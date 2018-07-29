@@ -486,7 +486,7 @@ ConstTokenOrSyntax AnsiPortListSyntax::getChild(uint32_t index) const {
 void AnsiPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&ports) = child.node()->as<SeparatedSyntaxList<MemberSyntax>>(); return;
+        case 1: ports = child.node()->as<SeparatedSyntaxList<MemberSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -522,7 +522,7 @@ ConstTokenOrSyntax ArgumentListSyntax::getChild(uint32_t index) const {
 void ArgumentListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&parameters) = child.node()->as<SeparatedSyntaxList<ArgumentSyntax>>(); return;
+        case 1: parameters = child.node()->as<SeparatedSyntaxList<ArgumentSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -569,7 +569,7 @@ ConstTokenOrSyntax AssertionItemPortListSyntax::getChild(uint32_t index) const {
 void AssertionItemPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&ports) = child.node()->as<SeparatedSyntaxList<AssertionItemPortSyntax>>(); return;
+        case 1: ports = child.node()->as<SeparatedSyntaxList<AssertionItemPortSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -589,8 +589,8 @@ TokenOrSyntax AssertionItemPortSyntax::getChild(uint32_t index) {
         case 0: return &attributes;
         case 1: return local;
         case 2: return direction;
-        case 3: return &type;
-        case 4: return &declarator;
+        case 3: return type.get();
+        case 4: return declarator.get();
         default: return nullptr;
     }
 }
@@ -600,19 +600,19 @@ ConstTokenOrSyntax AssertionItemPortSyntax::getChild(uint32_t index) const {
         case 0: return &attributes;
         case 1: return local;
         case 2: return direction;
-        case 3: return &type;
-        case 4: return &declarator;
+        case 3: return type.get();
+        case 4: return declarator.get();
         default: return nullptr;
     }
 }
 
 void AssertionItemPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: local = child.token(); return;
         case 2: direction = child.token(); return;
-        case 3: new (&type) = child.node()->as<DataTypeSyntax>(); return;
-        case 4: new (&declarator) = child.node()->as<VariableDeclaratorSyntax>(); return;
+        case 3: type = &child.node()->as<DataTypeSyntax>(); return;
+        case 4: declarator = &child.node()->as<VariableDeclaratorSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -629,7 +629,7 @@ bool AssignmentPatternExpressionSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax AssignmentPatternExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return type;
-        case 1: return &pattern;
+        case 1: return pattern.get();
         default: return nullptr;
     }
 }
@@ -637,7 +637,7 @@ TokenOrSyntax AssignmentPatternExpressionSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax AssignmentPatternExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return type;
-        case 1: return &pattern;
+        case 1: return pattern.get();
         default: return nullptr;
     }
 }
@@ -645,7 +645,7 @@ ConstTokenOrSyntax AssignmentPatternExpressionSyntax::getChild(uint32_t index) c
 void AssignmentPatternExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: type = &child.node()->as<DataTypeSyntax>(); return;
-        case 1: new (&pattern) = child.node()->as<AssignmentPatternSyntax>(); return;
+        case 1: pattern = &child.node()->as<AssignmentPatternSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -661,27 +661,27 @@ bool AssignmentPatternItemSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax AssignmentPatternItemSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &key;
+        case 0: return key.get();
         case 1: return colon;
-        case 2: return &expr;
+        case 2: return expr.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax AssignmentPatternItemSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &key;
+        case 0: return key.get();
         case 1: return colon;
-        case 2: return &expr;
+        case 2: return expr.get();
         default: return nullptr;
     }
 }
 
 void AssignmentPatternItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&key) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: key = &child.node()->as<ExpressionSyntax>(); return;
         case 1: colon = child.token(); return;
-        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -727,7 +727,7 @@ ConstTokenOrSyntax AttributeInstanceSyntax::getChild(uint32_t index) const {
 void AttributeInstanceSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&specs) = child.node()->as<SeparatedSyntaxList<AttributeSpecSyntax>>(); return;
+        case 1: specs = child.node()->as<SeparatedSyntaxList<AttributeSpecSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -777,21 +777,21 @@ bool BadExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax BadExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax BadExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         default: return nullptr;
     }
 }
 
 void BadExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -843,27 +843,27 @@ bool BinaryBlockEventExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax BinaryBlockEventExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return orKeyword;
-        case 2: return &right;
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax BinaryBlockEventExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return orKeyword;
-        case 2: return &right;
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 void BinaryBlockEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<BlockEventExpressionSyntax>(); return;
+        case 0: left = &child.node()->as<BlockEventExpressionSyntax>(); return;
         case 1: orKeyword = child.token(); return;
-        case 2: new (&right) = child.node()->as<BlockEventExpressionSyntax>(); return;
+        case 2: right = &child.node()->as<BlockEventExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -879,27 +879,27 @@ bool BinaryEventExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax BinaryEventExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return operatorToken;
-        case 2: return &right;
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax BinaryEventExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return operatorToken;
-        case 2: return &right;
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 void BinaryEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<EventExpressionSyntax>(); return;
+        case 0: left = &child.node()->as<EventExpressionSyntax>(); return;
         case 1: operatorToken = child.token(); return;
-        case 2: new (&right) = child.node()->as<EventExpressionSyntax>(); return;
+        case 2: right = &child.node()->as<EventExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -977,30 +977,30 @@ bool BinaryExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax BinaryExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return operatorToken;
         case 2: return &attributes;
-        case 3: return &right;
+        case 3: return right.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax BinaryExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return operatorToken;
         case 2: return &attributes;
-        case 3: return &right;
+        case 3: return right.get();
         default: return nullptr;
     }
 }
 
 void BinaryExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: left = &child.node()->as<ExpressionSyntax>(); return;
         case 1: operatorToken = child.token(); return;
-        case 2: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 3: new (&right) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 3: right = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -1016,21 +1016,21 @@ bool BitSelectSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax BitSelectSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax BitSelectSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         default: return nullptr;
     }
 }
 
 void BitSelectSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -1048,7 +1048,7 @@ TokenOrSyntax BlockCoverageEventSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return atat;
         case 1: return openParen;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return closeParen;
         default: return nullptr;
     }
@@ -1058,7 +1058,7 @@ ConstTokenOrSyntax BlockCoverageEventSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return atat;
         case 1: return openParen;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return closeParen;
         default: return nullptr;
     }
@@ -1068,7 +1068,7 @@ void BlockCoverageEventSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: atat = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: new (&expr) = child.node()->as<BlockEventExpressionSyntax>(); return;
+        case 2: expr = &child.node()->as<BlockEventExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -1128,10 +1128,10 @@ ConstTokenOrSyntax BlockStatementSyntax::getChild(uint32_t index) const {
 void BlockStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: begin = child.token(); return;
         case 3: blockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
-        case 4: new (&items) = child.node()->as<SyntaxList<SyntaxNode>>(); return;
+        case 4: items = child.node()->as<SyntaxList<SyntaxNode>>(); return;
         case 5: end = child.token(); return;
         case 6: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
@@ -1152,7 +1152,7 @@ TokenOrSyntax CaseGenerateSyntax::getChild(uint32_t index) {
         case 0: return &attributes;
         case 1: return keyword;
         case 2: return openParen;
-        case 3: return &condition;
+        case 3: return condition.get();
         case 4: return closeParen;
         case 5: return &items;
         case 6: return endCase;
@@ -1165,7 +1165,7 @@ ConstTokenOrSyntax CaseGenerateSyntax::getChild(uint32_t index) const {
         case 0: return &attributes;
         case 1: return keyword;
         case 2: return openParen;
-        case 3: return &condition;
+        case 3: return condition.get();
         case 4: return closeParen;
         case 5: return &items;
         case 6: return endCase;
@@ -1175,12 +1175,12 @@ ConstTokenOrSyntax CaseGenerateSyntax::getChild(uint32_t index) const {
 
 void CaseGenerateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: openParen = child.token(); return;
-        case 3: new (&condition) = child.node()->as<ExpressionSyntax>(); return;
+        case 3: condition = &child.node()->as<ExpressionSyntax>(); return;
         case 4: closeParen = child.token(); return;
-        case 5: new (&items) = child.node()->as<SyntaxList<CaseItemSyntax>>(); return;
+        case 5: items = child.node()->as<SyntaxList<CaseItemSyntax>>(); return;
         case 6: endCase = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -1213,7 +1213,7 @@ TokenOrSyntax CaseStatementSyntax::getChild(uint32_t index) {
         case 2: return uniqueOrPriority;
         case 3: return caseKeyword;
         case 4: return openParen;
-        case 5: return &expr;
+        case 5: return expr.get();
         case 6: return closeParen;
         case 7: return matchesOrInside;
         case 8: return &items;
@@ -1229,7 +1229,7 @@ ConstTokenOrSyntax CaseStatementSyntax::getChild(uint32_t index) const {
         case 2: return uniqueOrPriority;
         case 3: return caseKeyword;
         case 4: return openParen;
-        case 5: return &expr;
+        case 5: return expr.get();
         case 6: return closeParen;
         case 7: return matchesOrInside;
         case 8: return &items;
@@ -1241,14 +1241,14 @@ ConstTokenOrSyntax CaseStatementSyntax::getChild(uint32_t index) const {
 void CaseStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: uniqueOrPriority = child.token(); return;
         case 3: caseKeyword = child.token(); return;
         case 4: openParen = child.token(); return;
-        case 5: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 5: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 6: closeParen = child.token(); return;
         case 7: matchesOrInside = child.token(); return;
-        case 8: new (&items) = child.node()->as<SyntaxList<CaseItemSyntax>>(); return;
+        case 8: items = child.node()->as<SyntaxList<CaseItemSyntax>>(); return;
         case 9: endcase = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -1265,27 +1265,27 @@ bool CastExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax CastExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return apostrophe;
-        case 2: return &right;
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax CastExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return apostrophe;
-        case 2: return &right;
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 void CastExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: left = &child.node()->as<ExpressionSyntax>(); return;
         case 1: apostrophe = child.token(); return;
-        case 2: new (&right) = child.node()->as<ParenthesizedExpressionSyntax>(); return;
+        case 2: right = &child.node()->as<ParenthesizedExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -1373,7 +1373,7 @@ ConstTokenOrSyntax ClassDeclarationSyntax::getChild(uint32_t index) const {
 
 void ClassDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: virtualOrInterface = child.token(); return;
         case 2: classKeyword = child.token(); return;
         case 3: lifetime = child.token(); return;
@@ -1382,7 +1382,7 @@ void ClassDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 6: extendsClause = &child.node()->as<ExtendsClauseSyntax>(); return;
         case 7: implementsClause = &child.node()->as<ImplementsClauseSyntax>(); return;
         case 8: semi = child.token(); return;
-        case 9: new (&items) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 9: items = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 10: endClass = child.token(); return;
         case 11: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
@@ -1402,7 +1402,7 @@ TokenOrSyntax ClassMethodDeclarationSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
-        case 2: return &declaration;
+        case 2: return declaration.get();
         default: return nullptr;
     }
 }
@@ -1411,16 +1411,16 @@ ConstTokenOrSyntax ClassMethodDeclarationSyntax::getChild(uint32_t index) const 
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
-        case 2: return &declaration;
+        case 2: return declaration.get();
         default: return nullptr;
     }
 }
 
 void ClassMethodDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
-        case 2: new (&declaration) = child.node()->as<FunctionDeclarationSyntax>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: qualifiers = child.node()->as<TokenList>(); return;
+        case 2: declaration = &child.node()->as<FunctionDeclarationSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -1438,7 +1438,7 @@ TokenOrSyntax ClassMethodPrototypeSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
-        case 2: return &prototype;
+        case 2: return prototype.get();
         case 3: return semi;
         default: return nullptr;
     }
@@ -1448,7 +1448,7 @@ ConstTokenOrSyntax ClassMethodPrototypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
-        case 2: return &prototype;
+        case 2: return prototype.get();
         case 3: return semi;
         default: return nullptr;
     }
@@ -1456,9 +1456,9 @@ ConstTokenOrSyntax ClassMethodPrototypeSyntax::getChild(uint32_t index) const {
 
 void ClassMethodPrototypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
-        case 2: new (&prototype) = child.node()->as<FunctionPrototypeSyntax>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: qualifiers = child.node()->as<TokenList>(); return;
+        case 2: prototype = &child.node()->as<FunctionPrototypeSyntax>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -1476,7 +1476,7 @@ bool ClassNameSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ClassNameSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return identifier;
-        case 1: return &parameters;
+        case 1: return parameters.get();
         default: return nullptr;
     }
 }
@@ -1484,7 +1484,7 @@ TokenOrSyntax ClassNameSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ClassNameSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return identifier;
-        case 1: return &parameters;
+        case 1: return parameters.get();
         default: return nullptr;
     }
 }
@@ -1492,7 +1492,7 @@ ConstTokenOrSyntax ClassNameSyntax::getChild(uint32_t index) const {
 void ClassNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: identifier = child.token(); return;
-        case 1: new (&parameters) = child.node()->as<ParameterValueAssignmentSyntax>(); return;
+        case 1: parameters = &child.node()->as<ParameterValueAssignmentSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -1510,7 +1510,7 @@ TokenOrSyntax ClassPropertyDeclarationSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
-        case 2: return &declaration;
+        case 2: return declaration.get();
         default: return nullptr;
     }
 }
@@ -1519,16 +1519,16 @@ ConstTokenOrSyntax ClassPropertyDeclarationSyntax::getChild(uint32_t index) cons
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
-        case 2: return &declaration;
+        case 2: return declaration.get();
         default: return nullptr;
     }
 }
 
 void ClassPropertyDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
-        case 2: new (&declaration) = child.node()->as<MemberSyntax>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: qualifiers = child.node()->as<TokenList>(); return;
+        case 2: declaration = &child.node()->as<MemberSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -1544,7 +1544,7 @@ bool ClassScopeSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ClassScopeSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return separator;
         default: return nullptr;
     }
@@ -1552,7 +1552,7 @@ TokenOrSyntax ClassScopeSyntax::getChild(uint32_t index) {
 
 ConstTokenOrSyntax ClassScopeSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return separator;
         default: return nullptr;
     }
@@ -1560,7 +1560,7 @@ ConstTokenOrSyntax ClassScopeSyntax::getChild(uint32_t index) const {
 
 void ClassScopeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<NameSyntax>(); return;
+        case 0: left = &child.node()->as<NameSyntax>(); return;
         case 1: separator = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -1611,7 +1611,7 @@ ConstTokenOrSyntax ClockingDeclarationSyntax::getChild(uint32_t index) const {
 
 void ClockingDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: globalOrDefault = child.token(); return;
         case 2: clocking = child.token(); return;
         case 3: blockName = child.token(); return;
@@ -1619,7 +1619,7 @@ void ClockingDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 5: event = &child.node()->as<ParenthesizedEventExpressionSyntax>(); return;
         case 6: eventIdentifier = child.token(); return;
         case 7: semi = child.token(); return;
-        case 8: new (&items) = child.node()->as<SyntaxList<ClockingItemSyntax>>(); return;
+        case 8: items = child.node()->as<SyntaxList<ClockingItemSyntax>>(); return;
         case 9: endClocking = child.token(); return;
         case 10: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
@@ -1703,7 +1703,7 @@ void ClockingItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: defaultKeyword = child.token(); return;
         case 1: direction = &child.node()->as<ClockingDirectionSyntax>(); return;
-        case 2: new (&assignments) = child.node()->as<SeparatedSyntaxList<AttributeSpecSyntax>>(); return;
+        case 2: assignments = child.node()->as<SeparatedSyntaxList<AttributeSpecSyntax>>(); return;
         case 3: semi = child.token(); return;
         case 4: declaration = &child.node()->as<MemberSyntax>(); return;
         default: THROW_UNREACHABLE;
@@ -1758,7 +1758,7 @@ bool ColonExpressionClauseSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ColonExpressionClauseSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return colon;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -1766,7 +1766,7 @@ TokenOrSyntax ColonExpressionClauseSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ColonExpressionClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return colon;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -1774,7 +1774,7 @@ ConstTokenOrSyntax ColonExpressionClauseSyntax::getChild(uint32_t index) const {
 void ColonExpressionClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: colon = child.token(); return;
-        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -1806,7 +1806,7 @@ ConstTokenOrSyntax CompilationUnitSyntax::getChild(uint32_t index) const {
 
 void CompilationUnitSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 0: members = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 1: endOfFile = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -1842,7 +1842,7 @@ ConstTokenOrSyntax ConcatenationExpressionSyntax::getChild(uint32_t index) const
 void ConcatenationExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: new (&expressions) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
+        case 1: expressions = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -1860,7 +1860,7 @@ bool ConcurrentAssertionMemberSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ConcurrentAssertionMemberSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &statement;
+        case 1: return statement.get();
         default: return nullptr;
     }
 }
@@ -1868,15 +1868,15 @@ TokenOrSyntax ConcurrentAssertionMemberSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ConcurrentAssertionMemberSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &statement;
+        case 1: return statement.get();
         default: return nullptr;
     }
 }
 
 void ConcurrentAssertionMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&statement) = child.node()->as<ConcurrentAssertionStatementSyntax>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: statement = &child.node()->as<ConcurrentAssertionStatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -1907,9 +1907,9 @@ TokenOrSyntax ConcurrentAssertionStatementSyntax::getChild(uint32_t index) {
         case 2: return keyword;
         case 3: return propertyOrSequence;
         case 4: return openParen;
-        case 5: return &propertySpec;
+        case 5: return propertySpec.get();
         case 6: return closeParen;
-        case 7: return &action;
+        case 7: return action.get();
         default: return nullptr;
     }
 }
@@ -1921,9 +1921,9 @@ ConstTokenOrSyntax ConcurrentAssertionStatementSyntax::getChild(uint32_t index) 
         case 2: return keyword;
         case 3: return propertyOrSequence;
         case 4: return openParen;
-        case 5: return &propertySpec;
+        case 5: return propertySpec.get();
         case 6: return closeParen;
-        case 7: return &action;
+        case 7: return action.get();
         default: return nullptr;
     }
 }
@@ -1931,13 +1931,13 @@ ConstTokenOrSyntax ConcurrentAssertionStatementSyntax::getChild(uint32_t index) 
 void ConcurrentAssertionStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: keyword = child.token(); return;
         case 3: propertyOrSequence = child.token(); return;
         case 4: openParen = child.token(); return;
-        case 5: new (&propertySpec) = child.node()->as<PropertySpecSyntax>(); return;
+        case 5: propertySpec = &child.node()->as<PropertySpecSyntax>(); return;
         case 6: closeParen = child.token(); return;
-        case 7: new (&action) = child.node()->as<ActionBlockSyntax>(); return;
+        case 7: action = &child.node()->as<ActionBlockSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -1983,7 +1983,7 @@ void ConditionalBranchDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax ch
         case 0: directive = child.token(); return;
         case 1: name = child.token(); return;
         case 2: endOfDirective = child.token(); return;
-        case 3: new (&disabledTokens) = child.node()->as<TokenList>(); return;
+        case 3: disabledTokens = child.node()->as<TokenList>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -2001,9 +2001,9 @@ TokenOrSyntax ConditionalConstraintSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return ifKeyword;
         case 1: return openParen;
-        case 2: return &condition;
+        case 2: return condition.get();
         case 3: return closeParen;
-        case 4: return &constraints;
+        case 4: return constraints.get();
         case 5: return elseClause;
         default: return nullptr;
     }
@@ -2013,9 +2013,9 @@ ConstTokenOrSyntax ConditionalConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return ifKeyword;
         case 1: return openParen;
-        case 2: return &condition;
+        case 2: return condition.get();
         case 3: return closeParen;
-        case 4: return &constraints;
+        case 4: return constraints.get();
         case 5: return elseClause;
         default: return nullptr;
     }
@@ -2025,9 +2025,9 @@ void ConditionalConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) 
     switch (index) {
         case 0: ifKeyword = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: new (&condition) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: condition = &child.node()->as<ExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
-        case 4: new (&constraints) = child.node()->as<ConstraintItemSyntax>(); return;
+        case 4: constraints = &child.node()->as<ConstraintItemSyntax>(); return;
         case 5: elseClause = &child.node()->as<ElseConstraintClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2044,36 +2044,36 @@ bool ConditionalExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ConditionalExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &predicate;
+        case 0: return predicate.get();
         case 1: return question;
         case 2: return &attributes;
-        case 3: return &left;
+        case 3: return left.get();
         case 4: return colon;
-        case 5: return &right;
+        case 5: return right.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax ConditionalExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &predicate;
+        case 0: return predicate.get();
         case 1: return question;
         case 2: return &attributes;
-        case 3: return &left;
+        case 3: return left.get();
         case 4: return colon;
-        case 5: return &right;
+        case 5: return right.get();
         default: return nullptr;
     }
 }
 
 void ConditionalExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&predicate) = child.node()->as<ConditionalPredicateSyntax>(); return;
+        case 0: predicate = &child.node()->as<ConditionalPredicateSyntax>(); return;
         case 1: question = child.token(); return;
-        case 2: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 3: new (&left) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 3: left = &child.node()->as<ExpressionSyntax>(); return;
         case 4: colon = child.token(); return;
-        case 5: new (&right) = child.node()->as<ExpressionSyntax>(); return;
+        case 5: right = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -2089,7 +2089,7 @@ bool ConditionalPatternSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ConditionalPatternSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         case 1: return matchesClause;
         default: return nullptr;
     }
@@ -2097,7 +2097,7 @@ TokenOrSyntax ConditionalPatternSyntax::getChild(uint32_t index) {
 
 ConstTokenOrSyntax ConditionalPatternSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         case 1: return matchesClause;
         default: return nullptr;
     }
@@ -2105,7 +2105,7 @@ ConstTokenOrSyntax ConditionalPatternSyntax::getChild(uint32_t index) const {
 
 void ConditionalPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 1: matchesClause = &child.node()->as<MatchesClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2136,7 +2136,7 @@ ConstTokenOrSyntax ConditionalPredicateSyntax::getChild(uint32_t index) const {
 
 void ConditionalPredicateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&conditions) = child.node()->as<SeparatedSyntaxList<ConditionalPatternSyntax>>(); return;
+        case 0: conditions = child.node()->as<SeparatedSyntaxList<ConditionalPatternSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -2157,9 +2157,9 @@ TokenOrSyntax ConditionalStatementSyntax::getChild(uint32_t index) {
         case 2: return uniqueOrPriority;
         case 3: return ifKeyword;
         case 4: return openParen;
-        case 5: return &predicate;
+        case 5: return predicate.get();
         case 6: return closeParen;
-        case 7: return &statement;
+        case 7: return statement.get();
         case 8: return elseClause;
         default: return nullptr;
     }
@@ -2172,9 +2172,9 @@ ConstTokenOrSyntax ConditionalStatementSyntax::getChild(uint32_t index) const {
         case 2: return uniqueOrPriority;
         case 3: return ifKeyword;
         case 4: return openParen;
-        case 5: return &predicate;
+        case 5: return predicate.get();
         case 6: return closeParen;
-        case 7: return &statement;
+        case 7: return statement.get();
         case 8: return elseClause;
         default: return nullptr;
     }
@@ -2183,13 +2183,13 @@ ConstTokenOrSyntax ConditionalStatementSyntax::getChild(uint32_t index) const {
 void ConditionalStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: uniqueOrPriority = child.token(); return;
         case 3: ifKeyword = child.token(); return;
         case 4: openParen = child.token(); return;
-        case 5: new (&predicate) = child.node()->as<ConditionalPredicateSyntax>(); return;
+        case 5: predicate = &child.node()->as<ConditionalPredicateSyntax>(); return;
         case 6: closeParen = child.token(); return;
-        case 7: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 7: statement = &child.node()->as<StatementSyntax>(); return;
         case 8: elseClause = &child.node()->as<ElseClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2225,7 +2225,7 @@ ConstTokenOrSyntax ConstraintBlockSyntax::getChild(uint32_t index) const {
 void ConstraintBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: new (&items) = child.node()->as<SyntaxList<ConstraintItemSyntax>>(); return;
+        case 1: items = child.node()->as<SyntaxList<ConstraintItemSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2246,7 +2246,7 @@ TokenOrSyntax ConstraintDeclarationSyntax::getChild(uint32_t index) {
         case 1: return &qualifiers;
         case 2: return keyword;
         case 3: return name;
-        case 4: return &block;
+        case 4: return block.get();
         default: return nullptr;
     }
 }
@@ -2257,18 +2257,18 @@ ConstTokenOrSyntax ConstraintDeclarationSyntax::getChild(uint32_t index) const {
         case 1: return &qualifiers;
         case 2: return keyword;
         case 3: return name;
-        case 4: return &block;
+        case 4: return block.get();
         default: return nullptr;
     }
 }
 
 void ConstraintDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: qualifiers = child.node()->as<TokenList>(); return;
         case 2: keyword = child.token(); return;
         case 3: name = child.token(); return;
-        case 4: new (&block) = child.node()->as<ConstraintBlockSyntax>(); return;
+        case 4: block = &child.node()->as<ConstraintBlockSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -2322,8 +2322,8 @@ ConstTokenOrSyntax ConstraintPrototypeSyntax::getChild(uint32_t index) const {
 
 void ConstraintPrototypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: qualifiers = child.node()->as<TokenList>(); return;
         case 2: keyword = child.token(); return;
         case 3: name = child.token(); return;
         case 4: semi = child.token(); return;
@@ -2362,9 +2362,9 @@ ConstTokenOrSyntax ContinuousAssignSyntax::getChild(uint32_t index) const {
 
 void ContinuousAssignSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: assign = child.token(); return;
-        case 2: new (&assignments) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
+        case 2: assignments = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2399,7 +2399,7 @@ TokenOrSyntax CoverageBinsSyntax::getChild(uint32_t index) {
         case 3: return name;
         case 4: return selector;
         case 5: return equals;
-        case 6: return &initializer;
+        case 6: return initializer.get();
         case 7: return iff;
         case 8: return semi;
         default: return nullptr;
@@ -2414,7 +2414,7 @@ ConstTokenOrSyntax CoverageBinsSyntax::getChild(uint32_t index) const {
         case 3: return name;
         case 4: return selector;
         case 5: return equals;
-        case 6: return &initializer;
+        case 6: return initializer.get();
         case 7: return iff;
         case 8: return semi;
         default: return nullptr;
@@ -2423,13 +2423,13 @@ ConstTokenOrSyntax CoverageBinsSyntax::getChild(uint32_t index) const {
 
 void CoverageBinsSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: wildcard = child.token(); return;
         case 2: keyword = child.token(); return;
         case 3: name = child.token(); return;
         case 4: selector = &child.node()->as<ElementSelectSyntax>(); return;
         case 5: equals = child.token(); return;
-        case 6: new (&initializer) = child.node()->as<CoverageBinInitializerSyntax>(); return;
+        case 6: initializer = &child.node()->as<CoverageBinInitializerSyntax>(); return;
         case 7: iff = &child.node()->as<IffClauseSyntax>(); return;
         case 8: semi = child.token(); return;
         default: THROW_UNREACHABLE;
@@ -2452,7 +2452,7 @@ TokenOrSyntax CoverageOptionSyntax::getChild(uint32_t index) {
         case 2: return dot;
         case 3: return name;
         case 4: return equals;
-        case 5: return &expr;
+        case 5: return expr.get();
         case 6: return semi;
         default: return nullptr;
     }
@@ -2465,7 +2465,7 @@ ConstTokenOrSyntax CoverageOptionSyntax::getChild(uint32_t index) const {
         case 2: return dot;
         case 3: return name;
         case 4: return equals;
-        case 5: return &expr;
+        case 5: return expr.get();
         case 6: return semi;
         default: return nullptr;
     }
@@ -2473,12 +2473,12 @@ ConstTokenOrSyntax CoverageOptionSyntax::getChild(uint32_t index) const {
 
 void CoverageOptionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: option = child.token(); return;
         case 2: dot = child.token(); return;
         case 3: name = child.token(); return;
         case 4: equals = child.token(); return;
-        case 5: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 5: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 6: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2525,13 +2525,13 @@ ConstTokenOrSyntax CovergroupDeclarationSyntax::getChild(uint32_t index) const {
 
 void CovergroupDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: covergroup = child.token(); return;
         case 2: name = child.token(); return;
         case 3: portList = &child.node()->as<AnsiPortListSyntax>(); return;
         case 4: event = &child.node()->as<SyntaxNode>(); return;
         case 5: semi = child.token(); return;
-        case 6: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 6: members = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 7: endgroup = child.token(); return;
         case 8: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
@@ -2553,7 +2553,7 @@ TokenOrSyntax CoverpointSyntax::getChild(uint32_t index) {
         case 1: return type;
         case 2: return label;
         case 3: return coverpoint;
-        case 4: return &expr;
+        case 4: return expr.get();
         case 5: return openBrace;
         case 6: return &members;
         case 7: return closeBrace;
@@ -2568,7 +2568,7 @@ ConstTokenOrSyntax CoverpointSyntax::getChild(uint32_t index) const {
         case 1: return type;
         case 2: return label;
         case 3: return coverpoint;
-        case 4: return &expr;
+        case 4: return expr.get();
         case 5: return openBrace;
         case 6: return &members;
         case 7: return closeBrace;
@@ -2579,13 +2579,13 @@ ConstTokenOrSyntax CoverpointSyntax::getChild(uint32_t index) const {
 
 void CoverpointSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: type = &child.node()->as<DataTypeSyntax>(); return;
         case 2: label = &child.node()->as<NamedLabelSyntax>(); return;
         case 3: coverpoint = child.token(); return;
-        case 4: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 4: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 5: openBrace = child.token(); return;
-        case 6: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 6: members = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 7: closeBrace = child.token(); return;
         case 8: emptySemi = child.token(); return;
         default: THROW_UNREACHABLE;
@@ -2609,7 +2609,7 @@ TokenOrSyntax DPIImportExportSyntax::getChild(uint32_t index) {
         case 3: return property;
         case 4: return name;
         case 5: return equals;
-        case 6: return &method;
+        case 6: return method.get();
         case 7: return semi;
         default: return nullptr;
     }
@@ -2623,7 +2623,7 @@ ConstTokenOrSyntax DPIImportExportSyntax::getChild(uint32_t index) const {
         case 3: return property;
         case 4: return name;
         case 5: return equals;
-        case 6: return &method;
+        case 6: return method.get();
         case 7: return semi;
         default: return nullptr;
     }
@@ -2631,13 +2631,13 @@ ConstTokenOrSyntax DPIImportExportSyntax::getChild(uint32_t index) const {
 
 void DPIImportExportSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: stringLiteral = child.token(); return;
         case 3: property = child.token(); return;
         case 4: name = child.token(); return;
         case 5: equals = child.token(); return;
-        case 6: new (&method) = child.node()->as<FunctionPrototypeSyntax>(); return;
+        case 6: method = &child.node()->as<FunctionPrototypeSyntax>(); return;
         case 7: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2656,7 +2656,7 @@ TokenOrSyntax DataDeclarationSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
         case 1: return &modifiers;
-        case 2: return &type;
+        case 2: return type.get();
         case 3: return &declarators;
         case 4: return semi;
         default: return nullptr;
@@ -2667,7 +2667,7 @@ ConstTokenOrSyntax DataDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &modifiers;
-        case 2: return &type;
+        case 2: return type.get();
         case 3: return &declarators;
         case 4: return semi;
         default: return nullptr;
@@ -2676,10 +2676,10 @@ ConstTokenOrSyntax DataDeclarationSyntax::getChild(uint32_t index) const {
 
 void DataDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&modifiers) = child.node()->as<TokenList>(); return;
-        case 2: new (&type) = child.node()->as<DataTypeSyntax>(); return;
-        case 3: new (&declarators) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: modifiers = child.node()->as<TokenList>(); return;
+        case 2: type = &child.node()->as<DataTypeSyntax>(); return;
+        case 3: declarators = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2732,7 +2732,7 @@ bool DefParamAssignmentSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax DefParamAssignmentSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &name;
+        case 0: return name.get();
         case 1: return setter;
         default: return nullptr;
     }
@@ -2740,7 +2740,7 @@ TokenOrSyntax DefParamAssignmentSyntax::getChild(uint32_t index) {
 
 ConstTokenOrSyntax DefParamAssignmentSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &name;
+        case 0: return name.get();
         case 1: return setter;
         default: return nullptr;
     }
@@ -2748,7 +2748,7 @@ ConstTokenOrSyntax DefParamAssignmentSyntax::getChild(uint32_t index) const {
 
 void DefParamAssignmentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&name) = child.node()->as<NameSyntax>(); return;
+        case 0: name = &child.node()->as<NameSyntax>(); return;
         case 1: setter = &child.node()->as<EqualsValueClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2785,9 +2785,9 @@ ConstTokenOrSyntax DefParamSyntax::getChild(uint32_t index) const {
 
 void DefParamSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: defparam = child.token(); return;
-        case 2: new (&assignments) = child.node()->as<SeparatedSyntaxList<DefParamAssignmentSyntax>>(); return;
+        case 2: assignments = child.node()->as<SeparatedSyntaxList<DefParamAssignmentSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2806,7 +2806,7 @@ TokenOrSyntax DefaultCaseItemSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return defaultKeyword;
         case 1: return colon;
-        case 2: return &clause;
+        case 2: return clause.get();
         default: return nullptr;
     }
 }
@@ -2815,7 +2815,7 @@ ConstTokenOrSyntax DefaultCaseItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return defaultKeyword;
         case 1: return colon;
-        case 2: return &clause;
+        case 2: return clause.get();
         default: return nullptr;
     }
 }
@@ -2824,7 +2824,7 @@ void DefaultCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: defaultKeyword = child.token(); return;
         case 1: colon = child.token(); return;
-        case 2: new (&clause) = child.node()->as<SyntaxNode>(); return;
+        case 2: clause = &child.node()->as<SyntaxNode>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -2970,7 +2970,7 @@ void DefineDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: directive = child.token(); return;
         case 1: name = child.token(); return;
         case 2: formalArguments = &child.node()->as<MacroFormalArgumentListSyntax>(); return;
-        case 3: new (&body) = child.node()->as<TokenList>(); return;
+        case 3: body = child.node()->as<TokenList>(); return;
         case 4: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -2994,7 +2994,7 @@ bool DelaySyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax DelaySyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return hash;
-        case 1: return &delayValue;
+        case 1: return delayValue.get();
         default: return nullptr;
     }
 }
@@ -3002,7 +3002,7 @@ TokenOrSyntax DelaySyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax DelaySyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return hash;
-        case 1: return &delayValue;
+        case 1: return delayValue.get();
         default: return nullptr;
     }
 }
@@ -3010,7 +3010,7 @@ ConstTokenOrSyntax DelaySyntax::getChild(uint32_t index) const {
 void DelaySyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: hash = child.token(); return;
-        case 1: new (&delayValue) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: delayValue = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -3094,7 +3094,7 @@ TokenOrSyntax DisableConstraintSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return disable;
         case 1: return soft;
-        case 2: return &name;
+        case 2: return name.get();
         case 3: return semi;
         default: return nullptr;
     }
@@ -3104,7 +3104,7 @@ ConstTokenOrSyntax DisableConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return disable;
         case 1: return soft;
-        case 2: return &name;
+        case 2: return name.get();
         case 3: return semi;
         default: return nullptr;
     }
@@ -3114,7 +3114,7 @@ void DisableConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: disable = child.token(); return;
         case 1: soft = child.token(); return;
-        case 2: new (&name) = child.node()->as<NameSyntax>(); return;
+        case 2: name = &child.node()->as<NameSyntax>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -3154,7 +3154,7 @@ ConstTokenOrSyntax DisableForkStatementSyntax::getChild(uint32_t index) const {
 void DisableForkStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: disable = child.token(); return;
         case 3: fork = child.token(); return;
         case 4: semi = child.token(); return;
@@ -3176,7 +3176,7 @@ TokenOrSyntax DisableIffSyntax::getChild(uint32_t index) {
         case 0: return disable;
         case 1: return iff;
         case 2: return openParen;
-        case 3: return &expr;
+        case 3: return expr.get();
         case 4: return closeParen;
         default: return nullptr;
     }
@@ -3187,7 +3187,7 @@ ConstTokenOrSyntax DisableIffSyntax::getChild(uint32_t index) const {
         case 0: return disable;
         case 1: return iff;
         case 2: return openParen;
-        case 3: return &expr;
+        case 3: return expr.get();
         case 4: return closeParen;
         default: return nullptr;
     }
@@ -3198,7 +3198,7 @@ void DisableIffSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: disable = child.token(); return;
         case 1: iff = child.token(); return;
         case 2: openParen = child.token(); return;
-        case 3: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 3: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 4: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -3218,7 +3218,7 @@ TokenOrSyntax DisableStatementSyntax::getChild(uint32_t index) {
         case 0: return label;
         case 1: return &attributes;
         case 2: return disable;
-        case 3: return &name;
+        case 3: return name.get();
         case 4: return semi;
         default: return nullptr;
     }
@@ -3229,7 +3229,7 @@ ConstTokenOrSyntax DisableStatementSyntax::getChild(uint32_t index) const {
         case 0: return label;
         case 1: return &attributes;
         case 2: return disable;
-        case 3: return &name;
+        case 3: return name.get();
         case 4: return semi;
         default: return nullptr;
     }
@@ -3238,9 +3238,9 @@ ConstTokenOrSyntax DisableStatementSyntax::getChild(uint32_t index) const {
 void DisableStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: disable = child.token(); return;
-        case 3: new (&name) = child.node()->as<NameSyntax>(); return;
+        case 3: name = &child.node()->as<NameSyntax>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -3279,7 +3279,7 @@ void DistConstraintListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: dist = child.token(); return;
         case 1: openBrace = child.token(); return;
-        case 2: new (&items) = child.node()->as<SeparatedSyntaxList<DistItemSyntax>>(); return;
+        case 2: items = child.node()->as<SeparatedSyntaxList<DistItemSyntax>>(); return;
         case 3: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -3296,7 +3296,7 @@ bool DistItemSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax DistItemSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &range;
+        case 0: return range.get();
         case 1: return weight;
         default: return nullptr;
     }
@@ -3304,7 +3304,7 @@ TokenOrSyntax DistItemSyntax::getChild(uint32_t index) {
 
 ConstTokenOrSyntax DistItemSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &range;
+        case 0: return range.get();
         case 1: return weight;
         default: return nullptr;
     }
@@ -3312,7 +3312,7 @@ ConstTokenOrSyntax DistItemSyntax::getChild(uint32_t index) const {
 
 void DistItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&range) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: range = &child.node()->as<ExpressionSyntax>(); return;
         case 1: weight = &child.node()->as<DistWeightSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -3330,7 +3330,7 @@ bool DistWeightSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax DistWeightSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return op;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -3338,7 +3338,7 @@ TokenOrSyntax DistWeightSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax DistWeightSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return op;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -3346,7 +3346,7 @@ ConstTokenOrSyntax DistWeightSyntax::getChild(uint32_t index) const {
 void DistWeightSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: op = child.token(); return;
-        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -3398,10 +3398,10 @@ TokenOrSyntax DoWhileStatementSyntax::getChild(uint32_t index) {
         case 0: return label;
         case 1: return &attributes;
         case 2: return doKeyword;
-        case 3: return &statement;
+        case 3: return statement.get();
         case 4: return whileKeyword;
         case 5: return openParen;
-        case 6: return &expr;
+        case 6: return expr.get();
         case 7: return closeParen;
         case 8: return semi;
         default: return nullptr;
@@ -3413,10 +3413,10 @@ ConstTokenOrSyntax DoWhileStatementSyntax::getChild(uint32_t index) const {
         case 0: return label;
         case 1: return &attributes;
         case 2: return doKeyword;
-        case 3: return &statement;
+        case 3: return statement.get();
         case 4: return whileKeyword;
         case 5: return openParen;
-        case 6: return &expr;
+        case 6: return expr.get();
         case 7: return closeParen;
         case 8: return semi;
         default: return nullptr;
@@ -3426,12 +3426,12 @@ ConstTokenOrSyntax DoWhileStatementSyntax::getChild(uint32_t index) const {
 void DoWhileStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: doKeyword = child.token(); return;
-        case 3: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 3: statement = &child.node()->as<StatementSyntax>(); return;
         case 4: whileKeyword = child.token(); return;
         case 5: openParen = child.token(); return;
-        case 6: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 6: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 7: closeParen = child.token(); return;
         case 8: semi = child.token(); return;
         default: THROW_UNREACHABLE;
@@ -3524,24 +3524,24 @@ bool ElementSelectExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ElementSelectExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
-        case 1: return &select;
+        case 0: return left.get();
+        case 1: return select.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax ElementSelectExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
-        case 1: return &select;
+        case 0: return left.get();
+        case 1: return select.get();
         default: return nullptr;
     }
 }
 
 void ElementSelectExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
-        case 1: new (&select) = child.node()->as<ElementSelectSyntax>(); return;
+        case 0: left = &child.node()->as<ExpressionSyntax>(); return;
+        case 1: select = &child.node()->as<ElementSelectSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -3594,7 +3594,7 @@ bool ElseClauseSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ElseClauseSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return elseKeyword;
-        case 1: return &clause;
+        case 1: return clause.get();
         default: return nullptr;
     }
 }
@@ -3602,7 +3602,7 @@ TokenOrSyntax ElseClauseSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ElseClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return elseKeyword;
-        case 1: return &clause;
+        case 1: return clause.get();
         default: return nullptr;
     }
 }
@@ -3610,7 +3610,7 @@ ConstTokenOrSyntax ElseClauseSyntax::getChild(uint32_t index) const {
 void ElseClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: elseKeyword = child.token(); return;
-        case 1: new (&clause) = child.node()->as<SyntaxNode>(); return;
+        case 1: clause = &child.node()->as<SyntaxNode>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -3627,7 +3627,7 @@ bool ElseConstraintClauseSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ElseConstraintClauseSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return elseKeyword;
-        case 1: return &constraints;
+        case 1: return constraints.get();
         default: return nullptr;
     }
 }
@@ -3635,7 +3635,7 @@ TokenOrSyntax ElseConstraintClauseSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ElseConstraintClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return elseKeyword;
-        case 1: return &constraints;
+        case 1: return constraints.get();
         default: return nullptr;
     }
 }
@@ -3643,7 +3643,7 @@ ConstTokenOrSyntax ElseConstraintClauseSyntax::getChild(uint32_t index) const {
 void ElseConstraintClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: elseKeyword = child.token(); return;
-        case 1: new (&constraints) = child.node()->as<ConstraintItemSyntax>(); return;
+        case 1: constraints = &child.node()->as<ConstraintItemSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -3725,8 +3725,8 @@ ConstTokenOrSyntax EmptyMemberSyntax::getChild(uint32_t index) const {
 
 void EmptyMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: qualifiers = child.node()->as<TokenList>(); return;
         case 2: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -3795,7 +3795,7 @@ ConstTokenOrSyntax EmptyStatementSyntax::getChild(uint32_t index) const {
 void EmptyStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: semicolon = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -3839,9 +3839,9 @@ void EnumTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: keyword = child.token(); return;
         case 1: baseType = &child.node()->as<DataTypeSyntax>(); return;
         case 2: openBrace = child.token(); return;
-        case 3: new (&members) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
+        case 3: members = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         case 4: closeBrace = child.token(); return;
-        case 5: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
+        case 5: dimensions = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -3858,7 +3858,7 @@ bool EqualsValueClauseSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax EqualsValueClauseSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return equals;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -3866,7 +3866,7 @@ TokenOrSyntax EqualsValueClauseSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax EqualsValueClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return equals;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -3874,7 +3874,7 @@ ConstTokenOrSyntax EqualsValueClauseSyntax::getChild(uint32_t index) const {
 void EqualsValueClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: equals = child.token(); return;
-        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -3891,7 +3891,7 @@ bool EventControlSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax EventControlSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return at;
-        case 1: return &eventName;
+        case 1: return eventName.get();
         default: return nullptr;
     }
 }
@@ -3899,7 +3899,7 @@ TokenOrSyntax EventControlSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax EventControlSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return at;
-        case 1: return &eventName;
+        case 1: return eventName.get();
         default: return nullptr;
     }
 }
@@ -3907,7 +3907,7 @@ ConstTokenOrSyntax EventControlSyntax::getChild(uint32_t index) const {
 void EventControlSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: at = child.token(); return;
-        case 1: new (&eventName) = child.node()->as<NameSyntax>(); return;
+        case 1: eventName = &child.node()->as<NameSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -3924,7 +3924,7 @@ bool EventControlWithExpressionSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax EventControlWithExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return at;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -3932,7 +3932,7 @@ TokenOrSyntax EventControlWithExpressionSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax EventControlWithExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return at;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -3940,7 +3940,7 @@ ConstTokenOrSyntax EventControlWithExpressionSyntax::getChild(uint32_t index) co
 void EventControlWithExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: at = child.token(); return;
-        case 1: new (&expr) = child.node()->as<EventExpressionSyntax>(); return;
+        case 1: expr = &child.node()->as<EventExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -3977,7 +3977,7 @@ TokenOrSyntax EventTriggerStatementSyntax::getChild(uint32_t index) {
         case 1: return &attributes;
         case 2: return trigger;
         case 3: return timing;
-        case 4: return &name;
+        case 4: return name.get();
         default: return nullptr;
     }
 }
@@ -3988,7 +3988,7 @@ ConstTokenOrSyntax EventTriggerStatementSyntax::getChild(uint32_t index) const {
         case 1: return &attributes;
         case 2: return trigger;
         case 3: return timing;
-        case 4: return &name;
+        case 4: return name.get();
         default: return nullptr;
     }
 }
@@ -3996,10 +3996,10 @@ ConstTokenOrSyntax EventTriggerStatementSyntax::getChild(uint32_t index) const {
 void EventTriggerStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: trigger = child.token(); return;
         case 3: timing = &child.node()->as<TimingControlSyntax>(); return;
-        case 4: new (&name) = child.node()->as<NameSyntax>(); return;
+        case 4: name = &child.node()->as<NameSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -4041,7 +4041,7 @@ ConstTokenOrSyntax ExplicitAnsiPortSyntax::getChild(uint32_t index) const {
 
 void ExplicitAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: direction = child.token(); return;
         case 2: dot = child.token(); return;
         case 3: name = child.token(); return;
@@ -4106,7 +4106,7 @@ bool ExpressionConstraintSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ExpressionConstraintSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return soft;
-        case 1: return &expr;
+        case 1: return expr.get();
         case 2: return semi;
         default: return nullptr;
     }
@@ -4115,7 +4115,7 @@ TokenOrSyntax ExpressionConstraintSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ExpressionConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return soft;
-        case 1: return &expr;
+        case 1: return expr.get();
         case 2: return semi;
         default: return nullptr;
     }
@@ -4124,7 +4124,7 @@ ConstTokenOrSyntax ExpressionConstraintSyntax::getChild(uint32_t index) const {
 void ExpressionConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: soft = child.token(); return;
-        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 2: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -4141,7 +4141,7 @@ bool ExpressionCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ExpressionCoverageBinInitializerSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         case 1: return withClause;
         default: return nullptr;
     }
@@ -4149,7 +4149,7 @@ TokenOrSyntax ExpressionCoverageBinInitializerSyntax::getChild(uint32_t index) {
 
 ConstTokenOrSyntax ExpressionCoverageBinInitializerSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         case 1: return withClause;
         default: return nullptr;
     }
@@ -4157,7 +4157,7 @@ ConstTokenOrSyntax ExpressionCoverageBinInitializerSyntax::getChild(uint32_t ind
 
 void ExpressionCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 1: withClause = &child.node()->as<WithClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -4174,24 +4174,24 @@ bool ExpressionOrDistSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ExpressionOrDistSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expr;
-        case 1: return &distribution;
+        case 0: return expr.get();
+        case 1: return distribution.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax ExpressionOrDistSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expr;
-        case 1: return &distribution;
+        case 0: return expr.get();
+        case 1: return distribution.get();
         default: return nullptr;
     }
 }
 
 void ExpressionOrDistSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
-        case 1: new (&distribution) = child.node()->as<DistConstraintListSyntax>(); return;
+        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
+        case 1: distribution = &child.node()->as<DistConstraintListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -4207,21 +4207,21 @@ bool ExpressionPatternSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ExpressionPatternSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax ExpressionPatternSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         default: return nullptr;
     }
 }
 
 void ExpressionPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -4239,7 +4239,7 @@ TokenOrSyntax ExpressionStatementSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return semi;
         default: return nullptr;
     }
@@ -4249,7 +4249,7 @@ ConstTokenOrSyntax ExpressionStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return semi;
         default: return nullptr;
     }
@@ -4258,8 +4258,8 @@ ConstTokenOrSyntax ExpressionStatementSyntax::getChild(uint32_t index) const {
 void ExpressionStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 2: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -4450,7 +4450,7 @@ bool ExtendsClauseSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ExtendsClauseSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return keyword;
-        case 1: return &baseName;
+        case 1: return baseName.get();
         case 2: return arguments;
         default: return nullptr;
     }
@@ -4459,7 +4459,7 @@ TokenOrSyntax ExtendsClauseSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ExtendsClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
-        case 1: return &baseName;
+        case 1: return baseName.get();
         case 2: return arguments;
         default: return nullptr;
     }
@@ -4468,7 +4468,7 @@ ConstTokenOrSyntax ExtendsClauseSyntax::getChild(uint32_t index) const {
 void ExtendsClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: keyword = child.token(); return;
-        case 1: new (&baseName) = child.node()->as<NameSyntax>(); return;
+        case 1: baseName = &child.node()->as<NameSyntax>(); return;
         case 2: arguments = &child.node()->as<ArgumentListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -4486,7 +4486,7 @@ bool ExternModuleSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ExternModuleSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return externKeyword;
-        case 1: return &header;
+        case 1: return header.get();
         default: return nullptr;
     }
 }
@@ -4494,7 +4494,7 @@ TokenOrSyntax ExternModuleSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ExternModuleSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return externKeyword;
-        case 1: return &header;
+        case 1: return header.get();
         default: return nullptr;
     }
 }
@@ -4502,7 +4502,7 @@ ConstTokenOrSyntax ExternModuleSyntax::getChild(uint32_t index) const {
 void ExternModuleSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: externKeyword = child.token(); return;
-        case 1: new (&header) = child.node()->as<ModuleHeaderSyntax>(); return;
+        case 1: header = &child.node()->as<ModuleHeaderSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -4524,11 +4524,11 @@ TokenOrSyntax ForLoopStatementSyntax::getChild(uint32_t index) {
         case 3: return openParen;
         case 4: return &initializers;
         case 5: return semi1;
-        case 6: return &stopExpr;
+        case 6: return stopExpr.get();
         case 7: return semi2;
         case 8: return &steps;
         case 9: return closeParen;
-        case 10: return &statement;
+        case 10: return statement.get();
         default: return nullptr;
     }
 }
@@ -4541,11 +4541,11 @@ ConstTokenOrSyntax ForLoopStatementSyntax::getChild(uint32_t index) const {
         case 3: return openParen;
         case 4: return &initializers;
         case 5: return semi1;
-        case 6: return &stopExpr;
+        case 6: return stopExpr.get();
         case 7: return semi2;
         case 8: return &steps;
         case 9: return closeParen;
-        case 10: return &statement;
+        case 10: return statement.get();
         default: return nullptr;
     }
 }
@@ -4553,16 +4553,16 @@ ConstTokenOrSyntax ForLoopStatementSyntax::getChild(uint32_t index) const {
 void ForLoopStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: forKeyword = child.token(); return;
         case 3: openParen = child.token(); return;
-        case 4: new (&initializers) = child.node()->as<SeparatedSyntaxList<SyntaxNode>>(); return;
+        case 4: initializers = child.node()->as<SeparatedSyntaxList<SyntaxNode>>(); return;
         case 5: semi1 = child.token(); return;
-        case 6: new (&stopExpr) = child.node()->as<ExpressionSyntax>(); return;
+        case 6: stopExpr = &child.node()->as<ExpressionSyntax>(); return;
         case 7: semi2 = child.token(); return;
-        case 8: new (&steps) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
+        case 8: steps = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 9: closeParen = child.token(); return;
-        case 10: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 10: statement = &child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -4579,8 +4579,8 @@ bool ForVariableDeclarationSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ForVariableDeclarationSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return varKeyword;
-        case 1: return &type;
-        case 2: return &declarator;
+        case 1: return type.get();
+        case 2: return declarator.get();
         default: return nullptr;
     }
 }
@@ -4588,8 +4588,8 @@ TokenOrSyntax ForVariableDeclarationSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ForVariableDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return varKeyword;
-        case 1: return &type;
-        case 2: return &declarator;
+        case 1: return type.get();
+        case 2: return declarator.get();
         default: return nullptr;
     }
 }
@@ -4597,8 +4597,8 @@ ConstTokenOrSyntax ForVariableDeclarationSyntax::getChild(uint32_t index) const 
 void ForVariableDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: varKeyword = child.token(); return;
-        case 1: new (&type) = child.node()->as<DataTypeSyntax>(); return;
-        case 2: new (&declarator) = child.node()->as<VariableDeclaratorSyntax>(); return;
+        case 1: type = &child.node()->as<DataTypeSyntax>(); return;
+        case 2: declarator = &child.node()->as<VariableDeclaratorSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -4615,7 +4615,7 @@ bool ForeachLoopListSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ForeachLoopListSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return openParen;
-        case 1: return &arrayName;
+        case 1: return arrayName.get();
         case 2: return openBracket;
         case 3: return &loopVariables;
         case 4: return closeBracket;
@@ -4627,7 +4627,7 @@ TokenOrSyntax ForeachLoopListSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ForeachLoopListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
-        case 1: return &arrayName;
+        case 1: return arrayName.get();
         case 2: return openBracket;
         case 3: return &loopVariables;
         case 4: return closeBracket;
@@ -4639,9 +4639,9 @@ ConstTokenOrSyntax ForeachLoopListSyntax::getChild(uint32_t index) const {
 void ForeachLoopListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&arrayName) = child.node()->as<NameSyntax>(); return;
+        case 1: arrayName = &child.node()->as<NameSyntax>(); return;
         case 2: openBracket = child.token(); return;
-        case 3: new (&loopVariables) = child.node()->as<SeparatedSyntaxList<NameSyntax>>(); return;
+        case 3: loopVariables = child.node()->as<SeparatedSyntaxList<NameSyntax>>(); return;
         case 4: closeBracket = child.token(); return;
         case 5: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
@@ -4662,8 +4662,8 @@ TokenOrSyntax ForeachLoopStatementSyntax::getChild(uint32_t index) {
         case 0: return label;
         case 1: return &attributes;
         case 2: return keyword;
-        case 3: return &loopList;
-        case 4: return &statement;
+        case 3: return loopList.get();
+        case 4: return statement.get();
         default: return nullptr;
     }
 }
@@ -4673,8 +4673,8 @@ ConstTokenOrSyntax ForeachLoopStatementSyntax::getChild(uint32_t index) const {
         case 0: return label;
         case 1: return &attributes;
         case 2: return keyword;
-        case 3: return &loopList;
-        case 4: return &statement;
+        case 3: return loopList.get();
+        case 4: return statement.get();
         default: return nullptr;
     }
 }
@@ -4682,10 +4682,10 @@ ConstTokenOrSyntax ForeachLoopStatementSyntax::getChild(uint32_t index) const {
 void ForeachLoopStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: keyword = child.token(); return;
-        case 3: new (&loopList) = child.node()->as<ForeachLoopListSyntax>(); return;
-        case 4: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 3: loopList = &child.node()->as<ForeachLoopListSyntax>(); return;
+        case 4: statement = &child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -4704,7 +4704,7 @@ TokenOrSyntax ForeverStatementSyntax::getChild(uint32_t index) {
         case 0: return label;
         case 1: return &attributes;
         case 2: return foreverKeyword;
-        case 3: return &statement;
+        case 3: return statement.get();
         default: return nullptr;
     }
 }
@@ -4714,7 +4714,7 @@ ConstTokenOrSyntax ForeverStatementSyntax::getChild(uint32_t index) const {
         case 0: return label;
         case 1: return &attributes;
         case 2: return foreverKeyword;
-        case 3: return &statement;
+        case 3: return statement.get();
         default: return nullptr;
     }
 }
@@ -4722,9 +4722,9 @@ ConstTokenOrSyntax ForeverStatementSyntax::getChild(uint32_t index) const {
 void ForeverStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: foreverKeyword = child.token(); return;
-        case 3: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 3: statement = &child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -4764,7 +4764,7 @@ ConstTokenOrSyntax ForwardInterfaceClassTypedefDeclarationSyntax::getChild(uint3
 
 void ForwardInterfaceClassTypedefDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: typedefKeyword = child.token(); return;
         case 2: interfaceKeyword = child.token(); return;
         case 3: classKeyword = child.token(); return;
@@ -4807,7 +4807,7 @@ ConstTokenOrSyntax ForwardTypedefDeclarationSyntax::getChild(uint32_t index) con
 
 void ForwardTypedefDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: typedefKeyword = child.token(); return;
         case 2: keyword = child.token(); return;
         case 3: name = child.token(); return;
@@ -4834,7 +4834,7 @@ bool FunctionDeclarationSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax FunctionDeclarationSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &prototype;
+        case 1: return prototype.get();
         case 2: return semi;
         case 3: return &items;
         case 4: return end;
@@ -4846,7 +4846,7 @@ TokenOrSyntax FunctionDeclarationSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax FunctionDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &prototype;
+        case 1: return prototype.get();
         case 2: return semi;
         case 3: return &items;
         case 4: return end;
@@ -4857,10 +4857,10 @@ ConstTokenOrSyntax FunctionDeclarationSyntax::getChild(uint32_t index) const {
 
 void FunctionDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&prototype) = child.node()->as<FunctionPrototypeSyntax>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: prototype = &child.node()->as<FunctionPrototypeSyntax>(); return;
         case 2: semi = child.token(); return;
-        case 3: new (&items) = child.node()->as<SyntaxList<SyntaxNode>>(); return;
+        case 3: items = child.node()->as<SyntaxList<SyntaxNode>>(); return;
         case 4: end = child.token(); return;
         case 5: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
@@ -4897,7 +4897,7 @@ ConstTokenOrSyntax FunctionPortListSyntax::getChild(uint32_t index) const {
 void FunctionPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&ports) = child.node()->as<SeparatedSyntaxList<FunctionPortSyntax>>(); return;
+        case 1: ports = child.node()->as<SeparatedSyntaxList<FunctionPortSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -4919,7 +4919,7 @@ TokenOrSyntax FunctionPortSyntax::getChild(uint32_t index) {
         case 2: return direction;
         case 3: return varKeyword;
         case 4: return dataType;
-        case 5: return &declarator;
+        case 5: return declarator.get();
         default: return nullptr;
     }
 }
@@ -4931,19 +4931,19 @@ ConstTokenOrSyntax FunctionPortSyntax::getChild(uint32_t index) const {
         case 2: return direction;
         case 3: return varKeyword;
         case 4: return dataType;
-        case 5: return &declarator;
+        case 5: return declarator.get();
         default: return nullptr;
     }
 }
 
 void FunctionPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: constKeyword = child.token(); return;
         case 2: direction = child.token(); return;
         case 3: varKeyword = child.token(); return;
         case 4: dataType = &child.node()->as<DataTypeSyntax>(); return;
-        case 5: new (&declarator) = child.node()->as<VariableDeclaratorSyntax>(); return;
+        case 5: declarator = &child.node()->as<VariableDeclaratorSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -4962,7 +4962,7 @@ TokenOrSyntax FunctionPrototypeSyntax::getChild(uint32_t index) {
         case 0: return keyword;
         case 1: return lifetime;
         case 2: return returnType;
-        case 3: return &name;
+        case 3: return name.get();
         case 4: return portList;
         default: return nullptr;
     }
@@ -4973,7 +4973,7 @@ ConstTokenOrSyntax FunctionPrototypeSyntax::getChild(uint32_t index) const {
         case 0: return keyword;
         case 1: return lifetime;
         case 2: return returnType;
-        case 3: return &name;
+        case 3: return name.get();
         case 4: return portList;
         default: return nullptr;
     }
@@ -4984,7 +4984,7 @@ void FunctionPrototypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: keyword = child.token(); return;
         case 1: lifetime = child.token(); return;
         case 2: returnType = &child.node()->as<DataTypeSyntax>(); return;
-        case 3: new (&name) = child.node()->as<NameSyntax>(); return;
+        case 3: name = &child.node()->as<NameSyntax>(); return;
         case 4: portList = &child.node()->as<FunctionPortListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -5027,11 +5027,11 @@ ConstTokenOrSyntax GenerateBlockSyntax::getChild(uint32_t index) const {
 
 void GenerateBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: label = &child.node()->as<NamedLabelSyntax>(); return;
         case 2: begin = child.token(); return;
         case 3: beginName = &child.node()->as<NamedBlockClauseSyntax>(); return;
-        case 4: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 4: members = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 5: end = child.token(); return;
         case 6: endName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
@@ -5069,9 +5069,9 @@ ConstTokenOrSyntax GenerateRegionSyntax::getChild(uint32_t index) const {
 
 void GenerateRegionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
-        case 2: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 2: members = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 3: endgenerate = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -5108,9 +5108,9 @@ ConstTokenOrSyntax GenvarDeclarationSyntax::getChild(uint32_t index) const {
 
 void GenvarDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
-        case 2: new (&identifiers) = child.node()->as<SeparatedSyntaxList<IdentifierNameSyntax>>(); return;
+        case 2: identifiers = child.node()->as<SeparatedSyntaxList<IdentifierNameSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -5150,9 +5150,9 @@ ConstTokenOrSyntax HierarchicalInstanceSyntax::getChild(uint32_t index) const {
 void HierarchicalInstanceSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: name = child.token(); return;
-        case 1: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
+        case 1: dimensions = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         case 2: openParen = child.token(); return;
-        case 3: new (&connections) = child.node()->as<SeparatedSyntaxList<PortConnectionSyntax>>(); return;
+        case 3: connections = child.node()->as<SeparatedSyntaxList<PortConnectionSyntax>>(); return;
         case 4: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -5191,10 +5191,10 @@ ConstTokenOrSyntax HierarchyInstantiationSyntax::getChild(uint32_t index) const 
 
 void HierarchyInstantiationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: type = child.token(); return;
         case 2: parameters = &child.node()->as<ParameterValueAssignmentSyntax>(); return;
-        case 3: new (&instances) = child.node()->as<SeparatedSyntaxList<HierarchicalInstanceSyntax>>(); return;
+        case 3: instances = child.node()->as<SeparatedSyntaxList<HierarchicalInstanceSyntax>>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -5230,7 +5230,7 @@ ConstTokenOrSyntax IdentifierListSyntax::getChild(uint32_t index) const {
 void IdentifierListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&identifiers) = child.node()->as<SeparatedSyntaxList<IdentifierNameSyntax>>(); return;
+        case 1: identifiers = child.node()->as<SeparatedSyntaxList<IdentifierNameSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -5294,7 +5294,7 @@ ConstTokenOrSyntax IdentifierSelectNameSyntax::getChild(uint32_t index) const {
 void IdentifierSelectNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: identifier = child.token(); return;
-        case 1: new (&selectors) = child.node()->as<SyntaxList<ElementSelectSyntax>>(); return;
+        case 1: selectors = child.node()->as<SyntaxList<ElementSelectSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5313,9 +5313,9 @@ TokenOrSyntax IfGenerateSyntax::getChild(uint32_t index) {
         case 0: return &attributes;
         case 1: return keyword;
         case 2: return openParen;
-        case 3: return &condition;
+        case 3: return condition.get();
         case 4: return closeParen;
-        case 5: return &block;
+        case 5: return block.get();
         case 6: return elseClause;
         default: return nullptr;
     }
@@ -5326,9 +5326,9 @@ ConstTokenOrSyntax IfGenerateSyntax::getChild(uint32_t index) const {
         case 0: return &attributes;
         case 1: return keyword;
         case 2: return openParen;
-        case 3: return &condition;
+        case 3: return condition.get();
         case 4: return closeParen;
-        case 5: return &block;
+        case 5: return block.get();
         case 6: return elseClause;
         default: return nullptr;
     }
@@ -5336,12 +5336,12 @@ ConstTokenOrSyntax IfGenerateSyntax::getChild(uint32_t index) const {
 
 void IfGenerateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: openParen = child.token(); return;
-        case 3: new (&condition) = child.node()->as<ExpressionSyntax>(); return;
+        case 3: condition = &child.node()->as<ExpressionSyntax>(); return;
         case 4: closeParen = child.token(); return;
-        case 5: new (&block) = child.node()->as<MemberSyntax>(); return;
+        case 5: block = &child.node()->as<MemberSyntax>(); return;
         case 6: elseClause = &child.node()->as<ElseClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -5360,7 +5360,7 @@ TokenOrSyntax IffClauseSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return iff;
         case 1: return openParen;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return closeParen;
         default: return nullptr;
     }
@@ -5370,7 +5370,7 @@ ConstTokenOrSyntax IffClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return iff;
         case 1: return openParen;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return closeParen;
         default: return nullptr;
     }
@@ -5380,7 +5380,7 @@ void IffClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: iff = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -5398,7 +5398,7 @@ bool ImmediateAssertionMemberSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ImmediateAssertionMemberSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &statement;
+        case 1: return statement.get();
         default: return nullptr;
     }
 }
@@ -5406,15 +5406,15 @@ TokenOrSyntax ImmediateAssertionMemberSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ImmediateAssertionMemberSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &statement;
+        case 1: return statement.get();
         default: return nullptr;
     }
 }
 
 void ImmediateAssertionMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&statement) = child.node()->as<ImmediateAssertionStatementSyntax>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: statement = &child.node()->as<ImmediateAssertionStatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5441,8 +5441,8 @@ TokenOrSyntax ImmediateAssertionStatementSyntax::getChild(uint32_t index) {
         case 1: return &attributes;
         case 2: return keyword;
         case 3: return delay;
-        case 4: return &expr;
-        case 5: return &action;
+        case 4: return expr.get();
+        case 5: return action.get();
         default: return nullptr;
     }
 }
@@ -5453,8 +5453,8 @@ ConstTokenOrSyntax ImmediateAssertionStatementSyntax::getChild(uint32_t index) c
         case 1: return &attributes;
         case 2: return keyword;
         case 3: return delay;
-        case 4: return &expr;
-        case 5: return &action;
+        case 4: return expr.get();
+        case 5: return action.get();
         default: return nullptr;
     }
 }
@@ -5462,11 +5462,11 @@ ConstTokenOrSyntax ImmediateAssertionStatementSyntax::getChild(uint32_t index) c
 void ImmediateAssertionStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: keyword = child.token(); return;
         case 3: delay = &child.node()->as<DeferredAssertionSyntax>(); return;
-        case 4: new (&expr) = child.node()->as<ParenthesizedExpressionSyntax>(); return;
-        case 5: new (&action) = child.node()->as<ActionBlockSyntax>(); return;
+        case 4: expr = &child.node()->as<ParenthesizedExpressionSyntax>(); return;
+        case 5: action = &child.node()->as<ActionBlockSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5499,7 +5499,7 @@ ConstTokenOrSyntax ImplementsClauseSyntax::getChild(uint32_t index) const {
 void ImplementsClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: keyword = child.token(); return;
-        case 1: new (&interfaces) = child.node()->as<SeparatedSyntaxList<NameSyntax>>(); return;
+        case 1: interfaces = child.node()->as<SeparatedSyntaxList<NameSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5515,27 +5515,27 @@ bool ImplicationConstraintSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ImplicationConstraintSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return arrow;
-        case 2: return &constraints;
+        case 2: return constraints.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax ImplicationConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return arrow;
-        case 2: return &constraints;
+        case 2: return constraints.get();
         default: return nullptr;
     }
 }
 
 void ImplicationConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: left = &child.node()->as<ExpressionSyntax>(); return;
         case 1: arrow = child.token(); return;
-        case 2: new (&constraints) = child.node()->as<ConstraintItemSyntax>(); return;
+        case 2: constraints = &child.node()->as<ConstraintItemSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5552,8 +5552,8 @@ bool ImplicitAnsiPortSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ImplicitAnsiPortSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &header;
-        case 2: return &declarator;
+        case 1: return header.get();
+        case 2: return declarator.get();
         default: return nullptr;
     }
 }
@@ -5561,17 +5561,17 @@ TokenOrSyntax ImplicitAnsiPortSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ImplicitAnsiPortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &header;
-        case 2: return &declarator;
+        case 1: return header.get();
+        case 2: return declarator.get();
         default: return nullptr;
     }
 }
 
 void ImplicitAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&header) = child.node()->as<PortHeaderSyntax>(); return;
-        case 2: new (&declarator) = child.node()->as<VariableDeclaratorSyntax>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: header = &child.node()->as<PortHeaderSyntax>(); return;
+        case 2: declarator = &child.node()->as<VariableDeclaratorSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5617,21 +5617,21 @@ bool ImplicitNonAnsiPortSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ImplicitNonAnsiPortSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax ImplicitNonAnsiPortSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         default: return nullptr;
     }
 }
 
 void ImplicitNonAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5664,7 +5664,7 @@ ConstTokenOrSyntax ImplicitTypeSyntax::getChild(uint32_t index) const {
 void ImplicitTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: signing = child.token(); return;
-        case 1: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
+        case 1: dimensions = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5716,27 +5716,27 @@ bool InsideExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax InsideExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         case 1: return inside;
-        case 2: return &ranges;
+        case 2: return ranges.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax InsideExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         case 1: return inside;
-        case 2: return &ranges;
+        case 2: return ranges.get();
         default: return nullptr;
     }
 }
 
 void InsideExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 1: inside = child.token(); return;
-        case 2: new (&ranges) = child.node()->as<OpenRangeListSyntax>(); return;
+        case 2: ranges = &child.node()->as<OpenRangeListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5785,7 +5785,7 @@ void IntegerTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: keyword = child.token(); return;
         case 1: signing = child.token(); return;
-        case 2: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
+        case 2: dimensions = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5906,7 +5906,7 @@ bool InvocationExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax InvocationExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return &attributes;
         case 2: return arguments;
         default: return nullptr;
@@ -5915,7 +5915,7 @@ TokenOrSyntax InvocationExpressionSyntax::getChild(uint32_t index) {
 
 ConstTokenOrSyntax InvocationExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return &attributes;
         case 2: return arguments;
         default: return nullptr;
@@ -5924,8 +5924,8 @@ ConstTokenOrSyntax InvocationExpressionSyntax::getChild(uint32_t index) const {
 
 void InvocationExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: left = &child.node()->as<ExpressionSyntax>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: arguments = &child.node()->as<ArgumentListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -5963,7 +5963,7 @@ ConstTokenOrSyntax JumpStatementSyntax::getChild(uint32_t index) const {
 void JumpStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: breakOrContinue = child.token(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
@@ -6075,7 +6075,7 @@ TokenOrSyntax LetDeclarationSyntax::getChild(uint32_t index) {
         case 1: return let;
         case 2: return identifier;
         case 3: return portList;
-        case 4: return &initializer;
+        case 4: return initializer.get();
         case 5: return semi;
         default: return nullptr;
     }
@@ -6087,7 +6087,7 @@ ConstTokenOrSyntax LetDeclarationSyntax::getChild(uint32_t index) const {
         case 1: return let;
         case 2: return identifier;
         case 3: return portList;
-        case 4: return &initializer;
+        case 4: return initializer.get();
         case 5: return semi;
         default: return nullptr;
     }
@@ -6095,11 +6095,11 @@ ConstTokenOrSyntax LetDeclarationSyntax::getChild(uint32_t index) const {
 
 void LetDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: let = child.token(); return;
         case 2: identifier = child.token(); return;
         case 3: portList = &child.node()->as<AssertionItemPortListSyntax>(); return;
-        case 4: new (&initializer) = child.node()->as<EqualsValueClauseSyntax>(); return;
+        case 4: initializer = &child.node()->as<EqualsValueClauseSyntax>(); return;
         case 5: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -6202,8 +6202,8 @@ bool LoopConstraintSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax LoopConstraintSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return foreachKeyword;
-        case 1: return &loopList;
-        case 2: return &constraints;
+        case 1: return loopList.get();
+        case 2: return constraints.get();
         default: return nullptr;
     }
 }
@@ -6211,8 +6211,8 @@ TokenOrSyntax LoopConstraintSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax LoopConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return foreachKeyword;
-        case 1: return &loopList;
-        case 2: return &constraints;
+        case 1: return loopList.get();
+        case 2: return constraints.get();
         default: return nullptr;
     }
 }
@@ -6220,8 +6220,8 @@ ConstTokenOrSyntax LoopConstraintSyntax::getChild(uint32_t index) const {
 void LoopConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: foreachKeyword = child.token(); return;
-        case 1: new (&loopList) = child.node()->as<ForeachLoopListSyntax>(); return;
-        case 2: new (&constraints) = child.node()->as<ConstraintItemSyntax>(); return;
+        case 1: loopList = &child.node()->as<ForeachLoopListSyntax>(); return;
+        case 2: constraints = &child.node()->as<ConstraintItemSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -6243,13 +6243,13 @@ TokenOrSyntax LoopGenerateSyntax::getChild(uint32_t index) {
         case 3: return genvar;
         case 4: return identifier;
         case 5: return equals;
-        case 6: return &initialExpr;
+        case 6: return initialExpr.get();
         case 7: return semi1;
-        case 8: return &stopExpr;
+        case 8: return stopExpr.get();
         case 9: return semi2;
-        case 10: return &iterationExpr;
+        case 10: return iterationExpr.get();
         case 11: return closeParen;
-        case 12: return &block;
+        case 12: return block.get();
         default: return nullptr;
     }
 }
@@ -6262,32 +6262,32 @@ ConstTokenOrSyntax LoopGenerateSyntax::getChild(uint32_t index) const {
         case 3: return genvar;
         case 4: return identifier;
         case 5: return equals;
-        case 6: return &initialExpr;
+        case 6: return initialExpr.get();
         case 7: return semi1;
-        case 8: return &stopExpr;
+        case 8: return stopExpr.get();
         case 9: return semi2;
-        case 10: return &iterationExpr;
+        case 10: return iterationExpr.get();
         case 11: return closeParen;
-        case 12: return &block;
+        case 12: return block.get();
         default: return nullptr;
     }
 }
 
 void LoopGenerateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: openParen = child.token(); return;
         case 3: genvar = child.token(); return;
         case 4: identifier = child.token(); return;
         case 5: equals = child.token(); return;
-        case 6: new (&initialExpr) = child.node()->as<ExpressionSyntax>(); return;
+        case 6: initialExpr = &child.node()->as<ExpressionSyntax>(); return;
         case 7: semi1 = child.token(); return;
-        case 8: new (&stopExpr) = child.node()->as<ExpressionSyntax>(); return;
+        case 8: stopExpr = &child.node()->as<ExpressionSyntax>(); return;
         case 9: semi2 = child.token(); return;
-        case 10: new (&iterationExpr) = child.node()->as<ExpressionSyntax>(); return;
+        case 10: iterationExpr = &child.node()->as<ExpressionSyntax>(); return;
         case 11: closeParen = child.token(); return;
-        case 12: new (&block) = child.node()->as<MemberSyntax>(); return;
+        case 12: block = &child.node()->as<MemberSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -6307,9 +6307,9 @@ TokenOrSyntax LoopStatementSyntax::getChild(uint32_t index) {
         case 1: return &attributes;
         case 2: return repeatOrWhile;
         case 3: return openParen;
-        case 4: return &expr;
+        case 4: return expr.get();
         case 5: return closeParen;
-        case 6: return &statement;
+        case 6: return statement.get();
         default: return nullptr;
     }
 }
@@ -6320,9 +6320,9 @@ ConstTokenOrSyntax LoopStatementSyntax::getChild(uint32_t index) const {
         case 1: return &attributes;
         case 2: return repeatOrWhile;
         case 3: return openParen;
-        case 4: return &expr;
+        case 4: return expr.get();
         case 5: return closeParen;
-        case 6: return &statement;
+        case 6: return statement.get();
         default: return nullptr;
     }
 }
@@ -6330,12 +6330,12 @@ ConstTokenOrSyntax LoopStatementSyntax::getChild(uint32_t index) const {
 void LoopStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: repeatOrWhile = child.token(); return;
         case 3: openParen = child.token(); return;
-        case 4: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 4: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 5: closeParen = child.token(); return;
-        case 6: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 6: statement = &child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -6370,7 +6370,7 @@ ConstTokenOrSyntax MacroActualArgumentListSyntax::getChild(uint32_t index) const
 void MacroActualArgumentListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&args) = child.node()->as<SeparatedSyntaxList<MacroActualArgumentSyntax>>(); return;
+        case 1: args = child.node()->as<SeparatedSyntaxList<MacroActualArgumentSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -6401,7 +6401,7 @@ ConstTokenOrSyntax MacroActualArgumentSyntax::getChild(uint32_t index) const {
 
 void MacroActualArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&tokens) = child.node()->as<TokenList>(); return;
+        case 0: tokens = child.node()->as<TokenList>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -6434,7 +6434,7 @@ ConstTokenOrSyntax MacroArgumentDefaultSyntax::getChild(uint32_t index) const {
 void MacroArgumentDefaultSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: equals = child.token(); return;
-        case 1: new (&tokens) = child.node()->as<TokenList>(); return;
+        case 1: tokens = child.node()->as<TokenList>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -6469,7 +6469,7 @@ ConstTokenOrSyntax MacroFormalArgumentListSyntax::getChild(uint32_t index) const
 void MacroFormalArgumentListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&args) = child.node()->as<SeparatedSyntaxList<MacroFormalArgumentSyntax>>(); return;
+        case 1: args = child.node()->as<SeparatedSyntaxList<MacroFormalArgumentSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -6553,7 +6553,7 @@ bool MatchesClauseSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax MatchesClauseSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return matchesKeyword;
-        case 1: return &pattern;
+        case 1: return pattern.get();
         default: return nullptr;
     }
 }
@@ -6561,7 +6561,7 @@ TokenOrSyntax MatchesClauseSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax MatchesClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return matchesKeyword;
-        case 1: return &pattern;
+        case 1: return pattern.get();
         default: return nullptr;
     }
 }
@@ -6569,7 +6569,7 @@ ConstTokenOrSyntax MatchesClauseSyntax::getChild(uint32_t index) const {
 void MatchesClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: matchesKeyword = child.token(); return;
-        case 1: new (&pattern) = child.node()->as<PatternSyntax>(); return;
+        case 1: pattern = &child.node()->as<PatternSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -6585,7 +6585,7 @@ bool MemberAccessExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax MemberAccessExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return dot;
         case 2: return name;
         default: return nullptr;
@@ -6594,7 +6594,7 @@ TokenOrSyntax MemberAccessExpressionSyntax::getChild(uint32_t index) {
 
 ConstTokenOrSyntax MemberAccessExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return dot;
         case 2: return name;
         default: return nullptr;
@@ -6603,7 +6603,7 @@ ConstTokenOrSyntax MemberAccessExpressionSyntax::getChild(uint32_t index) const 
 
 void MemberAccessExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: left = &child.node()->as<ExpressionSyntax>(); return;
         case 1: dot = child.token(); return;
         case 2: name = child.token(); return;
         default: THROW_UNREACHABLE;
@@ -6693,7 +6693,7 @@ ConstTokenOrSyntax MemberSyntax::getChild(uint32_t index) const {
 
 void MemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -6709,33 +6709,33 @@ bool MinTypMaxExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax MinTypMaxExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &min;
+        case 0: return min.get();
         case 1: return colon1;
-        case 2: return &typ;
+        case 2: return typ.get();
         case 3: return colon2;
-        case 4: return &max;
+        case 4: return max.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax MinTypMaxExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &min;
+        case 0: return min.get();
         case 1: return colon1;
-        case 2: return &typ;
+        case 2: return typ.get();
         case 3: return colon2;
-        case 4: return &max;
+        case 4: return max.get();
         default: return nullptr;
     }
 }
 
 void MinTypMaxExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&min) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: min = &child.node()->as<ExpressionSyntax>(); return;
         case 1: colon1 = child.token(); return;
-        case 2: new (&typ) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: typ = &child.node()->as<ExpressionSyntax>(); return;
         case 3: colon2 = child.token(); return;
-        case 4: new (&max) = child.node()->as<ExpressionSyntax>(); return;
+        case 4: max = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -6769,7 +6769,7 @@ ConstTokenOrSyntax ModportClockingPortSyntax::getChild(uint32_t index) const {
 
 void ModportClockingPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: clocking = child.token(); return;
         case 2: name = child.token(); return;
         default: THROW_UNREACHABLE;
@@ -6807,9 +6807,9 @@ ConstTokenOrSyntax ModportDeclarationSyntax::getChild(uint32_t index) const {
 
 void ModportDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
-        case 2: new (&items) = child.node()->as<SeparatedSyntaxList<ModportItemSyntax>>(); return;
+        case 2: items = child.node()->as<SeparatedSyntaxList<ModportItemSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -6869,7 +6869,7 @@ bool ModportItemSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ModportItemSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return name;
-        case 1: return &ports;
+        case 1: return ports.get();
         default: return nullptr;
     }
 }
@@ -6877,7 +6877,7 @@ TokenOrSyntax ModportItemSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ModportItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return name;
-        case 1: return &ports;
+        case 1: return ports.get();
         default: return nullptr;
     }
 }
@@ -6885,7 +6885,7 @@ ConstTokenOrSyntax ModportItemSyntax::getChild(uint32_t index) const {
 void ModportItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: name = child.token(); return;
-        case 1: new (&ports) = child.node()->as<AnsiPortListSyntax>(); return;
+        case 1: ports = &child.node()->as<AnsiPortListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -6960,9 +6960,9 @@ ConstTokenOrSyntax ModportSimplePortListSyntax::getChild(uint32_t index) const {
 
 void ModportSimplePortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: direction = child.token(); return;
-        case 2: new (&ports) = child.node()->as<SeparatedSyntaxList<ModportPortSyntax>>(); return;
+        case 2: ports = child.node()->as<SeparatedSyntaxList<ModportPortSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -6996,9 +6996,9 @@ ConstTokenOrSyntax ModportSubroutinePortListSyntax::getChild(uint32_t index) con
 
 void ModportSubroutinePortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: importExport = child.token(); return;
-        case 2: new (&ports) = child.node()->as<SeparatedSyntaxList<ModportPortSyntax>>(); return;
+        case 2: ports = child.node()->as<SeparatedSyntaxList<ModportPortSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7014,21 +7014,21 @@ bool ModportSubroutinePortSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ModportSubroutinePortSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &prototype;
+        case 0: return prototype.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax ModportSubroutinePortSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &prototype;
+        case 0: return prototype.get();
         default: return nullptr;
     }
 }
 
 void ModportSubroutinePortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&prototype) = child.node()->as<FunctionPrototypeSyntax>(); return;
+        case 0: prototype = &child.node()->as<FunctionPrototypeSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7053,7 +7053,7 @@ bool ModuleDeclarationSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ModuleDeclarationSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &header;
+        case 1: return header.get();
         case 2: return &members;
         case 3: return endmodule;
         case 4: return blockName;
@@ -7064,7 +7064,7 @@ TokenOrSyntax ModuleDeclarationSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ModuleDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &header;
+        case 1: return header.get();
         case 2: return &members;
         case 3: return endmodule;
         case 4: return blockName;
@@ -7074,9 +7074,9 @@ ConstTokenOrSyntax ModuleDeclarationSyntax::getChild(uint32_t index) const {
 
 void ModuleDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&header) = child.node()->as<ModuleHeaderSyntax>(); return;
-        case 2: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: header = &child.node()->as<ModuleHeaderSyntax>(); return;
+        case 2: members = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 3: endmodule = child.token(); return;
         case 4: blockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
@@ -7131,7 +7131,7 @@ void ModuleHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: moduleKeyword = child.token(); return;
         case 1: lifetime = child.token(); return;
         case 2: name = child.token(); return;
-        case 3: new (&imports) = child.node()->as<SyntaxList<PackageImportDeclarationSyntax>>(); return;
+        case 3: imports = child.node()->as<SyntaxList<PackageImportDeclarationSyntax>>(); return;
         case 4: parameters = &child.node()->as<ParameterPortListSyntax>(); return;
         case 5: ports = &child.node()->as<PortListSyntax>(); return;
         case 6: semi = child.token(); return;
@@ -7151,8 +7151,8 @@ bool MultipleConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax MultipleConcatenationExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return openBrace;
-        case 1: return &expression;
-        case 2: return &concatenation;
+        case 1: return expression.get();
+        case 2: return concatenation.get();
         case 3: return closeBrace;
         default: return nullptr;
     }
@@ -7161,8 +7161,8 @@ TokenOrSyntax MultipleConcatenationExpressionSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax MultipleConcatenationExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
-        case 1: return &expression;
-        case 2: return &concatenation;
+        case 1: return expression.get();
+        case 2: return concatenation.get();
         case 3: return closeBrace;
         default: return nullptr;
     }
@@ -7171,8 +7171,8 @@ ConstTokenOrSyntax MultipleConcatenationExpressionSyntax::getChild(uint32_t inde
 void MultipleConcatenationExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: new (&expression) = child.node()->as<ExpressionSyntax>(); return;
-        case 2: new (&concatenation) = child.node()->as<ConcatenationExpressionSyntax>(); return;
+        case 1: expression = &child.node()->as<ExpressionSyntax>(); return;
+        case 2: concatenation = &child.node()->as<ConcatenationExpressionSyntax>(); return;
         case 3: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -7346,7 +7346,7 @@ ConstTokenOrSyntax NamedPortConnectionSyntax::getChild(uint32_t index) const {
 
 void NamedPortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: dot = child.token(); return;
         case 2: name = child.token(); return;
         case 3: openParen = child.token(); return;
@@ -7369,7 +7369,7 @@ TokenOrSyntax NamedStructurePatternMemberSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return name;
         case 1: return colon;
-        case 2: return &pattern;
+        case 2: return pattern.get();
         default: return nullptr;
     }
 }
@@ -7378,7 +7378,7 @@ ConstTokenOrSyntax NamedStructurePatternMemberSyntax::getChild(uint32_t index) c
     switch (index) {
         case 0: return name;
         case 1: return colon;
-        case 2: return &pattern;
+        case 2: return pattern.get();
         default: return nullptr;
     }
 }
@@ -7387,7 +7387,7 @@ void NamedStructurePatternMemberSyntax::setChild(uint32_t index, TokenOrSyntax c
     switch (index) {
         case 0: name = child.token(); return;
         case 1: colon = child.token(); return;
-        case 2: new (&pattern) = child.node()->as<PatternSyntax>(); return;
+        case 2: pattern = &child.node()->as<PatternSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7403,21 +7403,21 @@ bool NamedTypeSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax NamedTypeSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &name;
+        case 0: return name.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax NamedTypeSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &name;
+        case 0: return name.get();
         default: return nullptr;
     }
 }
 
 void NamedTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&name) = child.node()->as<NameSyntax>(); return;
+        case 0: name = &child.node()->as<NameSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7437,7 +7437,7 @@ TokenOrSyntax NetDeclarationSyntax::getChild(uint32_t index) {
         case 1: return netType;
         case 2: return strength;
         case 3: return expansionHint;
-        case 4: return &type;
+        case 4: return type.get();
         case 5: return &declarators;
         case 6: return semi;
         default: return nullptr;
@@ -7450,7 +7450,7 @@ ConstTokenOrSyntax NetDeclarationSyntax::getChild(uint32_t index) const {
         case 1: return netType;
         case 2: return strength;
         case 3: return expansionHint;
-        case 4: return &type;
+        case 4: return type.get();
         case 5: return &declarators;
         case 6: return semi;
         default: return nullptr;
@@ -7459,12 +7459,12 @@ ConstTokenOrSyntax NetDeclarationSyntax::getChild(uint32_t index) const {
 
 void NetDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: netType = child.token(); return;
         case 2: strength = &child.node()->as<NetStrengthSyntax>(); return;
         case 3: expansionHint = child.token(); return;
-        case 4: new (&type) = child.node()->as<DataTypeSyntax>(); return;
-        case 5: new (&declarators) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
+        case 4: type = &child.node()->as<DataTypeSyntax>(); return;
+        case 5: declarators = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         case 6: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -7483,7 +7483,7 @@ TokenOrSyntax NetPortHeaderSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return direction;
         case 1: return netType;
-        case 2: return &dataType;
+        case 2: return dataType.get();
         default: return nullptr;
     }
 }
@@ -7492,7 +7492,7 @@ ConstTokenOrSyntax NetPortHeaderSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return direction;
         case 1: return netType;
-        case 2: return &dataType;
+        case 2: return dataType.get();
         default: return nullptr;
     }
 }
@@ -7501,7 +7501,7 @@ void NetPortHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: direction = child.token(); return;
         case 1: netType = child.token(); return;
-        case 2: new (&dataType) = child.node()->as<DataTypeSyntax>(); return;
+        case 2: dataType = &child.node()->as<DataTypeSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7529,7 +7529,7 @@ TokenOrSyntax NewArrayExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return newKeyword;
         case 1: return openBracket;
-        case 2: return &sizeExpr;
+        case 2: return sizeExpr.get();
         case 3: return closeBracket;
         case 4: return initializer;
         default: return nullptr;
@@ -7540,7 +7540,7 @@ ConstTokenOrSyntax NewArrayExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return newKeyword;
         case 1: return openBracket;
-        case 2: return &sizeExpr;
+        case 2: return sizeExpr.get();
         case 3: return closeBracket;
         case 4: return initializer;
         default: return nullptr;
@@ -7551,7 +7551,7 @@ void NewArrayExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: newKeyword = child.token(); return;
         case 1: openBracket = child.token(); return;
-        case 2: new (&sizeExpr) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: sizeExpr = &child.node()->as<ExpressionSyntax>(); return;
         case 3: closeBracket = child.token(); return;
         case 4: initializer = &child.node()->as<ParenthesizedExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
@@ -7606,7 +7606,7 @@ bool NewExpressionSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax NewExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return newKeyword;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -7614,7 +7614,7 @@ TokenOrSyntax NewExpressionSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax NewExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return newKeyword;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -7622,7 +7622,7 @@ ConstTokenOrSyntax NewExpressionSyntax::getChild(uint32_t index) const {
 void NewExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: newKeyword = child.token(); return;
-        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7657,7 +7657,7 @@ ConstTokenOrSyntax NonAnsiPortListSyntax::getChild(uint32_t index) const {
 void NonAnsiPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&ports) = child.node()->as<SeparatedSyntaxList<NonAnsiPortSyntax>>(); return;
+        case 1: ports = child.node()->as<SeparatedSyntaxList<NonAnsiPortSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -7703,7 +7703,7 @@ ConstTokenOrSyntax OpenRangeListSyntax::getChild(uint32_t index) const {
 void OpenRangeListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: new (&valueRanges) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
+        case 1: valueRanges = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -7720,21 +7720,21 @@ bool OrderedArgumentSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax OrderedArgumentSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax OrderedArgumentSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         default: return nullptr;
     }
 }
 
 void OrderedArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7751,7 +7751,7 @@ bool OrderedPortConnectionSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax OrderedPortConnectionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -7759,15 +7759,15 @@ TokenOrSyntax OrderedPortConnectionSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax OrderedPortConnectionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
 
 void OrderedPortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7783,21 +7783,21 @@ bool OrderedStructurePatternMemberSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax OrderedStructurePatternMemberSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &pattern;
+        case 0: return pattern.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax OrderedStructurePatternMemberSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &pattern;
+        case 0: return pattern.get();
         default: return nullptr;
     }
 }
 
 void OrderedStructurePatternMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&pattern) = child.node()->as<PatternSyntax>(); return;
+        case 0: pattern = &child.node()->as<PatternSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7833,9 +7833,9 @@ ConstTokenOrSyntax PackageImportDeclarationSyntax::getChild(uint32_t index) cons
 
 void PackageImportDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
-        case 2: new (&items) = child.node()->as<SeparatedSyntaxList<PackageImportItemSyntax>>(); return;
+        case 2: items = child.node()->as<SeparatedSyntaxList<PackageImportItemSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -7889,7 +7889,7 @@ bool ParameterDeclarationStatementSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ParameterDeclarationStatementSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &parameter;
+        case 1: return parameter.get();
         case 2: return semi;
         default: return nullptr;
     }
@@ -7898,7 +7898,7 @@ TokenOrSyntax ParameterDeclarationStatementSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ParameterDeclarationStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &parameter;
+        case 1: return parameter.get();
         case 2: return semi;
         default: return nullptr;
     }
@@ -7906,8 +7906,8 @@ ConstTokenOrSyntax ParameterDeclarationStatementSyntax::getChild(uint32_t index)
 
 void ParameterDeclarationStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&parameter) = child.node()->as<ParameterDeclarationSyntax>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: parameter = &child.node()->as<ParameterDeclarationSyntax>(); return;
         case 2: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -7925,7 +7925,7 @@ bool ParameterDeclarationSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ParameterDeclarationSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return keyword;
-        case 1: return &type;
+        case 1: return type.get();
         case 2: return &declarators;
         default: return nullptr;
     }
@@ -7934,7 +7934,7 @@ TokenOrSyntax ParameterDeclarationSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ParameterDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
-        case 1: return &type;
+        case 1: return type.get();
         case 2: return &declarators;
         default: return nullptr;
     }
@@ -7943,8 +7943,8 @@ ConstTokenOrSyntax ParameterDeclarationSyntax::getChild(uint32_t index) const {
 void ParameterDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: keyword = child.token(); return;
-        case 1: new (&type) = child.node()->as<DataTypeSyntax>(); return;
-        case 2: new (&declarators) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
+        case 1: type = &child.node()->as<DataTypeSyntax>(); return;
+        case 2: declarators = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7982,7 +7982,7 @@ void ParameterPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: hash = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: new (&declarations) = child.node()->as<SeparatedSyntaxList<ParameterDeclarationSyntax>>(); return;
+        case 2: declarations = child.node()->as<SeparatedSyntaxList<ParameterDeclarationSyntax>>(); return;
         case 3: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -8000,7 +8000,7 @@ bool ParameterValueAssignmentSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return hash;
-        case 1: return &parameters;
+        case 1: return parameters.get();
         default: return nullptr;
     }
 }
@@ -8008,7 +8008,7 @@ TokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return hash;
-        case 1: return &parameters;
+        case 1: return parameters.get();
         default: return nullptr;
     }
 }
@@ -8016,7 +8016,7 @@ ConstTokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) cons
 void ParameterValueAssignmentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: hash = child.token(); return;
-        case 1: new (&parameters) = child.node()->as<ArgumentListSyntax>(); return;
+        case 1: parameters = &child.node()->as<ArgumentListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8066,7 +8066,7 @@ bool ParenthesizedEventExpressionSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ParenthesizedEventExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return openParen;
-        case 1: return &expr;
+        case 1: return expr.get();
         case 2: return closeParen;
         default: return nullptr;
     }
@@ -8075,7 +8075,7 @@ TokenOrSyntax ParenthesizedEventExpressionSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ParenthesizedEventExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
-        case 1: return &expr;
+        case 1: return expr.get();
         case 2: return closeParen;
         default: return nullptr;
     }
@@ -8084,7 +8084,7 @@ ConstTokenOrSyntax ParenthesizedEventExpressionSyntax::getChild(uint32_t index) 
 void ParenthesizedEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&expr) = child.node()->as<EventExpressionSyntax>(); return;
+        case 1: expr = &child.node()->as<EventExpressionSyntax>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -8102,7 +8102,7 @@ bool ParenthesizedExpressionSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ParenthesizedExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return openParen;
-        case 1: return &expression;
+        case 1: return expression.get();
         case 2: return closeParen;
         default: return nullptr;
     }
@@ -8111,7 +8111,7 @@ TokenOrSyntax ParenthesizedExpressionSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ParenthesizedExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
-        case 1: return &expression;
+        case 1: return expression.get();
         case 2: return closeParen;
         default: return nullptr;
     }
@@ -8120,7 +8120,7 @@ ConstTokenOrSyntax ParenthesizedExpressionSyntax::getChild(uint32_t index) const
 void ParenthesizedExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&expression) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: expression = &child.node()->as<ExpressionSyntax>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -8137,33 +8137,33 @@ bool PatternCaseItemSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax PatternCaseItemSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &pattern;
+        case 0: return pattern.get();
         case 1: return tripleAnd;
         case 2: return expr;
         case 3: return colon;
-        case 4: return &statement;
+        case 4: return statement.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax PatternCaseItemSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &pattern;
+        case 0: return pattern.get();
         case 1: return tripleAnd;
         case 2: return expr;
         case 3: return colon;
-        case 4: return &statement;
+        case 4: return statement.get();
         default: return nullptr;
     }
 }
 
 void PatternCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&pattern) = child.node()->as<PatternSyntax>(); return;
+        case 0: pattern = &child.node()->as<PatternSyntax>(); return;
         case 1: tripleAnd = child.token(); return;
         case 2: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 3: colon = child.token(); return;
-        case 4: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 4: statement = &child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8213,7 +8213,7 @@ ConstTokenOrSyntax PortConnectionSyntax::getChild(uint32_t index) const {
 
 void PortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8230,7 +8230,7 @@ bool PortDeclarationSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax PortDeclarationSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &header;
+        case 1: return header.get();
         case 2: return &declarators;
         case 3: return semi;
         default: return nullptr;
@@ -8240,7 +8240,7 @@ TokenOrSyntax PortDeclarationSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax PortDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
-        case 1: return &header;
+        case 1: return header.get();
         case 2: return &declarators;
         case 3: return semi;
         default: return nullptr;
@@ -8249,9 +8249,9 @@ ConstTokenOrSyntax PortDeclarationSyntax::getChild(uint32_t index) const {
 
 void PortDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 1: new (&header) = child.node()->as<PortHeaderSyntax>(); return;
-        case 2: new (&declarators) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: header = &child.node()->as<PortHeaderSyntax>(); return;
+        case 2: declarators = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -8297,7 +8297,7 @@ bool PostfixUnaryExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax PostfixUnaryExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &operand;
+        case 0: return operand.get();
         case 1: return &attributes;
         case 2: return operatorToken;
         default: return nullptr;
@@ -8306,7 +8306,7 @@ TokenOrSyntax PostfixUnaryExpressionSyntax::getChild(uint32_t index) {
 
 ConstTokenOrSyntax PostfixUnaryExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &operand;
+        case 0: return operand.get();
         case 1: return &attributes;
         case 2: return operatorToken;
         default: return nullptr;
@@ -8315,8 +8315,8 @@ ConstTokenOrSyntax PostfixUnaryExpressionSyntax::getChild(uint32_t index) const 
 
 void PostfixUnaryExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&operand) = child.node()->as<ExpressionSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: operand = &child.node()->as<ExpressionSyntax>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: operatorToken = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -8364,7 +8364,7 @@ TokenOrSyntax PrefixUnaryExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return operatorToken;
         case 1: return &attributes;
-        case 2: return &operand;
+        case 2: return operand.get();
         default: return nullptr;
     }
 }
@@ -8373,7 +8373,7 @@ ConstTokenOrSyntax PrefixUnaryExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return operatorToken;
         case 1: return &attributes;
-        case 2: return &operand;
+        case 2: return operand.get();
         default: return nullptr;
     }
 }
@@ -8381,8 +8381,8 @@ ConstTokenOrSyntax PrefixUnaryExpressionSyntax::getChild(uint32_t index) const {
 void PrefixUnaryExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: operatorToken = child.token(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 2: new (&operand) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 2: operand = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8399,7 +8399,7 @@ bool PrimaryBlockEventExpressionSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax PrimaryBlockEventExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return keyword;
-        case 1: return &name;
+        case 1: return name.get();
         default: return nullptr;
     }
 }
@@ -8407,7 +8407,7 @@ TokenOrSyntax PrimaryBlockEventExpressionSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax PrimaryBlockEventExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
-        case 1: return &name;
+        case 1: return name.get();
         default: return nullptr;
     }
 }
@@ -8415,7 +8415,7 @@ ConstTokenOrSyntax PrimaryBlockEventExpressionSyntax::getChild(uint32_t index) c
 void PrimaryBlockEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: keyword = child.token(); return;
-        case 1: new (&name) = child.node()->as<NameSyntax>(); return;
+        case 1: name = &child.node()->as<NameSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8464,9 +8464,9 @@ TokenOrSyntax ProceduralAssignStatementSyntax::getChild(uint32_t index) {
         case 0: return label;
         case 1: return &attributes;
         case 2: return keyword;
-        case 3: return &lvalue;
+        case 3: return lvalue.get();
         case 4: return equals;
-        case 5: return &value;
+        case 5: return value.get();
         case 6: return semi;
         default: return nullptr;
     }
@@ -8477,9 +8477,9 @@ ConstTokenOrSyntax ProceduralAssignStatementSyntax::getChild(uint32_t index) con
         case 0: return label;
         case 1: return &attributes;
         case 2: return keyword;
-        case 3: return &lvalue;
+        case 3: return lvalue.get();
         case 4: return equals;
-        case 5: return &value;
+        case 5: return value.get();
         case 6: return semi;
         default: return nullptr;
     }
@@ -8488,11 +8488,11 @@ ConstTokenOrSyntax ProceduralAssignStatementSyntax::getChild(uint32_t index) con
 void ProceduralAssignStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: keyword = child.token(); return;
-        case 3: new (&lvalue) = child.node()->as<ExpressionSyntax>(); return;
+        case 3: lvalue = &child.node()->as<ExpressionSyntax>(); return;
         case 4: equals = child.token(); return;
-        case 5: new (&value) = child.node()->as<ExpressionSyntax>(); return;
+        case 5: value = &child.node()->as<ExpressionSyntax>(); return;
         case 6: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -8521,7 +8521,7 @@ TokenOrSyntax ProceduralBlockSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
-        case 2: return &statement;
+        case 2: return statement.get();
         default: return nullptr;
     }
 }
@@ -8530,16 +8530,16 @@ ConstTokenOrSyntax ProceduralBlockSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
-        case 2: return &statement;
+        case 2: return statement.get();
         default: return nullptr;
     }
 }
 
 void ProceduralBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
-        case 2: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 2: statement = &child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8564,7 +8564,7 @@ TokenOrSyntax ProceduralDeassignStatementSyntax::getChild(uint32_t index) {
         case 0: return label;
         case 1: return &attributes;
         case 2: return keyword;
-        case 3: return &variable;
+        case 3: return variable.get();
         case 4: return semi;
         default: return nullptr;
     }
@@ -8575,7 +8575,7 @@ ConstTokenOrSyntax ProceduralDeassignStatementSyntax::getChild(uint32_t index) c
         case 0: return label;
         case 1: return &attributes;
         case 2: return keyword;
-        case 3: return &variable;
+        case 3: return variable.get();
         case 4: return semi;
         default: return nullptr;
     }
@@ -8584,9 +8584,9 @@ ConstTokenOrSyntax ProceduralDeassignStatementSyntax::getChild(uint32_t index) c
 void ProceduralDeassignStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: keyword = child.token(); return;
-        case 3: new (&variable) = child.node()->as<ExpressionSyntax>(); return;
+        case 3: variable = &child.node()->as<ExpressionSyntax>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -8609,7 +8609,7 @@ TokenOrSyntax PropertyDeclarationSyntax::getChild(uint32_t index) {
         case 3: return portList;
         case 4: return semi;
         case 5: return &assertionVariables;
-        case 6: return &propertySpec;
+        case 6: return propertySpec.get();
         case 7: return optionalSemi;
         case 8: return end;
         case 9: return endBlockName;
@@ -8625,7 +8625,7 @@ ConstTokenOrSyntax PropertyDeclarationSyntax::getChild(uint32_t index) const {
         case 3: return portList;
         case 4: return semi;
         case 5: return &assertionVariables;
-        case 6: return &propertySpec;
+        case 6: return propertySpec.get();
         case 7: return optionalSemi;
         case 8: return end;
         case 9: return endBlockName;
@@ -8635,13 +8635,13 @@ ConstTokenOrSyntax PropertyDeclarationSyntax::getChild(uint32_t index) const {
 
 void PropertyDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: name = child.token(); return;
         case 3: portList = &child.node()->as<AssertionItemPortListSyntax>(); return;
         case 4: semi = child.token(); return;
-        case 5: new (&assertionVariables) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
-        case 6: new (&propertySpec) = child.node()->as<PropertySpecSyntax>(); return;
+        case 5: assertionVariables = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 6: propertySpec = &child.node()->as<PropertySpecSyntax>(); return;
         case 7: optionalSemi = child.token(); return;
         case 8: end = child.token(); return;
         case 9: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
@@ -8662,7 +8662,7 @@ TokenOrSyntax PropertySpecSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return clocking;
         case 1: return disable;
-        case 2: return &expr;
+        case 2: return expr.get();
         default: return nullptr;
     }
 }
@@ -8671,7 +8671,7 @@ ConstTokenOrSyntax PropertySpecSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return clocking;
         case 1: return disable;
-        case 2: return &expr;
+        case 2: return expr.get();
         default: return nullptr;
     }
 }
@@ -8680,7 +8680,7 @@ void PropertySpecSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: clocking = &child.node()->as<TimingControlSyntax>(); return;
         case 1: disable = &child.node()->as<DisableIffSyntax>(); return;
-        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8729,27 +8729,27 @@ bool RandCaseItemSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax RandCaseItemSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         case 1: return colon;
-        case 2: return &statement;
+        case 2: return statement.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax RandCaseItemSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expr;
+        case 0: return expr.get();
         case 1: return colon;
-        case 2: return &statement;
+        case 2: return statement.get();
         default: return nullptr;
     }
 }
 
 void RandCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 1: colon = child.token(); return;
-        case 2: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 2: statement = &child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8788,9 +8788,9 @@ ConstTokenOrSyntax RandCaseStatementSyntax::getChild(uint32_t index) const {
 void RandCaseStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: randCase = child.token(); return;
-        case 3: new (&items) = child.node()->as<SyntaxList<RandCaseItemSyntax>>(); return;
+        case 3: items = child.node()->as<SyntaxList<RandCaseItemSyntax>>(); return;
         case 4: endCase = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -8809,7 +8809,7 @@ TokenOrSyntax RandomizeMethodWithClauseSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return with;
         case 1: return names;
-        case 2: return &constraints;
+        case 2: return constraints.get();
         default: return nullptr;
     }
 }
@@ -8818,7 +8818,7 @@ ConstTokenOrSyntax RandomizeMethodWithClauseSyntax::getChild(uint32_t index) con
     switch (index) {
         case 0: return with;
         case 1: return names;
-        case 2: return &constraints;
+        case 2: return constraints.get();
         default: return nullptr;
     }
 }
@@ -8827,7 +8827,7 @@ void RandomizeMethodWithClauseSyntax::setChild(uint32_t index, TokenOrSyntax chi
     switch (index) {
         case 0: with = child.token(); return;
         case 1: names = &child.node()->as<IdentifierListSyntax>(); return;
-        case 2: new (&constraints) = child.node()->as<ConstraintBlockSyntax>(); return;
+        case 2: constraints = &child.node()->as<ConstraintBlockSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8843,7 +8843,7 @@ bool RangeCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax RangeCoverageBinInitializerSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &ranges;
+        case 0: return ranges.get();
         case 1: return withClause;
         default: return nullptr;
     }
@@ -8851,7 +8851,7 @@ TokenOrSyntax RangeCoverageBinInitializerSyntax::getChild(uint32_t index) {
 
 ConstTokenOrSyntax RangeCoverageBinInitializerSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &ranges;
+        case 0: return ranges.get();
         case 1: return withClause;
         default: return nullptr;
     }
@@ -8859,7 +8859,7 @@ ConstTokenOrSyntax RangeCoverageBinInitializerSyntax::getChild(uint32_t index) c
 
 void RangeCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&ranges) = child.node()->as<OpenRangeListSyntax>(); return;
+        case 0: ranges = &child.node()->as<OpenRangeListSyntax>(); return;
         case 1: withClause = &child.node()->as<WithClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -8876,21 +8876,21 @@ bool RangeDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax RangeDimensionSpecifierSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &selector;
+        case 0: return selector.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax RangeDimensionSpecifierSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &selector;
+        case 0: return selector.get();
         default: return nullptr;
     }
 }
 
 void RangeDimensionSpecifierSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&selector) = child.node()->as<SelectorSyntax>(); return;
+        case 0: selector = &child.node()->as<SelectorSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8913,27 +8913,27 @@ bool RangeSelectSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax RangeSelectSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return range;
-        case 2: return &right;
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax RangeSelectSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return range;
-        case 2: return &right;
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 void RangeSelectSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: left = &child.node()->as<ExpressionSyntax>(); return;
         case 1: range = child.token(); return;
-        case 2: new (&right) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: right = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -8951,7 +8951,7 @@ TokenOrSyntax RepeatedEventControlSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return repeat;
         case 1: return openParen;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return closeParen;
         case 4: return eventControl;
         default: return nullptr;
@@ -8962,7 +8962,7 @@ ConstTokenOrSyntax RepeatedEventControlSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return repeat;
         case 1: return openParen;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return closeParen;
         case 4: return eventControl;
         default: return nullptr;
@@ -8973,7 +8973,7 @@ void RepeatedEventControlSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: repeat = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
         case 4: eventControl = &child.node()->as<TimingControlSyntax>(); return;
         default: THROW_UNREACHABLE;
@@ -8992,7 +8992,7 @@ bool ReplicatedAssignmentPatternSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ReplicatedAssignmentPatternSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return openBrace;
-        case 1: return &countExpr;
+        case 1: return countExpr.get();
         case 2: return innerOpenBrace;
         case 3: return &items;
         case 4: return innerCloseBrace;
@@ -9004,7 +9004,7 @@ TokenOrSyntax ReplicatedAssignmentPatternSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ReplicatedAssignmentPatternSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
-        case 1: return &countExpr;
+        case 1: return countExpr.get();
         case 2: return innerOpenBrace;
         case 3: return &items;
         case 4: return innerCloseBrace;
@@ -9016,9 +9016,9 @@ ConstTokenOrSyntax ReplicatedAssignmentPatternSyntax::getChild(uint32_t index) c
 void ReplicatedAssignmentPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: new (&countExpr) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: countExpr = &child.node()->as<ExpressionSyntax>(); return;
         case 2: innerOpenBrace = child.token(); return;
-        case 3: new (&items) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
+        case 3: items = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 4: innerCloseBrace = child.token(); return;
         case 5: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
@@ -9059,7 +9059,7 @@ ConstTokenOrSyntax ReturnStatementSyntax::getChild(uint32_t index) const {
 void ReturnStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: returnKeyword = child.token(); return;
         case 3: returnValue = &child.node()->as<ExpressionSyntax>(); return;
         case 4: semi = child.token(); return;
@@ -9078,27 +9078,27 @@ bool ScopedNameSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ScopedNameSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return separator;
-        case 2: return &right;
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax ScopedNameSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
+        case 0: return left.get();
         case 1: return separator;
-        case 2: return &right;
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 void ScopedNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<NameSyntax>(); return;
+        case 0: left = &child.node()->as<NameSyntax>(); return;
         case 1: separator = child.token(); return;
-        case 2: new (&right) = child.node()->as<NameSyntax>(); return;
+        case 2: right = &child.node()->as<NameSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -9132,7 +9132,7 @@ TokenOrSyntax SequenceDeclarationSyntax::getChild(uint32_t index) {
         case 3: return portList;
         case 4: return semi;
         case 5: return &assertionVariables;
-        case 6: return &seqExpr;
+        case 6: return seqExpr.get();
         case 7: return optionalSemi;
         case 8: return end;
         case 9: return endBlockName;
@@ -9148,7 +9148,7 @@ ConstTokenOrSyntax SequenceDeclarationSyntax::getChild(uint32_t index) const {
         case 3: return portList;
         case 4: return semi;
         case 5: return &assertionVariables;
-        case 6: return &seqExpr;
+        case 6: return seqExpr.get();
         case 7: return optionalSemi;
         case 8: return end;
         case 9: return endBlockName;
@@ -9158,13 +9158,13 @@ ConstTokenOrSyntax SequenceDeclarationSyntax::getChild(uint32_t index) const {
 
 void SequenceDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: name = child.token(); return;
         case 3: portList = &child.node()->as<AssertionItemPortListSyntax>(); return;
         case 4: semi = child.token(); return;
-        case 5: new (&assertionVariables) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
-        case 6: new (&seqExpr) = child.node()->as<ExpressionSyntax>(); return;
+        case 5: assertionVariables = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 6: seqExpr = &child.node()->as<ExpressionSyntax>(); return;
         case 7: optionalSemi = child.token(); return;
         case 8: end = child.token(); return;
         case 9: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
@@ -9223,7 +9223,7 @@ bool SignalEventExpressionSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax SignalEventExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return edge;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -9231,7 +9231,7 @@ TokenOrSyntax SignalEventExpressionSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax SignalEventExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return edge;
-        case 1: return &expr;
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
@@ -9239,7 +9239,7 @@ ConstTokenOrSyntax SignalEventExpressionSyntax::getChild(uint32_t index) const {
 void SignalEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: edge = child.token(); return;
-        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -9257,7 +9257,7 @@ TokenOrSyntax SignedCastExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return signing;
         case 1: return apostrophe;
-        case 2: return &inner;
+        case 2: return inner.get();
         default: return nullptr;
     }
 }
@@ -9266,7 +9266,7 @@ ConstTokenOrSyntax SignedCastExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return signing;
         case 1: return apostrophe;
-        case 2: return &inner;
+        case 2: return inner.get();
         default: return nullptr;
     }
 }
@@ -9275,7 +9275,7 @@ void SignedCastExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: signing = child.token(); return;
         case 1: apostrophe = child.token(); return;
-        case 2: new (&inner) = child.node()->as<ParenthesizedExpressionSyntax>(); return;
+        case 2: inner = &child.node()->as<ParenthesizedExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -9310,7 +9310,7 @@ ConstTokenOrSyntax SimpleAssignmentPatternSyntax::getChild(uint32_t index) const
 void SimpleAssignmentPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: new (&items) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
+        case 1: items = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -9395,9 +9395,9 @@ ConstTokenOrSyntax SolveBeforeConstraintSyntax::getChild(uint32_t index) const {
 void SolveBeforeConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: solve = child.token(); return;
-        case 1: new (&beforeExpr) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
+        case 1: beforeExpr = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 2: before = child.token(); return;
-        case 3: new (&afterExpr) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
+        case 3: afterExpr = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -9416,7 +9416,7 @@ TokenOrSyntax StandardCaseItemSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &expressions;
         case 1: return colon;
-        case 2: return &clause;
+        case 2: return clause.get();
         default: return nullptr;
     }
 }
@@ -9425,16 +9425,16 @@ ConstTokenOrSyntax StandardCaseItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expressions;
         case 1: return colon;
-        case 2: return &clause;
+        case 2: return clause.get();
         default: return nullptr;
     }
 }
 
 void StandardCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expressions) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
+        case 0: expressions = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 1: colon = child.token(); return;
-        case 2: new (&clause) = child.node()->as<SyntaxNode>(); return;
+        case 2: clause = &child.node()->as<SyntaxNode>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -9506,7 +9506,7 @@ ConstTokenOrSyntax StatementSyntax::getChild(uint32_t index) const {
 void StatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -9522,7 +9522,7 @@ bool StreamExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax StreamExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &expression;
+        case 0: return expression.get();
         case 1: return withRange;
         default: return nullptr;
     }
@@ -9530,7 +9530,7 @@ TokenOrSyntax StreamExpressionSyntax::getChild(uint32_t index) {
 
 ConstTokenOrSyntax StreamExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &expression;
+        case 0: return expression.get();
         case 1: return withRange;
         default: return nullptr;
     }
@@ -9538,7 +9538,7 @@ ConstTokenOrSyntax StreamExpressionSyntax::getChild(uint32_t index) const {
 
 void StreamExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&expression) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: expression = &child.node()->as<ExpressionSyntax>(); return;
         case 1: withRange = &child.node()->as<StreamExpressionWithRange>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -9556,7 +9556,7 @@ bool StreamExpressionWithRange::isKind(SyntaxKind kind) {
 TokenOrSyntax StreamExpressionWithRange::getChild(uint32_t index) {
     switch (index) {
         case 0: return withKeyword;
-        case 1: return &range;
+        case 1: return range.get();
         default: return nullptr;
     }
 }
@@ -9564,7 +9564,7 @@ TokenOrSyntax StreamExpressionWithRange::getChild(uint32_t index) {
 ConstTokenOrSyntax StreamExpressionWithRange::getChild(uint32_t index) const {
     switch (index) {
         case 0: return withKeyword;
-        case 1: return &range;
+        case 1: return range.get();
         default: return nullptr;
     }
 }
@@ -9572,7 +9572,7 @@ ConstTokenOrSyntax StreamExpressionWithRange::getChild(uint32_t index) const {
 void StreamExpressionWithRange::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: withKeyword = child.token(); return;
-        case 1: new (&range) = child.node()->as<ElementSelectSyntax>(); return;
+        case 1: range = &child.node()->as<ElementSelectSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -9618,7 +9618,7 @@ void StreamingConcatenationExpressionSyntax::setChild(uint32_t index, TokenOrSyn
         case 1: operatorToken = child.token(); return;
         case 2: sliceSize = &child.node()->as<ExpressionSyntax>(); return;
         case 3: innerOpenBrace = child.token(); return;
-        case 4: new (&expressions) = child.node()->as<SeparatedSyntaxList<StreamExpressionSyntax>>(); return;
+        case 4: expressions = child.node()->as<SeparatedSyntaxList<StreamExpressionSyntax>>(); return;
         case 5: innerCloseBrace = child.token(); return;
         case 6: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
@@ -9638,7 +9638,7 @@ TokenOrSyntax StructUnionMemberSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
         case 1: return randomQualifier;
-        case 2: return &type;
+        case 2: return type.get();
         case 3: return &declarators;
         case 4: return semi;
         default: return nullptr;
@@ -9649,7 +9649,7 @@ ConstTokenOrSyntax StructUnionMemberSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return randomQualifier;
-        case 2: return &type;
+        case 2: return type.get();
         case 3: return &declarators;
         case 4: return semi;
         default: return nullptr;
@@ -9658,10 +9658,10 @@ ConstTokenOrSyntax StructUnionMemberSyntax::getChild(uint32_t index) const {
 
 void StructUnionMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: randomQualifier = child.token(); return;
-        case 2: new (&type) = child.node()->as<DataTypeSyntax>(); return;
-        case 3: new (&declarators) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
+        case 2: type = &child.node()->as<DataTypeSyntax>(); return;
+        case 3: declarators = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -9717,9 +9717,9 @@ void StructUnionTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 2: packed = child.token(); return;
         case 3: signing = child.token(); return;
         case 4: openBrace = child.token(); return;
-        case 5: new (&members) = child.node()->as<SyntaxList<StructUnionMemberSyntax>>(); return;
+        case 5: members = child.node()->as<SyntaxList<StructUnionMemberSyntax>>(); return;
         case 6: closeBrace = child.token(); return;
-        case 7: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
+        case 7: dimensions = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -9764,7 +9764,7 @@ ConstTokenOrSyntax StructurePatternSyntax::getChild(uint32_t index) const {
 void StructurePatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: new (&members) = child.node()->as<SeparatedSyntaxList<StructurePatternMemberSyntax>>(); return;
+        case 1: members = child.node()->as<SeparatedSyntaxList<StructurePatternMemberSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -9800,7 +9800,7 @@ ConstTokenOrSyntax StructuredAssignmentPatternSyntax::getChild(uint32_t index) c
 void StructuredAssignmentPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: new (&items) = child.node()->as<SeparatedSyntaxList<AssignmentPatternItemSyntax>>(); return;
+        case 1: items = child.node()->as<SeparatedSyntaxList<AssignmentPatternItemSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -9911,7 +9911,7 @@ ConstTokenOrSyntax TimeUnitsDeclarationSyntax::getChild(uint32_t index) const {
 
 void TimeUnitsDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: time = child.token(); return;
         case 3: divider = &child.node()->as<DividerClauseSyntax>(); return;
@@ -9979,27 +9979,27 @@ bool TimingControlExpressionConcatenationSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax TimingControlExpressionConcatenationSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &left;
-        case 1: return &timing;
-        case 2: return &right;
+        case 0: return left.get();
+        case 1: return timing.get();
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax TimingControlExpressionConcatenationSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &left;
-        case 1: return &timing;
-        case 2: return &right;
+        case 0: return left.get();
+        case 1: return timing.get();
+        case 2: return right.get();
         default: return nullptr;
     }
 }
 
 void TimingControlExpressionConcatenationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
-        case 1: new (&timing) = child.node()->as<TimingControlSyntax>(); return;
-        case 2: new (&right) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: left = &child.node()->as<ExpressionSyntax>(); return;
+        case 1: timing = &child.node()->as<TimingControlSyntax>(); return;
+        case 2: right = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10015,24 +10015,24 @@ bool TimingControlExpressionSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax TimingControlExpressionSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return &timing;
-        case 1: return &expr;
+        case 0: return timing.get();
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax TimingControlExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return &timing;
-        case 1: return &expr;
+        case 0: return timing.get();
+        case 1: return expr.get();
         default: return nullptr;
     }
 }
 
 void TimingControlExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&timing) = child.node()->as<TimingControlSyntax>(); return;
-        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 0: timing = &child.node()->as<TimingControlSyntax>(); return;
+        case 1: expr = &child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10050,8 +10050,8 @@ TokenOrSyntax TimingControlStatementSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
-        case 2: return &timingControl;
-        case 3: return &statement;
+        case 2: return timingControl.get();
+        case 3: return statement.get();
         default: return nullptr;
     }
 }
@@ -10060,8 +10060,8 @@ ConstTokenOrSyntax TimingControlStatementSyntax::getChild(uint32_t index) const 
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
-        case 2: return &timingControl;
-        case 3: return &statement;
+        case 2: return timingControl.get();
+        case 3: return statement.get();
         default: return nullptr;
     }
 }
@@ -10069,9 +10069,9 @@ ConstTokenOrSyntax TimingControlStatementSyntax::getChild(uint32_t index) const 
 void TimingControlStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
-        case 2: new (&timingControl) = child.node()->as<TimingControlSyntax>(); return;
-        case 3: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 2: timingControl = &child.node()->as<TimingControlSyntax>(); return;
+        case 3: statement = &child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10119,7 +10119,7 @@ ConstTokenOrSyntax TransListCoverageBinInitializerSyntax::getChild(uint32_t inde
 
 void TransListCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&sets) = child.node()->as<SeparatedSyntaxList<TransSetSyntax>>(); return;
+        case 0: sets = child.node()->as<SeparatedSyntaxList<TransSetSyntax>>(); return;
         case 1: withClause = &child.node()->as<WithClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -10152,7 +10152,7 @@ ConstTokenOrSyntax TransRangeSyntax::getChild(uint32_t index) const {
 
 void TransRangeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&items) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
+        case 0: items = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 1: repeat = &child.node()->as<TransRepeatRangeSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -10227,7 +10227,7 @@ ConstTokenOrSyntax TransSetSyntax::getChild(uint32_t index) const {
 void TransSetSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: new (&ranges) = child.node()->as<SeparatedSyntaxList<TransRangeSyntax>>(); return;
+        case 1: ranges = child.node()->as<SeparatedSyntaxList<TransRangeSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -10246,7 +10246,7 @@ TokenOrSyntax TypeReferenceSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return typeKeyword;
         case 1: return openParen;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return closeParen;
         default: return nullptr;
     }
@@ -10256,7 +10256,7 @@ ConstTokenOrSyntax TypeReferenceSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return typeKeyword;
         case 1: return openParen;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return closeParen;
         default: return nullptr;
     }
@@ -10266,7 +10266,7 @@ void TypeReferenceSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: typeKeyword = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -10285,7 +10285,7 @@ TokenOrSyntax TypedefDeclarationSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
         case 1: return typedefKeyword;
-        case 2: return &type;
+        case 2: return type.get();
         case 3: return name;
         case 4: return &dimensions;
         case 5: return semi;
@@ -10297,7 +10297,7 @@ ConstTokenOrSyntax TypedefDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return typedefKeyword;
-        case 2: return &type;
+        case 2: return type.get();
         case 3: return name;
         case 4: return &dimensions;
         case 5: return semi;
@@ -10307,11 +10307,11 @@ ConstTokenOrSyntax TypedefDeclarationSyntax::getChild(uint32_t index) const {
 
 void TypedefDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: typedefKeyword = child.token(); return;
-        case 2: new (&type) = child.node()->as<DataTypeSyntax>(); return;
+        case 2: type = &child.node()->as<DataTypeSyntax>(); return;
         case 3: name = child.token(); return;
-        case 4: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
+        case 4: dimensions = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         case 5: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -10354,7 +10354,7 @@ void UnconditionalBranchDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax 
     switch (index) {
         case 0: directive = child.token(); return;
         case 1: endOfDirective = child.token(); return;
-        case 2: new (&disabledTokens) = child.node()->as<TokenList>(); return;
+        case 2: disabledTokens = child.node()->as<TokenList>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10407,7 +10407,7 @@ bool UniquenessConstraintSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax UniquenessConstraintSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return unique;
-        case 1: return &ranges;
+        case 1: return ranges.get();
         case 2: return semi;
         default: return nullptr;
     }
@@ -10416,7 +10416,7 @@ TokenOrSyntax UniquenessConstraintSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax UniquenessConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return unique;
-        case 1: return &ranges;
+        case 1: return ranges.get();
         case 2: return semi;
         default: return nullptr;
     }
@@ -10425,7 +10425,7 @@ ConstTokenOrSyntax UniquenessConstraintSyntax::getChild(uint32_t index) const {
 void UniquenessConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: unique = child.token(); return;
-        case 1: new (&ranges) = child.node()->as<OpenRangeListSyntax>(); return;
+        case 1: ranges = &child.node()->as<OpenRangeListSyntax>(); return;
         case 2: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -10443,7 +10443,7 @@ bool VarDataTypeSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax VarDataTypeSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return var;
-        case 1: return &type;
+        case 1: return type.get();
         default: return nullptr;
     }
 }
@@ -10451,7 +10451,7 @@ TokenOrSyntax VarDataTypeSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax VarDataTypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return var;
-        case 1: return &type;
+        case 1: return type.get();
         default: return nullptr;
     }
 }
@@ -10459,7 +10459,7 @@ ConstTokenOrSyntax VarDataTypeSyntax::getChild(uint32_t index) const {
 void VarDataTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: var = child.token(); return;
-        case 1: new (&type) = child.node()->as<DataTypeSyntax>(); return;
+        case 1: type = &child.node()->as<DataTypeSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10494,7 +10494,7 @@ ConstTokenOrSyntax VariableDeclaratorSyntax::getChild(uint32_t index) const {
 void VariableDeclaratorSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: name = child.token(); return;
-        case 1: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
+        case 1: dimensions = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         case 2: initializer = &child.node()->as<EqualsValueClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
@@ -10582,7 +10582,7 @@ TokenOrSyntax VariablePortHeaderSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return direction;
         case 1: return varKeyword;
-        case 2: return &dataType;
+        case 2: return dataType.get();
         default: return nullptr;
     }
 }
@@ -10591,7 +10591,7 @@ ConstTokenOrSyntax VariablePortHeaderSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return direction;
         case 1: return varKeyword;
-        case 2: return &dataType;
+        case 2: return dataType.get();
         default: return nullptr;
     }
 }
@@ -10600,7 +10600,7 @@ void VariablePortHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: direction = child.token(); return;
         case 1: varKeyword = child.token(); return;
-        case 2: new (&dataType) = child.node()->as<DataTypeSyntax>(); return;
+        case 2: dataType = &child.node()->as<DataTypeSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10681,7 +10681,7 @@ ConstTokenOrSyntax WaitForkStatementSyntax::getChild(uint32_t index) const {
 void WaitForkStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: wait = child.token(); return;
         case 3: fork = child.token(); return;
         case 4: semi = child.token(); return;
@@ -10706,7 +10706,7 @@ TokenOrSyntax WaitOrderStatementSyntax::getChild(uint32_t index) {
         case 3: return openParen;
         case 4: return &names;
         case 5: return closeParen;
-        case 6: return &action;
+        case 6: return action.get();
         default: return nullptr;
     }
 }
@@ -10719,7 +10719,7 @@ ConstTokenOrSyntax WaitOrderStatementSyntax::getChild(uint32_t index) const {
         case 3: return openParen;
         case 4: return &names;
         case 5: return closeParen;
-        case 6: return &action;
+        case 6: return action.get();
         default: return nullptr;
     }
 }
@@ -10727,12 +10727,12 @@ ConstTokenOrSyntax WaitOrderStatementSyntax::getChild(uint32_t index) const {
 void WaitOrderStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: wait_order = child.token(); return;
         case 3: openParen = child.token(); return;
-        case 4: new (&names) = child.node()->as<SeparatedSyntaxList<NameSyntax>>(); return;
+        case 4: names = child.node()->as<SeparatedSyntaxList<NameSyntax>>(); return;
         case 5: closeParen = child.token(); return;
-        case 6: new (&action) = child.node()->as<ActionBlockSyntax>(); return;
+        case 6: action = &child.node()->as<ActionBlockSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10752,9 +10752,9 @@ TokenOrSyntax WaitStatementSyntax::getChild(uint32_t index) {
         case 1: return &attributes;
         case 2: return wait;
         case 3: return openParen;
-        case 4: return &expr;
+        case 4: return expr.get();
         case 5: return closeParen;
-        case 6: return &statement;
+        case 6: return statement.get();
         default: return nullptr;
     }
 }
@@ -10765,9 +10765,9 @@ ConstTokenOrSyntax WaitStatementSyntax::getChild(uint32_t index) const {
         case 1: return &attributes;
         case 2: return wait;
         case 3: return openParen;
-        case 4: return &expr;
+        case 4: return expr.get();
         case 5: return closeParen;
-        case 6: return &statement;
+        case 6: return statement.get();
         default: return nullptr;
     }
 }
@@ -10775,12 +10775,12 @@ ConstTokenOrSyntax WaitStatementSyntax::getChild(uint32_t index) const {
 void WaitStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: wait = child.token(); return;
         case 3: openParen = child.token(); return;
-        case 4: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 4: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 5: closeParen = child.token(); return;
-        case 6: new (&statement) = child.node()->as<StatementSyntax>(); return;
+        case 6: statement = &child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10872,7 +10872,7 @@ ConstTokenOrSyntax WildcardPortConnectionSyntax::getChild(uint32_t index) const 
 
 void WildcardPortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 0: attributes = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: dotStar = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -10927,7 +10927,7 @@ TokenOrSyntax WithClauseSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return with;
         case 1: return openParen;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return closeParen;
         default: return nullptr;
     }
@@ -10937,7 +10937,7 @@ ConstTokenOrSyntax WithClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return with;
         case 1: return openParen;
-        case 2: return &expr;
+        case 2: return expr.get();
         case 3: return closeParen;
         default: return nullptr;
     }
@@ -10947,7 +10947,7 @@ void WithClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: with = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -10967,7 +10967,7 @@ TokenOrSyntax WithFunctionSampleSyntax::getChild(uint32_t index) {
         case 0: return with;
         case 1: return function;
         case 2: return sample;
-        case 3: return &portList;
+        case 3: return portList.get();
         default: return nullptr;
     }
 }
@@ -10977,7 +10977,7 @@ ConstTokenOrSyntax WithFunctionSampleSyntax::getChild(uint32_t index) const {
         case 0: return with;
         case 1: return function;
         case 2: return sample;
-        case 3: return &portList;
+        case 3: return portList.get();
         default: return nullptr;
     }
 }
@@ -10987,7 +10987,7 @@ void WithFunctionSampleSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: with = child.token(); return;
         case 1: function = child.token(); return;
         case 2: sample = child.token(); return;
-        case 3: new (&portList) = child.node()->as<AnsiPortListSyntax>(); return;
+        case 3: portList = &child.node()->as<AnsiPortListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }

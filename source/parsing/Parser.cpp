@@ -41,7 +41,7 @@ SyntaxNode& Parser::parseGuess() {
             diagnostics.pop();
 
         // Always pull the expression out for convenience.
-        return statement.as<ExpressionStatementSyntax>().expr;
+        return *statement.as<ExpressionStatementSyntax>().expr;
     }
 
     // It might not have been a statement at all, in which case try a whole compilation unit
@@ -782,15 +782,15 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(span<AttributeInstanceSyn
         case SyntaxKind::LogicalRightShiftAssignmentExpression:
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
-            iterVarCheck = &iterationExpr.as<BinaryExpressionSyntax>().left;
+            iterVarCheck = iterationExpr.as<BinaryExpressionSyntax>().left;
             break;
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
-            iterVarCheck = &iterationExpr.as<PrefixUnaryExpressionSyntax>().operand;
+            iterVarCheck = iterationExpr.as<PrefixUnaryExpressionSyntax>().operand;
             break;
         case SyntaxKind::PostincrementExpression:
         case SyntaxKind::PostdecrementExpression:
-            iterVarCheck = &iterationExpr.as<PostfixUnaryExpressionSyntax>().operand;
+            iterVarCheck = iterationExpr.as<PostfixUnaryExpressionSyntax>().operand;
             break;
         default:
             addError(DiagCode::InvalidGenvarIterExpression, iterationExpr.getFirstToken().location())

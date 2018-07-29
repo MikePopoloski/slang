@@ -14,8 +14,8 @@
 namespace slang {
 
 PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax) {
-    auto result = compilation.emplace<PackageSymbol>(compilation, syntax.header.name.valueText(),
-                                                     syntax.header.name.location());
+    auto result = compilation.emplace<PackageSymbol>(compilation, syntax.header->name.valueText(),
+                                                     syntax.header->name.location());
     for (auto member : syntax.members)
         result->addMembers(*member);
     return *result;
@@ -41,7 +41,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
         SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
 
         // TODO: syntax node names here are dumb
-        for (auto paramBase : syntax.parameters->parameters.parameters) {
+        for (auto paramBase : syntax.parameters->parameters->parameters) {
             bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
             if (!hasParamAssignments) {
                 hasParamAssignments = true;
@@ -75,7 +75,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 if (param.isLocal)
                     continue;
 
-                paramOverrides.emplace(param.name, &orderedParams[orderedIndex++]->expr);
+                paramOverrides.emplace(param.name, orderedParams[orderedIndex++]->expr);
             }
 
             // Make sure there aren't extra param assignments for non-existent params.
@@ -188,7 +188,7 @@ void InstanceSymbol::populate(const Definition& definition, span<const Parameter
         paramIt++;
     }
 
-    const PortListSyntax* portSyntax = definition.syntax.header.ports;
+    const PortListSyntax* portSyntax = definition.syntax.header->ports;
     if (portSyntax) {
         switch (portSyntax->kind) {
             case SyntaxKind::AnsiPortList:
@@ -208,7 +208,7 @@ void InstanceSymbol::populate(const Definition& definition, span<const Parameter
         if (member->kind != SyntaxKind::ParameterDeclarationStatement)
             addMembers(*member);
         else {
-            for (auto declarator : member->as<ParameterDeclarationStatementSyntax>().parameter.declarators) {
+            for (auto declarator : member->as<ParameterDeclarationStatementSyntax>().parameter->declarators) {
                 (void)declarator;
                 ASSERT(paramIt != parameters.end());
 
@@ -248,7 +248,7 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
     Compilation& comp = getCompilation();
 
     Port port;
-    port.name = syntax.declarator.name.valueText();
+    port.name = syntax.declarator->name.valueText();
 
     // Helper function to check if an implicit type syntax is totally empty.
     auto typeSyntaxEmpty = [](const DataTypeSyntax& typeSyntax) {
@@ -266,19 +266,19 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
         else
             port.direction = SemanticFacts::getPortDirection(header.direction.kind);
 
-        if (typeSyntaxEmpty(header.dataType))
+        if (typeSyntaxEmpty(*header.dataType))
             port.type = &comp.getLogicType();
         else {
             // We always add ports in syntactical order, so it's fine to just
             // always do a lookup from the "end" of the instance. No other members have been added yet.
-            port.type = &comp.getType(header.dataType, LookupLocation::max, *this);
+            port.type = &comp.getType(*header.dataType, LookupLocation::max, *this);
         }
     };
 
-    switch (syntax.header.kind) {
+    switch (syntax.header->kind) {
         case SyntaxKind::VariablePortHeader: {
-            const auto& header = syntax.header.as<VariablePortHeaderSyntax>();
-            if (!header.direction && !header.varKeyword && typeSyntaxEmpty(header.dataType)) {
+            const auto& header = syntax.header->as<VariablePortHeaderSyntax>();
+            if (!header.direction && !header.varKeyword && typeSyntaxEmpty(*header.dataType)) {
                 // If all three are omitted, take all from the previous port.
                 // TODO: default nettype?
                 port.kind = builder.lastKind;
@@ -302,7 +302,7 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
                             port.kind = PortKind::Net;
                             break;
                         case PortDirection::Out:
-                            if (header.dataType.kind == SyntaxKind::ImplicitType)
+                            if (header.dataType->kind == SyntaxKind::ImplicitType)
                                 port.kind = PortKind::Net;
                             else
                                 port.kind = PortKind::Variable;
@@ -317,13 +317,13 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
             }
 
             // Unpacked dimensions are not inherited, so make sure not to set port.type with them.
-            const Type* finalType = &comp.getType(*port.type, syntax.declarator.dimensions,
+            const Type* finalType = &comp.getType(*port.type, syntax.declarator->dimensions,
                                                   LookupLocation::max, *this);
 
             // Create a new symbol to represent this port internally to the instance.
             // TODO: interconnect ports don't have a datatype
             // TODO: variable lifetime
-            auto variable = comp.emplace<VariableSymbol>(port.name, syntax.declarator.name.location());
+            auto variable = comp.emplace<VariableSymbol>(port.name, syntax.declarator->name.location());
             port.symbol = variable;
             variable->type = finalType;
             addMember(*variable);
@@ -334,17 +334,17 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
             break;
         }
         case SyntaxKind::NetPortHeader: {
-            const auto& header = syntax.header.as<NetPortHeaderSyntax>();
+            const auto& header = syntax.header->as<NetPortHeaderSyntax>();
             port.kind = PortKind::Net;
             setDirectionAndType(header);
 
             // Unpacked dimensions are not inherited, so make sure not to set port.type with them.
-            const Type* finalType = &comp.getType(*port.type, syntax.declarator.dimensions,
+            const Type* finalType = &comp.getType(*port.type, syntax.declarator->dimensions,
                                                   LookupLocation::max, *this);
 
             // Create a new symbol to represent this port internally to the instance.
             // TODO: net type
-            auto net = comp.emplace<NetSymbol>(port.name, syntax.declarator.name.location());
+            auto net = comp.emplace<NetSymbol>(port.name, syntax.declarator->name.location());
             port.symbol = net;
             net->dataType = finalType;
             addMember(*net);
@@ -444,7 +444,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Compilation& compilatio
     auto result = compilation.emplace<ProceduralBlockSymbol>(compilation,
                                                              syntax.keyword.location(),
                                                              kind);
-    result->setBody(syntax.statement);
+    result->setBody(*syntax.statement);
     return *result;
 }
 
@@ -473,7 +473,7 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, c
                                                      LookupLocation location, const Scope& parent) {
     // TODO: better error checking
     BindContext bindContext(parent, location, BindFlags::Constant);
-    const auto& cond = Expression::bind(compilation, syntax.condition, bindContext);
+    const auto& cond = Expression::bind(compilation, *syntax.condition, bindContext);
     if (!cond.constant)
         return nullptr;
 
@@ -481,9 +481,9 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, c
 
     const SyntaxNode* memberSyntax = nullptr;
     if ((logic_t)value)
-        memberSyntax = &syntax.block;
+        memberSyntax = syntax.block;
     else if (syntax.elseClause)
-        memberSyntax = &syntax.elseClause->clause;
+        memberSyntax = syntax.elseClause->clause;
     else
         return nullptr;
 
@@ -503,13 +503,13 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     // we need to do a lookup to make sure we have the actual genvar.
     // TODO: do the actual lookup
 
-    string_view name = getGenerateBlockName(syntax.block);
-    SourceLocation loc = syntax.block.getFirstToken().location();
+    string_view name = getGenerateBlockName(*syntax.block);
+    SourceLocation loc = syntax.block->getFirstToken().location();
     auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc);
 
     // Initialize the genvar
     BindContext bindContext(parent, location, BindFlags::Constant);
-    const auto& initial = Expression::bind(compilation, syntax.initialExpr, bindContext);
+    const auto& initial = Expression::bind(compilation, *syntax.initialExpr, bindContext);
     if (!initial.constant)
         return *result;
 
@@ -520,8 +520,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    const auto& stopExpr = Expression::bind(compilation, syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
-    const auto& iterExpr = Expression::bind(compilation, syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
+    const auto& stopExpr = Expression::bind(compilation, *syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
+    const auto& iterExpr = Expression::bind(compilation, *syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
 
     // Create storage for the iteration variable.
     EvalContext context;
@@ -539,7 +539,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
                                                                   true /* isLocal */,
                                                                   false /* isPort */);
         block->addMember(*implicitParam);
-        block->addMembers(syntax.block);
+        block->addMembers(*syntax.block);
         result->addMember(*block);
 
         implicitParam->setType(*local.type);

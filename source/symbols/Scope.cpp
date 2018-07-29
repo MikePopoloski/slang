@@ -185,7 +185,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ParameterDeclarationStatement: {
             SmallVectorSized<ParameterSymbol*, 16> params;
             ParameterSymbol::fromSyntax(compilation,
-                                        syntax.as<ParameterDeclarationStatementSyntax>().parameter,
+                                        *syntax.as<ParameterDeclarationStatementSyntax>().parameter,
                                         params);
             for (auto param : params)
                 addMember(*param);
@@ -696,20 +696,20 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     SmallVectorSized<NamePlusLoc, 8> nameParts;
     const ScopedNameSyntax* scoped = &syntax;
     while (true) {
-        nameParts.append({ &scoped->right, scoped->separator.location() });
+        nameParts.append({ scoped->right, scoped->separator.location() });
         if (scoped->separator.kind == TokenKind::Dot)
             colonParts = 0;
         else
             colonParts++;
 
-        if (scoped->left.kind == SyntaxKind::ScopedName)
-            scoped = &scoped->left.as<ScopedNameSyntax>();
+        if (scoped->left->kind == SyntaxKind::ScopedName)
+            scoped = &scoped->left->as<ScopedNameSyntax>();
         else
             break;
     }
 
     Token nameToken;
-    const NameSyntax* first = &scoped->left;
+    const NameSyntax* first = scoped->left;
     switch (first->kind) {
         case SyntaxKind::IdentifierName:
             nameToken = first->as<IdentifierNameSyntax>().identifier;

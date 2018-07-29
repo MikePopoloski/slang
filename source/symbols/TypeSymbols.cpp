@@ -249,7 +249,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::TimeType: {
             // TODO: signing
             // TODO: report this error in the parser?
-            //auto& its = syntax.as<IntegerTypeSyntax>();
+            //auto& its = syntax->as<IntegerTypeSyntax>();
             //if (its.dimensions.count() > 0) {
             //    // Error but don't fail out; just remove the dims and keep trucking
             //    auto& diag = addError(DiagCode::PackedDimsOnPredefinedType, its.dimensions[0]->openBracket.location());
@@ -273,7 +273,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                 UnpackedStructType::fromSyntax(compilation, structUnion, location, parent);
         }
         case SyntaxKind::NamedType:
-            return lookupNamedType(compilation, node.as<NamedTypeSyntax>().name, location, parent);
+            return lookupNamedType(compilation, *node.as<NamedTypeSyntax>().name, location, parent);
         default:
             THROW_UNREACHABLE;
     }
@@ -361,8 +361,8 @@ optional<ConstantRange> Type::evaluateDimension(Compilation& compilation, const 
     }
 
     const RangeSelectSyntax& range = syntax.as<RangeSelectSyntax>();
-    auto left = compilation.evalIntegerExpr(range.left, location, scope);
-    auto right = compilation.evalIntegerExpr(range.right, location, scope);
+    auto left = compilation.evalIntegerExpr(*range.left, location, scope);
+    auto right = compilation.evalIntegerExpr(*range.right, location, scope);
     if (!left || !right)
         return std::nullopt;
 
@@ -371,8 +371,8 @@ optional<ConstantRange> Type::evaluateDimension(Compilation& compilation, const 
     diff = (diff < 0 ? -diff : diff) + 1;
     if (diff > SVInt::MAX_BITS) {
         auto& diag = compilation.addError(DiagCode::ValueExceedsMaxBitWidth, range.range.location());
-        diag << range.left.sourceRange();
-        diag << range.right.sourceRange();
+        diag << range.left->sourceRange();
+        diag << range.right->sourceRange();
         diag << (int)SVInt::MAX_BITS;
         return std::nullopt;
     }
@@ -431,8 +431,8 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
         if (!dimSyntax->specifier || dimSyntax->specifier->kind != SyntaxKind::RangeDimensionSpecifier)
             return compilation.getErrorType();
 
-        const auto& selector = dimSyntax->specifier->as<RangeDimensionSpecifierSyntax>().selector;
-        auto dim = evaluateDimension(compilation, selector, location, scope);
+        auto selector = dimSyntax->specifier->as<RangeDimensionSpecifierSyntax>().selector;
+        auto dim = evaluateDimension(compilation, *selector, location, scope);
         if (!dim)
             return compilation.getErrorType();
 
@@ -563,7 +563,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                                 previousMember ? LookupLocation::after(*previousMember) : LookupLocation::min,
                                 BindFlags::Constant);
 
-            const auto& init = Expression::bind(compilation, member->initializer->expr, context);
+            const auto& init = Expression::bind(compilation, *member->initializer->expr, context);
             if (!init.constant)
                 value = current;
             else
@@ -618,15 +618,15 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
             return compilation.getErrorType();
 
         ConstantRange range;
-        const auto& selector = dim.specifier->as<RangeDimensionSpecifierSyntax>().selector;
-        switch (selector.kind) {
+        auto selector = dim.specifier->as<RangeDimensionSpecifierSyntax>().selector;
+        switch (selector->kind) {
             case SyntaxKind::BitSelect: {
-                auto left = compilation.evalIntegerExpr(selector.as<BitSelectSyntax>().expr, location, scope);
+                auto left = compilation.evalIntegerExpr(*selector->as<BitSelectSyntax>().expr, location, scope);
                 if (!left)
                     return compilation.getErrorType();
 
                 if (*left <= 0) {
-                    compilation.addError(DiagCode::ValueMustBePositive, selector.sourceRange());
+                    compilation.addError(DiagCode::ValueMustBePositive, selector->sourceRange());
                     return compilation.getErrorType();
                 }
 
@@ -634,9 +634,9 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
                 break;
             }
             case SyntaxKind::SimpleRangeSelect: {
-                auto& rangeSyntax = selector.as<RangeSelectSyntax>();
-                auto left = compilation.evalIntegerExpr(rangeSyntax.left, location, scope);
-                auto right = compilation.evalIntegerExpr(rangeSyntax.right, location, scope);
+                auto& rangeSyntax = selector->as<RangeSelectSyntax>();
+                auto left = compilation.evalIntegerExpr(*rangeSyntax.left, location, scope);
+                auto right = compilation.evalIntegerExpr(*rangeSyntax.right, location, scope);
                 if (!left || !right)
                     return compilation.getErrorType();
 
@@ -644,7 +644,7 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
                 break;
             }
             default: {
-                compilation.addError(DiagCode::InvalidUnpackedDimension, selector.sourceRange());
+                compilation.addError(DiagCode::InvalidUnpackedDimension, selector->sourceRange());
                 return compilation.getErrorType();
             }
         }
@@ -685,16 +685,16 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
     // We have to iterate in reverse because members are specified from MSB to LSB order.
     SmallVectorSized<const Symbol*, 8> members;
     for (auto member : make_reverse_range(syntax.members)) {
-        const Type& type = compilation.getType(member->type, location, scope);
+        const Type& type = compilation.getType(*member->type, location, scope);
         isFourState |= type.isFourState();
 
         bool issuedError = false;
         if (!type.isIntegral() && !type.isError()) {
             issuedError = true;
             auto& diag = compilation.addError(DiagCode::PackedMemberNotIntegral,
-                                              member->type.getFirstToken().location());
+                                              member->type->getFirstToken().location());
             diag << type;
-            diag << member->type.sourceRange();
+            diag << member->type->sourceRange();
         }
 
         for (auto decl : member->declarators) {
@@ -717,7 +717,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
             if (decl->initializer) {
                 auto& diag = compilation.addError(DiagCode::PackedMemberHasInitializer,
                                                   decl->initializer->equals.location());
-                diag << decl->initializer->expr.sourceRange();
+                diag << decl->initializer->expr->sourceRange();
             }
         }
     }
@@ -747,7 +747,7 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const Struc
     uint32_t fieldIndex = 0;
     auto result = compilation.emplace<UnpackedStructType>(compilation);
     for (auto member : syntax.members) {
-        const Type& type = compilation.getType(member->type, location, scope);
+        const Type& type = compilation.getType(*member->type, location, scope);
         for (auto decl : member->declarators) {
             auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(),
                                                              decl->name.location(), fieldIndex);
@@ -757,7 +757,7 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const Struc
 
             variable->type = compilation.getType(type, decl->dimensions, location, scope);
             if (decl->initializer)
-                variable->initializer = decl->initializer->expr;
+                variable->initializer = *decl->initializer->expr;
         }
     }
 
@@ -820,7 +820,7 @@ const TypeAliasType& TypeAliasType::fromSyntax(Compilation& compilation,
                                                const TypedefDeclarationSyntax& syntax) {
     // TODO: unpacked dimensions
     auto result = compilation.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
-    result->targetType = syntax.type;
+    result->targetType = *syntax.type;
     return *result;
 }
 

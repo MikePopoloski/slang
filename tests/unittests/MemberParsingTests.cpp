@@ -7,7 +7,7 @@ TEST_CASE("Simple module", "[parser:modules]") {
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
     CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
-    CHECK(module.header.name.valueText() == "foo");
+    CHECK(module.header->name.valueText() == "foo");
 }
 
 TEST_CASE("Simple interface", "[parser:modules]") {
@@ -17,7 +17,7 @@ TEST_CASE("Simple interface", "[parser:modules]") {
     REQUIRE(module.kind == SyntaxKind::InterfaceDeclaration);
     CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
-    CHECK(module.header.name.valueText() == "foo");
+    CHECK(module.header->name.valueText() == "foo");
 }
 
 TEST_CASE("Simple program", "[parser:modules]") {
@@ -27,7 +27,7 @@ TEST_CASE("Simple program", "[parser:modules]") {
     REQUIRE(module.kind == SyntaxKind::ProgramDeclaration);
     CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
-    CHECK(module.header.name.valueText() == "foo");
+    CHECK(module.header->name.valueText() == "foo");
 }
 
 TEST_CASE("Complex header", "[parser:modules]") {
@@ -37,11 +37,11 @@ TEST_CASE("Complex header", "[parser:modules]") {
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
     CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
-    CHECK(module.header.name.valueText() == "foo");
+    CHECK(module.header->name.valueText() == "foo");
     CHECK(module.attributes.size() == 1);
-    CHECK(module.header.imports[0]->items.size() == 2);
-    CHECK(module.header.parameters->declarations.size() == 3);
-    CHECK(module.header.ports->kind == SyntaxKind::AnsiPortList);
+    CHECK(module.header->imports[0]->items.size() == 2);
+    CHECK(module.header->parameters->declarations.size() == 3);
+    CHECK(module.header->ports->kind == SyntaxKind::AnsiPortList);
 }
 
 TEST_CASE("Parameter ports", "[parser:modules]") {
@@ -52,14 +52,14 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
     CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
 
-    auto parameters = module.header.parameters->declarations;
+    auto parameters = module.header->parameters->declarations;
     CHECK(parameters[0]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[1]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[2]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[2]->declarators[0]->name.valueText() == "blah");
     CHECK(parameters[3]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[3]->declarators[0]->name.valueText() == "blah");
-    CHECK(parameters[3]->declarators[0]->initializer->expr.kind == SyntaxKind::ShortIntType);
+    CHECK(parameters[3]->declarators[0]->initializer->expr->kind == SyntaxKind::ShortIntType);
 }
 
 const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) {

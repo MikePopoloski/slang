@@ -5,7 +5,7 @@ import os
 
 class TypeInfo:
 	def __init__(self, processedMembers, members, pointerMembers, optionalMembers,
-				 final, constructorArgs, base, combinedMembers):
+				 final, constructorArgs, base, combinedMembers, notNullMembers):
 		self.processedMembers = processedMembers
 		self.members = members
 		self.pointerMembers = pointerMembers
@@ -14,6 +14,7 @@ class TypeInfo:
 		self.constructorArgs = constructorArgs
 		self.base = base
 		self.combinedMembers = combinedMembers
+		self.notNullMembers = notNullMembers
 
 def main():
 	ourdir = os.path.dirname(os.path.realpath(__file__))
@@ -62,7 +63,7 @@ namespace slang {
 	alltypes = {}
 	kindmap = {}
 
-	alltypes['SyntaxNode'] = TypeInfo(None, None, None, None, '', None, None, [])
+	alltypes['SyntaxNode'] = TypeInfo(None, None, None, None, '', None, None, [], None)
 
 	for line in [x.strip('\n') for x in inf]:
 		if line.startswith('//'):
@@ -163,7 +164,8 @@ namespace slang {
 					index = 0
 					for m in v.combinedMembers:
 						addr = '&' if m[1] in v.pointerMembers else ''
-						cppf.write('        case {}: return {}{};\n'.format(index, addr, m[1]))
+						get = '.get()' if m[1] in v.notNullMembers else ''
+						cppf.write('        case {}: return {}{}{};\n'.format(index, addr, m[1], get))
 						index += 1
 
 					cppf.write('        default: return nullptr;\n')
@@ -185,10 +187,10 @@ namespace slang {
 
 					if m[0] == 'token':
 						cppf.write('{} = child.token(); return;\n'.format(m[1]))
-					elif m[1] in v.optionalMembers:
-						cppf.write('{} = &child.node()->as<{}>(); return;\n'.format(m[1], m[0]))
-					else:
+					elif m[1] in v.pointerMembers:
 						cppf.write('{} = child.node()->as<{}>(); return;\n'.format(m[1], m[0]))
+					else:
+						cppf.write('{} = &child.node()->as<{}>(); return;\n'.format(m[1], m[0]))
 
 				cppf.write('        default: THROW_UNREACHABLE;\n')
 				cppf.write('    }\n')
@@ -283,6 +285,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 
 	pointerMembers = set()
 	optionalMembers = set()
+	notNullMembers = set()
 	processed_members = []
 	baseInitializers = ''
 	combined = members
@@ -290,12 +293,14 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 		processed_members.extend(alltypes[base].processedMembers)
 		pointerMembers = pointerMembers.union(alltypes[base].pointerMembers)
 		optionalMembers = optionalMembers.union(alltypes[base].optionalMembers)
+		notNullMembers = notNullMembers.union(alltypes[base].notNullMembers)
 		baseInitializers = ', '.join([x[1] for x in alltypes[base].members])
 		if baseInitializers:
 			baseInitializers = ', ' + baseInitializers
 		combined = alltypes[base].members + members
 
 	for m in members:
+		membertype = None
 		if m[0] == 'token':
 			typename = 'Token'
 		elif m[0] == 'tokenlist':
@@ -320,12 +325,17 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 				typename = m[0] + '*'
 				optionalMembers.add(m[1])
 			else:
-				pointerMembers.add(m[1])
+				notNullMembers.add(m[1])
 				typename = m[0] + '&'
+				membertype = 'not_null<{}*>'.format(m[0])
 
 		l = '{} {}'.format(typename, m[1])
 		processed_members.append(l)
-		outf.write('    {};\n'.format(l))
+
+		if membertype is None:
+			outf.write('    {};\n'.format(l))
+		else:
+			outf.write('    {} {};\n'.format(membertype, m[1]))
 
 	kindArg = 'SyntaxKind kind' if 'kind' not in tagdict else ''
 	kindValue = 'kind' if 'kind' not in tagdict else 'SyntaxKind::' + tagdict['kind']
@@ -339,7 +349,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 	if kindArg and len(processed_members) > 0:
 		kindArg += ', '
 
-	initializers = ', '.join(['{0}({0})'.format(x[1]) for x in members])
+	initializers = ', '.join(['{0}({1}{0})'.format(x[1], '&' if x[1] in notNullMembers else '') for x in members])
 	if initializers:
 		initializers = ', ' + initializers
 
@@ -349,7 +359,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 
 	constructorArgs = '{}{}'.format(kindArg, ', '.join(processed_members))
 	alltypes[name] = TypeInfo(processed_members, members, pointerMembers, optionalMembers,
-							  final, constructorArgs, base, combined)
+							  final, constructorArgs, base, combined, notNullMembers)
 
 	outf.write('\n')
 	outf.write('    {}({}) :\n'.format(name, constructorArgs))

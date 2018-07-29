@@ -168,7 +168,7 @@ const RootSymbol& Compilation::getRoot() {
             if (syntax.kind == SyntaxKind::ModuleDeclaration && instantiatedNames.count(definition->name) == 0) {
                 // TODO: check for no parameters here
                 const auto& instance = ModuleInstanceSymbol::instantiate(*this, definition->name,
-                                                                         syntax.header.name.location(), *definition);
+                                                                         syntax.header->name.location(), *definition);
                 root->addMember(instance);
                 topList.append(&instance);
             }
@@ -201,10 +201,10 @@ const Definition* Compilation::getDefinition(string_view lookupName, const Scope
 
 void Compilation::addDefinition(const ModuleDeclarationSyntax& syntax, const Scope& scope) {
     SmallVectorSized<Definition::ParameterDecl, 8> parameters;
-    bool hasPortParams = syntax.header.parameters;
+    bool hasPortParams = syntax.header->parameters;
     if (hasPortParams) {
         bool lastLocal = false;
-        for (auto declaration : syntax.header.parameters->declarations) {
+        for (auto declaration : syntax.header->parameters->declarations) {
             // It's legal to leave off the parameter keyword in the parameter port list.
             // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
             // This isn't allowed in a module body, but the parser will take care of the error for us.
@@ -218,9 +218,9 @@ void Compilation::addDefinition(const ModuleDeclarationSyntax& syntax, const Sco
     // be overridable at instantiation time.
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::ParameterDeclarationStatement) {
-            const auto& declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
-            bool isLocal = hasPortParams || declaration.keyword.kind == TokenKind::LocalParamKeyword;
-            getParamDecls(declaration, false, isLocal, parameters);
+            auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
+            bool isLocal = hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
+            getParamDecls(*declaration, false, isLocal, parameters);
         }
     }
 
@@ -241,12 +241,12 @@ void Compilation::getParamDecls(const ParameterDeclarationSyntax& syntax, bool i
         Definition::ParameterDecl param;
         param.name = decl->name.valueText();
         param.location = decl->name.location();
-        param.type = &syntax.type;
+        param.type = syntax.type;
         param.isLocal = isLocal;
         param.isPort = isPort;
 
         if (decl->initializer)
-            param.initializer = &decl->initializer->expr;
+            param.initializer = decl->initializer->expr;
         else if (!isPort)
             addError(DiagCode::BodyParamNoInitializer, param.location);
         else if (isLocal)
@@ -452,7 +452,7 @@ void Compilation::findInstantiations(const ModuleDeclarationSyntax& module, Smal
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ProgramDeclaration: {
                 // ignore empty names
-                string_view name = member->as<ModuleDeclarationSyntax>().header.name.valueText();
+                string_view name = member->as<ModuleDeclarationSyntax>().header->name.valueText();
                 if (!name.empty()) {
                     // create new scope entry lazily
                     if (!localDefs) {
@@ -510,17 +510,17 @@ void Compilation::findInstantiations(const MemberSyntax& node, SmallVector<NameS
                 findInstantiations(*child, scopeStack, found);
             break;
         case SyntaxKind::LoopGenerate:
-            findInstantiations(node.as<LoopGenerateSyntax>().block, scopeStack, found);
+            findInstantiations(*node.as<LoopGenerateSyntax>().block, scopeStack, found);
             break;
         case SyntaxKind::CaseGenerate:
             for (auto& item : node.as<CaseGenerateSyntax>().items) {
                 switch (item->kind) {
                     case SyntaxKind::DefaultCaseItem:
-                        findInstantiations(item->as<DefaultCaseItemSyntax>().clause.as<MemberSyntax>(),
+                        findInstantiations(item->as<DefaultCaseItemSyntax>().clause->as<MemberSyntax>(),
                                            scopeStack, found);
                         break;
                     case SyntaxKind::StandardCaseItem:
-                        findInstantiations(item->as<StandardCaseItemSyntax>().clause.as<MemberSyntax>(),
+                        findInstantiations(item->as<StandardCaseItemSyntax>().clause->as<MemberSyntax>(),
                                            scopeStack, found);
                         break;
                     default:
@@ -530,9 +530,9 @@ void Compilation::findInstantiations(const MemberSyntax& node, SmallVector<NameS
             break;
         case SyntaxKind::IfGenerate: {
             const auto& ifGen = node.as<IfGenerateSyntax>();
-            findInstantiations(ifGen.block, scopeStack, found);
+            findInstantiations(*ifGen.block, scopeStack, found);
             if (ifGen.elseClause)
-                findInstantiations(ifGen.elseClause->clause.as<MemberSyntax>(), scopeStack, found);
+                findInstantiations(ifGen.elseClause->clause->as<MemberSyntax>(), scopeStack, found);
             break;
         }
         default:

@@ -48,9 +48,9 @@ void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclar
                                  SmallVector<ParameterSymbol*>& results) {
     for (auto decl : syntax.declarators) {
         auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText(), decl->name.location(), true, false);
-        param->setDeclaredType(syntax.type);
+        param->setDeclaredType(*syntax.type);
         if (decl->initializer)
-            param->setDefault(decl->initializer->expr);
+            param->setDefault(*decl->initializer->expr);
         else
             compilation.addError(DiagCode::BodyParamNoInitializer, decl->name.location());
 
@@ -160,7 +160,7 @@ void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax&
                                                   declarator->name.location());
         
         // TODO: net types, initializers, etc
-        net->dataType = syntax.type;
+        net->dataType = *syntax.type;
         results.append(net);
     }
 }
@@ -174,9 +174,9 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     for (auto declarator : syntax.declarators) {
         auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(),
                                                             declarator->name.location());
-        variable->type = syntax.type;
+        variable->type = *syntax.type;
         if (declarator->initializer)
-            variable->initializer = declarator->initializer->expr;
+            variable->initializer = *declarator->initializer->expr;
 
         results.append(variable);
     }
@@ -184,11 +184,11 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
 
 VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
                                            const ForVariableDeclarationSyntax& syntax) {
-    auto var = compilation.emplace<VariableSymbol>(syntax.declarator.name.valueText(),
-                                                   syntax.declarator.name.location());
-    var->type = syntax.type;
-    if (syntax.declarator.initializer)
-        var->initializer = syntax.declarator.initializer->expr;
+    auto var = compilation.emplace<VariableSymbol>(syntax.declarator->name.valueText(),
+                                                   syntax.declarator->name.location());
+    var->type = *syntax.type;
+    if (syntax.declarator->initializer)
+        var->initializer = *syntax.declarator->initializer->expr;
     return *var;
 }
 
@@ -211,24 +211,24 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                                                const FunctionDeclarationSyntax& syntax,
                                                const Scope& parent) {
     // TODO: non simple names?
-    const auto& proto = syntax.prototype;
-    Token nameToken = proto.name.getFirstToken();
+    auto proto = syntax.prototype;
+    Token nameToken = proto->name->getFirstToken();
 
     auto result = compilation.emplace<SubroutineSymbol>(
         compilation,
         nameToken.valueText(),
         nameToken.location(),
-        SemanticFacts::getVariableLifetime(proto.lifetime).value_or(VariableLifetime::Automatic),
+        SemanticFacts::getVariableLifetime(proto->lifetime).value_or(VariableLifetime::Automatic),
         syntax.kind == SyntaxKind::TaskDeclaration,
         parent
     );
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
-    if (proto.portList) {
+    if (proto->portList) {
         const DataTypeSyntax* lastType = nullptr;
         auto lastDirection = FormalArgumentDirection::In;
 
-        for (const FunctionPortSyntax* portSyntax : proto.portList->ports) {
+        for (const FunctionPortSyntax* portSyntax : proto->portList->ports) {
             FormalArgumentDirection direction;
             bool directionSpecified = true;
             switch (portSyntax->direction.kind) {
@@ -250,10 +250,10 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                     THROW_UNREACHABLE;
             }
 
-            const auto& declarator = portSyntax->declarator;
+            auto declarator = portSyntax->declarator;
             auto arg = compilation.emplace<FormalArgumentSymbol>(
-                declarator.name.valueText(),
-                declarator.name.location(),
+                declarator->name.valueText(),
+                declarator->name.location(),
                 direction
             );
 
@@ -271,8 +271,8 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                 arg->type = *lastType;
             }
 
-            if (declarator.initializer)
-                arg->initializer = declarator.initializer->expr;
+            if (declarator->initializer)
+                arg->initializer = *declarator->initializer->expr;
 
             result->addMember(*arg);
             arguments.append(arg);
@@ -283,13 +283,13 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     // The function gets an implicit variable inserted that represents the return value.
     // TODO: don't do this if returning void; also handle name collisions with this thing
     auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location);
-    implicitReturnVar->type = *proto.returnType;
+    implicitReturnVar->type = *proto->returnType;
     result->addMember(*implicitReturnVar);
     result->returnValVar = implicitReturnVar;
 
     // TODO: mising return type
     result->arguments = arguments.copy(compilation);
-    result->returnType = *proto.returnType;
+    result->returnType = *proto->returnType;
     result->setBody(syntax.items);
     return *result;
 }

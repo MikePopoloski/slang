@@ -49,7 +49,7 @@ public:
     span<const ParameterDecl> parameters;
 
     explicit Definition(const ModuleDeclarationSyntax& syntax) :
-        syntax(syntax), name(syntax.header.name.valueText()) {}
+        syntax(syntax), name(syntax.header->name.valueText()) {}
 };
 
 }

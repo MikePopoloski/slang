@@ -101,15 +101,15 @@ Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax
 
 Statement& StatementBodiedScope::bindConditionalStatement(const ConditionalStatementSyntax& syntax,
                                                           const BindContext& context) {
-    ASSERT(syntax.predicate.conditions.size() == 1);
-    ASSERT(!syntax.predicate.conditions[0]->matchesClause);
+    ASSERT(syntax.predicate->conditions.size() == 1);
+    ASSERT(!syntax.predicate->conditions[0]->matchesClause);
 
     Compilation& comp = getCompilation();
-    const auto& cond = Expression::bind(comp, syntax.predicate.conditions[0]->expr, context);
-    const auto& ifTrue = bindStatement(syntax.statement, context);
+    const auto& cond = Expression::bind(comp, *syntax.predicate->conditions[0]->expr, context);
+    const auto& ifTrue = bindStatement(*syntax.statement, context);
     const Statement* ifFalse = nullptr;
     if (syntax.elseClause)
-        ifFalse = &bindStatement(syntax.elseClause->clause.as<StatementSyntax>(), context);
+        ifFalse = &bindStatement(syntax.elseClause->clause->as<StatementSyntax>(), context);
 
     return *comp.emplace<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
@@ -151,11 +151,11 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
     }
 
     SmallVectorSized<const Expression*, 2> steps;
-    const auto& stopExpr = Expression::bind(comp, syntax.stopExpr, *forContext);
+    const auto& stopExpr = Expression::bind(comp, *syntax.stopExpr, *forContext);
     for (auto step : syntax.steps)
         steps.append(&Expression::bind(comp, *step, *forContext));
 
-    const auto& bodyStmt = forScope->bindStatement(syntax.statement, *forContext);
+    const auto& bodyStmt = forScope->bindStatement(*syntax.statement, *forContext);
     auto initList = comp.emplace<StatementList>(initializers.copy(comp));
     auto loop = comp.emplace<ForLoopStatement>(syntax, *initList, &stopExpr, steps.copy(comp), bodyStmt);
 
@@ -171,7 +171,7 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
 Statement& StatementBodiedScope::bindExpressionStatement(const ExpressionStatementSyntax& syntax,
                                                          const BindContext& context) {
     Compilation& comp = getCompilation();
-    const auto& expr = Expression::bind(comp, syntax.expr, context);
+    const auto& expr = Expression::bind(comp, *syntax.expr, context);
     return *comp.emplace<ExpressionStatement>(syntax, expr);
 }
 

@@ -6,7 +6,7 @@ TEST_CASE("If statement", "[parser:statements]") {
 
     REQUIRE(stmt.kind == SyntaxKind::ConditionalStatement);
     CHECK(stmt.toString() == text);
-    CHECK(stmt.as<ConditionalStatementSyntax>().predicate.conditions[0]->expr.kind == SyntaxKind::LogicalAndExpression);
+    CHECK(stmt.as<ConditionalStatementSyntax>().predicate->conditions[0]->expr->kind == SyntaxKind::LogicalAndExpression);
 }
 
 TEST_CASE("Case statement (empty)", "[parser:statements]") {
@@ -108,7 +108,7 @@ void testTimingControl(string_view text, SyntaxKind kind) {
     auto& stmt = parseStatement(std::string(text));
 
     REQUIRE(stmt.kind == SyntaxKind::TimingControlStatement);
-    CHECK(stmt.as<TimingControlStatementSyntax>().timingControl.kind == kind);
+    CHECK(stmt.as<TimingControlStatementSyntax>().timingControl->kind == kind);
     CHECK(stmt.toString() == text);
 }
 

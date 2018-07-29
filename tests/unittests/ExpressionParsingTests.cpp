@@ -32,7 +32,7 @@ TEST_CASE("MinTypMax expression", "[parser:expressions]") {
     auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::ParenthesizedExpression);
-    CHECK(expr.as<ParenthesizedExpressionSyntax>().expression.kind == SyntaxKind::MinTypMaxExpression);
+    CHECK(expr.as<ParenthesizedExpressionSyntax>().expression->kind == SyntaxKind::MinTypMaxExpression);
     CHECK(expr.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -114,7 +114,7 @@ void testPrefixUnary(TokenKind kind) {
     CHECK_DIAGNOSTICS_EMPTY;
     auto& us = expr.as<PrefixUnaryExpressionSyntax>();
     CHECK(us.operatorToken.kind == kind);
-    CHECK(us.operand.kind == SyntaxKind::IdentifierName);
+    CHECK(us.operand->kind == SyntaxKind::IdentifierName);
 }
 
 TEST_CASE("Unary prefix operators", "[parser:expressions]") {
@@ -142,7 +142,7 @@ void testPostfixUnary(TokenKind kind) {
     CHECK_DIAGNOSTICS_EMPTY;
     auto& us = expr.as<PostfixUnaryExpressionSyntax>();
     CHECK(us.operatorToken.kind == kind);
-    CHECK(us.operand.kind == SyntaxKind::IdentifierName);
+    CHECK(us.operand->kind == SyntaxKind::IdentifierName);
 }
 
 TEST_CASE("Unary postfix operators", "[parser:expressions]") {
@@ -159,8 +159,8 @@ void testBinaryOperator(TokenKind kind) {
     CHECK_DIAGNOSTICS_EMPTY;
     auto& us = expr.as<BinaryExpressionSyntax>();
     CHECK(us.operatorToken.kind == kind);
-    CHECK(us.left.kind == SyntaxKind::IdentifierName);
-    CHECK(us.right.kind == SyntaxKind::IntegerLiteralExpression);
+    CHECK(us.left->kind == SyntaxKind::IdentifierName);
+    CHECK(us.right->kind == SyntaxKind::IntegerLiteralExpression);
 }
 
 TEST_CASE("Binary operators", "[parser:expression]") {
@@ -274,7 +274,7 @@ TEST_CASE("Streaming concatenation", "[parser:expressions]") {
     auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::StreamingConcatenationExpression);
-    CHECK(expr.as<StreamingConcatenationExpressionSyntax>().expressions[1]->withRange->range.selector->kind == SyntaxKind::AscendingRangeSelect);
+    CHECK(expr.as<StreamingConcatenationExpressionSyntax>().expressions[1]->withRange->range->selector->kind == SyntaxKind::AscendingRangeSelect);
     CHECK(expr.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -291,7 +291,7 @@ TEST_CASE("Element Access", "[parser:expressions]") {
 void testElementRange(string_view text, SyntaxKind kind) {
     auto& expr = parseExpression(std::string(text));
     REQUIRE(expr.kind == SyntaxKind::ElementSelectExpression);
-    CHECK(expr.as<ElementSelectExpressionSyntax>().select.selector->kind == kind);
+    CHECK(expr.as<ElementSelectExpressionSyntax>().select->selector->kind == kind);
     CHECK(expr.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -357,8 +357,8 @@ TEST_CASE("Conditional expression", "[parser:expressions]") {
     REQUIRE(expr.kind == SyntaxKind::ConditionalExpression);
 
     auto& cond = expr.as<ConditionalExpressionSyntax>();
-    REQUIRE(cond.predicate.conditions.size() == 1);
-    CHECK(cond.predicate.conditions[0]->expr.kind == SyntaxKind::LogicalOrExpression);
+    REQUIRE(cond.predicate->conditions.size() == 1);
+    CHECK(cond.predicate->conditions[0]->expr->kind == SyntaxKind::LogicalOrExpression);
 }
 
 TEST_CASE("Conditional expression (pattern matching)", "[parser:expressions]") {
@@ -371,9 +371,9 @@ TEST_CASE("Conditional expression (pattern matching)", "[parser:expressions]") {
     REQUIRE(expr.kind == SyntaxKind::ConditionalExpression);
 
     auto& cond = expr.as<ConditionalExpressionSyntax>();
-    REQUIRE(cond.predicate.conditions.size() == 2);
-    CHECK(cond.predicate.conditions[0]->expr.kind == SyntaxKind::IdentifierName);
-    CHECK(cond.predicate.conditions[0]->matchesClause->pattern.kind == SyntaxKind::ExpressionPattern);
+    REQUIRE(cond.predicate->conditions.size() == 2);
+    CHECK(cond.predicate->conditions[0]->expr->kind == SyntaxKind::IdentifierName);
+    CHECK(cond.predicate->conditions[0]->matchesClause->pattern->kind == SyntaxKind::ExpressionPattern);
 }
 
 TEST_CASE("Big expression", "[parser:expressions]") {
@@ -391,7 +391,7 @@ TEST_CASE("Big expression", "[parser:expressions]") {
 TEST_CASE("Arithmetic expressions", "[parser:expressions]") {
     auto& expr = parseExpression("3 + 4 / 2 * 9");
     REQUIRE(expr.kind == SyntaxKind::AddExpression);
-    CHECK(expr.as<BinaryExpressionSyntax>().right.kind == SyntaxKind::MultiplyExpression);
+    CHECK(expr.as<BinaryExpressionSyntax>().right->kind == SyntaxKind::MultiplyExpression);
 }
 
 TEST_CASE("Simple class new expression", "[parser:expressions]") {
