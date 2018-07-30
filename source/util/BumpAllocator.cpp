@@ -37,6 +37,18 @@ BumpAllocator& BumpAllocator::operator=(BumpAllocator&& other) noexcept {
     return *this;
 }
 
+void BumpAllocator::steal(BumpAllocator&& other) {
+    Segment* seg = other.head;
+    if (!seg)
+        return;
+
+    while (seg->prev)
+        seg = seg->prev;
+
+    seg->prev = head->prev;
+    head->prev = std::exchange(other.head, nullptr);
+}
+
 byte* BumpAllocator::allocateSlow(size_t size, size_t alignment) {
     // for really large allocations, give them their own segment
     if (size > (SEGMENT_SIZE >> 1)) {

@@ -70,7 +70,8 @@ struct SyntaxChange {
 };
 
 using ChangeMap = flat_hash_map<const SyntaxNode*, detail::SyntaxChange>;
-std::shared_ptr<SyntaxTree> transformTree(const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes);
+std::shared_ptr<SyntaxTree> transformTree(const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
+                                          const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees);
 
 }
 
@@ -79,12 +80,14 @@ class SyntaxRewriter : public SyntaxVisitor<TDerived> {
 public:
     std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
         changes.clear();
+        tempTrees.clear();
+
         tree->root().visit(*this);
 
         if (changes.empty())
             return tree;
 
-        return transformTree(tree, changes);
+        return transformTree(tree, changes, tempTrees);
     }
 
 protected:

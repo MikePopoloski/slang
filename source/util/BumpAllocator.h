@@ -44,6 +44,10 @@ public:
         return base;
     }
 
+    /// Steals ownership of all of the memory contents of the given allocator.
+    /// The other allocator will be in a moved-from state after the call.
+    void steal(BumpAllocator&& other);
+
 protected:
     // Allocations are tracked as a linked list of segments.
     struct Segment {

@@ -14,8 +14,6 @@ struct CloneVisitor {
     BumpAllocator& alloc;
     const slang::detail::ChangeMap& changes;
 
-    optional<SmallVectorSized<TokenOrSyntax, 8>> listBuffer;
-
     CloneVisitor(BumpAllocator& alloc, const slang::detail::ChangeMap& changes) :
         alloc(alloc), changes(changes) {}
 
@@ -28,6 +26,16 @@ struct CloneVisitor {
         T* cloned = node.clone(alloc);
 
         constexpr bool IsList = std::is_same_v<T, SyntaxListBase>;
+        optional<SmallVectorSized<TokenOrSyntax, 8>> listBuffer;
+
+        auto backfillList = [&](uint32_t index) {
+            if (cloned->kind != SyntaxKind::SyntaxList && cloned->kind != SyntaxKind::SeparatedList)
+                throw std::logic_error("Can't use insertBefore or insertAfter on a non-list node");
+
+            listBuffer.emplace();
+            for (uint32_t i = 0; i < index; i++)
+                listBuffer->append(cloned->getChild(i));
+        };
 
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
@@ -61,13 +69,13 @@ struct CloneVisitor {
                         break;
                     case slang::detail::SyntaxChange::InsertBefore:
                         if (!listBuffer)
-                            backfillList(cloned, i);
+                            backfillList(i);
                         listBuffer->append(it->second.second);
                         listBuffer->append(child->visit(*this));
                         break;
                     case slang::detail::SyntaxChange::InsertAfter:
                         if (!listBuffer)
-                            backfillList(cloned, i);
+                            backfillList(i);
                         listBuffer->append(child->visit(*this));
                         listBuffer->append(it->second.second);
                         break;
@@ -91,16 +99,6 @@ struct CloneVisitor {
 #endif
 
     SyntaxNode* visitInvalid(const SyntaxNode&) { THROW_UNREACHABLE; }
-
-    template<typename T>
-    void backfillList(T* cloned, uint32_t index) {
-        if (cloned->kind != SyntaxKind::SyntaxList && cloned->kind != SyntaxKind::SeparatedList)
-            throw std::logic_error("Can't use insertBefore or insertAfter on a non-list node");
-
-        listBuffer.emplace();
-        for (uint32_t i = 0; i < index; i++)
-            listBuffer->append(cloned->getChild(i));
-    }
 };
 
 }
@@ -109,11 +107,18 @@ namespace slang {
 
 namespace detail {
 
-std::shared_ptr<SyntaxTree> transformTree(const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes) {
+std::shared_ptr<SyntaxTree> transformTree(const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
+                                          const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees) {
     BumpAllocator alloc;
     CloneVisitor visitor(alloc, changes);
 
     SyntaxNode* root = tree->root().visit(visitor);
+
+    // Steal ownership of any temporary syntax trees that the user created; once we return the
+    // user expects that the newly transformed tree fully owns all of its memory.
+    for (auto& t : tempTrees)
+        alloc.steal(std::move(t->allocator()));
+
     return std::make_shared<SyntaxTree>(root, tree->sourceManager(), std::move(alloc), tree);
 }
 

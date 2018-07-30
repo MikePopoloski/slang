@@ -32,6 +32,8 @@ public:
 
     std::string str() const { return buffer; }
 
+    static std::string printFile(const SyntaxTree& tree);
+
 private:
     std::string buffer;
     const SourceManager* sourceManager = nullptr;

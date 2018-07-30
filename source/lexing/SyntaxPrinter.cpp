@@ -95,4 +95,14 @@ SyntaxPrinter& SyntaxPrinter::print(const SyntaxTree& tree) {
     return *this;
 }
 
+std::string SyntaxPrinter::printFile(const SyntaxTree& tree) {
+    return SyntaxPrinter()
+        .setIncludeDirectives(true)
+        .setIncludeSkipped(true)
+        .setIncludeTrivia(true)
+        .excludePreprocessed(tree.sourceManager())
+        .print(tree)
+        .str();
+}
+
 }
