@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <flat_hash_map.hpp>
 #include <vector>
 
 #include "AllSyntax.h"
@@ -55,7 +56,7 @@ namespace detail {
 
 struct SyntaxChange {
     const SyntaxNode* first = nullptr;
-    const SyntaxNode* second = nullptr;
+    SyntaxNode* second = nullptr;
 
     enum Kind {
         Remove,
@@ -64,12 +65,12 @@ struct SyntaxChange {
         InsertAfter
     } kind;
 
-    SyntaxChange(Kind kind, const SyntaxNode* first, const SyntaxNode* second) :
+    SyntaxChange(Kind kind, const SyntaxNode* first, SyntaxNode* second) :
         first(first), second(second), kind(kind) {}
 };
 
-std::shared_ptr<SyntaxTree> transformTree(const std::shared_ptr<SyntaxTree>& tree,
-                                          span<const SyntaxChange> changes);
+using ChangeMap = flat_hash_map<const SyntaxNode*, detail::SyntaxChange>;
+std::shared_ptr<SyntaxTree> transformTree(const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes);
 
 }
 
@@ -93,23 +94,23 @@ protected:
     }
 
     void remove(const SyntaxNode& oldNode) {
-        changes.emplace_back(detail::SyntaxChange::Remove, &oldNode, nullptr);
+        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::Remove, &oldNode, nullptr });
     }
 
-    void replace(const SyntaxNode& oldNode, const SyntaxNode& newNode) {
-        changes.emplace_back(detail::SyntaxChange::Replace, &oldNode, &newNode);
+    void replace(const SyntaxNode& oldNode, SyntaxNode& newNode) {
+        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::Replace, &oldNode, &newNode });
     }
 
-    void insertBefore(const SyntaxNode& oldNode, const SyntaxNode& newNode) {
-        changes.emplace_back(detail::SyntaxChange::InsertBefore, &oldNode, &newNode);
+    void insertBefore(const SyntaxNode& oldNode, SyntaxNode& newNode) {
+        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::InsertBefore, &oldNode, &newNode });
     }
 
-    void insertAfter(const SyntaxNode& oldNode, const SyntaxNode& newNode) {
-        changes.emplace_back(detail::SyntaxChange::InsertAfter, &oldNode, &newNode);
+    void insertAfter(const SyntaxNode& oldNode, SyntaxNode& newNode) {
+        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::InsertAfter, &oldNode, &newNode });
     }
 
 private:
-    std::vector<detail::SyntaxChange> changes;
+    detail::ChangeMap changes;
     std::vector<std::shared_ptr<SyntaxTree>> tempTrees;
 };
 
