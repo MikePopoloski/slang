@@ -1024,13 +1024,12 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
         argumentMap[name] = tokenList;
     }
 
-    // TODO: the expansion range for a function-like macro should include the parenthesis and arguments
+    Token endOfArgs = actualArgs->getLastToken();
     SourceLocation start = body[0].location();
-    SourceLocation usageLoc = usageSite.location();
     SourceLocation expansionLoc = sourceManager.createExpansionLoc(
         start,
-        usageLoc,
-        usageLoc + usageSite.rawText().length()
+        usageSite.location(),
+        endOfArgs.location() + endOfArgs.rawText().length()
     );
 
     // now add each body token, substituting arguments as necessary
@@ -1046,7 +1045,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
             // `define ONE 1
             // `FOO(ONE)   // expands to 1
             string_view text = token.valueText();
-            if (token.kind == TokenKind::Directive)
+            if (token.kind == TokenKind::Directive && text.length() >= 1)
                 text = text.substr(1);
 
             // check for formal param
@@ -1089,7 +1088,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
 }
 
 void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
-                                  SourceLocation expansionLoc, Token usageSite, bool& isFirst) {
+                                   SourceLocation expansionLoc, Token usageSite, bool& isFirst) {
     if (isFirst) {
         token = token.withTrivia(alloc, usageSite.trivia());
         isFirst = false;
