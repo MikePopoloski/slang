@@ -38,30 +38,30 @@ endmodule
 
 TEST_CASE("Rewriting around macros") {
     auto tree = SyntaxTree::fromText(R"(
-`define ENUM_MACRO \
+`define ENUM_MACRO(asdf) \
     typedef enum int {\
         FOO = 1,\
         BAR = 2,\
         BAZ = 3\
-    } test_t
+    } asdf;
 
 module M;
-    `ENUM_MACRO
+    `ENUM_MACRO(test_t)
 endmodule
 )");
 
     tree = TestRewriter().transform(tree);
 
     CHECK(SyntaxPrinter::printFile(*tree) == R"(
-`define ENUM_MACRO \
+`define ENUM_MACRO(asdf) \
     typedef enum int {\
         FOO = 1,\
         BAR = 2,\
         BAZ = 3\
-    } test_t
+    } asdf;
 
 module M;
-    `ENUM_MACRO
+    `ENUM_MACRO(test_t)
     localparam int test_t__count = 3;
 endmodule
 )");

@@ -176,7 +176,7 @@ private:
     // This is actually used two different ways; if this is a normal token from a
     // macro expansion, originalLocation will point to the token inside the macro
     // definition, and expansionLocation will point to the range of the macro usage
-    // the expansion site. Alternatively, if this token came from an argument,
+    // at the expansion site. Alternatively, if this token came from an argument,
     // originalLocation will point to the argument at the expansion site and
     // expansionLocation will point to the parameter inside the macro body.
     struct ExpansionInfo {

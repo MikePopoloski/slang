@@ -1038,50 +1038,63 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
         if (token.kind != TokenKind::Identifier && !isKeyword(token.kind) &&
             (token.kind != TokenKind::Directive || token.directiveKind() != SyntaxKind::MacroUsage)) {
             appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
+            continue;
         }
-        else {
-            // Other tools allow arguments to replace matching directive names, e.g.:
-            // `define FOO(bar) `bar
-            // `define ONE 1
-            // `FOO(ONE)   // expands to 1
-            string_view text = token.valueText();
-            if (token.kind == TokenKind::Directive && text.length() >= 1)
-                text = text.substr(1);
 
-            // check for formal param
-            auto it = argumentMap.find(text);
-            if (it == argumentMap.end())
-                appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
-            else {
-                // We need to ensure that we get correct spacing for the leading token here;
-                // it needs to come from the *formal* parameter used in the macro body, not
-                // from the argument itself.
-                auto begin = it->second->begin();
-                auto end = it->second->end();
-                if (begin != end) {
-                    // See note above about weird macro usage being argument replaced.
-                    // In that case we want to fabricate the correct directive token here.
-                    Token first = begin->withTrivia(alloc, token.trivia());
-                    if (token.kind == TokenKind::Directive) {
-                        Token grave {
-                            TokenKind::Directive,
-                            alloc.emplace<Token::Info>(first.trivia(), "`", first.location())
-                        };
-                        first = Lexer::concatenateTokens(alloc, grave, first);
-                    }
+        // Other tools allow arguments to replace matching directive names, e.g.:
+        // `define FOO(bar) `bar
+        // `define ONE 1
+        // `FOO(ONE)   // expands to 1
+        string_view text = token.valueText();
+        if (token.kind == TokenKind::Directive && text.length() >= 1)
+            text = text.substr(1);
 
-                    appendBodyToken(dest, first, first.location(), first.location(), usageSite, isFirst);
-                    for (++begin; begin != end; begin++)
-                        appendBodyToken(dest, *begin, begin->location(), begin->location(), usageSite, isFirst);
-                }
-                else {
-                    // The macro argument contained no tokens. We still need to supply an empty token
-                    // here to ensure that the trivia of the formal parameter is passed on.
-                    appendBodyToken(dest, Token(TokenKind::EmptyMacroArgument, token.getInfo()),
-                                    start, expansionLoc, usageSite, isFirst);
-                }
-            }
+        // check for formal param
+        auto it = argumentMap.find(text);
+        if (it == argumentMap.end()) {
+            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
+            continue;
         }
+
+        auto begin = it->second->begin();
+        auto end = it->second->end();
+        if (begin == end) {
+            // The macro argument contained no tokens. We still need to supply an empty token
+            // here to ensure that the trivia of the formal parameter is passed on.
+            appendBodyToken(dest, Token(TokenKind::EmptyMacroArgument, token.getInfo()),
+                            start, expansionLoc, usageSite, isFirst);
+            continue;
+        }
+
+        // We need to ensure that we get correct spacing for the leading token here;
+        // it needs to come from the *formal* parameter used in the macro body, not
+        // from the argument itself.
+        Token first = begin->withTrivia(alloc, token.trivia());
+        SourceLocation firstLoc = first.location();
+
+        // Arguments need their own expansion location created; the original
+        // location comes from the source file itself, and the expansion location
+        // points into the macro body where the formal argument was used.
+        SourceLocation formalLoc = expansionLoc + (int(token.location().offset()) - int(firstLoc.offset()));
+        SourceLocation argLoc = sourceManager.createExpansionLoc(
+            firstLoc,
+            formalLoc,
+            formalLoc + token.rawText().length()
+        );
+
+        // See note above about weird macro usage being argument replaced.
+        // In that case we want to fabricate the correct directive token here.
+        if (token.kind == TokenKind::Directive) {
+            Token grave {
+                TokenKind::Directive,
+                alloc.emplace<Token::Info>(first.trivia(), "`", first.location())
+            };
+            first = Lexer::concatenateTokens(alloc, grave, first);
+        }
+
+        appendBodyToken(dest, first, firstLoc, argLoc, usageSite, isFirst);
+        for (++begin; begin != end; begin++)
+            appendBodyToken(dest, *begin, firstLoc, argLoc, usageSite, isFirst);
     }
 
     return true;
@@ -1102,7 +1115,7 @@ void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, Source
             }
         }
     }
-    // TODO: make sure locations are valid, I've seen unsigned overflow here
+
     int delta = int(token.location().offset()) - int(startLoc.offset());
     dest.append(token.withLocation(alloc, expansionLoc + delta));
 }
