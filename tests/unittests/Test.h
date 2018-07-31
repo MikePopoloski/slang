@@ -9,15 +9,15 @@
 
 #include <catch.hpp>
 
-#include "binding/Expressions.h"
-#include "binding/Statements.h"
-#include "compilation/Compilation.h"
-#include "diagnostics/Diagnostics.h"
-#include "lexing/Preprocessor.h"
-#include "parsing/Parser.h"
-#include "parsing/SyntaxTree.h"
-#include "text/SourceManager.h"
-#include "util/BumpAllocator.h"
+#include "slang/binding/Expressions.h"
+#include "slang/binding/Statements.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/Diagnostics.h"
+#include "slang/parsing/Parser.h"
+#include "slang/parsing/Preprocessor.h"
+#include "slang/syntax/SyntaxTree.h"
+#include "slang/text/SourceManager.h"
+#include "slang/util/BumpAllocator.h"
 
 namespace slang {
 

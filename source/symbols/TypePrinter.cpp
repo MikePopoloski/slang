@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "TypePrinter.h"
+#include "slang/symbols/TypePrinter.h"
 
 namespace slang {
 

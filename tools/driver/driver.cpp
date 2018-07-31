@@ -5,9 +5,9 @@
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 
-#include "compilation/Compilation.h"
-#include "lexing/SyntaxPrinter.h"
-#include "parsing/SyntaxTree.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/syntax/SyntaxPrinter.h"
+#include "slang/syntax/SyntaxTree.h"
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>

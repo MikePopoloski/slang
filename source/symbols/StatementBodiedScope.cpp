@@ -4,10 +4,10 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "StatementBodiedScope.h"
+#include "slang/symbols/StatementBodiedScope.h"
 
-#include "binding/Statements.h"
-#include "compilation/Compilation.h"
+#include "slang/binding/Statements.h"
+#include "slang/compilation/Compilation.h"
 
 namespace slang {
 

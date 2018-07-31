@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "binding/SystemSubroutine.h"
+#include "slang/binding/SystemSubroutine.h"
 
 namespace slang::Builtins {
 

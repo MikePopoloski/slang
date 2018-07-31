@@ -4,14 +4,13 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "TypeSymbols.h"
+#include "slang/symbols/TypeSymbols.h"
 
 #include <nlohmann/json.hpp>
 
-#include "binding/ConstantValue.h"
-#include "compilation/Compilation.h"
-
-#include "TypePrinter.h"
+#include "slang/binding/ConstantValue.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/symbols/TypePrinter.h"
 
 namespace {
 

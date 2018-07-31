@@ -11,24 +11,18 @@ add_library(slang STATIC
 
 	diagnostics/Diagnostics.cpp
 
-	lexing/Lexer.cpp
-	lexing/LexerFacts.cpp
-	lexing/Preprocessor.cpp
-	lexing/SyntaxPrinter.cpp
-	lexing/Token.cpp
-
 	numeric/SVInt.cpp
 	numeric/Time.cpp
 	numeric/VectorBuilder.cpp
 
-	parsing/AllSyntax.cpp
+	parsing/Lexer.cpp
+	parsing/LexerFacts.cpp
 	parsing/Parser.cpp
 	parsing/Parser_expressions.cpp
 	parsing/Parser_statements.cpp
 	parsing/ParserBase.cpp
-	parsing/SyntaxFacts.cpp
-	parsing/SyntaxNode.cpp
-	parsing/SyntaxVisitor.cpp
+	parsing/Preprocessor.cpp
+	parsing/Token.cpp
 
 	symbols/HierarchySymbols.cpp
 	symbols/Lazy.cpp
@@ -39,6 +33,12 @@ add_library(slang STATIC
 	symbols/Symbol.cpp
 	symbols/TypePrinter.cpp
 	symbols/TypeSymbols.cpp
+
+	syntax/AllSyntax.cpp
+	syntax/SyntaxFacts.cpp
+	syntax/SyntaxNode.cpp
+	syntax/SyntaxPrinter.cpp
+	syntax/SyntaxVisitor.cpp
 
 	text/SourceManager.cpp
 
@@ -97,5 +97,5 @@ endif()
 
 target_link_libraries(slang PUBLIC CONAN_PKG::jsonformoderncpp)
 
-target_include_directories(slang PUBLIC ./)
+target_include_directories(slang PUBLIC ../include/)
 target_include_directories(slang PUBLIC ../external/)

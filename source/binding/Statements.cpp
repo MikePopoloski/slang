@@ -4,9 +4,9 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Statements.h"
+#include "slang/binding/Statements.h"
 
-#include "Expressions.h"
+#include "slang/binding/Expressions.h"
 
 namespace slang {
 

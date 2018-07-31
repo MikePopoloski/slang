@@ -12,8 +12,8 @@
   #include <io.h>
 #endif
 
-#include "lexing/SyntaxPrinter.h"
-#include "parsing/SyntaxTree.h"
+#include "slang/syntax/SyntaxPrinter.h"
+#include "slang/syntax/SyntaxTree.h"
 
 using namespace slang;
 

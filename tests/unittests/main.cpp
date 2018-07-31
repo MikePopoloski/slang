@@ -10,8 +10,8 @@
 // Don't put tests in this file; we want to avoid recompiling the
 // Catch impl whenever we modify a test.
 
-#include "util/BumpAllocator.h"
-#include "diagnostics/Diagnostics.h"
+#include "slang/util/BumpAllocator.h"
+#include "slang/diagnostics/Diagnostics.h"
 
 namespace slang {
 

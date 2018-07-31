@@ -4,9 +4,9 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "Time.h"
+#include "slang/numeric/Time.h"
 
-#include "util/StringTable.h"
+#include "slang/util/StringTable.h"
 
 namespace slang {
 

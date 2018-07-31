@@ -4,10 +4,10 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Compilation.h"
+#include "slang/compilation/Compilation.h"
 
-#include "parsing/SyntaxTree.h"
-#include "symbols/ASTVisitor.h"
+#include "slang/syntax/SyntaxTree.h"
+#include "slang/symbols/ASTVisitor.h"
 
 #include "BuiltInSubroutines.h"
 

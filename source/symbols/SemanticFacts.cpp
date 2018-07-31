@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "SemanticFacts.h"
+#include "slang/symbols/SemanticFacts.h"
 
 namespace slang {
 

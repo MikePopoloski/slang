@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "BuiltInSubroutines.h"
 
-#include "Compilation.h"
+#include "slang/compilation/Compilation.h"
 
 namespace slang::Builtins {
 

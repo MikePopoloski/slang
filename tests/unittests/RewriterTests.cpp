@@ -2,8 +2,8 @@
 
 #include <fmt/format.h>
 
-#include "lexing/SyntaxPrinter.h"
-#include "parsing/SyntaxVisitor.h"
+#include "slang/syntax/SyntaxPrinter.h"
+#include "slang/syntax/SyntaxVisitor.h"
 
 class TestRewriter : public SyntaxRewriter<TestRewriter> {
 public:

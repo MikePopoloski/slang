@@ -8,8 +8,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "parsing/SyntaxTree.h"
-#include "parsing/SyntaxVisitor.h"
+#include "slang/syntax/SyntaxTree.h"
+#include "slang/syntax/SyntaxVisitor.h"
 
 using namespace slang;
 

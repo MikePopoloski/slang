@@ -1,7 +1,7 @@
 #include "Test.h"
 
-#include "compilation/Compilation.h"
-#include "parsing/SyntaxTree.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/syntax/SyntaxTree.h"
 
 SVInt testParameter(const std::string& text, uint32_t index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";

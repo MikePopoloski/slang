@@ -4,10 +4,10 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "ParserBase.h"
+#include "slang/parsing/ParserBase.h"
 
-#include "lexing/Preprocessor.h"
-#include "util/BumpAllocator.h"
+#include "slang/parsing/Preprocessor.h"
+#include "slang/util/BumpAllocator.h"
 
 namespace slang {
 

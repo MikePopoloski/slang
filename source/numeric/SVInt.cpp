@@ -4,16 +4,17 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "SVInt.h"
+#include "slang/numeric/SVInt.h"
 
 #include <stdexcept>
 
 #include <fmt/format.h>
 
-#include "text/CharInfo.h"
-#include "util/Hash.h"
-#include "util/TempBuffer.h"
+#include "slang/util/Hash.h"
+#include "slang/util/TempBuffer.h"
+
 #include "SVIntHelpers.h"
+#include "../text/CharInfo.h"
 
 namespace slang {
 

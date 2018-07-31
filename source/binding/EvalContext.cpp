@@ -4,12 +4,12 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "EvalContext.h"
+#include "slang/binding/EvalContext.h"
 
 #include <fmt/format.h>
 
-#include "symbols/MemberSymbols.h"
-#include "symbols/TypeSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/TypeSymbols.h"
 
 namespace slang {
 

@@ -4,11 +4,11 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Scope.h"
+#include "slang/symbols/Scope.h"
 
-#include "compilation/Compilation.h"
-#include "symbols/Symbol.h"
-#include "util/StackContainer.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/symbols/Symbol.h"
+#include "slang/util/StackContainer.h"
 
 namespace {
 

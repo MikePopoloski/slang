@@ -4,11 +4,11 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Lazy.h"
+#include "slang/symbols/Lazy.h"
 
-#include "compilation/Compilation.h"
-#include "symbols/Scope.h"
-#include "symbols/TypeSymbols.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/symbols/Scope.h"
+#include "slang/symbols/TypeSymbols.h"
 
 namespace slang {
 

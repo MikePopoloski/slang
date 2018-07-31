@@ -4,13 +4,13 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Diagnostics.h"
+#include "slang/diagnostics/Diagnostics.h"
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include "symbols/TypePrinter.h"
-#include "text/SourceManager.h"
+#include "slang/symbols/TypePrinter.h"
+#include "slang/text/SourceManager.h"
 
 namespace slang {
 

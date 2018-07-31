@@ -4,17 +4,17 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Symbol.h"
+#include "slang/symbols/Symbol.h"
 
 #include <nlohmann/json.hpp>
 
-#include "compilation/Compilation.h"
-#include "diagnostics/Diagnostics.h"
-#include "symbols/HierarchySymbols.h"
-#include "symbols/MemberSymbols.h"
-#include "symbols/ASTVisitor.h"
-#include "symbols/TypeSymbols.h"
-#include "text/SourceManager.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/Diagnostics.h"
+#include "slang/symbols/HierarchySymbols.h"
+#include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/ASTVisitor.h"
+#include "slang/symbols/TypeSymbols.h"
+#include "slang/text/SourceManager.h"
 
 namespace {
 

@@ -4,9 +4,9 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Parser.h"
+#include "slang/parsing/Parser.h"
 
-#include "lexing/Lexer.h"
+#include "slang/parsing/Lexer.h"
 
 namespace slang {
 

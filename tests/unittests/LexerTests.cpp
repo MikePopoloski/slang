@@ -1,6 +1,6 @@
 #include "Test.h"
 
-#include "lexing/SyntaxPrinter.h"
+#include "slang/syntax/SyntaxPrinter.h"
 
 TEST_CASE("Invalid chars", "[lexer]") {
     auto& text = "\x04";

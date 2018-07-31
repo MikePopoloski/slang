@@ -4,11 +4,11 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Expressions.h"
+#include "slang/binding/Expressions.h"
 
-#include "binding/Statements.h"
-#include "compilation/Compilation.h"
-#include "symbols/ASTVisitor.h"
+#include "slang/binding/Statements.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/symbols/ASTVisitor.h"
 
 namespace {
 

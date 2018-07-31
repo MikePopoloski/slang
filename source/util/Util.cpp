@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Util.h"
+#include "slang/util/Util.h"
 
 #include <fmt/format.h>
 

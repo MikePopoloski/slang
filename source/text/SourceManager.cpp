@@ -4,11 +4,11 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "SourceManager.h"
+#include "slang/text/SourceManager.h"
 
 #include <fstream>
 
-#include "util/StackContainer.h"
+#include "slang/util/StackContainer.h"
 
 namespace slang {
 

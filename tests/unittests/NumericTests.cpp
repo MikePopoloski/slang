@@ -1,6 +1,6 @@
 #include "Test.h"
 
-#include "numeric/SVInt.h"
+#include "slang/numeric/SVInt.h"
 
 TEST_CASE("Construction", "[numeric]") {
     SVInt value1;

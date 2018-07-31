@@ -4,12 +4,12 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "MemberSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
 
 #include <nlohmann/json.hpp>
 
-#include "compilation/Compilation.h"
-#include "symbols/HierarchySymbols.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/symbols/HierarchySymbols.h"
 
 namespace slang {
 

@@ -4,10 +4,11 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "VectorBuilder.h"
+#include "slang/numeric/VectorBuilder.h"
 
-#include "text/CharInfo.h"
-#include "diagnostics/Diagnostics.h"
+#include "slang/diagnostics/Diagnostics.h"
+
+#include "../text/CharInfo.h"
 
 namespace slang {
 

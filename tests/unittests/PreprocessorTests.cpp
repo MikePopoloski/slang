@@ -1,6 +1,6 @@
 #include "Test.h"
 
-#include "lexing/SyntaxPrinter.h"
+#include "slang/syntax/SyntaxPrinter.h"
 
 std::string preprocess(string_view text) {
     diagnostics.clear();

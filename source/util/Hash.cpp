@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Hash.h"
+#include "slang/util/Hash.h"
 
 #include <cstdlib>
 
