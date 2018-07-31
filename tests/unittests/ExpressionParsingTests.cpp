@@ -69,6 +69,15 @@ TEST_CASE("Integer literal expression", "[parser:expressions]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Integer with question", "[parser:expressions]") {
+    auto& text = "4'b?10?";
+    auto& expr = parseExpression(text);
+
+    REQUIRE(expr.kind == SyntaxKind::IntegerVectorExpression);
+    CHECK(expr.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Real literal expression", "[parser:expressions]") {
     auto& text = "42.42";
     auto& expr = parseExpression(text);

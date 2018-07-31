@@ -293,18 +293,20 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
     }
 
     Token next = first;
-    uint32_t length = 0;
     NumericTokenFlags baseFlags = baseToken.numericFlags();
+    SmallVectorSized<char, 64> text;
+    int count = 0;
 
     vectorBuilder.start(baseFlags.base(), sizeBits, baseFlags.isSigned(), first.location());
     do {
-        length += (uint32_t)next.rawText().length();
+        count++;
+        text.appendRange(next.rawText());
         consume();
         vectorBuilder.append(next);
         next = peek();
     } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
-    string_view rawText(first.rawText().data(), length);
+    string_view rawText = count == 1 ? first.rawText() : to_string_view(text.copy(alloc));
 
     auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location());
     info->setInt(alloc, vectorBuilder.finish());
