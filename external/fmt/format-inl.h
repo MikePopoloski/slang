@@ -96,7 +96,7 @@ inline int fmt_snprintf(char *buffer, size_t size, const char *format, ...) {
 #endif // defined(_WIN32) && defined(__MINGW32__) && !defined(__NO_ISOCEXT)
 
 const char RESET_COLOR[] = "\x1b[0m";
-const wchar_t WRESET_COLOR[] = L"\x1b[0m"; 
+const wchar_t WRESET_COLOR[] = L"\x1b[0m";
 
 typedef void (*FormatFunc)(internal::buffer &, int, string_view);
 

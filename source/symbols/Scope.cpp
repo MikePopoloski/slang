@@ -163,7 +163,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ModportDeclaration:
             // TODO: modports
             break;
-        
+
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
             addMember(SubroutineSymbol::fromSyntax(compilation, syntax.as<FunctionDeclarationSyntax>(), *this));
@@ -576,13 +576,13 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
                 const LazyType* lazyType = getLazyType(*result.found);
                 if ((lazyType && lazyType->isEvaluating()) || (result.found->kind == SymbolKind::Parameter &&
                                                                result.found->as<ParameterSymbol>().isEvaluating())) {
-                    
+
                     auto& diag = result.diagnostics.add(DiagCode::RecursiveDefinition, sourceRange) << name;
                     diag.addNote(DiagCode::NoteDeclarationHere, result.found->location);
                     result.found = nullptr;
                 }
             }
-            
+
             return;
         }
     }

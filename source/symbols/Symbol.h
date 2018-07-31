@@ -106,7 +106,7 @@ public:
             return *scope;
         }
         else {
-            ASSERT(T::isKind(kind)); 
+            ASSERT(T::isKind(kind));
             return *static_cast<T*>(this);
         }
     }

@@ -158,7 +158,7 @@ void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax&
     for (auto declarator : syntax.declarators) {
         auto net = compilation.emplace<NetSymbol>(declarator->name.valueText(),
                                                   declarator->name.location());
-        
+
         // TODO: net types, initializers, etc
         net->dataType = *syntax.type;
         results.append(net);
@@ -196,10 +196,10 @@ void VariableSymbol::toJson(json& j) const {
     j["type"] = *type;
     j["lifetime"] = lifetime; // TODO: tostring
     j["isConst"] = isConst;
-    
+
     // TODO:
     //if (initializer)
-    //    j["initializer"] = 
+    //    j["initializer"] =
 }
 
 void FormalArgumentSymbol::toJson(json& j) const {

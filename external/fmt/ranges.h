@@ -145,7 +145,7 @@ void for_each(std::index_sequence<Is...>, Tuple &&tup, F &&f) noexcept {
 }
 
 template <class T>
-FMT_CONSTEXPR std::make_index_sequence<std::tuple_size<T>::value> 
+FMT_CONSTEXPR std::make_index_sequence<std::tuple_size<T>::value>
 get_indexes(T const &) { return {}; }
 
 template <class Tuple, class F>
@@ -156,7 +156,7 @@ void for_each(Tuple &&tup, F &&f) {
 }  // namespace internal
 
 template <typename TupleT, typename Char>
-struct formatter<TupleT, Char, 
+struct formatter<TupleT, Char,
     typename std::enable_if<fmt::internal::is_tuple_like<TupleT>::value>::type> {
 
   fmt::formatting_tuple<Char> formatting;

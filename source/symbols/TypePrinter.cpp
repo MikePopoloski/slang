@@ -71,7 +71,7 @@ void TypePrinter::handle(const PackedStructType& type) {
     buffer << "struct packed";
     if (type.isSigned)
         buffer << " signed";
-    
+
     appendStructMembers(type);
 }
 

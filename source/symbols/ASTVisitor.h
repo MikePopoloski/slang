@@ -94,7 +94,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         TYPE(EventType);
         TYPE(ErrorType);
         TYPE(NetType);
-            
+
         case SymbolKind::PackedUnionType: THROW_UNREACHABLE;
         case SymbolKind::UnpackedUnionType: THROW_UNREACHABLE;
         case SymbolKind::ClassType: THROW_UNREACHABLE;

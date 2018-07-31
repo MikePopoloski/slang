@@ -137,7 +137,7 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
         for (auto initializer : syntax.initializers) {
             // If one entry is a variable declaration, they should all be. Checked by the parser.
             ASSERT(initializer->kind == SyntaxKind::ForVariableDeclaration);
-            
+
             auto& var = VariableSymbol::fromSyntax(comp, initializer->as<ForVariableDeclarationSyntax>());
             implicitBlock->addMember(var);
             initializers.append(comp.emplace<VariableDeclStatement>(var));

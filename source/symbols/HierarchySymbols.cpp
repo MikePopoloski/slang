@@ -489,7 +489,7 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, c
 
     string_view name = getGenerateBlockName(*memberSyntax);
     SourceLocation loc = memberSyntax->getFirstToken().location();
-    
+
     auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc);
     block->addMembers(*memberSyntax);
     return block;
