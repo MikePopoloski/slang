@@ -140,14 +140,18 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                         item->package.valueText(),
                         item->item.location());
 
+                    import->setSyntax(*item);
                     addMember(*import);
                     compilation.trackImport(importDataIndex, *import);
                 }
                 else {
-                    addMember(*compilation.emplace<ExplicitImportSymbol>(
+                    auto import = compilation.emplace<ExplicitImportSymbol>(
                         item->package.valueText(),
                         item->item.valueText(),
-                        item->item.location()));
+                        item->item.location());
+
+                    import->setSyntax(*item);
+                    addMember(*import);
                 }
             }
             break;
@@ -163,7 +167,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ModportDeclaration:
             // TODO: modports
             break;
-
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
             addMember(SubroutineSymbol::fromSyntax(compilation, syntax.as<FunctionDeclarationSyntax>(), *this));

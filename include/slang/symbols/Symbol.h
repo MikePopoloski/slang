@@ -13,6 +13,7 @@
 namespace slang {
 
 class Scope;
+class SyntaxNode;
 class Type;
 
 enum class SymbolKind {
@@ -86,6 +87,10 @@ public:
     /// the given kind, returns this symbol.
     const Symbol* findAncestor(SymbolKind searchKind) const;
 
+    /// Gets the syntax node that was used to create this symbol, if any. Symbols can
+    /// be created without any originating syntax; in those cases, this returns nullptr.
+    const SyntaxNode* getSyntax() const { return originatingSyntax; }
+
     /// Determines whether this symbol also represents a scope.
     bool isScope() const { return scopeOrNull(); }
 
@@ -124,6 +129,10 @@ public:
     /// to determine the relative ordering of scope members.
     Index getIndex() const { return indexInScope; }
 
+    /// Sets the syntax that was used to create this symbol. Mostly called by
+    /// various factory functions.
+    void setSyntax(const SyntaxNode& node) { originatingSyntax = &node; }
+
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
@@ -147,6 +156,8 @@ private:
     mutable const Scope* parentScope = nullptr;
     mutable const Symbol* nextInScope = nullptr;
     mutable Index indexInScope {0};
+
+    const SyntaxNode* originatingSyntax = nullptr;
 };
 
 /// A base class for symbols that represent a value (for example a variable or a parameter).

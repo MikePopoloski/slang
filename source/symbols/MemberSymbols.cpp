@@ -54,6 +54,7 @@ void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclar
         else
             compilation.addError(DiagCode::BodyParamNoInitializer, decl->name.location());
 
+        param->setSyntax(*decl);
         results.append(param);
     }
 }
@@ -161,6 +162,7 @@ void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax&
 
         // TODO: net types, initializers, etc
         net->dataType = *syntax.type;
+        net->setSyntax(*declarator);
         results.append(net);
     }
 }
@@ -178,6 +180,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
         if (declarator->initializer)
             variable->initializer = *declarator->initializer->expr;
 
+        variable->setSyntax(*declarator);
         results.append(variable);
     }
 }
@@ -189,6 +192,8 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
     var->type = *syntax.type;
     if (syntax.declarator->initializer)
         var->initializer = *syntax.declarator->initializer->expr;
+
+    var->setSyntax(*syntax.declarator);
     return *var;
 }
 
@@ -222,6 +227,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
         syntax.kind == SyntaxKind::TaskDeclaration,
         parent
     );
+    result->setSyntax(syntax);
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
     if (proto->portList) {
@@ -256,6 +262,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                 declarator->name.location(),
                 direction
             );
+            arg->setSyntax(*portSyntax);
 
             // If we're given a type, use that. Otherwise, if we were given a
             // direction, default to logic. Otherwise, use the last type.

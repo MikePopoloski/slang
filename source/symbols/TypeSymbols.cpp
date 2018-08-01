@@ -424,7 +424,7 @@ bool IntegralType::isDeclaredReg() const {
 const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
                                      LookupLocation location, const Scope& scope) {
     // This is a simple integral vector (possibly of just one element).
-    SmallVectorSized<ConstantRange, 4> dims;
+    SmallVectorSized<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
     for (const VariableDimensionSyntax* dimSyntax : syntax.dimensions) {
         // TODO: better checking for these cases
         if (!dimSyntax->specifier || dimSyntax->specifier->kind != SyntaxKind::RangeDimensionSpecifier)
@@ -435,7 +435,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
         if (!dim)
             return compilation.getErrorType();
 
-        dims.append(*dim);
+        dims.emplace(*dim, dimSyntax);
     }
 
     bitmask<IntegralFlags> flags;
@@ -452,16 +452,19 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
         // TODO: signing
         return compilation.getType(syntax.kind);
     }
-    else if (dims.size() == 1 && dims[0].right == 0) {
+    else if (dims.size() == 1 && dims[0].first.right == 0) {
         // if we have the common case of only one dimension and lsb == 0
         // then we can use the shared representation
-        int width = dims[0].left + 1;
+        int width = dims[0].first.left + 1;
         return compilation.getType(bitwidth_t(width), flags);
     }
 
     const IntegralType* result = &compilation.getScalarType(flags);
-    for (uint32_t i = 0; i < dims.size(); i++)
-        result = compilation.emplace<PackedArrayType>(*result, dims[i]);
+    for (uint32_t i = 0; i < dims.size(); i++) {
+        auto packed = compilation.emplace<PackedArrayType>(*result, dims[i].first);
+        packed->setSyntax(*dims[i].second);
+        result = packed;
+    }
 
     return *result;
 }
@@ -547,6 +550,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     const IntegralType& integralBase = base->as<IntegralType>();
     auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(),
                                                     integralBase, scope);
+    resultType->setSyntax(syntax);
 
     SVInt one(integralBase.bitWidth, 1, integralBase.isSigned);
     SVInt current(integralBase.bitWidth, 0, integralBase.isSigned);
@@ -573,6 +577,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         auto ev = compilation.emplace<EnumValueSymbol>(compilation, member->name.valueText(),
                                                        member->name.location(), *resultType,
                                                        std::move(value));
+        ev->setSyntax(*member);
         resultType->addMember(*ev);
         previousMember = ev;
     }
@@ -648,7 +653,9 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
             }
         }
 
-        result = compilation.emplace<UnpackedArrayType>(*result, range);
+        auto unpacked = compilation.emplace<UnpackedArrayType>(*result, range);
+        unpacked->setSyntax(dim);
+        result = unpacked;
     }
 
     return *result;
@@ -699,8 +706,9 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
         for (auto decl : member->declarators) {
             auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(),
                                                              decl->name.location(), bitWidth);
-            members.append(variable);
             variable->type = type;
+            variable->setSyntax(*decl);
+            members.append(variable);
 
             // Unpacked arrays are disallowed in packed structs.
             if (const Type& dimType = compilation.getType(type, decl->dimensions, location, scope);
@@ -725,6 +733,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
     for (auto member : make_reverse_range(members))
         result->addMember(*member);
 
+    result->setSyntax(syntax);
     return *result;
 }
 
@@ -750,6 +759,7 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const Struc
         for (auto decl : member->declarators) {
             auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(),
                                                              decl->name.location(), fieldIndex);
+            variable->setSyntax(*decl);
             result->addMember(*variable);
 
             fieldIndex++;
@@ -760,6 +770,7 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const Struc
         }
     }
 
+    result->setSyntax(syntax);
     return *result;
 }
 
@@ -791,17 +802,21 @@ ForwardingTypedefSymbol::fromSyntax(Compilation& compilation, const ForwardTyped
         case TokenKind::ClassKeyword: category = Category::Class; break;
         default: category = Category::None; break;
     }
-    return *compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
-                                                         syntax.name.location(),
-                                                         category);
+    auto result = compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
+                                                               syntax.name.location(),
+                                                               category);
+    result->setSyntax(syntax);
+    return *result;
 }
 
 const ForwardingTypedefSymbol&
 ForwardingTypedefSymbol::fromSyntax(Compilation& compilation,
                                     const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
-    return *compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
-                                                         syntax.name.location(),
-                                                         Category::InterfaceClass);
+    auto result = compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
+                                                               syntax.name.location(),
+                                                               Category::InterfaceClass);
+    result->setSyntax(syntax);
+    return *result;
 }
 
 void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
@@ -820,6 +835,7 @@ const TypeAliasType& TypeAliasType::fromSyntax(Compilation& compilation,
     // TODO: unpacked dimensions
     auto result = compilation.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
     result->targetType = *syntax.type;
+    result->setSyntax(syntax);
     return *result;
 }
 

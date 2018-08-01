@@ -18,6 +18,8 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleD
                                                      syntax.header->name.location());
     for (auto member : syntax.members)
         result->addMembers(*member);
+
+    result->setSyntax(syntax);
     return *result;
 }
 
@@ -139,7 +141,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
     }
 
     for (auto instanceSyntax : syntax.instances) {
-        const Symbol* inst;
+        Symbol* inst;
         switch (definition->syntax.kind) {
             case SyntaxKind::ModuleDeclaration:
                 inst = &ModuleInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
@@ -154,6 +156,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
         }
 
         // TODO: instance arrays
+        inst->setSyntax(*instanceSyntax);
         results.append(inst);
     }
 }
@@ -209,7 +212,6 @@ void InstanceSymbol::populate(const Definition& definition, span<const Parameter
             addMembers(*member);
         else {
             for (auto declarator : member->as<ParameterDeclarationStatementSyntax>().parameter->declarators) {
-                (void)declarator;
                 ASSERT(paramIt != parameters.end());
 
                 auto decl = paramIt->decl;
@@ -218,6 +220,8 @@ void InstanceSymbol::populate(const Definition& definition, span<const Parameter
                     param.setType(*paramIt->type);
                     param.setValue(paramIt->value);
                 }
+
+                param.setSyntax(*declarator);
                 addMember(param);
                 paramIt++;
             }
@@ -326,6 +330,7 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
             auto variable = comp.emplace<VariableSymbol>(port.name, syntax.declarator->name.location());
             port.symbol = variable;
             variable->type = finalType;
+            variable->setSyntax(syntax);
             addMember(*variable);
 
             // Initializers here are evaluated in the context of the port list and must always be a constant value.
@@ -347,6 +352,7 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
             auto net = comp.emplace<NetSymbol>(port.name, syntax.declarator->name.location());
             port.symbol = net;
             net->dataType = finalType;
+            net->setSyntax(syntax);
             addMember(*net);
 
             break;
@@ -435,6 +441,7 @@ SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilatio
                                                          const BlockStatementSyntax& syntax) {
     auto result = compilation.emplace<SequentialBlockSymbol>(compilation, syntax.begin.location());
     result->setBody(syntax.items);
+    result->setSyntax(syntax);
     return *result;
 }
 
@@ -445,6 +452,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Compilation& compilatio
                                                              syntax.keyword.location(),
                                                              kind);
     result->setBody(*syntax.statement);
+    result->setSyntax(syntax);
     return *result;
 }
 
@@ -492,6 +500,7 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, c
 
     auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc);
     block->addMembers(*memberSyntax);
+    block->setSyntax(syntax);
     return block;
 }
 
@@ -506,6 +515,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     string_view name = getGenerateBlockName(*syntax.block);
     SourceLocation loc = syntax.block->getFirstToken().location();
     auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc);
+    result->setSyntax(syntax);
 
     // Initialize the genvar
     BindContext bindContext(parent, location, BindFlags::Constant);

@@ -121,6 +121,7 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     NameSet instances;
 
     if (node.kind == SyntaxKind::CompilationUnit) {
+        unit->setSyntax(node);
         for (auto member : node.as<CompilationUnitSyntax>().members) {
             unit->addMembers(*member);
 
