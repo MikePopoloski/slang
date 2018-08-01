@@ -110,6 +110,10 @@ struct ConstTokenOrSyntax : public TokenOrSyntaxBase<const SyntaxNode*> {
 /// Base class for all syntax nodes.
 class SyntaxNode {
 public:
+    /// The parent node of this syntax node. The root of the syntax
+    /// tree does not have a parent (will be nullptr).
+    SyntaxNode* parent = nullptr;
+
     /// The kind of syntax node.
     SyntaxKind kind;
 

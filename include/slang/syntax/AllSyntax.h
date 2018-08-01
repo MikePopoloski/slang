@@ -18,8 +18,8 @@ namespace slang {
 struct ExpressionSyntax : public SyntaxNode {
 
     ExpressionSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -27,8 +27,8 @@ struct ExpressionSyntax : public SyntaxNode {
 struct DataTypeSyntax : public ExpressionSyntax {
 
     DataTypeSyntax(SyntaxKind kind) :
-        ExpressionSyntax(kind)
-    {}
+        ExpressionSyntax(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -40,8 +40,9 @@ struct EqualsValueClauseSyntax : public SyntaxNode {
     not_null<ExpressionSyntax*> expr;
 
     EqualsValueClauseSyntax(Token equals, ExpressionSyntax& expr) :
-        SyntaxNode(SyntaxKind::EqualsValueClause), equals(equals), expr(&expr)
-    {}
+        SyntaxNode(SyntaxKind::EqualsValueClause), equals(equals), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -57,8 +58,9 @@ struct AttributeSpecSyntax : public SyntaxNode {
     EqualsValueClauseSyntax* value;
 
     AttributeSpecSyntax(Token name, EqualsValueClauseSyntax* value) :
-        SyntaxNode(SyntaxKind::AttributeSpec), name(name), value(value)
-    {}
+        SyntaxNode(SyntaxKind::AttributeSpec), name(name), value(value) {
+        if (this->value) this->value->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -75,8 +77,9 @@ struct AttributeInstanceSyntax : public SyntaxNode {
     Token closeParen;
 
     AttributeInstanceSyntax(Token openParen, SeparatedSyntaxList<AttributeSpecSyntax> specs, Token closeParen) :
-        SyntaxNode(SyntaxKind::AttributeInstance), openParen(openParen), specs(specs), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::AttributeInstance), openParen(openParen), specs(specs), closeParen(closeParen) {
+        this->specs.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -92,8 +95,8 @@ struct NamedLabelSyntax : public SyntaxNode {
     Token colon;
 
     NamedLabelSyntax(Token name, Token colon) :
-        SyntaxNode(SyntaxKind::NamedLabel), name(name), colon(colon)
-    {}
+        SyntaxNode(SyntaxKind::NamedLabel), name(name), colon(colon) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -109,8 +112,10 @@ struct StatementSyntax : public SyntaxNode {
     SyntaxList<AttributeInstanceSyntax> attributes;
 
     StatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes) :
-        SyntaxNode(kind), label(label), attributes(attributes)
-    {}
+        SyntaxNode(kind), label(label), attributes(attributes) {
+        if (this->label) this->label->parent = this;
+        this->attributes.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -125,8 +130,9 @@ struct MemberSyntax : public SyntaxNode {
     SyntaxList<AttributeInstanceSyntax> attributes;
 
     MemberSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
-        SyntaxNode(kind), attributes(attributes)
-    {}
+        SyntaxNode(kind), attributes(attributes) {
+        this->attributes.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -142,8 +148,8 @@ struct MemberSyntax : public SyntaxNode {
 struct ArgumentSyntax : public SyntaxNode {
 
     ArgumentSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -151,8 +157,8 @@ struct ArgumentSyntax : public SyntaxNode {
 struct EmptyArgumentSyntax : public ArgumentSyntax {
 
     EmptyArgumentSyntax() :
-        ArgumentSyntax(SyntaxKind::EmptyArgument)
-    {}
+        ArgumentSyntax(SyntaxKind::EmptyArgument) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -167,8 +173,9 @@ struct OrderedArgumentSyntax : public ArgumentSyntax {
     not_null<ExpressionSyntax*> expr;
 
     OrderedArgumentSyntax(ExpressionSyntax& expr) :
-        ArgumentSyntax(SyntaxKind::OrderedArgument), expr(&expr)
-    {}
+        ArgumentSyntax(SyntaxKind::OrderedArgument), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -187,8 +194,9 @@ struct NamedArgumentSyntax : public ArgumentSyntax {
     Token closeParen;
 
     NamedArgumentSyntax(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
-        ArgumentSyntax(SyntaxKind::NamedArgument), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
-    {}
+        ArgumentSyntax(SyntaxKind::NamedArgument), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen) {
+        if (this->expr) this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -205,8 +213,9 @@ struct ArgumentListSyntax : public SyntaxNode {
     Token closeParen;
 
     ArgumentListSyntax(Token openParen, SeparatedSyntaxList<ArgumentSyntax> parameters, Token closeParen) :
-        SyntaxNode(SyntaxKind::ArgumentList), openParen(openParen), parameters(parameters), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::ArgumentList), openParen(openParen), parameters(parameters), closeParen(closeParen) {
+        this->parameters.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -222,8 +231,9 @@ struct ParameterValueAssignmentSyntax : public SyntaxNode {
     not_null<ArgumentListSyntax*> parameters;
 
     ParameterValueAssignmentSyntax(Token hash, ArgumentListSyntax& parameters) :
-        SyntaxNode(SyntaxKind::ParameterValueAssignment), hash(hash), parameters(&parameters)
-    {}
+        SyntaxNode(SyntaxKind::ParameterValueAssignment), hash(hash), parameters(&parameters) {
+        this->parameters->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -239,8 +249,8 @@ struct ParameterValueAssignmentSyntax : public SyntaxNode {
 struct PatternSyntax : public SyntaxNode {
 
     PatternSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -250,8 +260,8 @@ struct VariablePatternSyntax : public PatternSyntax {
     Token variableName;
 
     VariablePatternSyntax(Token dot, Token variableName) :
-        PatternSyntax(SyntaxKind::VariablePattern), dot(dot), variableName(variableName)
-    {}
+        PatternSyntax(SyntaxKind::VariablePattern), dot(dot), variableName(variableName) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -266,8 +276,8 @@ struct WildcardPatternSyntax : public PatternSyntax {
     Token dotStar;
 
     WildcardPatternSyntax(Token dotStar) :
-        PatternSyntax(SyntaxKind::WildcardPattern), dotStar(dotStar)
-    {}
+        PatternSyntax(SyntaxKind::WildcardPattern), dotStar(dotStar) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -282,8 +292,9 @@ struct ExpressionPatternSyntax : public PatternSyntax {
     not_null<ExpressionSyntax*> expr;
 
     ExpressionPatternSyntax(ExpressionSyntax& expr) :
-        PatternSyntax(SyntaxKind::ExpressionPattern), expr(&expr)
-    {}
+        PatternSyntax(SyntaxKind::ExpressionPattern), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -300,8 +311,9 @@ struct TaggedPatternSyntax : public PatternSyntax {
     PatternSyntax* pattern;
 
     TaggedPatternSyntax(Token tagged, Token memberName, PatternSyntax* pattern) :
-        PatternSyntax(SyntaxKind::TaggedPattern), tagged(tagged), memberName(memberName), pattern(pattern)
-    {}
+        PatternSyntax(SyntaxKind::TaggedPattern), tagged(tagged), memberName(memberName), pattern(pattern) {
+        if (this->pattern) this->pattern->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -315,8 +327,8 @@ struct TaggedPatternSyntax : public PatternSyntax {
 struct StructurePatternMemberSyntax : public SyntaxNode {
 
     StructurePatternMemberSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -325,8 +337,9 @@ struct OrderedStructurePatternMemberSyntax : public StructurePatternMemberSyntax
     not_null<PatternSyntax*> pattern;
 
     OrderedStructurePatternMemberSyntax(PatternSyntax& pattern) :
-        StructurePatternMemberSyntax(SyntaxKind::OrderedStructurePatternMember), pattern(&pattern)
-    {}
+        StructurePatternMemberSyntax(SyntaxKind::OrderedStructurePatternMember), pattern(&pattern) {
+        this->pattern->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -343,8 +356,9 @@ struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
     not_null<PatternSyntax*> pattern;
 
     NamedStructurePatternMemberSyntax(Token name, Token colon, PatternSyntax& pattern) :
-        StructurePatternMemberSyntax(SyntaxKind::NamedStructurePatternMember), name(name), colon(colon), pattern(&pattern)
-    {}
+        StructurePatternMemberSyntax(SyntaxKind::NamedStructurePatternMember), name(name), colon(colon), pattern(&pattern) {
+        this->pattern->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -361,8 +375,9 @@ struct StructurePatternSyntax : public PatternSyntax {
     Token closeBrace;
 
     StructurePatternSyntax(Token openBrace, SeparatedSyntaxList<StructurePatternMemberSyntax> members, Token closeBrace) :
-        PatternSyntax(SyntaxKind::StructurePattern), openBrace(openBrace), members(members), closeBrace(closeBrace)
-    {}
+        PatternSyntax(SyntaxKind::StructurePattern), openBrace(openBrace), members(members), closeBrace(closeBrace) {
+        this->members.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -378,8 +393,9 @@ struct MatchesClauseSyntax : public SyntaxNode {
     not_null<PatternSyntax*> pattern;
 
     MatchesClauseSyntax(Token matchesKeyword, PatternSyntax& pattern) :
-        SyntaxNode(SyntaxKind::MatchesClause), matchesKeyword(matchesKeyword), pattern(&pattern)
-    {}
+        SyntaxNode(SyntaxKind::MatchesClause), matchesKeyword(matchesKeyword), pattern(&pattern) {
+        this->pattern->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -395,8 +411,10 @@ struct ConditionalPatternSyntax : public SyntaxNode {
     MatchesClauseSyntax* matchesClause;
 
     ConditionalPatternSyntax(ExpressionSyntax& expr, MatchesClauseSyntax* matchesClause) :
-        SyntaxNode(SyntaxKind::ConditionalPattern), expr(&expr), matchesClause(matchesClause)
-    {}
+        SyntaxNode(SyntaxKind::ConditionalPattern), expr(&expr), matchesClause(matchesClause) {
+        this->expr->parent = this;
+        if (this->matchesClause) this->matchesClause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -411,8 +429,9 @@ struct ConditionalPredicateSyntax : public SyntaxNode {
     SeparatedSyntaxList<ConditionalPatternSyntax> conditions;
 
     ConditionalPredicateSyntax(SeparatedSyntaxList<ConditionalPatternSyntax> conditions) :
-        SyntaxNode(SyntaxKind::ConditionalPredicate), conditions(conditions)
-    {}
+        SyntaxNode(SyntaxKind::ConditionalPredicate), conditions(conditions) {
+        this->conditions.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -426,8 +445,8 @@ struct ConditionalPredicateSyntax : public SyntaxNode {
 struct AssignmentPatternSyntax : public SyntaxNode {
 
     AssignmentPatternSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -438,8 +457,9 @@ struct SimpleAssignmentPatternSyntax : public AssignmentPatternSyntax {
     Token closeBrace;
 
     SimpleAssignmentPatternSyntax(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token closeBrace) :
-        AssignmentPatternSyntax(SyntaxKind::SimpleAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace)
-    {}
+        AssignmentPatternSyntax(SyntaxKind::SimpleAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace) {
+        this->items.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -456,8 +476,10 @@ struct AssignmentPatternItemSyntax : public SyntaxNode {
     not_null<ExpressionSyntax*> expr;
 
     AssignmentPatternItemSyntax(ExpressionSyntax& key, Token colon, ExpressionSyntax& expr) :
-        SyntaxNode(SyntaxKind::AssignmentPatternItem), key(&key), colon(colon), expr(&expr)
-    {}
+        SyntaxNode(SyntaxKind::AssignmentPatternItem), key(&key), colon(colon), expr(&expr) {
+        this->key->parent = this;
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -474,8 +496,9 @@ struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
     Token closeBrace;
 
     StructuredAssignmentPatternSyntax(Token openBrace, SeparatedSyntaxList<AssignmentPatternItemSyntax> items, Token closeBrace) :
-        AssignmentPatternSyntax(SyntaxKind::StructuredAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace)
-    {}
+        AssignmentPatternSyntax(SyntaxKind::StructuredAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace) {
+        this->items.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -495,8 +518,10 @@ struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
     Token closeBrace;
 
     ReplicatedAssignmentPatternSyntax(Token openBrace, ExpressionSyntax& countExpr, Token innerOpenBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token innerCloseBrace, Token closeBrace) :
-        AssignmentPatternSyntax(SyntaxKind::ReplicatedAssignmentPattern), openBrace(openBrace), countExpr(&countExpr), innerOpenBrace(innerOpenBrace), items(items), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace)
-    {}
+        AssignmentPatternSyntax(SyntaxKind::ReplicatedAssignmentPattern), openBrace(openBrace), countExpr(&countExpr), innerOpenBrace(innerOpenBrace), items(items), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace) {
+        this->countExpr->parent = this;
+        this->items.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -513,8 +538,9 @@ struct BadExpressionSyntax : public ExpressionSyntax {
     not_null<ExpressionSyntax*> expr;
 
     BadExpressionSyntax(ExpressionSyntax& expr) :
-        ExpressionSyntax(SyntaxKind::BadExpression), expr(&expr)
-    {}
+        ExpressionSyntax(SyntaxKind::BadExpression), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -528,8 +554,8 @@ struct BadExpressionSyntax : public ExpressionSyntax {
 struct PrimaryExpressionSyntax : public ExpressionSyntax {
 
     PrimaryExpressionSyntax(SyntaxKind kind) :
-        ExpressionSyntax(kind)
-    {}
+        ExpressionSyntax(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -540,8 +566,10 @@ struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
     not_null<ExpressionSyntax*> operand;
 
     PrefixUnaryExpressionSyntax(SyntaxKind kind, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& operand) :
-        ExpressionSyntax(kind), operatorToken(operatorToken), attributes(attributes), operand(&operand)
-    {}
+        ExpressionSyntax(kind), operatorToken(operatorToken), attributes(attributes), operand(&operand) {
+        this->attributes.parent = this;
+        this->operand->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -558,8 +586,10 @@ struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
     Token operatorToken;
 
     PostfixUnaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax& operand, SyntaxList<AttributeInstanceSyntax> attributes, Token operatorToken) :
-        ExpressionSyntax(kind), operand(&operand), attributes(attributes), operatorToken(operatorToken)
-    {}
+        ExpressionSyntax(kind), operand(&operand), attributes(attributes), operatorToken(operatorToken) {
+        this->operand->parent = this;
+        this->attributes.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -577,8 +607,11 @@ struct BinaryExpressionSyntax : public ExpressionSyntax {
     not_null<ExpressionSyntax*> right;
 
     BinaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax& left, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& right) :
-        ExpressionSyntax(kind), left(&left), operatorToken(operatorToken), attributes(attributes), right(&right)
-    {}
+        ExpressionSyntax(kind), left(&left), operatorToken(operatorToken), attributes(attributes), right(&right) {
+        this->left->parent = this;
+        this->attributes.parent = this;
+        this->right->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -597,8 +630,11 @@ struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
     not_null<ExpressionSyntax*> max;
 
     MinTypMaxExpressionSyntax(ExpressionSyntax& min, Token colon1, ExpressionSyntax& typ, Token colon2, ExpressionSyntax& max) :
-        ExpressionSyntax(SyntaxKind::MinTypMaxExpression), min(&min), colon1(colon1), typ(&typ), colon2(colon2), max(&max)
-    {}
+        ExpressionSyntax(SyntaxKind::MinTypMaxExpression), min(&min), colon1(colon1), typ(&typ), colon2(colon2), max(&max) {
+        this->min->parent = this;
+        this->typ->parent = this;
+        this->max->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -615,8 +651,9 @@ struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* expr;
 
     TaggedUnionExpressionSyntax(Token tagged, Token member, ExpressionSyntax* expr) :
-        ExpressionSyntax(SyntaxKind::TaggedUnionExpression), tagged(tagged), member(member), expr(expr)
-    {}
+        ExpressionSyntax(SyntaxKind::TaggedUnionExpression), tagged(tagged), member(member), expr(expr) {
+        if (this->expr) this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -633,8 +670,9 @@ struct OpenRangeListSyntax : public SyntaxNode {
     Token closeBrace;
 
     OpenRangeListSyntax(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> valueRanges, Token closeBrace) :
-        SyntaxNode(SyntaxKind::OpenRangeList), openBrace(openBrace), valueRanges(valueRanges), closeBrace(closeBrace)
-    {}
+        SyntaxNode(SyntaxKind::OpenRangeList), openBrace(openBrace), valueRanges(valueRanges), closeBrace(closeBrace) {
+        this->valueRanges.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -651,8 +689,10 @@ struct InsideExpressionSyntax : public ExpressionSyntax {
     not_null<OpenRangeListSyntax*> ranges;
 
     InsideExpressionSyntax(ExpressionSyntax& expr, Token inside, OpenRangeListSyntax& ranges) :
-        ExpressionSyntax(SyntaxKind::InsideExpression), expr(&expr), inside(inside), ranges(&ranges)
-    {}
+        ExpressionSyntax(SyntaxKind::InsideExpression), expr(&expr), inside(inside), ranges(&ranges) {
+        this->expr->parent = this;
+        this->ranges->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -672,8 +712,12 @@ struct ConditionalExpressionSyntax : public ExpressionSyntax {
     not_null<ExpressionSyntax*> right;
 
     ConditionalExpressionSyntax(ConditionalPredicateSyntax& predicate, Token question, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& left, Token colon, ExpressionSyntax& right) :
-        ExpressionSyntax(SyntaxKind::ConditionalExpression), predicate(&predicate), question(question), attributes(attributes), left(&left), colon(colon), right(&right)
-    {}
+        ExpressionSyntax(SyntaxKind::ConditionalExpression), predicate(&predicate), question(question), attributes(attributes), left(&left), colon(colon), right(&right) {
+        this->predicate->parent = this;
+        this->attributes.parent = this;
+        this->left->parent = this;
+        this->right->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -689,8 +733,10 @@ struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
     not_null<AssignmentPatternSyntax*> pattern;
 
     AssignmentPatternExpressionSyntax(DataTypeSyntax* type, AssignmentPatternSyntax& pattern) :
-        PrimaryExpressionSyntax(SyntaxKind::AssignmentPatternExpression), type(type), pattern(&pattern)
-    {}
+        PrimaryExpressionSyntax(SyntaxKind::AssignmentPatternExpression), type(type), pattern(&pattern) {
+        if (this->type) this->type->parent = this;
+        this->pattern->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -706,8 +752,8 @@ struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
 struct SelectorSyntax : public SyntaxNode {
 
     SelectorSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -716,8 +762,9 @@ struct BitSelectSyntax : public SelectorSyntax {
     not_null<ExpressionSyntax*> expr;
 
     BitSelectSyntax(ExpressionSyntax& expr) :
-        SelectorSyntax(SyntaxKind::BitSelect), expr(&expr)
-    {}
+        SelectorSyntax(SyntaxKind::BitSelect), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -734,8 +781,10 @@ struct RangeSelectSyntax : public SelectorSyntax {
     not_null<ExpressionSyntax*> right;
 
     RangeSelectSyntax(SyntaxKind kind, ExpressionSyntax& left, Token range, ExpressionSyntax& right) :
-        SelectorSyntax(kind), left(&left), range(range), right(&right)
-    {}
+        SelectorSyntax(kind), left(&left), range(range), right(&right) {
+        this->left->parent = this;
+        this->right->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -752,8 +801,9 @@ struct ElementSelectSyntax : public ExpressionSyntax {
     Token closeBracket;
 
     ElementSelectSyntax(Token openBracket, SelectorSyntax* selector, Token closeBracket) :
-        ExpressionSyntax(SyntaxKind::ElementSelect), openBracket(openBracket), selector(selector), closeBracket(closeBracket)
-    {}
+        ExpressionSyntax(SyntaxKind::ElementSelect), openBracket(openBracket), selector(selector), closeBracket(closeBracket) {
+        if (this->selector) this->selector->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -769,8 +819,8 @@ struct ElementSelectSyntax : public ExpressionSyntax {
 struct NameSyntax : public ExpressionSyntax {
 
     NameSyntax(SyntaxKind kind) :
-        ExpressionSyntax(kind)
-    {}
+        ExpressionSyntax(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -779,8 +829,8 @@ struct IdentifierNameSyntax : public NameSyntax {
     Token identifier;
 
     IdentifierNameSyntax(Token identifier) :
-        NameSyntax(SyntaxKind::IdentifierName), identifier(identifier)
-    {}
+        NameSyntax(SyntaxKind::IdentifierName), identifier(identifier) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -796,8 +846,9 @@ struct IdentifierSelectNameSyntax : public NameSyntax {
     SyntaxList<ElementSelectSyntax> selectors;
 
     IdentifierSelectNameSyntax(Token identifier, SyntaxList<ElementSelectSyntax> selectors) :
-        NameSyntax(SyntaxKind::IdentifierSelectName), identifier(identifier), selectors(selectors)
-    {}
+        NameSyntax(SyntaxKind::IdentifierSelectName), identifier(identifier), selectors(selectors) {
+        this->selectors.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -811,8 +862,8 @@ struct IdentifierSelectNameSyntax : public NameSyntax {
 struct EmptyIdentifierNameSyntax : public NameSyntax {
 
     EmptyIdentifierNameSyntax() :
-        NameSyntax(SyntaxKind::EmptyIdentifierName)
-    {}
+        NameSyntax(SyntaxKind::EmptyIdentifierName) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -827,8 +878,8 @@ struct KeywordNameSyntax : public NameSyntax {
     Token keyword;
 
     KeywordNameSyntax(SyntaxKind kind, Token keyword) :
-        NameSyntax(kind), keyword(keyword)
-    {}
+        NameSyntax(kind), keyword(keyword) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -844,8 +895,9 @@ struct ClassNameSyntax : public NameSyntax {
     not_null<ParameterValueAssignmentSyntax*> parameters;
 
     ClassNameSyntax(Token identifier, ParameterValueAssignmentSyntax& parameters) :
-        NameSyntax(SyntaxKind::ClassName), identifier(identifier), parameters(&parameters)
-    {}
+        NameSyntax(SyntaxKind::ClassName), identifier(identifier), parameters(&parameters) {
+        this->parameters->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -862,8 +914,10 @@ struct ScopedNameSyntax : public NameSyntax {
     not_null<NameSyntax*> right;
 
     ScopedNameSyntax(NameSyntax& left, Token separator, NameSyntax& right) :
-        NameSyntax(SyntaxKind::ScopedName), left(&left), separator(separator), right(&right)
-    {}
+        NameSyntax(SyntaxKind::ScopedName), left(&left), separator(separator), right(&right) {
+        this->left->parent = this;
+        this->right->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -879,8 +933,9 @@ struct ClassScopeSyntax : public NameSyntax {
     Token separator;
 
     ClassScopeSyntax(NameSyntax& left, Token separator) :
-        NameSyntax(SyntaxKind::ClassScope), left(&left), separator(separator)
-    {}
+        NameSyntax(SyntaxKind::ClassScope), left(&left), separator(separator) {
+        this->left->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -897,8 +952,8 @@ struct LiteralExpressionSyntax : public PrimaryExpressionSyntax {
     Token literal;
 
     LiteralExpressionSyntax(SyntaxKind kind, Token literal) :
-        PrimaryExpressionSyntax(kind), literal(literal)
-    {}
+        PrimaryExpressionSyntax(kind), literal(literal) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -915,8 +970,8 @@ struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
     Token value;
 
     IntegerVectorExpressionSyntax(Token size, Token base, Token value) :
-        PrimaryExpressionSyntax(SyntaxKind::IntegerVectorExpression), size(size), base(base), value(value)
-    {}
+        PrimaryExpressionSyntax(SyntaxKind::IntegerVectorExpression), size(size), base(base), value(value) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -932,8 +987,8 @@ struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
     Token closeBrace;
 
     EmptyQueueExpressionSyntax(Token openBrace, Token closeBrace) :
-        PrimaryExpressionSyntax(SyntaxKind::EmptyQueueExpression), openBrace(openBrace), closeBrace(closeBrace)
-    {}
+        PrimaryExpressionSyntax(SyntaxKind::EmptyQueueExpression), openBrace(openBrace), closeBrace(closeBrace) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -950,8 +1005,9 @@ struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
     Token closeBrace;
 
     ConcatenationExpressionSyntax(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> expressions, Token closeBrace) :
-        PrimaryExpressionSyntax(SyntaxKind::ConcatenationExpression), openBrace(openBrace), expressions(expressions), closeBrace(closeBrace)
-    {}
+        PrimaryExpressionSyntax(SyntaxKind::ConcatenationExpression), openBrace(openBrace), expressions(expressions), closeBrace(closeBrace) {
+        this->expressions.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -969,8 +1025,10 @@ struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
     Token closeBrace;
 
     MultipleConcatenationExpressionSyntax(Token openBrace, ExpressionSyntax& expression, ConcatenationExpressionSyntax& concatenation, Token closeBrace) :
-        PrimaryExpressionSyntax(SyntaxKind::MultipleConcatenationExpression), openBrace(openBrace), expression(&expression), concatenation(&concatenation), closeBrace(closeBrace)
-    {}
+        PrimaryExpressionSyntax(SyntaxKind::MultipleConcatenationExpression), openBrace(openBrace), expression(&expression), concatenation(&concatenation), closeBrace(closeBrace) {
+        this->expression->parent = this;
+        this->concatenation->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -986,8 +1044,9 @@ struct StreamExpressionWithRange : public SyntaxNode {
     not_null<ElementSelectSyntax*> range;
 
     StreamExpressionWithRange(Token withKeyword, ElementSelectSyntax& range) :
-        SyntaxNode(SyntaxKind::StreamExpressionWithRange), withKeyword(withKeyword), range(&range)
-    {}
+        SyntaxNode(SyntaxKind::StreamExpressionWithRange), withKeyword(withKeyword), range(&range) {
+        this->range->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1003,8 +1062,10 @@ struct StreamExpressionSyntax : public SyntaxNode {
     StreamExpressionWithRange* withRange;
 
     StreamExpressionSyntax(ExpressionSyntax& expression, StreamExpressionWithRange* withRange) :
-        SyntaxNode(SyntaxKind::StreamExpression), expression(&expression), withRange(withRange)
-    {}
+        SyntaxNode(SyntaxKind::StreamExpression), expression(&expression), withRange(withRange) {
+        this->expression->parent = this;
+        if (this->withRange) this->withRange->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1025,8 +1086,10 @@ struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
     Token closeBrace;
 
     StreamingConcatenationExpressionSyntax(Token openBrace, Token operatorToken, ExpressionSyntax* sliceSize, Token innerOpenBrace, SeparatedSyntaxList<StreamExpressionSyntax> expressions, Token innerCloseBrace, Token closeBrace) :
-        PrimaryExpressionSyntax(SyntaxKind::StreamingConcatenationExpression), openBrace(openBrace), operatorToken(operatorToken), sliceSize(sliceSize), innerOpenBrace(innerOpenBrace), expressions(expressions), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace)
-    {}
+        PrimaryExpressionSyntax(SyntaxKind::StreamingConcatenationExpression), openBrace(openBrace), operatorToken(operatorToken), sliceSize(sliceSize), innerOpenBrace(innerOpenBrace), expressions(expressions), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace) {
+        if (this->sliceSize) this->sliceSize->parent = this;
+        this->expressions.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1043,8 +1106,9 @@ struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
     Token closeParen;
 
     ParenthesizedExpressionSyntax(Token openParen, ExpressionSyntax& expression, Token closeParen) :
-        PrimaryExpressionSyntax(SyntaxKind::ParenthesizedExpression), openParen(openParen), expression(&expression), closeParen(closeParen)
-    {}
+        PrimaryExpressionSyntax(SyntaxKind::ParenthesizedExpression), openParen(openParen), expression(&expression), closeParen(closeParen) {
+        this->expression->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1061,8 +1125,10 @@ struct NewClassExpressionSyntax : public ExpressionSyntax {
     ArgumentListSyntax* arguments;
 
     NewClassExpressionSyntax(ClassScopeSyntax* classScope, Token newKeyword, ArgumentListSyntax* arguments) :
-        ExpressionSyntax(SyntaxKind::NewClassExpression), classScope(classScope), newKeyword(newKeyword), arguments(arguments)
-    {}
+        ExpressionSyntax(SyntaxKind::NewClassExpression), classScope(classScope), newKeyword(newKeyword), arguments(arguments) {
+        if (this->classScope) this->classScope->parent = this;
+        if (this->arguments) this->arguments->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1081,8 +1147,10 @@ struct NewArrayExpressionSyntax : public ExpressionSyntax {
     ParenthesizedExpressionSyntax* initializer;
 
     NewArrayExpressionSyntax(Token newKeyword, Token openBracket, ExpressionSyntax& sizeExpr, Token closeBracket, ParenthesizedExpressionSyntax* initializer) :
-        ExpressionSyntax(SyntaxKind::NewArrayExpression), newKeyword(newKeyword), openBracket(openBracket), sizeExpr(&sizeExpr), closeBracket(closeBracket), initializer(initializer)
-    {}
+        ExpressionSyntax(SyntaxKind::NewArrayExpression), newKeyword(newKeyword), openBracket(openBracket), sizeExpr(&sizeExpr), closeBracket(closeBracket), initializer(initializer) {
+        this->sizeExpr->parent = this;
+        if (this->initializer) this->initializer->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1098,8 +1166,9 @@ struct NewExpressionSyntax : public ExpressionSyntax {
     not_null<ExpressionSyntax*> expr;
 
     NewExpressionSyntax(Token newKeyword, ExpressionSyntax& expr) :
-        ExpressionSyntax(SyntaxKind::NewExpression), newKeyword(newKeyword), expr(&expr)
-    {}
+        ExpressionSyntax(SyntaxKind::NewExpression), newKeyword(newKeyword), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1117,8 +1186,10 @@ struct ElementSelectExpressionSyntax : public ExpressionSyntax {
     not_null<ElementSelectSyntax*> select;
 
     ElementSelectExpressionSyntax(ExpressionSyntax& left, ElementSelectSyntax& select) :
-        ExpressionSyntax(SyntaxKind::ElementSelectExpression), left(&left), select(&select)
-    {}
+        ExpressionSyntax(SyntaxKind::ElementSelectExpression), left(&left), select(&select) {
+        this->left->parent = this;
+        this->select->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1135,8 +1206,9 @@ struct MemberAccessExpressionSyntax : public ExpressionSyntax {
     Token name;
 
     MemberAccessExpressionSyntax(ExpressionSyntax& left, Token dot, Token name) :
-        ExpressionSyntax(SyntaxKind::MemberAccessExpression), left(&left), dot(dot), name(name)
-    {}
+        ExpressionSyntax(SyntaxKind::MemberAccessExpression), left(&left), dot(dot), name(name) {
+        this->left->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1153,8 +1225,11 @@ struct InvocationExpressionSyntax : public ExpressionSyntax {
     ArgumentListSyntax* arguments;
 
     InvocationExpressionSyntax(ExpressionSyntax& left, SyntaxList<AttributeInstanceSyntax> attributes, ArgumentListSyntax* arguments) :
-        ExpressionSyntax(SyntaxKind::InvocationExpression), left(&left), attributes(attributes), arguments(arguments)
-    {}
+        ExpressionSyntax(SyntaxKind::InvocationExpression), left(&left), attributes(attributes), arguments(arguments) {
+        this->left->parent = this;
+        this->attributes.parent = this;
+        if (this->arguments) this->arguments->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1171,8 +1246,10 @@ struct CastExpressionSyntax : public ExpressionSyntax {
     not_null<ParenthesizedExpressionSyntax*> right;
 
     CastExpressionSyntax(ExpressionSyntax& left, Token apostrophe, ParenthesizedExpressionSyntax& right) :
-        ExpressionSyntax(SyntaxKind::CastExpression), left(&left), apostrophe(apostrophe), right(&right)
-    {}
+        ExpressionSyntax(SyntaxKind::CastExpression), left(&left), apostrophe(apostrophe), right(&right) {
+        this->left->parent = this;
+        this->right->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1189,8 +1266,9 @@ struct SignedCastExpressionSyntax : public ExpressionSyntax {
     not_null<ParenthesizedExpressionSyntax*> inner;
 
     SignedCastExpressionSyntax(Token signing, Token apostrophe, ParenthesizedExpressionSyntax& inner) :
-        ExpressionSyntax(SyntaxKind::SignedCastExpression), signing(signing), apostrophe(apostrophe), inner(&inner)
-    {}
+        ExpressionSyntax(SyntaxKind::SignedCastExpression), signing(signing), apostrophe(apostrophe), inner(&inner) {
+        this->inner->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1206,8 +1284,8 @@ struct SignedCastExpressionSyntax : public ExpressionSyntax {
 struct TimingControlSyntax : public SyntaxNode {
 
     TimingControlSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -1217,8 +1295,9 @@ struct DelaySyntax : public TimingControlSyntax {
     not_null<ExpressionSyntax*> delayValue;
 
     DelaySyntax(SyntaxKind kind, Token hash, ExpressionSyntax& delayValue) :
-        TimingControlSyntax(kind), hash(hash), delayValue(&delayValue)
-    {}
+        TimingControlSyntax(kind), hash(hash), delayValue(&delayValue) {
+        this->delayValue->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1234,8 +1313,9 @@ struct EventControlSyntax : public TimingControlSyntax {
     not_null<NameSyntax*> eventName;
 
     EventControlSyntax(Token at, NameSyntax& eventName) :
-        TimingControlSyntax(SyntaxKind::EventControl), at(at), eventName(&eventName)
-    {}
+        TimingControlSyntax(SyntaxKind::EventControl), at(at), eventName(&eventName) {
+        this->eventName->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1249,8 +1329,8 @@ struct EventControlSyntax : public TimingControlSyntax {
 struct EventExpressionSyntax : public SyntaxNode {
 
     EventExpressionSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -1260,8 +1340,9 @@ struct SignalEventExpressionSyntax : public EventExpressionSyntax {
     not_null<ExpressionSyntax*> expr;
 
     SignalEventExpressionSyntax(Token edge, ExpressionSyntax& expr) :
-        EventExpressionSyntax(SyntaxKind::SignalEventExpression), edge(edge), expr(&expr)
-    {}
+        EventExpressionSyntax(SyntaxKind::SignalEventExpression), edge(edge), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1278,8 +1359,10 @@ struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
     not_null<EventExpressionSyntax*> right;
 
     BinaryEventExpressionSyntax(EventExpressionSyntax& left, Token operatorToken, EventExpressionSyntax& right) :
-        EventExpressionSyntax(SyntaxKind::BinaryEventExpression), left(&left), operatorToken(operatorToken), right(&right)
-    {}
+        EventExpressionSyntax(SyntaxKind::BinaryEventExpression), left(&left), operatorToken(operatorToken), right(&right) {
+        this->left->parent = this;
+        this->right->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1296,8 +1379,9 @@ struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
     Token closeParen;
 
     ParenthesizedEventExpressionSyntax(Token openParen, EventExpressionSyntax& expr, Token closeParen) :
-        EventExpressionSyntax(SyntaxKind::ParenthesizedEventExpression), openParen(openParen), expr(&expr), closeParen(closeParen)
-    {}
+        EventExpressionSyntax(SyntaxKind::ParenthesizedEventExpression), openParen(openParen), expr(&expr), closeParen(closeParen) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1312,8 +1396,8 @@ struct ImplicitEventControlSyntax : public TimingControlSyntax {
     Token atStar;
 
     ImplicitEventControlSyntax(Token atStar) :
-        TimingControlSyntax(SyntaxKind::ImplicitEventControl), atStar(atStar)
-    {}
+        TimingControlSyntax(SyntaxKind::ImplicitEventControl), atStar(atStar) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1329,8 +1413,8 @@ struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
     Token openParenStarCloseParen;
 
     ParenImplicitEventControlSyntax(Token at, Token openParenStarCloseParen) :
-        TimingControlSyntax(SyntaxKind::ParenImplicitEventControl), at(at), openParenStarCloseParen(openParenStarCloseParen)
-    {}
+        TimingControlSyntax(SyntaxKind::ParenImplicitEventControl), at(at), openParenStarCloseParen(openParenStarCloseParen) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1346,8 +1430,9 @@ struct EventControlWithExpressionSyntax : public TimingControlSyntax {
     not_null<EventExpressionSyntax*> expr;
 
     EventControlWithExpressionSyntax(Token at, EventExpressionSyntax& expr) :
-        TimingControlSyntax(SyntaxKind::EventControlWithExpression), at(at), expr(&expr)
-    {}
+        TimingControlSyntax(SyntaxKind::EventControlWithExpression), at(at), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1366,8 +1451,10 @@ struct RepeatedEventControlSyntax : public TimingControlSyntax {
     TimingControlSyntax* eventControl;
 
     RepeatedEventControlSyntax(Token repeat, Token openParen, ExpressionSyntax& expr, Token closeParen, TimingControlSyntax* eventControl) :
-        TimingControlSyntax(SyntaxKind::RepeatedEventControl), repeat(repeat), openParen(openParen), expr(&expr), closeParen(closeParen), eventControl(eventControl)
-    {}
+        TimingControlSyntax(SyntaxKind::RepeatedEventControl), repeat(repeat), openParen(openParen), expr(&expr), closeParen(closeParen), eventControl(eventControl) {
+        this->expr->parent = this;
+        if (this->eventControl) this->eventControl->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1383,8 +1470,10 @@ struct TimingControlExpressionSyntax : public ExpressionSyntax {
     not_null<ExpressionSyntax*> expr;
 
     TimingControlExpressionSyntax(TimingControlSyntax& timing, ExpressionSyntax& expr) :
-        ExpressionSyntax(SyntaxKind::TimingControlExpression), timing(&timing), expr(&expr)
-    {}
+        ExpressionSyntax(SyntaxKind::TimingControlExpression), timing(&timing), expr(&expr) {
+        this->timing->parent = this;
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1401,8 +1490,11 @@ struct TimingControlExpressionConcatenationSyntax : public ExpressionSyntax {
     not_null<ExpressionSyntax*> right;
 
     TimingControlExpressionConcatenationSyntax(ExpressionSyntax& left, TimingControlSyntax& timing, ExpressionSyntax& right) :
-        ExpressionSyntax(SyntaxKind::TimingControlExpressionConcatenation), left(&left), timing(&timing), right(&right)
-    {}
+        ExpressionSyntax(SyntaxKind::TimingControlExpressionConcatenation), left(&left), timing(&timing), right(&right) {
+        this->left->parent = this;
+        this->timing->parent = this;
+        this->right->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1420,8 +1512,8 @@ struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
     Token closeBracket;
 
     ShortcutCycleDelayRangeSyntax(Token doubleHash, Token openBracket, Token op, Token closeBracket) :
-        TimingControlSyntax(SyntaxKind::ShortcutCycleDelayRange), doubleHash(doubleHash), openBracket(openBracket), op(op), closeBracket(closeBracket)
-    {}
+        TimingControlSyntax(SyntaxKind::ShortcutCycleDelayRange), doubleHash(doubleHash), openBracket(openBracket), op(op), closeBracket(closeBracket) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1437,8 +1529,8 @@ struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
 struct DimensionSpecifierSyntax : public SyntaxNode {
 
     DimensionSpecifierSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -1447,8 +1539,9 @@ struct RangeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
     not_null<SelectorSyntax*> selector;
 
     RangeDimensionSpecifierSyntax(SelectorSyntax& selector) :
-        DimensionSpecifierSyntax(SyntaxKind::RangeDimensionSpecifier), selector(&selector)
-    {}
+        DimensionSpecifierSyntax(SyntaxKind::RangeDimensionSpecifier), selector(&selector) {
+        this->selector->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1463,8 +1556,8 @@ struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
     Token star;
 
     WildcardDimensionSpecifierSyntax(Token star) :
-        DimensionSpecifierSyntax(SyntaxKind::WildcardDimensionSpecifier), star(star)
-    {}
+        DimensionSpecifierSyntax(SyntaxKind::WildcardDimensionSpecifier), star(star) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1480,8 +1573,9 @@ struct ColonExpressionClauseSyntax : public SyntaxNode {
     not_null<ExpressionSyntax*> expr;
 
     ColonExpressionClauseSyntax(Token colon, ExpressionSyntax& expr) :
-        SyntaxNode(SyntaxKind::ColonExpressionClause), colon(colon), expr(&expr)
-    {}
+        SyntaxNode(SyntaxKind::ColonExpressionClause), colon(colon), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1497,8 +1591,9 @@ struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
     ColonExpressionClauseSyntax* maxSizeClause;
 
     QueueDimensionSpecifierSyntax(Token dollar, ColonExpressionClauseSyntax* maxSizeClause) :
-        DimensionSpecifierSyntax(SyntaxKind::QueueDimensionSpecifier), dollar(dollar), maxSizeClause(maxSizeClause)
-    {}
+        DimensionSpecifierSyntax(SyntaxKind::QueueDimensionSpecifier), dollar(dollar), maxSizeClause(maxSizeClause) {
+        if (this->maxSizeClause) this->maxSizeClause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1515,8 +1610,9 @@ struct VariableDimensionSyntax : public SyntaxNode {
     Token closeBracket;
 
     VariableDimensionSyntax(Token openBracket, DimensionSpecifierSyntax* specifier, Token closeBracket) :
-        SyntaxNode(SyntaxKind::VariableDimension), openBracket(openBracket), specifier(specifier), closeBracket(closeBracket)
-    {}
+        SyntaxNode(SyntaxKind::VariableDimension), openBracket(openBracket), specifier(specifier), closeBracket(closeBracket) {
+        if (this->specifier) this->specifier->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1533,8 +1629,10 @@ struct VariableDeclaratorSyntax : public SyntaxNode {
     EqualsValueClauseSyntax* initializer;
 
     VariableDeclaratorSyntax(Token name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* initializer) :
-        SyntaxNode(SyntaxKind::VariableDeclarator), name(name), dimensions(dimensions), initializer(initializer)
-    {}
+        SyntaxNode(SyntaxKind::VariableDeclarator), name(name), dimensions(dimensions), initializer(initializer) {
+        this->dimensions.parent = this;
+        if (this->initializer) this->initializer->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1552,8 +1650,11 @@ struct DataDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     DataDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
-        MemberSyntax(SyntaxKind::DataDeclaration, attributes), modifiers(modifiers), type(&type), declarators(declarators), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::DataDeclaration, attributes), modifiers(modifiers), type(&type), declarators(declarators), semi(semi) {
+        this->modifiers.parent = this;
+        this->type->parent = this;
+        this->declarators.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1572,8 +1673,10 @@ struct TypedefDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     TypedefDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, DataTypeSyntax& type, Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token semi) :
-        MemberSyntax(SyntaxKind::TypedefDeclaration, attributes), typedefKeyword(typedefKeyword), type(&type), name(name), dimensions(dimensions), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::TypedefDeclaration, attributes), typedefKeyword(typedefKeyword), type(&type), name(name), dimensions(dimensions), semi(semi) {
+        this->type->parent = this;
+        this->dimensions.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1591,8 +1694,8 @@ struct ForwardTypedefDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     ForwardTypedefDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token keyword, Token name, Token semi) :
-        MemberSyntax(SyntaxKind::ForwardTypedefDeclaration, attributes), typedefKeyword(typedefKeyword), keyword(keyword), name(name), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::ForwardTypedefDeclaration, attributes), typedefKeyword(typedefKeyword), keyword(keyword), name(name), semi(semi) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1611,8 +1714,8 @@ struct ForwardInterfaceClassTypedefDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     ForwardInterfaceClassTypedefDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token interfaceKeyword, Token classKeyword, Token name, Token semi) :
-        MemberSyntax(SyntaxKind::ForwardInterfaceClassTypedefDeclaration, attributes), typedefKeyword(typedefKeyword), interfaceKeyword(interfaceKeyword), classKeyword(classKeyword), name(name), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::ForwardInterfaceClassTypedefDeclaration, attributes), typedefKeyword(typedefKeyword), interfaceKeyword(interfaceKeyword), classKeyword(classKeyword), name(name), semi(semi) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1626,8 +1729,8 @@ struct ForwardInterfaceClassTypedefDeclarationSyntax : public MemberSyntax {
 struct NetStrengthSyntax : public SyntaxNode {
 
     NetStrengthSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -1638,8 +1741,8 @@ struct ChargeStrengthSyntax : public NetStrengthSyntax {
     Token closeParen;
 
     ChargeStrengthSyntax(Token openParen, Token strength, Token closeParen) :
-        NetStrengthSyntax(SyntaxKind::ChargeStrength), openParen(openParen), strength(strength), closeParen(closeParen)
-    {}
+        NetStrengthSyntax(SyntaxKind::ChargeStrength), openParen(openParen), strength(strength), closeParen(closeParen) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1658,8 +1761,8 @@ struct DriveStrengthSyntax : public NetStrengthSyntax {
     Token closeParen;
 
     DriveStrengthSyntax(Token openParen, Token strength0, Token comma, Token strength1, Token closeParen) :
-        NetStrengthSyntax(SyntaxKind::DriveStrength), openParen(openParen), strength0(strength0), comma(comma), strength1(strength1), closeParen(closeParen)
-    {}
+        NetStrengthSyntax(SyntaxKind::DriveStrength), openParen(openParen), strength0(strength0), comma(comma), strength1(strength1), closeParen(closeParen) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1679,8 +1782,11 @@ struct NetDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     NetDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token netType, NetStrengthSyntax* strength, Token expansionHint, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
-        MemberSyntax(SyntaxKind::NetDeclaration, attributes), netType(netType), strength(strength), expansionHint(expansionHint), type(&type), declarators(declarators), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::NetDeclaration, attributes), netType(netType), strength(strength), expansionHint(expansionHint), type(&type), declarators(declarators), semi(semi) {
+        if (this->strength) this->strength->parent = this;
+        this->type->parent = this;
+        this->declarators.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1697,8 +1803,8 @@ struct PackageImportItemSyntax : public SyntaxNode {
     Token item;
 
     PackageImportItemSyntax(Token package, Token doubleColon, Token item) :
-        SyntaxNode(SyntaxKind::PackageImportItem), package(package), doubleColon(doubleColon), item(item)
-    {}
+        SyntaxNode(SyntaxKind::PackageImportItem), package(package), doubleColon(doubleColon), item(item) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1715,8 +1821,9 @@ struct PackageImportDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     PackageImportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<PackageImportItemSyntax> items, Token semi) :
-        MemberSyntax(SyntaxKind::PackageImportDeclaration, attributes), keyword(keyword), items(items), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::PackageImportDeclaration, attributes), keyword(keyword), items(items), semi(semi) {
+        this->items.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1733,8 +1840,10 @@ struct ParameterDeclarationSyntax : public SyntaxNode {
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
 
     ParameterDeclarationSyntax(Token keyword, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) :
-        SyntaxNode(SyntaxKind::ParameterDeclaration), keyword(keyword), type(&type), declarators(declarators)
-    {}
+        SyntaxNode(SyntaxKind::ParameterDeclaration), keyword(keyword), type(&type), declarators(declarators) {
+        this->type->parent = this;
+        this->declarators.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1750,8 +1859,9 @@ struct ParameterDeclarationStatementSyntax : public MemberSyntax {
     Token semi;
 
     ParameterDeclarationStatementSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ParameterDeclarationSyntax& parameter, Token semi) :
-        MemberSyntax(SyntaxKind::ParameterDeclarationStatement, attributes), parameter(&parameter), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::ParameterDeclarationStatement, attributes), parameter(&parameter), semi(semi) {
+        this->parameter->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1765,8 +1875,8 @@ struct ParameterDeclarationStatementSyntax : public MemberSyntax {
 struct PortHeaderSyntax : public SyntaxNode {
 
     PortHeaderSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -1777,8 +1887,10 @@ struct PortDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     PortDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
-        MemberSyntax(SyntaxKind::PortDeclaration, attributes), header(&header), declarators(declarators), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::PortDeclaration, attributes), header(&header), declarators(declarators), semi(semi) {
+        this->header->parent = this;
+        this->declarators.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1795,8 +1907,9 @@ struct GenvarDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     GenvarDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token semi) :
-        MemberSyntax(SyntaxKind::GenvarDeclaration, attributes), keyword(keyword), identifiers(identifiers), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::GenvarDeclaration, attributes), keyword(keyword), identifiers(identifiers), semi(semi) {
+        this->identifiers.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1815,8 +1928,9 @@ struct IntegerTypeSyntax : public DataTypeSyntax {
     SyntaxList<VariableDimensionSyntax> dimensions;
 
     IntegerTypeSyntax(SyntaxKind kind, Token keyword, Token signing, SyntaxList<VariableDimensionSyntax> dimensions) :
-        DataTypeSyntax(kind), keyword(keyword), signing(signing), dimensions(dimensions)
-    {}
+        DataTypeSyntax(kind), keyword(keyword), signing(signing), dimensions(dimensions) {
+        this->dimensions.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1831,8 +1945,8 @@ struct KeywordTypeSyntax : public DataTypeSyntax {
     Token keyword;
 
     KeywordTypeSyntax(SyntaxKind kind, Token keyword) :
-        DataTypeSyntax(kind), keyword(keyword)
-    {}
+        DataTypeSyntax(kind), keyword(keyword) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1847,8 +1961,9 @@ struct NamedTypeSyntax : public DataTypeSyntax {
     not_null<NameSyntax*> name;
 
     NamedTypeSyntax(NameSyntax& name) :
-        DataTypeSyntax(SyntaxKind::NamedType), name(&name)
-    {}
+        DataTypeSyntax(SyntaxKind::NamedType), name(&name) {
+        this->name->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1867,8 +1982,11 @@ struct StructUnionMemberSyntax : public SyntaxNode {
     Token semi;
 
     StructUnionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token randomQualifier, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
-        SyntaxNode(SyntaxKind::StructUnionMember), attributes(attributes), randomQualifier(randomQualifier), type(&type), declarators(declarators), semi(semi)
-    {}
+        SyntaxNode(SyntaxKind::StructUnionMember), attributes(attributes), randomQualifier(randomQualifier), type(&type), declarators(declarators), semi(semi) {
+        this->attributes.parent = this;
+        this->type->parent = this;
+        this->declarators.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1890,8 +2008,10 @@ struct StructUnionTypeSyntax : public DataTypeSyntax {
     SyntaxList<VariableDimensionSyntax> dimensions;
 
     StructUnionTypeSyntax(SyntaxKind kind, Token keyword, Token tagged, Token packed, Token signing, Token openBrace, SyntaxList<StructUnionMemberSyntax> members, Token closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
-        DataTypeSyntax(kind), keyword(keyword), tagged(tagged), packed(packed), signing(signing), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
-    {}
+        DataTypeSyntax(kind), keyword(keyword), tagged(tagged), packed(packed), signing(signing), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions) {
+        this->members.parent = this;
+        this->dimensions.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1911,8 +2031,11 @@ struct EnumTypeSyntax : public DataTypeSyntax {
     SyntaxList<VariableDimensionSyntax> dimensions;
 
     EnumTypeSyntax(Token keyword, DataTypeSyntax* baseType, Token openBrace, SeparatedSyntaxList<VariableDeclaratorSyntax> members, Token closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
-        DataTypeSyntax(SyntaxKind::EnumType), keyword(keyword), baseType(baseType), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
-    {}
+        DataTypeSyntax(SyntaxKind::EnumType), keyword(keyword), baseType(baseType), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions) {
+        if (this->baseType) this->baseType->parent = this;
+        this->members.parent = this;
+        this->dimensions.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1930,8 +2053,9 @@ struct TypeReferenceSyntax : public DataTypeSyntax {
     Token closeParen;
 
     TypeReferenceSyntax(Token typeKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen) :
-        DataTypeSyntax(SyntaxKind::TypeReference), typeKeyword(typeKeyword), openParen(openParen), expr(&expr), closeParen(closeParen)
-    {}
+        DataTypeSyntax(SyntaxKind::TypeReference), typeKeyword(typeKeyword), openParen(openParen), expr(&expr), closeParen(closeParen) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1947,8 +2071,8 @@ struct DotMemberClauseSyntax : public SyntaxNode {
     Token member;
 
     DotMemberClauseSyntax(Token dot, Token member) :
-        SyntaxNode(SyntaxKind::DotMemberClause), dot(dot), member(member)
-    {}
+        SyntaxNode(SyntaxKind::DotMemberClause), dot(dot), member(member) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1967,8 +2091,10 @@ struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
     DotMemberClauseSyntax* modport;
 
     VirtualInterfaceTypeSyntax(Token virtualKeyword, Token interfaceKeyword, Token name, ParameterValueAssignmentSyntax* parameters, DotMemberClauseSyntax* modport) :
-        DataTypeSyntax(SyntaxKind::VirtualInterfaceType), virtualKeyword(virtualKeyword), interfaceKeyword(interfaceKeyword), name(name), parameters(parameters), modport(modport)
-    {}
+        DataTypeSyntax(SyntaxKind::VirtualInterfaceType), virtualKeyword(virtualKeyword), interfaceKeyword(interfaceKeyword), name(name), parameters(parameters), modport(modport) {
+        if (this->parameters) this->parameters->parent = this;
+        if (this->modport) this->modport->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -1984,8 +2110,9 @@ struct ImplicitTypeSyntax : public DataTypeSyntax {
     SyntaxList<VariableDimensionSyntax> dimensions;
 
     ImplicitTypeSyntax(Token signing, SyntaxList<VariableDimensionSyntax> dimensions) :
-        DataTypeSyntax(SyntaxKind::ImplicitType), signing(signing), dimensions(dimensions)
-    {}
+        DataTypeSyntax(SyntaxKind::ImplicitType), signing(signing), dimensions(dimensions) {
+        this->dimensions.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2001,8 +2128,9 @@ struct VarDataTypeSyntax : public DataTypeSyntax {
     not_null<DataTypeSyntax*> type;
 
     VarDataTypeSyntax(Token var, DataTypeSyntax& type) :
-        DataTypeSyntax(SyntaxKind::VarDataType), var(var), type(&type)
-    {}
+        DataTypeSyntax(SyntaxKind::VarDataType), var(var), type(&type) {
+        this->type->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2021,8 +2149,8 @@ struct DeferredAssertionSyntax : public SyntaxNode {
     Token finalKeyword;
 
     DeferredAssertionSyntax(Token hash, Token zero, Token finalKeyword) :
-        SyntaxNode(SyntaxKind::DeferredAssertion), hash(hash), zero(zero), finalKeyword(finalKeyword)
-    {}
+        SyntaxNode(SyntaxKind::DeferredAssertion), hash(hash), zero(zero), finalKeyword(finalKeyword) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2038,8 +2166,9 @@ struct ElseClauseSyntax : public SyntaxNode {
     not_null<SyntaxNode*> clause;
 
     ElseClauseSyntax(Token elseKeyword, SyntaxNode& clause) :
-        SyntaxNode(SyntaxKind::ElseClause), elseKeyword(elseKeyword), clause(&clause)
-    {}
+        SyntaxNode(SyntaxKind::ElseClause), elseKeyword(elseKeyword), clause(&clause) {
+        this->clause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2055,8 +2184,10 @@ struct ActionBlockSyntax : public SyntaxNode {
     ElseClauseSyntax* elseClause;
 
     ActionBlockSyntax(StatementSyntax* statement, ElseClauseSyntax* elseClause) :
-        SyntaxNode(SyntaxKind::ActionBlock), statement(statement), elseClause(elseClause)
-    {}
+        SyntaxNode(SyntaxKind::ActionBlock), statement(statement), elseClause(elseClause) {
+        if (this->statement) this->statement->parent = this;
+        if (this->elseClause) this->elseClause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2074,8 +2205,11 @@ struct ImmediateAssertionStatementSyntax : public StatementSyntax {
     not_null<ActionBlockSyntax*> action;
 
     ImmediateAssertionStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, DeferredAssertionSyntax* delay, ParenthesizedExpressionSyntax& expr, ActionBlockSyntax& action) :
-        StatementSyntax(kind, label, attributes), keyword(keyword), delay(delay), expr(&expr), action(&action)
-    {}
+        StatementSyntax(kind, label, attributes), keyword(keyword), delay(delay), expr(&expr), action(&action) {
+        if (this->delay) this->delay->parent = this;
+        this->expr->parent = this;
+        this->action->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2094,8 +2228,9 @@ struct DisableIffSyntax : public SyntaxNode {
     Token closeParen;
 
     DisableIffSyntax(Token disable, Token iff, Token openParen, ExpressionSyntax& expr, Token closeParen) :
-        SyntaxNode(SyntaxKind::DisableIff), disable(disable), iff(iff), openParen(openParen), expr(&expr), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::DisableIff), disable(disable), iff(iff), openParen(openParen), expr(&expr), closeParen(closeParen) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2112,8 +2247,11 @@ struct PropertySpecSyntax : public SyntaxNode {
     not_null<ExpressionSyntax*> expr;
 
     PropertySpecSyntax(TimingControlSyntax* clocking, DisableIffSyntax* disable, ExpressionSyntax& expr) :
-        SyntaxNode(SyntaxKind::PropertySpec), clocking(clocking), disable(disable), expr(&expr)
-    {}
+        SyntaxNode(SyntaxKind::PropertySpec), clocking(clocking), disable(disable), expr(&expr) {
+        if (this->clocking) this->clocking->parent = this;
+        if (this->disable) this->disable->parent = this;
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2133,8 +2271,10 @@ struct ConcurrentAssertionStatementSyntax : public StatementSyntax {
     not_null<ActionBlockSyntax*> action;
 
     ConcurrentAssertionStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token propertyOrSequence, Token openParen, PropertySpecSyntax& propertySpec, Token closeParen, ActionBlockSyntax& action) :
-        StatementSyntax(kind, label, attributes), keyword(keyword), propertyOrSequence(propertyOrSequence), openParen(openParen), propertySpec(&propertySpec), closeParen(closeParen), action(&action)
-    {}
+        StatementSyntax(kind, label, attributes), keyword(keyword), propertyOrSequence(propertyOrSequence), openParen(openParen), propertySpec(&propertySpec), closeParen(closeParen), action(&action) {
+        this->propertySpec->parent = this;
+        this->action->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2149,8 +2289,9 @@ struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
     not_null<ConcurrentAssertionStatementSyntax*> statement;
 
     ConcurrentAssertionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ConcurrentAssertionStatementSyntax& statement) :
-        MemberSyntax(SyntaxKind::ConcurrentAssertionMember, attributes), statement(&statement)
-    {}
+        MemberSyntax(SyntaxKind::ConcurrentAssertionMember, attributes), statement(&statement) {
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2165,8 +2306,9 @@ struct ImmediateAssertionMemberSyntax : public MemberSyntax {
     not_null<ImmediateAssertionStatementSyntax*> statement;
 
     ImmediateAssertionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ImmediateAssertionStatementSyntax& statement) :
-        MemberSyntax(SyntaxKind::ImmediateAssertionMember, attributes), statement(&statement)
-    {}
+        MemberSyntax(SyntaxKind::ImmediateAssertionMember, attributes), statement(&statement) {
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2183,8 +2325,8 @@ struct EmptyStatementSyntax : public StatementSyntax {
     Token semicolon;
 
     EmptyStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token semicolon) :
-        StatementSyntax(SyntaxKind::EmptyStatement, label, attributes), semicolon(semicolon)
-    {}
+        StatementSyntax(SyntaxKind::EmptyStatement, label, attributes), semicolon(semicolon) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2205,8 +2347,11 @@ struct ConditionalStatementSyntax : public StatementSyntax {
     ElseClauseSyntax* elseClause;
 
     ConditionalStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token uniqueOrPriority, Token ifKeyword, Token openParen, ConditionalPredicateSyntax& predicate, Token closeParen, StatementSyntax& statement, ElseClauseSyntax* elseClause) :
-        StatementSyntax(SyntaxKind::ConditionalStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), ifKeyword(ifKeyword), openParen(openParen), predicate(&predicate), closeParen(closeParen), statement(&statement), elseClause(elseClause)
-    {}
+        StatementSyntax(SyntaxKind::ConditionalStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), ifKeyword(ifKeyword), openParen(openParen), predicate(&predicate), closeParen(closeParen), statement(&statement), elseClause(elseClause) {
+        this->predicate->parent = this;
+        this->statement->parent = this;
+        if (this->elseClause) this->elseClause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2220,8 +2365,8 @@ struct ConditionalStatementSyntax : public StatementSyntax {
 struct CaseItemSyntax : public SyntaxNode {
 
     CaseItemSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -2232,8 +2377,9 @@ struct DefaultCaseItemSyntax : public CaseItemSyntax {
     not_null<SyntaxNode*> clause;
 
     DefaultCaseItemSyntax(Token defaultKeyword, Token colon, SyntaxNode& clause) :
-        CaseItemSyntax(SyntaxKind::DefaultCaseItem), defaultKeyword(defaultKeyword), colon(colon), clause(&clause)
-    {}
+        CaseItemSyntax(SyntaxKind::DefaultCaseItem), defaultKeyword(defaultKeyword), colon(colon), clause(&clause) {
+        this->clause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2252,8 +2398,11 @@ struct PatternCaseItemSyntax : public CaseItemSyntax {
     not_null<StatementSyntax*> statement;
 
     PatternCaseItemSyntax(PatternSyntax& pattern, Token tripleAnd, ExpressionSyntax* expr, Token colon, StatementSyntax& statement) :
-        CaseItemSyntax(SyntaxKind::PatternCaseItem), pattern(&pattern), tripleAnd(tripleAnd), expr(expr), colon(colon), statement(&statement)
-    {}
+        CaseItemSyntax(SyntaxKind::PatternCaseItem), pattern(&pattern), tripleAnd(tripleAnd), expr(expr), colon(colon), statement(&statement) {
+        this->pattern->parent = this;
+        if (this->expr) this->expr->parent = this;
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2270,8 +2419,10 @@ struct StandardCaseItemSyntax : public CaseItemSyntax {
     not_null<SyntaxNode*> clause;
 
     StandardCaseItemSyntax(SeparatedSyntaxList<ExpressionSyntax> expressions, Token colon, SyntaxNode& clause) :
-        CaseItemSyntax(SyntaxKind::StandardCaseItem), expressions(expressions), colon(colon), clause(&clause)
-    {}
+        CaseItemSyntax(SyntaxKind::StandardCaseItem), expressions(expressions), colon(colon), clause(&clause) {
+        this->expressions.parent = this;
+        this->clause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2293,8 +2444,10 @@ struct CaseStatementSyntax : public StatementSyntax {
     Token endcase;
 
     CaseStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token uniqueOrPriority, Token caseKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen, Token matchesOrInside, SyntaxList<CaseItemSyntax> items, Token endcase) :
-        StatementSyntax(SyntaxKind::CaseStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), caseKeyword(caseKeyword), openParen(openParen), expr(&expr), closeParen(closeParen), matchesOrInside(matchesOrInside), items(items), endcase(endcase)
-    {}
+        StatementSyntax(SyntaxKind::CaseStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), caseKeyword(caseKeyword), openParen(openParen), expr(&expr), closeParen(closeParen), matchesOrInside(matchesOrInside), items(items), endcase(endcase) {
+        this->expr->parent = this;
+        this->items.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2310,8 +2463,9 @@ struct ForeverStatementSyntax : public StatementSyntax {
     not_null<StatementSyntax*> statement;
 
     ForeverStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token foreverKeyword, StatementSyntax& statement) :
-        StatementSyntax(SyntaxKind::ForeverStatement, label, attributes), foreverKeyword(foreverKeyword), statement(&statement)
-    {}
+        StatementSyntax(SyntaxKind::ForeverStatement, label, attributes), foreverKeyword(foreverKeyword), statement(&statement) {
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2330,8 +2484,10 @@ struct LoopStatementSyntax : public StatementSyntax {
     not_null<StatementSyntax*> statement;
 
     LoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token repeatOrWhile, Token openParen, ExpressionSyntax& expr, Token closeParen, StatementSyntax& statement) :
-        StatementSyntax(SyntaxKind::LoopStatement, label, attributes), repeatOrWhile(repeatOrWhile), openParen(openParen), expr(&expr), closeParen(closeParen), statement(&statement)
-    {}
+        StatementSyntax(SyntaxKind::LoopStatement, label, attributes), repeatOrWhile(repeatOrWhile), openParen(openParen), expr(&expr), closeParen(closeParen), statement(&statement) {
+        this->expr->parent = this;
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2352,8 +2508,10 @@ struct DoWhileStatementSyntax : public StatementSyntax {
     Token semi;
 
     DoWhileStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token doKeyword, StatementSyntax& statement, Token whileKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen, Token semi) :
-        StatementSyntax(SyntaxKind::DoWhileStatement, label, attributes), doKeyword(doKeyword), statement(&statement), whileKeyword(whileKeyword), openParen(openParen), expr(&expr), closeParen(closeParen), semi(semi)
-    {}
+        StatementSyntax(SyntaxKind::DoWhileStatement, label, attributes), doKeyword(doKeyword), statement(&statement), whileKeyword(whileKeyword), openParen(openParen), expr(&expr), closeParen(closeParen), semi(semi) {
+        this->statement->parent = this;
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2370,8 +2528,10 @@ struct ForVariableDeclarationSyntax : public SyntaxNode {
     not_null<VariableDeclaratorSyntax*> declarator;
 
     ForVariableDeclarationSyntax(Token varKeyword, DataTypeSyntax& type, VariableDeclaratorSyntax& declarator) :
-        SyntaxNode(SyntaxKind::ForVariableDeclaration), varKeyword(varKeyword), type(&type), declarator(&declarator)
-    {}
+        SyntaxNode(SyntaxKind::ForVariableDeclaration), varKeyword(varKeyword), type(&type), declarator(&declarator) {
+        this->type->parent = this;
+        this->declarator->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2394,8 +2554,12 @@ struct ForLoopStatementSyntax : public StatementSyntax {
     not_null<StatementSyntax*> statement;
 
     ForLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token forKeyword, Token openParen, SeparatedSyntaxList<SyntaxNode> initializers, Token semi1, ExpressionSyntax& stopExpr, Token semi2, SeparatedSyntaxList<ExpressionSyntax> steps, Token closeParen, StatementSyntax& statement) :
-        StatementSyntax(SyntaxKind::ForLoopStatement, label, attributes), forKeyword(forKeyword), openParen(openParen), initializers(initializers), semi1(semi1), stopExpr(&stopExpr), semi2(semi2), steps(steps), closeParen(closeParen), statement(&statement)
-    {}
+        StatementSyntax(SyntaxKind::ForLoopStatement, label, attributes), forKeyword(forKeyword), openParen(openParen), initializers(initializers), semi1(semi1), stopExpr(&stopExpr), semi2(semi2), steps(steps), closeParen(closeParen), statement(&statement) {
+        this->initializers.parent = this;
+        this->stopExpr->parent = this;
+        this->steps.parent = this;
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2415,8 +2579,10 @@ struct ForeachLoopListSyntax : public SyntaxNode {
     Token closeParen;
 
     ForeachLoopListSyntax(Token openParen, NameSyntax& arrayName, Token openBracket, SeparatedSyntaxList<NameSyntax> loopVariables, Token closeBracket, Token closeParen) :
-        SyntaxNode(SyntaxKind::ForeachLoopList), openParen(openParen), arrayName(&arrayName), openBracket(openBracket), loopVariables(loopVariables), closeBracket(closeBracket), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::ForeachLoopList), openParen(openParen), arrayName(&arrayName), openBracket(openBracket), loopVariables(loopVariables), closeBracket(closeBracket), closeParen(closeParen) {
+        this->arrayName->parent = this;
+        this->loopVariables.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2433,8 +2599,10 @@ struct ForeachLoopStatementSyntax : public StatementSyntax {
     not_null<StatementSyntax*> statement;
 
     ForeachLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ForeachLoopListSyntax& loopList, StatementSyntax& statement) :
-        StatementSyntax(SyntaxKind::ForeachLoopStatement, label, attributes), keyword(keyword), loopList(&loopList), statement(&statement)
-    {}
+        StatementSyntax(SyntaxKind::ForeachLoopStatement, label, attributes), keyword(keyword), loopList(&loopList), statement(&statement) {
+        this->loopList->parent = this;
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2451,8 +2619,9 @@ struct ReturnStatementSyntax : public StatementSyntax {
     Token semi;
 
     ReturnStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token returnKeyword, ExpressionSyntax* returnValue, Token semi) :
-        StatementSyntax(SyntaxKind::ReturnStatement, label, attributes), returnKeyword(returnKeyword), returnValue(returnValue), semi(semi)
-    {}
+        StatementSyntax(SyntaxKind::ReturnStatement, label, attributes), returnKeyword(returnKeyword), returnValue(returnValue), semi(semi) {
+        if (this->returnValue) this->returnValue->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2468,8 +2637,8 @@ struct JumpStatementSyntax : public StatementSyntax {
     Token semi;
 
     JumpStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token breakOrContinue, Token semi) :
-        StatementSyntax(SyntaxKind::JumpStatement, label, attributes), breakOrContinue(breakOrContinue), semi(semi)
-    {}
+        StatementSyntax(SyntaxKind::JumpStatement, label, attributes), breakOrContinue(breakOrContinue), semi(semi) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2485,8 +2654,10 @@ struct TimingControlStatementSyntax : public StatementSyntax {
     not_null<StatementSyntax*> statement;
 
     TimingControlStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, TimingControlSyntax& timingControl, StatementSyntax& statement) :
-        StatementSyntax(SyntaxKind::TimingControlStatement, label, attributes), timingControl(&timingControl), statement(&statement)
-    {}
+        StatementSyntax(SyntaxKind::TimingControlStatement, label, attributes), timingControl(&timingControl), statement(&statement) {
+        this->timingControl->parent = this;
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2502,8 +2673,9 @@ struct ExpressionStatementSyntax : public StatementSyntax {
     Token semi;
 
     ExpressionStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr, Token semi) :
-        StatementSyntax(SyntaxKind::ExpressionStatement, label, attributes), expr(&expr), semi(semi)
-    {}
+        StatementSyntax(SyntaxKind::ExpressionStatement, label, attributes), expr(&expr), semi(semi) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2522,8 +2694,10 @@ struct ProceduralAssignStatementSyntax : public StatementSyntax {
     Token semi;
 
     ProceduralAssignStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ExpressionSyntax& lvalue, Token equals, ExpressionSyntax& value, Token semi) :
-        StatementSyntax(kind, label, attributes), keyword(keyword), lvalue(&lvalue), equals(equals), value(&value), semi(semi)
-    {}
+        StatementSyntax(kind, label, attributes), keyword(keyword), lvalue(&lvalue), equals(equals), value(&value), semi(semi) {
+        this->lvalue->parent = this;
+        this->value->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2540,8 +2714,9 @@ struct ProceduralDeassignStatementSyntax : public StatementSyntax {
     Token semi;
 
     ProceduralDeassignStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ExpressionSyntax& variable, Token semi) :
-        StatementSyntax(kind, label, attributes), keyword(keyword), variable(&variable), semi(semi)
-    {}
+        StatementSyntax(kind, label, attributes), keyword(keyword), variable(&variable), semi(semi) {
+        this->variable->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2558,8 +2733,9 @@ struct DisableStatementSyntax : public StatementSyntax {
     Token semi;
 
     DisableStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, NameSyntax& name, Token semi) :
-        StatementSyntax(SyntaxKind::DisableStatement, label, attributes), disable(disable), name(&name), semi(semi)
-    {}
+        StatementSyntax(SyntaxKind::DisableStatement, label, attributes), disable(disable), name(&name), semi(semi) {
+        this->name->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2576,8 +2752,8 @@ struct DisableForkStatementSyntax : public StatementSyntax {
     Token semi;
 
     DisableForkStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, Token fork, Token semi) :
-        StatementSyntax(SyntaxKind::DisableForkStatement, label, attributes), disable(disable), fork(fork), semi(semi)
-    {}
+        StatementSyntax(SyntaxKind::DisableForkStatement, label, attributes), disable(disable), fork(fork), semi(semi) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2593,8 +2769,8 @@ struct NamedBlockClauseSyntax : public SyntaxNode {
     Token name;
 
     NamedBlockClauseSyntax(Token colon, Token name) :
-        SyntaxNode(SyntaxKind::NamedBlockClause), colon(colon), name(name)
-    {}
+        SyntaxNode(SyntaxKind::NamedBlockClause), colon(colon), name(name) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2613,8 +2789,11 @@ struct BlockStatementSyntax : public StatementSyntax {
     NamedBlockClauseSyntax* endBlockName;
 
     BlockStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token begin, NamedBlockClauseSyntax* blockName, SyntaxList<SyntaxNode> items, Token end, NamedBlockClauseSyntax* endBlockName) :
-        StatementSyntax(kind, label, attributes), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName)
-    {}
+        StatementSyntax(kind, label, attributes), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName) {
+        if (this->blockName) this->blockName->parent = this;
+        this->items.parent = this;
+        if (this->endBlockName) this->endBlockName->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2633,8 +2812,10 @@ struct WaitStatementSyntax : public StatementSyntax {
     not_null<StatementSyntax*> statement;
 
     WaitStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait, Token openParen, ExpressionSyntax& expr, Token closeParen, StatementSyntax& statement) :
-        StatementSyntax(SyntaxKind::WaitStatement, label, attributes), wait(wait), openParen(openParen), expr(&expr), closeParen(closeParen), statement(&statement)
-    {}
+        StatementSyntax(SyntaxKind::WaitStatement, label, attributes), wait(wait), openParen(openParen), expr(&expr), closeParen(closeParen), statement(&statement) {
+        this->expr->parent = this;
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2651,8 +2832,8 @@ struct WaitForkStatementSyntax : public StatementSyntax {
     Token semi;
 
     WaitForkStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait, Token fork, Token semi) :
-        StatementSyntax(SyntaxKind::WaitForkStatement, label, attributes), wait(wait), fork(fork), semi(semi)
-    {}
+        StatementSyntax(SyntaxKind::WaitForkStatement, label, attributes), wait(wait), fork(fork), semi(semi) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2671,8 +2852,10 @@ struct WaitOrderStatementSyntax : public StatementSyntax {
     not_null<ActionBlockSyntax*> action;
 
     WaitOrderStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait_order, Token openParen, SeparatedSyntaxList<NameSyntax> names, Token closeParen, ActionBlockSyntax& action) :
-        StatementSyntax(SyntaxKind::WaitOrderStatement, label, attributes), wait_order(wait_order), openParen(openParen), names(names), closeParen(closeParen), action(&action)
-    {}
+        StatementSyntax(SyntaxKind::WaitOrderStatement, label, attributes), wait_order(wait_order), openParen(openParen), names(names), closeParen(closeParen), action(&action) {
+        this->names.parent = this;
+        this->action->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2689,8 +2872,10 @@ struct RandCaseItemSyntax : public SyntaxNode {
     not_null<StatementSyntax*> statement;
 
     RandCaseItemSyntax(ExpressionSyntax& expr, Token colon, StatementSyntax& statement) :
-        SyntaxNode(SyntaxKind::RandCaseItem), expr(&expr), colon(colon), statement(&statement)
-    {}
+        SyntaxNode(SyntaxKind::RandCaseItem), expr(&expr), colon(colon), statement(&statement) {
+        this->expr->parent = this;
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2707,8 +2892,9 @@ struct RandCaseStatementSyntax : public StatementSyntax {
     Token endCase;
 
     RandCaseStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token randCase, SyntaxList<RandCaseItemSyntax> items, Token endCase) :
-        StatementSyntax(SyntaxKind::RandCaseStatement, label, attributes), randCase(randCase), items(items), endCase(endCase)
-    {}
+        StatementSyntax(SyntaxKind::RandCaseStatement, label, attributes), randCase(randCase), items(items), endCase(endCase) {
+        this->items.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2725,8 +2911,10 @@ struct EventTriggerStatementSyntax : public StatementSyntax {
     not_null<NameSyntax*> name;
 
     EventTriggerStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token trigger, TimingControlSyntax* timing, NameSyntax& name) :
-        StatementSyntax(kind, label, attributes), trigger(trigger), timing(timing), name(&name)
-    {}
+        StatementSyntax(kind, label, attributes), trigger(trigger), timing(timing), name(&name) {
+        if (this->timing) this->timing->parent = this;
+        this->name->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2742,8 +2930,8 @@ struct EventTriggerStatementSyntax : public StatementSyntax {
 struct PortListSyntax : public SyntaxNode {
 
     PortListSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -2751,8 +2939,8 @@ struct PortListSyntax : public SyntaxNode {
 struct NonAnsiPortSyntax : public SyntaxNode {
 
     NonAnsiPortSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -2761,8 +2949,9 @@ struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
     not_null<ExpressionSyntax*> expr;
 
     ImplicitNonAnsiPortSyntax(ExpressionSyntax& expr) :
-        NonAnsiPortSyntax(SyntaxKind::ImplicitNonAnsiPort), expr(&expr)
-    {}
+        NonAnsiPortSyntax(SyntaxKind::ImplicitNonAnsiPort), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2781,8 +2970,9 @@ struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
     Token closeParen;
 
     ExplicitNonAnsiPortSyntax(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
-        NonAnsiPortSyntax(SyntaxKind::ExplicitNonAnsiPort), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
-    {}
+        NonAnsiPortSyntax(SyntaxKind::ExplicitNonAnsiPort), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen) {
+        if (this->expr) this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2799,8 +2989,9 @@ struct NonAnsiPortListSyntax : public PortListSyntax {
     Token closeParen;
 
     NonAnsiPortListSyntax(Token openParen, SeparatedSyntaxList<NonAnsiPortSyntax> ports, Token closeParen) :
-        PortListSyntax(SyntaxKind::NonAnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
-    {}
+        PortListSyntax(SyntaxKind::NonAnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen) {
+        this->ports.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2816,8 +3007,9 @@ struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
     DotMemberClauseSyntax* modport;
 
     InterfacePortHeaderSyntax(Token nameOrKeyword, DotMemberClauseSyntax* modport) :
-        PortHeaderSyntax(SyntaxKind::InterfacePortHeader), nameOrKeyword(nameOrKeyword), modport(modport)
-    {}
+        PortHeaderSyntax(SyntaxKind::InterfacePortHeader), nameOrKeyword(nameOrKeyword), modport(modport) {
+        if (this->modport) this->modport->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2834,8 +3026,9 @@ struct VariablePortHeaderSyntax : public PortHeaderSyntax {
     not_null<DataTypeSyntax*> dataType;
 
     VariablePortHeaderSyntax(Token direction, Token varKeyword, DataTypeSyntax& dataType) :
-        PortHeaderSyntax(SyntaxKind::VariablePortHeader), direction(direction), varKeyword(varKeyword), dataType(&dataType)
-    {}
+        PortHeaderSyntax(SyntaxKind::VariablePortHeader), direction(direction), varKeyword(varKeyword), dataType(&dataType) {
+        this->dataType->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2852,8 +3045,9 @@ struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
     DataTypeSyntax* type;
 
     InterconnectPortHeaderSyntax(Token direction, Token interconnect, DataTypeSyntax* type) :
-        PortHeaderSyntax(SyntaxKind::InterconnectPortHeader), direction(direction), interconnect(interconnect), type(type)
-    {}
+        PortHeaderSyntax(SyntaxKind::InterconnectPortHeader), direction(direction), interconnect(interconnect), type(type) {
+        if (this->type) this->type->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2870,8 +3064,9 @@ struct NetPortHeaderSyntax : public PortHeaderSyntax {
     not_null<DataTypeSyntax*> dataType;
 
     NetPortHeaderSyntax(Token direction, Token netType, DataTypeSyntax& dataType) :
-        PortHeaderSyntax(SyntaxKind::NetPortHeader), direction(direction), netType(netType), dataType(&dataType)
-    {}
+        PortHeaderSyntax(SyntaxKind::NetPortHeader), direction(direction), netType(netType), dataType(&dataType) {
+        this->dataType->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2887,8 +3082,10 @@ struct ImplicitAnsiPortSyntax : public MemberSyntax {
     not_null<VariableDeclaratorSyntax*> declarator;
 
     ImplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, VariableDeclaratorSyntax& declarator) :
-        MemberSyntax(SyntaxKind::ImplicitAnsiPort, attributes), header(&header), declarator(&declarator)
-    {}
+        MemberSyntax(SyntaxKind::ImplicitAnsiPort, attributes), header(&header), declarator(&declarator) {
+        this->header->parent = this;
+        this->declarator->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2908,8 +3105,9 @@ struct ExplicitAnsiPortSyntax : public MemberSyntax {
     Token closeParen;
 
     ExplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token direction, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
-        MemberSyntax(SyntaxKind::ExplicitAnsiPort, attributes), direction(direction), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
-    {}
+        MemberSyntax(SyntaxKind::ExplicitAnsiPort, attributes), direction(direction), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen) {
+        if (this->expr) this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2926,8 +3124,9 @@ struct AnsiPortListSyntax : public PortListSyntax {
     Token closeParen;
 
     AnsiPortListSyntax(Token openParen, SeparatedSyntaxList<MemberSyntax> ports, Token closeParen) :
-        PortListSyntax(SyntaxKind::AnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
-    {}
+        PortListSyntax(SyntaxKind::AnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen) {
+        this->ports.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2944,8 +3143,8 @@ struct WildcardPortListSyntax : public PortListSyntax {
     Token closeParen;
 
     WildcardPortListSyntax(Token openParen, Token dotStar, Token closeParen) :
-        PortListSyntax(SyntaxKind::WildcardPortList), openParen(openParen), dotStar(dotStar), closeParen(closeParen)
-    {}
+        PortListSyntax(SyntaxKind::WildcardPortList), openParen(openParen), dotStar(dotStar), closeParen(closeParen) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2963,8 +3162,9 @@ struct ParameterPortListSyntax : public SyntaxNode {
     Token closeParen;
 
     ParameterPortListSyntax(Token hash, Token openParen, SeparatedSyntaxList<ParameterDeclarationSyntax> declarations, Token closeParen) :
-        SyntaxNode(SyntaxKind::ParameterPortList), hash(hash), openParen(openParen), declarations(declarations), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::ParameterPortList), hash(hash), openParen(openParen), declarations(declarations), closeParen(closeParen) {
+        this->declarations.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -2985,8 +3185,11 @@ struct ModuleHeaderSyntax : public SyntaxNode {
     Token semi;
 
     ModuleHeaderSyntax(SyntaxKind kind, Token moduleKeyword, Token lifetime, Token name, SyntaxList<PackageImportDeclarationSyntax> imports, ParameterPortListSyntax* parameters, PortListSyntax* ports, Token semi) :
-        SyntaxNode(kind), moduleKeyword(moduleKeyword), lifetime(lifetime), name(name), imports(imports), parameters(parameters), ports(ports), semi(semi)
-    {}
+        SyntaxNode(kind), moduleKeyword(moduleKeyword), lifetime(lifetime), name(name), imports(imports), parameters(parameters), ports(ports), semi(semi) {
+        this->imports.parent = this;
+        if (this->parameters) this->parameters->parent = this;
+        if (this->ports) this->ports->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3004,8 +3207,11 @@ struct ModuleDeclarationSyntax : public MemberSyntax {
     NamedBlockClauseSyntax* blockName;
 
     ModuleDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax& header, SyntaxList<MemberSyntax> members, Token endmodule, NamedBlockClauseSyntax* blockName) :
-        MemberSyntax(kind, attributes), header(&header), members(members), endmodule(endmodule), blockName(blockName)
-    {}
+        MemberSyntax(kind, attributes), header(&header), members(members), endmodule(endmodule), blockName(blockName) {
+        this->header->parent = this;
+        this->members.parent = this;
+        if (this->blockName) this->blockName->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3021,8 +3227,9 @@ struct ExternModuleSyntax : public SyntaxNode {
     not_null<ModuleHeaderSyntax*> header;
 
     ExternModuleSyntax(Token externKeyword, ModuleHeaderSyntax& header) :
-        SyntaxNode(SyntaxKind::ExternModule), externKeyword(externKeyword), header(&header)
-    {}
+        SyntaxNode(SyntaxKind::ExternModule), externKeyword(externKeyword), header(&header) {
+        this->header->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3040,8 +3247,9 @@ struct EmptyMemberSyntax : public MemberSyntax {
     Token semi;
 
     EmptyMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token semi) :
-        MemberSyntax(SyntaxKind::EmptyMember, attributes), qualifiers(qualifiers), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::EmptyMember, attributes), qualifiers(qualifiers), semi(semi) {
+        this->qualifiers.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3057,8 +3265,9 @@ struct ProceduralBlockSyntax : public MemberSyntax {
     not_null<StatementSyntax*> statement;
 
     ProceduralBlockSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, StatementSyntax& statement) :
-        MemberSyntax(kind, attributes), keyword(keyword), statement(&statement)
-    {}
+        MemberSyntax(kind, attributes), keyword(keyword), statement(&statement) {
+        this->statement->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3075,8 +3284,9 @@ struct GenerateRegionSyntax : public MemberSyntax {
     Token endgenerate;
 
     GenerateRegionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SyntaxList<MemberSyntax> members, Token endgenerate) :
-        MemberSyntax(SyntaxKind::GenerateRegion, attributes), keyword(keyword), members(members), endgenerate(endgenerate)
-    {}
+        MemberSyntax(SyntaxKind::GenerateRegion, attributes), keyword(keyword), members(members), endgenerate(endgenerate) {
+        this->members.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3102,8 +3312,12 @@ struct LoopGenerateSyntax : public MemberSyntax {
     not_null<MemberSyntax*> block;
 
     LoopGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, Token genvar, Token identifier, Token equals, ExpressionSyntax& initialExpr, Token semi1, ExpressionSyntax& stopExpr, Token semi2, ExpressionSyntax& iterationExpr, Token closeParen, MemberSyntax& block) :
-        MemberSyntax(SyntaxKind::LoopGenerate, attributes), keyword(keyword), openParen(openParen), genvar(genvar), identifier(identifier), equals(equals), initialExpr(&initialExpr), semi1(semi1), stopExpr(&stopExpr), semi2(semi2), iterationExpr(&iterationExpr), closeParen(closeParen), block(&block)
-    {}
+        MemberSyntax(SyntaxKind::LoopGenerate, attributes), keyword(keyword), openParen(openParen), genvar(genvar), identifier(identifier), equals(equals), initialExpr(&initialExpr), semi1(semi1), stopExpr(&stopExpr), semi2(semi2), iterationExpr(&iterationExpr), closeParen(closeParen), block(&block) {
+        this->initialExpr->parent = this;
+        this->stopExpr->parent = this;
+        this->iterationExpr->parent = this;
+        this->block->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3123,8 +3337,11 @@ struct IfGenerateSyntax : public MemberSyntax {
     ElseClauseSyntax* elseClause;
 
     IfGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, ExpressionSyntax& condition, Token closeParen, MemberSyntax& block, ElseClauseSyntax* elseClause) :
-        MemberSyntax(SyntaxKind::IfGenerate, attributes), keyword(keyword), openParen(openParen), condition(&condition), closeParen(closeParen), block(&block), elseClause(elseClause)
-    {}
+        MemberSyntax(SyntaxKind::IfGenerate, attributes), keyword(keyword), openParen(openParen), condition(&condition), closeParen(closeParen), block(&block), elseClause(elseClause) {
+        this->condition->parent = this;
+        this->block->parent = this;
+        if (this->elseClause) this->elseClause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3144,8 +3361,10 @@ struct CaseGenerateSyntax : public MemberSyntax {
     Token endCase;
 
     CaseGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, ExpressionSyntax& condition, Token closeParen, SyntaxList<CaseItemSyntax> items, Token endCase) :
-        MemberSyntax(SyntaxKind::CaseGenerate, attributes), keyword(keyword), openParen(openParen), condition(&condition), closeParen(closeParen), items(items), endCase(endCase)
-    {}
+        MemberSyntax(SyntaxKind::CaseGenerate, attributes), keyword(keyword), openParen(openParen), condition(&condition), closeParen(closeParen), items(items), endCase(endCase) {
+        this->condition->parent = this;
+        this->items.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3165,8 +3384,12 @@ struct GenerateBlockSyntax : public MemberSyntax {
     NamedBlockClauseSyntax* endName;
 
     GenerateBlockSyntax(SyntaxList<AttributeInstanceSyntax> attributes, NamedLabelSyntax* label, Token begin, NamedBlockClauseSyntax* beginName, SyntaxList<MemberSyntax> members, Token end, NamedBlockClauseSyntax* endName) :
-        MemberSyntax(SyntaxKind::GenerateBlock, attributes), label(label), begin(begin), beginName(beginName), members(members), end(end), endName(endName)
-    {}
+        MemberSyntax(SyntaxKind::GenerateBlock, attributes), label(label), begin(begin), beginName(beginName), members(members), end(end), endName(endName) {
+        if (this->label) this->label->parent = this;
+        if (this->beginName) this->beginName->parent = this;
+        this->members.parent = this;
+        if (this->endName) this->endName->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3182,8 +3405,8 @@ struct DividerClauseSyntax : public SyntaxNode {
     Token value;
 
     DividerClauseSyntax(Token divide, Token value) :
-        SyntaxNode(SyntaxKind::DividerClause), divide(divide), value(value)
-    {}
+        SyntaxNode(SyntaxKind::DividerClause), divide(divide), value(value) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3201,8 +3424,9 @@ struct TimeUnitsDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     TimeUnitsDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token time, DividerClauseSyntax* divider, Token semi) :
-        MemberSyntax(SyntaxKind::TimeUnitsDeclaration, attributes), keyword(keyword), time(time), divider(divider), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::TimeUnitsDeclaration, attributes), keyword(keyword), time(time), divider(divider), semi(semi) {
+        if (this->divider) this->divider->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3217,8 +3441,9 @@ struct PortConnectionSyntax : public SyntaxNode {
     SyntaxList<AttributeInstanceSyntax> attributes;
 
     PortConnectionSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
-        SyntaxNode(kind), attributes(attributes)
-    {}
+        SyntaxNode(kind), attributes(attributes) {
+        this->attributes.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3233,8 +3458,9 @@ struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
     not_null<ExpressionSyntax*> expr;
 
     OrderedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr) :
-        PortConnectionSyntax(SyntaxKind::OrderedPortConnection, attributes), expr(&expr)
-    {}
+        PortConnectionSyntax(SyntaxKind::OrderedPortConnection, attributes), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3253,8 +3479,9 @@ struct NamedPortConnectionSyntax : public PortConnectionSyntax {
     Token closeParen;
 
     NamedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
-        PortConnectionSyntax(SyntaxKind::NamedPortConnection, attributes), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
-    {}
+        PortConnectionSyntax(SyntaxKind::NamedPortConnection, attributes), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen) {
+        if (this->expr) this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3269,8 +3496,8 @@ struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
     Token dotStar;
 
     WildcardPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token dotStar) :
-        PortConnectionSyntax(SyntaxKind::WildcardPortConnection, attributes), dotStar(dotStar)
-    {}
+        PortConnectionSyntax(SyntaxKind::WildcardPortConnection, attributes), dotStar(dotStar) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3289,8 +3516,10 @@ struct HierarchicalInstanceSyntax : public SyntaxNode {
     Token closeParen;
 
     HierarchicalInstanceSyntax(Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token openParen, SeparatedSyntaxList<PortConnectionSyntax> connections, Token closeParen) :
-        SyntaxNode(SyntaxKind::HierarchicalInstance), name(name), dimensions(dimensions), openParen(openParen), connections(connections), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::HierarchicalInstance), name(name), dimensions(dimensions), openParen(openParen), connections(connections), closeParen(closeParen) {
+        this->dimensions.parent = this;
+        this->connections.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3308,8 +3537,10 @@ struct HierarchyInstantiationSyntax : public MemberSyntax {
     Token semi;
 
     HierarchyInstantiationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token type, ParameterValueAssignmentSyntax* parameters, SeparatedSyntaxList<HierarchicalInstanceSyntax> instances, Token semi) :
-        MemberSyntax(SyntaxKind::HierarchyInstantiation, attributes), type(type), parameters(parameters), instances(instances), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::HierarchyInstantiation, attributes), type(type), parameters(parameters), instances(instances), semi(semi) {
+        if (this->parameters) this->parameters->parent = this;
+        this->instances.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3329,8 +3560,11 @@ struct FunctionPortSyntax : public SyntaxNode {
     not_null<VariableDeclaratorSyntax*> declarator;
 
     FunctionPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token constKeyword, Token direction, Token varKeyword, DataTypeSyntax* dataType, VariableDeclaratorSyntax& declarator) :
-        SyntaxNode(SyntaxKind::FunctionPort), attributes(attributes), constKeyword(constKeyword), direction(direction), varKeyword(varKeyword), dataType(dataType), declarator(&declarator)
-    {}
+        SyntaxNode(SyntaxKind::FunctionPort), attributes(attributes), constKeyword(constKeyword), direction(direction), varKeyword(varKeyword), dataType(dataType), declarator(&declarator) {
+        this->attributes.parent = this;
+        if (this->dataType) this->dataType->parent = this;
+        this->declarator->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3347,8 +3581,9 @@ struct FunctionPortListSyntax : public SyntaxNode {
     Token closeParen;
 
     FunctionPortListSyntax(Token openParen, SeparatedSyntaxList<FunctionPortSyntax> ports, Token closeParen) :
-        SyntaxNode(SyntaxKind::FunctionPortList), openParen(openParen), ports(ports), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::FunctionPortList), openParen(openParen), ports(ports), closeParen(closeParen) {
+        this->ports.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3367,8 +3602,11 @@ struct FunctionPrototypeSyntax : public SyntaxNode {
     FunctionPortListSyntax* portList;
 
     FunctionPrototypeSyntax(Token keyword, Token lifetime, DataTypeSyntax* returnType, NameSyntax& name, FunctionPortListSyntax* portList) :
-        SyntaxNode(SyntaxKind::FunctionPrototype), keyword(keyword), lifetime(lifetime), returnType(returnType), name(&name), portList(portList)
-    {}
+        SyntaxNode(SyntaxKind::FunctionPrototype), keyword(keyword), lifetime(lifetime), returnType(returnType), name(&name), portList(portList) {
+        if (this->returnType) this->returnType->parent = this;
+        this->name->parent = this;
+        if (this->portList) this->portList->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3387,8 +3625,11 @@ struct FunctionDeclarationSyntax : public MemberSyntax {
     NamedBlockClauseSyntax* endBlockName;
 
     FunctionDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, FunctionPrototypeSyntax& prototype, Token semi, SyntaxList<SyntaxNode> items, Token end, NamedBlockClauseSyntax* endBlockName) :
-        MemberSyntax(kind, attributes), prototype(&prototype), semi(semi), items(items), end(end), endBlockName(endBlockName)
-    {}
+        MemberSyntax(kind, attributes), prototype(&prototype), semi(semi), items(items), end(end), endBlockName(endBlockName) {
+        this->prototype->parent = this;
+        this->items.parent = this;
+        if (this->endBlockName) this->endBlockName->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3407,8 +3648,11 @@ struct AssertionItemPortSyntax : public SyntaxNode {
     not_null<VariableDeclaratorSyntax*> declarator;
 
     AssertionItemPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token local, Token direction, DataTypeSyntax& type, VariableDeclaratorSyntax& declarator) :
-        SyntaxNode(SyntaxKind::AssertionItemPort), attributes(attributes), local(local), direction(direction), type(&type), declarator(&declarator)
-    {}
+        SyntaxNode(SyntaxKind::AssertionItemPort), attributes(attributes), local(local), direction(direction), type(&type), declarator(&declarator) {
+        this->attributes.parent = this;
+        this->type->parent = this;
+        this->declarator->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3425,8 +3669,9 @@ struct AssertionItemPortListSyntax : public SyntaxNode {
     Token closeParen;
 
     AssertionItemPortListSyntax(Token openParen, SeparatedSyntaxList<AssertionItemPortSyntax> ports, Token closeParen) :
-        SyntaxNode(SyntaxKind::AssertionItemPortList), openParen(openParen), ports(ports), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::AssertionItemPortList), openParen(openParen), ports(ports), closeParen(closeParen) {
+        this->ports.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3445,8 +3690,10 @@ struct LetDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     LetDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token let, Token identifier, AssertionItemPortListSyntax* portList, EqualsValueClauseSyntax& initializer, Token semi) :
-        MemberSyntax(SyntaxKind::LetDeclaration, attributes), let(let), identifier(identifier), portList(portList), initializer(&initializer), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::LetDeclaration, attributes), let(let), identifier(identifier), portList(portList), initializer(&initializer), semi(semi) {
+        if (this->portList) this->portList->parent = this;
+        this->initializer->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3469,8 +3716,12 @@ struct PropertyDeclarationSyntax : public MemberSyntax {
     NamedBlockClauseSyntax* endBlockName;
 
     PropertyDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token name, AssertionItemPortListSyntax* portList, Token semi, SyntaxList<MemberSyntax> assertionVariables, PropertySpecSyntax& propertySpec, Token optionalSemi, Token end, NamedBlockClauseSyntax* endBlockName) :
-        MemberSyntax(SyntaxKind::PropertyDeclaration, attributes), keyword(keyword), name(name), portList(portList), semi(semi), assertionVariables(assertionVariables), propertySpec(&propertySpec), optionalSemi(optionalSemi), end(end), endBlockName(endBlockName)
-    {}
+        MemberSyntax(SyntaxKind::PropertyDeclaration, attributes), keyword(keyword), name(name), portList(portList), semi(semi), assertionVariables(assertionVariables), propertySpec(&propertySpec), optionalSemi(optionalSemi), end(end), endBlockName(endBlockName) {
+        if (this->portList) this->portList->parent = this;
+        this->assertionVariables.parent = this;
+        this->propertySpec->parent = this;
+        if (this->endBlockName) this->endBlockName->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3493,8 +3744,12 @@ struct SequenceDeclarationSyntax : public MemberSyntax {
     NamedBlockClauseSyntax* endBlockName;
 
     SequenceDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token name, AssertionItemPortListSyntax* portList, Token semi, SyntaxList<MemberSyntax> assertionVariables, ExpressionSyntax& seqExpr, Token optionalSemi, Token end, NamedBlockClauseSyntax* endBlockName) :
-        MemberSyntax(SyntaxKind::SequenceDeclaration, attributes), keyword(keyword), name(name), portList(portList), semi(semi), assertionVariables(assertionVariables), seqExpr(&seqExpr), optionalSemi(optionalSemi), end(end), endBlockName(endBlockName)
-    {}
+        MemberSyntax(SyntaxKind::SequenceDeclaration, attributes), keyword(keyword), name(name), portList(portList), semi(semi), assertionVariables(assertionVariables), seqExpr(&seqExpr), optionalSemi(optionalSemi), end(end), endBlockName(endBlockName) {
+        if (this->portList) this->portList->parent = this;
+        this->assertionVariables.parent = this;
+        this->seqExpr->parent = this;
+        if (this->endBlockName) this->endBlockName->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3511,8 +3766,10 @@ struct ExtendsClauseSyntax : public SyntaxNode {
     ArgumentListSyntax* arguments;
 
     ExtendsClauseSyntax(Token keyword, NameSyntax& baseName, ArgumentListSyntax* arguments) :
-        SyntaxNode(SyntaxKind::ExtendsClause), keyword(keyword), baseName(&baseName), arguments(arguments)
-    {}
+        SyntaxNode(SyntaxKind::ExtendsClause), keyword(keyword), baseName(&baseName), arguments(arguments) {
+        this->baseName->parent = this;
+        if (this->arguments) this->arguments->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3528,8 +3785,9 @@ struct ImplementsClauseSyntax : public SyntaxNode {
     SeparatedSyntaxList<NameSyntax> interfaces;
 
     ImplementsClauseSyntax(Token keyword, SeparatedSyntaxList<NameSyntax> interfaces) :
-        SyntaxNode(SyntaxKind::ImplementsClause), keyword(keyword), interfaces(interfaces)
-    {}
+        SyntaxNode(SyntaxKind::ImplementsClause), keyword(keyword), interfaces(interfaces) {
+        this->interfaces.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3554,8 +3812,13 @@ struct ClassDeclarationSyntax : public MemberSyntax {
     NamedBlockClauseSyntax* endBlockName;
 
     ClassDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token virtualOrInterface, Token classKeyword, Token lifetime, Token name, ParameterPortListSyntax* parameters, ExtendsClauseSyntax* extendsClause, ImplementsClauseSyntax* implementsClause, Token semi, SyntaxList<MemberSyntax> items, Token endClass, NamedBlockClauseSyntax* endBlockName) :
-        MemberSyntax(SyntaxKind::ClassDeclaration, attributes), virtualOrInterface(virtualOrInterface), classKeyword(classKeyword), lifetime(lifetime), name(name), parameters(parameters), extendsClause(extendsClause), implementsClause(implementsClause), semi(semi), items(items), endClass(endClass), endBlockName(endBlockName)
-    {}
+        MemberSyntax(SyntaxKind::ClassDeclaration, attributes), virtualOrInterface(virtualOrInterface), classKeyword(classKeyword), lifetime(lifetime), name(name), parameters(parameters), extendsClause(extendsClause), implementsClause(implementsClause), semi(semi), items(items), endClass(endClass), endBlockName(endBlockName) {
+        if (this->parameters) this->parameters->parent = this;
+        if (this->extendsClause) this->extendsClause->parent = this;
+        if (this->implementsClause) this->implementsClause->parent = this;
+        this->items.parent = this;
+        if (this->endBlockName) this->endBlockName->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3571,8 +3834,10 @@ struct ClassPropertyDeclarationSyntax : public MemberSyntax {
     not_null<MemberSyntax*> declaration;
 
     ClassPropertyDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, MemberSyntax& declaration) :
-        MemberSyntax(SyntaxKind::ClassPropertyDeclaration, attributes), qualifiers(qualifiers), declaration(&declaration)
-    {}
+        MemberSyntax(SyntaxKind::ClassPropertyDeclaration, attributes), qualifiers(qualifiers), declaration(&declaration) {
+        this->qualifiers.parent = this;
+        this->declaration->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3588,8 +3853,10 @@ struct ClassMethodDeclarationSyntax : public MemberSyntax {
     not_null<FunctionDeclarationSyntax*> declaration;
 
     ClassMethodDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, FunctionDeclarationSyntax& declaration) :
-        MemberSyntax(SyntaxKind::ClassMethodDeclaration, attributes), qualifiers(qualifiers), declaration(&declaration)
-    {}
+        MemberSyntax(SyntaxKind::ClassMethodDeclaration, attributes), qualifiers(qualifiers), declaration(&declaration) {
+        this->qualifiers.parent = this;
+        this->declaration->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3606,8 +3873,10 @@ struct ClassMethodPrototypeSyntax : public MemberSyntax {
     Token semi;
 
     ClassMethodPrototypeSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, FunctionPrototypeSyntax& prototype, Token semi) :
-        MemberSyntax(SyntaxKind::ClassMethodPrototype, attributes), qualifiers(qualifiers), prototype(&prototype), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::ClassMethodPrototype, attributes), qualifiers(qualifiers), prototype(&prototype), semi(semi) {
+        this->qualifiers.parent = this;
+        this->prototype->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3624,8 +3893,9 @@ struct ContinuousAssignSyntax : public MemberSyntax {
     Token semi;
 
     ContinuousAssignSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token assign, SeparatedSyntaxList<ExpressionSyntax> assignments, Token semi) :
-        MemberSyntax(SyntaxKind::ContinuousAssign, attributes), assign(assign), assignments(assignments), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::ContinuousAssign, attributes), assign(assign), assignments(assignments), semi(semi) {
+        this->assignments.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3641,8 +3911,10 @@ struct DefParamAssignmentSyntax : public SyntaxNode {
     EqualsValueClauseSyntax* setter;
 
     DefParamAssignmentSyntax(NameSyntax& name, EqualsValueClauseSyntax* setter) :
-        SyntaxNode(SyntaxKind::DefParamAssignment), name(&name), setter(setter)
-    {}
+        SyntaxNode(SyntaxKind::DefParamAssignment), name(&name), setter(setter) {
+        this->name->parent = this;
+        if (this->setter) this->setter->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3659,8 +3931,9 @@ struct DefParamSyntax : public MemberSyntax {
     Token semi;
 
     DefParamSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token defparam, SeparatedSyntaxList<DefParamAssignmentSyntax> assignments, Token semi) :
-        MemberSyntax(SyntaxKind::DefParam, attributes), defparam(defparam), assignments(assignments), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::DefParam, attributes), defparam(defparam), assignments(assignments), semi(semi) {
+        this->assignments.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3676,8 +3949,8 @@ struct ModportClockingPortSyntax : public MemberSyntax {
     Token name;
 
     ModportClockingPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token clocking, Token name) :
-        MemberSyntax(SyntaxKind::ModportClockingPort, attributes), clocking(clocking), name(name)
-    {}
+        MemberSyntax(SyntaxKind::ModportClockingPort, attributes), clocking(clocking), name(name) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3691,8 +3964,8 @@ struct ModportClockingPortSyntax : public MemberSyntax {
 struct ModportPortSyntax : public SyntaxNode {
 
     ModportPortSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -3701,8 +3974,8 @@ struct ModportNamedPortSyntax : public ModportPortSyntax {
     Token name;
 
     ModportNamedPortSyntax(Token name) :
-        ModportPortSyntax(SyntaxKind::ModportNamedPort), name(name)
-    {}
+        ModportPortSyntax(SyntaxKind::ModportNamedPort), name(name) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3721,8 +3994,9 @@ struct ModportExplicitPortSyntax : public ModportPortSyntax {
     Token closeParen;
 
     ModportExplicitPortSyntax(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
-        ModportPortSyntax(SyntaxKind::ModportExplicitPort), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
-    {}
+        ModportPortSyntax(SyntaxKind::ModportExplicitPort), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen) {
+        if (this->expr) this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3738,8 +4012,9 @@ struct ModportSimplePortListSyntax : public MemberSyntax {
     SeparatedSyntaxList<ModportPortSyntax> ports;
 
     ModportSimplePortListSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token direction, SeparatedSyntaxList<ModportPortSyntax> ports) :
-        MemberSyntax(SyntaxKind::ModportSimplePortList, attributes), direction(direction), ports(ports)
-    {}
+        MemberSyntax(SyntaxKind::ModportSimplePortList, attributes), direction(direction), ports(ports) {
+        this->ports.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3754,8 +4029,9 @@ struct ModportSubroutinePortSyntax : public ModportPortSyntax {
     not_null<FunctionPrototypeSyntax*> prototype;
 
     ModportSubroutinePortSyntax(FunctionPrototypeSyntax& prototype) :
-        ModportPortSyntax(SyntaxKind::ModportSubroutinePort), prototype(&prototype)
-    {}
+        ModportPortSyntax(SyntaxKind::ModportSubroutinePort), prototype(&prototype) {
+        this->prototype->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3771,8 +4047,9 @@ struct ModportSubroutinePortListSyntax : public MemberSyntax {
     SeparatedSyntaxList<ModportPortSyntax> ports;
 
     ModportSubroutinePortListSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token importExport, SeparatedSyntaxList<ModportPortSyntax> ports) :
-        MemberSyntax(SyntaxKind::ModportSubroutinePortList, attributes), importExport(importExport), ports(ports)
-    {}
+        MemberSyntax(SyntaxKind::ModportSubroutinePortList, attributes), importExport(importExport), ports(ports) {
+        this->ports.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3788,8 +4065,9 @@ struct ModportItemSyntax : public SyntaxNode {
     not_null<AnsiPortListSyntax*> ports;
 
     ModportItemSyntax(Token name, AnsiPortListSyntax& ports) :
-        SyntaxNode(SyntaxKind::ModportItem), name(name), ports(&ports)
-    {}
+        SyntaxNode(SyntaxKind::ModportItem), name(name), ports(&ports) {
+        this->ports->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3806,8 +4084,9 @@ struct ModportDeclarationSyntax : public MemberSyntax {
     Token semi;
 
     ModportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<ModportItemSyntax> items, Token semi) :
-        MemberSyntax(SyntaxKind::ModportDeclaration, attributes), keyword(keyword), items(items), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::ModportDeclaration, attributes), keyword(keyword), items(items), semi(semi) {
+        this->items.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3824,8 +4103,9 @@ struct ClockingSkewSyntax : public SyntaxNode {
     ExpressionSyntax* value;
 
     ClockingSkewSyntax(Token edge, Token hash, ExpressionSyntax* value) :
-        SyntaxNode(SyntaxKind::ClockingSkew), edge(edge), hash(hash), value(value)
-    {}
+        SyntaxNode(SyntaxKind::ClockingSkew), edge(edge), hash(hash), value(value) {
+        if (this->value) this->value->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3844,8 +4124,10 @@ struct ClockingDirectionSyntax : public SyntaxNode {
     Token inout;
 
     ClockingDirectionSyntax(Token input, ClockingSkewSyntax* inputSkew, Token output, ClockingSkewSyntax* ouputSkew, Token inout) :
-        SyntaxNode(SyntaxKind::ClockingDirection), input(input), inputSkew(inputSkew), output(output), ouputSkew(ouputSkew), inout(inout)
-    {}
+        SyntaxNode(SyntaxKind::ClockingDirection), input(input), inputSkew(inputSkew), output(output), ouputSkew(ouputSkew), inout(inout) {
+        if (this->inputSkew) this->inputSkew->parent = this;
+        if (this->ouputSkew) this->ouputSkew->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3864,8 +4146,11 @@ struct ClockingItemSyntax : public SyntaxNode {
     MemberSyntax* declaration;
 
     ClockingItemSyntax(Token defaultKeyword, ClockingDirectionSyntax* direction, SeparatedSyntaxList<AttributeSpecSyntax> assignments, Token semi, MemberSyntax* declaration) :
-        SyntaxNode(SyntaxKind::ClockingItem), defaultKeyword(defaultKeyword), direction(direction), assignments(assignments), semi(semi), declaration(declaration)
-    {}
+        SyntaxNode(SyntaxKind::ClockingItem), defaultKeyword(defaultKeyword), direction(direction), assignments(assignments), semi(semi), declaration(declaration) {
+        if (this->direction) this->direction->parent = this;
+        this->assignments.parent = this;
+        if (this->declaration) this->declaration->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3889,8 +4174,11 @@ struct ClockingDeclarationSyntax : public MemberSyntax {
     NamedBlockClauseSyntax* endBlockName;
 
     ClockingDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token globalOrDefault, Token clocking, Token blockName, Token at, ParenthesizedEventExpressionSyntax* event, Token eventIdentifier, Token semi, SyntaxList<ClockingItemSyntax> items, Token endClocking, NamedBlockClauseSyntax* endBlockName) :
-        MemberSyntax(SyntaxKind::ClockingDeclaration, attributes), globalOrDefault(globalOrDefault), clocking(clocking), blockName(blockName), at(at), event(event), eventIdentifier(eventIdentifier), semi(semi), items(items), endClocking(endClocking), endBlockName(endBlockName)
-    {}
+        MemberSyntax(SyntaxKind::ClockingDeclaration, attributes), globalOrDefault(globalOrDefault), clocking(clocking), blockName(blockName), at(at), event(event), eventIdentifier(eventIdentifier), semi(semi), items(items), endClocking(endClocking), endBlockName(endBlockName) {
+        if (this->event) this->event->parent = this;
+        this->items.parent = this;
+        if (this->endBlockName) this->endBlockName->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3911,8 +4199,9 @@ struct DPIImportExportSyntax : public MemberSyntax {
     Token semi;
 
     DPIImportExportSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token stringLiteral, Token property, Token name, Token equals, FunctionPrototypeSyntax& method, Token semi) :
-        MemberSyntax(SyntaxKind::DPIImportExport, attributes), keyword(keyword), stringLiteral(stringLiteral), property(property), name(name), equals(equals), method(&method), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::DPIImportExport, attributes), keyword(keyword), stringLiteral(stringLiteral), property(property), name(name), equals(equals), method(&method), semi(semi) {
+        this->method->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3928,8 +4217,8 @@ struct DPIImportExportSyntax : public MemberSyntax {
 struct ConstraintItemSyntax : public SyntaxNode {
 
     ConstraintItemSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -3939,8 +4228,9 @@ struct DistWeightSyntax : public SyntaxNode {
     not_null<ExpressionSyntax*> expr;
 
     DistWeightSyntax(Token op, ExpressionSyntax& expr) :
-        SyntaxNode(SyntaxKind::DistWeight), op(op), expr(&expr)
-    {}
+        SyntaxNode(SyntaxKind::DistWeight), op(op), expr(&expr) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3956,8 +4246,10 @@ struct DistItemSyntax : public SyntaxNode {
     DistWeightSyntax* weight;
 
     DistItemSyntax(ExpressionSyntax& range, DistWeightSyntax* weight) :
-        SyntaxNode(SyntaxKind::DistItem), range(&range), weight(weight)
-    {}
+        SyntaxNode(SyntaxKind::DistItem), range(&range), weight(weight) {
+        this->range->parent = this;
+        if (this->weight) this->weight->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3975,8 +4267,9 @@ struct DistConstraintListSyntax : public SyntaxNode {
     Token closeBrace;
 
     DistConstraintListSyntax(Token dist, Token openBrace, SeparatedSyntaxList<DistItemSyntax> items, Token closeBrace) :
-        SyntaxNode(SyntaxKind::DistConstraintList), dist(dist), openBrace(openBrace), items(items), closeBrace(closeBrace)
-    {}
+        SyntaxNode(SyntaxKind::DistConstraintList), dist(dist), openBrace(openBrace), items(items), closeBrace(closeBrace) {
+        this->items.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -3992,8 +4285,10 @@ struct ExpressionOrDistSyntax : public ExpressionSyntax {
     not_null<DistConstraintListSyntax*> distribution;
 
     ExpressionOrDistSyntax(ExpressionSyntax& expr, DistConstraintListSyntax& distribution) :
-        ExpressionSyntax(SyntaxKind::ExpressionOrDist), expr(&expr), distribution(&distribution)
-    {}
+        ExpressionSyntax(SyntaxKind::ExpressionOrDist), expr(&expr), distribution(&distribution) {
+        this->expr->parent = this;
+        this->distribution->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4010,8 +4305,9 @@ struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
     Token semi;
 
     ExpressionConstraintSyntax(Token soft, ExpressionSyntax& expr, Token semi) :
-        ConstraintItemSyntax(SyntaxKind::ExpressionConstraint), soft(soft), expr(&expr), semi(semi)
-    {}
+        ConstraintItemSyntax(SyntaxKind::ExpressionConstraint), soft(soft), expr(&expr), semi(semi) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4028,8 +4324,9 @@ struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
     Token semi;
 
     UniquenessConstraintSyntax(Token unique, OpenRangeListSyntax& ranges, Token semi) :
-        ConstraintItemSyntax(SyntaxKind::UniquenessConstraint), unique(unique), ranges(&ranges), semi(semi)
-    {}
+        ConstraintItemSyntax(SyntaxKind::UniquenessConstraint), unique(unique), ranges(&ranges), semi(semi) {
+        this->ranges->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4046,8 +4343,10 @@ struct ImplicationConstraintSyntax : public ConstraintItemSyntax {
     not_null<ConstraintItemSyntax*> constraints;
 
     ImplicationConstraintSyntax(ExpressionSyntax& left, Token arrow, ConstraintItemSyntax& constraints) :
-        ConstraintItemSyntax(SyntaxKind::ImplicationConstraint), left(&left), arrow(arrow), constraints(&constraints)
-    {}
+        ConstraintItemSyntax(SyntaxKind::ImplicationConstraint), left(&left), arrow(arrow), constraints(&constraints) {
+        this->left->parent = this;
+        this->constraints->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4063,8 +4362,9 @@ struct ElseConstraintClauseSyntax : public SyntaxNode {
     not_null<ConstraintItemSyntax*> constraints;
 
     ElseConstraintClauseSyntax(Token elseKeyword, ConstraintItemSyntax& constraints) :
-        SyntaxNode(SyntaxKind::ElseConstraintClause), elseKeyword(elseKeyword), constraints(&constraints)
-    {}
+        SyntaxNode(SyntaxKind::ElseConstraintClause), elseKeyword(elseKeyword), constraints(&constraints) {
+        this->constraints->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4084,8 +4384,11 @@ struct ConditionalConstraintSyntax : public ConstraintItemSyntax {
     ElseConstraintClauseSyntax* elseClause;
 
     ConditionalConstraintSyntax(Token ifKeyword, Token openParen, ExpressionSyntax& condition, Token closeParen, ConstraintItemSyntax& constraints, ElseConstraintClauseSyntax* elseClause) :
-        ConstraintItemSyntax(SyntaxKind::ConditionalConstraint), ifKeyword(ifKeyword), openParen(openParen), condition(&condition), closeParen(closeParen), constraints(&constraints), elseClause(elseClause)
-    {}
+        ConstraintItemSyntax(SyntaxKind::ConditionalConstraint), ifKeyword(ifKeyword), openParen(openParen), condition(&condition), closeParen(closeParen), constraints(&constraints), elseClause(elseClause) {
+        this->condition->parent = this;
+        this->constraints->parent = this;
+        if (this->elseClause) this->elseClause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4102,8 +4405,10 @@ struct LoopConstraintSyntax : public ConstraintItemSyntax {
     not_null<ConstraintItemSyntax*> constraints;
 
     LoopConstraintSyntax(Token foreachKeyword, ForeachLoopListSyntax& loopList, ConstraintItemSyntax& constraints) :
-        ConstraintItemSyntax(SyntaxKind::LoopConstraint), foreachKeyword(foreachKeyword), loopList(&loopList), constraints(&constraints)
-    {}
+        ConstraintItemSyntax(SyntaxKind::LoopConstraint), foreachKeyword(foreachKeyword), loopList(&loopList), constraints(&constraints) {
+        this->loopList->parent = this;
+        this->constraints->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4121,8 +4426,9 @@ struct DisableConstraintSyntax : public ConstraintItemSyntax {
     Token semi;
 
     DisableConstraintSyntax(Token disable, Token soft, NameSyntax& name, Token semi) :
-        ConstraintItemSyntax(SyntaxKind::DisableConstraint), disable(disable), soft(soft), name(&name), semi(semi)
-    {}
+        ConstraintItemSyntax(SyntaxKind::DisableConstraint), disable(disable), soft(soft), name(&name), semi(semi) {
+        this->name->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4141,8 +4447,10 @@ struct SolveBeforeConstraintSyntax : public ConstraintItemSyntax {
     Token semi;
 
     SolveBeforeConstraintSyntax(Token solve, SeparatedSyntaxList<ExpressionSyntax> beforeExpr, Token before, SeparatedSyntaxList<ExpressionSyntax> afterExpr, Token semi) :
-        ConstraintItemSyntax(SyntaxKind::SolveBeforeConstraint), solve(solve), beforeExpr(beforeExpr), before(before), afterExpr(afterExpr), semi(semi)
-    {}
+        ConstraintItemSyntax(SyntaxKind::SolveBeforeConstraint), solve(solve), beforeExpr(beforeExpr), before(before), afterExpr(afterExpr), semi(semi) {
+        this->beforeExpr.parent = this;
+        this->afterExpr.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4159,8 +4467,9 @@ struct ConstraintBlockSyntax : public ConstraintItemSyntax {
     Token closeBrace;
 
     ConstraintBlockSyntax(Token openBrace, SyntaxList<ConstraintItemSyntax> items, Token closeBrace) :
-        ConstraintItemSyntax(SyntaxKind::ConstraintBlock), openBrace(openBrace), items(items), closeBrace(closeBrace)
-    {}
+        ConstraintItemSyntax(SyntaxKind::ConstraintBlock), openBrace(openBrace), items(items), closeBrace(closeBrace) {
+        this->items.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4178,8 +4487,9 @@ struct ConstraintPrototypeSyntax : public MemberSyntax {
     Token semi;
 
     ConstraintPrototypeSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token keyword, Token name, Token semi) :
-        MemberSyntax(SyntaxKind::ConstraintPrototype, attributes), qualifiers(qualifiers), keyword(keyword), name(name), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::ConstraintPrototype, attributes), qualifiers(qualifiers), keyword(keyword), name(name), semi(semi) {
+        this->qualifiers.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4197,8 +4507,10 @@ struct ConstraintDeclarationSyntax : public MemberSyntax {
     not_null<ConstraintBlockSyntax*> block;
 
     ConstraintDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token keyword, Token name, ConstraintBlockSyntax& block) :
-        MemberSyntax(SyntaxKind::ConstraintDeclaration, attributes), qualifiers(qualifiers), keyword(keyword), name(name), block(&block)
-    {}
+        MemberSyntax(SyntaxKind::ConstraintDeclaration, attributes), qualifiers(qualifiers), keyword(keyword), name(name), block(&block) {
+        this->qualifiers.parent = this;
+        this->block->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4216,8 +4528,9 @@ struct WithClauseSyntax : public ExpressionSyntax {
     Token closeParen;
 
     WithClauseSyntax(Token with, Token openParen, ExpressionSyntax& expr, Token closeParen) :
-        ExpressionSyntax(SyntaxKind::WithClause), with(with), openParen(openParen), expr(&expr), closeParen(closeParen)
-    {}
+        ExpressionSyntax(SyntaxKind::WithClause), with(with), openParen(openParen), expr(&expr), closeParen(closeParen) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4234,8 +4547,9 @@ struct IdentifierListSyntax : public SyntaxNode {
     Token closeParen;
 
     IdentifierListSyntax(Token openParen, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token closeParen) :
-        SyntaxNode(SyntaxKind::IdentifierList), openParen(openParen), identifiers(identifiers), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::IdentifierList), openParen(openParen), identifiers(identifiers), closeParen(closeParen) {
+        this->identifiers.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4252,8 +4566,10 @@ struct RandomizeMethodWithClauseSyntax : public ExpressionSyntax {
     not_null<ConstraintBlockSyntax*> constraints;
 
     RandomizeMethodWithClauseSyntax(Token with, IdentifierListSyntax* names, ConstraintBlockSyntax& constraints) :
-        ExpressionSyntax(SyntaxKind::RandomizeMethodWithClause), with(with), names(names), constraints(&constraints)
-    {}
+        ExpressionSyntax(SyntaxKind::RandomizeMethodWithClause), with(with), names(names), constraints(&constraints) {
+        if (this->names) this->names->parent = this;
+        this->constraints->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4273,8 +4589,9 @@ struct WithFunctionSampleSyntax : public SyntaxNode {
     not_null<AnsiPortListSyntax*> portList;
 
     WithFunctionSampleSyntax(Token with, Token function, Token sample, AnsiPortListSyntax& portList) :
-        SyntaxNode(SyntaxKind::WithFunctionSample), with(with), function(function), sample(sample), portList(&portList)
-    {}
+        SyntaxNode(SyntaxKind::WithFunctionSample), with(with), function(function), sample(sample), portList(&portList) {
+        this->portList->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4288,8 +4605,8 @@ struct WithFunctionSampleSyntax : public SyntaxNode {
 struct BlockEventExpressionSyntax : public SyntaxNode {
 
     BlockEventExpressionSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -4300,8 +4617,10 @@ struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
     not_null<BlockEventExpressionSyntax*> right;
 
     BinaryBlockEventExpressionSyntax(BlockEventExpressionSyntax& left, Token orKeyword, BlockEventExpressionSyntax& right) :
-        BlockEventExpressionSyntax(SyntaxKind::BinaryBlockEventExpression), left(&left), orKeyword(orKeyword), right(&right)
-    {}
+        BlockEventExpressionSyntax(SyntaxKind::BinaryBlockEventExpression), left(&left), orKeyword(orKeyword), right(&right) {
+        this->left->parent = this;
+        this->right->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4317,8 +4636,9 @@ struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
     not_null<NameSyntax*> name;
 
     PrimaryBlockEventExpressionSyntax(Token keyword, NameSyntax& name) :
-        BlockEventExpressionSyntax(SyntaxKind::PrimaryBlockEventExpression), keyword(keyword), name(&name)
-    {}
+        BlockEventExpressionSyntax(SyntaxKind::PrimaryBlockEventExpression), keyword(keyword), name(&name) {
+        this->name->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4336,8 +4656,9 @@ struct BlockCoverageEventSyntax : public SyntaxNode {
     Token closeParen;
 
     BlockCoverageEventSyntax(Token atat, Token openParen, BlockEventExpressionSyntax& expr, Token closeParen) :
-        SyntaxNode(SyntaxKind::BlockCoverageEvent), atat(atat), openParen(openParen), expr(&expr), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::BlockCoverageEvent), atat(atat), openParen(openParen), expr(&expr), closeParen(closeParen) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4359,8 +4680,12 @@ struct CovergroupDeclarationSyntax : public MemberSyntax {
     NamedBlockClauseSyntax* endBlockName;
 
     CovergroupDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token covergroup, Token name, AnsiPortListSyntax* portList, SyntaxNode* event, Token semi, SyntaxList<MemberSyntax> members, Token endgroup, NamedBlockClauseSyntax* endBlockName) :
-        MemberSyntax(SyntaxKind::CovergroupDeclaration, attributes), covergroup(covergroup), name(name), portList(portList), event(event), semi(semi), members(members), endgroup(endgroup), endBlockName(endBlockName)
-    {}
+        MemberSyntax(SyntaxKind::CovergroupDeclaration, attributes), covergroup(covergroup), name(name), portList(portList), event(event), semi(semi), members(members), endgroup(endgroup), endBlockName(endBlockName) {
+        if (this->portList) this->portList->parent = this;
+        if (this->event) this->event->parent = this;
+        this->members.parent = this;
+        if (this->endBlockName) this->endBlockName->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4380,8 +4705,9 @@ struct CoverageOptionSyntax : public MemberSyntax {
     Token semi;
 
     CoverageOptionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token option, Token dot, Token name, Token equals, ExpressionSyntax& expr, Token semi) :
-        MemberSyntax(SyntaxKind::CoverageOption, attributes), option(option), dot(dot), name(name), equals(equals), expr(&expr), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::CoverageOption, attributes), option(option), dot(dot), name(name), equals(equals), expr(&expr), semi(semi) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4403,8 +4729,12 @@ struct CoverpointSyntax : public MemberSyntax {
     Token emptySemi;
 
     CoverpointSyntax(SyntaxList<AttributeInstanceSyntax> attributes, DataTypeSyntax* type, NamedLabelSyntax* label, Token coverpoint, ExpressionSyntax& expr, Token openBrace, SyntaxList<MemberSyntax> members, Token closeBrace, Token emptySemi) :
-        MemberSyntax(SyntaxKind::Coverpoint, attributes), type(type), label(label), coverpoint(coverpoint), expr(&expr), openBrace(openBrace), members(members), closeBrace(closeBrace), emptySemi(emptySemi)
-    {}
+        MemberSyntax(SyntaxKind::Coverpoint, attributes), type(type), label(label), coverpoint(coverpoint), expr(&expr), openBrace(openBrace), members(members), closeBrace(closeBrace), emptySemi(emptySemi) {
+        if (this->type) this->type->parent = this;
+        if (this->label) this->label->parent = this;
+        this->expr->parent = this;
+        this->members.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4418,8 +4748,8 @@ struct CoverpointSyntax : public MemberSyntax {
 struct CoverageBinInitializerSyntax : public SyntaxNode {
 
     CoverageBinInitializerSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {}
+        SyntaxNode(kind) {
+    }
 
     static bool isKind(SyntaxKind kind);
 };
@@ -4429,8 +4759,8 @@ struct DefaultCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax
     Token sequenceKeyword;
 
     DefaultCoverageBinInitializerSyntax(Token defaultKeyword, Token sequenceKeyword) :
-        CoverageBinInitializerSyntax(SyntaxKind::DefaultCoverageBinInitializer), defaultKeyword(defaultKeyword), sequenceKeyword(sequenceKeyword)
-    {}
+        CoverageBinInitializerSyntax(SyntaxKind::DefaultCoverageBinInitializer), defaultKeyword(defaultKeyword), sequenceKeyword(sequenceKeyword) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4446,8 +4776,10 @@ struct ExpressionCoverageBinInitializerSyntax : public CoverageBinInitializerSyn
     WithClauseSyntax* withClause;
 
     ExpressionCoverageBinInitializerSyntax(ExpressionSyntax& expr, WithClauseSyntax* withClause) :
-        CoverageBinInitializerSyntax(SyntaxKind::ExpressionCoverageBinInitializer), expr(&expr), withClause(withClause)
-    {}
+        CoverageBinInitializerSyntax(SyntaxKind::ExpressionCoverageBinInitializer), expr(&expr), withClause(withClause) {
+        this->expr->parent = this;
+        if (this->withClause) this->withClause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4463,8 +4795,10 @@ struct RangeCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
     WithClauseSyntax* withClause;
 
     RangeCoverageBinInitializerSyntax(OpenRangeListSyntax& ranges, WithClauseSyntax* withClause) :
-        CoverageBinInitializerSyntax(SyntaxKind::RangeCoverageBinInitializer), ranges(&ranges), withClause(withClause)
-    {}
+        CoverageBinInitializerSyntax(SyntaxKind::RangeCoverageBinInitializer), ranges(&ranges), withClause(withClause) {
+        this->ranges->parent = this;
+        if (this->withClause) this->withClause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4482,8 +4816,9 @@ struct TransRepeatRangeSyntax : public SyntaxNode {
     Token closeBracket;
 
     TransRepeatRangeSyntax(Token openBracket, Token specifier, SelectorSyntax* selector, Token closeBracket) :
-        SyntaxNode(SyntaxKind::TransRepeatRange), openBracket(openBracket), specifier(specifier), selector(selector), closeBracket(closeBracket)
-    {}
+        SyntaxNode(SyntaxKind::TransRepeatRange), openBracket(openBracket), specifier(specifier), selector(selector), closeBracket(closeBracket) {
+        if (this->selector) this->selector->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4499,8 +4834,10 @@ struct TransRangeSyntax : public SyntaxNode {
     TransRepeatRangeSyntax* repeat;
 
     TransRangeSyntax(SeparatedSyntaxList<ExpressionSyntax> items, TransRepeatRangeSyntax* repeat) :
-        SyntaxNode(SyntaxKind::TransRange), items(items), repeat(repeat)
-    {}
+        SyntaxNode(SyntaxKind::TransRange), items(items), repeat(repeat) {
+        this->items.parent = this;
+        if (this->repeat) this->repeat->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4517,8 +4854,9 @@ struct TransSetSyntax : public SyntaxNode {
     Token closeParen;
 
     TransSetSyntax(Token openParen, SeparatedSyntaxList<TransRangeSyntax> ranges, Token closeParen) :
-        SyntaxNode(SyntaxKind::TransSet), openParen(openParen), ranges(ranges), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::TransSet), openParen(openParen), ranges(ranges), closeParen(closeParen) {
+        this->ranges.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4534,8 +4872,10 @@ struct TransListCoverageBinInitializerSyntax : public CoverageBinInitializerSynt
     WithClauseSyntax* withClause;
 
     TransListCoverageBinInitializerSyntax(SeparatedSyntaxList<TransSetSyntax> sets, WithClauseSyntax* withClause) :
-        CoverageBinInitializerSyntax(SyntaxKind::TransListCoverageBinInitializer), sets(sets), withClause(withClause)
-    {}
+        CoverageBinInitializerSyntax(SyntaxKind::TransListCoverageBinInitializer), sets(sets), withClause(withClause) {
+        this->sets.parent = this;
+        if (this->withClause) this->withClause->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4553,8 +4893,9 @@ struct IffClauseSyntax : public SyntaxNode {
     Token closeParen;
 
     IffClauseSyntax(Token iff, Token openParen, ExpressionSyntax& expr, Token closeParen) :
-        SyntaxNode(SyntaxKind::IffClause), iff(iff), openParen(openParen), expr(&expr), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::IffClause), iff(iff), openParen(openParen), expr(&expr), closeParen(closeParen) {
+        this->expr->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4576,8 +4917,11 @@ struct CoverageBinsSyntax : public MemberSyntax {
     Token semi;
 
     CoverageBinsSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token wildcard, Token keyword, Token name, ElementSelectSyntax* selector, Token equals, CoverageBinInitializerSyntax& initializer, IffClauseSyntax* iff, Token semi) :
-        MemberSyntax(SyntaxKind::CoverageBins, attributes), wildcard(wildcard), keyword(keyword), name(name), selector(selector), equals(equals), initializer(&initializer), iff(iff), semi(semi)
-    {}
+        MemberSyntax(SyntaxKind::CoverageBins, attributes), wildcard(wildcard), keyword(keyword), name(name), selector(selector), equals(equals), initializer(&initializer), iff(iff), semi(semi) {
+        if (this->selector) this->selector->parent = this;
+        this->initializer->parent = this;
+        if (this->iff) this->iff->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4595,8 +4939,9 @@ struct CompilationUnitSyntax : public SyntaxNode {
     Token endOfFile;
 
     CompilationUnitSyntax(SyntaxList<MemberSyntax> members, Token endOfFile) :
-        SyntaxNode(SyntaxKind::CompilationUnit), members(members), endOfFile(endOfFile)
-    {}
+        SyntaxNode(SyntaxKind::CompilationUnit), members(members), endOfFile(endOfFile) {
+        this->members.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4613,8 +4958,8 @@ struct DirectiveSyntax : public SyntaxNode {
     Token directive;
 
     DirectiveSyntax(SyntaxKind kind, Token directive) :
-        SyntaxNode(kind), directive(directive)
-    {}
+        SyntaxNode(kind), directive(directive) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4629,8 +4974,8 @@ struct SimpleDirectiveSyntax : public DirectiveSyntax {
     Token endOfDirective;
 
     SimpleDirectiveSyntax(SyntaxKind kind, Token directive, Token endOfDirective) :
-        DirectiveSyntax(kind, directive), endOfDirective(endOfDirective)
-    {}
+        DirectiveSyntax(kind, directive), endOfDirective(endOfDirective) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4646,8 +4991,8 @@ struct IncludeDirectiveSyntax : public DirectiveSyntax {
     Token endOfDirective;
 
     IncludeDirectiveSyntax(Token directive, Token fileName, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::IncludeDirective, directive), fileName(fileName), endOfDirective(endOfDirective)
-    {}
+        DirectiveSyntax(SyntaxKind::IncludeDirective, directive), fileName(fileName), endOfDirective(endOfDirective) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4664,8 +5009,9 @@ struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
     TokenList disabledTokens;
 
     ConditionalBranchDirectiveSyntax(SyntaxKind kind, Token directive, Token name, Token endOfDirective, TokenList disabledTokens) :
-        DirectiveSyntax(kind, directive), name(name), endOfDirective(endOfDirective), disabledTokens(disabledTokens)
-    {}
+        DirectiveSyntax(kind, directive), name(name), endOfDirective(endOfDirective), disabledTokens(disabledTokens) {
+        this->disabledTokens.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4681,8 +5027,9 @@ struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
     TokenList disabledTokens;
 
     UnconditionalBranchDirectiveSyntax(SyntaxKind kind, Token directive, Token endOfDirective, TokenList disabledTokens) :
-        DirectiveSyntax(kind, directive), endOfDirective(endOfDirective), disabledTokens(disabledTokens)
-    {}
+        DirectiveSyntax(kind, directive), endOfDirective(endOfDirective), disabledTokens(disabledTokens) {
+        this->disabledTokens.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4698,8 +5045,9 @@ struct MacroArgumentDefaultSyntax : public SyntaxNode {
     TokenList tokens;
 
     MacroArgumentDefaultSyntax(Token equals, TokenList tokens) :
-        SyntaxNode(SyntaxKind::MacroArgumentDefault), equals(equals), tokens(tokens)
-    {}
+        SyntaxNode(SyntaxKind::MacroArgumentDefault), equals(equals), tokens(tokens) {
+        this->tokens.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4715,8 +5063,9 @@ struct MacroFormalArgumentSyntax : public SyntaxNode {
     MacroArgumentDefaultSyntax* defaultValue;
 
     MacroFormalArgumentSyntax(Token name, MacroArgumentDefaultSyntax* defaultValue) :
-        SyntaxNode(SyntaxKind::MacroFormalArgument), name(name), defaultValue(defaultValue)
-    {}
+        SyntaxNode(SyntaxKind::MacroFormalArgument), name(name), defaultValue(defaultValue) {
+        if (this->defaultValue) this->defaultValue->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4733,8 +5082,9 @@ struct MacroFormalArgumentListSyntax : public SyntaxNode {
     Token closeParen;
 
     MacroFormalArgumentListSyntax(Token openParen, SeparatedSyntaxList<MacroFormalArgumentSyntax> args, Token closeParen) :
-        SyntaxNode(SyntaxKind::MacroFormalArgumentList), openParen(openParen), args(args), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::MacroFormalArgumentList), openParen(openParen), args(args), closeParen(closeParen) {
+        this->args.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4752,8 +5102,10 @@ struct DefineDirectiveSyntax : public DirectiveSyntax {
     Token endOfDirective;
 
     DefineDirectiveSyntax(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::DefineDirective, directive), name(name), formalArguments(formalArguments), body(body), endOfDirective(endOfDirective)
-    {}
+        DirectiveSyntax(SyntaxKind::DefineDirective, directive), name(name), formalArguments(formalArguments), body(body), endOfDirective(endOfDirective) {
+        if (this->formalArguments) this->formalArguments->parent = this;
+        this->body.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4768,8 +5120,9 @@ struct MacroActualArgumentSyntax : public SyntaxNode {
     TokenList tokens;
 
     MacroActualArgumentSyntax(TokenList tokens) :
-        SyntaxNode(SyntaxKind::MacroActualArgument), tokens(tokens)
-    {}
+        SyntaxNode(SyntaxKind::MacroActualArgument), tokens(tokens) {
+        this->tokens.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4786,8 +5139,9 @@ struct MacroActualArgumentListSyntax : public SyntaxNode {
     Token closeParen;
 
     MacroActualArgumentListSyntax(Token openParen, SeparatedSyntaxList<MacroActualArgumentSyntax> args, Token closeParen) :
-        SyntaxNode(SyntaxKind::MacroActualArgumentList), openParen(openParen), args(args), closeParen(closeParen)
-    {}
+        SyntaxNode(SyntaxKind::MacroActualArgumentList), openParen(openParen), args(args), closeParen(closeParen) {
+        this->args.parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4802,8 +5156,9 @@ struct MacroUsageSyntax : public DirectiveSyntax {
     MacroActualArgumentListSyntax* args;
 
     MacroUsageSyntax(Token directive, MacroActualArgumentListSyntax* args) :
-        DirectiveSyntax(SyntaxKind::MacroUsage, directive), args(args)
-    {}
+        DirectiveSyntax(SyntaxKind::MacroUsage, directive), args(args) {
+        if (this->args) this->args->parent = this;
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4823,8 +5178,8 @@ struct TimescaleDirectiveSyntax : public DirectiveSyntax {
     Token endOfDirective;
 
     TimescaleDirectiveSyntax(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::TimescaleDirective, directive), timeUnit(timeUnit), timeUnitUnit(timeUnitUnit), slash(slash), timePrecision(timePrecision), timePrecisionUnit(timePrecisionUnit), endOfDirective(endOfDirective)
-    {}
+        DirectiveSyntax(SyntaxKind::TimescaleDirective, directive), timeUnit(timeUnit), timeUnitUnit(timeUnitUnit), slash(slash), timePrecision(timePrecision), timePrecisionUnit(timePrecisionUnit), endOfDirective(endOfDirective) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4840,8 +5195,8 @@ struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
     Token endOfDirective;
 
     DefaultNetTypeDirectiveSyntax(Token directive, Token netType, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::DefaultNetTypeDirective, directive), netType(netType), endOfDirective(endOfDirective)
-    {}
+        DirectiveSyntax(SyntaxKind::DefaultNetTypeDirective, directive), netType(netType), endOfDirective(endOfDirective) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4859,8 +5214,8 @@ struct LineDirectiveSyntax : public DirectiveSyntax {
     Token endOfDirective;
 
     LineDirectiveSyntax(Token directive, Token lineNumber, Token fileName, Token level, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::LineDirective, directive), lineNumber(lineNumber), fileName(fileName), level(level), endOfDirective(endOfDirective)
-    {}
+        DirectiveSyntax(SyntaxKind::LineDirective, directive), lineNumber(lineNumber), fileName(fileName), level(level), endOfDirective(endOfDirective) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4876,8 +5231,8 @@ struct UndefDirectiveSyntax : public DirectiveSyntax {
     Token endOfDirective;
 
     UndefDirectiveSyntax(Token directive, Token name, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::UndefDirective, directive), name(name), endOfDirective(endOfDirective)
-    {}
+        DirectiveSyntax(SyntaxKind::UndefDirective, directive), name(name), endOfDirective(endOfDirective) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
@@ -4893,8 +5248,8 @@ struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
     Token endOfDirective;
 
     BeginKeywordsDirectiveSyntax(Token directive, Token versionSpecifier, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::BeginKeywordsDirective, directive), versionSpecifier(versionSpecifier), endOfDirective(endOfDirective)
-    {}
+        DirectiveSyntax(SyntaxKind::BeginKeywordsDirective, directive), versionSpecifier(versionSpecifier), endOfDirective(endOfDirective) {
+    }
 
     static bool isKind(SyntaxKind kind);
 
