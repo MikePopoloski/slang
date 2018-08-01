@@ -194,7 +194,7 @@ private:
     // cache for file lookups; this holds on to the actual file data
     std::unordered_map<std::string, std::unique_ptr<FileData>> lookupCache;
 
-    // extra file data that came from programmatic buffers instead of a real fie on disk
+    // extra file data that came from programmatic buffers instead of a real file on disk
     std::deque<FileData> userFileBuffers;
 
     // directories for system and user includes

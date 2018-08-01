@@ -79,6 +79,7 @@ template<typename TDerived>
 class SyntaxRewriter : public SyntaxVisitor<TDerived> {
 public:
     std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
+        sourceManager = &tree->sourceManager();
         changes.clear();
         tempTrees.clear();
 
@@ -92,7 +93,7 @@ public:
 
 protected:
     SyntaxNode& parse(string_view text) {
-        tempTrees.emplace_back(SyntaxTree::fromText(text));
+        tempTrees.emplace_back(SyntaxTree::fromText(text, *sourceManager));
         return tempTrees.back()->root();
     }
 
@@ -113,6 +114,7 @@ protected:
     }
 
 private:
+    SourceManager* sourceManager = nullptr;
     detail::ChangeMap changes;
     std::vector<std::shared_ptr<SyntaxTree>> tempTrees;
 };
