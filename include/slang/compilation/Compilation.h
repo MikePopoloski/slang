@@ -20,6 +20,7 @@ namespace slang {
 
 class SyntaxTree;
 class SystemSubroutine;
+struct CompilationUnitSyntax;
 
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
@@ -43,6 +44,10 @@ public:
 
     /// Indicates whether the design has been compiled and can no longer accept modifications.
     bool isFinalized() const { return finalized; }
+
+    /// Gets the compilation unit for the given syntax node. The compilation unit must have
+    /// already been added to the compilation previously via a call to @a addSyntaxTree
+    const CompilationUnitSymbol* getCompilationUnit(const CompilationUnitSyntax& syntax) const;
 
     /// Gets the definition with the given name, or null if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found before more global ones.
