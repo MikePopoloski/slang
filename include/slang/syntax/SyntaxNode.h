@@ -241,29 +241,36 @@ class SeparatedSyntaxList : public SyntaxListBase {
 public:
     using size_type = span<TokenOrSyntax>::size_type;
 
-    class const_iterator : public iterator_facade<const_iterator, std::random_access_iterator_tag,
-                                                  const T*, size_type> {
+    template<typename U>
+    class iterator_base : public iterator_facade<iterator_base<U>,
+                                                 std::random_access_iterator_tag,
+                                                 U, size_type> {
     public:
-        const_iterator(const SeparatedSyntaxList& list, size_type index) :
+        using ParentList = std::conditional_t<std::is_const_v<std::remove_pointer_t<U>>,
+                                              const SeparatedSyntaxList, SeparatedSyntaxList>;
+        iterator_base(ParentList& list, size_type index) :
             list(list), index(index) {}
 
-        bool operator==(const const_iterator& other) const {
+        bool operator==(const iterator_base& other) const {
             return &list == &other.list && index == other.index;
         }
 
-        bool operator<(const const_iterator& other) const { return index < other.index; }
+        bool operator<(const iterator_base& other) const { return index < other.index; }
 
-        const T* operator*() const { return list[index]; }
+        U operator*() const { return list[index]; }
 
-        size_type operator-(const const_iterator& other) const { return index - other.index; }
+        size_type operator-(const iterator_base& other) const { return index - other.index; }
 
-        const_iterator& operator+=(int32_t n) { index += n; return *this; }
-        const_iterator& operator-=(int32_t n) { index -= n; return *this; }
+        iterator_base& operator+=(int32_t n) { index += n; return *this; }
+        iterator_base& operator-=(int32_t n) { index -= n; return *this; }
 
     private:
-        const SeparatedSyntaxList& list;
+        ParentList & list;
         size_type index;
     };
+
+    using iterator = iterator_base<T*>;
+    using const_iterator = iterator_base<const T*>;
 
     SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax>()) {}
     SeparatedSyntaxList(span<TokenOrSyntax> elements);
@@ -276,8 +283,17 @@ public:
         return &elements[index].node()->template as<T>();
     }
 
-    const_iterator begin() const { return const_iterator(*this, 0); }
-    const_iterator end() const { return const_iterator(*this, size()); }
+    T* operator[](size_type index) {
+        index <<= 1;
+        return &elements[index].node()->template as<T>();
+    }
+
+    iterator begin() { return iterator(*this, 0); }
+    iterator end() { return iterator(*this, size()); }
+    const_iterator begin() const { return cbegin(); }
+    const_iterator end() const { return cend(); }
+    const_iterator cbegin() const { return const_iterator(*this, 0); }
+    const_iterator cend() const { return const_iterator(*this, size()); }
 
 private:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
