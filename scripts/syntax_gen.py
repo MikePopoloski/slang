@@ -369,6 +369,10 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 			continue
 		if m[1] in pointerMembers:
 			outf.write('        this->{}.parent = this;\n'.format(m[1]))
+			if m[0].startswith('SyntaxList<') or m[0].startswith('SeparatedSyntaxList<'):
+				outf.write('        for (auto child : this->{})\n'.format(m[1]))
+				outf.write('            child->parent = this;\n')
+
 		elif m[1] in optionalMembers:
 			outf.write('        if (this->{0}) this->{0}->parent = this;\n'.format(m[1]))
 		else:
