@@ -121,7 +121,6 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     NameSet instances;
 
     if (node.kind == SyntaxKind::CompilationUnit) {
-        unit->setSyntax(node);
         for (auto member : node.as<CompilationUnitSyntax>().members) {
             unit->addMembers(*member);
 
@@ -148,6 +147,11 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     for (auto entry : instances)
         instantiatedNames.emplace(entry);
 
+    const SyntaxNode* topNode = &node;
+    while (topNode->parent)
+        topNode = topNode->parent;
+
+    unit->setSyntax(*topNode);
     root->addMember(*unit);
     compilationUnits.push_back(unit);
     syntaxTrees.emplace_back(std::move(tree));
@@ -184,6 +188,14 @@ const RootSymbol& Compilation::getRoot() {
         finalized = true;
     }
     return *root;
+}
+
+const CompilationUnitSymbol* Compilation::getCompilationUnit(const CompilationUnitSyntax& syntax) const {
+    for (auto unit : compilationUnits) {
+        if (unit->getSyntax() == &syntax)
+            return unit;
+    }
+    return nullptr;
 }
 
 const Definition* Compilation::getDefinition(string_view lookupName, const Scope& scope) const {

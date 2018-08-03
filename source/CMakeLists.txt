@@ -8,6 +8,7 @@ add_library(slang STATIC
 
 	compilation/BuiltInSubroutines.cpp
 	compilation/Compilation.cpp
+	compilation/SemanticModel.cpp
 
 	diagnostics/Diagnostics.cpp
 
