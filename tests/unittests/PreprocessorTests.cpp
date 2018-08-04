@@ -340,15 +340,12 @@ initial $display("start", " msg1" , , "end");
 initial $display("start",  , "msg2 ", "end");
 initial $display("start",  , , "end");
 initial $display("start",  , , "end");
-
 $display(5,,2,,3);
 $display(1,,"B",,3);
 $display(5,,2,,);
-
 $display(1,,,,3);
 $display(5,,2,,"C");
 $display(5,,2,,"C");
-
 $display(1,,0,,"C");
 $display(5,,0,,"C");
 )";
@@ -456,7 +453,7 @@ b
 `endif
 )";
 
-    auto& expected = "a";
+    auto& expected = "\na\n";
 
     std::string result = preprocess(text);
     CHECK(result == expected);

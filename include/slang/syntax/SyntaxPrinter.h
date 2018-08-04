@@ -31,12 +31,16 @@ public:
     SyntaxPrinter& setIncludeSkipped(bool include) { includeSkipped = include; return *this; }
     SyntaxPrinter& setIncludeDirectives(bool include) { includeDirectives = include; return *this; }
     SyntaxPrinter& setIncludePreprocessed(bool include) { includePreprocessed = include; return *this; }
+    SyntaxPrinter& setIncludeComments(bool include) { includeComments = include; return *this; }
+    SyntaxPrinter& setSquashNewlines(bool include) { squashNewlines = include; return *this; }
 
     std::string str() const { return buffer; }
 
     static std::string printFile(const SyntaxTree& tree);
 
 private:
+    void append(string_view text);
+
     std::string buffer;
     const SourceManager* sourceManager = nullptr;
     bool includeTrivia = true;
@@ -44,6 +48,8 @@ private:
     bool includeSkipped = false;
     bool includeDirectives = false;
     bool includePreprocessed = true;
+    bool includeComments = true;
+    bool squashNewlines = true;
 };
 
 }

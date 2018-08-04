@@ -165,11 +165,11 @@ private:
     MacroDef findMacro(Token directive);
     MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
     bool expandMacro(MacroDef macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs,
-                     SmallVector<Token>& dest);
-    bool expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, SmallVector<Token>& dest);
+                     SmallVector<Token>& dest, bool isTopLevel);
+    bool expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, SmallVector<Token>& dest, bool isTopLevel);
     bool expandReplacementList(span<Token const>& tokens);
     void appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
-                         SourceLocation expansionLoc, Token usageSite, bool& isFirst);
+                         SourceLocation expansionLoc, Token usageSite, bool& isFirst, bool isTopLevel);
 
     // functions to advance the underlying token stream
     Token peek(LexerMode mode = LexerMode::Directive);

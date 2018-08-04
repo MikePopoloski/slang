@@ -832,7 +832,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
     // Expand out the macro
     SmallVectorSized<Token, 32> buffer;
-    if (!expandMacro(macro, directive, actualArgs, buffer))
+    if (!expandMacro(macro, directive, actualArgs, buffer, true))
         return actualArgs;
 
     // The macro is now expanded out into tokens, but some of those tokens might
@@ -954,11 +954,11 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 }
 
 bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs,
-                               SmallVector<Token>& dest) {
+                               SmallVector<Token>& dest, bool isTopLevel) {
     if (macro.isIntrinsic()) {
         // for now, no intrisics can have arguments
         ASSERT(!actualArgs);
-        return expandIntrinsic(macro.intrinsic, usageSite, dest);
+        return expandIntrinsic(macro.intrinsic, usageSite, dest, isTopLevel);
     }
 
     DefineDirectiveSyntax* directive = macro.syntax;
@@ -982,7 +982,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
         // simple macro; just take body tokens
         bool isFirst = true;
         for (auto& token : body)
-            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
+            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst, isTopLevel);
         return true;
     }
 
@@ -1037,7 +1037,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
     for (auto& token : body) {
         if (token.kind != TokenKind::Identifier && !isKeyword(token.kind) &&
             (token.kind != TokenKind::Directive || token.directiveKind() != SyntaxKind::MacroUsage)) {
-            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
+            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst, isTopLevel);
             continue;
         }
 
@@ -1052,7 +1052,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
         // check for formal param
         auto it = argumentMap.find(text);
         if (it == argumentMap.end()) {
-            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
+            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst, isTopLevel);
             continue;
         }
 
@@ -1063,7 +1063,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
             // here to ensure that the trivia of the formal parameter is passed on.
             Token empty { TokenKind::EmptyMacroArgument,
                           alloc.emplace<Token::Info>(token.trivia(), "", token.location()) };
-            appendBodyToken(dest, empty, start, expansionLoc, usageSite, isFirst);
+            appendBodyToken(dest, empty, start, expansionLoc, usageSite, isFirst, isTopLevel);
             continue;
         }
 
@@ -1093,18 +1093,21 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
             first = Lexer::concatenateTokens(alloc, grave, first);
         }
 
-        appendBodyToken(dest, first, firstLoc, argLoc, usageSite, isFirst);
+        appendBodyToken(dest, first, firstLoc, argLoc, usageSite, isFirst, isTopLevel);
         for (++begin; begin != end; begin++)
-            appendBodyToken(dest, *begin, firstLoc, argLoc, usageSite, isFirst);
+            appendBodyToken(dest, *begin, firstLoc, argLoc, usageSite, isFirst, isTopLevel);
     }
 
     return true;
 }
 
 void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
-                                   SourceLocation expansionLoc, Token usageSite, bool& isFirst) {
+                                   SourceLocation expansionLoc, Token usageSite, bool& isFirst, bool isTopLevel) {
     if (isFirst) {
-        token = token.withTrivia(alloc, usageSite.trivia());
+        if (!isTopLevel)
+            token = token.withTrivia(alloc, usageSite.trivia());
+        else
+            token = token.withTrivia(alloc, {});
         isFirst = false;
 
         // If our usageSite had no whitespace, we should concatenate with whatever was previously in the buffer.
@@ -1162,7 +1165,7 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens) {
                         return false;
                 }
 
-                if (!expandMacro(macro, token, actualArgs, *currentBuffer))
+                if (!expandMacro(macro, token, actualArgs, *currentBuffer, false))
                     return false;
 
                 expandedSomething = true;
@@ -1181,7 +1184,8 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens) {
     return true;
 }
 
-bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, SmallVector<Token>& dest) {
+bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite,
+                                   SmallVector<Token>& dest, bool isTopLevel) {
     // Take the location and trivia from the usage site; the source text we're
     // going to make up here doesn't actually exist and shouldn't be shown to the
     // user as an "expanded from here" note.
@@ -1210,7 +1214,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, Sm
             // was already in the destination buffer.
             bool isFirst = true;
             appendBodyToken(dest, Token(TokenKind::IntegerLiteral, info), usageSite.location(),
-                            usageSite.location(), usageSite, isFirst);
+                            usageSite.location(), usageSite, isFirst, isTopLevel);
             break;
         }
         case MacroIntrinsic::None:

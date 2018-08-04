@@ -59,7 +59,6 @@ endmodule
         BAR = 2,\
         BAZ = 3\
     } asdf;
-
 module M;
     `ENUM_MACRO(test_t)
     localparam int test_t__count = 3;

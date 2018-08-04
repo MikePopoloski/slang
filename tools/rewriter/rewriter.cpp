@@ -29,15 +29,6 @@ int main(int argc, char** argv) {
 #endif
 
     auto tree = SyntaxTree::fromFile(argv[1]);
-
-    std::string output = SyntaxPrinter()
-        .setIncludeDirectives(true)
-        .setIncludeSkipped(true)
-        .setIncludeTrivia(true)
-        .excludePreprocessed(tree->sourceManager())
-        .print(tree->root())
-        .str();
-
-    printf("%s", output.c_str());
+    printf("%s", SyntaxPrinter::printFile(*tree).c_str());
     return 0;
 }

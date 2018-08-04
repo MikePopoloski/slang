@@ -34,8 +34,13 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
                     print(t);
             }
             break;
+        case TriviaKind::LineComment:
+        case TriviaKind::BlockComment:
+            if (!includeComments)
+                break;
+            [[fallthrough]];
         default:
-            buffer.append(trivia.getRawText());
+            append(trivia.getRawText());
             break;
     }
     return *this;
@@ -79,7 +84,7 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
     }
 
     if (!excluded && (includeMissing || !token.isMissing()))
-        buffer.append(token.rawText());
+        append(token.rawText());
 
     return *this;
 }
@@ -110,6 +115,45 @@ std::string SyntaxPrinter::printFile(const SyntaxTree& tree) {
         .setIncludePreprocessed(false)
         .print(tree)
         .str();
+}
+
+void SyntaxPrinter::append(string_view text) {
+    if (!squashNewlines) {
+        buffer.append(text);
+        return;
+    }
+
+    bool carriage = false;
+    bool newline = false;
+
+    if (!text.empty() && (text[0] == '\r' || text[0] == '\n')) {
+        size_t i = 0;
+        if (text[i] == '\r') {
+            carriage = true;
+            i++;
+        }
+
+        if (i < text.length() && text[i] == '\n') {
+            newline = true;
+            i++;
+        }
+
+        for (; i < text.length(); i++) {
+            if (text[i] == '\r' || text[i] == '\n')
+                i++;
+        }
+
+        text = text.substr(i);
+    }
+
+    if (buffer.empty() || buffer.back() != '\n') {
+        if (carriage)
+            buffer.push_back('\r');
+        if (newline)
+            buffer.push_back('\n');
+    }
+
+    buffer.append(text);
 }
 
 }
