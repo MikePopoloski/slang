@@ -1061,8 +1061,9 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
         if (begin == end) {
             // The macro argument contained no tokens. We still need to supply an empty token
             // here to ensure that the trivia of the formal parameter is passed on.
-            appendBodyToken(dest, Token(TokenKind::EmptyMacroArgument, token.getInfo()),
-                            start, expansionLoc, usageSite, isFirst);
+            Token empty { TokenKind::EmptyMacroArgument,
+                          alloc.emplace<Token::Info>(token.trivia(), "", token.location()) };
+            appendBodyToken(dest, empty, start, expansionLoc, usageSite, isFirst);
             continue;
         }
 
