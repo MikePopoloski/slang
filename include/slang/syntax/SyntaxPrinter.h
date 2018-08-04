@@ -18,6 +18,9 @@ class SyntaxTree;
 /// back to source code.
 class SyntaxPrinter {
 public:
+    SyntaxPrinter() = default;
+    explicit SyntaxPrinter(const SourceManager& sourceManager);
+
     SyntaxPrinter& print(Trivia trivia);
     SyntaxPrinter& print(Token token);
     SyntaxPrinter& print(const SyntaxNode& node);
@@ -27,8 +30,7 @@ public:
     SyntaxPrinter& setIncludeMissing(bool include) { includeMissing = include; return *this; }
     SyntaxPrinter& setIncludeSkipped(bool include) { includeSkipped = include; return *this; }
     SyntaxPrinter& setIncludeDirectives(bool include) { includeDirectives = include; return *this; }
-
-    SyntaxPrinter& excludePreprocessed(const SourceManager& sm) { sourceManager = &sm; return *this; }
+    SyntaxPrinter& setIncludePreprocessed(bool include) { includePreprocessed = include; return *this; }
 
     std::string str() const { return buffer; }
 
@@ -41,6 +43,7 @@ private:
     bool includeMissing = false;
     bool includeSkipped = false;
     bool includeDirectives = false;
+    bool includePreprocessed = true;
 };
 
 }

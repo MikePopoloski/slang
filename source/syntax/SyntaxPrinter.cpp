@@ -11,11 +11,18 @@
 
 namespace slang {
 
+SyntaxPrinter::SyntaxPrinter(const SourceManager& sourceManager) :
+    sourceManager(&sourceManager) {}
+
 SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
     switch (trivia.kind) {
         case TriviaKind::Directive:
             if (includeDirectives)
                 print(*trivia.syntax());
+            else if (includePreprocessed) {
+                for (const auto& t : trivia.syntax()->getFirstToken().trivia())
+                    print(t);
+            }
             break;
         case TriviaKind::SkippedSyntax:
             if (includeSkipped)
@@ -36,16 +43,16 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
 
 SyntaxPrinter& SyntaxPrinter::print(Token token) {
     bool excluded = false;
-    if (sourceManager) {
-        // If we have a source manager set it means we want to exclude any tokens that
-        // came from the preprocessor (macro expansion, include files).
+    if (!includePreprocessed && sourceManager)
         excluded = sourceManager->isPreprocessedLoc(token.location());
-    }
 
     if (includeTrivia) {
-        if (!sourceManager) {
-            for (const auto& t : token.trivia())
-                print(t);
+        if (includePreprocessed || !sourceManager) {
+            bool isFromMacro = sourceManager && sourceManager->isMacroLoc(token.location());
+            for (const auto& t : token.trivia()) {
+                if (!isFromMacro || t.kind != TriviaKind::LineContinuation)
+                    print(t);
+            }
         }
         else {
             // Exclude any trivia that is from a preprocessed location as well. In order
@@ -96,11 +103,11 @@ SyntaxPrinter& SyntaxPrinter::print(const SyntaxTree& tree) {
 }
 
 std::string SyntaxPrinter::printFile(const SyntaxTree& tree) {
-    return SyntaxPrinter()
+    return SyntaxPrinter(tree.sourceManager())
         .setIncludeDirectives(true)
         .setIncludeSkipped(true)
         .setIncludeTrivia(true)
-        .excludePreprocessed(tree.sourceManager())
+        .setIncludePreprocessed(false)
         .print(tree)
         .str();
 }
