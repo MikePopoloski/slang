@@ -129,10 +129,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ProgramDeclaration:
             compilation.addDefinition(syntax.as<ModuleDeclarationSyntax>(), *this);
             break;
-        case SyntaxKind::PackageDeclaration:
+        case SyntaxKind::PackageDeclaration: {
             // Packages exist in their own namespace and are tracked in the Compilation
-            compilation.addPackage(PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>()));
+            auto& package = PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
+            addMember(package);
+            compilation.addPackage(package);
             break;
+        }
         case SyntaxKind::PackageImportDeclaration:
             for (auto item : syntax.as<PackageImportDeclarationSyntax>().items) {
                 if (item->item.kind == TokenKind::Star) {
