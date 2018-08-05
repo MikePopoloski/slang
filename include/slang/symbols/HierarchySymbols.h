@@ -7,7 +7,6 @@
 #pragma once
 
 #include "slang/binding/ConstantValue.h"
-#include "slang/symbols/Definition.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/StatementBodiedScope.h"
 #include "slang/symbols/Symbol.h"
@@ -41,6 +40,47 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Package; }
 };
 
+/// Represents a definition (module, interface, or program) that can be instantiated
+/// to form a node in the design hierarchy.
+class DefinitionSymbol : public Symbol, public Scope {
+public:
+    /// Tracks info about each parameter declaration for later evaluation.
+    struct ParameterDecl {
+        /// The name of the parameter.
+        string_view name;
+
+        /// The syntax describing the parameter's data type. This is evaluated lazily
+        /// into a real type since it may require doing inference from the value.
+        const DataTypeSyntax* type = nullptr;
+
+        /// The default initializer, or null if the parameter has no default.
+        const ExpressionSyntax* initializer = nullptr;
+
+        /// The source location of the parameter.
+        SourceLocation location;
+
+        /// Indicates whether the parameter is a localparam (not overridable).
+        bool isLocal;
+
+        /// Indicates whether the parameter was declared in the header (parameter port list) or
+        /// within the body of the definition itself.
+        bool isPort;
+    };
+
+    DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                     span<const ParameterDecl> parameters) :
+        Symbol(SymbolKind::Definition, name, loc),
+        Scope(compilation, this),
+        parameters(parameters) {}
+
+    span<const ParameterDecl> parameters;
+
+    void toJson(json&) const {}
+
+    static DefinitionSymbol& fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax);
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Definition; }
+};
+
 /// Base class for module, interface, and program instance symbols.
 class InstanceSymbol : public Symbol, public Scope {
 public:
@@ -50,7 +90,7 @@ public:
     static bool isKind(SymbolKind kind);
 
     struct ParameterMetadata {
-        const Definition::ParameterDecl* decl;
+        const DefinitionSymbol::ParameterDecl* decl;
         const Type* type;
         ConstantValue value;
     };
@@ -106,7 +146,7 @@ protected:
         void add(const Port& port);
     };
 
-    void populate(const Definition& definition, span<const ParameterMetadata> parameters);
+    void populate(const DefinitionSymbol& definition, span<const ParameterMetadata> parameters);
     void handleAnsiPorts(const AnsiPortListSyntax& syntax);
     void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilder& builder);
     void handleNonAnsiPorts(const NonAnsiPortListSyntax& syntax);
@@ -120,10 +160,11 @@ public:
     void toJson(json&) const {}
 
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
-                                             const Definition& definition);
+                                             const DefinitionSymbol& definition);
 
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
-                                             const Definition& definition, span<const ParameterMetadata> parameters);
+                                             const DefinitionSymbol& definition,
+                                             span<const ParameterMetadata> parameters);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
 };
@@ -136,7 +177,8 @@ public:
     void toJson(json&) const {}
 
     static InterfaceInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
-                                                const Definition& definition, span<const ParameterMetadata> parameters);
+                                                const DefinitionSymbol& definition,
+                                                span<const ParameterMetadata> parameters);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfaceInstance; }
 };

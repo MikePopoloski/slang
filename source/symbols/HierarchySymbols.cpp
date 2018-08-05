@@ -23,6 +23,59 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleD
     return *result;
 }
 
+static void getParamDecls(Compilation& compilation, const ParameterDeclarationSyntax& syntax, bool isPort,
+                          bool isLocal, SmallVector<DefinitionSymbol::ParameterDecl>& parameters) {
+    for (const VariableDeclaratorSyntax* decl : syntax.declarators) {
+        DefinitionSymbol::ParameterDecl param;
+        param.name = decl->name.valueText();
+        param.location = decl->name.location();
+        param.type = syntax.type;
+        param.isLocal = isLocal;
+        param.isPort = isPort;
+
+        if (decl->initializer)
+            param.initializer = decl->initializer->expr;
+        else if (!isPort)
+            compilation.addError(DiagCode::BodyParamNoInitializer, param.location);
+        else if (isLocal)
+            compilation.addError(DiagCode::LocalParamNoInitializer, param.location);
+
+        parameters.append(param);
+    }
+}
+
+DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax) {
+    SmallVectorSized<DefinitionSymbol::ParameterDecl, 8> parameters;
+    bool hasPortParams = syntax.header->parameters;
+    if (hasPortParams) {
+        bool lastLocal = false;
+        for (auto declaration : syntax.header->parameters->declarations) {
+            // It's legal to leave off the parameter keyword in the parameter port list.
+            // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
+            // This isn't allowed in a module body, but the parser will take care of the error for us.
+            if (declaration->keyword)
+                lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
+            getParamDecls(compilation, *declaration, true, lastLocal, parameters);
+        }
+    }
+
+    // Also search through immediate members in the body of the definition for any parameters, as they may
+    // be overridable at instantiation time.
+    for (auto member : syntax.members) {
+        if (member->kind == SyntaxKind::ParameterDeclarationStatement) {
+            auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
+            bool isLocal = hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
+            getParamDecls(compilation, *declaration, false, isLocal, parameters);
+        }
+    }
+
+    auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header->name.valueText(),
+                                                        syntax.header->name.location(),
+                                                        parameters.copy(compilation));
+    result->setSyntax(syntax);
+    return *result;
+}
+
 void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                                 LookupLocation location, const Scope& scope, SmallVector<const Symbol*>& results) {
 
@@ -142,7 +195,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
 
     for (auto instanceSyntax : syntax.instances) {
         Symbol* inst;
-        switch (definition->syntax.kind) {
+        switch (definition->getSyntax()->kind) { // TODO: don't rely on syntax here
             case SyntaxKind::ModuleDeclaration:
                 inst = &ModuleInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
                                                           instanceSyntax->name.location(), *definition, params);
@@ -172,16 +225,17 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
     }
 }
 
-void InstanceSymbol::populate(const Definition& definition, span<const ParameterMetadata> parameters) {
+void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const ParameterMetadata> parameters) {
     // Add all port parameters as members first.
     Compilation& comp = getCompilation();
     auto paramIt = parameters.begin();
     while (paramIt != parameters.end()) {
-        auto decl = paramIt->decl;
-        if (!decl->isPort)
+        auto& decl = *paramIt->decl;
+        if (!decl.isPort)
             break;
 
-        auto& param = ParameterSymbol::fromDecl(comp, *decl);
+        auto& param = ParameterSymbol::fromDecl(comp, decl.name, decl.location, decl.isLocal,
+                                                decl.isPort, *decl.type, decl.initializer);
         addMember(param);
 
         if (paramIt->type) {
@@ -191,7 +245,9 @@ void InstanceSymbol::populate(const Definition& definition, span<const Parameter
         paramIt++;
     }
 
-    const PortListSyntax* portSyntax = definition.syntax.header->ports;
+    auto& syntax = definition.getSyntax()->as<ModuleDeclarationSyntax>(); // TODO: getSyntax dependency
+    const PortListSyntax* portSyntax = syntax.header->ports;
+
     if (portSyntax) {
         switch (portSyntax->kind) {
             case SyntaxKind::AnsiPortList:
@@ -205,7 +261,7 @@ void InstanceSymbol::populate(const Definition& definition, span<const Parameter
         }
     }
 
-    for (auto member : definition.syntax.members) {
+    for (auto member : syntax.members) {
         // If this is a parameter declaration, we should already have metadata for it in our parameters list.
         // The list is given in declaration order, so we should be be able to move through them incrementally.
         if (member->kind != SyntaxKind::ParameterDeclarationStatement)
@@ -214,8 +270,9 @@ void InstanceSymbol::populate(const Definition& definition, span<const Parameter
             for (auto declarator : member->as<ParameterDeclarationStatementSyntax>().parameter->declarators) {
                 ASSERT(paramIt != parameters.end());
 
-                auto decl = paramIt->decl;
-                auto& param = ParameterSymbol::fromDecl(comp, *decl);
+                auto& decl = *paramIt->decl;
+                auto& param = ParameterSymbol::fromDecl(comp, decl.name, decl.location, decl.isLocal,
+                                                        decl.isPort, *decl.type, decl.initializer);
                 if (paramIt->type) {
                     param.setType(*paramIt->type);
                     param.setValue(paramIt->value);
@@ -408,7 +465,7 @@ void InstanceSymbol::PortListBuilder::add(const Port& port) {
 }
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
-                                                        SourceLocation loc, const Definition& definition) {
+                                                        SourceLocation loc, const DefinitionSymbol& definition) {
     SmallVectorSized<ParameterMetadata, 8> params;
     for (const auto& decl : definition.parameters) {
         // This function should only be called for definitions where all parameters have defaults.
@@ -420,7 +477,7 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
 }
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
-                                                        SourceLocation loc, const Definition& definition,
+                                                        SourceLocation loc, const DefinitionSymbol& definition,
                                                         span<const ParameterMetadata> parameters) {
 
     auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc);
@@ -429,7 +486,7 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
 }
 
 InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(Compilation& compilation, string_view name,
-                                                              SourceLocation loc, const Definition& definition,
+                                                              SourceLocation loc, const DefinitionSymbol& definition,
                                                               span<const ParameterMetadata> parameters) {
 
     auto instance = compilation.emplace<InterfaceInstanceSymbol>(compilation, name, loc);

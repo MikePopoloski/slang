@@ -168,12 +168,15 @@ const RootSymbol& Compilation::getRoot() {
         SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
         for (auto& [key, definition] : definitionMap) {
             (void)key;
-            const auto& syntax = definition->syntax;
+            auto syntax = definition->getSyntax();
 
-            if (syntax.kind == SyntaxKind::ModuleDeclaration && instantiatedNames.count(definition->name) == 0) {
+            if (syntax && syntax->kind == SyntaxKind::ModuleDeclaration &&
+                instantiatedNames.count(definition->name) == 0) {
                 // TODO: check for no parameters here
+                auto& decl = syntax->as<ModuleDeclarationSyntax>();
                 const auto& instance = ModuleInstanceSymbol::instantiate(*this, definition->name,
-                                                                         syntax.header->name.location(), *definition);
+                                                                         decl.header->name.location(),
+                                                                         *definition);
                 root->addMember(instance);
                 topList.append(&instance);
             }
@@ -198,12 +201,12 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(const CompilationUn
     return nullptr;
 }
 
-const Definition* Compilation::getDefinition(string_view lookupName, const Scope& scope) const {
+const DefinitionSymbol* Compilation::getDefinition(string_view lookupName, const Scope& scope) const {
     const Scope* searchScope = &scope;
     while (true) {
         auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
         if (it != definitionMap.end())
-            return it->second.get();
+            return it->second;
 
         if (searchScope->asSymbol().kind == SymbolKind::Root)
             return nullptr;
@@ -212,61 +215,16 @@ const Definition* Compilation::getDefinition(string_view lookupName, const Scope
     }
 }
 
-void Compilation::addDefinition(const ModuleDeclarationSyntax& syntax, const Scope& scope) {
-    SmallVectorSized<Definition::ParameterDecl, 8> parameters;
-    bool hasPortParams = syntax.header->parameters;
-    if (hasPortParams) {
-        bool lastLocal = false;
-        for (auto declaration : syntax.header->parameters->declarations) {
-            // It's legal to leave off the parameter keyword in the parameter port list.
-            // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
-            // This isn't allowed in a module body, but the parser will take care of the error for us.
-            if (declaration->keyword)
-                lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
-            getParamDecls(*declaration, true, lastLocal, parameters);
-        }
-    }
-
-    // Also search through immediate members in the body of the definition for any parameters, as they may
-    // be overridable at instantiation time.
-    for (auto member : syntax.members) {
-        if (member->kind == SyntaxKind::ParameterDeclarationStatement) {
-            auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
-            bool isLocal = hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
-            getParamDecls(*declaration, false, isLocal, parameters);
-        }
-    }
-
-    auto definition = std::make_unique<Definition>(syntax);
-    definition->parameters = parameters.copy(*this);
-
+void Compilation::addDefinition(const DefinitionSymbol& definition) {
     // Record that the given scope contains this definition. If the scope is a compilation unit, add it to
     // the root scope instead so that lookups from other compilation units will find it.
-    if (scope.asSymbol().kind == SymbolKind::CompilationUnit)
-        definitionMap.emplace(std::make_tuple(definition->name, root.get()), std::move(definition));
+    const Scope* scope = definition.getScope();
+    ASSERT(scope);
+
+    if (scope->asSymbol().kind == SymbolKind::CompilationUnit)
+        definitionMap.emplace(std::make_tuple(definition.name, root.get()), &definition);
     else
-        definitionMap.emplace(std::make_tuple(definition->name, &scope), std::move(definition));
-}
-
-void Compilation::getParamDecls(const ParameterDeclarationSyntax& syntax, bool isPort, bool isLocal,
-                                SmallVector<Definition::ParameterDecl>& parameters) {
-    for (const VariableDeclaratorSyntax* decl : syntax.declarators) {
-        Definition::ParameterDecl param;
-        param.name = decl->name.valueText();
-        param.location = decl->name.location();
-        param.type = syntax.type;
-        param.isLocal = isLocal;
-        param.isPort = isPort;
-
-        if (decl->initializer)
-            param.initializer = decl->initializer->expr;
-        else if (!isPort)
-            addError(DiagCode::BodyParamNoInitializer, param.location);
-        else if (isLocal)
-            addError(DiagCode::LocalParamNoInitializer, param.location);
-
-        parameters.append(param);
-    }
+        definitionMap.emplace(std::make_tuple(definition.name, scope), &definition);
 }
 
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {

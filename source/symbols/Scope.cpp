@@ -126,11 +126,17 @@ void Scope::addMembers(const SyntaxNode& syntax) {
     switch (syntax.kind) {
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::InterfaceDeclaration:
-        case SyntaxKind::ProgramDeclaration:
-            compilation.addDefinition(syntax.as<ModuleDeclarationSyntax>(), *this);
+        case SyntaxKind::ProgramDeclaration: {
+            // Definitions exist in their own namespace and are tracked in the Compilation.
+            // TODO: make this not going into the scope's name map
+            auto& def = DefinitionSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
+            addMember(def);
+            compilation.addDefinition(def);
             break;
+        }
         case SyntaxKind::PackageDeclaration: {
-            // Packages exist in their own namespace and are tracked in the Compilation
+            // Packages exist in their own namespace and are tracked in the Compilation.
+            // TODO: make this not going into the scope's name map
             auto& package = PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
             addMember(package);
             compilation.addPackage(package);

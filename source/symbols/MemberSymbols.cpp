@@ -59,11 +59,13 @@ void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclar
     }
 }
 
-ParameterSymbol& ParameterSymbol::fromDecl(Compilation& compilation, const Definition::ParameterDecl& decl) {
-    auto param = compilation.emplace<ParameterSymbol>(decl.name, decl.location, decl.isLocal, decl.isPort);
-    param->setDeclaredType(*decl.type);
-    if (decl.initializer)
-        param->setDefault(*decl.initializer);
+ParameterSymbol& ParameterSymbol::fromDecl(Compilation& compilation, string_view name, SourceLocation location,
+                                           bool isLocal, bool isPort, const DataTypeSyntax& type,
+                                           const ExpressionSyntax* initializer) {
+    auto param = compilation.emplace<ParameterSymbol>(name, location, isLocal, isPort);
+    param->setDeclaredType(type);
+    if (initializer)
+        param->setDefault(*initializer);
 
     return *param;
 }

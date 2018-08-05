@@ -51,10 +51,10 @@ public:
 
     /// Gets the definition with the given name, or null if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found before more global ones.
-    const Definition* getDefinition(string_view name, const Scope& scope) const;
+    const DefinitionSymbol* getDefinition(string_view name, const Scope& scope) const;
 
     /// Adds a definition to the set of definitions tracked in the compilation.
-    void addDefinition(const ModuleDeclarationSyntax& syntax, const Scope& scope);
+    void addDefinition(const DefinitionSymbol& definition);
 
     /// Gets the package with the give name, or null if there is no such package.
     const PackageSymbol* getPackage(string_view name) const;
@@ -142,9 +142,6 @@ public:
     optional<int32_t> evalIntegerExpr(const ExpressionSyntax& syntax, LookupLocation location, const Scope& scope);
 
 private:
-    void getParamDecls(const ParameterDeclarationSyntax& syntax, bool isPort, bool isLocal,
-                       SmallVector<Definition::ParameterDecl>& parameters);
-
     // These functions are called by Scopes to create and track various members.
     friend class Scope;
     SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
@@ -186,7 +183,7 @@ private:
     SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
 
     // The name map for global definitions.
-    flat_hash_map<std::tuple<string_view, const Scope*>, std::unique_ptr<Definition>> definitionMap;
+    flat_hash_map<std::tuple<string_view, const Scope*>, const DefinitionSymbol*> definitionMap;
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the definitions name table.

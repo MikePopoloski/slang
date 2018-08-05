@@ -9,7 +9,6 @@
 #include <tuple>
 
 #include "slang/binding/ConstantValue.h"
-#include "slang/symbols/Definition.h"
 #include "slang/symbols/Lazy.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/StatementBodiedScope.h"
@@ -90,7 +89,9 @@ public:
     static void fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
                            SmallVector<ParameterSymbol*>& results);
 
-    static ParameterSymbol& fromDecl(Compilation& compilation, const Definition::ParameterDecl& decl);
+    static ParameterSymbol& fromDecl(Compilation& compilation, string_view name, SourceLocation location,
+                                     bool isLocal, bool isPort, const DataTypeSyntax& type,
+                                     const ExpressionSyntax* initializer);
 
     static std::tuple<const Type*, ConstantValue> evaluate(const DataTypeSyntax& type,
                                                            const ExpressionSyntax& expr,
