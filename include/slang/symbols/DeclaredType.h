@@ -15,6 +15,7 @@ class Expression;
 class Scope;
 class Symbol;
 class Type;
+struct BindContext;
 struct DataTypeSyntax;
 struct ExpressionSyntax;
 struct VariableDeclaratorSyntax;
