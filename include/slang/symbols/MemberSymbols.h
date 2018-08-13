@@ -9,7 +9,6 @@
 #include <tuple>
 
 #include "slang/binding/ConstantValue.h"
-#include "slang/symbols/Lazy.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/StatementBodiedScope.h"
 #include "slang/symbols/Symbol.h"
@@ -82,9 +81,7 @@ private:
 /// Represents a parameter value.
 class ParameterSymbol : public ValueSymbol {
 public:
-    ParameterSymbol(string_view name, SourceLocation loc, bool isLocal_, bool isPort_) :
-        ValueSymbol(SymbolKind::Parameter, name, loc),
-        type(this), isLocal(isLocal_), isPort(isPort_) {}
+    ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
     static void fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
                            SmallVector<ParameterSymbol*>& results);
@@ -100,36 +97,17 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
-    void setDeclaredType(const DataTypeSyntax& syntax) { declaredType = &syntax; type = syntax; }
-    const DataTypeSyntax* getDeclaredType() const { return declaredType; }
-
-    const Type& getType() const;
-    void setType(const Type& newType) { type = newType; }
-
-    const LazyType& getLazyType() const { return type; }
-
     const ConstantValue& getValue() const;
-    void setValue(ConstantValue value);
+    void overrideValue(ConstantValue value);
 
-    const ConstantValue* getDefault() const;
-    void setDefault(ConstantValue&& value);
-    void setDefault(const ExpressionSyntax& syntax);
-
-    bool hasDefault() const { return (bool)defaultValue; }
     bool isLocalParam() const { return isLocal; }
     bool isPortParam() const { return isPort; }
     bool isBodyParam() const { return !isPortParam(); }
 
-    bool isEvaluating() const { return evaluating; }
-
     void toJson(json& j) const;
 
 private:
-    const DataTypeSyntax* declaredType = nullptr;
-    mutable LazyType type;
-    mutable const ConstantValue* value = nullptr;
-    mutable PointerUnion<const ConstantValue*, const ExpressionSyntax*> defaultValue;
-    mutable bool evaluating = false;
+    const ConstantValue* overriden = nullptr;
     bool isLocal = false;
     bool isPort = false;
 };
@@ -137,11 +115,8 @@ private:
 /// Represents a net declaration.
 class NetSymbol : public ValueSymbol {
 public:
-    LazyType dataType;
-
     NetSymbol(string_view name, SourceLocation loc) :
-        ValueSymbol(SymbolKind::Net, name, loc),
-        dataType(this) {}
+        ValueSymbol(SymbolKind::Net, name, loc) {}
 
     void toJson(json& j) const;
 
@@ -154,8 +129,6 @@ public:
 /// Represents a variable declaration.
 class VariableSymbol : public ValueSymbol {
 public:
-    LazyType type;
-    LazyInitializer initializer;
     VariableLifetime lifetime;
     bool isConst;
 
@@ -179,8 +152,6 @@ protected:
     VariableSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false) :
         ValueSymbol(childKind, name, loc),
-        type(this),
-        initializer(this),
         lifetime(lifetime),
         isConst(isConst) {}
 };
@@ -209,7 +180,7 @@ class SubroutineSymbol : public Symbol, public StatementBodiedScope {
 public:
     using ArgList = span<const FormalArgumentSymbol* const>;
 
-    LazyType returnType;
+    DeclaredType declaredReturnType;
     const VariableSymbol* returnValVar = nullptr;
     ArgList arguments;
     VariableLifetime defaultLifetime = VariableLifetime::Automatic;
@@ -219,8 +190,10 @@ public:
                      VariableLifetime defaultLifetime, bool isTask, const Scope&) :
         Symbol(SymbolKind::Subroutine, name, loc),
         StatementBodiedScope(compilation, this),
-        returnType(static_cast<Symbol*>(this)),
+        declaredReturnType(*this),
         defaultLifetime(defaultLifetime), isTask(isTask) {}
+
+    const Type& getReturnType() const { return declaredReturnType.getType(); }
 
     void toJson(json& j) const;
 

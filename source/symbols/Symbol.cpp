@@ -85,22 +85,29 @@ bool Symbol::isInstance() const {
     return InstanceSymbol::isKind(kind);
 }
 
+const DeclaredType* Symbol::getDeclaredType() const {
+    switch (kind) {
+        case SymbolKind::TypeAlias:
+            return &as<TypeAliasType>().targetType;
+        case SymbolKind::Subroutine:
+            return &as<SubroutineSymbol>().declaredReturnType;
+        default:
+            if (isValue())
+                return as<ValueSymbol>().getDeclaredType();
+            return nullptr;
+    }
+}
+
 const Scope* Symbol::scopeOrNull() const {
     AsScopeVisitor visitor;
     return visit(visitor);
 }
 
-const Type& ValueSymbol::getType() const {
-    switch (kind) {
-        case SymbolKind::EnumValue:
-            return as<EnumValueSymbol>().type;
-        case SymbolKind::Parameter:
-            return as<ParameterSymbol>().getType();
-        case SymbolKind::Net:
-            return *as<NetSymbol>().dataType;
-        default:
-            return *as<VariableSymbol>().type;
-    }
+ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
+                         bitmask<DeclaredTypeFlags> flags) :
+    Symbol(kind, name, location),
+    declaredType(*this, flags)
+{
 }
 
 bool ValueSymbol::isKind(SymbolKind kind) {

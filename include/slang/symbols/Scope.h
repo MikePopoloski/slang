@@ -20,7 +20,6 @@ class ForwardingTypedefSymbol;
 class Scope;
 class SystemSubroutine;
 class WildcardImportSymbol;
-struct LazyType;
 
 using SymbolMap = flat_hash_map<string_view, const Symbol*>;
 
@@ -286,11 +285,11 @@ private:
             return std::get<1>(membersOrStatement);
         }
 
-        void registerTransparentType(const Symbol* symbol, const LazyType& type) {
-            transparentTypes.emplace(symbol, &type);
+        void registerTransparentType(const Symbol* insertion, const Symbol& parent) {
+            transparentTypes.emplace(insertion, &parent);
         }
 
-        using TransparentTypeMap = flat_hash_map<const Symbol*, const LazyType*>;
+        using TransparentTypeMap = flat_hash_map<const Symbol*, const Symbol*>;
         iterator_range<TransparentTypeMap::const_iterator> getTransparentTypes() const {
             return { transparentTypes.begin(), transparentTypes.end() };
         }

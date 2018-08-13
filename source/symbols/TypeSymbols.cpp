@@ -269,7 +269,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
             return structUnion.packed ?
                 PackedStructType::fromSyntax(compilation, structUnion, location, parent) :
-                UnpackedStructType::fromSyntax(compilation, structUnion, location, parent);
+                UnpackedStructType::fromSyntax(compilation, structUnion);
         }
         case SyntaxKind::NamedType:
             return lookupNamedType(compilation, *node.as<NamedTypeSyntax>().name, location, parent);
@@ -309,7 +309,7 @@ void Type::resolveCanonical() const {
     ASSERT(kind == SymbolKind::TypeAlias);
     canonical = this;
     do {
-        canonical = canonical->as<TypeAliasType>().targetType.get();
+        canonical = &canonical->as<TypeAliasType>().targetType.getType();
     }
     while (canonical->isAlias());
 }
@@ -554,47 +554,48 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
     SVInt one(integralBase.bitWidth, 1, integralBase.isSigned);
     SVInt current(integralBase.bitWidth, 0, integralBase.isSigned);
-    const Symbol* previousMember = nullptr;
 
     for (auto member : syntax.members) {
-        ConstantValue value;
-        if (!member->initializer)
-            value = current;
-        else {
-            // TODO: conversion? range / overflow checking? non-constant?
-            BindContext context(*resultType,
-                                previousMember ? LookupLocation::after(*previousMember) : LookupLocation::min,
-                                BindFlags::Constant);
-
-            const auto& init = Expression::bind(compilation, *member->initializer->expr, context);
-            if (!init.constant)
-                value = current;
-            else
-                value = *init.constant;
-        }
-
-        current = value.integer() + one;
-        auto ev = compilation.emplace<EnumValueSymbol>(compilation, member->name.valueText(),
-                                                       member->name.location(), *resultType,
-                                                       std::move(value));
+        auto ev = compilation.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location());
+        ev->setType(*resultType);
         ev->setSyntax(*member);
         resultType->addMember(*ev);
-        previousMember = ev;
+
+        if (!member->initializer) {
+            ev->setValue(current);
+            current += one;
+        }
+        else {
+            // TODO: require integer in binding
+            ev->setInitializerSyntax(*member->initializer->expr, member->initializer->equals.location());
+            if (auto& cv = ev->getConstantValue())
+                current = cv.integer() + one;
+            else
+                current += one;
+        }
     }
 
     return *resultType;
 }
 
-EnumValueSymbol::EnumValueSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                                 const Type& type, ConstantValue value) :
-    ValueSymbol(SymbolKind::EnumValue, name, loc),
-    type(type), value(*compilation.createConstant(std::move(value)))
+EnumValueSymbol::EnumValueSymbol(string_view name, SourceLocation loc) :
+    ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::RequireIntegerConstant)
 {
 }
 
+const ConstantValue& EnumValueSymbol::getValue() const {
+    return value ? *value : getConstantValue();
+}
+
+void EnumValueSymbol::setValue(ConstantValue newValue) {
+    auto scope = getScope();
+    ASSERT(scope);
+    value = scope->getCompilation().createConstant(std::move(newValue));
+}
+
 void EnumValueSymbol::toJson(json& j) const {
-    j["type"] = type;
-    j["value"] = value;
+    j["type"] = getType();
+    j["value"] = getValue();
 }
 
 PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
@@ -706,7 +707,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
         for (auto decl : member->declarators) {
             auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(),
                                                              decl->name.location(), bitWidth);
-            variable->type = type;
+            variable->setType(type);
             variable->setSyntax(*decl);
             members.append(variable);
 
@@ -748,25 +749,21 @@ ConstantValue UnpackedStructType::getDefaultValueImpl() const {
     THROW_UNREACHABLE;
 }
 
-const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                           LookupLocation location, const Scope& scope) {
+const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
     uint32_t fieldIndex = 0;
     auto result = compilation.emplace<UnpackedStructType>(compilation);
     for (auto member : syntax.members) {
-        const Type& type = compilation.getType(*member->type, location, scope);
         for (auto decl : member->declarators) {
             auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(),
                                                              decl->name.location(), fieldIndex);
+            variable->setDeclaredType(*member->type);
+            variable->setFromDeclarator(*decl);
             variable->setSyntax(*decl);
+
             result->addMember(*variable);
-
             fieldIndex++;
-
-            variable->type = compilation.getType(type, decl->dimensions, location, scope);
-            if (decl->initializer)
-                variable->initializer = *decl->initializer->expr;
         }
     }
 
@@ -834,7 +831,7 @@ const TypeAliasType& TypeAliasType::fromSyntax(Compilation& compilation,
                                                const TypedefDeclarationSyntax& syntax) {
     // TODO: unpacked dimensions
     auto result = compilation.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
-    result->targetType = *syntax.type;
+    result->targetType.setTypeSyntax(*syntax.type);
     result->setSyntax(syntax);
     return *result;
 }
@@ -848,7 +845,7 @@ void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
 
 void TypeAliasType::checkForwardDecls() const {
     ForwardingTypedefSymbol::Category category;
-    switch (targetType->kind) {
+    switch (targetType.getType().kind) {
         case SymbolKind::PackedStructType:
         case SymbolKind::UnpackedStructType:
             category = ForwardingTypedefSymbol::Struct;
@@ -881,7 +878,7 @@ void TypeAliasType::checkForwardDecls() const {
 }
 
 ConstantValue TypeAliasType::getDefaultValueImpl() const {
-    return targetType->getDefaultValue();
+    return targetType.getType().getDefaultValue();
 }
 
 NetType::NetType(NetKind netKind) :

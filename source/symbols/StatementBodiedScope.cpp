@@ -94,7 +94,7 @@ Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax
         return badStmt(nullptr);
     }
 
-    const auto& expr = Expression::bind(comp, *subroutine->as<SubroutineSymbol>().returnType,
+    const auto& expr = Expression::bind(comp, subroutine->as<SubroutineSymbol>().getReturnType(),
                                         *syntax.returnValue, stmtLoc, context);
     return *comp.emplace<ReturnStatement>(syntax, &expr);
 }

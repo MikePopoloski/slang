@@ -38,8 +38,8 @@ public:
                     scope.addMember(*symbol);
 
                     ConstantValue initial;
-                    if (symbol->initializer)
-                        initial = symbol->initializer->eval(evalContext);
+                    if (auto initializer = symbol->getInitializer())
+                        initial = initializer->eval(evalContext);
 
                     evalContext.createLocal(symbol, initial);
                 }

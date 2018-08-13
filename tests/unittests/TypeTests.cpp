@@ -20,13 +20,13 @@ endmodule
     CHECK(instance.find("C"));
 
     const auto& someVar = instance.memberAt<VariableSymbol>(3);
-    REQUIRE(someVar.type->kind == SymbolKind::EnumType);
-    const auto& et = someVar.type->as<EnumType>();
+    REQUIRE(someVar.getType().kind == SymbolKind::EnumType);
+    const auto& et = someVar.getType().as<EnumType>();
 
     auto values = et.values().begin();
-    CHECK(values->value.integer() == 0); values++;
-    CHECK(values->value.integer() == 4); values++;
-    CHECK(values->value.integer() == 5); values++;
+    CHECK(values->getValue().integer() == 0); values++;
+    CHECK(values->getValue().integer() == 4); values++;
+    CHECK(values->getValue().integer() == 5); values++;
 
     // TODO: test (and implement) all the restrictions on enum and enum values
     NO_COMPILATION_ERRORS;
@@ -81,9 +81,9 @@ endmodule
     const auto& instance = evalModule(tree, compilation);
 
     const auto& foo = instance.memberAt<VariableSymbol>(0);
-    REQUIRE(foo.type->kind == SymbolKind::PackedStructType);
+    REQUIRE(foo.getType().kind == SymbolKind::PackedStructType);
 
-    const auto& structType = foo.type->as<PackedStructType>();
+    const auto& structType = foo.getType().as<PackedStructType>();
     CHECK(structType.bitWidth == 38);
     CHECK(structType.isFourState);
     CHECK(!structType.isSigned);
@@ -116,11 +116,11 @@ endmodule
     const auto& instance = evalModule(tree, compilation);
 
     const auto& f = instance.memberAt<VariableSymbol>(1);
-    const Type& type = f.type->getCanonicalType();
+    const Type& type = f.getType().getCanonicalType();
     REQUIRE(type.kind == SymbolKind::PackedArrayType);
-    REQUIRE(type.isMatching(*instance.memberAt<TypeAliasType>(0).targetType));
+    REQUIRE(type.isMatching(instance.memberAt<TypeAliasType>(0).targetType.getType()));
 
-    const Type& barType = instance.memberAt<VariableSymbol>(3).type->getCanonicalType();
+    const Type& barType = instance.memberAt<VariableSymbol>(3).getType().getCanonicalType();
     CHECK(barType.getBitWidth() == 1);
     CHECK(barType.isFourState());
 
@@ -157,11 +157,11 @@ endmodule
     const auto& instance = evalModule(tree, compilation);
 
     const auto& e = instance.memberAt<VariableSymbol>(1);
-    const Type& type = e.type->getCanonicalType();
+    const Type& type = e.getType().getCanonicalType();
     REQUIRE(type.kind == SymbolKind::EnumType);
     CHECK(type.getBitWidth() == 5);
 
-    const Type& s1_t = instance.memberAt<VariableSymbol>(6).type->getCanonicalType();
+    const Type& s1_t = instance.memberAt<VariableSymbol>(6).getType().getCanonicalType();
     CHECK(s1_t.getBitWidth() == 10);
 
     const auto& s2_t = instance.find<TypeAliasType>("s2_t");

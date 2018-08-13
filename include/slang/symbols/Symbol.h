@@ -7,13 +7,13 @@
 #pragma once
 
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/symbols/DeclaredType.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
 
 namespace slang {
 
 class Scope;
-class SyntaxNode;
 class Type;
 
 enum class SymbolKind {
@@ -104,6 +104,9 @@ public:
     /// Determines whether this symbol is a module, interface, or program instance.
     bool isInstance() const;
 
+    /// If the symbol has a declared type, returns a pointer to it. Otherwise returns nullptr.
+    const DeclaredType* getDeclaredType() const;
+
     template<typename T>
     decltype(auto) as() {
         if constexpr (std::is_same_v<T, Scope>) {
@@ -138,7 +141,7 @@ public:
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
 protected:
-    explicit Symbol(SymbolKind kind, string_view name, SourceLocation location) :
+    Symbol(SymbolKind kind, string_view name, SourceLocation location) :
         kind(kind), name(name), location(location) {}
 
     Symbol(const Symbol&) = delete;
@@ -153,7 +156,7 @@ private:
     // When a symbol is first added to a scope a pointer to it will be stored here.
     // Along with that pointer, a linked list of members in the scope will be created
     // by using the nextInScope pointer, and the index within the scope (used to quickly
-    // determine ordering during lookups) will set here.
+    // determine ordering during lookups) will be set here.
     mutable const Scope* parentScope = nullptr;
     mutable const Symbol* nextInScope = nullptr;
     mutable Index indexInScope {0};
@@ -166,12 +169,46 @@ private:
 class ValueSymbol : public Symbol {
 public:
     /// Gets the type of the value.
-    const Type& getType() const;
+    const Type& getType() const { return declaredType.getType(); }
+
+    /// Sets the type of the value.
+    void setType(const Type& type) { declaredType.setType(type); }
+
+    /// Gets access to the symbol's declared type.
+    not_null<const DeclaredType*> getDeclaredType() const { return &declaredType; }
+
+    /// Sets the symbol's declared type.
+    void setDeclaredType(const DataTypeSyntax& newType) { declaredType.setTypeSyntax(newType); }
+    void setDeclaredType(const DataTypeSyntax& newType, const SyntaxList<VariableDimensionSyntax>& newDimensions) {
+        declaredType.setTypeSyntax(newType);
+        declaredType.setDimensionSyntax(newDimensions);
+    }
+
+    /// Gets the initializer for this value, if it has one.
+    const Expression* getInitializer() const { return declaredType.getInitializer(); }
+
+    /// Sets the initializer for this value.
+    void setInitializer(const Expression& expr) { declaredType.setInitializer(expr); }
+
+    /// Sets the expression tree used to initialize this value.
+    void setInitializerSyntax(const ExpressionSyntax& syntax, SourceLocation initLocation) {
+        declaredType.setInitializerSyntax(syntax, initLocation);
+    }
+
+    /// Initializes the value's dimension and initializer syntax from the given declarator.
+    void setFromDeclarator(const VariableDeclaratorSyntax& decl) { declaredType.setFromDeclarator(decl); }
+
+    /// Gets the value of the symbol if it is a compile time constant.
+    const ConstantValue& getConstantValue() const { return declaredType.getConstantValue(); }
 
     static bool isKind(SymbolKind kind);
 
 protected:
-    using Symbol::Symbol;
+    ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
+                bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
+
+private:
+    DeclaredType declaredType;
 };
 
 /// Serialization of arbitrary symbols to JSON.

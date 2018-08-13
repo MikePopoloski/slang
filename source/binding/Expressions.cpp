@@ -381,7 +381,11 @@ Expression& Expression::convertAssignment(Compilation& compilation, const Type& 
     // Once we've converted up, we may still need to truncate back down to the actual size of
     // the lvalue we're assigning to.
     if (rt->getBitWidth() > type.getBitWidth()) {
-        return convert(compilation, ConversionKind::IntTruncation, type, *result);
+        result = &convert(compilation, ConversionKind::IntTruncation, type, *result);
+        EvalContext context;
+        ConstantValue value = result->eval(context);
+        if (value)
+            result->constant = compilation.createConstant(std::move(value));
     }
 
     return *result;
@@ -991,12 +995,13 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     SmallVectorSized<const Expression*, 8> buffer;
     for (uint32_t i = 0; i < actualArgs.size(); i++) {
         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-        buffer.append(&Expression::bind(compilation, *formalArgs[i]->type, *arg.expr,
+        buffer.append(&Expression::bind(compilation, formalArgs[i]->getType(), *arg.expr,
                                         arg.getFirstToken().location(), context));
     }
 
-    return *compilation.emplace<CallExpression>(&subroutine, *subroutine.returnType, buffer.copy(compilation),
-                                                context.lookupLocation, syntax.sourceRange());
+    return *compilation.emplace<CallExpression>(&subroutine, subroutine.getReturnType(),
+                                                buffer.copy(compilation), context.lookupLocation,
+                                                syntax.sourceRange());
 }
 
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,

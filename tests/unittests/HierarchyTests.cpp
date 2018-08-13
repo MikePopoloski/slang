@@ -223,7 +223,7 @@ endmodule
     CHECK(alwaysComb.procedureKind == ProceduralBlockKind::AlwaysComb);
 
     const auto& variable = instance.memberAt<VariableSymbol>(10);
-    CHECK(variable.type->isIntegral());
+    CHECK(variable.getType().isIntegral());
     CHECK(variable.name == "arr1");
 
     // TODO:
@@ -244,20 +244,20 @@ endmodule
     const auto& foo = instance.memberAt<SubroutineSymbol>(0);
     CHECK(!foo.isTask);
     CHECK(foo.defaultLifetime == VariableLifetime::Static);
-    CHECK(foo.returnType->getBitWidth() == 16);
+    CHECK(foo.getReturnType().getBitWidth() == 16);
     CHECK(foo.name == "foo");
 
     auto args = foo.arguments;
     REQUIRE(args.size() == 5);
-    CHECK(args[0]->type->getBitWidth() == 1);
+    CHECK(args[0]->getType().getBitWidth() == 1);
     CHECK(args[0]->direction == FormalArgumentDirection::In);
-    CHECK(args[1]->type->getBitWidth() == 32);
+    CHECK(args[1]->getType().getBitWidth() == 32);
     CHECK(args[1]->direction == FormalArgumentDirection::In);
-    CHECK(args[2]->type->getBitWidth() == 16);
+    CHECK(args[2]->getType().getBitWidth() == 16);
     CHECK(args[2]->direction == FormalArgumentDirection::Out);
-    CHECK(args[3]->type->getBitWidth() == 16);
+    CHECK(args[3]->getType().getBitWidth() == 16);
     CHECK(args[3]->direction == FormalArgumentDirection::Out);
-    CHECK(args[4]->type->getBitWidth() == 1);
+    CHECK(args[4]->getType().getBitWidth() == 1);
     CHECK(args[4]->direction == FormalArgumentDirection::InOut);
 
     const auto& returnStmt = foo.getBody()->as<StatementList>().list[0]->as<ReturnStatement>();
@@ -281,7 +281,7 @@ endpackage
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    const auto& cv = compilation.getRoot().topInstances[0]->memberAt<ParameterSymbol>(0).getValue();
+    auto& cv = compilation.getRoot().topInstances[0]->memberAt<ParameterSymbol>(0).getValue();
     CHECK(cv.integer() == 4);
     NO_COMPILATION_ERRORS;
 }

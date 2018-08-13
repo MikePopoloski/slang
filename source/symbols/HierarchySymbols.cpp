@@ -240,7 +240,7 @@ void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const Par
 
         if (paramIt->type) {
             param.setType(*paramIt->type);
-            param.setValue(paramIt->value);
+            param.overrideValue(paramIt->value);
         }
         paramIt++;
     }
@@ -275,7 +275,7 @@ void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const Par
                                                         decl.isPort, *decl.type, decl.initializer);
                 if (paramIt->type) {
                     param.setType(*paramIt->type);
-                    param.setValue(paramIt->value);
+                    param.overrideValue(paramIt->value);
                 }
 
                 param.setSyntax(*declarator);
@@ -310,6 +310,8 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
 
     Port port;
     port.name = syntax.declarator->name.valueText();
+
+    // TODO: make sure ports include type syntax instead of just type symbol
 
     // Helper function to check if an implicit type syntax is totally empty.
     auto typeSyntaxEmpty = [](const DataTypeSyntax& typeSyntax) {
@@ -378,15 +380,15 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
             }
 
             // Unpacked dimensions are not inherited, so make sure not to set port.type with them.
-            const Type* finalType = &comp.getType(*port.type, syntax.declarator->dimensions,
-                                                  LookupLocation::max, *this);
+            const Type& finalType = comp.getType(*port.type, syntax.declarator->dimensions,
+                                                 LookupLocation::max, *this);
 
             // Create a new symbol to represent this port internally to the instance.
             // TODO: interconnect ports don't have a datatype
             // TODO: variable lifetime
             auto variable = comp.emplace<VariableSymbol>(port.name, syntax.declarator->name.location());
             port.symbol = variable;
-            variable->type = finalType;
+            variable->setType(finalType);
             variable->setSyntax(syntax);
             addMember(*variable);
 
@@ -401,14 +403,14 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
             setDirectionAndType(header);
 
             // Unpacked dimensions are not inherited, so make sure not to set port.type with them.
-            const Type* finalType = &comp.getType(*port.type, syntax.declarator->dimensions,
-                                                  LookupLocation::max, *this);
+            const Type& finalType = comp.getType(*port.type, syntax.declarator->dimensions,
+                                                 LookupLocation::max, *this);
 
             // Create a new symbol to represent this port internally to the instance.
             // TODO: net type
             auto net = comp.emplace<NetSymbol>(port.name, syntax.declarator->name.location());
             port.symbol = net;
-            net->dataType = finalType;
+            net->setType(finalType);
             net->setSyntax(syntax);
             addMember(*net);
 
@@ -583,7 +585,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     // Fabricate a local variable that will serve as the loop iteration variable.
     SequentialBlockSymbol iterScope(compilation, SourceLocation());
     VariableSymbol local { syntax.identifier.valueText(), syntax.identifier.location() };
-    local.type = compilation.getIntType();
+    local.setType(compilation.getIntType());
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
@@ -609,8 +611,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         block->addMembers(*syntax.block);
         result->addMember(*block);
 
-        implicitParam->setType(*local.type);
-        implicitParam->setValue(*genvar);
+        implicitParam->setType(local.getType());
+        implicitParam->overrideValue(*genvar);
     }
 
     return *result;

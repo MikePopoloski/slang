@@ -25,8 +25,8 @@ add_library(slang STATIC
 	parsing/Preprocessor.cpp
 	parsing/Token.cpp
 
+	symbols/DeclaredType.cpp
 	symbols/HierarchySymbols.cpp
-	symbols/Lazy.cpp
 	symbols/MemberSymbols.cpp
 	symbols/Scope.cpp
 	symbols/SemanticFacts.cpp

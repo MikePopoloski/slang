@@ -69,6 +69,7 @@ using namespace std::literals;
 using gsl::span;
 using gsl::make_span;
 using gsl::not_null;
+using gsl::finally;
 
 // Compiler-specific macros for warnings and suppressions
 #ifdef __clang__

@@ -89,34 +89,14 @@ const Scope* Scope::getParent() const {
     return thisSym->getScope();
 }
 
-static const LazyType* getLazyType(const Symbol& symbol) {
-    switch (symbol.kind) {
-        case SymbolKind::Net:
-            return &symbol.as<NetSymbol>().dataType;
-        case SymbolKind::Variable:
-        case SymbolKind::FormalArgument:
-            return &symbol.as<VariableSymbol>().type;
-        case SymbolKind::Subroutine:
-            return &symbol.as<SubroutineSymbol>().returnType;
-        case SymbolKind::Parameter:
-            return &symbol.as<ParameterSymbol>().getLazyType();
-        case SymbolKind::TypeAlias:
-            return &symbol.as<TypeAliasType>().targetType;
-        default:
-            return nullptr;
-    }
-}
-
 void Scope::addMember(const Symbol& symbol) {
     // For any symbols that expose a type to the surrounding scope, keep track of it in our
     // deferred data so that we can include enum values in our member list.
-    const LazyType* lazyType = getLazyType(symbol);
-    if (lazyType) {
-        auto syntax = lazyType->getSourceOrNull();
+    const DeclaredType* declaredType = symbol.getDeclaredType();
+    if (declaredType) {
+        auto syntax = declaredType->getTypeSyntax();
         if (syntax && syntax->kind == SyntaxKind::EnumType)
-            getOrAddDeferredData().registerTransparentType(lastMember, *lazyType);
-
-        // TODO: handle lazy types that have already been realized?
+            getOrAddDeferredData().registerTransparentType(lastMember, symbol);
     }
 
     insertMember(&symbol, lastMember);
@@ -422,10 +402,10 @@ void Scope::elaborate() const {
 
     for (const auto& pair : deferredData.getTransparentTypes()) {
         const Symbol* insertAt = pair.first;
-        const Type* type = pair.second->get();
+        const Type& type = pair.second->getDeclaredType()->getType();
 
-        if (type && type->kind == SymbolKind::EnumType) {
-            for (const auto& value : type->as<EnumType>().values()) {
+        if (type.kind == SymbolKind::EnumType) {
+            for (const auto& value : type.as<EnumType>().values()) {
                 auto wrapped = compilation.emplace<TransparentMemberSymbol>(value);
                 insertMember(wrapped, insertAt);
                 insertAt = wrapped;
@@ -585,10 +565,8 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
             // with a mutually recursive definition of something like a parameter and a function, so detect and
             // report the error here to avoid a stack overflow.
             if (result.found) {
-                const LazyType* lazyType = getLazyType(*result.found);
-                if ((lazyType && lazyType->isEvaluating()) || (result.found->kind == SymbolKind::Parameter &&
-                                                               result.found->as<ParameterSymbol>().isEvaluating())) {
-
+                const DeclaredType* declaredType = result.found->getDeclaredType();
+                if (declaredType && declaredType->isEvaluating()) {
                     auto& diag = result.diagnostics.add(DiagCode::RecursiveDefinition, sourceRange) << name;
                     diag.addNote(DiagCode::NoteDeclarationHere, result.found->location);
                     result.found = nullptr;

@@ -175,7 +175,7 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
         case SymbolKind::Parameter:
             return symbol.as<ParameterSymbol>().getValue();
         case SymbolKind::EnumValue:
-            return symbol.as<EnumValueSymbol>().value;
+            return symbol.as<EnumValueSymbol>().getValue();
         default:
             ConstantValue* v = context.findLocal(&symbol);
             if (v)

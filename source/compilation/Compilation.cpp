@@ -18,11 +18,10 @@ using namespace slang;
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
 struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
-    void handle(const ValueSymbol& value) { value.getType(); }
+    void handle(const ValueSymbol& value) { value.getType(); value.getInitializer(); }
     void handle(const ExplicitImportSymbol& symbol) { symbol.importedSymbol(); }
     void handle(const WildcardImportSymbol& symbol) { symbol.getPackage(); }
-    void handle(const SubroutineSymbol& symbol) { symbol.returnType.get(); }
-    void handle(const VariableSymbol& symbol) { symbol.type.get(); symbol.initializer.get(); }
+    void handle(const SubroutineSymbol& symbol) { symbol.getReturnType(); }
 };
 
 }

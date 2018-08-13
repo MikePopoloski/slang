@@ -56,7 +56,7 @@ void TypePrinter::handle(const EnumType& type) {
     buffer << "enum{";
     for (const auto& member : type.values()) {
         // TODO: write value with correct prefix
-        format_to(buffer, "{}={},", member.name, member.value.integer().toString(LiteralBase::Decimal));
+        format_to(buffer, "{}={},", member.name, member.getValue().integer().toString(LiteralBase::Decimal));
     }
     buffer.pop_back();
     buffer << "}";
@@ -102,10 +102,10 @@ void TypePrinter::handle(const EventType&) {
 
 void TypePrinter::handle(const TypeAliasType& type) {
     // Handle the target first.
-    append(*type.targetType);
+    append(type.targetType.getType());
 
     // If our direct target is a user defined type, append its name here. Otherwise just ignore.
-    switch (type.targetType->kind) {
+    switch (type.targetType.getType().kind) {
         case SymbolKind::EnumType:
         case SymbolKind::PackedStructType:
         case SymbolKind::UnpackedStructType:
@@ -145,7 +145,7 @@ void TypePrinter::appendStructMembers(const Scope& scope) {
     buffer << "{";
     for (const auto& member : scope.members()) {
         const auto& var = member.as<VariableSymbol>();
-        append(*var.type);
+        append(var.getType());
         format_to(buffer, " {};", var.name);
     }
     buffer << "}";

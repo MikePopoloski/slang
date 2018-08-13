@@ -7,7 +7,6 @@
 #pragma once
 
 #include "slang/binding/ConstantValue.h"
-#include "slang/symbols/Lazy.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
@@ -290,15 +289,17 @@ public:
 /// Represents an enumerated value / member.
 class EnumValueSymbol : public ValueSymbol {
 public:
-    const Type& type;
-    const ConstantValue& value;
+    EnumValueSymbol(string_view name, SourceLocation loc);
 
-    EnumValueSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                    const Type& type, ConstantValue value);
+    const ConstantValue& getValue() const;
+    void setValue(ConstantValue value);
 
     void toJson(json& j) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumValue; }
+
+private:
+    const ConstantValue* value = nullptr;
 };
 
 /// Represents a packed array of some simple element type (vectors, packed structures, other packed arrays).
@@ -362,8 +363,7 @@ class UnpackedStructType : public Type, public Scope {
 public:
     explicit UnpackedStructType(Compilation& compilation);
 
-    static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope);
+    static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -459,11 +459,11 @@ private:
 /// Represents a type alias, which is introduced via a typedef or type parameter.
 class TypeAliasType : public Type {
 public:
-    LazyType targetType;
+    DeclaredType targetType;
 
     TypeAliasType(string_view name, SourceLocation loc) :
         Type(SymbolKind::TypeAlias, name, loc),
-        targetType(this)
+        targetType(*this)
     {
         canonical = nullptr;
     }
