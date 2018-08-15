@@ -12,7 +12,7 @@ matrix:
 before_install:
   - docker pull mpopoloski/slang:latest
   - docker run -itd --name build mpopoloski/slang:latest
-  - docker exec build git clone https://github.com/MikePopoloski/slang.git
+  - docker cp . build:/slang
 
 script:
   - export ci_env=`bash <(curl -s https://codecov.io/env)`
