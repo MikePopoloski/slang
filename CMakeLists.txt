@@ -126,4 +126,8 @@ conan_cmake_run(CONANFILE conanfile.txt BASIC_SETUP CMAKE_TARGETS)
 
 add_subdirectory(source)
 add_subdirectory(tools)
+
+include(CTest)
+
+add_subdirectory(tests/regression)
 add_subdirectory(tests/unittests)
