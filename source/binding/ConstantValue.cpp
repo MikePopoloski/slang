@@ -62,7 +62,11 @@ std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {
 
 ConstantValue LValue::load() const {
     return std::visit([](auto&& arg)
-                      noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>) -> ConstantValue {
+    // This ifdef is here until MS fixes a compiler regression
+#ifndef _MSVC_LANG
+                      noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>)
+#endif
+                      -> ConstantValue {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             return ConstantValue();
