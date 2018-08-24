@@ -223,7 +223,7 @@ public:
 
     ProceduralBlockSymbol(const ProceduralBlockSymbol& other) :
         Symbol(other), StatementBodiedScope(other, this),
-        procedureKind(procedureKind) {}
+        procedureKind(other.procedureKind) {}
 
     void toJson(json& j) const;
 
