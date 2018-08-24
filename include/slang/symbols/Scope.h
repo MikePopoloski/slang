@@ -18,6 +18,7 @@ namespace slang {
 class Compilation;
 class ForwardingTypedefSymbol;
 class Scope;
+class StatementBodiedScope;
 class SystemSubroutine;
 class WildcardImportSymbol;
 
@@ -246,13 +247,15 @@ public:
     }
 
 protected:
-    Scope(Compilation& compilation_, const Symbol* thisSym_);
+    Scope(Compilation& compilation, const Symbol* thisSym);
+    Scope(const Scope& other, const Symbol* thisSym);
+    Scope(const Scope&) = delete;
 
     /// Before we access any members to do lookups or return iterators, make sure
     /// the scope is fully elaborated.
     void ensureElaborated() const { if (deferredMemberIndex != DeferredMemberIndex::Invalid) elaborate(); }
 
-    void setStatement(const SyntaxNode& syntax) { getOrAddDeferredData().setStatement(syntax); }
+    void setStatement(StatementBodiedScope& stmt) { getOrAddDeferredData().setStatement(stmt); }
 
     const Symbol* getLastMember() const { return lastMember; }
 
@@ -279,9 +282,9 @@ private:
         }
 
         bool hasStatement() const { return membersOrStatement.index() == 1; }
-        void setStatement(const SyntaxNode& syntax) { membersOrStatement = &syntax; }
+        void setStatement(StatementBodiedScope& stmt) { membersOrStatement = &stmt; }
 
-        const SyntaxNode* getStatement() const {
+        StatementBodiedScope* getStatement() const {
             return std::get<1>(membersOrStatement);
         }
 
@@ -304,9 +307,8 @@ private:
         // A given scope only ever stores one of the following:
         // - A list of syntax nodes that represent deferred members that need to be elaborated
         //   before any lookups or iterations are done of members in the scope.
-        // - Statement syntax (a single node or a list of them) that describes the body
-        //   of a StatementBodiedScope.
-        std::variant<std::vector<Symbol*>, const SyntaxNode*> membersOrStatement;
+        // - A StatementBodiedScope.
+        std::variant<std::vector<Symbol*>, StatementBodiedScope*> membersOrStatement;
 
         // Some types are special in that their members leak into the surrounding scope; this
         // set keeps track of all variables, parameters, arguments, etc that have such data types

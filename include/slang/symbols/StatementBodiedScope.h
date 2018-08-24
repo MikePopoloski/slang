@@ -28,12 +28,13 @@ public:
     void setBody(const SyntaxList<SyntaxNode>& syntax);
 
 protected:
-    using Scope::Scope;
+    StatementBodiedScope(Compilation& compilation, const Symbol* thisSym);
+    StatementBodiedScope(const StatementBodiedScope& other, const Symbol* thisSym);
 
 private:
     friend class Scope;
 
-    void bindBody(const SyntaxNode& syntax);
+    void bindBody();
     void bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const Statement*>& statements);
 
     Statement& bindStatementList(const SyntaxList<SyntaxNode>& items);
@@ -47,6 +48,7 @@ private:
     Statement& badStmt(const Statement* stmt);
 
     const Statement* body = nullptr;
+    const SyntaxNode* sourceSyntax = nullptr;
 };
 
 }

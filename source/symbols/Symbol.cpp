@@ -62,6 +62,12 @@ struct ToJsonVisitor {
 
 namespace slang {
 
+Symbol::Symbol(const Symbol& other) :
+    kind(other.kind), name(other.name), location(other.location),
+    originatingSyntax(other.originatingSyntax)
+{
+}
+
 const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
     const Symbol* current = this;
     while (current->kind != searchKind) {
@@ -107,6 +113,12 @@ ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation locat
                          bitmask<DeclaredTypeFlags> flags) :
     Symbol(kind, name, location),
     declaredType(*this, flags)
+{
+}
+
+ValueSymbol::ValueSymbol(const ValueSymbol& other) :
+    Symbol(other),
+    declaredType(*this, other.declaredType)
 {
 }
 

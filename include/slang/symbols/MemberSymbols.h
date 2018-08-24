@@ -28,6 +28,8 @@ public:
         Symbol(SymbolKind::TransparentMember, wrapped_.name, wrapped_.location),
         wrapped(wrapped_) {}
 
+    TransparentMemberSymbol(const TransparentMemberSymbol&) = delete;
+
     void toJson(json&) const { /* enum members will be exposed in their containing enum */ }
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TransparentMember; }
@@ -42,6 +44,8 @@ public:
     ExplicitImportSymbol(string_view packageName, string_view importName, SourceLocation location) :
         Symbol(SymbolKind::ExplicitImport, importName, location),
         packageName(packageName), importName(importName) {}
+
+    ExplicitImportSymbol(const ExplicitImportSymbol&);
 
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
@@ -68,6 +72,8 @@ public:
         Symbol(SymbolKind::WildcardImport, "", location),
         packageName(packageName) {}
 
+    WildcardImportSymbol(const WildcardImportSymbol&);
+
     const PackageSymbol* getPackage() const;
 
     void toJson(json& j) const;
@@ -82,6 +88,7 @@ private:
 class ParameterSymbol : public ValueSymbol {
 public:
     ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
+    ParameterSymbol(const ParameterSymbol&);
 
     static void fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
                            SmallVector<ParameterSymbol*>& results);
@@ -90,6 +97,7 @@ public:
                                      bool isLocal, bool isPort, const DataTypeSyntax& type,
                                      const ExpressionSyntax* initializer);
 
+    // TODO: remove this method
     static std::tuple<const Type*, ConstantValue> evaluate(const DataTypeSyntax& type,
                                                            const ExpressionSyntax& expr,
                                                            LookupLocation location,
@@ -192,6 +200,8 @@ public:
         StatementBodiedScope(compilation, this),
         declaredReturnType(*this),
         defaultLifetime(defaultLifetime), isTask(isTask) {}
+
+    SubroutineSymbol(const SubroutineSymbol&);
 
     const Type& getReturnType() const { return declaredReturnType.getType(); }
 

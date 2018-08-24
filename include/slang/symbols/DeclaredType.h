@@ -34,6 +34,8 @@ BITMASK_DEFINE_MAX_ELEMENT(DeclaredTypeFlags, RequireIntegerConstant);
 class DeclaredType {
 public:
     explicit DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
+    DeclaredType(const Symbol& parent, const DeclaredType& other);
+    DeclaredType(const DeclaredType&) = delete;
 
     const Type& getType() const {
         if (!type)

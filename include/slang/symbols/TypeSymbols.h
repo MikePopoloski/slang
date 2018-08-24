@@ -173,6 +173,8 @@ protected:
     Type(SymbolKind kind, string_view name, SourceLocation loc) :
         Symbol(kind, name, loc), canonical(this) {}
 
+    Type(const Type&) = delete;
+
     mutable const Type* canonical;
 
     static optional<ConstantRange> evaluateDimension(Compilation& compilation, const SelectorSyntax& syntax,

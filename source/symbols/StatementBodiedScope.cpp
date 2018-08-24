@@ -11,19 +11,33 @@
 
 namespace slang {
 
-void StatementBodiedScope::setBody(const StatementSyntax& syntax) {
-    setStatement(syntax);
+StatementBodiedScope::StatementBodiedScope(Compilation& compilation, const Symbol* thisSym) :
+    Scope(compilation, thisSym)
+{
 }
 
-void StatementBodiedScope::setBody(const SyntaxList<SyntaxNode>& syntax) {
-    setStatement(syntax);
+StatementBodiedScope::StatementBodiedScope(const StatementBodiedScope& other, const Symbol* thisSym) :
+    Scope(other, thisSym),
+    sourceSyntax(other.sourceSyntax)
+{
 }
 
-void StatementBodiedScope::bindBody(const SyntaxNode& syntax) {
-    if (syntax.kind == SyntaxKind::SyntaxList)
-        setBody(&bindStatementList((const SyntaxList<SyntaxNode>&)syntax));
+void StatementBodiedScope::setBody(const StatementSyntax& newSyntax) {
+    sourceSyntax = &newSyntax;
+    setStatement(*this);
+}
+
+void StatementBodiedScope::setBody(const SyntaxList<SyntaxNode>& newSyntax) {
+    sourceSyntax = &newSyntax;
+    setStatement(*this);
+}
+
+void StatementBodiedScope::bindBody() {
+    ASSERT(sourceSyntax);
+    if (sourceSyntax->kind == SyntaxKind::SyntaxList)
+        setBody(&bindStatementList(*(const SyntaxList<SyntaxNode>*)sourceSyntax));
     else
-        setBody(&bindStatement(syntax.as<StatementSyntax>(), BindContext(*this, LookupLocation::max)));
+        setBody(&bindStatement(sourceSyntax->as<StatementSyntax>(), BindContext(*this, LookupLocation::max)));
 }
 
 Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax, const BindContext& context) {

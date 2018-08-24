@@ -19,6 +19,21 @@ DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flag
     ASSERT(parent.getDeclaredType() == this);
 }
 
+DeclaredType::DeclaredType(const Symbol& parent, const DeclaredType& other) :
+    parent(parent), type(other.type), typeSyntax(other.typeSyntax),
+    dimensions(other.dimensions), initializer(other.initializer),
+    initializerSyntax(other.initializerSyntax), initializerLocation(other.initializerLocation),
+    evaluating(other.evaluating), flags(other.flags)
+{
+    // If we have syntax given, clear out the resolved forms so that we're forced to re-resolve them.
+    // This ensures that if we get copied into a new location in the tree we correctly bind
+    // to new symbols.
+    if (typeSyntax)
+        type = nullptr;
+    if (initializerSyntax)
+        initializer = nullptr;
+}
+
 const Scope& DeclaredType::getScope() const {
     const Scope* scope = parent.getScope();
     ASSERT(scope);

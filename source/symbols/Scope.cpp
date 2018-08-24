@@ -7,6 +7,7 @@
 #include "slang/symbols/Scope.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/util/StackContainer.h"
 
@@ -42,6 +43,21 @@ public:
     }
 };
 
+struct CloneVisitor {
+    template<typename T>
+    Symbol* visit(const T& symbol, BumpAllocator& alloc) {
+        if constexpr (std::is_same_v<T, Symbol> || std::is_base_of_v<Type, T> ||
+                      std::is_same_v<T, TransparentMemberSymbol>) {
+            // TODO: handle TransparentMemberSymbol specially
+            (void)symbol;
+            THROW_UNREACHABLE;
+        }
+        else {
+            return alloc.emplace<T>(symbol);
+        }
+    }
+};
+
 }
 
 namespace slang {
@@ -74,10 +90,19 @@ void LookupResult::clear() {
     diagnostics.clear();
 }
 
-Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
-    compilation(compilation_), thisSym(thisSym_),
+Scope::Scope(Compilation& compilation, const Symbol* thisSym) :
+    compilation(compilation), thisSym(thisSym),
     nameMap(compilation.allocSymbolMap())
 {
+}
+
+Scope::Scope(const Scope& other, const Symbol* thisSym) :
+    compilation(other.compilation), thisSym(thisSym),
+    nameMap(compilation.allocSymbolMap())
+{
+    CloneVisitor visitor;
+    for (auto& member : other.members())
+        addMember(*member.visit(visitor, compilation));
 }
 
 Scope::iterator& Scope::iterator::operator++() {
@@ -414,13 +439,9 @@ void Scope::elaborate() const {
     }
 
     if (deferredData.hasStatement()) {
-        auto syntax = deferredData.getStatement();
-        ASSERT(syntax);
-
-        // The const_cast should always be safe here; there's no way for statement
-        // syntax to be added to our deferred members unless the original class
-        // was non-const.
-        static_cast<StatementBodiedScope*>(const_cast<Scope*>(this))->bindBody(*syntax);
+        auto stmt = deferredData.getStatement();
+        ASSERT(stmt);
+        stmt->bindBody();
     }
     else {
         // Go through deferred members and elaborate them now. We skip generate blocks in
