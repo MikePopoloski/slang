@@ -11,17 +11,6 @@
 
 namespace slang {
 
-StatementBodiedScope::StatementBodiedScope(Compilation& compilation, const Symbol* thisSym) :
-    Scope(compilation, thisSym)
-{
-}
-
-StatementBodiedScope::StatementBodiedScope(const StatementBodiedScope& other, const Symbol* thisSym) :
-    Scope(other, thisSym),
-    sourceSyntax(other.sourceSyntax)
-{
-}
-
 void StatementBodiedScope::setBody(const StatementSyntax& newSyntax) {
     sourceSyntax = &newSyntax;
     setStatement(*this);

@@ -28,8 +28,7 @@ public:
     void setBody(const SyntaxList<SyntaxNode>& syntax);
 
 protected:
-    StatementBodiedScope(Compilation& compilation, const Symbol* thisSym);
-    StatementBodiedScope(const StatementBodiedScope& other, const Symbol* thisSym);
+    using Scope::Scope;
 
 private:
     friend class Scope;

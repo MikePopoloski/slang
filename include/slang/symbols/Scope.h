@@ -247,9 +247,7 @@ public:
     }
 
 protected:
-    Scope(Compilation& compilation, const Symbol* thisSym);
-    Scope(const Scope& other, const Symbol* thisSym);
-    Scope(const Scope&) = delete;
+    Scope(Compilation& compilation_, const Symbol* thisSym_);
 
     /// Before we access any members to do lookups or return iterators, make sure
     /// the scope is fully elaborated.

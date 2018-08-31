@@ -22,9 +22,6 @@ public:
         Symbol(SymbolKind::CompilationUnit, "", SourceLocation()),
         Scope(compilation, this) {}
 
-    CompilationUnitSymbol(const CompilationUnitSymbol& other) :
-        Symbol(other), Scope(other, this) {}
-
     void toJson(json&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CompilationUnit; }
@@ -36,9 +33,6 @@ public:
     PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(SymbolKind::Package, name, loc),
         Scope(compilation, this) {}
-
-    PackageSymbol(const PackageSymbol& other) :
-        Symbol(other), Scope(other, this) {}
 
     void toJson(json&) const {}
 
@@ -78,9 +72,6 @@ public:
         Symbol(SymbolKind::Definition, name, loc),
         Scope(compilation, this),
         parameters(parameters) {}
-
-    DefinitionSymbol(const DefinitionSymbol& other) :
-        Symbol(other), Scope(other, this) {}
 
     span<const ParameterDecl> parameters;
 
@@ -141,10 +132,6 @@ protected:
         Symbol(kind, name, loc),
         Scope(compilation, this) {}
 
-    // TODO: copy ports
-    InstanceSymbol(const InstanceSymbol& other) :
-        Symbol(other), Scope(other, this) {}
-
     struct PortListBuilder {
         Compilation& compilation;
 
@@ -202,9 +189,6 @@ public:
         Symbol(SymbolKind::SequentialBlock, "", loc),
         StatementBodiedScope(compilation, this) {}
 
-    SequentialBlockSymbol(const SequentialBlockSymbol& other) :
-        Symbol(other), StatementBodiedScope(other, this) {}
-
     void toJson(json&) const {}
 
     static SequentialBlockSymbol& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax);
@@ -221,10 +205,6 @@ public:
         StatementBodiedScope(compilation, this),
         procedureKind(procedureKind) {}
 
-    ProceduralBlockSymbol(const ProceduralBlockSymbol& other) :
-        Symbol(other), StatementBodiedScope(other, this),
-        procedureKind(other.procedureKind) {}
-
     void toJson(json& j) const;
 
     static ProceduralBlockSymbol& fromSyntax(Compilation& compilation, const ProceduralBlockSyntax& syntax);
@@ -239,9 +219,6 @@ public:
     GenerateBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(SymbolKind::GenerateBlock, name, loc),
         Scope(compilation, this) {}
-
-    GenerateBlockSymbol(const GenerateBlockSymbol& other) :
-        Symbol(other), Scope(other, this) {}
 
     void toJson(json&) const {}
 
@@ -259,9 +236,6 @@ public:
     GenerateBlockArraySymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(SymbolKind::GenerateBlockArray, name, loc),
         Scope(compilation, this) {}
-
-    GenerateBlockArraySymbol(const GenerateBlockArraySymbol& other) :
-        Symbol(other), Scope(other, this) {}
 
     void toJson(json&) const {}
 
@@ -281,10 +255,6 @@ public:
 
     explicit RootSymbol(Compilation& compilation) :
         Symbol(SymbolKind::Root, "$root", SourceLocation()), Scope(compilation, this) {}
-
-    // TODO: remove members
-    RootSymbol(const RootSymbol& other) :
-        Symbol(other), Scope(other, this) {}
 
     void toJson(json&) const {}
 

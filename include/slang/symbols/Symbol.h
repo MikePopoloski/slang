@@ -144,7 +144,7 @@ protected:
     Symbol(SymbolKind kind, string_view name, SourceLocation location) :
         kind(kind), name(name), location(location) {}
 
-    Symbol(const Symbol&);
+    Symbol(const Symbol&) = delete;
 
     void setParent(const Scope& scope) { parentScope = &scope; }
 
@@ -206,8 +206,6 @@ public:
 protected:
     ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
                 bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
-
-    ValueSymbol(const ValueSymbol&);
 
 private:
     DeclaredType declaredType;

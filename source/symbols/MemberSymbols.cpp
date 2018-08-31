@@ -13,12 +13,6 @@
 
 namespace slang {
 
-ExplicitImportSymbol::ExplicitImportSymbol(const ExplicitImportSymbol& other) :
-    Symbol(other),
-    packageName(other.packageName), importName(other.importName)
-{
-}
-
 const PackageSymbol* ExplicitImportSymbol::package() const {
     importedSymbol();
     return package_;
@@ -40,12 +34,6 @@ void ExplicitImportSymbol::toJson(json& j) const {
     j["package"] = std::string(packageName);
 }
 
-WildcardImportSymbol::WildcardImportSymbol(const WildcardImportSymbol& other) :
-    Symbol(other),
-    packageName(other.packageName)
-{
-}
-
 const PackageSymbol* WildcardImportSymbol::getPackage() const {
     if (!package)
         package = getScope()->getCompilation().getPackage(packageName);
@@ -59,12 +47,6 @@ void WildcardImportSymbol::toJson(json& j) const {
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort) :
     ValueSymbol(SymbolKind::Parameter, name, loc, DeclaredTypeFlags::AllowImplicit | DeclaredTypeFlags::RequireConstant),
     isLocal(isLocal), isPort(isPort)
-{
-}
-
-ParameterSymbol::ParameterSymbol(const ParameterSymbol& other) :
-    ValueSymbol(other),
-    isLocal(other.isLocal), isPort(other.isPort)
 {
 }
 
@@ -185,13 +167,6 @@ void VariableSymbol::toJson(json& j) const {
 void FormalArgumentSymbol::toJson(json& j) const {
     VariableSymbol::toJson(j);
     j["direction"] = direction; // TODO: tostring
-}
-
-SubroutineSymbol::SubroutineSymbol(const SubroutineSymbol& other) :
-    Symbol(other), StatementBodiedScope(other, this),
-    declaredReturnType(*this, other.declaredReturnType)
-    // TODO: other members
-{
 }
 
 SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
