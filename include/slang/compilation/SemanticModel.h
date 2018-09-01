@@ -19,6 +19,8 @@ class SemanticModel {
 public:
     explicit SemanticModel(Compilation& compilation);
 
+    void withContext(const SyntaxNode& node, const Symbol& symbol);
+
     const Symbol* getDeclaredSymbol(const SyntaxNode& syntax);
 
     const CompilationUnitSymbol* getDeclaredSymbol(const CompilationUnitSyntax& syntax);

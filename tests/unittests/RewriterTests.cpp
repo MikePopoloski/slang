@@ -2,17 +2,30 @@
 
 #include <fmt/format.h>
 
+#include "slang/compilation/SemanticModel.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxVisitor.h"
 
 class TestRewriter : public SyntaxRewriter<TestRewriter> {
 public:
+    Compilation compilation;
+    SemanticModel model;
+
+    TestRewriter(const std::shared_ptr<SyntaxTree>& tree) :
+        model(compilation)
+    {
+        compilation.addSyntaxTree(tree);
+    }
+
     void handle(const TypedefDeclarationSyntax& decl) {
         if (decl.type->kind != SyntaxKind::EnumType)
             return;
 
         // Create a new localparam hardcoded with the number of entries in the enum.
-        ptrdiff_t count = decl.type->as<EnumTypeSyntax>().members.size();
+        auto type = model.getDeclaredSymbol(decl.type->as<EnumTypeSyntax>());
+        REQUIRE(type);
+
+        ptrdiff_t count = type->as<EnumType>().members().size();
         auto& newNode = parse(fmt::format("\n    localparam int {}__count = {};",
                                           decl.name.valueText(), count));
         insertAfter(decl, newNode);
@@ -26,7 +39,7 @@ module M;
 endmodule
 )");
 
-    tree = TestRewriter().transform(tree);
+    tree = TestRewriter(tree).transform(tree);
 
     CHECK(SyntaxPrinter::printFile(*tree) == R"(
 module M;
@@ -50,7 +63,7 @@ module M;
 endmodule
 )");
 
-    tree = TestRewriter().transform(tree);
+    tree = TestRewriter(tree).transform(tree);
 
     CHECK(SyntaxPrinter::printFile(*tree) == R"(
 `define ENUM_MACRO(asdf) \

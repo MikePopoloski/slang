@@ -13,6 +13,10 @@ namespace slang {
 SemanticModel::SemanticModel(Compilation& compilation) :
     compilation(compilation) {}
 
+void SemanticModel::withContext(const SyntaxNode& node, const Symbol& symbol) {
+    symbolCache[&node] = &symbol;
+}
+
 const Symbol* SemanticModel::getDeclaredSymbol(const SyntaxNode& syntax) {
     // If we've already cached this node, return that.
     if (auto it = symbolCache.find(&syntax); it != symbolCache.end())
@@ -22,14 +26,33 @@ const Symbol* SemanticModel::getDeclaredSymbol(const SyntaxNode& syntax) {
     if (syntax.kind == SyntaxKind::CompilationUnit) {
         auto result = compilation.getCompilationUnit(syntax.as<CompilationUnitSyntax>());
         if (result)
-            symbolCache.emplace(&syntax, result);
+            symbolCache[&syntax] = result;
         return result;
     }
 
     // Otherwise try to find the parent symbol first.
     auto parent = syntax.parent ? getDeclaredSymbol(*syntax.parent) : nullptr;
-    if (!parent || !parent->isScope())
+    if (!parent)
         return nullptr;
+
+    // If we found a definition symbol we need to make a fake instantiation in order
+    // to search through its children.
+    if (parent->kind == SymbolKind::Definition) {
+        parent = &ModuleInstanceSymbol::instantiate(compilation, "", SourceLocation(),
+                                                    parent->as<DefinitionSymbol>());
+        symbolCache[syntax.parent] = parent;
+    }
+    else if (parent->kind == SymbolKind::TypeAlias) {
+        auto& target = parent->as<TypeAliasType>().targetType.getType();
+        if (target.getSyntax() == &syntax) {
+            symbolCache.emplace(&syntax, &target);
+            return &target;
+        }
+        return nullptr;
+    }
+    else if (!parent->isScope()) {
+        return nullptr;
+    }
 
     // Search among the parent's children to see if we can find ourself.
     for (auto& child : parent->as<Scope>().members()) {

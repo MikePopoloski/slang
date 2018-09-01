@@ -23,6 +23,8 @@ public:
     TIterator begin() const { return m_begin; }
     TIterator end() const { return m_end; }
 
+    auto size() const { return std::distance(begin(), end()); }
+
 private:
     TIterator m_begin;
     TIterator m_end;

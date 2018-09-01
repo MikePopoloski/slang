@@ -146,8 +146,7 @@ endmodule
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation).memberAt<GenerateBlockArraySymbol>(0);
 
-    // TODO: size of the range?
-    //REQUIRE(instance.members().size() == 10);
+    REQUIRE(instance.members().size() == 10);
 
     for (uint32_t i = 0; i < 10; i++) {
         const auto& leaf = instance.memberAt<GenerateBlockSymbol>(i).memberAt<ModuleInstanceSymbol>(1);
