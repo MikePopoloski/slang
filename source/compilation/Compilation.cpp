@@ -300,6 +300,14 @@ Diagnostics Compilation::getAllDiagnostics() {
     return results;
 }
 
+Diagnostic& Compilation::addError(const Symbol& source, DiagCode code, SourceLocation location) {
+    return diags.add(source, code, location);
+}
+
+Diagnostic& Compilation::addError(const Symbol& source, DiagCode code, SourceRange sourceRange) {
+    return diags.add(source, code, sourceRange);
+}
+
 void Compilation::addDiagnostics(const Diagnostics& diagnostics) {
     diags.appendRange(diagnostics);
 }
@@ -313,7 +321,7 @@ const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation loca
                                  bool allowNetType) {
     const Type& result = Type::fromSyntax(*this, node, location, parent);
     if (!allowNetType && result.isNetType()) {
-        addError(DiagCode::NetTypeNotAllowed, node.sourceRange()) << result.name;
+        parent.addError(DiagCode::NetTypeNotAllowed, node.sourceRange()) << result.name;
         return errorType;
     }
     return result;
@@ -367,29 +375,6 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
     return importData[index];
 }
 
-bool Compilation::checkNoUnknowns(const SVInt& value, SourceRange range) {
-    if (value.hasUnknown()) {
-        addError(DiagCode::ValueMustNotBeUnknown, range);
-        return false;
-    }
-    return true;
-}
-
-bool Compilation::checkPositive(const SVInt& value, SourceRange range) {
-    if (value.isSigned() && value.isNegative()) {
-        addError(DiagCode::ValueMustBePositive, range);
-        return false;
-    }
-    return true;
-}
-
-optional<bitwidth_t> Compilation::checkValidBitWidth(const SVInt& value, SourceRange range) {
-    auto result = value.as<bitwidth_t>();
-    if (!result)
-        addError(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
-    return result;
-}
-
 optional<int32_t> Compilation::evalIntegerExpr(const ExpressionSyntax& syntax, LookupLocation location,
                                                const Scope& scope) {
     BindContext context(scope, location, BindFlags::IntegralConstant);
@@ -398,12 +383,12 @@ optional<int32_t> Compilation::evalIntegerExpr(const ExpressionSyntax& syntax, L
         return std::nullopt;
 
     const SVInt& value = expr.constant->integer();
-    if (!checkNoUnknowns(value, expr.sourceRange))
+    if (!context.checkNoUnknowns(value, expr.sourceRange))
         return std::nullopt;
 
     auto coerced = value.as<int32_t>();
     if (!coerced) {
-        auto& diag = addError(DiagCode::ValueOutOfRange, expr.sourceRange);
+        auto& diag = context.addError(DiagCode::ValueOutOfRange, expr.sourceRange);
         diag << value;
         diag << INT32_MIN;
         diag << INT32_MAX;

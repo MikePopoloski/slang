@@ -87,7 +87,7 @@ const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance
 const Expression& Expression::bind(Compilation& compilation, const ExpressionSyntax& syntax,
                                    const BindContext& context) {
     const Expression& result = selfDetermined(compilation, syntax, context);
-    result.checkBindFlags(compilation, context);
+    result.checkBindFlags(context);
     return result;
 }
 
@@ -97,19 +97,19 @@ const Expression& Expression::bind(Compilation& compilation, const Type& lhs, co
     if (expr.bad() || lhs.isError())
         return expr;
 
-    const Expression& result = convertAssignment(compilation, lhs, expr, location, std::nullopt);
-    result.checkBindFlags(compilation, context);
+    const Expression& result = convertAssignment(compilation, lhs, expr, location, std::nullopt, context);
+    result.checkBindFlags(context);
     return result;
 }
 
-void Expression::checkBindFlags(Compilation& compilation, const BindContext& context) const {
+void Expression::checkBindFlags(const BindContext& context) const {
     if (context.isConstant()) {
         EvalContext evalContext;
         eval(evalContext);
 
         const Diagnostics& diags = evalContext.getDiagnostics();
         if (!diags.empty()) {
-            Diagnostic& diag = compilation.addError(DiagCode::ExpressionNotConstant, sourceRange);
+            Diagnostic& diag = context.addError(DiagCode::ExpressionNotConstant, sourceRange);
             for (const Diagnostic& note : diags)
                 diag.addNote(note);
         }
@@ -275,7 +275,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     }
 
     if (!symbol->isValue()) {
-        compilation.addError(DiagCode::NotAValue, syntax.sourceRange()) << symbol->name;
+        context.addError(DiagCode::NotAValue, syntax.sourceRange()) << symbol->name;
         return badExpr(compilation, nullptr);
     }
 
@@ -295,7 +295,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                 return badExpr(compilation, expr);
 
             if (!expr->type->isStructUnion()) {
-                auto& diag = compilation.addError(DiagCode::MemberAccessNotStructUnion, memberSelect->dotLocation);
+                auto& diag = context.addError(DiagCode::MemberAccessNotStructUnion, memberSelect->dotLocation);
                 diag << expr->sourceRange;
                 diag << memberSelect->nameRange;
                 diag << *expr->type;
@@ -304,7 +304,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
             const Symbol* member = expr->type->getCanonicalType().as<Scope>().find(name);
             if (!member) {
-                auto& diag = compilation.addError(DiagCode::UnknownMember, memberSelect->nameRange);
+                auto& diag = context.addError(DiagCode::UnknownMember, memberSelect->nameRange);
                 diag << expr->sourceRange;
                 diag << name;
                 diag << *expr->type;
@@ -359,11 +359,12 @@ Expression& Expression::convert(Compilation& compilation, ConversionKind convers
 }
 
 Expression& Expression::convertAssignment(Compilation& compilation, const Type& type, Expression& expr,
-                                          SourceLocation location, optional<SourceRange> lhsRange) {
+                                          SourceLocation location, optional<SourceRange> lhsRange,
+                                          const BindContext& context) {
     const Type* rt = expr.type;
     if (!type.isAssignmentCompatible(*rt)) {
         DiagCode code = type.isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
-        auto& diag = compilation.addError(code, location);
+        auto& diag = context.addError(code, location);
         diag << *rt << type;
         if (lhsRange)
             diag << *lhsRange;
@@ -382,8 +383,8 @@ Expression& Expression::convertAssignment(Compilation& compilation, const Type& 
     // the lvalue we're assigning to.
     if (rt->getBitWidth() > type.getBitWidth()) {
         result = &convert(compilation, ConversionKind::IntTruncation, type, *result);
-        EvalContext context;
-        ConstantValue value = result->eval(context);
+        EvalContext evalContext;
+        ConstantValue value = result->eval(evalContext);
         if (value)
             result->constant = compilation.createConstant(std::move(value));
     }
@@ -393,15 +394,6 @@ Expression& Expression::convertAssignment(Compilation& compilation, const Type& 
 
 Expression& Expression::badExpr(Compilation& compilation, const Expression* expr) {
     return *compilation.emplace<InvalidExpression>(expr, compilation.getErrorType());
-}
-
-bool Expression::checkLValue(Compilation& compilation, const Expression& expr, SourceLocation location) {
-    if (!expr.isLValue()) {
-        auto& diag = compilation.addError(DiagCode::ExpressionNotAssignable, location);
-        diag << expr.sourceRange;
-        return false;
-    }
-    return true;
 }
 
 IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
@@ -519,7 +511,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
             // The operand must also be an assignable lvalue.
             good = type->isNumeric();
             result->type = type;
-            if (!checkLValue(compilation, operand, syntax.operatorToken.location()))
+            if (!context.checkLValue(operand, syntax.operatorToken.location()))
                 return badExpr(compilation, result);
             break;
         default:
@@ -527,7 +519,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
     }
 
     if (!good) {
-        auto& diag = compilation.addError(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
+        auto& diag = context.addError(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
         diag << *type;
         diag << operand.sourceRange;
         return badExpr(compilation, result);
@@ -545,11 +537,11 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PostfixU
     // the operand must be an lvalue.
     Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
                                                               operand, syntax.sourceRange());
-    if (operand.bad() || !checkLValue(compilation, operand, syntax.operatorToken.location()))
+    if (operand.bad() || !context.checkLValue(operand, syntax.operatorToken.location()))
         return badExpr(compilation, result);
 
     if (!type->isNumeric()) {
-        auto& diag = compilation.addError(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
+        auto& diag = context.addError(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
         diag << *type;
         diag << operand.sourceRange;
         return badExpr(compilation, result);
@@ -700,7 +692,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
 
     auto location = syntax.operatorToken.location();
     if (!good) {
-        auto& diag = compilation.addError(DiagCode::BadBinaryExpression, location);
+        auto& diag = context.addError(DiagCode::BadBinaryExpression, location);
         diag << *lt << *rt;
         diag << lhs.sourceRange;
         diag << rhs.sourceRange;
@@ -740,10 +732,10 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation, const Bin
     // Make sure we can actually assign to the thing on the lhs.
     // TODO: check for const assignment
     auto location = syntax.operatorToken.location();
-    if (!checkLValue(compilation, lhs, location))
+    if (!context.checkLValue(lhs, location))
         return badExpr(compilation, result);
 
-    result->right_ = &convertAssignment(compilation, *lhs.type, *result->right_, location, lhs.sourceRange);
+    result->right_ = &convertAssignment(compilation, *lhs.type, *result->right_, location, lhs.sourceRange, context);
     if (result->right_->bad())
         return badExpr(compilation, result);
 
@@ -761,13 +753,13 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 
     const Type& valueType = value.type->getCanonicalType();
     if (!valueType.isIntegral()) {
-        auto& diag = compilation.addError(DiagCode::BadIndexExpression, syntax.sourceRange());
+        auto& diag = context.addError(DiagCode::BadIndexExpression, syntax.sourceRange());
         diag << value.sourceRange;
         diag << *value.type;
         return badExpr(compilation, result);
     }
     else if (valueType.isScalar()) {
-        auto& diag = compilation.addError(DiagCode::CannotIndexScalar, syntax.sourceRange());
+        auto& diag = context.addError(DiagCode::CannotIndexScalar, syntax.sourceRange());
         diag << value.sourceRange;
         return badExpr(compilation, result);
     }
@@ -779,7 +771,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     }
 
     if (!selector.type->isIntegral()) {
-        compilation.addError(DiagCode::IndexMustBeIntegral, selector.sourceRange);
+        context.addError(DiagCode::IndexMustBeIntegral, selector.sourceRange);
         return badExpr(compilation, result);
     }
 
@@ -858,14 +850,14 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
 
         if (!type.isIntegral()) {
             errored = true;
-            compilation.addError(DiagCode::BadConcatExpression, arg->sourceRange);
+            context.addError(DiagCode::BadConcatExpression, arg->sourceRange);
             continue;
         }
 
         bitwidth_t newWidth = totalWidth + type.getBitWidth();
         if (newWidth < totalWidth) {
             errored = true;
-            compilation.addError(DiagCode::ValueExceedsMaxBitWidth, syntax.sourceRange()) << (int)SVInt::MAX_BITS;
+            context.addError(DiagCode::ValueExceedsMaxBitWidth, syntax.sourceRange()) << (int)SVInt::MAX_BITS;
             break;
         }
         totalWidth = newWidth;
@@ -899,13 +891,13 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
 
     const SVInt& value = left.constant->integer();
-    if (!compilation.checkNoUnknowns(value, left.sourceRange) ||
-        !compilation.checkPositive(value, left.sourceRange))
+    if (!context.checkNoUnknowns(value, left.sourceRange) ||
+        !context.checkPositive(value, left.sourceRange))
         return badExpr(compilation, result);
 
     if (value == 0) {
         if ((context.flags & BindFlags::InsideConcatenation) == 0) {
-            compilation.addError(DiagCode::ReplicationZeroOutsideConcat, left.sourceRange);
+            context.addError(DiagCode::ReplicationZeroOutsideConcat, left.sourceRange);
             return badExpr(compilation, result);
         }
 
@@ -914,7 +906,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return *result;
     }
 
-    auto width = compilation.checkValidBitWidth(value * right.type->getBitWidth(), syntax.sourceRange());
+    auto width = context.checkValidBitWidth(value * right.type->getBitWidth(), syntax.sourceRange());
     if (!width)
         return badExpr(compilation, result);
 
@@ -928,7 +920,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     if (!NameSyntax::isKind(syntax.left->kind)) {
         SourceLocation loc = syntax.arguments ? syntax.arguments->openParen.location() :
                                                 syntax.left->getFirstToken().location();
-        auto& diag = compilation.addError(DiagCode::ExpressionNotCallable, loc);
+        auto& diag = context.addError(DiagCode::ExpressionNotCallable, loc);
         diag << syntax.left->sourceRange();
         return badExpr(compilation, nullptr);
     }
@@ -975,7 +967,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
         return badExpr(compilation, nullptr);
 
     if (symbol->kind != SymbolKind::Subroutine) {
-        compilation.addError(DiagCode::NotASubroutine, syntax.left->sourceRange()) << symbol->name;
+        context.addError(DiagCode::NotASubroutine, syntax.left->sourceRange()) << symbol->name;
         return badExpr(compilation, nullptr);
     }
 
@@ -985,7 +977,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     // TODO: handle too few args as well, which requires looking at default values
     auto formalArgs = subroutine.arguments;
     if (formalArgs.size() < actualArgs.size()) {
-        auto& diag = compilation.addError(DiagCode::TooManyArguments, syntax.left->sourceRange());
+        auto& diag = context.addError(DiagCode::TooManyArguments, syntax.left->sourceRange());
         diag << formalArgs.size();
         diag << actualArgs.size();
         return badExpr(compilation, nullptr);
@@ -1007,7 +999,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                            const BindContext& context) {
     if ((context.flags & BindFlags::AllowDataType) == 0) {
-        compilation.addError(DiagCode::ExpectedExpression, syntax.sourceRange());
+        context.addError(DiagCode::ExpectedExpression, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 

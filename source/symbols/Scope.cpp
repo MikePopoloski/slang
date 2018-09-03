@@ -89,6 +89,14 @@ const Scope* Scope::getParent() const {
     return thisSym->getScope();
 }
 
+Diagnostic& Scope::addError(DiagCode code, SourceLocation location) const {
+    return compilation.addError(*thisSym, code, location);
+}
+
+Diagnostic& Scope::addError(DiagCode code, SourceRange sourceRange) const {
+    return compilation.addError(*thisSym, code, sourceRange);
+}
+
 void Scope::addMember(const Symbol& symbol) {
     // For any symbols that expose a type to the surrounding scope, keep track of it in our
     // deferred data so that we can include enum values in our member list.
@@ -373,20 +381,20 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
                     const Type& memberType = member->as<ValueSymbol>().getType();
                     const Type& existingType = existing->as<ValueSymbol>().getType();
                     if (memberType.isMatching(existingType)) {
-                        diag = &compilation.addError(DiagCode::Redefinition, member->location);
+                        diag = &addError(DiagCode::Redefinition, member->location);
                         (*diag) << member->name;
                     }
                     else {
-                        diag = &compilation.addError(DiagCode::RedefinitionDifferentType, member->location);
+                        diag = &addError(DiagCode::RedefinitionDifferentType, member->location);
                         (*diag) << member->name << memberType << existingType;
                     }
                 }
                 else if (existing->kind != member->kind) {
-                    diag = &compilation.addError(DiagCode::RedefinitionDifferentSymbolKind, member->location);
+                    diag = &addError(DiagCode::RedefinitionDifferentSymbolKind, member->location);
                     (*diag) << member->name;
                 }
                 else {
-                    diag = &compilation.addError(DiagCode::Redefinition, member->location);
+                    diag = &addError(DiagCode::Redefinition, member->location);
                     (*diag) << member->name;
                 }
                 diag->addNote(DiagCode::NotePreviousDefinition, existing->location);
@@ -507,7 +515,7 @@ void Scope::elaborate() const {
         if (it->second->kind == SymbolKind::TypeAlias)
             it->second->as<TypeAliasType>().checkForwardDecls();
         else
-            compilation.addError(DiagCode::UnresolvedForwardTypedef, symbol->location) << symbol->name;
+            addError(DiagCode::UnresolvedForwardTypedef, symbol->location) << symbol->name;
     }
 }
 

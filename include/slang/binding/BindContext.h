@@ -29,17 +29,19 @@ struct BindContext {
     BindContext(const Scope& scope, LookupLocation lookupLocation, bitmask<BindFlags> flags = BindFlags::None) :
         scope(scope), lookupLocation(lookupLocation), flags(flags) {}
 
+    Diagnostic& addError(DiagCode code, SourceLocation location) const;
+    Diagnostic& addError(DiagCode code, SourceRange sourceRange) const;
+
+    bool checkLValue(const Expression& expr, SourceLocation location) const;
+    bool checkNoUnknowns(const SVInt& value, SourceRange range) const;
+    bool checkPositive(const SVInt& value, SourceRange range) const;
+    optional<bitwidth_t> checkValidBitWidth(const SVInt& value, SourceRange range) const;
+
     bool isConstant() const {
         return (flags & BindFlags::Constant) || (flags & BindFlags::IntegralConstant);
     }
 
-    BindContext resetFlags(bitmask<BindFlags> addedFlags) const {
-        // Remove non-sticky flags, add in any extras specified by addedFlags
-        BindContext result(*this);
-        result.flags &= ~(BindFlags::InsideConcatenation | BindFlags::AllowDataType);
-        result.flags |= addedFlags;
-        return result;
-    }
+    BindContext resetFlags(bitmask<BindFlags> addedFlags) const;
 };
 
 }

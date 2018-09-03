@@ -18,6 +18,7 @@
 namespace slang {
 
 class SourceManager;
+class Symbol;
 class Type;
 
 /// Complete set of diagnostic codes.
@@ -228,8 +229,14 @@ public:
     /// The location in source of the cause of the diagnostic.
     SourceLocation location;
 
+    /// The symbol in which the diagnostic occurred, or null if not applicable.
+    const Symbol* symbol = nullptr;
+
     /// Constructs a new Diagnostic entry with the given code and location.
     Diagnostic(DiagCode code, SourceLocation location);
+
+    /// Constructs a new Diagnostic entry with the given symbol, code and location.
+    Diagnostic(const Symbol& source, DiagCode code, SourceLocation location);
 
     /// Adds a new note to the diagnostic at the given source location.
     Diagnostic& addNote(DiagCode code, SourceLocation location);
@@ -268,6 +275,12 @@ public:
 
     /// Adds a new diagnostic to the collection, highlighting the given source range.
     Diagnostic& add(DiagCode code, SourceRange range);
+
+    /// Adds a new diagnostic to the collection, pointing to the given source location.
+    Diagnostic& add(const Symbol& source, DiagCode code, SourceLocation location);
+
+    /// Adds a new diagnostic to the collection, highlighting the given source range.
+    Diagnostic& add(const Symbol& source, DiagCode code, SourceRange range);
 
     /// Sorts the diagnostics in the collection based on source file and line number.
     void sort(const SourceManager& sourceManager);

@@ -94,8 +94,8 @@ public:
     Diagnostics getAllDiagnostics();
 
     /// Report an error at the specified location.
-    Diagnostic& addError(DiagCode code, SourceLocation location) { return diags.add(code, location); }
-    Diagnostic& addError(DiagCode code, SourceRange sourceRange) { return diags.add(code, sourceRange); }
+    Diagnostic& addError(const Symbol& source, DiagCode code, SourceLocation location);
+    Diagnostic& addError(const Symbol& source, DiagCode code, SourceRange sourceRange);
 
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);
@@ -136,9 +136,6 @@ public:
 
     ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
 
-    bool checkNoUnknowns(const SVInt& value, SourceRange range);
-    bool checkPositive(const SVInt& value, SourceRange range);
-    optional<bitwidth_t> checkValidBitWidth(const SVInt& value, SourceRange range);
     optional<int32_t> evalIntegerExpr(const ExpressionSyntax& syntax, LookupLocation location, const Scope& scope);
 
 private:

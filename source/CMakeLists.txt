@@ -1,4 +1,5 @@
 add_library(slang STATIC
+	binding/BindContext.cpp
 	binding/ConstantValue.cpp
 	binding/EvalContext.cpp
 	binding/Expressions.cpp

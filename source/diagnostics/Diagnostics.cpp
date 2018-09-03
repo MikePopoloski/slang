@@ -23,6 +23,9 @@ static const char* severityToString[] = {
 Diagnostic::Diagnostic(DiagCode code, SourceLocation location) :
     code(code), location(location) {}
 
+Diagnostic::Diagnostic(const Symbol& source, DiagCode code, SourceLocation location) :
+    code(code), location(location), symbol(&source) {}
+
 Diagnostic& Diagnostic::addNote(DiagCode noteCode, SourceLocation noteLocation) {
     notes.emplace_back(noteCode, noteLocation);
     return notes.back();
@@ -73,6 +76,15 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceRange range) {
     return add(code, range.start()) << range;
+}
+
+Diagnostic& Diagnostics::add(const Symbol& source, DiagCode code, SourceLocation location) {
+    emplace(source, code, location);
+    return back();
+}
+
+Diagnostic& Diagnostics::add(const Symbol& source, DiagCode code, SourceRange range) {
+    return add(source, code, range.start()) << range;
 }
 
 void Diagnostics::sort(const SourceManager& sourceManager) {

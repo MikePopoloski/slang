@@ -171,14 +171,15 @@ protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
 
-    void checkBindFlags(Compilation& compilation, const BindContext& context) const;
+    void checkBindFlags(const BindContext& context) const;
 
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context,
                               bitmask<BindFlags> extraFlags = BindFlags::None);
     static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
 
     static Expression& convertAssignment(Compilation& compilation, const Type& type, Expression& expr,
-                                         SourceLocation location, optional<SourceRange> lhsRange);
+                                         SourceLocation location, optional<SourceRange> lhsRange,
+                                         const BindContext& context);
 
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax, const BindContext& context);
     static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const BindContext& context);
@@ -194,10 +195,6 @@ protected:
     [[nodiscard]] static Expression& selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
                                                     const BindContext& context,
                                                     bitmask<BindFlags> extraFlags = BindFlags::None);
-
-    // Helper methods for checking common expression requirements.
-    static bool checkLValue(Compilation& compilation, const Expression& expr, SourceLocation location);
-
     struct PropagationVisitor;
 };
 

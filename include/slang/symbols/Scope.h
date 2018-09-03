@@ -137,6 +137,9 @@ public:
     /// Gets the compilation that contains this scope.
     Compilation& getCompilation() const { return compilation; }
 
+    Diagnostic& addError(DiagCode code, SourceLocation location) const;
+    Diagnostic& addError(DiagCode code, SourceRange sourceRange) const;
+
     /// Finds a direct child member with the given name. This won't return anything weird like
     /// forwarding typdefs or imported symbols, but will return things like transparent enum members.
     /// If no symbol is found with the given name, nullptr is returned.

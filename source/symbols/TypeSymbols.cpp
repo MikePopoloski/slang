@@ -333,7 +333,7 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
         return compilation.getErrorType();
 
     if (!symbol->isType()) {
-        compilation.addError(DiagCode::NotAType, syntax.sourceRange()) << symbol->name;
+        parent.addError(DiagCode::NotAType, syntax.sourceRange()) << symbol->name;
         return compilation.getErrorType();
     }
 
@@ -355,7 +355,7 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
 optional<ConstantRange> Type::evaluateDimension(Compilation& compilation, const SelectorSyntax& syntax,
                                                 LookupLocation location, const Scope& scope) {
     if (syntax.kind != SyntaxKind::SimpleRangeSelect) {
-        compilation.addError(DiagCode::PackedDimRequiresConstantRange, syntax.sourceRange());
+        scope.addError(DiagCode::PackedDimRequiresConstantRange, syntax.sourceRange());
         return std::nullopt;
     }
 
@@ -369,7 +369,7 @@ optional<ConstantRange> Type::evaluateDimension(Compilation& compilation, const 
     int64_t diff = *left - *right;
     diff = (diff < 0 ? -diff : diff) + 1;
     if (diff > SVInt::MAX_BITS) {
-        auto& diag = compilation.addError(DiagCode::ValueExceedsMaxBitWidth, range.range.location());
+        auto& diag = scope.addError(DiagCode::ValueExceedsMaxBitWidth, range.range.location());
         diag << range.left->sourceRange();
         diag << range.right->sourceRange();
         diag << (int)SVInt::MAX_BITS;
@@ -541,8 +541,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             return canonicalBase;
 
         if (!canonicalBase.isSimpleBitVector()) {
-            compilation.addError(DiagCode::InvalidEnumBase,
-                                 syntax.baseType->getFirstToken().location()) << *base;
+            scope.addError(DiagCode::InvalidEnumBase, syntax.baseType->getFirstToken().location()) << *base;
             return compilation.getErrorType();
         }
     }
@@ -631,7 +630,7 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
                     return compilation.getErrorType();
 
                 if (*left <= 0) {
-                    compilation.addError(DiagCode::ValueMustBePositive, selector->sourceRange());
+                    scope.addError(DiagCode::ValueMustBePositive, selector->sourceRange());
                     return compilation.getErrorType();
                 }
 
@@ -649,7 +648,7 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
                 break;
             }
             default: {
-                compilation.addError(DiagCode::InvalidUnpackedDimension, selector->sourceRange());
+                scope.addError(DiagCode::InvalidUnpackedDimension, selector->sourceRange());
                 return compilation.getErrorType();
             }
         }
@@ -698,8 +697,8 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
         bool issuedError = false;
         if (!type.isIntegral() && !type.isError()) {
             issuedError = true;
-            auto& diag = compilation.addError(DiagCode::PackedMemberNotIntegral,
-                                              member->type->getFirstToken().location());
+            auto& diag = scope.addError(DiagCode::PackedMemberNotIntegral,
+                                        member->type->getFirstToken().location());
             diag << type;
             diag << member->type->sourceRange();
         }
@@ -715,7 +714,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
             if (const Type& dimType = compilation.getType(type, decl->dimensions, location, scope);
                 dimType.isUnpackedArray() && !issuedError) {
 
-                auto& diag = compilation.addError(DiagCode::PackedMemberNotIntegral, decl->name.range());
+                auto& diag = scope.addError(DiagCode::PackedMemberNotIntegral, decl->name.range());
                 diag << dimType;
                 diag << decl->dimensions.sourceRange();
             }
@@ -723,8 +722,8 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
             bitWidth += type.getBitWidth();
 
             if (decl->initializer) {
-                auto& diag = compilation.addError(DiagCode::PackedMemberHasInitializer,
-                                                  decl->initializer->equals.location());
+                auto& diag = scope.addError(DiagCode::PackedMemberHasInitializer,
+                                            decl->initializer->equals.location());
                 diag << decl->initializer->expr->sourceRange();
             }
         }
@@ -860,8 +859,7 @@ void TypeAliasType::checkForwardDecls() const {
     const ForwardingTypedefSymbol* forward = firstForward;
     while (forward) {
         if (forward->category != ForwardingTypedefSymbol::None && forward->category != category) {
-            auto& diag = getScope()->getCompilation().addError(DiagCode::ForwardTypedefDoesNotMatch,
-                                                               forward->location);
+            auto& diag = getScope()->addError(DiagCode::ForwardTypedefDoesNotMatch, forward->location);
             switch (forward->category) {
                 case ForwardingTypedefSymbol::Enum: diag << "enum"; break;
                 case ForwardingTypedefSymbol::Struct: diag << "struct"; break;
