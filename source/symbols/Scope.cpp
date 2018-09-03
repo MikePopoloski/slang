@@ -61,6 +61,14 @@ bool LookupLocation::operator<(const LookupLocation& other) const {
     return index < other.index;
 }
 
+Diagnostic& LookupResult::addDiag(const Scope& scope, DiagCode code, SourceLocation location) {
+    return diagnostics.add(scope.asSymbol(), code, location);
+}
+
+Diagnostic& LookupResult::addDiag(const Scope& scope, DiagCode code, SourceRange sourceRange) {
+    return diagnostics.add(scope.asSymbol(), code, sourceRange);
+}
+
 bool LookupResult::hasError() const {
     // We have an error if we have any diagnostics or if there was a missing explicit import.
     return !diagnostics.empty() || (!found && wasImported);
@@ -281,7 +289,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
         result.found = nullptr;
         result.systemSubroutine = compilation.getSystemSubroutine(nameToken.valueText());
         if (!result.systemSubroutine)
-            result.diagnostics.add(DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
         return;
     }
 
@@ -312,9 +320,9 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
         }
 
         if (!usedBeforeDeclared)
-            result.diagnostics.add(DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
         else {
-            auto& diag = result.diagnostics.add(DiagCode::UsedBeforeDeclared, nameToken.range());
+            auto& diag = result.addDiag(*this, DiagCode::UsedBeforeDeclared, nameToken.range());
             diag << nameToken.valueText();
             diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
         }
@@ -571,7 +579,7 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
             if (result.found) {
                 const DeclaredType* declaredType = result.found->getDeclaredType();
                 if (declaredType && declaredType->isEvaluating()) {
-                    auto& diag = result.diagnostics.add(DiagCode::RecursiveDefinition, sourceRange) << name;
+                    auto& diag = result.addDiag(*this, DiagCode::RecursiveDefinition, sourceRange) << name;
                     diag.addNote(DiagCode::NoteDeclarationHere, result.found->location);
                     result.found = nullptr;
                 }
@@ -604,7 +612,7 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
 
     if (!imports.empty()) {
         if (imports.size() > 1) {
-            auto& diag = result.diagnostics.add(DiagCode::AmbiguousWildcardImport, sourceRange) << name;
+            auto& diag = result.addDiag(*this, DiagCode::AmbiguousWildcardImport, sourceRange) << name;
             for (const auto& pair : imports) {
                 diag.addNote(DiagCode::NoteImportedFrom, pair.import->location);
                 diag.addNote(DiagCode::NoteDeclarationHere, pair.imported->location);
@@ -613,7 +621,7 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
         }
 
         if (symbol) {
-            auto& diag = result.diagnostics.add(DiagCode::ImportNameCollision, sourceRange) << name;
+            auto& diag = result.addDiag(*this, DiagCode::ImportNameCollision, sourceRange) << name;
             diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
             diag.addNote(DiagCode::NoteImportedFrom, imports[0].import->location);
             diag.addNote(DiagCode::NoteDeclarationHere, imports[0].imported->location);
@@ -734,7 +742,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             &result.found->as<PackageSymbol>() : compilation.getPackage(nameToken.valueText());
 
         if (!package) {
-            result.diagnostics.add(DiagCode::UnknownClassOrPackage, nameToken.range()) << nameToken.valueText();
+            result.addDiag(*this, DiagCode::UnknownClassOrPackage, nameToken.range()) << nameToken.valueText();
             return;
         }
 
@@ -785,7 +793,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     result.isHierarchical = true;
     if (flags & LookupFlags::Constant) {
         NamePlusLoc& part = nameParts.back();
-        auto& diag = result.diagnostics.add(DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
+        auto& diag = result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
         diag << nameToken.range();
 
         result.found = nullptr;
@@ -795,7 +803,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     if (result.found) {
         if (!result.found->isScope() || result.found->isType()) {
             NamePlusLoc& part = nameParts.back();
-            auto& diag = result.diagnostics.add(DiagCode::NotAHierarchicalScope, part.dotLocation);
+            auto& diag = result.addDiag(*this, DiagCode::NotAHierarchicalScope, part.dotLocation);
             diag << nameToken.valueText();
             diag << nameToken.range();
             diag << part.name->sourceRange();
@@ -809,7 +817,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     }
 
     // TODO: upward name resolution
-    result.diagnostics.add(DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+    result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
 }
 
 }

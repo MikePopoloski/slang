@@ -261,7 +261,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     context.scope.lookupName(syntax, context.lookupLocation, context.lookupKind, flags, result);
 
     if (result.hasError())
-        compilation.addDiagnostics(result.diagnostics);
+        compilation.addDiagnostics(result.getDiagnostics());
 
     const Symbol* symbol = result.found;
     if (!symbol)
@@ -931,7 +931,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
                              flags, result);
 
     if (result.hasError())
-        compilation.addDiagnostics(result.diagnostics);
+        compilation.addDiagnostics(result.getDiagnostics());
 
     if (result.systemSubroutine) {
         SmallVectorSized<const Expression*, 8> buffer;

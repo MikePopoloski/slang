@@ -102,7 +102,6 @@ private:
 struct LookupResult {
     const Symbol* found = nullptr;
     const SystemSubroutine* systemSubroutine = nullptr;
-    Diagnostics diagnostics;
     bool wasImported = false;
     bool isHierarchical = false;
 
@@ -115,9 +114,16 @@ struct LookupResult {
     using Selector = std::variant<const ElementSelectSyntax*, MemberSelector>;
     SmallVectorSized<Selector, 4> selectors;
 
-    bool hasError() const;
+    Diagnostic& addDiag(const Scope& scope, DiagCode code, SourceLocation location);
+    Diagnostic& addDiag(const Scope& scope, DiagCode code, SourceRange sourceRange);
 
+    const Diagnostics& getDiagnostics() const { return diagnostics; }
+
+    bool hasError() const;
     void clear();
+
+private:
+    Diagnostics diagnostics;
 };
 
 /// Base class for symbols that represent a name scope; that is, they contain children and can

@@ -320,7 +320,7 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
     parent.lookupName(syntax, location, LookupNameKind::Type, LookupFlags::None, result);
 
     if (result.hasError())
-        compilation.addDiagnostics(result.diagnostics);
+        compilation.addDiagnostics(result.getDiagnostics());
 
     return fromLookupResult(compilation, result, syntax, location, parent);
 }
