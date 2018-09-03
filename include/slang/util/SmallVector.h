@@ -57,7 +57,7 @@ public:
         return data_[len - 1];
     }
 
-    const T* data() const { return data_; }
+    T* data() const { return data_; }
     uint32_t size() const { return len; }
     bool empty() const { return len == 0; }
 

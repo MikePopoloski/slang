@@ -23,29 +23,8 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleD
     return *result;
 }
 
-static void getParamDecls(Compilation& compilation, const ParameterDeclarationSyntax& syntax, bool isPort,
-                          bool isLocal, SmallVector<DefinitionSymbol::ParameterDecl>& parameters) {
-    for (const VariableDeclaratorSyntax* decl : syntax.declarators) {
-        DefinitionSymbol::ParameterDecl param;
-        param.name = decl->name.valueText();
-        param.location = decl->name.location();
-        param.type = syntax.type;
-        param.isLocal = isLocal;
-        param.isPort = isPort;
-
-        if (decl->initializer)
-            param.initializer = decl->initializer->expr;
-        else if (!isPort)
-            compilation.addError(DiagCode::BodyParamNoInitializer, param.location);
-        else if (isLocal)
-            compilation.addError(DiagCode::LocalParamNoInitializer, param.location);
-
-        parameters.append(param);
-    }
-}
-
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax) {
-    SmallVectorSized<DefinitionSymbol::ParameterDecl, 8> parameters;
+    SmallVectorSized<ParameterSymbol*, 8> parameters;
     bool hasPortParams = syntax.header->parameters;
     if (hasPortParams) {
         bool lastLocal = false;
@@ -55,7 +34,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const M
             // This isn't allowed in a module body, but the parser will take care of the error for us.
             if (declaration->keyword)
                 lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
-            getParamDecls(compilation, *declaration, true, lastLocal, parameters);
+            ParameterSymbol::fromSyntax(compilation, *declaration, lastLocal, true, parameters);
         }
     }
 
@@ -65,13 +44,17 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const M
         if (member->kind == SyntaxKind::ParameterDeclarationStatement) {
             auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
             bool isLocal = hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
-            getParamDecls(compilation, *declaration, false, isLocal, parameters);
+            ParameterSymbol::fromSyntax(compilation, *declaration, isLocal, false, parameters);
         }
     }
 
+    auto copied = parameters.copy(compilation);
     auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header->name.valueText(),
                                                         syntax.header->name.location(),
-                                                        parameters.copy(compilation));
+                                                        span((const ParameterSymbol**)copied.data(), copied.size()));
+    for (auto param : parameters)
+        result->addMember(*param);
+
     result->setSyntax(syntax);
     return *result;
 }
@@ -127,10 +110,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 if (orderedIndex >= orderedParams.size())
                     break;
 
-                if (param.isLocal)
+                if (param->isLocalParam())
                     continue;
 
-                paramOverrides.emplace(param.name, orderedParams[orderedIndex++]->expr);
+                paramOverrides.emplace(param->name, orderedParams[orderedIndex++]->expr);
             }
 
             // Make sure there aren't extra param assignments for non-existent params.
@@ -145,17 +128,19 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
         else {
             // Otherwise handle named assignments.
             for (auto param : definition->parameters) {
-                auto it = namedParams.find(param.name);
+                auto it = namedParams.find(param->name);
                 if (it == namedParams.end())
                     continue;
 
                 const NamedArgumentSyntax* arg = it->second.first;
                 it->second.second = true;
-                if (param.isLocal) {
+                if (param->isLocalParam()) {
                     // Can't assign to localparams, so this is an error.
-                    DiagCode code = param.isPort ? DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam;
+                    DiagCode code = param->isPortParam() ?
+                        DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam;
+
                     auto& diag = compilation.addError(code, arg->name.location());
-                    diag.addNote(DiagCode::NoteDeclarationHere, param.location);
+                    diag.addNote(DiagCode::NoteDeclarationHere, param->location);
                     continue;
                 }
 
@@ -163,7 +148,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 if (!arg->expr)
                     continue;
 
-                paramOverrides.emplace(param.name, arg->expr);
+                paramOverrides.emplace(param->name, arg->expr);
             }
 
             for (const auto& pair : namedParams) {
@@ -179,18 +164,28 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
     }
 
     // Determine values for all parameters now so that they can be shared between instances.
-    SmallVectorSized<ParameterMetadata, 8> params;
-    for (const auto& decl : definition->parameters) {
-        std::tuple<const Type*, ConstantValue> typeAndValue(nullptr, nullptr);
-        if (auto it = paramOverrides.find(decl.name); it != paramOverrides.end())
-            typeAndValue = ParameterSymbol::evaluate(*decl.type, *it->second, location, scope);
-        else if (!decl.initializer && !decl.isLocal && decl.isPort) {
+    SmallVectorSized<const Expression*, 8> overrides;
+    for (auto param : definition->parameters) {
+        if (auto it = paramOverrides.find(param->name); it != paramOverrides.end()) {
+            auto declared = param->getDeclaredType();
+            auto typeSyntax = declared->getTypeSyntax();
+            ASSERT(typeSyntax);
+
+            auto& expr = DeclaredType::resolveInitializer(*typeSyntax, declared->getDimensionSyntax(), *it->second,
+                                                          it->second->getFirstToken().location(),
+                                                          BindContext(scope, location, BindFlags::Constant),
+                                                          DeclaredTypeFlags::AllowImplicit);
+            overrides.append(&expr);
+        }
+        else if (!param->getInitializer() && !param->isLocalParam() && param->isPortParam()) {
             auto& diag = compilation.addError(DiagCode::ParamHasNoValue, syntax.getFirstToken().location());
             diag << definition->name;
-            diag << decl.name;
+            diag << param->name;
+            overrides.append(nullptr);
         }
-
-        params.emplace(ParameterMetadata { &decl, std::get<0>(typeAndValue), std::move(std::get<1>(typeAndValue)) });
+        else {
+            overrides.append(nullptr);
+        }
     }
 
     for (auto instanceSyntax : syntax.instances) {
@@ -198,11 +193,11 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
         switch (definition->getSyntax()->kind) { // TODO: don't rely on syntax here
             case SyntaxKind::ModuleDeclaration:
                 inst = &ModuleInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
-                                                          instanceSyntax->name.location(), *definition, params);
+                                                          instanceSyntax->name.location(), *definition, overrides);
                 break;
             case SyntaxKind::InterfaceDeclaration:
                 inst = &InterfaceInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
-                                                             instanceSyntax->name.location(), *definition, params);
+                                                             instanceSyntax->name.location(), *definition, overrides);
                 break;
             default:
                 THROW_UNREACHABLE;
@@ -225,24 +220,22 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
     }
 }
 
-void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const ParameterMetadata> parameters) {
+void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const Expression*> parameterOverides) {
     // Add all port parameters as members first.
     Compilation& comp = getCompilation();
-    auto paramIt = parameters.begin();
-    while (paramIt != parameters.end()) {
-        auto& decl = *paramIt->decl;
-        if (!decl.isPort)
+    auto paramIt = definition.parameters.begin();
+    auto overrideIt = parameterOverides.begin();
+
+    while (paramIt != definition.parameters.end()) {
+        auto original = *paramIt;
+        if (!original->isPortParam())
             break;
 
-        auto& param = ParameterSymbol::fromDecl(comp, decl.name, decl.location, decl.isLocal,
-                                                decl.isPort, *decl.type, decl.initializer);
-        addMember(param);
+        ASSERT(overrideIt != parameterOverides.end());
+        addMember(original->createOverride(comp, *overrideIt));
 
-        if (paramIt->type) {
-            param.setType(*paramIt->type);
-            param.overrideValue(paramIt->value);
-        }
         paramIt++;
+        overrideIt++;
     }
 
     auto& syntax = definition.getSyntax()->as<ModuleDeclarationSyntax>(); // TODO: getSyntax dependency
@@ -268,19 +261,14 @@ void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const Par
             addMembers(*member);
         else {
             for (auto declarator : member->as<ParameterDeclarationStatementSyntax>().parameter->declarators) {
-                ASSERT(paramIt != parameters.end());
+                ASSERT(paramIt != definition.parameters.end());
+                ASSERT(overrideIt != parameterOverides.end());
+                ASSERT(declarator->name.valueText() == (*paramIt)->name);
 
-                auto& decl = *paramIt->decl;
-                auto& param = ParameterSymbol::fromDecl(comp, decl.name, decl.location, decl.isLocal,
-                                                        decl.isPort, *decl.type, decl.initializer);
-                if (paramIt->type) {
-                    param.setType(*paramIt->type);
-                    param.overrideValue(paramIt->value);
-                }
+                addMember((*paramIt)->createOverride(comp, *overrideIt));
 
-                param.setSyntax(*declarator);
-                addMember(param);
                 paramIt++;
+                overrideIt++;
             }
         }
     }
@@ -468,31 +456,30 @@ void InstanceSymbol::PortListBuilder::add(const Port& port) {
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
                                                         SourceLocation loc, const DefinitionSymbol& definition) {
-    SmallVectorSized<ParameterMetadata, 8> params;
-    for (const auto& decl : definition.parameters) {
-        // This function should only be called for definitions where all parameters have defaults.
-        ASSERT(decl.initializer);
-        params.emplace(ParameterMetadata { &decl, nullptr, nullptr });
+    SmallVectorSized<const Expression*, 8> overrides;
+    for (auto param : definition.parameters) {
+        (void)param;
+        overrides.emplace(nullptr);
     }
 
-    return instantiate(compilation, name, loc, definition, params);
+    return instantiate(compilation, name, loc, definition, overrides);
 }
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
                                                         SourceLocation loc, const DefinitionSymbol& definition,
-                                                        span<const ParameterMetadata> parameters) {
+                                                        span<const Expression*> parameterOverrides) {
 
     auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc);
-    instance->populate(definition, parameters);
+    instance->populate(definition, parameterOverrides);
     return *instance;
 }
 
 InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(Compilation& compilation, string_view name,
                                                               SourceLocation loc, const DefinitionSymbol& definition,
-                                                              span<const ParameterMetadata> parameters) {
+                                                              span<const Expression*> parameterOverrides) {
 
     auto instance = compilation.emplace<InterfaceInstanceSymbol>(compilation, name, loc);
-    instance->populate(definition, parameters);
+    instance->populate(definition, parameterOverrides);
     return *instance;
 }
 
@@ -612,7 +599,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         result->addMember(*block);
 
         implicitParam->setType(local.getType());
-        implicitParam->overrideValue(*genvar);
+        implicitParam->setValue(*genvar);
     }
 
     return *result;

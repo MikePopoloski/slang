@@ -84,22 +84,14 @@ public:
     ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
     static void fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
-                           SmallVector<ParameterSymbol*>& results);
-
-    static ParameterSymbol& fromDecl(Compilation& compilation, string_view name, SourceLocation location,
-                                     bool isLocal, bool isPort, const DataTypeSyntax& type,
-                                     const ExpressionSyntax* initializer);
-
-    // TODO: remove this method
-    static std::tuple<const Type*, ConstantValue> evaluate(const DataTypeSyntax& type,
-                                                           const ExpressionSyntax& expr,
-                                                           LookupLocation location,
-                                                           const Scope& scope);
+                           bool isLocal, bool isPort, SmallVector<ParameterSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
+    ParameterSymbol& createOverride(Compilation& compilation, const Expression* newInitializer) const;
+
     const ConstantValue& getValue() const;
-    void overrideValue(ConstantValue value);
+    void setValue(ConstantValue value);
 
     bool isLocalParam() const { return isLocal; }
     bool isPortParam() const { return isPort; }

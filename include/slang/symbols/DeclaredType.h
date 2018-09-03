@@ -65,12 +65,31 @@ public:
     }
 
     const ExpressionSyntax* getInitializerSyntax() const { return initializerSyntax; }
+    SourceLocation getInitializerLocation() const { return initializerLocation; }
 
     void setFromDeclarator(const VariableDeclaratorSyntax& decl);
 
     const ConstantValue& getConstantValue() const;
 
     bool isEvaluating() const { return evaluating; }
+
+    static std::tuple<const Type*, const Expression*>
+        resolveType(const DataTypeSyntax& typeSyntax,
+                    const SyntaxList<VariableDimensionSyntax>* dimensions,
+                    const ExpressionSyntax* initializerSyntax,
+                    const BindContext& context,
+                    bitmask<DeclaredTypeFlags> flags);
+
+    static const Expression& resolveInitializer(const Type& type, const ExpressionSyntax& initializerSyntax,
+                                                SourceLocation initializerLocation, const BindContext& context);
+
+    static const Expression&
+        resolveInitializer(const DataTypeSyntax& typeSyntax,
+                           const SyntaxList<VariableDimensionSyntax>* dimensions,
+                           const ExpressionSyntax& initializerSyntax,
+                           SourceLocation initializerLocation,
+                           const BindContext& context,
+                           bitmask<DeclaredTypeFlags> flags);
 
 private:
     const Scope& getScope() const;

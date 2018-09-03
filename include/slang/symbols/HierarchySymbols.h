@@ -14,6 +14,7 @@
 namespace slang {
 
 class Expression;
+class ParameterSymbol;
 
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public Symbol, public Scope {
@@ -44,36 +45,13 @@ public:
 /// to form a node in the design hierarchy.
 class DefinitionSymbol : public Symbol, public Scope {
 public:
-    /// Tracks info about each parameter declaration for later evaluation.
-    struct ParameterDecl {
-        /// The name of the parameter.
-        string_view name;
-
-        /// The syntax describing the parameter's data type. This is evaluated lazily
-        /// into a real type since it may require doing inference from the value.
-        const DataTypeSyntax* type = nullptr;
-
-        /// The default initializer, or null if the parameter has no default.
-        const ExpressionSyntax* initializer = nullptr;
-
-        /// The source location of the parameter.
-        SourceLocation location;
-
-        /// Indicates whether the parameter is a localparam (not overridable).
-        bool isLocal;
-
-        /// Indicates whether the parameter was declared in the header (parameter port list) or
-        /// within the body of the definition itself.
-        bool isPort;
-    };
+    span<const ParameterSymbol*> parameters;
 
     DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     span<const ParameterDecl> parameters) :
+                     span<const ParameterSymbol*> parameters) :
         Symbol(SymbolKind::Definition, name, loc),
         Scope(compilation, this),
         parameters(parameters) {}
-
-    span<const ParameterDecl> parameters;
 
     void toJson(json&) const {}
 
@@ -88,12 +66,6 @@ public:
                            LookupLocation location, const Scope& scope, SmallVector<const Symbol*>& results);
 
     static bool isKind(SymbolKind kind);
-
-    struct ParameterMetadata {
-        const DefinitionSymbol::ParameterDecl* decl;
-        const Type* type;
-        ConstantValue value;
-    };
 
     /// Defines information about a single port exposed by the instance.
     struct Port {
@@ -146,7 +118,7 @@ protected:
         void add(const Port& port);
     };
 
-    void populate(const DefinitionSymbol& definition, span<const ParameterMetadata> parameters);
+    void populate(const DefinitionSymbol& definition, span<const Expression*> parameterOverrides);
     void handleAnsiPorts(const AnsiPortListSyntax& syntax);
     void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilder& builder);
     void handleNonAnsiPorts(const NonAnsiPortListSyntax& syntax);
@@ -164,7 +136,7 @@ public:
 
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
                                              const DefinitionSymbol& definition,
-                                             span<const ParameterMetadata> parameters);
+                                             span<const Expression*> parameterOverrides);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
 };
@@ -178,7 +150,7 @@ public:
 
     static InterfaceInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
                                                 const DefinitionSymbol& definition,
-                                                span<const ParameterMetadata> parameters);
+                                                span<const Expression*> parameterOverrides);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfaceInstance; }
 };

@@ -178,7 +178,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             SmallVectorSized<ParameterSymbol*, 16> params;
             ParameterSymbol::fromSyntax(compilation,
                                         *syntax.as<ParameterDeclarationStatementSyntax>().parameter,
-                                        params);
+                                        true, false, params);
             for (auto param : params)
                 addMember(*param);
             break;
@@ -716,13 +716,15 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     // If we are starting with a colon separator, always do a downwards name resolution. If the prefix name can
     // be resolved normally, we have a class scope, otherwise it's a package lookup. See [23.7.1]
     if (colonParts) {
-        if (result.found) {
+        if (result.found && result.found->kind != SymbolKind::Package) {
             // TODO: handle classes
             THROW_UNREACHABLE;
         }
 
         // Otherwise, it should be a package name.
-        const PackageSymbol* package = compilation.getPackage(nameToken.valueText());
+        const PackageSymbol* package = result.found ?
+            &result.found->as<PackageSymbol>() : compilation.getPackage(nameToken.valueText());
+
         if (!package) {
             result.diagnostics.add(DiagCode::UnknownClassOrPackage, nameToken.range()) << nameToken.valueText();
             return;

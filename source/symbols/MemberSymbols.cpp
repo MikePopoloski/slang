@@ -51,59 +51,57 @@ ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLo
 }
 
 void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
-                                 SmallVector<ParameterSymbol*>& results) {
+                                 bool isLocal, bool isPort, SmallVector<ParameterSymbol*>& results) {
     for (auto decl : syntax.declarators) {
-        auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText(), decl->name.location(), true, false);
+        auto loc = decl->name.location();
+        auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText(), loc, isLocal, isPort);
         param->setDeclaredType(*syntax.type);
         param->setFromDeclarator(*decl);
 
-        if (!decl->initializer)
-            compilation.addError(DiagCode::BodyParamNoInitializer, decl->name.location());
+        if (!decl->initializer) {
+            if (!isPort)
+                compilation.addError(DiagCode::BodyParamNoInitializer, loc);
+            else if (isLocal)
+                compilation.addError(DiagCode::LocalParamNoInitializer, loc);
+        }
 
         param->setSyntax(*decl);
         results.append(param);
     }
 }
 
-ParameterSymbol& ParameterSymbol::fromDecl(Compilation& compilation, string_view name, SourceLocation location,
-                                           bool isLocal, bool isPort, const DataTypeSyntax& type,
-                                           const ExpressionSyntax* initializer) {
-    auto param = compilation.emplace<ParameterSymbol>(name, location, isLocal, isPort);
-    param->setDeclaredType(type);
-    if (initializer)
-        param->setInitializerSyntax(*initializer, SourceLocation()); // TODO: set correct location
+ParameterSymbol& ParameterSymbol::createOverride(Compilation& compilation, const Expression* newInitializer) const {
+    auto result = compilation.emplace<ParameterSymbol>(name, location, isLocal, isPort);
+    if (auto syntax = getSyntax())
+        result->setSyntax(*syntax);
 
-    return *param;
+    auto declared = getDeclaredType();
+    if (auto typeSyntax = declared->getTypeSyntax()) {
+        if (auto dimensions = declared->getDimensionSyntax())
+            result->setDeclaredType(*typeSyntax, *dimensions);
+        else
+            result->setDeclaredType(*typeSyntax);
+    }
+
+    if (newInitializer) {
+        result->setType(*newInitializer->type);
+        result->setInitializer(*newInitializer);
+    }
+    else if (auto init = declared->getInitializerSyntax()) {
+        result->setInitializerSyntax(*init, declared->getInitializerLocation());
+    }
+
+    return *result;
 }
 
 const ConstantValue& ParameterSymbol::getValue() const {
     return overriden ? *overriden : getConstantValue();
 }
 
-void ParameterSymbol::overrideValue(ConstantValue value) {
+void ParameterSymbol::setValue(ConstantValue value) {
     auto scope = getScope();
     ASSERT(scope);
     overriden = scope->getCompilation().createConstant(std::move(value));
-}
-
-std::tuple<const Type*, ConstantValue> ParameterSymbol::evaluate(const DataTypeSyntax& type,
-                                                                 const ExpressionSyntax& expr,
-                                                                 LookupLocation location,
-                                                                 const Scope& scope) {
-    // TODO: handle more cases here
-
-    // If no type is given, infer the type from the initializer.
-    Compilation& comp = scope.getCompilation();
-    if (type.kind == SyntaxKind::ImplicitType) {
-        const auto& bound = Expression::bind(comp, expr, BindContext(scope, location, BindFlags::Constant));
-        return std::make_tuple(bound.type, bound.eval());
-    }
-
-    const Type& t = comp.getType(type, location, scope);
-    const Expression& assignment = Expression::bind(comp, t, expr, expr.getFirstToken().location(),
-                                                    BindContext(scope, location, BindFlags::Constant));
-
-    return std::make_tuple(&t, assignment.eval());
 }
 
 void ParameterSymbol::toJson(json& j) const {

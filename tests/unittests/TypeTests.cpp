@@ -202,8 +202,8 @@ endmodule
     CHECK(diags[1].code == DiagCode::UnresolvedForwardTypedef);
     CHECK(diags[2].code == DiagCode::ForwardTypedefDoesNotMatch);
 
-    CHECK(report(diags) == R"(
-source:5:18: error: forward typedef 'e1_t' does not resolve to a data type
+    CHECK(report(diags) ==
+R"(source:5:18: error: forward typedef 'e1_t' does not resolve to a data type
     typedef enum e1_t;
                  ^
 source:6:13: error: forward typedef 'e2' does not resolve to a data type
@@ -267,8 +267,8 @@ endmodule
 
     // TODO: reporting for value out of range is bad
     // TODO: report type names correctly
-    CHECK(report(diags) == R"(
-source:2:20: error: value must not have any unknown bits
+    CHECK(report(diags) ==
+R"(source:2:20: error: value must not have any unknown bits
 module Top(logic f[3'b1x0],
                    ^~~~~~
 source:3:14: error: value must be positive
