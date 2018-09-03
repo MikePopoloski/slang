@@ -30,7 +30,7 @@ Diagnostics& ParserBase::getDiagnostics() {
     return window.tokenSource.getDiagnostics();
 }
 
-Diagnostic& ParserBase::addError(DiagCode code, SourceLocation location) {
+Diagnostic& ParserBase::addDiag(DiagCode code, SourceLocation location) {
     return getDiagnostics().add(code, location);
 }
 
@@ -88,7 +88,7 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
     window.moveToNext();
 
     if (diagCode)
-        addError(*diagCode, token.location()) << token.range();
+        addDiag(*diagCode, token.location()) << token.range();
 }
 
 Token ParserBase::getLastConsumed() const {

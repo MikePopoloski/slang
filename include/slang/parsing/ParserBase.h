@@ -23,7 +23,7 @@ protected:
     ParserBase(Preprocessor& preprocessor);
 
     Diagnostics& getDiagnostics();
-    Diagnostic& addError(DiagCode code, SourceLocation location);
+    Diagnostic& addDiag(DiagCode code, SourceLocation location);
 
     // Helper methods to manipulate the underlying token stream.
     Token peek(uint32_t offset);
@@ -154,7 +154,7 @@ protected:
             if (diagnostics.empty() || diagnostics.back().code != DiagCode::ExpectedToken ||
                 (diagnostics.back().location != location && diagnostics.back().location != current.location())) {
 
-                addError(code, location);
+                addDiag(code, location);
             }
 
             closeToken = Token::createMissing(alloc, closeKind, current.location());
@@ -174,7 +174,7 @@ protected:
 
                         if (IsEnd(peek().kind)) {
                             // Specific check for misplaced trailing separators here.
-                            auto& diag = addError(DiagCode::MisplacedTrailingSeparator, window.lastConsumed.location());
+                            auto& diag = addDiag(DiagCode::MisplacedTrailingSeparator, window.lastConsumed.location());
                             diag << getTokenKindText(window.lastConsumed.kind);
                             break;
                         }

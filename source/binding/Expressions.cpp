@@ -109,7 +109,7 @@ void Expression::checkBindFlags(const BindContext& context) const {
 
         const Diagnostics& diags = evalContext.getDiagnostics();
         if (!diags.empty()) {
-            Diagnostic& diag = context.addError(DiagCode::ExpressionNotConstant, sourceRange);
+            Diagnostic& diag = context.addDiag(DiagCode::ExpressionNotConstant, sourceRange);
             for (const Diagnostic& note : diags)
                 diag.addNote(note);
         }
@@ -275,7 +275,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     }
 
     if (!symbol->isValue()) {
-        context.addError(DiagCode::NotAValue, syntax.sourceRange()) << symbol->name;
+        context.addDiag(DiagCode::NotAValue, syntax.sourceRange()) << symbol->name;
         return badExpr(compilation, nullptr);
     }
 
@@ -295,7 +295,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                 return badExpr(compilation, expr);
 
             if (!expr->type->isStructUnion()) {
-                auto& diag = context.addError(DiagCode::MemberAccessNotStructUnion, memberSelect->dotLocation);
+                auto& diag = context.addDiag(DiagCode::MemberAccessNotStructUnion, memberSelect->dotLocation);
                 diag << expr->sourceRange;
                 diag << memberSelect->nameRange;
                 diag << *expr->type;
@@ -304,7 +304,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
             const Symbol* member = expr->type->getCanonicalType().as<Scope>().find(name);
             if (!member) {
-                auto& diag = context.addError(DiagCode::UnknownMember, memberSelect->nameRange);
+                auto& diag = context.addDiag(DiagCode::UnknownMember, memberSelect->nameRange);
                 diag << expr->sourceRange;
                 diag << name;
                 diag << *expr->type;
@@ -364,7 +364,7 @@ Expression& Expression::convertAssignment(Compilation& compilation, const Type& 
     const Type* rt = expr.type;
     if (!type.isAssignmentCompatible(*rt)) {
         DiagCode code = type.isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
-        auto& diag = context.addError(code, location);
+        auto& diag = context.addDiag(code, location);
         diag << *rt << type;
         if (lhsRange)
             diag << *lhsRange;
@@ -519,7 +519,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
     }
 
     if (!good) {
-        auto& diag = context.addError(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
+        auto& diag = context.addDiag(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
         diag << *type;
         diag << operand.sourceRange;
         return badExpr(compilation, result);
@@ -541,7 +541,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PostfixU
         return badExpr(compilation, result);
 
     if (!type->isNumeric()) {
-        auto& diag = context.addError(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
+        auto& diag = context.addDiag(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
         diag << *type;
         diag << operand.sourceRange;
         return badExpr(compilation, result);
@@ -692,7 +692,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
 
     auto location = syntax.operatorToken.location();
     if (!good) {
-        auto& diag = context.addError(DiagCode::BadBinaryExpression, location);
+        auto& diag = context.addDiag(DiagCode::BadBinaryExpression, location);
         diag << *lt << *rt;
         diag << lhs.sourceRange;
         diag << rhs.sourceRange;
@@ -753,13 +753,13 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 
     const Type& valueType = value.type->getCanonicalType();
     if (!valueType.isIntegral()) {
-        auto& diag = context.addError(DiagCode::BadIndexExpression, syntax.sourceRange());
+        auto& diag = context.addDiag(DiagCode::BadIndexExpression, syntax.sourceRange());
         diag << value.sourceRange;
         diag << *value.type;
         return badExpr(compilation, result);
     }
     else if (valueType.isScalar()) {
-        auto& diag = context.addError(DiagCode::CannotIndexScalar, syntax.sourceRange());
+        auto& diag = context.addDiag(DiagCode::CannotIndexScalar, syntax.sourceRange());
         diag << value.sourceRange;
         return badExpr(compilation, result);
     }
@@ -771,7 +771,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     }
 
     if (!selector.type->isIntegral()) {
-        context.addError(DiagCode::IndexMustBeIntegral, selector.sourceRange);
+        context.addDiag(DiagCode::IndexMustBeIntegral, selector.sourceRange);
         return badExpr(compilation, result);
     }
 
@@ -850,14 +850,14 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
 
         if (!type.isIntegral()) {
             errored = true;
-            context.addError(DiagCode::BadConcatExpression, arg->sourceRange);
+            context.addDiag(DiagCode::BadConcatExpression, arg->sourceRange);
             continue;
         }
 
         bitwidth_t newWidth = totalWidth + type.getBitWidth();
         if (newWidth < totalWidth) {
             errored = true;
-            context.addError(DiagCode::ValueExceedsMaxBitWidth, syntax.sourceRange()) << (int)SVInt::MAX_BITS;
+            context.addDiag(DiagCode::ValueExceedsMaxBitWidth, syntax.sourceRange()) << (int)SVInt::MAX_BITS;
             break;
         }
         totalWidth = newWidth;
@@ -897,7 +897,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
 
     if (value == 0) {
         if ((context.flags & BindFlags::InsideConcatenation) == 0) {
-            context.addError(DiagCode::ReplicationZeroOutsideConcat, left.sourceRange);
+            context.addDiag(DiagCode::ReplicationZeroOutsideConcat, left.sourceRange);
             return badExpr(compilation, result);
         }
 
@@ -920,7 +920,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     if (!NameSyntax::isKind(syntax.left->kind)) {
         SourceLocation loc = syntax.arguments ? syntax.arguments->openParen.location() :
                                                 syntax.left->getFirstToken().location();
-        auto& diag = context.addError(DiagCode::ExpressionNotCallable, loc);
+        auto& diag = context.addDiag(DiagCode::ExpressionNotCallable, loc);
         diag << syntax.left->sourceRange();
         return badExpr(compilation, nullptr);
     }
@@ -967,7 +967,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
         return badExpr(compilation, nullptr);
 
     if (symbol->kind != SymbolKind::Subroutine) {
-        context.addError(DiagCode::NotASubroutine, syntax.left->sourceRange()) << symbol->name;
+        context.addDiag(DiagCode::NotASubroutine, syntax.left->sourceRange()) << symbol->name;
         return badExpr(compilation, nullptr);
     }
 
@@ -977,7 +977,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     // TODO: handle too few args as well, which requires looking at default values
     auto formalArgs = subroutine.arguments;
     if (formalArgs.size() < actualArgs.size()) {
-        auto& diag = context.addError(DiagCode::TooManyArguments, syntax.left->sourceRange());
+        auto& diag = context.addDiag(DiagCode::TooManyArguments, syntax.left->sourceRange());
         diag << formalArgs.size();
         diag << actualArgs.size();
         return badExpr(compilation, nullptr);
@@ -999,7 +999,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                            const BindContext& context) {
     if ((context.flags & BindFlags::AllowDataType) == 0) {
-        context.addError(DiagCode::ExpectedExpression, syntax.sourceRange());
+        context.addDiag(DiagCode::ExpectedExpression, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 

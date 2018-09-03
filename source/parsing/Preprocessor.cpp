@@ -322,7 +322,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             Token nextToken = peek();
             while (nextToken.kind != TokenKind::GreaterThan) {
                 if (sourceManager.getExpansionLoc(nextToken.location()) != rootExpansionLoc) {
-                    addError(DiagCode::ExpectedIncludeFileName, fileName.location());
+                    addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
                     break;
                 }
                 consume();
@@ -351,7 +351,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             fileName = Token(TokenKind::IncludeFileName, fileNameInfo);
         }
         else {
-            addError(DiagCode::ExpectedIncludeFileName, fileName.location());
+            addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
         }
     }
 
@@ -360,16 +360,16 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     // path should be at least three chars: "a" or <a>
     string_view path = fileName.valueText();
     if (path.length() < 3)
-        addError(DiagCode::ExpectedIncludeFileName, fileName.location());
+        addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
     else {
         // remove delimiters
         bool isSystem = path[0] == '<';
         path = path.substr(1, path.length() - 2);
         SourceBuffer buffer = sourceManager.readHeader(path, directive.location(), isSystem);
         if (!buffer.id)
-            addError(DiagCode::CouldNotOpenIncludeFile, fileName.location());
+            addDiag(DiagCode::CouldNotOpenIncludeFile, fileName.location());
         else if (lexerStack.size() >= options.maxIncludeDepth)
-            addError(DiagCode::ExceededMaxIncludeDepth, fileName.location());
+            addDiag(DiagCode::ExceededMaxIncludeDepth, fileName.location());
         else
             pushSource(buffer);
     }
@@ -393,7 +393,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 
     if (!name.isMissing()) {
         if (getDirectiveKind(name.valueText()) != SyntaxKind::MacroUsage)
-            addError(DiagCode::InvalidMacroName, name.location());
+            addDiag(DiagCode::InvalidMacroName, name.location());
         else {
             // check if this is a function-like macro, which requires an opening paren with no leading space
             if (peek(TokenKind::OpenParenthesis) && peek().trivia().empty()) {
@@ -481,14 +481,14 @@ Trivia Preprocessor::handleElseDirective(Token directive) {
 bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf, string_view macroName) {
     // empty stack is an error
     if (branchStack.empty()) {
-        addError(DiagCode::UnexpectedConditionalDirective, location);
+        addDiag(DiagCode::UnexpectedConditionalDirective, location);
         return true;
     }
 
     // if we already had an else for this branch, we can't have any more elseifs
     BranchEntry& branch = branchStack.back();
     if (branch.hasElse) {
-        addError(DiagCode::UnexpectedConditionalDirective, location);
+        addDiag(DiagCode::UnexpectedConditionalDirective, location);
         return true;
     }
 
@@ -575,7 +575,7 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
     // pop the active branch off the stack
     bool taken = true;
     if (branchStack.empty())
-        addError(DiagCode::UnexpectedConditionalDirective, directive.location());
+        addDiag(DiagCode::UnexpectedConditionalDirective, directive.location());
     else {
         branchStack.pop_back();
         if (!branchStack.empty() && !branchStack.back().currentActive)
@@ -617,7 +617,7 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit, Timescale
 
         consume();
         if (!success)
-            addError(DiagCode::InvalidTimescaleSpecifier, token.location());
+            addDiag(DiagCode::InvalidTimescaleSpecifier, token.location());
         return success;
     }
 
@@ -648,7 +648,7 @@ Trivia Preprocessor::handleTimescaleDirective(Token directive) {
         if (!success1 || !success2 || unitPrecision < unitValue ||
                 (unitPrecision == unitValue &&
                 precision.intValue() > value.intValue())) {
-            addError(DiagCode::InvalidTimescaleSpecifier, directive.location());
+            addDiag(DiagCode::InvalidTimescaleSpecifier, directive.location());
         }
         else {
             activeTimescale = Timescale(TimescaleValue(unitValue, valueMagnitude),
@@ -675,7 +675,7 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
         if (!levNum || (levNum != 0 && levNum != 1 && levNum != 2)) {
             // We don't actually use the level for anything, but the spec allows
             // only the values 0,1,2
-            addError(DiagCode::InvalidLineDirectiveLevel, level.location());
+            addDiag(DiagCode::InvalidLineDirectiveLevel, level.location());
         }
         else if (lineNum) {
             // We should only notify the source manager about the line directive if it
@@ -715,7 +715,7 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
     }
 
     if (!netType) {
-        addError(DiagCode::ExpectedNetType, peek().location());
+        addDiag(DiagCode::ExpectedNetType, peek().location());
         netType = Token::createMissing(alloc, TokenKind::WireKeyword, peek().location());
     }
 
@@ -734,7 +734,7 @@ Trivia Preprocessor::handleUndefDirective(Token directive) {
             if (name != "__LINE__" && name != "__FILE__")
                 macros.erase(it);
             else
-                addError(DiagCode::UndefineBuiltinDirective, nameToken.location());
+                addDiag(DiagCode::UndefineBuiltinDirective, nameToken.location());
         }
     }
 
@@ -752,7 +752,7 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
     if (!versionToken.isMissing()) {
         auto versionOpt = getKeywordVersion(versionToken.valueText());
         if (!versionOpt)
-            addError(DiagCode::UnrecognizedKeywordVersion, versionToken.location());
+            addDiag(DiagCode::UnrecognizedKeywordVersion, versionToken.location());
         else
             keywordVersionStack.push_back(*versionOpt);
     }
@@ -763,7 +763,7 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
 
 Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
     if (keywordVersionStack.size() == 1)
-        addError(DiagCode::MismatchedEndKeywordsDirective, directive.location());
+        addDiag(DiagCode::MismatchedEndKeywordsDirective, directive.location());
     else
         keywordVersionStack.pop_back();
 
@@ -775,7 +775,7 @@ Token Preprocessor::parseEndOfDirective(bool suppressError) {
     SmallVectorSized<Token, 32> skipped;
     if (!peek(TokenKind::EndOfDirective)) {
         if (!suppressError)
-            addError(DiagCode::ExpectedEndOfDirective, peek().location());
+            addDiag(DiagCode::ExpectedEndOfDirective, peek().location());
         do {
             skipped.append(consume());
         } while (!peek(TokenKind::EndOfDirective));
@@ -813,7 +813,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
     auto macro = findMacro(directive);
     if (!macro.valid()) {
-        addError(DiagCode::UnknownDirective, directive.location()) << directive.valueText();
+        addDiag(DiagCode::UnknownDirective, directive.location()) << directive.valueText();
 
         // If we see a parenthesis next, let's assume they tried to invoke a function-like macro
         // and skip over the tokens.
@@ -879,13 +879,13 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                     if (i == 0 || i == tokens.size() - 1 || !token.trivia().empty() ||
                         !tokens[i + 1].trivia().empty()) {
 
-                        addError(DiagCode::IgnoredMacroPaste, token.location());
+                        addDiag(DiagCode::IgnoredMacroPaste, token.location());
                     }
                     else if (stringify) {
                         // if this is right after the opening quote or right before the closing quote, we're
                         // trying to concatenate something with nothing, so assume an error
                         if (buffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote)
-                            addError(DiagCode::IgnoredMacroPaste, token.location());
+                            addDiag(DiagCode::IgnoredMacroPaste, token.location());
                         else {
                             newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[i + 1]);
                             if (newToken) {
@@ -940,7 +940,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         // Verify that we haven't failed to expand any nested macros.
         for (Token token : expandedTokens) {
             if (token.kind == TokenKind::Directive && token.directiveKind() == SyntaxKind::MacroUsage) {
-                addError(DiagCode::UnknownDirective, token.location()) << token.valueText();
+                addDiag(DiagCode::UnknownDirective, token.location()) << token.valueText();
                 return actualArgs;
             }
         }
@@ -991,7 +991,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
     auto& formalList = directive->formalArguments->args;
     auto& actualList = actualArgs->args;
     if (actualList.size() > formalList.size()) {
-        addError(DiagCode::TooManyActualMacroArgs, actualArgs->getFirstToken().location());
+        addDiag(DiagCode::TooManyActualMacroArgs, actualArgs->getFirstToken().location());
         return false;
     }
 
@@ -1012,7 +1012,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
             if (formal->defaultValue)
                 tokenList = &formal->defaultValue->tokens;
             else {
-                addError(DiagCode::NotEnoughMacroArgs, actualArgs->closeParen.location());
+                addDiag(DiagCode::NotEnoughMacroArgs, actualArgs->closeParen.location());
                 return false;
             }
         }
@@ -1246,7 +1246,7 @@ Token Preprocessor::expect(TokenKind kind, LexerMode mode) {
     return result;
 }
 
-Diagnostic& Preprocessor::addError(DiagCode code, SourceLocation location) {
+Diagnostic& Preprocessor::addDiag(DiagCode code, SourceLocation location) {
     return diagnostics.add(code, location);
 }
 
@@ -1272,7 +1272,7 @@ MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentLis
     // macro has arguments, so we expect to see them here
     currentMode = LexerMode::Normal;
     if (!peek(TokenKind::OpenParenthesis)) {
-        pp.addError(DiagCode::ExpectedMacroArgs, peek().location());
+        pp.addDiag(DiagCode::ExpectedMacroArgs, peek().location());
         return nullptr;
     }
 
@@ -1330,7 +1330,7 @@ span<Token> Preprocessor::MacroParser::parseTokenList() {
         auto kind = peek().kind;
         if (kind == TokenKind::EndOfDirective || kind == TokenKind::EndOfFile) {
             if (!delimPairStack.empty())
-                pp.addError(DiagCode::UnbalancedMacroArgDims, peek().location()) << getTokenKindText(delimPairStack.back());
+                pp.addDiag(DiagCode::UnbalancedMacroArgDims, peek().location()) << getTokenKindText(delimPairStack.back());
             break;
         }
 

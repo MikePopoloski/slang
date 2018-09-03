@@ -100,7 +100,7 @@ private:
     bool scanExponent(uint64_t& value, bool& negative);
 
     void addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer);
-    void addError(DiagCode code, uint32_t offset);
+    void addDiag(DiagCode code, uint32_t offset);
 
     // source pointer manipulation
     void mark() { marker = sourceBuffer; }

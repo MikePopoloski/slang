@@ -60,9 +60,9 @@ void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclar
 
         if (!decl->initializer) {
             if (!isPort)
-                compilation.addError(*param, DiagCode::BodyParamNoInitializer, loc);
+                compilation.addDiag(*param, DiagCode::BodyParamNoInitializer, loc);
             else if (isLocal)
-                compilation.addError(*param, DiagCode::LocalParamNoInitializer, loc);
+                compilation.addDiag(*param, DiagCode::LocalParamNoInitializer, loc);
         }
 
         param->setSyntax(*decl);

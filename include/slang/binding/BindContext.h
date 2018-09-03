@@ -29,8 +29,8 @@ struct BindContext {
     BindContext(const Scope& scope, LookupLocation lookupLocation, bitmask<BindFlags> flags = BindFlags::None) :
         scope(scope), lookupLocation(lookupLocation), flags(flags) {}
 
-    Diagnostic& addError(DiagCode code, SourceLocation location) const;
-    Diagnostic& addError(DiagCode code, SourceRange sourceRange) const;
+    Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
+    Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 
     bool checkLValue(const Expression& expr, SourceLocation location) const;
     bool checkNoUnknowns(const SVInt& value, SourceRange range) const;

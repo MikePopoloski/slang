@@ -94,8 +94,8 @@ public:
     Diagnostics getAllDiagnostics();
 
     /// Report an error at the specified location.
-    Diagnostic& addError(const Symbol& source, DiagCode code, SourceLocation location);
-    Diagnostic& addError(const Symbol& source, DiagCode code, SourceRange sourceRange);
+    Diagnostic& addDiag(const Symbol& source, DiagCode code, SourceLocation location);
+    Diagnostic& addDiag(const Symbol& source, DiagCode code, SourceRange sourceRange);
 
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);

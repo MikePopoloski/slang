@@ -93,7 +93,7 @@ Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax
     auto stmtLoc = syntax.returnKeyword.location();
     const Symbol* subroutine = asSymbol().findAncestor(SymbolKind::Subroutine);
     if (!subroutine) {
-        addError(DiagCode::ReturnNotInSubroutine, stmtLoc);
+        addDiag(DiagCode::ReturnNotInSubroutine, stmtLoc);
         return badStmt(nullptr);
     }
 

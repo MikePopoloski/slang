@@ -305,11 +305,11 @@ Diagnostics Compilation::getAllDiagnostics() {
     return results;
 }
 
-Diagnostic& Compilation::addError(const Symbol& source, DiagCode code, SourceLocation location) {
+Diagnostic& Compilation::addDiag(const Symbol& source, DiagCode code, SourceLocation location) {
     return diags.add(source, code, location);
 }
 
-Diagnostic& Compilation::addError(const Symbol& source, DiagCode code, SourceRange sourceRange) {
+Diagnostic& Compilation::addDiag(const Symbol& source, DiagCode code, SourceRange sourceRange) {
     return diags.add(source, code, sourceRange);
 }
 
@@ -326,7 +326,7 @@ const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation loca
                                  bool allowNetType) {
     const Type& result = Type::fromSyntax(*this, node, location, parent);
     if (!allowNetType && result.isNetType()) {
-        parent.addError(DiagCode::NetTypeNotAllowed, node.sourceRange()) << result.name;
+        parent.addDiag(DiagCode::NetTypeNotAllowed, node.sourceRange()) << result.name;
         return errorType;
     }
     return result;
@@ -393,7 +393,7 @@ optional<int32_t> Compilation::evalIntegerExpr(const ExpressionSyntax& syntax, L
 
     auto coerced = value.as<int32_t>();
     if (!coerced) {
-        auto& diag = context.addError(DiagCode::ValueOutOfRange, expr.sourceRange);
+        auto& diag = context.addDiag(DiagCode::ValueOutOfRange, expr.sourceRange);
         diag << value;
         diag << INT32_MIN;
         diag << INT32_MAX;

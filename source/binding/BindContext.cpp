@@ -10,17 +10,17 @@
 
 namespace slang {
 
-Diagnostic& BindContext::addError(DiagCode code, SourceLocation location) const {
-    return scope.addError(code, location);
+Diagnostic& BindContext::addDiag(DiagCode code, SourceLocation location) const {
+    return scope.addDiag(code, location);
 }
 
-Diagnostic& BindContext::addError(DiagCode code, SourceRange sourceRange) const {
-    return scope.addError(code, sourceRange);
+Diagnostic& BindContext::addDiag(DiagCode code, SourceRange sourceRange) const {
+    return scope.addDiag(code, sourceRange);
 }
 
 bool BindContext::checkLValue(const Expression& expr, SourceLocation location) const {
     if (!expr.isLValue()) {
-        auto& diag = addError(DiagCode::ExpressionNotAssignable, location);
+        auto& diag = addDiag(DiagCode::ExpressionNotAssignable, location);
         diag << expr.sourceRange;
         return false;
     }
@@ -29,7 +29,7 @@ bool BindContext::checkLValue(const Expression& expr, SourceLocation location) c
 
 bool BindContext::checkNoUnknowns(const SVInt& value, SourceRange range) const {
     if (value.hasUnknown()) {
-        addError(DiagCode::ValueMustNotBeUnknown, range);
+        addDiag(DiagCode::ValueMustNotBeUnknown, range);
         return false;
     }
     return true;
@@ -37,7 +37,7 @@ bool BindContext::checkNoUnknowns(const SVInt& value, SourceRange range) const {
 
 bool BindContext::checkPositive(const SVInt& value, SourceRange range) const {
     if (value.isSigned() && value.isNegative()) {
-        addError(DiagCode::ValueMustBePositive, range);
+        addDiag(DiagCode::ValueMustBePositive, range);
         return false;
     }
     return true;
@@ -46,7 +46,7 @@ bool BindContext::checkPositive(const SVInt& value, SourceRange range) const {
 optional<bitwidth_t> BindContext::checkValidBitWidth(const SVInt& value, SourceRange range) const {
     auto result = value.as<bitwidth_t>();
     if (!result)
-        addError(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
+        addDiag(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
     return result;
 }
 

@@ -86,7 +86,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 orderedAssignments = isOrdered;
             }
             else if (isOrdered != orderedAssignments) {
-                scope.addError(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
+                scope.addDiag(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
                 break;
             }
 
@@ -96,7 +96,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 const NamedArgumentSyntax& nas = paramBase->as<NamedArgumentSyntax>();
                 auto pair = namedParams.emplace(nas.name.valueText(), std::make_pair(&nas, false));
                 if (!pair.second) {
-                    auto& diag = scope.addError(DiagCode::DuplicateParamAssignment, nas.name.location());
+                    auto& diag = scope.addDiag(DiagCode::DuplicateParamAssignment, nas.name.location());
                     diag << nas.name.valueText();
                     diag.addNote(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
                 }
@@ -119,7 +119,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
             // Make sure there aren't extra param assignments for non-existent params.
             if (orderedIndex < orderedParams.size()) {
                 auto loc = orderedParams[orderedIndex]->getFirstToken().location();
-                auto& diag = scope.addError(DiagCode::TooManyParamAssignments, loc);
+                auto& diag = scope.addDiag(DiagCode::TooManyParamAssignments, loc);
                 diag << definition->name;
                 diag << orderedParams.size();
                 diag << orderedIndex;
@@ -139,7 +139,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                     DiagCode code = param->isPortParam() ?
                         DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam;
 
-                    auto& diag = scope.addError(code, arg->name.location());
+                    auto& diag = scope.addDiag(code, arg->name.location());
                     diag.addNote(DiagCode::NoteDeclarationHere, param->location);
                     continue;
                 }
@@ -155,7 +155,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 // We marked all the args that we used, so anything left over is a param assignment
                 // for a non-existent parameter.
                 if (!pair.second.second) {
-                    auto& diag = scope.addError(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
+                    auto& diag = scope.addDiag(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
                     diag << pair.second.first->name.valueText();
                     diag << definition->name;
                 }
@@ -178,7 +178,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
             overrides.append(&expr);
         }
         else if (!param->getInitializer() && !param->isLocalParam() && param->isPortParam()) {
-            auto& diag = scope.addError(DiagCode::ParamHasNoValue, syntax.getFirstToken().location());
+            auto& diag = scope.addDiag(DiagCode::ParamHasNoValue, syntax.getFirstToken().location());
             diag << definition->name;
             diag << param->name;
             overrides.append(nullptr);

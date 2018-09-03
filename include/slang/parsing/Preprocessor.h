@@ -177,7 +177,7 @@ private:
     Token expect(TokenKind kind, LexerMode mode = LexerMode::Directive);
     bool peek(TokenKind kind, LexerMode mode = LexerMode::Directive) { return peek(mode).kind == kind; }
 
-    Diagnostic& addError(DiagCode code, SourceLocation location);
+    Diagnostic& addDiag(DiagCode code, SourceLocation location);
 
     // This is a small collection of state used to keep track of where we are in a tree of
     // nested conditional directives.

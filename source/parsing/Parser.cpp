@@ -665,7 +665,7 @@ FunctionPortSyntax& Parser::parseFunctionPort() {
 
     if (constKeyword && direction.kind != TokenKind::RefKeyword) {
         auto location = direction ? direction.location() : constKeyword.location();
-        addError(DiagCode::ConstFunctionPortRequiresRef, location);
+        addDiag(DiagCode::ConstFunctionPortRequiresRef, location);
     }
 
     Token varKeyword = consumeIf(TokenKind::VarKeyword);
@@ -806,14 +806,14 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(span<AttributeInstanceSyn
             iterVarCheck = iterationExpr.as<PostfixUnaryExpressionSyntax>().operand;
             break;
         default:
-            addError(DiagCode::InvalidGenvarIterExpression, iterationExpr.getFirstToken().location())
+            addDiag(DiagCode::InvalidGenvarIterExpression, iterationExpr.getFirstToken().location())
                 << iterationExpr.sourceRange();
             iterationExpr = factory.badExpression(iterationExpr);
             break;
     }
 
     if (iterVarCheck && iterVarCheck->kind != SyntaxKind::IdentifierName) {
-        addError(DiagCode::ExpectedGenvarIterVar, iterVarCheck->getFirstToken().location())
+        addDiag(DiagCode::ExpectedGenvarIterVar, iterVarCheck->getFirstToken().location())
             << iterVarCheck->sourceRange();
         iterationExpr = factory.badExpression(iterationExpr);
     }
@@ -1798,7 +1798,7 @@ DataTypeSyntax& Parser::parseDataType(bool allowImplicit) {
     auto dimensions = parseDimensionList();
 
     if (!allowImplicit)
-        addError(DiagCode::ImplicitNotAllowed, peek().location());
+        addDiag(DiagCode::ImplicitNotAllowed, peek().location());
 
     return factory.implicitType(signing, dimensions);
 }
@@ -1933,7 +1933,7 @@ VariableDeclaratorSyntax& Parser::parseVariableDeclarator(bool isFirst) {
     // X x = 1, Y y = 2;
     // The second identifier would be treated as a variable name, which is confusing
     if (!isFirst && peek(TokenKind::Identifier))
-        addError(DiagCode::MultipleTypesInDeclaration, peek().location());
+        addDiag(DiagCode::MultipleTypesInDeclaration, peek().location());
 
     auto dimensions = parseDimensionList();
 
@@ -2047,7 +2047,7 @@ DPIImportExportSyntax& Parser::parseDPIImportExport(span<AttributeInstanceSyntax
     auto keyword = consume();
     auto stringLiteral = expect(TokenKind::StringLiteral);
     if (stringLiteral.valueText() != "DPI-C" && stringLiteral.valueText() != "DPI") {
-        addError(DiagCode::ExpectedDPISpecString, stringLiteral.location());
+        addDiag(DiagCode::ExpectedDPISpecString, stringLiteral.location());
     }
     Token property, name, equals;
     if (keyword.kind == TokenKind::ImportKeyword && (peek(TokenKind::ContextKeyword) || peek(TokenKind::PureKeyword))) {
@@ -2266,7 +2266,7 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(span<AttributeInstan
                 auto token = consume();
                 skipped.append(token);
                 if (!error) {
-                    addError(DiagCode::ExpectedClockingSkew, peek().location());
+                    addDiag(DiagCode::ExpectedClockingSkew, peek().location());
                     error = true;
                 }
                 continue;
@@ -2512,7 +2512,7 @@ bool Parser::scanQualifiedName(uint32_t& index) {
 
 void Parser::errorIfAttributes(span<AttributeInstanceSyntax*> attributes, DiagCode code) {
     if (!attributes.empty())
-        addError(code, peek().location());
+        addDiag(code, peek().location());
 }
 
 void Parser::throwIfTooDeep() {

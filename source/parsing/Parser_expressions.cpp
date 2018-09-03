@@ -163,7 +163,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             // have to check for overflow here, now that we know this is actually a real
             auto literal = consume();
             if (!std::isfinite(literal.realValue()))
-                addError(DiagCode::RealExponentOverflow, literal.location());
+                addDiag(DiagCode::RealExponentOverflow, literal.location());
             expr = &factory.literalExpression(SyntaxKind::RealLiteralExpression, literal);
             break;
         }
@@ -265,7 +265,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
         const SVInt& tokenValue = token.intValue();
         if (!peek(TokenKind::IntegerBase)) {
             if (tokenValue > INT32_MAX)
-                addError(DiagCode::SignedIntegerOverflow, token.location());
+                addDiag(DiagCode::SignedIntegerOverflow, token.location());
             return factory.literalExpression(SyntaxKind::IntegerLiteralExpression, token);
         }
 
@@ -273,11 +273,11 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
         baseToken = consume();
 
         if (tokenValue == 0) {
-            addError(DiagCode::LiteralSizeIsZero, token.location());
+            addDiag(DiagCode::LiteralSizeIsZero, token.location());
         }
         else if (tokenValue > SVInt::MAX_BITS) {
             sizeBits = SVInt::MAX_BITS;
-            addError(DiagCode::LiteralSizeTooLarge, token.location()) << (int)SVInt::MAX_BITS;
+            addDiag(DiagCode::LiteralSizeTooLarge, token.location()) << (int)SVInt::MAX_BITS;
         }
         else {
             sizeBits = tokenValue.as<bitwidth_t>().value();
@@ -288,7 +288,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
     // because of hex literals
     auto first = peek();
     if (!isPossibleVectorDigit(first.kind)) {
-        addError(DiagCode::ExpectedVectorDigits, first.location());
+        addDiag(DiagCode::ExpectedVectorDigits, first.location());
         return factory.integerVectorExpression(sizeToken, baseToken, Token::createMissing(alloc, TokenKind::IntegerLiteral, first.location()));
     }
 
@@ -625,7 +625,7 @@ NameSyntax& Parser::parseName(bool isForEach) {
             usedDot = true;
         else if (usedDot && !reportedError) {
             reportedError = true;
-            addError(DiagCode::ColonShouldBeDot, separator.location());
+            addDiag(DiagCode::ColonShouldBeDot, separator.location());
         }
         if (peek().kind == TokenKind::NewKeyword) {
             name = &factory.classScope(*name, separator);
@@ -810,7 +810,7 @@ EventExpressionSyntax& Parser::parseEventExpression() {
 ExpressionSyntax& Parser::parseNewExpression(ExpressionSyntax* scope) {
     if (scope && scope->kind != SyntaxKind::ClassScope) {
         // TODO: verify this error message makes sense
-        addError(DiagCode::ExpectedClassScope, scope->getFirstToken().location());
+        addDiag(DiagCode::ExpectedClassScope, scope->getFirstToken().location());
         return *scope;
     }
     auto newKeyword = expect(TokenKind::NewKeyword);

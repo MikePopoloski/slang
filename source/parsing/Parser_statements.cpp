@@ -32,7 +32,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
                     return parseCaseStatement(label, attributes, modifier, consume());
                 }
                 default: {
-                    addError(DiagCode::ExpectedIfOrCase, peek(1).location()) << getTokenKindText(peek().kind);
+                    addDiag(DiagCode::ExpectedIfOrCase, peek(1).location()) << getTokenKindText(peek().kind);
                     skipToken(std::nullopt);
                     return factory.emptyStatement(label, attributes, Token());
                 }
@@ -101,9 +101,9 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
             return parseRandCaseStatement(label, attributes);
         case TokenKind::Semicolon:
             if (label)
-                addError(DiagCode::NoLabelOnSemicolon, peek().location());
+                addDiag(DiagCode::NoLabelOnSemicolon, peek().location());
             else if (!allowEmpty)
-                addError(DiagCode::ExpectedStatement, peek().location());
+                addDiag(DiagCode::ExpectedStatement, peek().location());
             return factory.emptyStatement(label, attributes, consume());
         case TokenKind::MinusArrow:
         case TokenKind::MinusDoubleArrow:
@@ -118,7 +118,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
         return factory.expressionStatement(label, attributes, expr, expect(TokenKind::Semicolon));
     }
 
-    addError(DiagCode::ExpectedStatement, peek().location());
+    addDiag(DiagCode::ExpectedStatement, peek().location());
     return factory.emptyStatement(label, attributes, Token());
 }
 
@@ -448,7 +448,7 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, span<A
         auto hash = consume();
         auto zero = expect(TokenKind::IntegerLiteral);
         if (!zero.isMissing() && zero.intValue() != 0)
-            addError(DiagCode::DeferredDelayMustBeZero, zero.location());
+            addDiag(DiagCode::DeferredDelayMustBeZero, zero.location());
         deferred = &factory.deferredAssertion(hash, zero, Token());
     }
     else if (peek(TokenKind::FinalKeyword)) {
