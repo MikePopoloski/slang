@@ -283,7 +283,12 @@ Diagnostics Compilation::getSemanticDiagnostics() {
     }
 
     Diagnostics results;
-    results.appendRange(diags);
+    for (auto& diag : diags) {
+        // TODO: smarter filtering of duplicate errors across instances
+        ASSERT(diag.symbol);
+        if (!diag.symbol->findAncestor(SymbolKind::Definition))
+            results.append(diag);
+    }
 
     if (sourceManager)
         results.sort(*sourceManager);
