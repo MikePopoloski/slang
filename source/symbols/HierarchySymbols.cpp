@@ -51,7 +51,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const M
     auto copied = parameters.copy(compilation);
     auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header->name.valueText(),
                                                         syntax.header->name.location(),
-                                                        span((const ParameterSymbol**)copied.data(), copied.size()));
+                                                        span((const ParameterSymbol* const *)copied.data(), copied.size()));
     for (auto param : parameters)
         result->addMember(*param);
 

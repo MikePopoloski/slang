@@ -45,10 +45,10 @@ public:
 /// to form a node in the design hierarchy.
 class DefinitionSymbol : public Symbol, public Scope {
 public:
-    span<const ParameterSymbol*> parameters;
+    span<const ParameterSymbol* const> parameters;
 
     DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     span<const ParameterSymbol*> parameters) :
+                     span<const ParameterSymbol* const> parameters) :
         Symbol(SymbolKind::Definition, name, loc),
         Scope(compilation, this),
         parameters(parameters) {}
