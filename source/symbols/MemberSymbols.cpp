@@ -112,6 +112,203 @@ void ParameterSymbol::toJson(json& j) const {
     j["isBody"] = isBodyParam();
 }
 
+namespace {
+
+// Helper class to build up lists of port symbols.
+struct PortListBuilder {
+    Compilation& compilation;
+    SmallVector<const PortSymbol*>& ports;
+
+    PortKind lastKind = PortKind::Net;
+    PortDirection lastDirection = PortDirection::InOut;
+    const DataTypeSyntax* lastType = nullptr;
+
+    PortListBuilder(Compilation& compilation, SmallVector<const PortSymbol*>& ports) :
+        compilation(compilation),
+        ports(ports)
+    {
+    }
+
+    void add(const PortSymbol& port) {
+        ports.append(&port);
+
+        lastKind = port.portKind;
+        lastDirection = port.direction;
+        lastType = port.getDeclaredType()->getTypeSyntax();
+
+        if (lastDirection == PortDirection::NotApplicable)
+            lastDirection = PortDirection::InOut;
+
+        if (lastKind == PortKind::Explicit || lastKind == PortKind::Interface) {
+            switch (lastDirection) {
+                case PortDirection::In:
+                case PortDirection::InOut:
+                case PortDirection::Out:
+                    // TODO: default nettype
+                    lastKind = PortKind::Net;
+                    break;
+                case PortDirection::Ref:
+                    lastKind = PortKind::Variable;
+                    break;
+                case PortDirection::NotApplicable:
+                    THROW_UNREACHABLE;
+            }
+        }
+    }
+};
+
+void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilder& builder) {
+    static KeywordTypeSyntax LogicSyntax { SyntaxKind::LogicType, Token() };
+
+    Compilation& comp = builder.compilation;
+
+    auto token = syntax.declarator->name;
+    auto& port = *comp.emplace<PortSymbol>(token.valueText(), token.location());
+
+    // Helper function to check if an implicit type syntax is totally empty.
+    auto typeSyntaxEmpty = [](const DataTypeSyntax& typeSyntax) {
+        if (typeSyntax.kind != SyntaxKind::ImplicitType)
+            return false;
+
+        const auto& implicitType = typeSyntax.as<ImplicitTypeSyntax>();
+        return !implicitType.signing && implicitType.dimensions.empty();
+    };
+
+    // Helper function to set the port's direction and data type, which are both optional.
+    auto setDirectionAndType = [&](const auto& header, const auto& dimensions) {
+        if (!header.direction)
+            port.direction = builder.lastDirection;
+        else
+            port.direction = SemanticFacts::getPortDirection(header.direction.kind);
+
+        if (typeSyntaxEmpty(*header.dataType))
+            port.setDeclaredType(LogicSyntax, dimensions);
+        else
+            port.setDeclaredType(*header.dataType, dimensions);
+    };
+
+    // Helper function to copy type and dimensions from a previously declared type.
+    auto copyTypeFrom = [](ValueSymbol& dest, const DeclaredType& source) {
+        if (auto typeSyntax = source.getTypeSyntax()) {
+            if (auto dims = source.getDimensionSyntax())
+                dest.setDeclaredType(*typeSyntax, *dims);
+            else
+                dest.setDeclaredType(*typeSyntax);
+        }
+    };
+
+    switch (syntax.header->kind) {
+        case SyntaxKind::VariablePortHeader: {
+            const auto& header = syntax.header->as<VariablePortHeaderSyntax>();
+            if (!header.direction && !header.varKeyword && typeSyntaxEmpty(*header.dataType)) {
+                // If all three are omitted, take all from the previous port.
+                // TODO: default nettype?
+                port.portKind = builder.lastKind;
+                port.direction = builder.lastDirection;
+
+                if (port.portKind != PortKind::Interconnect) {
+                    if (builder.lastType)
+                        port.setDeclaredType(*builder.lastType, syntax.declarator->dimensions);
+                    else
+                        port.setDeclaredType(LogicSyntax, syntax.declarator->dimensions);
+                }
+            }
+            else {
+                setDirectionAndType(header, syntax.declarator->dimensions);
+
+                if (header.varKeyword)
+                    port.portKind = PortKind::Variable;
+                else {
+                    // Rules from [23.2.2.3]:
+                    // - For input and inout, default to a net
+                    // - For output, if we have a data type it's a var, otherwise net
+                    // - For ref it's always a var
+                    switch (port.direction) {
+                        case PortDirection::In:
+                        case PortDirection::InOut:
+                            // TODO: default nettype
+                            port.portKind = PortKind::Net;
+                            break;
+                        case PortDirection::Out:
+                            if (header.dataType->kind == SyntaxKind::ImplicitType)
+                                port.portKind = PortKind::Net;
+                            else
+                                port.portKind = PortKind::Variable;
+                            break;
+                        case PortDirection::Ref:
+                            port.portKind = PortKind::Variable;
+                            break;
+                        case PortDirection::NotApplicable:
+                            THROW_UNREACHABLE;
+                    }
+                }
+            }
+
+            // Create a new symbol to represent this port internally to the instance.
+            // TODO: interconnect ports don't have a datatype
+            // TODO: variable lifetime
+            auto variable = comp.emplace<VariableSymbol>(port.name, syntax.declarator->name.location());
+            variable->setSyntax(syntax);
+            copyTypeFrom(*variable, *port.getDeclaredType());
+            port.internalSymbol = variable;
+
+            // Initializers here are evaluated in the context of the port list and must always be a constant value.
+            // TODO: handle initializers
+            break;
+        }
+        case SyntaxKind::NetPortHeader: {
+            const auto& header = syntax.header->as<NetPortHeaderSyntax>();
+            port.portKind = PortKind::Net;
+            setDirectionAndType(header, syntax.declarator->dimensions);
+
+            // Create a new symbol to represent this port internally to the instance.
+            // TODO: net type
+            auto net = comp.emplace<NetSymbol>(port.name, syntax.declarator->name.location());
+            net->setSyntax(syntax);
+            copyTypeFrom(*net, *port.getDeclaredType());
+            port.internalSymbol = net;
+            break;
+        }
+        default:
+            // TODO:
+            THROW_UNREACHABLE;
+    }
+
+    builder.add(port);
+}
+
+}
+
+void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
+                            SmallVector<const PortSymbol*>& results) {
+    switch (syntax.kind) {
+        case SyntaxKind::AnsiPortList: {
+            PortListBuilder builder { compilation, results };
+            for (const MemberSyntax* port : syntax.as<AnsiPortListSyntax>().ports) {
+                switch (port->kind) {
+                    case SyntaxKind::ImplicitAnsiPort: {
+                        handleImplicitAnsiPort(port->as<ImplicitAnsiPortSyntax>(), builder);
+                        break;
+                    }
+                    default:
+                        // TODO:
+                        THROW_UNREACHABLE;
+                }
+            }
+            break;
+        }
+        case SyntaxKind::NonAnsiPortList:
+            // TODO: implement
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
+void PortSymbol::toJson(json&) const {
+    // TODO: implement this
+}
+
 void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results) {
     for (auto declarator : syntax.declarators) {

@@ -567,7 +567,7 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
 
         case ConversionKind::IntExtension:
             ASSERT(value.isInteger() && value.integer().getBitWidth() == operand().type->getBitWidth());
-            return extend(value.integer(), (uint16_t)type->getBitWidth(), type->as<IntegralType>().isSigned);
+            return extend(value.integer(), type->getBitWidth(), type->as<IntegralType>().isSigned);
 
         case ConversionKind::IntTruncation:
             // TODO: add a truncate() method

@@ -64,6 +64,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         SYMBOL(EnumValue);
         SYMBOL(ForwardingTypedef);
         SYMBOL(Parameter);
+        SYMBOL(Port);
         SYMBOL(Definition);
         SYMBOL(ModuleInstance);
         SYMBOL(InterfaceInstance);

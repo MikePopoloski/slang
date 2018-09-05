@@ -115,6 +115,7 @@ bool ValueSymbol::isKind(SymbolKind kind) {
         case SymbolKind::Net:
         case SymbolKind::EnumValue:
         case SymbolKind::Parameter:
+        case SymbolKind::Port:
             return true;
         default:
             return VariableSymbol::isKind(kind);

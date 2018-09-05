@@ -45,6 +45,7 @@ enum class SymbolKind {
     NetType,
     Definition,
     Parameter,
+    Port,
     Modport,
     ModuleInstance,
     InterfaceInstance,

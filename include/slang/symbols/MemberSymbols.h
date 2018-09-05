@@ -105,6 +105,39 @@ private:
     bool isPort = false;
 };
 
+/// Represents the public-facing side of a module / program / interface port.
+/// The port symbol itself is not directly referenceable from within the instance;
+/// it can however connect directly to a symbol that is.
+class PortSymbol : public ValueSymbol {
+public:
+    /// The kind of port.
+    PortKind portKind = PortKind::Net;
+
+    /// The direction of data flowing across the port. Some port kinds
+    /// don't have meaningful semantics for direction; in those cases, this
+    /// is set to NotApplicable.
+    PortDirection direction = PortDirection::NotApplicable;
+
+    /// An instance-internal symbol that this port connects to, if any.
+    /// Ports that do not connect directly to an internal symbol will have
+    /// this set to nullptr.
+    const Symbol* internalSymbol = nullptr;
+
+    /// For explicit ports, this is the expression that controls how it
+    /// connects to the instance's internals.
+    const Expression* explicitConnection = nullptr;
+
+    PortSymbol(string_view name, SourceLocation loc) :
+        ValueSymbol(SymbolKind::Port, name, loc) {}
+
+    void toJson(json& j) const;
+
+    static void fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
+                           SmallVector<const PortSymbol*>& results);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
+};
+
 /// Represents a net declaration.
 class NetSymbol : public ValueSymbol {
 public:
