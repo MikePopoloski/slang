@@ -16,8 +16,8 @@ coverage:
     - "external/*"
     - "tests/*"
     - "tools/*"
-    - "source/parsing/AllSyntax.h"
-    - "source/parsing/AllSyntax.cpp"
+    - "include/slang/syntax/AllSyntax.h"
+    - "source/syntax/AllSyntax.cpp"
 
 parsers:
   gcov:
