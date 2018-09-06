@@ -284,12 +284,44 @@ Diagnostics Compilation::getSemanticDiagnostics() {
         getRoot().visit(visitor);
     }
 
-    Diagnostics results;
+    // Go through all diagnostics and build a map from source location / code to the
+    // actual diagnostic. The purpose is to find duplicate diagnostics issued by several
+    // instantiations and collapse them down to one output for the user.
+    flat_hash_map<std::tuple<DiagCode, SourceLocation>,
+                  std::pair<const Diagnostic*, std::vector<const Diagnostic*>>> diagMap;
+
     for (auto& diag : diags) {
-        // TODO: smarter filtering of duplicate errors across instances
         ASSERT(diag.symbol);
-        if (!diag.symbol->findAncestor(SymbolKind::Definition))
-            results.append(diag);
+        if (auto it = diagMap.find({ diag.code, diag.location }); it != diagMap.end()) {
+            it->second.second.push_back(&diag);
+            if (diag.symbol->kind == SymbolKind::Definition)
+                it->second.first = &diag;
+        }
+        else {
+            std::pair<const Diagnostic*, std::vector<const Diagnostic*>> newEntry;
+            newEntry.second.push_back(&diag);
+            if (diag.symbol->kind == SymbolKind::Definition)
+                newEntry.first = &diag;
+
+            diagMap.emplace(std::make_tuple(diag.code, diag.location), std::move(newEntry));
+        }
+    }
+
+    Diagnostics results;
+    for (auto& pair : diagMap) {
+        auto& [definition, diagList] = pair.second;
+        if (diagList.size() == 1)
+            results.append(*diagList.front());
+        else {
+            // If we get here there are multiple duplicate diagnostics issued. Pick the one that
+            // came from a Definition, if there is one. Otherwise just pick whatever the first one is.
+            // TODO: in the future this could print out the hierarchical paths or parameter values
+            // involves with the instantiations to provide more insight as to what caused the error.
+            if (definition)
+                results.append(*definition);
+            else
+                results.append(*diagList.front());
+        }
     }
 
     if (sourceManager)

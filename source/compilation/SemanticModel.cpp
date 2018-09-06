@@ -35,14 +35,8 @@ const Symbol* SemanticModel::getDeclaredSymbol(const SyntaxNode& syntax) {
     if (!parent)
         return nullptr;
 
-    // If we found a definition symbol we need to make a fake instantiation in order
-    // to search through its children.
-    if (parent->kind == SymbolKind::Definition) {
-        parent = &ModuleInstanceSymbol::instantiate(compilation, "", SourceLocation(),
-                                                    parent->as<DefinitionSymbol>());
-        symbolCache[syntax.parent] = parent;
-    }
-    else if (parent->kind == SymbolKind::TypeAlias) {
+    // If this is a type alias, unwrap its target type to look at the syntax node.
+    if (parent->kind == SymbolKind::TypeAlias) {
         auto& target = parent->as<TypeAliasType>().targetType.getType();
         if (target.getSyntax() == &syntax) {
             symbolCache.emplace(&syntax, &target);

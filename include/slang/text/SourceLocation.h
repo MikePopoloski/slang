@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/util/Util.h"
+
 namespace slang {
 
 class SourceManager;
@@ -114,6 +116,16 @@ template<>
 struct hash<slang::BufferID> {
     size_t operator()(const slang::BufferID& obj) const {
         return obj.getId();
+    }
+};
+
+template<>
+struct hash<slang::SourceLocation> {
+    size_t operator()(const slang::SourceLocation& obj) const {
+        size_t seed = 0;
+        slang::hash_combine(seed, obj.buffer());
+        slang::hash_combine(seed, obj.offset());
+        return seed;
     }
 };
 
