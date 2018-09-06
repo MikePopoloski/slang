@@ -158,7 +158,7 @@ struct PortListBuilder {
 };
 
 void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilder& builder) {
-    static KeywordTypeSyntax LogicSyntax { SyntaxKind::LogicType, Token() };
+    static IntegerTypeSyntax LogicSyntax { SyntaxKind::LogicType, Token(), Token(), nullptr };
 
     Compilation& comp = builder.compilation;
 
