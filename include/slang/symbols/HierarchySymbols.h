@@ -47,11 +47,9 @@ class DefinitionSymbol : public Symbol, public Scope {
 public:
     span<const ParameterSymbol* const> parameters;
 
-    DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     span<const ParameterSymbol* const> parameters) :
+    DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(SymbolKind::Definition, name, loc),
-        Scope(compilation, this),
-        parameters(parameters) {}
+        Scope(compilation, this) {}
 
     void toJson(json&) const {}
 

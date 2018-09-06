@@ -1,7 +1,7 @@
 #include "Test.h"
 
 TEST_CASE("Finding top level", "[binding:decls]") {
-    auto file1 = SyntaxTree::fromText("module A; A a(); endmodule\nmodule B; endmodule\nmodule C; endmodule");
+    auto file1 = SyntaxTree::fromText("module A; endmodule\nmodule B; A a(); endmodule\nmodule C; endmodule");
     auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
     Compilation compilation;

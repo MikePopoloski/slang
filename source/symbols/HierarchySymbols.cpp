@@ -24,7 +24,11 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleD
 }
 
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax) {
-    SmallVectorSized<ParameterSymbol*, 8> parameters;
+    auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header->name.valueText(),
+                                                        syntax.header->name.location());
+    result->setSyntax(syntax);
+
+    SmallVectorSized<const ParameterSymbol*, 8> parameters;
     bool hasPortParams = syntax.header->parameters;
     if (hasPortParams) {
         bool lastLocal = false;
@@ -34,28 +38,45 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const M
             // This isn't allowed in a module body, but the parser will take care of the error for us.
             if (declaration->keyword)
                 lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
-            ParameterSymbol::fromSyntax(compilation, *declaration, lastLocal, true, parameters);
+
+            SmallVectorSized<ParameterSymbol*, 8> params;
+            ParameterSymbol::fromSyntax(compilation, *declaration, lastLocal, true, params);
+
+            for (auto param : params) {
+                parameters.append(param);
+                result->addMember(*param);
+            }
         }
     }
 
-    // Also search through immediate members in the body of the definition for any parameters, as they may
-    // be overridable at instantiation time.
+    if (syntax.header->ports) {
+        SmallVectorSized<const PortSymbol*, 8> ports;
+        PortSymbol::fromSyntax(compilation, *syntax.header->ports, ports);
+        for (auto port : ports) {
+            // TODO: also add port itself as a member
+            if (port->internalSymbol)
+                result->addMember(*port->internalSymbol);
+        }
+    }
+
     for (auto member : syntax.members) {
-        if (member->kind == SyntaxKind::ParameterDeclarationStatement) {
+        if (member->kind != SyntaxKind::ParameterDeclarationStatement)
+            result->addMembers(*member);
+        else {
             auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
             bool isLocal = hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
-            ParameterSymbol::fromSyntax(compilation, *declaration, isLocal, false, parameters);
+
+            SmallVectorSized<ParameterSymbol*, 8> params;
+            ParameterSymbol::fromSyntax(compilation, *declaration, isLocal, false, params);
+
+            for (auto param : params) {
+                parameters.append(param);
+                result->addMember(*param);
+            }
         }
     }
 
-    auto copied = parameters.copy(compilation);
-    auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header->name.valueText(),
-                                                        syntax.header->name.location(),
-                                                        span((const ParameterSymbol* const *)copied.data(), copied.size()));
-    for (auto param : parameters)
-        result->addMember(*param);
-
-    result->setSyntax(syntax);
+    result->parameters = parameters.copy(compilation);
     return *result;
 }
 

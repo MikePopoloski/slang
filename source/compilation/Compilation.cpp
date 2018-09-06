@@ -166,9 +166,11 @@ const RootSymbol& Compilation::getRoot() {
         // Find modules that have no instantiations.
         SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
         for (auto& [key, definition] : definitionMap) {
-            (void)key;
-            auto syntax = definition->getSyntax();
+            // Ignore definitions that are not top level.
+            if (std::get<1>(key) != root.get())
+                continue;
 
+            auto syntax = definition->getSyntax();
             if (syntax && syntax->kind == SyntaxKind::ModuleDeclaration &&
                 instantiatedNames.count(definition->name) == 0) {
                 // TODO: check for no parameters here
