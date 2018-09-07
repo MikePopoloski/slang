@@ -1,4 +1,4 @@
-FROM 		ubuntu:bionic
+FROM 		ubuntu:cosmic
 MAINTAINER 	Mike Popoloski
 CMD 		bash
 
@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip3 install conan && conan user
 
 RUN wget -O /tmp/cppcheck.tar.gz \
-	https://github.com/danmar/cppcheck/archive/1.83.tar.gz && \
+	https://github.com/danmar/cppcheck/archive/1.84.tar.gz && \
 	mkdir -p /tmp/cppcheck && \
 	tar xvzf /tmp/cppcheck.tar.gz -C /tmp/cppcheck --strip-components=1 && \
 	make -j 4 -C /tmp/cppcheck
