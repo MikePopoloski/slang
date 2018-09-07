@@ -1,8 +1,4 @@
-*:external/*
-syntaxError:source/util/SmallVector.h:91
-uninitMemberVar:source/util/SmallVector.h:154
-uninitMemberVar:source/util/SmallVector.h:155
-uninitMemberVar:source/util/SmallVector.h:223
-uninitMemberVar:source/util/SmallVector.h:228
+*:*external/*
+syntaxError:*SmallVector.h:91
 toomanyconfigs
 constStatement
