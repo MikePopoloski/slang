@@ -149,8 +149,15 @@ public:
     T& operator[](size_t index) { return data_[index]; }
     const T& operator[](size_t index) const { return data_[index]; }
 
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
     /// Indicates whether we are still "small", which means we are still on the stack.
     bool isSmall() const { return (void*)data_ == (void*)firstElement; }
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 protected:
     // Protected to disallow construction or deletion via base class.
