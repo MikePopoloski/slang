@@ -312,6 +312,7 @@ bool isPossibleDataType(TokenKind kind) {
         case TokenKind::VoidKeyword:
         case TokenKind::Identifier:
         case TokenKind::UnitSystemName:
+        case TokenKind::OpenBracket:
             return true;
         default:
             return false;
