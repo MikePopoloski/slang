@@ -334,30 +334,11 @@ Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation 
     return Token(kind, info);
 }
 
-// for certain kinds of expected tokens we back up and report
-// the error at the end of the previous token
-static bool reportErrorAdjacent(TokenKind kind) {
-    switch (kind) {
-        case TokenKind::OpenBracket:
-        case TokenKind::OpenParenthesis:
-        case TokenKind::OpenParenthesisStar:
-        case TokenKind::OpenParenthesisStarCloseParenthesis:
-        case TokenKind::Semicolon:
-        case TokenKind::Colon:
-        case TokenKind::DoubleColon:
-        case TokenKind::Comma:
-        case TokenKind::Dot:
-            return true;
-        default:
-            return false;
-    }
-}
-
 Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual, TokenKind expected, Token lastConsumed) {
     // Figure out the best place to report this error based on the current
     // token as well as the last real token we consumed.
     SourceLocation location;
-    if (!lastConsumed || !reportErrorAdjacent(expected))
+    if (!lastConsumed)
         location = actual.location();
     else {
         location = lastConsumed.location();
