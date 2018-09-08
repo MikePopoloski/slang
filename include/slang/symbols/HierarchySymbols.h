@@ -15,6 +15,7 @@ namespace slang {
 
 class Expression;
 class ParameterSymbol;
+class PortSymbol;
 
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public Symbol, public Scope {
@@ -46,6 +47,7 @@ public:
 class DefinitionSymbol : public Symbol, public Scope {
 public:
     span<const ParameterSymbol* const> parameters;
+    span<const PortSymbol* const> ports;
 
     DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(SymbolKind::Definition, name, loc),

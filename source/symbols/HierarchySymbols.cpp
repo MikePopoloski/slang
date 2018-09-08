@@ -53,10 +53,11 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const M
         SmallVectorSized<const PortSymbol*, 8> ports;
         PortSymbol::fromSyntax(compilation, *syntax.header->ports, ports);
         for (auto port : ports) {
-            // TODO: also add port itself as a member
+            result->addMember(*port);
             if (port->internalSymbol)
                 result->addMember(*port->internalSymbol);
         }
+        result->ports = ports.copy(compilation);
     }
 
     for (auto member : syntax.members) {
@@ -266,7 +267,7 @@ void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const Exp
         SmallVectorSized<const PortSymbol*, 8> ports;
         PortSymbol::fromSyntax(comp, *portSyntax, ports);
         for (auto port : ports) {
-            // TODO: also add port itself as a member
+            addMember(*port);
             if (port->internalSymbol)
                 addMember(*port->internalSymbol);
         }

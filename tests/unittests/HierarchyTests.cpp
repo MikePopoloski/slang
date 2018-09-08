@@ -29,7 +29,6 @@ module Top;
     Leaf #(.unset(10)) l9(); // no errors on this one
 endmodule
 
-// TODO: handle implicit types here?
 module Leaf #(
     int foo = 4,
     int bar = 9,
@@ -217,11 +216,11 @@ endmodule
 
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
-    const auto& alwaysComb = instance.memberAt<ProceduralBlockSymbol>(8);
+    const auto& alwaysComb = instance.memberAt<ProceduralBlockSymbol>(14);
 
     CHECK(alwaysComb.procedureKind == ProceduralBlockKind::AlwaysComb);
 
-    const auto& variable = instance.memberAt<VariableSymbol>(10);
+    const auto& variable = instance.memberAt<VariableSymbol>(16);
     CHECK(variable.getType().isIntegral());
     CHECK(variable.name == "arr1");
 

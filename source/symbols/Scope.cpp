@@ -353,11 +353,13 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
         member->nextInScope = std::exchange(at->nextInScope, member);
     }
 
+    member->parentScope = this;
     if (!member->nextInScope)
         lastMember = member;
 
-    member->parentScope = this;
-    if (!member->name.empty()) {
+    // Add to the name map if the symbol has a name, unless it's a port symbol.
+    // Per the spec, ports exist in their own namespace.
+    if (!member->name.empty() && member->kind != SymbolKind::Port) {
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second) {
             // We have a name collision; first check if this is ok (forwarding typedefs share a name with
