@@ -25,6 +25,7 @@ public:
     void handle(const EnumType& type);
     void handle(const PackedArrayType& type);
     void handle(const PackedStructType& type);
+    void handle(const UnpackedArrayType& type);
     void handle(const UnpackedStructType& type);
     void handle(const VoidType& type);
     void handle(const NullType& type);
@@ -34,6 +35,9 @@ public:
     void handle(const TypeAliasType& type);
     void handle(const ErrorType& type);
     void handle(const NetType& type);
+
+    // Catch-all method that should never be called.
+    void handle(const Type&) { THROW_UNREACHABLE; }
 
 private:
     void appendStructMembers(const Scope& scope);

@@ -280,7 +280,7 @@ source:4:14: error: 1316134911 is out of allowed range (-2147483648 to 214748364
 source:5:14: error: value must be positive
            i[0]);
              ^
-source:7:27: error: packed members must be of integral type (type is )
+source:7:27: error: packed members must be of integral type (type is logic$[0:2])
     struct packed { logic j[3]; } foo;
                           ^~~~
 )");

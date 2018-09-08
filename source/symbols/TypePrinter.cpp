@@ -75,6 +75,11 @@ void TypePrinter::handle(const PackedStructType& type) {
     appendStructMembers(type);
 }
 
+void TypePrinter::handle(const UnpackedArrayType& type) {
+    append(type.elementType);
+    format_to(buffer, "$[{}:{}]", type.range.left, type.range.right);
+}
+
 void TypePrinter::handle(const UnpackedStructType& type) {
     buffer << "struct{";
     appendStructMembers(type);
