@@ -163,29 +163,32 @@ span<const std::shared_ptr<SyntaxTree>> Compilation::getSyntaxTrees() const {
 
 const RootSymbol& Compilation::getRoot() {
     if (!finalized) {
-        // Find modules that have no instantiations.
-        SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
+        // Find modules that have no instantiations. Iterate the definitions map
+        // before instantiating any top level modules, since that can cause changes
+        // to the definition map itself.
+        SmallVectorSized<const DefinitionSymbol*, 8> topDefinitions;
         for (auto& [key, definition] : definitionMap) {
             // Ignore definitions that are not top level.
-            if (std::get<1>(key) != root.get())
-                continue;
-
+            // TODO: check for no parameters here
             auto syntax = definition->getSyntax();
-            if (syntax && syntax->kind == SyntaxKind::ModuleDeclaration &&
+            if (std::get<1>(key) == root.get() && syntax &&
+                syntax->kind == SyntaxKind::ModuleDeclaration &&
                 instantiatedNames.count(definition->name) == 0) {
-                // TODO: check for no parameters here
-                auto& decl = syntax->as<ModuleDeclarationSyntax>();
-                const auto& instance = ModuleInstanceSymbol::instantiate(*this, definition->name,
-                                                                         decl.header->name.location(),
-                                                                         *definition);
-                root->addMember(instance);
-                topList.append(&instance);
+
+                topDefinitions.append(definition);
             }
         }
 
-        // Sort the list of instances so that we get deterministic ordering of instances;
+        // Sort the list of definitions so that we get deterministic ordering of instances;
         // the order is otherwise dependent on iterating over a hash table.
-        std::sort(topList.begin(), topList.end(), [](auto a, auto b) { return a->name < b->name; });
+        std::sort(topDefinitions.begin(), topDefinitions.end(), [](auto a, auto b) { return a->name < b->name; });
+
+        SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
+        for (auto def : topDefinitions) {
+            auto& instance = ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def);
+            root->addMember(instance);
+            topList.append(&instance);
+        }
 
         root->topInstances = topList.copy(*this);
         root->compilationUnits = compilationUnits;
@@ -214,6 +217,10 @@ const DefinitionSymbol* Compilation::getDefinition(string_view lookupName, const
 
         searchScope = searchScope->getParent();
     }
+}
+
+const DefinitionSymbol* Compilation::getDefinition(string_view lookupName) const {
+    return getDefinition(lookupName, *root);
 }
 
 void Compilation::addDefinition(const DefinitionSymbol& definition) {

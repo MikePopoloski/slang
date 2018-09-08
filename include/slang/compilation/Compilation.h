@@ -53,6 +53,9 @@ public:
     /// This takes into account the given scope so that nested definitions are found before more global ones.
     const DefinitionSymbol* getDefinition(string_view name, const Scope& scope) const;
 
+    /// Gets the top level definition with the given name, or null if there is no such definition.
+    const DefinitionSymbol* getDefinition(string_view name) const;
+
     /// Adds a definition to the set of definitions tracked in the compilation.
     void addDefinition(const DefinitionSymbol& definition);
 
