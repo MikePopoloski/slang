@@ -24,6 +24,9 @@ public:
     TIterator end() const { return m_end; }
 
     auto size() const { return std::distance(begin(), end()); }
+    auto operator[](typename std::iterator_traits<TIterator>::difference_type index) const {
+        return std::next(begin(), index);
+    }
 
 private:
     TIterator m_begin;

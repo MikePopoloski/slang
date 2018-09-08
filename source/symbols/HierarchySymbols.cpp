@@ -49,16 +49,8 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const M
         }
     }
 
-    if (syntax.header->ports) {
-        SmallVectorSized<const PortSymbol*, 8> ports;
-        PortSymbol::fromSyntax(compilation, *syntax.header->ports, ports);
-        for (auto port : ports) {
-            result->addMember(*port);
-            if (port->internalSymbol)
-                result->addMember(*port->internalSymbol);
-        }
-        result->ports = ports.copy(compilation);
-    }
+    if (syntax.header->ports)
+        result->addMembers(*syntax.header->ports);
 
     for (auto member : syntax.members) {
         if (member->kind != SyntaxKind::ParameterDeclarationStatement)
@@ -261,11 +253,9 @@ void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const Exp
     }
 
     auto& syntax = definition.getSyntax()->as<ModuleDeclarationSyntax>(); // TODO: getSyntax dependency
-    const PortListSyntax* portSyntax = syntax.header->ports;
-
-    if (portSyntax) {
+    if (syntax.header->ports) {
         SmallVectorSized<const PortSymbol*, 8> ports;
-        PortSymbol::fromSyntax(comp, *portSyntax, ports);
+        PortSymbol::fromSyntax(comp, *syntax.header->ports, ports);
         for (auto port : ports) {
             addMember(*port);
             if (port->internalSymbol)

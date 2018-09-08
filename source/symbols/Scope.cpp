@@ -161,6 +161,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             }
             break;
         case SyntaxKind::HierarchyInstantiation:
+        case SyntaxKind::AnsiPortList:
+        case SyntaxKind::NonAnsiPortList:
         case SyntaxKind::IfGenerate:
         case SyntaxKind::LoopGenerate: {
             // TODO: handle special generate block name conflict rules
@@ -459,6 +461,22 @@ void Scope::elaborate() const {
                         last = instance;
                     }
                     break;
+                }
+                case SyntaxKind::AnsiPortList:
+                case SyntaxKind::NonAnsiPortList: {
+                    SmallVectorSized<const PortSymbol*, 8> ports;
+                    PortSymbol::fromSyntax(compilation, member.node.as<PortListSyntax>(), ports);
+
+                    const Symbol* last = symbol;
+                    for (auto port : ports) {
+                        insertMember(port, last);
+                        last = port;
+
+                        if (port->internalSymbol) {
+                            insertMember(port->internalSymbol, last);
+                            last = port->internalSymbol;
+                        }
+                    }
                 }
                 default:
                     break;

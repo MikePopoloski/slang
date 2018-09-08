@@ -47,11 +47,14 @@ public:
 class DefinitionSymbol : public Symbol, public Scope {
 public:
     span<const ParameterSymbol* const> parameters;
-    span<const PortSymbol* const> ports;
 
     DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(SymbolKind::Definition, name, loc),
         Scope(compilation, this) {}
+
+    iterator_range<specific_symbol_iterator<PortSymbol>> ports() const {
+        return membersOfType<PortSymbol>();
+    }
 
     void toJson(json&) const {}
 

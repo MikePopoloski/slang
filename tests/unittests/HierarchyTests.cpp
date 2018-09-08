@@ -363,8 +363,8 @@ module mh21(ref x [5:0], y); endmodule
     #define checkPort(moduleName, index, dir, kind, type) {\
         auto def = compilation.getDefinition(moduleName);\
         REQUIRE(def);\
-        REQUIRE(def->ports.size() > index);\
-        auto& port = *def->ports[index]; \
+        REQUIRE(def->ports().size() > index);\
+        auto& port = *def->ports()[index]; \
         CHECK(port.direction == dir); \
         CHECK(port.portKind == kind); \
         CHECK(port.getType().toString() == type); \
