@@ -34,7 +34,7 @@ module Leaf #(
     int foo = 4,
     int bar = 9,
     localparam int baz,
-    parameter int bizz = baz,
+    parameter bizz = baz,
     parameter int unset
     )();
 
@@ -225,8 +225,7 @@ endmodule
     CHECK(variable.getType().isIntegral());
     CHECK(variable.name == "arr1");
 
-    // TODO:
-    //NO_COMPILATION_ERRORS;
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Function declaration", "[binding:modules]") {
