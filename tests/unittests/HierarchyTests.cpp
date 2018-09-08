@@ -329,3 +329,75 @@ endmodule
     CHECK(diags[3].code == DiagCode::RecursiveDefinition);
     //CHECK(diags[4].code == DiagCode::ExpressionNotConstant);
 }
+
+TEST_CASE("Module ANSI ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module mh0 (wire x); endmodule
+module mh1 (integer x); endmodule
+module mh2 (inout integer x); endmodule
+module mh3 ([5:0] x); endmodule
+module mh4 (var x); endmodule // TODO: ERROR: direction defaults to inout which cannot be var
+module mh5 (input x); endmodule
+module mh6 (input var x); endmodule
+module mh7 (input var integer x); endmodule
+module mh8 (output x); endmodule
+module mh9 (output var x); endmodule
+module mh10(output signed [5:0] x); endmodule
+module mh11(output integer x); endmodule
+module mh12(ref [5:0] x); endmodule
+module mh13(ref x [5:0]); endmodule
+module mh14(wire x, y[7:0]); endmodule
+module mh15(integer x, signed [5:0] y); endmodule
+module mh16([5:0] x, wire y); endmodule
+module mh17(input var integer x, wire y); endmodule
+module mh18(output var x, input y); endmodule
+module mh19(output signed [5:0] x, integer y); endmodule
+module mh20(ref [5:0] x, y); endmodule
+module mh21(ref x [5:0], y); endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    Diagnostics diags = compilation.getAllDiagnostics();
+
+    #define checkPort(moduleName, index, dir, kind, type) {\
+        auto def = compilation.getDefinition(moduleName);\
+        REQUIRE(def);\
+        REQUIRE(def->ports.size() > index);\
+        auto& port = *def->ports[index]; \
+        CHECK(port.direction == dir); \
+        CHECK(port.portKind == kind); \
+        CHECK(port.getType().toString() == type); \
+    };
+
+    checkPort("mh0", 0, PortDirection::InOut, PortKind::Net, "logic");
+    checkPort("mh1", 0, PortDirection::InOut, PortKind::Net, "integer");
+    checkPort("mh2", 0, PortDirection::InOut, PortKind::Net, "integer");
+    checkPort("mh3", 0, PortDirection::InOut, PortKind::Net, "logic[5:0]");
+    checkPort("mh4", 0, PortDirection::InOut, PortKind::Variable, "logic");
+    checkPort("mh5", 0, PortDirection::In, PortKind::Net, "logic");
+    checkPort("mh6", 0, PortDirection::In, PortKind::Variable, "logic");
+    checkPort("mh7", 0, PortDirection::In, PortKind::Variable, "integer");
+    checkPort("mh8", 0, PortDirection::Out, PortKind::Net, "logic");
+    checkPort("mh9", 0, PortDirection::Out, PortKind::Variable, "logic");
+    checkPort("mh10", 0, PortDirection::Out, PortKind::Net, "logic signed[5:0]");
+    checkPort("mh11", 0, PortDirection::Out, PortKind::Variable, "integer");
+    checkPort("mh12", 0, PortDirection::Ref, PortKind::Variable, "logic[5:0]");
+    checkPort("mh13", 0, PortDirection::Ref, PortKind::Variable, "logic$[5:0]");
+    checkPort("mh14", 0, PortDirection::InOut, PortKind::Net, "logic");
+    checkPort("mh14", 1, PortDirection::InOut, PortKind::Net, "logic$[7:0]");
+    checkPort("mh15", 0, PortDirection::InOut, PortKind::Net, "integer");
+    checkPort("mh15", 1, PortDirection::InOut, PortKind::Net, "logic signed[5:0]");
+    checkPort("mh16", 0, PortDirection::InOut, PortKind::Net, "logic[5:0]");
+    checkPort("mh16", 1, PortDirection::InOut, PortKind::Net, "logic");
+    checkPort("mh17", 0, PortDirection::In, PortKind::Variable, "integer");
+    checkPort("mh17", 1, PortDirection::In, PortKind::Net, "logic");
+    checkPort("mh18", 0, PortDirection::Out, PortKind::Variable, "logic");
+    checkPort("mh18", 1, PortDirection::In, PortKind::Net, "logic");
+    checkPort("mh19", 0, PortDirection::Out, PortKind::Net, "logic signed[5:0]");
+    checkPort("mh19", 1, PortDirection::Out, PortKind::Variable, "integer");
+    checkPort("mh20", 0, PortDirection::Ref, PortKind::Variable, "logic[5:0]");
+    checkPort("mh20", 1, PortDirection::Ref, PortKind::Variable, "logic[5:0]");
+    checkPort("mh21", 0, PortDirection::Ref, PortKind::Variable, "logic$[5:0]");
+    checkPort("mh21", 1, PortDirection::Ref, PortKind::Variable, "logic");
+}
