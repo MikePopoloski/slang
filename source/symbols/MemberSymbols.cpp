@@ -45,7 +45,7 @@ void WildcardImportSymbol::toJson(json& j) const {
 }
 
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort) :
-    ValueSymbol(SymbolKind::Parameter, name, loc, DeclaredTypeFlags::AllowImplicit | DeclaredTypeFlags::RequireConstant),
+    ValueSymbol(SymbolKind::Parameter, name, loc, DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant),
     isLocal(isLocal), isPort(isPort)
 {
 }

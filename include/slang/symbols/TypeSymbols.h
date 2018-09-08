@@ -208,6 +208,10 @@ public:
     static const Type& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope);
 
+    static const Type& fromSyntax(Compilation& compilation, SyntaxKind integerKind,
+                                  span<const VariableDimensionSyntax* const> dimensions,
+                                  bool isSigned, LookupLocation location, const Scope& scope);
+
     ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind);

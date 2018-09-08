@@ -23,7 +23,7 @@ struct VariableDimensionSyntax;
 
 enum class DeclaredTypeFlags : uint8_t {
     None = 0,
-    AllowImplicit = 1,
+    InferImplicit = 1,
     RequireConstant = 2,
     RequireIntegerConstant = 4
 };

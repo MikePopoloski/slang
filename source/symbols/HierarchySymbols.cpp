@@ -196,7 +196,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
             auto& expr = DeclaredType::resolveInitializer(*typeSyntax, declared->getDimensionSyntax(), *it->second,
                                                           it->second->getFirstToken().location(),
                                                           BindContext(scope, location, BindFlags::Constant),
-                                                          DeclaredTypeFlags::AllowImplicit);
+                                                          DeclaredTypeFlags::InferImplicit);
             overrides.append(&expr);
         }
         else if (!param->getInitializer() && !param->isLocalParam() && param->isPortParam()) {

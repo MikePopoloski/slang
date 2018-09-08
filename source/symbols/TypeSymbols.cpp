@@ -273,6 +273,11 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         }
         case SyntaxKind::NamedType:
             return lookupNamedType(compilation, *node.as<NamedTypeSyntax>().name, location, parent);
+        case SyntaxKind::ImplicitType: {
+            auto& implicit = node.as<ImplicitTypeSyntax>();
+            return IntegralType::fromSyntax(compilation, SyntaxKind::LogicType, implicit.dimensions,
+                                            implicit.signing.kind == TokenKind::SignedKeyword, location, parent);
+        }
         default:
             THROW_UNREACHABLE;
     }
@@ -421,11 +426,12 @@ bool IntegralType::isDeclaredReg() const {
     return false;
 }
 
-const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                     LookupLocation location, const Scope& scope) {
+const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind integerKind,
+                                     span<const VariableDimensionSyntax* const> dimensions,
+                                     bool isSigned, LookupLocation location, const Scope& scope) {
     // This is a simple integral vector (possibly of just one element).
     SmallVectorSized<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
-    for (const VariableDimensionSyntax* dimSyntax : syntax.dimensions) {
+    for (auto dimSyntax : dimensions) {
         // TODO: better checking for these cases
         if (!dimSyntax->specifier || dimSyntax->specifier->kind != SyntaxKind::RangeDimensionSpecifier)
             return compilation.getErrorType();
@@ -439,18 +445,18 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
     }
 
     bitmask<IntegralFlags> flags;
-    if (syntax.keyword.kind == TokenKind::RegKeyword)
+    if (integerKind == SyntaxKind::RegType)
         flags |= IntegralFlags::Reg;
-    if (syntax.signing.kind == TokenKind::SignedKeyword)
+    if (isSigned)
         flags |= IntegralFlags::Signed;
-    if (syntax.kind != SyntaxKind::BitType)
+    if (integerKind != SyntaxKind::BitType)
         flags |= IntegralFlags::FourState;
 
     // TODO: review this whole mess
 
     if (dims.empty()) {
         // TODO: signing
-        return compilation.getType(syntax.kind);
+        return compilation.getType(integerKind);
     }
     else if (dims.size() == 1 && dims[0].first.right == 0) {
         // if we have the common case of only one dimension and lsb == 0
@@ -467,6 +473,12 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
     }
 
     return *result;
+}
+
+const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
+                                     LookupLocation location, const Scope& scope) {
+    return fromSyntax(compilation, syntax.kind, syntax.dimensions,
+                      syntax.signing.kind == TokenKind::SignedKeyword, location, scope);
 }
 
 ConstantValue IntegralType::getDefaultValueImpl() const {

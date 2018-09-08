@@ -32,10 +32,10 @@ DeclaredType::resolveType(const DataTypeSyntax& typeSyntax,
     const Type* type = nullptr;
     const Expression* initializer = nullptr;
 
-    if (typeSyntax.kind == SyntaxKind::ImplicitType) {
+    if (typeSyntax.kind == SyntaxKind::ImplicitType && (flags & DeclaredTypeFlags::InferImplicit) != 0) {
         // TODO: handle unpacked dimensions here?
         // TODO: make sure errors are issued elsewhere for when implicit is not allowed
-        if ((flags & DeclaredTypeFlags::AllowImplicit) == 0 || !initializerSyntax)
+        if (!initializerSyntax)
             type = &comp.getErrorType();
         else {
             initializer = &Expression::bind(comp, *initializerSyntax, context);
