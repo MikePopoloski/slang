@@ -81,7 +81,7 @@ void TypePrinter::handle(const UnpackedArrayType& type) {
 }
 
 void TypePrinter::handle(const UnpackedStructType& type) {
-    buffer << "struct{";
+    buffer << "struct";
     appendStructMembers(type);
 }
 
