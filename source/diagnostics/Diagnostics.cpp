@@ -229,6 +229,11 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::RedefinitionDifferentSymbolKind] = { "redefinition of '{}' as different kind of symbol", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnresolvedForwardTypedef] = { "forward typedef '{}' does not resolve to a data type", DiagnosticSeverity::Error };
     descriptors[DiagCode::ForwardTypedefDoesNotMatch] = { "forward typedef basic type '{}' does not match declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::PortTypeNotInterfaceOrData] = { "port type '{}' is neither an interface nor a data type", DiagnosticSeverity::Error };
+    descriptors[DiagCode::VarWithInterfacePort] = { "'var' keyword may not be used with an interface port", DiagnosticSeverity::Error };
+    descriptors[DiagCode::DirectionWithInterfacePort] = { "port direction not allowed on an interface port", DiagnosticSeverity::Error };
+    descriptors[DiagCode::InOutPortCannotBeVariable] = { "variable port '{}' cannot have direction inout", DiagnosticSeverity::Error };
+    descriptors[DiagCode::RefPortMustBeVariable] = { "ref port '{}' cannot be of net type", DiagnosticSeverity::Error };
 
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };

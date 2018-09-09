@@ -151,6 +151,11 @@ enum class DiagCode : uint8_t {
     RedefinitionDifferentSymbolKind,
     UnresolvedForwardTypedef,
     ForwardTypedefDoesNotMatch,
+    PortTypeNotInterfaceOrData,
+    VarWithInterfacePort,
+    DirectionWithInterfacePort,
+    InOutPortCannotBeVariable,
+    RefPortMustBeVariable,
 
     // expressions
     BadUnaryExpression,

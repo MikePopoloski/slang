@@ -336,7 +336,7 @@ module mh0 (wire x); endmodule
 module mh1 (integer x); endmodule
 module mh2 (inout integer x); endmodule
 module mh3 ([5:0] x); endmodule
-module mh4 (var x); endmodule // TODO: ERROR: direction defaults to inout which cannot be var
+module mh4 (var x); endmodule
 module mh5 (input x); endmodule
 module mh6 (input var x); endmodule
 module mh7 (input var integer x); endmodule
@@ -354,6 +354,7 @@ module mh18(output var x, input y); endmodule
 module mh19(output signed [5:0] x, integer y); endmodule
 module mh20(ref [5:0] x, y); endmodule
 module mh21(ref x [5:0], y); endmodule
+module mh22(ref wire x); endmodule
 )");
 
     Compilation compilation;
@@ -400,6 +401,10 @@ module mh21(ref x [5:0], y); endmodule
     checkPort("mh20", 1, PortDirection::Ref, PortKind::Variable, "logic[5:0]");
     checkPort("mh21", 0, PortDirection::Ref, PortKind::Variable, "logic$[5:0]");
     checkPort("mh21", 1, PortDirection::Ref, PortKind::Variable, "logic");
+
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == DiagCode::InOutPortCannotBeVariable);
+    CHECK(diags[1].code == DiagCode::RefPortMustBeVariable);
 }
 
 TEST_CASE("Module ANSI interface ports") {
@@ -415,8 +420,8 @@ typedef struct { logic f; } J;
 module m0(I a[3], b, input c); endmodule
 module m1(J j); endmodule
 module m2(L l); endmodule
-module m3(K k, wire w); endmodule
-module m4(K k, var v); endmodule
+module m3(var K k, wire w); endmodule
+module m4(output K k, output var v); endmodule
 )");
 
     Compilation compilation;
@@ -441,5 +446,10 @@ module m4(K k, var v); endmodule
     checkPort("m1", 0, PortDirection::InOut, PortKind::Net, "struct{logic f;}J");
     checkIfacePort("m3", 0, "K");
     checkPort("m3", 1, PortDirection::InOut, PortKind::Net, "logic");
-    checkPort("m4", 1, PortDirection::InOut, PortKind::Variable, "logic");
+    checkPort("m4", 1, PortDirection::Out, PortKind::Variable, "logic");
+
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == DiagCode::PortTypeNotInterfaceOrData);
+    CHECK(diags[1].code == DiagCode::VarWithInterfacePort);
+    CHECK(diags[2].code == DiagCode::DirectionWithInterfacePort);
 }

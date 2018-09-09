@@ -212,6 +212,7 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilde
 
                 if (port.interfaceDef) {
                     port.portKind = PortKind::Interface;
+                    // TODO: dimensions
                 }
                 else {
                     if (builder.lastType)
@@ -240,12 +241,28 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilde
                 }
 
                 if (definition) {
-                    // TODO: check for non-interface definition here
-                    // TODO: dimensions, error checking on direction, etc
+                    // TODO: dimensions
                     port.portKind = PortKind::Interface;
-                    port.interfaceDef = definition;
+
+                    if (definition->definitionKind != DefinitionKind::Interface) {
+                        auto& diag = scope.addDiag(DiagCode::PortTypeNotInterfaceOrData,
+                                                   header.dataType->sourceRange());
+                        diag << definition->name;
+                        diag.addNote(DiagCode::NoteDeclarationHere, definition->location);
+
+                        port.interfaceDef = nullptr;
+                    }
+                    else {
+                        port.interfaceDef = definition;
+
+                        if (header.varKeyword)
+                            scope.addDiag(DiagCode::VarWithInterfacePort, header.varKeyword.location());
+                        if (header.direction)
+                            scope.addDiag(DiagCode::DirectionWithInterfacePort, header.direction.location());
+                    }
                 }
                 else {
+                    // TODO: handle user defined nettypes here
                     setDirectionAndType(header, syntax.declarator->dimensions);
                     if (header.varKeyword)
                         port.portKind = PortKind::Variable;
@@ -273,6 +290,11 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilde
                                 THROW_UNREACHABLE;
                         }
                     }
+
+                    if (port.direction == PortDirection::InOut && port.portKind == PortKind::Variable)
+                        scope.addDiag(DiagCode::InOutPortCannotBeVariable, port.location) << port.name;
+                    else if (port.direction == PortDirection::Ref && port.portKind != PortKind::Variable)
+                        scope.addDiag(DiagCode::RefPortMustBeVariable, port.location) << port.name;
                 }
             }
 
@@ -298,6 +320,9 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilde
             const auto& header = syntax.header->as<NetPortHeaderSyntax>();
             port.portKind = PortKind::Net;
             setDirectionAndType(header, syntax.declarator->dimensions);
+
+            if (port.direction == PortDirection::Ref)
+                scope.addDiag(DiagCode::RefPortMustBeVariable, port.location) << port.name;
 
             // Create a new symbol to represent this port internally to the instance.
             // TODO: net type
