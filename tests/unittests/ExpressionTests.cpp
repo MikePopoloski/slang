@@ -245,7 +245,9 @@ TEST_CASE("Expression - bad name references") {
     auto tree = SyntaxTree::fromText(R"(
 module m1;
 
-    int i = m1 + 2;     // not a value
+    typedef struct { logic f; } T;
+
+    int i = T + 2;     // not a value
     int j = (3 + 4)(2); // not callable
     int k = i(2);       // not a task or function
 

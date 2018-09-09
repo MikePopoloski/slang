@@ -15,6 +15,7 @@
 
 namespace slang {
 
+class DefinitionSymbol;
 class PackageSymbol;
 
 /// A class that wraps a hoisted transparent type member (such as an enum value)
@@ -127,12 +128,16 @@ public:
     /// connects to the instance's internals.
     const Expression* explicitConnection = nullptr;
 
+    /// If this is an interface port, a pointer to the definition for the interface.
+    const DefinitionSymbol* interfaceDef = nullptr;
+
     PortSymbol(string_view name, SourceLocation loc) :
         ValueSymbol(SymbolKind::Port, name, loc) {}
 
     void toJson(json& j) const;
 
     static void fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
+                           LookupLocation location, const Scope& scope,
                            SmallVector<const PortSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }

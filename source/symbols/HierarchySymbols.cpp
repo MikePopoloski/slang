@@ -253,15 +253,8 @@ void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const Exp
     }
 
     auto& syntax = definition.getSyntax()->as<ModuleDeclarationSyntax>(); // TODO: getSyntax dependency
-    if (syntax.header->ports) {
-        SmallVectorSized<const PortSymbol*, 8> ports;
-        PortSymbol::fromSyntax(comp, *syntax.header->ports, ports);
-        for (auto port : ports) {
-            addMember(*port);
-            if (port->internalSymbol)
-                addMember(*port->internalSymbol);
-        }
-    }
+    if (syntax.header->ports)
+        addMembers(*syntax.header->ports);
 
     for (auto member : syntax.members) {
         // If this is a parameter declaration, we should already have metadata for it in our parameters list.

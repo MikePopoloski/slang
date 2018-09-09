@@ -364,10 +364,10 @@ module mh21(ref x [5:0], y); endmodule
         auto def = compilation.getDefinition(moduleName);\
         REQUIRE(def);\
         REQUIRE(def->ports().size() > index);\
-        auto& port = *def->ports()[index]; \
-        CHECK(port.direction == dir); \
-        CHECK(port.portKind == kind); \
-        CHECK(port.getType().toString() == type); \
+        auto& port = *def->ports()[index];\
+        CHECK(port.direction == dir);\
+        CHECK(port.portKind == kind);\
+        CHECK(port.getType().toString() == type);\
     };
 
     checkPort("mh0", 0, PortDirection::InOut, PortKind::Net, "logic");
@@ -400,4 +400,46 @@ module mh21(ref x [5:0], y); endmodule
     checkPort("mh20", 1, PortDirection::Ref, PortKind::Variable, "logic[5:0]");
     checkPort("mh21", 0, PortDirection::Ref, PortKind::Variable, "logic$[5:0]");
     checkPort("mh21", 1, PortDirection::Ref, PortKind::Variable, "logic");
+}
+
+TEST_CASE("Module ANSI interface ports") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I; endinterface
+interface J; endinterface
+interface K; endinterface
+module L; endmodule
+
+parameter int I = 3;
+typedef struct { logic f; } J;
+
+module m0(I a[3], b, input c); endmodule
+module m1(J j); endmodule
+module m2(L l); endmodule
+module m3(K k, wire w); endmodule
+module m4(K k, var v); endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    Diagnostics diags = compilation.getAllDiagnostics();
+
+    #define checkIfacePort(moduleName, index, ifaceName) {\
+        auto def = compilation.getDefinition(moduleName);\
+        REQUIRE(def);\
+        REQUIRE(def->ports().size() > index);\
+        auto& port = *def->ports()[index];\
+        CHECK(port.direction == PortDirection::NotApplicable);\
+        CHECK(port.portKind == PortKind::Interface);\
+        CHECK(port.getType().isError());\
+        REQUIRE(port.interfaceDef);\
+        CHECK(port.interfaceDef->name == ifaceName);\
+    };
+
+    checkIfacePort("m0", 0, "I");
+    checkIfacePort("m0", 1, "I");
+    checkPort("m0", 2, PortDirection::In, PortKind::Net, "logic");
+    checkPort("m1", 0, PortDirection::InOut, PortKind::Net, "struct{logic f;}J");
+    checkIfacePort("m3", 0, "K");
+    checkPort("m3", 1, PortDirection::InOut, PortKind::Net, "logic");
+    checkPort("m4", 1, PortDirection::InOut, PortKind::Variable, "logic");
 }
