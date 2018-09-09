@@ -85,8 +85,12 @@ const Scope& DeclaredType::getScope() const {
 }
 
 void DeclaredType::resolveType() const {
+    if (!typeSyntax) {
+        type = &getScope().getCompilation().getErrorType();
+        return;
+    }
+
     ASSERT(!evaluating);
-    ASSERT(typeSyntax);
     evaluating = true;
     auto guard = finally([this] { evaluating = false; });
 
