@@ -477,6 +477,7 @@ void Scope::elaborate() const {
                             last = port->internalSymbol;
                         }
                     }
+                    break;
                 }
                 default:
                     break;
