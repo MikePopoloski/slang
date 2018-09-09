@@ -156,6 +156,7 @@ enum class DiagCode : uint8_t {
     DirectionWithInterfacePort,
     InOutPortCannotBeVariable,
     RefPortMustBeVariable,
+    MissingPortIODeclaration,
 
     // expressions
     BadUnaryExpression,

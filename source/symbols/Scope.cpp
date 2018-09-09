@@ -474,7 +474,7 @@ void Scope::elaborate() const {
                         insertMember(port, last);
                         last = port;
 
-                        if (port->internalSymbol) {
+                        if (port->internalSymbol && !port->internalSymbol->getScope()) {
                             insertMember(port->internalSymbol, last);
                             last = port->internalSymbol;
                         }

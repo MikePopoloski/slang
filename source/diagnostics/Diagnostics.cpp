@@ -234,6 +234,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::DirectionWithInterfacePort] = { "port direction not allowed on an interface port", DiagnosticSeverity::Error };
     descriptors[DiagCode::InOutPortCannotBeVariable] = { "variable port '{}' cannot have direction inout", DiagnosticSeverity::Error };
     descriptors[DiagCode::RefPortMustBeVariable] = { "ref port '{}' cannot be of net type", DiagnosticSeverity::Error };
+    descriptors[DiagCode::MissingPortIODeclaration] = { "port '{}' has no I/O member declaration", DiagnosticSeverity::Error };
 
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };

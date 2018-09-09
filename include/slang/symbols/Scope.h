@@ -147,7 +147,7 @@ public:
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 
     /// Finds a direct child member with the given name. This won't return anything weird like
-    /// forwarding typdefs or imported symbols, but will return things like transparent enum members.
+    /// forwarding typedefs or imported symbols, but will return things like transparent enum members.
     /// If no symbol is found with the given name, nullptr is returned.
     const Symbol* find(string_view name) const;
 
