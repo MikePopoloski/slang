@@ -280,35 +280,22 @@ private:
     // Data stored in sideband tables in the Compilation object for deferred members.
     class DeferredMemberData {
     public:
-        void addMember(Symbol* symbol) {
-            std::get<0>(membersOrStatement).emplace_back(symbol);
-        }
+        void addMember(Symbol* symbol);
+        span<Symbol* const> getMembers() const;
 
-        span<Symbol* const> getMembers() const {
-            return std::get<0>(membersOrStatement);
-        }
-
-        bool hasStatement() const { return membersOrStatement.index() == 1; }
-        void setStatement(StatementBodiedScope& stmt) { membersOrStatement = &stmt; }
-
-        StatementBodiedScope* getStatement() const {
-            return std::get<1>(membersOrStatement);
-        }
-
-        void registerTransparentType(const Symbol* insertion, const Symbol& parent) {
-            transparentTypes.emplace(insertion, &parent);
-        }
+        bool hasStatement() const;
+        void setStatement(StatementBodiedScope& stmt);
+        StatementBodiedScope* getStatement() const;
 
         using TransparentTypeMap = flat_hash_map<const Symbol*, const Symbol*>;
-        iterator_range<TransparentTypeMap::const_iterator> getTransparentTypes() const {
-            return { transparentTypes.begin(), transparentTypes.end() };
-        }
+        void registerTransparentType(const Symbol* insertion, const Symbol& parent);
+        iterator_range<TransparentTypeMap::const_iterator> getTransparentTypes() const;
 
-        void addForwardingTypedef(const ForwardingTypedefSymbol& symbol) {
-            forwardingTypedefs.push_back(&symbol);
-        }
+        void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
+        span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
 
-        span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const { return forwardingTypedefs; }
+        void addPortDeclaration(const PortDeclarationSyntax& syntax);
+        span<const PortDeclarationSyntax* const> getPortDeclarations() const;
 
     private:
         // A given scope only ever stores one of the following:
@@ -325,6 +312,10 @@ private:
         // Track a list of forwarding typedefs declared in the scope; once we've fully elaborated
         // we'll go back and make sure they're actually valid.
         std::vector<const ForwardingTypedefSymbol*> forwardingTypedefs;
+
+        // Track a list of non-ANSI port declarations declared in the scope; once we've fully
+        // elaborated we'll go back and make sure they're valid.
+        std::vector<const PortDeclarationSyntax*> portDecls;
     };
 
     // Sideband collection of wildcard imports stored in the Compilation object.

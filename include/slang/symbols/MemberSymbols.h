@@ -137,8 +137,8 @@ public:
     void toJson(json& j) const;
 
     static void fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
-                           LookupLocation location, const Scope& scope,
-                           SmallVector<const PortSymbol*>& results);
+                           const Scope& scope, SmallVector<const PortSymbol*>& results,
+                           span<const PortDeclarationSyntax* const> portDeclarations = {});
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
 };

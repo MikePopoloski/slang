@@ -159,8 +159,7 @@ struct PortListBuilder {
     }
 };
 
-void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilder& builder,
-                            LookupLocation location, const Scope& scope) {
+void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilder& builder, const Scope& scope) {
     static IntegerTypeSyntax LogicSyntax { SyntaxKind::LogicType, Token(), Token(), nullptr };
 
     Compilation& comp = builder.compilation;
@@ -229,7 +228,7 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilde
                     auto& namedType = header.dataType->as<NamedTypeSyntax>();
                     if (namedType.name->kind == SyntaxKind::IdentifierName) {
                         LookupResult lookupResult;
-                        scope.lookupName(*namedType.name, location, LookupNameKind::Type,
+                        scope.lookupName(*namedType.name, LookupLocation::max, LookupNameKind::Type,
                                          LookupFlags::None, lookupResult);
 
                         if (lookupResult.hasError() || !lookupResult.found || !lookupResult.found->isType()) {
@@ -340,20 +339,28 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilde
     builder.add(port);
 }
 
+void handleImplicitNonAnsiPort(Compilation& compilation, const ImplicitNonAnsiPortSyntax& syntax,
+                               const Scope& , SmallVector<const PortSymbol*>& results) {
+    // TODO: other kinds of expressions
+    auto token = syntax.expr->as<IdentifierNameSyntax>().identifier;
+    auto& port = *compilation.emplace<PortSymbol>(token.valueText(), token.location());
+
+    results.append(&port);
+}
+
 }
 
 void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
-                            LookupLocation location, const Scope& scope,
-                            SmallVector<const PortSymbol*>& results) {
+                            const Scope& scope, SmallVector<const PortSymbol*>& results,
+                            span<const PortDeclarationSyntax* const> ) {
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
             PortListBuilder builder { compilation, results };
-            for (const MemberSyntax* port : syntax.as<AnsiPortListSyntax>().ports) {
+            for (auto port : syntax.as<AnsiPortListSyntax>().ports) {
                 switch (port->kind) {
-                    case SyntaxKind::ImplicitAnsiPort: {
-                        handleImplicitAnsiPort(port->as<ImplicitAnsiPortSyntax>(), builder, location, scope);
+                    case SyntaxKind::ImplicitAnsiPort:
+                        handleImplicitAnsiPort(port->as<ImplicitAnsiPortSyntax>(), builder, scope);
                         break;
-                    }
                     default:
                         // TODO:
                         THROW_UNREACHABLE;
@@ -362,7 +369,16 @@ void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& synt
             break;
         }
         case SyntaxKind::NonAnsiPortList:
-            // TODO: implement
+            for (auto port : syntax.as<NonAnsiPortListSyntax>().ports) {
+                switch (port->kind) {
+                    case SyntaxKind::ImplicitNonAnsiPort:
+                        handleImplicitNonAnsiPort(compilation, port->as<ImplicitNonAnsiPortSyntax>(),
+                                                  scope, results);
+                        break;
+                    default:
+                        THROW_UNREACHABLE;
+                }
+            }
             break;
         default:
             THROW_UNREACHABLE;

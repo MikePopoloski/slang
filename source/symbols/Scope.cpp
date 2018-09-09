@@ -171,6 +171,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             getOrAddDeferredData().addMember(sym);
             break;
         }
+        case SyntaxKind::PortDeclaration:
+            getOrAddDeferredData().addPortDeclaration(syntax.as<PortDeclarationSyntax>());
+            break;
         case SyntaxKind::ModportDeclaration:
             // TODO: modports
             break;
@@ -446,12 +449,10 @@ void Scope::elaborate() const {
         auto deferred = deferredData.getMembers();
         for (auto symbol : deferred) {
             auto& member = symbol->as<DeferredMemberSymbol>();
-            LookupLocation location = LookupLocation::before(*symbol);
-
             switch (member.node.kind) {
                 case SyntaxKind::HierarchyInstantiation: {
                     SmallVectorSized<const Symbol*, 8> instances;
-
+                    LookupLocation location = LookupLocation::before(*symbol);
                     InstanceSymbol::fromSyntax(compilation, member.node.as<HierarchyInstantiationSyntax>(),
                                                location, *this, instances);
 
@@ -465,7 +466,8 @@ void Scope::elaborate() const {
                 case SyntaxKind::AnsiPortList:
                 case SyntaxKind::NonAnsiPortList: {
                     SmallVectorSized<const PortSymbol*, 8> ports;
-                    PortSymbol::fromSyntax(compilation, member.node.as<PortListSyntax>(), location, *this, ports);
+                    PortSymbol::fromSyntax(compilation, member.node.as<PortListSyntax>(),
+                                           *this, ports, deferredData.getPortDeclarations());
 
                     const Symbol* last = symbol;
                     for (auto port : ports) {
@@ -840,6 +842,51 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
 
     // TODO: upward name resolution
     result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+}
+
+void Scope::DeferredMemberData::addMember(Symbol* symbol) {
+    std::get<0>(membersOrStatement).emplace_back(symbol);
+}
+
+span<Symbol* const> Scope::DeferredMemberData::getMembers() const {
+    return std::get<0>(membersOrStatement);
+}
+
+bool Scope::DeferredMemberData::hasStatement() const {
+    return membersOrStatement.index() == 1;
+}
+
+void Scope::DeferredMemberData::setStatement(StatementBodiedScope& stmt) {
+    membersOrStatement = &stmt;
+}
+
+StatementBodiedScope* Scope::DeferredMemberData::getStatement() const {
+    return std::get<1>(membersOrStatement);
+}
+
+void Scope::DeferredMemberData::registerTransparentType(const Symbol* insertion, const Symbol& parent) {
+    transparentTypes.emplace(insertion, &parent);
+}
+
+iterator_range<Scope::DeferredMemberData::TransparentTypeMap::const_iterator>
+Scope::DeferredMemberData::getTransparentTypes() const {
+    return { transparentTypes.begin(), transparentTypes.end() };
+}
+
+void Scope::DeferredMemberData::addForwardingTypedef(const ForwardingTypedefSymbol& symbol) {
+    forwardingTypedefs.push_back(&symbol);
+}
+
+span<const ForwardingTypedefSymbol* const> Scope::DeferredMemberData::getForwardingTypedefs() const {
+    return forwardingTypedefs;
+}
+
+void Scope::DeferredMemberData::addPortDeclaration(const PortDeclarationSyntax& syntax) {
+    portDecls.push_back(&syntax);
+}
+
+span<const PortDeclarationSyntax* const> Scope::DeferredMemberData::getPortDeclarations() const {
+    return portDecls;
 }
 
 }
