@@ -477,13 +477,13 @@ endmodule
     compilation.addSyntaxTree(tree);
     Diagnostics diags = compilation.getAllDiagnostics();
 
-    // TODO: fix signing, check errors
+    // TODO: check errors
     checkPort("test", 0, PortDirection::In, PortKind::Net, "logic[7:0]");
     checkPort("test", 1, PortDirection::In, PortKind::Net, "logic signed[7:0]");
-    //checkPort("test", 2, PortDirection::In, PortKind::Net, "logic signed[7:0]");
+    checkPort("test", 2, PortDirection::In, PortKind::Net, "logic signed[7:0]");
     checkPort("test", 3, PortDirection::In, PortKind::Net, "logic signed[7:0]");
     checkPort("test", 4, PortDirection::Out, PortKind::Net, "logic[7:0]");
     checkPort("test", 5, PortDirection::Out, PortKind::Variable, "logic signed[7:0]");
-    //checkPort("test", 6, PortDirection::Out, PortKind::Variable, "logic signed[7:0]");
+    checkPort("test", 6, PortDirection::Out, PortKind::Variable, "logic signed[7:0]");
     checkPort("test", 7, PortDirection::Out, PortKind::Net, "logic signed[7:0]");
 }

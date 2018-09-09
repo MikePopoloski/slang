@@ -43,7 +43,8 @@ DeclaredType::resolveType(const DataTypeSyntax& typeSyntax,
         }
     }
     else {
-        type = &comp.getType(typeSyntax, context.lookupLocation, scope);
+        type = &comp.getType(typeSyntax, context.lookupLocation, scope, false,
+                             (flags & DeclaredTypeFlags::ForceSigned) != 0);
         if (dimensions)
             type = &comp.getType(*type, *dimensions, context.lookupLocation, scope);
     }

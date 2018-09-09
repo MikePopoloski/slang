@@ -25,9 +25,10 @@ enum class DeclaredTypeFlags : uint8_t {
     None = 0,
     InferImplicit = 1,
     RequireConstant = 2,
-    RequireIntegerConstant = 4
+    RequireIntegerConstant = 4,
+    ForceSigned = 8
 };
-BITMASK_DEFINE_MAX_ELEMENT(DeclaredTypeFlags, RequireIntegerConstant);
+BITMASK_DEFINE_MAX_ELEMENT(DeclaredTypeFlags, ForceSigned);
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type.
@@ -73,6 +74,10 @@ public:
     const ConstantValue& getConstantValue() const;
 
     bool isEvaluating() const { return evaluating; }
+    bool isTypeResolved() const { return type != nullptr; }
+    bitmask<DeclaredTypeFlags> getFlags() const { return flags; }
+
+    void setForceSigned() { type = nullptr; flags |= DeclaredTypeFlags::ForceSigned; }
 
     static std::tuple<const Type*, const Expression*>
         resolveType(const DataTypeSyntax& typeSyntax,

@@ -158,7 +158,7 @@ public:
     std::string toString() const;
 
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope);
+                                  LookupLocation location, const Scope& scope, bool forceSigned);
 
     /// Constructs a type from the results of a lookup operation. Note that this will
     /// not issue any diagnostics from the result object; the caller must do that
@@ -206,7 +206,7 @@ public:
     bool isDeclaredReg() const;
 
     static const Type& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope);
+                                  LookupLocation location, const Scope& scope, bool forceSigned);
 
     static const Type& fromSyntax(Compilation& compilation, SyntaxKind integerKind,
                                   span<const VariableDimensionSyntax* const> dimensions,
@@ -282,7 +282,7 @@ public:
     EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope);
+                                  LookupLocation location, const Scope& scope, bool forceSigned);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
     iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {
@@ -357,7 +357,7 @@ public:
     PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope);
+                                  LookupLocation location, const Scope& scope, bool forceSigned);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedStructType; }
 };

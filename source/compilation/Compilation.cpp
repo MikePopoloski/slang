@@ -363,8 +363,8 @@ const Type& Compilation::getType(SyntaxKind typeKind) const {
 }
 
 const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
-                                 bool allowNetType) {
-    const Type& result = Type::fromSyntax(*this, node, location, parent);
+                                 bool allowNetType, bool forceSigned) {
+    const Type& result = Type::fromSyntax(*this, node, location, parent, forceSigned);
     if (!allowNetType && result.isNetType()) {
         parent.addDiag(DiagCode::NetTypeNotAllowed, node.sourceRange()) << result.name;
         return errorType;

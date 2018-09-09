@@ -167,6 +167,9 @@ void copyTypeFrom(ValueSymbol& dest, const DeclaredType& source) {
         else
             dest.setDeclaredType(*typeSyntax);
     }
+
+    if (source.isTypeResolved())
+        dest.setType(source.getType());
 }
 
 void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBuilder& builder, const Scope& scope) {
@@ -380,7 +383,7 @@ struct NonAnsiPortListBuilder {
     }
 };
 
-void mergePortTypes(PortSymbol& , const ValueSymbol& symbol, const ImplicitTypeSyntax& implicit) {
+void mergePortTypes(PortSymbol& port, const ValueSymbol& symbol, const ImplicitTypeSyntax& implicit) {
     // There's this really terrible "feature" where the port declaration can influence the type
     // of the actual symbol somewhere else in the tree. This is ugly but should be safe since
     // nobody else can look at that symbol's type until we've gone through elaboration.
@@ -394,10 +397,17 @@ void mergePortTypes(PortSymbol& , const ValueSymbol& symbol, const ImplicitTypeS
         if (!type->isIntegral()) {
             // TODO: error
         }
-        else {
-            bool isSigned = implicit.signing.kind == TokenKind::SignedKeyword || type->isSigned();
-            if (isSigned != type->isSigned()) {
-                // TODO: signify type
+        else if (implicit.signing.kind == TokenKind::SignedKeyword && !type->isSigned()) {
+            // Yeah, this is ugly.
+            const_cast<DeclaredType&>(*symbol.getDeclaredType()).setForceSigned();
+
+            // Verify that the sign flag had an effect; it's not always possible to force it.
+            type = &symbol.getType();
+            while (type->isUnpackedArray())
+                type = &type->getCanonicalType().as<UnpackedArrayType>().elementType;
+
+            if (!type->isSigned()) {
+                // TODO: error
             }
         }
     }
@@ -413,6 +423,8 @@ void mergePortTypes(PortSymbol& , const ValueSymbol& symbol, const ImplicitTypeS
     //if (!implicit.dimensions.empty()) {
 
     //}
+
+    copyTypeFrom(port, *symbol.getDeclaredType());
 }
 
 void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax, NonAnsiPortListBuilder& builder,
@@ -453,7 +465,6 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax, NonAnsiP
 
                 // Port kind and type come from the matching symbol
                 port.portKind = symbol->kind == SymbolKind::Variable ? PortKind::Variable : PortKind::Net;
-                copyTypeFrom(port, *symbol->getDeclaredType());
                 port.internalSymbol = symbol;
 
                 mergePortTypes(port, symbol->as<ValueSymbol>(), header.dataType->as<ImplicitTypeSyntax>());

@@ -105,7 +105,7 @@ public:
 
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
-                        bool allowNetType = false);
+                        bool allowNetType = false, bool forceSigned = false);
     const Type& getType(const Type& elementType, const SyntaxList<VariableDimensionSyntax>& dimensions,
                         LookupLocation location, const Scope& parent);
 
