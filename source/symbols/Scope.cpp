@@ -359,9 +359,9 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
     if (!member->nextInScope)
         lastMember = member;
 
-    // Add to the name map if the symbol has a name, unless it's a port symbol.
-    // Per the spec, ports exist in their own namespace.
-    if (!member->name.empty() && member->kind != SymbolKind::Port) {
+    // Add to the name map if the symbol has a name, unless it's a port or definition symbol.
+    // Per the spec, ports and definitions exist in their own namespaces.
+    if (!member->name.empty() && member->kind != SymbolKind::Port && member->kind != SymbolKind::Definition) {
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second) {
             // We have a name collision; first check if this is ok (forwarding typedefs share a name with
@@ -446,11 +446,11 @@ void Scope::elaborate() const {
         auto deferred = deferredData.getMembers();
         for (auto symbol : deferred) {
             auto& member = symbol->as<DeferredMemberSymbol>();
+            LookupLocation location = LookupLocation::before(*symbol);
 
             switch (member.node.kind) {
                 case SyntaxKind::HierarchyInstantiation: {
                     SmallVectorSized<const Symbol*, 8> instances;
-                    LookupLocation location = LookupLocation::before(*symbol);
 
                     InstanceSymbol::fromSyntax(compilation, member.node.as<HierarchyInstantiationSyntax>(),
                                                location, *this, instances);
@@ -465,7 +465,7 @@ void Scope::elaborate() const {
                 case SyntaxKind::AnsiPortList:
                 case SyntaxKind::NonAnsiPortList: {
                     SmallVectorSized<const PortSymbol*, 8> ports;
-                    PortSymbol::fromSyntax(compilation, member.node.as<PortListSyntax>(), ports);
+                    PortSymbol::fromSyntax(compilation, member.node.as<PortListSyntax>(), location, *this, ports);
 
                     const Symbol* last = symbol;
                     for (auto port : ports) {
@@ -522,8 +522,9 @@ void Scope::elaborate() const {
                     if (lastMember == symbol)
                         lastMember = symbol->nextInScope;
                 }
-
-                prev = symbol;
+                else {
+                    prev = symbol;
+                }
                 symbol = symbol->nextInScope;
             }
         }
