@@ -56,6 +56,13 @@ enum class PortDirection {
     Ref
 };
 
+/// Specifies possible definition kinds.
+enum class DefinitionKind {
+    Module,
+    Interface,
+    Program
+};
+
 namespace SemanticFacts {
 
 /// Interprets a keyword token as a variable lifetime value.
@@ -65,6 +72,8 @@ std::optional<VariableLifetime> getVariableLifetime(Token token);
 PortDirection getPortDirection(TokenKind kind);
 
 ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind);
+
+DefinitionKind getDefinitionKind(SyntaxKind kind);
 
 }
 

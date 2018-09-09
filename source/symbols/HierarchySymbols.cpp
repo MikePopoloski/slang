@@ -25,7 +25,8 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleD
 
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax) {
     auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header->name.valueText(),
-                                                        syntax.header->name.location());
+                                                        syntax.header->name.location(),
+                                                        SemanticFacts::getDefinitionKind(syntax.kind));
     result->setSyntax(syntax);
 
     SmallVectorSized<const ParameterSymbol*, 8> parameters;
@@ -204,12 +205,12 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
 
     for (auto instanceSyntax : syntax.instances) {
         Symbol* inst;
-        switch (definition->getSyntax()->kind) { // TODO: don't rely on syntax here
-            case SyntaxKind::ModuleDeclaration:
+        switch (definition->definitionKind) {
+            case DefinitionKind::Module:
                 inst = &ModuleInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
                                                           instanceSyntax->name.location(), *definition, overrides);
                 break;
-            case SyntaxKind::InterfaceDeclaration:
+            case DefinitionKind::Interface:
                 inst = &InterfaceInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
                                                              instanceSyntax->name.location(), *definition, overrides);
                 break;

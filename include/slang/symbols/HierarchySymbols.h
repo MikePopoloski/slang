@@ -47,10 +47,12 @@ public:
 class DefinitionSymbol : public Symbol, public Scope {
 public:
     span<const ParameterSymbol* const> parameters;
+    DefinitionKind definitionKind;
 
-    DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
+    DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc, DefinitionKind definitionKind) :
         Symbol(SymbolKind::Definition, name, loc),
-        Scope(compilation, this) {}
+        Scope(compilation, this),
+        definitionKind(definitionKind) {}
 
     iterator_range<specific_symbol_iterator<PortSymbol>> ports() const {
         return membersOfType<PortSymbol>();

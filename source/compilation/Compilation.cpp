@@ -170,9 +170,8 @@ const RootSymbol& Compilation::getRoot() {
         for (auto& [key, definition] : definitionMap) {
             // Ignore definitions that are not top level.
             // TODO: check for no parameters here
-            auto syntax = definition->getSyntax();
-            if (std::get<1>(key) == root.get() && syntax &&
-                syntax->kind == SyntaxKind::ModuleDeclaration &&
+            if (std::get<1>(key) == root.get() &&
+                definition->definitionKind == DefinitionKind::Module &&
                 instantiatedNames.count(definition->name) == 0) {
 
                 topDefinitions.append(definition);

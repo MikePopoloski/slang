@@ -41,6 +41,15 @@ ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind) {
     }
 }
 
+DefinitionKind getDefinitionKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ModuleDeclaration: return DefinitionKind::Module;
+        case SyntaxKind::InterfaceDeclaration: return DefinitionKind::Interface;
+        case SyntaxKind::ProgramDeclaration: return DefinitionKind::Program;
+        default: THROW_UNREACHABLE;
+    }
+}
+
 }
 
 }
