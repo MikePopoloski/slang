@@ -76,8 +76,21 @@ void TypePrinter::handle(const PackedStructType& type) {
 }
 
 void TypePrinter::handle(const UnpackedArrayType& type) {
-    append(type.elementType);
-    format_to(buffer, "$[{}:{}]", type.range.left, type.range.right);
+    SmallVectorSized<ConstantRange, 8> dims;
+    const UnpackedArrayType* curr = &type;
+    while (true) {
+        dims.append(curr->range);
+        if (!curr->elementType.isUnpackedArray())
+            break;
+
+        curr = &curr->elementType.getCanonicalType().as<UnpackedArrayType>();
+    }
+
+    append(curr->elementType);
+    buffer << "$";
+
+    for (auto& range : dims)
+        format_to(buffer, "[{}:{}]", range.left, range.right);
 }
 
 void TypePrinter::handle(const UnpackedStructType& type) {
