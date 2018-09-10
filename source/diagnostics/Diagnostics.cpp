@@ -235,6 +235,8 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::InOutPortCannotBeVariable] = { "variable port '{}' cannot have direction inout", DiagnosticSeverity::Error };
     descriptors[DiagCode::RefPortMustBeVariable] = { "ref port '{}' cannot be of net type", DiagnosticSeverity::Error };
     descriptors[DiagCode::MissingPortIODeclaration] = { "port '{}' has no I/O member declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::CantDeclarePortSigned] = { "port '{}' cannot be declared signed because its type {} is not integral", DiagnosticSeverity::Error };
+    descriptors[DiagCode::PortDeclDimensionsMismatch] = { "dimensions of port '{}' do not match its declaration", DiagnosticSeverity::Error };
 
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };

@@ -456,6 +456,86 @@ module m4(output K k, output var v); endmodule
 
 TEST_CASE("Module non-ANSI ports") {
     auto tree = SyntaxTree::fromText(R"(
+module test(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r);
+    inout a;
+    inout a;            // Error, redefinition
+    output a;           // Error, redefinition
+    ref b;              // Error, net type can't be ref
+    ref var c;
+    inout logic d;      // Error, variable type can't be inout
+    input wire e;
+    ref wire f;         // Error, net type can't be ref
+
+    input logic g;      // Error, collides with variable g below
+    input h;
+    output i;
+    output j;           // Error, collides with parameter j below
+    input unsigned k;   // Error, type isn't integral
+
+    input l;
+    input [2:0] m;
+    input n[3];
+    input o[3];         // Error, not all dimensions match
+    input [2:0][3:1] p [1:2][2:0][5];
+    input signed [2:0][3:1] q [1:2][2:0][5];
+    input signed [2:0][3:1] r [1:2][2:0][5];    // Error, not all dimensions match
+
+    logic g;
+    struct { logic f; } h;
+    wire [2:0] i;
+    parameter int j = 1;
+    struct { logic f; } k;
+
+    logic [1:0] l [2];
+    logic [2:0] m;
+    logic n[3];
+    logic [2:0] o[3];
+    logic [2:0][3:1] p [1:2][2:0][5];
+    logic [2:0][3:1] q [1:2][2:0][5];
+    logic [2:0][3:2] r [1:2][2:0][5];
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    checkPort("test", 0, PortDirection::InOut, PortKind::Net, "logic");
+    checkPort("test", 1, PortDirection::Ref, PortKind::Net, "logic");
+    checkPort("test", 2, PortDirection::Ref, PortKind::Variable, "logic");
+    checkPort("test", 3, PortDirection::InOut, PortKind::Variable, "logic");
+    checkPort("test", 4, PortDirection::In, PortKind::Net, "logic");
+    checkPort("test", 5, PortDirection::Ref, PortKind::Net, "logic");
+
+    checkPort("test", 6, PortDirection::In, PortKind::Variable, "logic");
+    checkPort("test", 7, PortDirection::In, PortKind::Variable, "struct{logic f;}");
+    checkPort("test", 8, PortDirection::Out, PortKind::Net, "logic[2:0]");
+    checkPort("test", 9, PortDirection::Out, PortKind::Net, "logic");
+    checkPort("test", 10, PortDirection::In, PortKind::Variable, "struct{logic f;}");
+    checkPort("test", 11, PortDirection::In, PortKind::Variable, "logic[1:0]$[0:1]");
+    checkPort("test", 12, PortDirection::In, PortKind::Variable, "logic[2:0]");
+    checkPort("test", 13, PortDirection::In, PortKind::Variable, "logic$[0:2]");
+    checkPort("test", 14, PortDirection::In, PortKind::Variable, "logic[2:0]$[0:2]");
+    checkPort("test", 15, PortDirection::In, PortKind::Variable, "logic[2:0][3:1]$[1:2][2:0][0:4]");
+    checkPort("test", 16, PortDirection::In, PortKind::Variable, "logic signed[2:0][3:1]$[1:2][2:0][0:4]");
+    checkPort("test", 17, PortDirection::In, PortKind::Variable, "logic signed[2:0][3:2]$[1:2][2:0][0:4]");
+
+    Diagnostics diags = compilation.getAllDiagnostics();
+
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::Redefinition);
+    CHECK((it++)->code == DiagCode::Redefinition);
+    CHECK((it++)->code == DiagCode::RefPortMustBeVariable);
+    CHECK((it++)->code == DiagCode::InOutPortCannotBeVariable);
+    CHECK((it++)->code == DiagCode::RefPortMustBeVariable);
+    CHECK((it++)->code == DiagCode::Redefinition);
+    CHECK((it++)->code == DiagCode::RedefinitionDifferentType);
+    CHECK((it++)->code == DiagCode::CantDeclarePortSigned);
+    CHECK(it == diags.end());
+}
+
+TEST_CASE("Module non-ANSI port signedness") {
+    auto tree = SyntaxTree::fromText(R"(
 module test(a,b,c,d,e,f,g,h);
     input [7:0] a;          // no explicit net declaration - net is unsigned
     input [7:0] b;
@@ -475,9 +555,7 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    Diagnostics diags = compilation.getAllDiagnostics();
 
-    // TODO: check errors
     checkPort("test", 0, PortDirection::In, PortKind::Net, "logic[7:0]");
     checkPort("test", 1, PortDirection::In, PortKind::Net, "logic signed[7:0]");
     checkPort("test", 2, PortDirection::In, PortKind::Net, "logic signed[7:0]");
@@ -486,4 +564,6 @@ endmodule
     checkPort("test", 5, PortDirection::Out, PortKind::Variable, "logic signed[7:0]");
     checkPort("test", 6, PortDirection::Out, PortKind::Variable, "logic signed[7:0]");
     checkPort("test", 7, PortDirection::Out, PortKind::Net, "logic signed[7:0]");
+
+    NO_COMPILATION_ERRORS;
 }

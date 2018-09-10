@@ -383,7 +383,9 @@ struct NonAnsiPortListBuilder {
     }
 };
 
-void mergePortTypes(PortSymbol& port, const ValueSymbol& symbol, const ImplicitTypeSyntax& implicit) {
+void mergePortTypes(PortSymbol& port, const ValueSymbol& symbol, const ImplicitTypeSyntax& implicit,
+                    SourceLocation location, const Scope& scope,
+                    span<const VariableDimensionSyntax* const> unpackedDimensions) {
     // There's this really terrible "feature" where the port declaration can influence the type
     // of the actual symbol somewhere else in the tree. This is ugly but should be safe since
     // nobody else can look at that symbol's type until we've gone through elaboration.
@@ -395,7 +397,8 @@ void mergePortTypes(PortSymbol& port, const ValueSymbol& symbol, const ImplicitT
             type = &type->getCanonicalType().as<UnpackedArrayType>().elementType;
 
         if (!type->isIntegral()) {
-            // TODO: error
+            auto& diag = scope.addDiag(DiagCode::CantDeclarePortSigned, location);
+            diag << port.name << *type;
         }
         else if (implicit.signing.kind == TokenKind::SignedKeyword && !type->isSigned()) {
             // Yeah, this is ugly.
@@ -412,17 +415,9 @@ void mergePortTypes(PortSymbol& port, const ValueSymbol& symbol, const ImplicitT
         }
     }
 
-    //// Verify that unpacked dimensions match.
-    //if (!decl->syntax->dimensions.empty()) {
-    //    port.setDeclaredType(port.getDeclaredType()->getTypeSyntax()
-    //                         verifyRanges());
-    //}
-
-
-    //// Packed dimensions can't be merged, they just have to match.
-    //if (!implicit.dimensions.empty()) {
-
-    //}
+    if (!implicit.dimensions.empty() || !unpackedDimensions.empty()) {
+        // TODO: check dimensions
+    }
 
     copyTypeFrom(port, *symbol.getDeclaredType());
 }
@@ -442,6 +437,8 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax, NonAnsiP
         return;
     }
 
+    auto declLoc = decl->syntax->name.location();
+
     switch (decl->header->kind) {
         case SyntaxKind::VariablePortHeader: {
             auto& header = decl->header->as<VariablePortHeaderSyntax>();
@@ -455,7 +452,7 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax, NonAnsiP
                 port.setDeclaredType(*header.dataType, decl->syntax->dimensions);
 
                 // TODO: variable lifetime
-                auto variable = comp.emplace<VariableSymbol>(port.name, decl->syntax->name.location());
+                auto variable = comp.emplace<VariableSymbol>(port.name, declLoc);
                 variable->setSyntax(*decl->syntax);
                 copyTypeFrom(*variable, *port.getDeclaredType());
                 port.internalSymbol = variable;
@@ -467,7 +464,8 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax, NonAnsiP
                 port.portKind = symbol->kind == SymbolKind::Variable ? PortKind::Variable : PortKind::Net;
                 port.internalSymbol = symbol;
 
-                mergePortTypes(port, symbol->as<ValueSymbol>(), header.dataType->as<ImplicitTypeSyntax>());
+                mergePortTypes(port, symbol->as<ValueSymbol>(), header.dataType->as<ImplicitTypeSyntax>(),
+                               declLoc, scope, decl->syntax->dimensions);
             }
             else {
                 // No symbol and no data type defaults to a basic net.
@@ -475,16 +473,16 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax, NonAnsiP
                 port.setDeclaredType(*header.dataType, decl->syntax->dimensions);
 
                 // TODO: net type
-                auto net = comp.emplace<NetSymbol>(port.name, decl->syntax->name.location());
+                auto net = comp.emplace<NetSymbol>(port.name, declLoc);
                 net->setSyntax(*decl->syntax);
                 copyTypeFrom(*net, *port.getDeclaredType());
                 port.internalSymbol = net;
             }
 
             if (port.direction == PortDirection::InOut && port.portKind == PortKind::Variable)
-                scope.addDiag(DiagCode::InOutPortCannotBeVariable, port.location) << port.name;
+                scope.addDiag(DiagCode::InOutPortCannotBeVariable, declLoc) << port.name;
             else if (port.direction == PortDirection::Ref && port.portKind != PortKind::Variable)
-                scope.addDiag(DiagCode::RefPortMustBeVariable, port.location) << port.name;
+                scope.addDiag(DiagCode::RefPortMustBeVariable, declLoc) << port.name;
 
             break;
         }
@@ -492,13 +490,14 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax, NonAnsiP
             auto& header = decl->header->as<NetPortHeaderSyntax>();
             port.portKind = PortKind::Net;
             port.direction = SemanticFacts::getPortDirection(header.direction.kind);
+            port.setDeclaredType(*header.dataType, decl->syntax->dimensions);
 
             if (port.direction == PortDirection::Ref)
-                scope.addDiag(DiagCode::RefPortMustBeVariable, port.location) << port.name;
+                scope.addDiag(DiagCode::RefPortMustBeVariable, declLoc) << port.name;
 
             // Create a new symbol to represent this port internally to the instance.
             // TODO: net type
-            auto net = comp.emplace<NetSymbol>(port.name, decl->syntax->name.location());
+            auto net = comp.emplace<NetSymbol>(port.name, declLoc);
             net->setSyntax(*decl->syntax);
             copyTypeFrom(*net, *port.getDeclaredType());
             port.internalSymbol = net;
