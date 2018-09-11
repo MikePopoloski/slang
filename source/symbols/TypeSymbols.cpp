@@ -263,6 +263,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::StringType:
         case SyntaxKind::CHandleType:
         case SyntaxKind::EventType:
+        case SyntaxKind::VoidType:
             return compilation.getType(node.kind);
         case SyntaxKind::EnumType:
             return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), location, parent, forceSigned);
