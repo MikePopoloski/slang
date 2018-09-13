@@ -359,11 +359,23 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     }
 
     if (report) {
-        // Since identifiers are so common, give a specialized error here.
-        if (expected == TokenKind::Identifier)
-            diagnostics.add(DiagCode::ExpectedIdentifier, location);
-        else
-            diagnostics.add(DiagCode::ExpectedToken, location) << getTokenKindText(expected);
+        switch (expected) {
+            case TokenKind::Identifier:
+                diagnostics.add(DiagCode::ExpectedIdentifier, location);
+                break;
+            case TokenKind::StringLiteral:
+                diagnostics.add(DiagCode::ExpectedStringLiteral, location);
+                break;
+            case TokenKind::IntegerLiteral:
+                diagnostics.add(DiagCode::ExpectedIntegerLiteral, location);
+                break;
+            case TokenKind::TimeLiteral:
+                diagnostics.add(DiagCode::ExpectedTimeLiteral, location);
+                break;
+            default:
+                diagnostics.add(DiagCode::ExpectedToken, location) << getTokenKindText(expected);
+                break;
+        }
     }
     return Token::createMissing(alloc, expected, location);
 }

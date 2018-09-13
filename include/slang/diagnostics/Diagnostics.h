@@ -83,6 +83,9 @@ enum class DiagCode : uint8_t {
 
     // parser
     ExpectedIdentifier,
+    ExpectedStringLiteral,
+    ExpectedIntegerLiteral,
+    ExpectedTimeLiteral,
     ExpectedToken,
     MisplacedTrailingSeparator,
     ImplicitNotAllowed,

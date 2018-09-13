@@ -68,7 +68,7 @@ TEST_CASE("keywords_errors", "[diagnostic]") {
     token = lexToken(text2);
     CHECK(token.kind == TokenKind::EndOfFile);
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
+    CHECK(diagnostics[0].code == DiagCode::ExpectedStringLiteral);
 
     auto& text3 = "`end_keywords\n";
 

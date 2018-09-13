@@ -160,6 +160,9 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
 
     // parser
     descriptors[DiagCode::ExpectedIdentifier] = { "expected identifier", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpectedStringLiteral] = { "expected string literal", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpectedIntegerLiteral] = { "expected integer literal", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpectedTimeLiteral] = { "expected time literal", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedToken] = { "expected '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::MisplacedTrailingSeparator] = { "misplaced trailing '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::ImplicitNotAllowed] = { "expected data type (implicit type name not allowed)", DiagnosticSeverity::Error };
