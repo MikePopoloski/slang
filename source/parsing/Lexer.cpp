@@ -203,6 +203,7 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
     // us to return an EndOfDirective token right away.
     if (lexTrivia(triviaBuffer, directiveMode)) {
         info->trivia = triviaBuffer.copy(alloc);
+        info->location = SourceLocation(getBufferID(), currentOffset());
         return Token(TokenKind::EndOfDirective, info);
     }
 
