@@ -126,11 +126,7 @@ void Preprocessor::resetAllDirectives() {
     defaultNetType = TokenKind::WireKeyword;
 }
 
-Token Preprocessor::next() {
-    Token token = next(LexerMode::Normal);
-    ASSERT(token);
-    return token;
-}
+Token Preprocessor::next() { return consume(LexerMode::Normal); }
 
 Token Preprocessor::next(LexerMode mode) {
     // The core preprocessing routine; this method pulls raw tokens from various text
@@ -172,6 +168,7 @@ Token Preprocessor::handleDirectives(LexerMode mode, Token token) {
     // burn through any preprocessor directives we find and convert them to trivia
     SmallVectorSized<Trivia, 16> trivia;
     do {
+        lastConsumed = token;
         switch (token.directiveKind()) {
             case SyntaxKind::IncludeDirective: trivia.append(handleIncludeDirective(token)); break;
             case SyntaxKind::ResetAllDirective: trivia.append(handleResetAllDirective(token)); break;
@@ -299,7 +296,7 @@ Token Preprocessor::nextRaw(LexerMode mode) {
 Trivia Preprocessor::handleIncludeDirective(Token directive) {
     // next token should be a filename, or something the preprocessor generated
     // that we will make into a filename
-    Token fileName = next(LexerMode::IncludeFileName);
+    Token fileName = consume(LexerMode::IncludeFileName);
 
     // If we have a macro-expanded filename, there won't be an EOD token
     bool suppressEODError = false;
@@ -321,7 +318,8 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             tokens.append(fileName);
             Token nextToken = peek();
             while (nextToken.kind != TokenKind::GreaterThan) {
-                if (sourceManager.getExpansionLoc(nextToken.location()) != rootExpansionLoc) {
+                if (!sourceManager.isMacroLoc(nextToken.location()) ||
+                    sourceManager.getExpansionLoc(nextToken.location()) != rootExpansionLoc) {
                     addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
                     break;
                 }
@@ -1232,6 +1230,7 @@ Token Preprocessor::peek(LexerMode mode) {
 
 Token Preprocessor::consume(LexerMode mode) {
     auto result = peek(mode);
+    lastConsumed = currentToken;
     currentToken = Token();
     return result;
 }
