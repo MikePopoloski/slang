@@ -358,12 +358,13 @@ struct NonAnsiPortListBuilder {
         // time we're done creating ports.
         for (auto port : portDeclarations) {
             for (auto decl : port->declarators) {
-                auto name = decl->name;
-                auto result = portDecls.emplace(name.valueText(), PortDecl{decl, port->header});
-                if (!result.second) {
-                    auto& diag = scope.addDiag(DiagCode::Redefinition, name.location());
-                    diag << name.valueText();
-                    diag.addNote(DiagCode::NotePreviousDefinition, result.first->second.syntax->name.location());
+                if (auto name = decl->name; !name.isMissing()) {
+                    auto result = portDecls.emplace(name.valueText(), PortDecl{ decl, port->header });
+                    if (!result.second) {
+                        auto& diag = scope.addDiag(DiagCode::Redefinition, name.location());
+                        diag << name.valueText();
+                        diag.addNote(DiagCode::NotePreviousDefinition, result.first->second.syntax->name.location());
+                    }
                 }
             }
         }

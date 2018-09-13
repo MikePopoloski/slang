@@ -748,6 +748,9 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             THROW_UNREACHABLE;
     }
 
+    if (nameToken.valueText().empty())
+        return;
+
     // Start by trying to find the first name segment using normal unqualified lookup.
     lookupUnqualified(nameToken.valueText(), location, nameKind, nameToken.range(), result);
     if (result.hasError())

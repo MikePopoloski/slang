@@ -997,6 +997,8 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
     for (uint32_t i = 0; i < formalList.size(); i++) {
         auto formal = formalList[i];
         auto name = formal->name.valueText();
+        if (name.empty())
+            continue;
 
         const TokenList* tokenList = nullptr;
         if (actualList.size() > i) {

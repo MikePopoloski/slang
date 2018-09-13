@@ -2046,17 +2046,20 @@ PackageImportItemSyntax& Parser::parsePackageImportItem() {
 DPIImportExportSyntax& Parser::parseDPIImportExport(span<AttributeInstanceSyntax*> attributes) {
     auto keyword = consume();
     auto stringLiteral = expect(TokenKind::StringLiteral);
-    if (stringLiteral.valueText() != "DPI-C" && stringLiteral.valueText() != "DPI") {
+    if (!stringLiteral.isMissing() && stringLiteral.valueText() != "DPI-C" && stringLiteral.valueText() != "DPI") {
         addDiag(DiagCode::ExpectedDPISpecString, stringLiteral.location());
     }
+
     Token property, name, equals;
     if (keyword.kind == TokenKind::ImportKeyword && (peek(TokenKind::ContextKeyword) || peek(TokenKind::PureKeyword))) {
         property = consume();
     }
+
     if (peek(TokenKind::Identifier)) {
         name = consume();
         equals = expect(TokenKind::Equals);
     }
+
     auto& method = parseFunctionPrototype(property.kind != TokenKind::PureKeyword);
     auto semi = expect(TokenKind::Semicolon);
     return factory.dPIImportExport(attributes, keyword, stringLiteral, property, name, equals, method, semi);

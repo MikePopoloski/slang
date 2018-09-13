@@ -109,11 +109,14 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 orderedParams.append(&paramBase->as<OrderedArgumentSyntax>());
             else {
                 const NamedArgumentSyntax& nas = paramBase->as<NamedArgumentSyntax>();
-                auto pair = namedParams.emplace(nas.name.valueText(), std::make_pair(&nas, false));
-                if (!pair.second) {
-                    auto& diag = scope.addDiag(DiagCode::DuplicateParamAssignment, nas.name.location());
-                    diag << nas.name.valueText();
-                    diag.addNote(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
+                auto name = nas.name.valueText();
+                if (!name.empty()) {
+                    auto pair = namedParams.emplace(name, std::make_pair(&nas, false));
+                    if (!pair.second) {
+                        auto& diag = scope.addDiag(DiagCode::DuplicateParamAssignment, nas.name.location());
+                        diag << name;
+                        diag.addNote(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
+                    }
                 }
             }
         }
