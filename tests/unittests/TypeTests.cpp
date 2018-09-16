@@ -1,6 +1,6 @@
 #include "Test.h"
 
-TEST_CASE("Enum declaration", "[types]") {
+TEST_CASE("Enum declaration") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     enum logic [3:0] {

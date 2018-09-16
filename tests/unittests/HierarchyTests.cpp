@@ -1,6 +1,6 @@
 #include "Test.h"
 
-TEST_CASE("Finding top level", "[binding:decls]") {
+TEST_CASE("Finding top level") {
     auto file1 = SyntaxTree::fromText("module A; endmodule\nmodule B; A a(); endmodule\nmodule C; endmodule");
     auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
@@ -15,7 +15,7 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Module parameterization errors", "[binding:modules]") {
+TEST_CASE("Module parameterization errors") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     Leaf l1();
@@ -75,7 +75,7 @@ endmodule
     CHECK(diags[6].notes[0].code == DiagCode::NotePreviousUsage);
 }
 
-TEST_CASE("Module children (simple)", "[binding:modules]") {
+TEST_CASE("Module children (simple)") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     Child child();
@@ -98,7 +98,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Module children (conditional generate)", "[binding:modules]") {
+TEST_CASE("Module children (conditional generate)") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     Child child();
@@ -130,7 +130,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Module children (loop generate)", "[binding:modules]") {
+TEST_CASE("Module children (loop generate)") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     for (genvar i = 0; i < 10; i += 1) begin
@@ -155,7 +155,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Interface instantiation", "[binding:modules]") {
+TEST_CASE("Interface instantiation") {
     auto tree = SyntaxTree::fromText(R"(
 interface I2CBus(
     input wire clk,
@@ -185,7 +185,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("always_comb", "[binding:modules]") {
+TEST_CASE("always_comb") {
     auto tree = SyntaxTree::fromText(R"(
 module module1
 #(
@@ -227,7 +227,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Function declaration", "[binding:modules]") {
+TEST_CASE("Function declaration") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     function static logic [15:0] foo(a, int b, output logic [15:0] u, v, inout w);
@@ -265,7 +265,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Package declaration", "[symbols]") {
+TEST_CASE("Package declaration") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     parameter int blah = Foo::x;

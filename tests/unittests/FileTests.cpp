@@ -4,7 +4,7 @@ std::string getTestInclude() {
     return findTestDir() + "/include.svh";
 }
 
-TEST_CASE("Read source", "[files]") {
+TEST_CASE("Read source") {
     SourceManager manager;
     std::string testPath = manager.makeAbsolutePath(string_view(getTestInclude()));
 
@@ -15,7 +15,7 @@ TEST_CASE("Read source", "[files]") {
     CHECK(file.data.length() > 0);
 }
 
-TEST_CASE("Read header (absolute)", "[files]") {
+TEST_CASE("Read header (absolute)") {
     SourceManager manager;
     std::string testPath = manager.makeAbsolutePath(string_view(getTestInclude()));
 
@@ -32,7 +32,7 @@ TEST_CASE("Read header (absolute)", "[files]") {
     CHECK(!buffer.data.empty());
 }
 
-TEST_CASE("Read header (relative)", "[files]") {
+TEST_CASE("Read header (relative)") {
     SourceManager manager;
 
     // relative to nothing should never return anything
@@ -54,7 +54,7 @@ TEST_CASE("Read header (relative)", "[files]") {
     CHECK(manager.readHeader("nested_local.svh", SourceLocation(buffer2.id, 0), false));
 }
 
-TEST_CASE("Read header (include dirs)", "[files]") {
+TEST_CASE("Read header (include dirs)") {
     SourceManager manager;
     manager.addSystemDirectory(string_view(manager.makeAbsolutePath(string_view(findTestDir()))));
 

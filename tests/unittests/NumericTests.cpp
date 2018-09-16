@@ -2,7 +2,7 @@
 
 #include "slang/numeric/SVInt.h"
 
-TEST_CASE("Construction", "[numeric]") {
+TEST_CASE("Construction") {
     SVInt value1;
     SVInt value2(924);
     SVInt value3(924u);
@@ -135,7 +135,7 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK(SVInt(128 * 8, make_span((byte*)mem2, 128), false).slice(263, 256).as<char>() == '@');
 }
 
-TEST_CASE("logic_t operators", "[numeric]") {
+TEST_CASE("logic_t operators") {
     logic_t v1(1);
     logic_t v2(0);
 
@@ -175,7 +175,7 @@ void checkRoundTrip(std::string str, LiteralBase base) {
     CHECK(sv.toString(base) == str);
 }
 
-TEST_CASE("SVInt to string (and back)", "[numeric]") {
+TEST_CASE("SVInt to string (and back)") {
     checkRoundTrip("22'd10", LiteralBase::Decimal);
     checkRoundTrip("92'so10_0214_562", LiteralBase::Octal);
     checkRoundTrip("-5'sd10", LiteralBase::Decimal);
@@ -205,7 +205,7 @@ TEST_CASE("SVInt to string (and back)", "[numeric]") {
     ss.str(""); ss << logic_t(1); CHECK(ss.str() == "1");
 }
 
-TEST_CASE("Comparison", "[numeric]") {
+TEST_CASE("Comparison") {
     CHECK(SVInt(9000) == SVInt(1024, 9000, false));
     CHECK(SVInt(-4) == -4);
     CHECK(SVInt((uint64_t)-4) != SVInt(9999, (uint64_t)-4, true));
@@ -254,7 +254,7 @@ TEST_CASE("Comparison", "[numeric]") {
     CHECK_THAT(SVInt::conditional(SVInt(logic_t::x), "4'b1111"_si, "4'bz1x0"_si), exactlyEquals("4'bx1xx"_si));
 }
 
-TEST_CASE("Arithmetic", "[numeric]") {
+TEST_CASE("Arithmetic") {
     CHECK("100'd99999999999"_si + "120'd987654321"_si == "137'd100987654320"_si);
     CHECK("120'd99999999999"_si + "100'd987654321"_si == "137'd100987654320"_si);
     CHECK("100'sd99999999999"_si + "-120'sd999987654321"_si == "-137'sd899987654322"_si);
@@ -325,7 +325,7 @@ void testDiv(SVInt a, SVInt b, SVInt c) {
     }
 }
 
-TEST_CASE("Division", "[numeric]") {
+TEST_CASE("Division") {
     // Division / remainder are very complicated, so split out there tests here.
     CHECK("100'sd99999999999"_si / "-120'sd987654321"_si == SVInt(-101));
     CHECK("100'sd99999999999"_si % "120'sd987654321"_si == SVInt(246913578));
@@ -372,7 +372,7 @@ TEST_CASE("Division", "[numeric]") {
     testDiv("1024'd19"_si.shl(811), "1024'd4356013"_si, "1024'd1"_si);
 }
 
-TEST_CASE("Power", "[numeric]") {
+TEST_CASE("Power") {
     // 0**y
     CHECK(SVInt::Zero.pow(SVInt::Zero) == 1);
     CHECK(SVInt::Zero.pow("20'sb1"_si) == 0);
@@ -421,7 +421,7 @@ TEST_CASE("Power", "[numeric]") {
 #endif
 }
 
-TEST_CASE("Shifting", "[numeric]") {
+TEST_CASE("Shifting") {
     CHECK("100'b11110000111"_si.lshr(5) == 60);
     CHECK("64"_si.shl(3) == 512);
 
@@ -451,7 +451,7 @@ TEST_CASE("Shifting", "[numeric]") {
     CHECK_THAT("100'sb1x"_si.ashr(SVInt(logic_t::x)), exactlyEquals("100'bx"_si));
 }
 
-TEST_CASE("Bitwise", "[numeric]") {
+TEST_CASE("Bitwise") {
     CHECK_THAT("100'b11xx1Z00x10"_si | "90'b10101xzx01z"_si, exactlyEquals("90'b111x1xxxx1x"_si));
     CHECK_THAT("100'b11xx1Z00x10"_si & "90'b10101xzx01z"_si, exactlyEquals("90'b10x01x00010"_si));
     CHECK_THAT("90'b11xx1Z00x10"_si & "100'b10101xzx01z"_si, exactlyEquals("90'b10x01x00010"_si));
@@ -484,7 +484,7 @@ TEST_CASE("Bitwise", "[numeric]") {
     CHECK_THAT("1'bx"_si.reductionXor(), exactlyEquals(logic_t::x));
 }
 
-TEST_CASE("Slicing", "[numeric]") {
+TEST_CASE("Slicing") {
     SVInt v1 = "7'b1010101"_si;
     v1.set(3, 2, "2'b10"_si);
     CHECK(v1 == "7'b1011001"_si);
@@ -517,7 +517,7 @@ TEST_CASE("Slicing", "[numeric]") {
     CHECK(v4.slice(16777214, 16777000).toString(LiteralBase::Hex) == "215'h728560c56c16d0b0be23da38038624767ffffffffffffffffffffd");
 }
 
-TEST_CASE("SVInt misc functions", "[numeric]") {
+TEST_CASE("SVInt misc functions") {
     CHECK("100'b111"_si.countLeadingZeros() == 97);
     CHECK("128'hffff000000000000ffff000000000000"_si.countLeadingOnes() == 16);
     CHECK("128'hffffffffffffffffffffffffffffffff"_si.countLeadingOnes() == 128);

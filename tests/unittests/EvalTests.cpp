@@ -2,7 +2,7 @@
 
 #include "slang/compilation/ScriptSession.h"
 
-TEST_CASE("Simple eval", "[eval]") {
+TEST_CASE("Simple eval") {
     ScriptSession session;
     auto value = session.eval("3 * 3");
     CHECK(value.integer() == 9);
@@ -12,7 +12,7 @@ TEST_CASE("Simple eval", "[eval]") {
     CHECK(value.integer() == 13);
 }
 
-TEST_CASE("Eval function calls", "[eval]") {
+TEST_CASE("Eval function calls") {
     ScriptSession session;
     session.eval(R"(
 function logic [15:0] foo(int a, int b);
@@ -34,7 +34,7 @@ endfunction
     CHECK(value.integer() == 2);
 }
 
-TEST_CASE("Nested functions", "[eval]") {
+TEST_CASE("Nested functions") {
     ScriptSession session;
     session.eval(R"(
 function automatic int symbols_in_data(int dataBitsPerSymbol, int data_width);
@@ -53,7 +53,7 @@ endfunction
     CHECK(value.integer() == 131072);
 }
 
-TEST_CASE("Module param", "[eval]") {
+TEST_CASE("Module param") {
    ScriptSession session;
    session.eval("module A#(parameter int P); localparam LP = P + 3; endmodule");
    session.eval("A #(.P(2)) a0();");
@@ -61,7 +61,7 @@ TEST_CASE("Module param", "[eval]") {
    CHECK(value.integer() == 5);
 }
 
-TEST_CASE("Interface param", "[eval]") {
+TEST_CASE("Interface param") {
    ScriptSession session;
    session.eval("interface IFACE1#(parameter int W = 8); logic valid; logic [W-1:0] data; endinterface");
    session.eval("IFACE1 #(6) i0();");
@@ -70,7 +70,7 @@ TEST_CASE("Interface param", "[eval]") {
 }
 
 // TODO:
-//TEST_CASE("Interface port param", "[eval]") {
+//TEST_CASE("Interface port param") {
 //    ScriptSession session;
 //    auto interface = session.eval("interface IFACE2 #(parameter int W = 8); logic valid; logic [W-1:0] data; endinterface");
 //    CHECK(interface);
@@ -84,7 +84,7 @@ TEST_CASE("Interface param", "[eval]") {
 //    CHECK(value.integer() == 6);
 //}
 //
-//TEST_CASE("Interface array", "[eval]") {
+//TEST_CASE("Interface array") {
 //    ScriptSession session;
 //    auto interface = session.eval("interface IFACE3 #(parameter int W = 8); logic valid; logic [W-1:0] data; endinterface");
 //    CHECK(interface);
@@ -99,7 +99,7 @@ TEST_CASE("Interface param", "[eval]") {
 //    CHECK(value.integer() == 6);
 //}
 
-TEST_CASE("Eval if statement", "[eval]") {
+TEST_CASE("Eval if statement") {
     ScriptSession session;
     session.eval(R"(
 function logic [15:0] foo(int a);
@@ -117,7 +117,7 @@ endfunction
     CHECK(elseValue.integer() == 5);
 }
 
-TEST_CASE("Eval for loop", "[eval]") {
+TEST_CASE("Eval for loop") {
     ScriptSession session;
     session.eval(R"(
 function logic [15:0] foo(int a);
@@ -231,7 +231,7 @@ TEST_CASE("Assignments") {
     EVAL("bar", 208901);
 }
 
-TEST_CASE("bit select weird indices", "[eval]") {
+TEST_CASE("bit select weird indices") {
     // The above bit select cases test the "normal" case where vectors are specified
     // with [N : 0]. Here we test "up-vectors" and non-zero lower bounds.
     ScriptSession session;
@@ -258,7 +258,7 @@ TEST_CASE("bit select weird indices", "[eval]") {
     CHECK(value == 9);
 }
 
-TEST_CASE("dimension based system functions", "[eval]") {
+TEST_CASE("dimension based system functions") {
     ScriptSession session;
     session.eval("logic [0 : 15] up_vect = 5'b10111;");
     session.eval("logic [15 : 0] down_vect = 5'd25");
@@ -284,7 +284,7 @@ TEST_CASE("dimension based system functions", "[eval]") {
 #undef EVAL
 }
 
-TEST_CASE("Unary inc-dec operators", "[eval]") {
+TEST_CASE("Unary inc-dec operators") {
     ScriptSession session;
     session.eval("logic [7:0] a = 123;");
 
@@ -302,7 +302,7 @@ TEST_CASE("Unary inc-dec operators", "[eval]") {
     CHECK(session.eval("a").integer() == 122);
 }
 
-TEST_CASE("Constant eval errors", "[eval]") {
+TEST_CASE("Constant eval errors") {
     ScriptSession session;
     session.eval("logic f = 1;");
     session.eval("function int foo(int a); return f + a; endfunction");

@@ -3,7 +3,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/syntax/SyntaxTree.h"
 
-TEST_CASE("Explicit import lookup", "[symbols:lookup]") {
+TEST_CASE("Explicit import lookup") {
     auto tree = SyntaxTree::fromText(R"(
 package Foo;
     parameter int x = 4;
@@ -28,7 +28,7 @@ import Foo::x;
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Wildcard import lookup 1", "[symbols:lookup]") {
+TEST_CASE("Wildcard import lookup 1") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
     parameter int x = 4;
@@ -79,7 +79,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Wildcard import lookup 2", "[symbols:lookup]") {
+TEST_CASE("Wildcard import lookup 2") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
     parameter int x = 4;
@@ -115,7 +115,7 @@ endmodule
     CHECK(diags[0].notes[2].code == DiagCode::NoteDeclarationHere);
 }
 
-TEST_CASE("Wildcard import lookup 3", "[symbols:lookup]") {
+TEST_CASE("Wildcard import lookup 3") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
     int x;
@@ -155,7 +155,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Wildcard import lookup 4", "[symbols:lookup]") {
+TEST_CASE("Wildcard import lookup 4") {
     auto tree = SyntaxTree::fromText(R"(
 package p1;
     function int f();
@@ -191,7 +191,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Package references", "[symbols:lookup]") {
+TEST_CASE("Package references") {
     auto tree = SyntaxTree::fromText(R"(
 package ComplexPkg;
     typedef struct packed {shortint i, r;} Complex;
@@ -233,7 +233,7 @@ endmodule
     CHECK(diags[1].code == DiagCode::UndeclaredIdentifier);
 }
 
-TEST_CASE("Package references 2", "[symbols:lookup]") {
+TEST_CASE("Package references 2") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
     typedef enum { FALSE, TRUE } BOOL;
@@ -287,7 +287,7 @@ endmodule
     CHECK(diags[3].code == DiagCode::ImportNameCollision);
 }
 
-TEST_CASE("Member access", "[symbols:lookup]") {
+TEST_CASE("Member access") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     struct packed { logic a; logic b; } foo;
@@ -303,7 +303,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Hierarchical reference in CE", "[symbols:lookup]") {
+TEST_CASE("Hierarchical reference in CE") {
     auto tree = SyntaxTree::fromText(R"(
 module m1;
 

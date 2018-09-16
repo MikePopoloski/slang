@@ -19,7 +19,7 @@ std::string preprocess(string_view text) {
     return result;
 }
 
-TEST_CASE("Include File", "[preprocessor]") {
+TEST_CASE("Include File") {
     auto& text = "`include \"include.svh\"";
     Token token = lexToken(text);
 
@@ -44,7 +44,7 @@ void testDirective(SyntaxKind kind) {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Directives", "[preprocessor]") {
+TEST_CASE("Directives") {
     testDirective(SyntaxKind::BeginKeywordsDirective);
     testDirective(SyntaxKind::CellDefineDirective);
     testDirective(SyntaxKind::DefaultNetTypeDirective);
@@ -69,7 +69,7 @@ TEST_CASE("Directives", "[preprocessor]") {
     CHECK(getDirectiveText(SyntaxKind::Unknown) == "");
 }
 
-TEST_CASE("Macro define (simple)", "[preprocessor]") {
+TEST_CASE("Macro define (simple)") {
     auto& text = "`define FOO (1)";
     Token token = lexToken(text);
 
@@ -90,7 +90,7 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
     CHECK(def.body[1].kind == TokenKind::IntegerLiteral);
 }
 
-TEST_CASE("Macro define (function-like)", "[preprocessor]") {
+TEST_CASE("Macro define (function-like)") {
     auto& text = "`define FOO(a) a+1";
     Token token = lexToken(text);
 
@@ -113,7 +113,7 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     CHECK(def.body[2].kind == TokenKind::IntegerLiteral);
 }
 
-TEST_CASE("Macro usage (undefined)", "[preprocessor]") {
+TEST_CASE("Macro usage (undefined)") {
     auto& text = "`FOO";
     lexToken(text);
 
@@ -121,7 +121,7 @@ TEST_CASE("Macro usage (undefined)", "[preprocessor]") {
     CHECK(diagnostics.back().code == DiagCode::UnknownDirective);
 }
 
-TEST_CASE("Macro usage (simple)", "[preprocessor]") {
+TEST_CASE("Macro usage (simple)") {
     auto& text = "`define FOO 42\n`FOO";
     Token token = lexToken(text);
 
@@ -130,7 +130,7 @@ TEST_CASE("Macro usage (simple)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Function macro (simple)", "[preprocessor]") {
+TEST_CASE("Function macro (simple)") {
     auto& text = "`define FOO(x) x\n`FOO(3)";
     Token token = lexToken(text);
 
@@ -139,7 +139,7 @@ TEST_CASE("Function macro (simple)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Function macro (defaults)", "[preprocessor]") {
+TEST_CASE("Function macro (defaults)") {
     auto& text = "`define FOO(x=9(,), y=2) x\n`FOO()";
     Token token = lexToken(text);
 
@@ -148,7 +148,7 @@ TEST_CASE("Function macro (defaults)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Function macro (no tokens)", "[preprocessor]") {
+TEST_CASE("Function macro (no tokens)") {
     auto& text = "`define FOO(x=) x\n`FOO()";
     Token token = lexToken(text);
 
@@ -156,7 +156,7 @@ TEST_CASE("Function macro (no tokens)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Function macro (simple nesting)", "[preprocessor]") {
+TEST_CASE("Function macro (simple nesting)") {
     auto& text = "`define BLAHBLAH(x) x\n`define BAR(x) `BLAHBLAH(x)\n`define BAZ(x) `BAR(x)\n`define FOO(y) `BAZ(y)\n`FOO(15)";
     Token token = lexToken(text);
 
@@ -165,7 +165,7 @@ TEST_CASE("Function macro (simple nesting)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Function macro (arg nesting)", "[preprocessor]") {
+TEST_CASE("Function macro (arg nesting)") {
     auto& text = "`define FOO(x) x\n`FOO(`FOO(3))";
     Token token = lexToken(text);
 
@@ -174,7 +174,7 @@ TEST_CASE("Function macro (arg nesting)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Function macro (keyword as formal argument)", "[preprocessor]") {
+TEST_CASE("Function macro (keyword as formal argument)") {
     auto& text = "`define FOO(type) type\n`FOO(3)";
     Token token = lexToken(text);
 
@@ -183,7 +183,7 @@ TEST_CASE("Function macro (keyword as formal argument)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro pasting (identifiers)", "[preprocessor]") {
+TEST_CASE("Macro pasting (identifiers)") {
     auto& text = "`define FOO(x,y) x``_blah``y\n`FOO(   bar,    _BAZ)";
     Token token = lexToken(text);
 
@@ -192,7 +192,7 @@ TEST_CASE("Macro pasting (identifiers)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro pasting (operator)", "[preprocessor]") {
+TEST_CASE("Macro pasting (operator)") {
     auto& text = "`define FOO(x) x``+\n`FOO(+)";
     Token token = lexToken(text);
 
@@ -200,7 +200,7 @@ TEST_CASE("Macro pasting (operator)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro pasting (combination)", "[preprocessor]") {
+TEST_CASE("Macro pasting (combination)") {
     auto& text = "`define FOO(x,y) x``foo``y``42\n`FOO(bar_, 32)";
     Token token = lexToken(text);
 
@@ -209,7 +209,7 @@ TEST_CASE("Macro pasting (combination)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro pasting (keyword)", "[preprocessor]") {
+TEST_CASE("Macro pasting (keyword)") {
     auto& text = "`define FOO(x) x``gic\n`FOO(lo)";
     Token token = lexToken(text);
 
@@ -218,7 +218,7 @@ TEST_CASE("Macro pasting (keyword)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro pasting (mixed)", "[preprocessor]") {
+TEST_CASE("Macro pasting (mixed)") {
     auto& text = "`define FOO(x) ;``x\n`FOO(y)";
     Token token = lexToken(text);
 
@@ -227,7 +227,7 @@ TEST_CASE("Macro pasting (mixed)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro pasting (whitespace)", "[preprocessor]") {
+TEST_CASE("Macro pasting (whitespace)") {
     auto& text = "`define FOO(x) x`` y\n`FOO(a)";
     Token token = lexToken(text);
 
@@ -236,7 +236,7 @@ TEST_CASE("Macro pasting (whitespace)", "[preprocessor]") {
     REQUIRE(diagnostics.size() == 1);
 }
 
-TEST_CASE("Macro stringify", "[preprocessor]") {
+TEST_CASE("Macro stringify") {
     auto& text = "`define FOO(x) `\" `\\`\" x``foo``42 `\\`\" `\"\n`FOO(bar_)";
     Token token = lexToken(text);
 
@@ -245,7 +245,7 @@ TEST_CASE("Macro stringify", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro stringify whitespace", "[preprocessor]") {
+TEST_CASE("Macro stringify whitespace") {
     auto& text = "`define FOO(x,y) `\" x ( y)\t  x   x`\"\n`FOO(bar,)";
     Token token = lexToken(text);
 
@@ -254,7 +254,7 @@ TEST_CASE("Macro stringify whitespace", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro define with missing paren", "[preprocessor]") {
+TEST_CASE("Macro define with missing paren") {
     auto& text = "`define FOO(asdf asdfasdf";
     Token token = lexToken(text);
 
@@ -263,7 +263,7 @@ TEST_CASE("Macro define with missing paren", "[preprocessor]") {
     CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
 }
 
-TEST_CASE("Macro default with missing paren", "[preprocessor]") {
+TEST_CASE("Macro default with missing paren") {
     auto& text = "`define FOO(asdf= asdfasdf";
     Token token = lexToken(text);
 
@@ -272,7 +272,7 @@ TEST_CASE("Macro default with missing paren", "[preprocessor]") {
     CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
 }
 
-TEST_CASE("Macro usage with missing paren", "[preprocessor]") {
+TEST_CASE("Macro usage with missing paren") {
     auto& text = "`define FOO(asdf)\n`FOO(lkj ";
     Token token = lexToken(text);
 
@@ -281,7 +281,7 @@ TEST_CASE("Macro usage with missing paren", "[preprocessor]") {
     CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
 }
 
-TEST_CASE("Macro deferred define", "[preprocessor]") {
+TEST_CASE("Macro deferred define") {
     auto& text = R"(
 `define DEFIF_DEFNOT(d, a) \
     `undef d \
@@ -303,7 +303,7 @@ TEST_CASE("Macro deferred define", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro string expansions", "[preprocessor]") {
+TEST_CASE("Macro string expansions") {
     // These examples were all pulled from the spec.
     auto& text = R"(
 `define D(x,y) initial $display("start", x , y, "end");
@@ -360,7 +360,7 @@ $display(5,,0,,"C");
     CHECK(diagnostics[4].code == DiagCode::ExpectedMacroArgs);
 }
 
-TEST_CASE("Macro string expansions 2", "[preprocessor]") {
+TEST_CASE("Macro string expansions 2") {
     // These examples were all pulled from the spec.
     auto& text = R"(
 `define max(a,b)((a) > (b)) ? (a) : (b)
@@ -383,7 +383,7 @@ $display("left side: \"right side\"");
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro meta repetition", "[preprocessor]") {
+TEST_CASE("Macro meta repetition") {
     auto& text = R"(
 `define REPEAT(n, d) `REPEAT_``n(d)
 `define REPEAT_0(d)
@@ -406,7 +406,7 @@ TEST_CASE("Macro meta repetition", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro nested stringification", "[preprocessor]") {
+TEST_CASE("Macro nested stringification") {
     auto& text = R"(
 `define THRU(d) d
 `define MSG(m) `"m`"
@@ -423,7 +423,7 @@ $display("hello")
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro nested multiline stringification", "[preprocessor]") {
+TEST_CASE("Macro nested multiline stringification") {
     auto& text = R"(
 `define MULTILINE line1 \
 line2
@@ -442,7 +442,7 @@ $display("line1 line2")
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro indirect ifdef branch", "[preprocessor]") {
+TEST_CASE("Macro indirect ifdef branch") {
     auto& text = R"(
 `define DEFINED
 `define INDIRECT(d) d
@@ -460,7 +460,7 @@ b
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro directive token substitution via arg", "[preprocessor]") {
+TEST_CASE("Macro directive token substitution via arg") {
     auto& text = R"(
 `define FOO 1
 `define FROB(asdf) `asdf
@@ -477,7 +477,7 @@ TEST_CASE("Macro directive token substitution via arg", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro bonkers arg substitution", "[preprocessor]") {
+TEST_CASE("Macro bonkers arg substitution") {
     auto& text = R"(
 `define FROB(asdf) `asdf STUFF 1
 `FROB(define)
@@ -494,7 +494,7 @@ TEST_CASE("Macro bonkers arg substitution", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro implicit concatenate", "[preprocessor]") {
+TEST_CASE("Macro implicit concatenate") {
     auto& text = "`define FOO 8\r\n`define BAR 9\n1`FOO`BAR";
 
     diagnostics.clear();
@@ -510,7 +510,7 @@ TEST_CASE("Macro implicit concatenate", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro nested implicit concatenate", "[preprocessor]") {
+TEST_CASE("Macro nested implicit concatenate") {
     auto& text = "`define FOO 8\n`define BAR 9`FOO\n1`BAR";
 
     diagnostics.clear();
@@ -526,7 +526,7 @@ TEST_CASE("Macro nested implicit concatenate", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
+TEST_CASE("IfDef branch (taken)") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     Token token = lexToken(text);
 
@@ -535,7 +535,7 @@ TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("IfDef branch (not taken)", "[preprocessor]") {
+TEST_CASE("IfDef branch (not taken)") {
     auto& text = "`define FOO\n`ifdef BAR\n42\n`endif";
     Token token = lexToken(text);
 
@@ -543,7 +543,7 @@ TEST_CASE("IfDef branch (not taken)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("IfNDef branch", "[preprocessor]") {
+TEST_CASE("IfNDef branch") {
     auto& text = "`ifndef BAR\n42\n`endif";
     Token token = lexToken(text);
 
@@ -552,7 +552,7 @@ TEST_CASE("IfNDef branch", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("ElseIf branch", "[preprocessor]") {
+TEST_CASE("ElseIf branch") {
     auto& text = "`define FOO\n`ifdef BAR\n42\n`elsif FOO\n99`else\n1000`endif";
     Token token = lexToken(text);
 
@@ -561,7 +561,7 @@ TEST_CASE("ElseIf branch", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("EndIf not done", "[preprocessor]") {
+TEST_CASE("EndIf not done") {
     auto& text = "`ifdef FOO\n`ifdef BAR\n42\n`endif\n1000\n`endif\n42.3";
     Token token = lexToken(text);
 
@@ -570,7 +570,7 @@ TEST_CASE("EndIf not done", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Nested branches", "[preprocessor]") {
+TEST_CASE("Nested branches") {
     auto& text =
 "`define FOO\n"
 "`ifdef BLAH\n"
@@ -600,7 +600,7 @@ TEST_CASE("Nested branches", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("IfDef inside macro", "[preprocessor]") {
+TEST_CASE("IfDef inside macro") {
     auto& text =
 "`define FOO \\\n"
 "  `ifdef BAR \\\n"
@@ -618,7 +618,7 @@ TEST_CASE("IfDef inside macro", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("LINE Directive", "[preprocessor]") {
+TEST_CASE("LINE Directive") {
     auto& text = "`__LINE__";
     Token token = lexToken(text);
 
@@ -627,7 +627,7 @@ TEST_CASE("LINE Directive", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("LINE Directive as actual arg", "[preprocessor]") {
+TEST_CASE("LINE Directive as actual arg") {
     auto& text = "`define FOO(x) x\n`define BAR `FOO(`__LINE__)`__LINE__\n`BAR";
     Token token = lexToken(text);
 
@@ -636,7 +636,7 @@ TEST_CASE("LINE Directive as actual arg", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("LINE Directive (include+nesting)", "[preprocessor]") {
+TEST_CASE("LINE Directive (include+nesting)") {
     auto& text =
 "`include \"local.svh\"\n"
 "`define BAZ `__LINE__\n"
@@ -658,7 +658,7 @@ TEST_CASE("LINE Directive (include+nesting)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("FILE Directive", "[preprocessor]") {
+TEST_CASE("FILE Directive") {
     auto& text = "`__FILE__";
     Token token = lexToken(text);
 
@@ -669,7 +669,7 @@ TEST_CASE("FILE Directive", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("FILE Directive (include+nesting)", "[preprocessor]") {
+TEST_CASE("FILE Directive (include+nesting)") {
     // file_uses_defn.svh includes file_defn.svh which has
     // `define FOO `__FILE__
     // and file_uses_defn.svh then has `FOO; that should expand to file_defn.svh
@@ -698,7 +698,7 @@ TEST_CASE("FILE Directive (include+nesting)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("`line + FILE + LINE Directive", "[preprocessor]") {
+TEST_CASE("`line + FILE + LINE Directive") {
     auto& text =
 "`line 6 \"other.sv\" 0\n"
 "`__LINE__\n"
@@ -725,7 +725,7 @@ TEST_CASE("`line + FILE + LINE Directive", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("undef Directive", "[preprocessor]") {
+TEST_CASE("undef Directive") {
     auto& text =
 "`define FOO 45\n"
 "`undef FOO\n"
@@ -738,7 +738,7 @@ TEST_CASE("undef Directive", "[preprocessor]") {
     CHECK(!diagnostics.empty());
 }
 
-TEST_CASE("undef Directive 2", "[preprocessor]") {
+TEST_CASE("undef Directive 2") {
     auto& text =
 "`define FOO 45\n"
 "`FOO\n"
@@ -750,7 +750,7 @@ TEST_CASE("undef Directive 2", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("undefineall", "[preprocessor]") {
+TEST_CASE("undefineall") {
     auto& text =
 "`define FOO 45\n"
 "`undefineall\n"
@@ -761,7 +761,7 @@ TEST_CASE("undefineall", "[preprocessor]") {
     CHECK(!diagnostics.empty());
 }
 
-TEST_CASE("begin_keywords", "[preprocessor]") {
+TEST_CASE("begin_keywords") {
     auto& text =
 "`begin_keywords \"1364-1995\"\n"
 "soft\n"
@@ -784,7 +784,7 @@ TEST_CASE("begin_keywords", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("begin_keywords (nested)", "[preprocessor]") {
+TEST_CASE("begin_keywords (nested)") {
     auto& text =
 "`begin_keywords \"1800-2009\"\n"
 "`begin_keywords \"1800-2005\"\n"
@@ -822,7 +822,7 @@ optional<Timescale> lexTimescale(string_view text) {
     return preprocessor.getTimescale();
 }
 
-TEST_CASE("timescale directive", "[preprocessor]") {
+TEST_CASE("timescale directive") {
     auto ts = lexTimescale("`timescale 10 ns / 1 fs");
     CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(ts.has_value());
@@ -863,7 +863,7 @@ TEST_CASE("timescale directive", "[preprocessor]") {
     CHECK(!diagnostics.empty());
 }
 
-TEST_CASE("macro-defined include file", "[preprocessor]") {
+TEST_CASE("macro-defined include file") {
     auto& text =
 "`define FILE <include.svh>\n"
 "`include `FILE";
@@ -900,7 +900,7 @@ TEST_CASE("macro-defined include file", "[preprocessor]") {
     CHECK(!diagnostics.empty());
 }
 
-TEST_CASE("Preprocessor API", "[preprocessor]") {
+TEST_CASE("Preprocessor API") {
     Preprocessor pp(getSourceManager(), alloc, diagnostics);
     CHECK(!pp.isDefined("FOO"));
     CHECK(pp.isDefined("__LINE__"));

@@ -1,6 +1,6 @@
 #include "Test.h"
 
-TEST_CASE("Simple module", "[parser:modules]") {
+TEST_CASE("Simple module") {
     auto& text = "module foo(); endmodule";
     const auto& module = parseModule(text);
 
@@ -10,7 +10,7 @@ TEST_CASE("Simple module", "[parser:modules]") {
     CHECK(module.header->name.valueText() == "foo");
 }
 
-TEST_CASE("Simple interface", "[parser:modules]") {
+TEST_CASE("Simple interface") {
     auto& text = "interface foo(); endinterface";
     const auto& module = parseModule(text);
 
@@ -20,7 +20,7 @@ TEST_CASE("Simple interface", "[parser:modules]") {
     CHECK(module.header->name.valueText() == "foo");
 }
 
-TEST_CASE("Simple program", "[parser:modules]") {
+TEST_CASE("Simple program") {
     auto& text = "program foo(); endprogram";
     const auto& module = parseModule(text);
 
@@ -30,7 +30,7 @@ TEST_CASE("Simple program", "[parser:modules]") {
     CHECK(module.header->name.valueText() == "foo");
 }
 
-TEST_CASE("Complex header", "[parser:modules]") {
+TEST_CASE("Complex header") {
     auto& text = "(* foo = 4 *) macromodule automatic foo import blah::*, foo::bar; #(foo = bar, parameter blah, stuff) (input wire i = 3); endmodule";
     const auto& module = parseModule(text);
 
@@ -44,7 +44,7 @@ TEST_CASE("Complex header", "[parser:modules]") {
     CHECK(module.header->ports->kind == SyntaxKind::AnsiPortList);
 }
 
-TEST_CASE("Parameter ports", "[parser:modules]") {
+TEST_CASE("Parameter ports") {
     auto& text = "module foo #(foo, foo [3:1][9:0] = 4:3:9, parameter blah = blah, localparam type blah = shortint); endmodule";
     const auto& module = parseModule(text);
 
@@ -75,7 +75,7 @@ const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) 
     return module.members[0];
 }
 
-TEST_CASE("Module members", "[parser:modules]") {
+TEST_CASE("Module members") {
     parseModuleMember("Foo #(stuff) bar(.*), baz(.clock, .rst(rst + 2));", SyntaxKind::HierarchyInstantiation);
     parseModuleMember("timeunit 30ns / 40ns;", SyntaxKind::TimeUnitsDeclaration);
     parseModuleMember("timeprecision 30ns;", SyntaxKind::TimeUnitsDeclaration);
@@ -112,7 +112,7 @@ TEST_CASE("Class members", "[parser:class]") {
     parseClassMember("static function type_id blah(); endfunction", SyntaxKind::ClassMethodDeclaration);
 }
 
-TEST_CASE("Property declarations", "[parser:properties]") {
+TEST_CASE("Property declarations") {
     auto& text = R"(
 property p3;
     b ##1 c;
