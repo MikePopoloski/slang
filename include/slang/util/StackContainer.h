@@ -44,8 +44,7 @@ public:
     void deallocate(T* p, std::size_t n) noexcept {
         // If the pointer is in our buffer, possibly "deallocate" by moving the high water mark back.
         // Otherwise it was heap allocated and we must free with delete.
-        using Less = std::less<T*>;
-        if (Less()(storage->getBuffer(), p) && Less()(p, storage->getBuffer() + N)) {
+        if (std::less_equal<T*>()(storage->getBuffer(), p) && std::less<T*>()(p, storage->getBuffer() + N)) {
             if (p + n == storage->ptr)
                 storage->ptr = p;
         }
