@@ -16,6 +16,7 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Bag.h"
 #include "slang/util/SmallVector.h"
+#include "slang/util/StackContainer.h"
 
 namespace slang {
 
@@ -167,7 +168,7 @@ private:
     bool expandMacro(MacroDef macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs,
                      SmallVector<Token>& dest, bool isTopLevel);
     bool expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, SmallVector<Token>& dest, bool isTopLevel);
-    bool expandReplacementList(span<Token const>& tokens);
+    bool expandReplacementList(span<Token const>& tokens, SmallSet<DefineDirectiveSyntax*, 8>& alreadyExpanded);
     void appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
                          SourceLocation expansionLoc, Token usageSite, bool& isFirst, bool isTopLevel);
 
@@ -252,9 +253,6 @@ private:
 
     // map from macro name to macro definition
     std::unordered_map<string_view, MacroDef> macros;
-
-    // scratch space for mapping macro formal parameters to argument values
-    std::unordered_map<string_view, const TokenList*> argumentMap;
 
     // list of expanded macro tokens to drain before continuing with active lexer
     SmallVectorSized<Token, 16> expandedTokens;

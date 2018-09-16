@@ -526,6 +526,24 @@ TEST_CASE("Macro nested implicit concatenate") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Recursive macros") {
+    auto& text = R"(
+`define A `A 1
+`A
+
+`define FOO(a) `BA``a
+`define BAR `FOO(R)
+`define ARG R
+
+`FOO(`ARG)
+)";
+
+    preprocess(text);
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == DiagCode::RecursiveMacro);
+    CHECK(diagnostics[1].code == DiagCode::RecursiveMacro);
+}
+
 TEST_CASE("IfDef branch (taken)") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     Token token = lexToken(text);

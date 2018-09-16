@@ -838,10 +838,14 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     // perform stringification or concatenation of tokens. It's possible that
     // after concatentation is performed we will have formed new valid macro
     // names that need to be expanded, which is why we loop here.
+    SmallSet<DefineDirectiveSyntax*, 8> alreadyExpanded;
+    if (!macro.isIntrinsic())
+        alreadyExpanded.insert(macro.syntax);
+
     span<Token const> tokens = buffer.copy(alloc);
     while (true) {
         // Start by recursively expanding out all valid macro usages.
-        if (!expandReplacementList(tokens))
+        if (!expandReplacementList(tokens, alreadyExpanded))
             return actualArgs;
 
         // Now that all macros have been expanded, handle token concatenation and stringification.
@@ -993,7 +997,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
         return false;
     }
 
-    argumentMap.clear();
+    SmallMap<string_view, span<const Token>, 8> argumentMap;
     for (uint32_t i = 0; i < formalList.size(); i++) {
         auto formal = formalList[i];
         auto name = formal->name.valueText();
@@ -1017,11 +1021,14 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
             }
         }
 
-        // The C preprocessor would fully pre-expand and mark any macro usage in the arguments here;
-        // because SystemVerilog macros are different tokens than identifiers (backtick character differentiates)
-        // we don't have to bother doing that. All macros either fully expand or we have an error if we detect
-        // recursive usage.
-        argumentMap[name] = tokenList;
+        // Fully expand out arguments before substitution to make sure we can detect whether
+        // a usage of a macro in a replacement list is valid or an illegal recursion.
+        span<const Token> argTokens = *tokenList;
+        SmallSet<DefineDirectiveSyntax*, 8> alreadyExpanded;
+        if (!expandReplacementList(argTokens, alreadyExpanded))
+            return false;
+
+        argumentMap[name] = argTokens;
     }
 
     Token endOfArgs = actualArgs->getLastToken();
@@ -1056,8 +1063,8 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
             continue;
         }
 
-        auto begin = it->second->begin();
-        auto end = it->second->end();
+        auto begin = it->second.begin();
+        auto end = it->second.end();
         if (begin == end) {
             // The macro argument contained no tokens. We still need to supply an empty token
             // here to ensure that the trivia of the formal parameter is passed on.
@@ -1124,7 +1131,8 @@ void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, Source
     dest.append(token.withLocation(alloc, expansionLoc + delta));
 }
 
-bool Preprocessor::expandReplacementList(span<Token const>& tokens) {
+bool Preprocessor::expandReplacementList(span<Token const>& tokens,
+                                         SmallSet<DefineDirectiveSyntax*, 8>& alreadyExpanded) {
     // keep expanding macros in the replacement list until we've got them all
     // use two alternating buffers to hold the tokens
     SmallVectorSized<Token, 64> buffer1;
@@ -1157,6 +1165,11 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens) {
                     continue;
                 }
 
+                if (!macro.isIntrinsic() && !alreadyExpanded.insert(macro.syntax).second) {
+                    addDiag(DiagCode::RecursiveMacro, token.location()) << token.valueText();
+                    return false;
+                }
+
                 // parse arguments if necessary
                 MacroActualArgumentListSyntax* actualArgs = nullptr;
                 if (macro.needsArgs()) {
@@ -1172,7 +1185,7 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens) {
             }
         }
 
-        // shake the box until the cat stops making noise
+        // keep shaking until there's no more noise!
         tokens = span<Token const>(currentBuffer->begin(), currentBuffer->end());
         std::swap(currentBuffer, nextBuffer);
         currentBuffer->clear();

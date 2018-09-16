@@ -80,6 +80,7 @@ enum class DiagCode : uint8_t {
     MismatchedEndKeywordsDirective,
     InvalidTimescaleSpecifier,
     IgnoredMacroPaste,
+    RecursiveMacro,
 
     // parser
     ExpectedIdentifier,
