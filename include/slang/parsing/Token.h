@@ -232,10 +232,12 @@ enum class KeywordVersion : uint8_t {
     v1800_2005 = 4,
     v1800_2009 = 5,
     v1800_2012 = 6,
+    v1800_2017 = 7,
 };
 
 TokenKind getSystemKeywordKind(string_view text);
 string_view getTokenKindText(TokenKind kind);
+KeywordVersion getDefaultKeywordVersion();
 optional<KeywordVersion> getKeywordVersion(string_view text);
 const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
 

@@ -44,7 +44,8 @@ const static StringTable<KeywordVersion> keywordVersionTable = {
     { "1364-2005", KeywordVersion::v1364_2005 },
     { "1800-2005", KeywordVersion::v1800_2005 },
     { "1800-2009", KeywordVersion::v1800_2009 },
-    { "1800-2012", KeywordVersion::v1800_2012 }
+    { "1800-2012", KeywordVersion::v1800_2012 },
+    { "1800-2017", KeywordVersion::v1800_2017 }
 };
 
 // Lists of keywords, separated by the specification in which they were first introduced
@@ -313,8 +314,8 @@ const static StringTable<KeywordVersion> keywordVersionTable = {
 
 // We maintain a separate table of keywords for all the various specifications,
 // to allow for easy switching between them when requested
-const static StringTable<TokenKind> allKeywords[7] =
-{  { // IEEE 1364-1995
+const static StringTable<TokenKind> allKeywords[8] =
+{ { // IEEE 1364-1995
     KEYWORDS_1364_1995
 }, { // IEEE 1364-2001-noconfig
     KEYWORDS_1364_1995,
@@ -349,10 +350,18 @@ const static StringTable<TokenKind> allKeywords[7] =
     NEWKEYWORDS_1800_2005,
     NEWKEYWORDS_1800_2009,
     NEWKEYWORDS_1800_2012
-}  };
+}, { // IEEE 1800-2017
+    KEYWORDS_1364_1995,
+    NEWKEYWORDS_1364_2001_noconfig,
+    NEWKEYWORDS_1364_2001,
+    NEWKEYWORDS_1364_2005,
+    NEWKEYWORDS_1800_2005,
+    NEWKEYWORDS_1800_2009,
+    NEWKEYWORDS_1800_2012
+} };
 
 bool isKeyword(TokenKind kind) {
-    switch(kind) {
+    switch (kind) {
         case TokenKind::OneStep:
         case TokenKind::AcceptOnKeyword:
         case TokenKind::AliasKeyword:
@@ -620,6 +629,10 @@ SyntaxKind getDirectiveKind(string_view directive) {
     if (directiveTable.lookup(directive, kind))
         return kind;
     return SyntaxKind::MacroUsage;
+}
+
+KeywordVersion getDefaultKeywordVersion() {
+    return KeywordVersion::v1800_2017;
 }
 
 optional<KeywordVersion> getKeywordVersion(string_view text) {

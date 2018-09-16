@@ -57,7 +57,7 @@ public:
     /// Lexes the next token from the source code.
     /// This will never return a null pointer; at the end of the buffer,
     /// an infinite stream of EndOfFile tokens will be generated
-    Token lex(LexerMode mode = LexerMode::Normal, KeywordVersion keywordVersion = KeywordVersion::v1800_2012);
+    Token lex(LexerMode mode = LexerMode::Normal, KeywordVersion keywordVersion = getDefaultKeywordVersion());
 
     BufferID getBufferID() const;
     BumpAllocator& getAllocator() { return alloc; }

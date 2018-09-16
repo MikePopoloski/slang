@@ -47,7 +47,7 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, D
     options(options_.getOrDefault<PreprocessorOptions>()),
     lexerOptions(options_.getOrDefault<LexerOptions>())
 {
-    keywordVersionStack.push_back(KeywordVersion::v1800_2012);
+    keywordVersionStack.push_back(getDefaultKeywordVersion());
     resetAllDirectives();
     undefineAll();
 
