@@ -6,10 +6,10 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/Diagnostics.h"
 
-#include <fmt/format.h>
 #include <fmt/ostream.h>
 
 #include "slang/symbols/TypePrinter.h"
+#include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {
@@ -317,7 +317,7 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     }
 
     // build the error message from arguments, if we have any
-    fmt::memory_buffer buffer;
+    FormatBuffer buffer;
     Descriptor& desc = descriptors[diagnostic.code];
     if (diagnostic.args.empty())
         formatDiag(buffer, location, diagnostic.ranges, severityToString[(int)desc.severity], desc.format);
@@ -341,15 +341,15 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     }
 
     for (const Diagnostic& note : diagnostic.notes)
-        buffer << report(note);
+        buffer.append(report(note));
 
-    return to_string(buffer);
+    return buffer.str();
 }
 
 std::string DiagnosticWriter::report(const Diagnostics& diagnostics) {
     std::deque<SourceLocation> includeStack;
     BufferID lastBuffer;
-    fmt::memory_buffer buffer;
+    FormatBuffer buffer;
 
     for (auto& diag : diagnostics) {
         SourceLocation loc = sourceManager.getFullyExpandedLoc(diag.location);
@@ -360,15 +360,15 @@ std::string DiagnosticWriter::report(const Diagnostics& diagnostics) {
             getIncludeStack(lastBuffer, includeStack);
 
             for (auto& includeLoc : includeStack) {
-                format_to(buffer, "In file included from {}:{}:\n",
+                buffer.format("In file included from {}:{}:\n",
                     sourceManager.getFileName(includeLoc),
                     sourceManager.getLineNumber(includeLoc)
                 );
             }
         }
-        buffer << report(diag);
+        buffer.append(report(diag));
     }
-    return to_string(buffer);
+    return buffer.str();
 }
 
 string_view DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col) {
@@ -450,7 +450,7 @@ template<typename T>
 void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc, const std::vector<SourceRange>& ranges,
                                   const char* severity, const std::string& msg) {
     uint32_t col = sourceManager.getColumnNumber(loc);
-    format_to(buffer, "{}:{}:{}: {}: {}",
+    buffer.format("{}:{}:{}: {}: {}",
         sourceManager.getFileName(loc),
         sourceManager.getLineNumber(loc),
         col,
@@ -460,7 +460,7 @@ void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc, const std::vect
 
     string_view line = getBufferLine(loc, col);
     if (!line.empty()) {
-        format_to(buffer, "\n{}\n", line);
+        buffer.format("\n{}\n", line);
 
         // Highlight any ranges and print the caret location.
         std::string highlight(std::max(line.length(), (size_t)col), ' ');
@@ -476,9 +476,9 @@ void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc, const std::vect
 
         highlight[col - 1] = '^';
         highlight.erase(highlight.find_last_not_of(' ') + 1);
-        buffer << highlight;
+        buffer.append(highlight);
     }
-    buffer << "\n";
+    buffer.append("\n");
 }
 
 }

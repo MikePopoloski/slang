@@ -6,10 +6,9 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/EvalContext.h"
 
-#include <fmt/format.h>
-
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
+#include "slang/text/FormatBuffer.h"
 
 namespace slang {
 
@@ -78,14 +77,14 @@ void EvalContext::setReturned(ConstantValue value) {
 }
 
 std::string EvalContext::dumpStack() const {
-    fmt::memory_buffer buffer;
+    FormatBuffer buffer;
     int index = 0;
     for (const Frame& frame : stack) {
-        format_to(buffer, "{}: {}\n", index++, frame.subroutine ? frame.subroutine->name : "<global>");
+        buffer.format("{}: {}\n", index++, frame.subroutine ? frame.subroutine->name : "<global>");
         for (auto& [symbol, value] : frame.temporaries)
-            format_to(buffer, "    {} = {}\n", symbol->name, value.toString());
+            buffer.format("    {} = {}\n", symbol->name, value.toString());
     }
-    return to_string(buffer);
+    return buffer.str();
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
@@ -106,26 +105,26 @@ void EvalContext::reportStack() {
     if (std::exchange(reportedCallstack, true))
         return;
 
-    fmt::memory_buffer buffer;;
+    FormatBuffer buffer;;
     for (const Frame& frame : make_reverse_range(stack)) {
         if (!frame.subroutine)
             break;
 
         buffer.clear();
-        format_to(buffer, "{}(", frame.subroutine->name);
+        buffer.format("{}(", frame.subroutine->name);
 
         for (auto arg : frame.subroutine->arguments) {
             auto it = frame.temporaries.find(arg);
             ASSERT(it != frame.temporaries.end());
 
-            buffer << it->second.toString();
+            buffer.append(it->second.toString());
             if (arg != frame.subroutine->arguments.last(1)[0])
-                buffer << ", ";
+                buffer.append(", ");
         }
 
-        buffer << ")";
+        buffer.append(")");
 
-        diags.add(DiagCode::NoteInCallTo, frame.callLocation) << to_string(buffer);
+        diags.add(DiagCode::NoteInCallTo, frame.callLocation) << buffer.str();
     }
 }
 

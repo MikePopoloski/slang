@@ -13,64 +13,64 @@ void TypePrinter::append(const Type& type) {
 }
 
 std::string TypePrinter::toString() const {
-    return to_string(buffer);
+    return buffer.str();
 }
 
 void TypePrinter::handle(const ScalarType& type) {
     switch (type.scalarKind) {
-        case ScalarType::Bit: buffer << "bit"; break;
-        case ScalarType::Logic: buffer << "logic"; break;
-        case ScalarType::Reg: buffer << "reg"; break;
+        case ScalarType::Bit: buffer.append("bit"); break;
+        case ScalarType::Logic: buffer.append("logic"); break;
+        case ScalarType::Reg: buffer.append("reg"); break;
         default: THROW_UNREACHABLE;
     }
 
     if (type.isSigned)
-        buffer << " signed";
+        buffer.append(" signed");
 }
 
 void TypePrinter::handle(const PredefinedIntegerType& type) {
     switch (type.integerKind) {
-        case PredefinedIntegerType::ShortInt: buffer << "shortint"; break;
-        case PredefinedIntegerType::Int: buffer << "int"; break;
-        case PredefinedIntegerType::LongInt: buffer << "longint"; break;
-        case PredefinedIntegerType::Byte: buffer << "byte"; break;
-        case PredefinedIntegerType::Integer: buffer << "integer"; break;
-        case PredefinedIntegerType::Time: buffer << "time"; break;
+        case PredefinedIntegerType::ShortInt: buffer.append("shortint"); break;
+        case PredefinedIntegerType::Int: buffer.append("int"); break;
+        case PredefinedIntegerType::LongInt: buffer.append("longint"); break;
+        case PredefinedIntegerType::Byte: buffer.append("byte"); break;
+        case PredefinedIntegerType::Integer: buffer.append("integer"); break;
+        case PredefinedIntegerType::Time: buffer.append("time"); break;
         default: THROW_UNREACHABLE;
     }
     if (type.isSigned != PredefinedIntegerType::isDefaultSigned(type.integerKind))
-        buffer << (type.isSigned ? " signed" : " unsigned");
+        buffer.append((type.isSigned ? " signed" : " unsigned"));
 }
 
 void TypePrinter::handle(const FloatingType& type) {
     switch (type.floatKind) {
-        case FloatingType::Real: buffer << "real"; break;
-        case FloatingType::ShortReal: buffer << "shortreal"; break;
-        case FloatingType::RealTime: buffer << "realtime"; break;
+        case FloatingType::Real: buffer.append("real"); break;
+        case FloatingType::ShortReal: buffer.append("shortreal"); break;
+        case FloatingType::RealTime: buffer.append("realtime"); break;
         default: THROW_UNREACHABLE;
     }
 }
 
 void TypePrinter::handle(const EnumType& type) {
     // TODO: base type?
-    buffer << "enum{";
+    buffer.append("enum{");
     for (const auto& member : type.values()) {
         // TODO: write value with correct prefix
-        format_to(buffer, "{}={},", member.name, member.getValue().integer().toString(LiteralBase::Decimal));
+        buffer.format("{}={},", member.name, member.getValue().integer().toString(LiteralBase::Decimal));
     }
     buffer.pop_back();
-    buffer << "}";
+    buffer.append("}");
 }
 
 void TypePrinter::handle(const PackedArrayType& type) {
     append(type.elementType);
-    format_to(buffer, "[{}:{}]", type.range.left, type.range.right);
+    buffer.format("[{}:{}]", type.range.left, type.range.right);
 }
 
 void TypePrinter::handle(const PackedStructType& type) {
-    buffer << "struct packed";
+    buffer.append("struct packed");
     if (type.isSigned)
-        buffer << " signed";
+        buffer.append(" signed");
 
     appendStructMembers(type);
 }
@@ -87,35 +87,35 @@ void TypePrinter::handle(const UnpackedArrayType& type) {
     }
 
     append(curr->elementType);
-    buffer << "$";
+    buffer.append("$");
 
     for (auto& range : dims)
-        format_to(buffer, "[{}:{}]", range.left, range.right);
+        buffer.format("[{}:{}]", range.left, range.right);
 }
 
 void TypePrinter::handle(const UnpackedStructType& type) {
-    buffer << "struct";
+    buffer.append("struct");
     appendStructMembers(type);
 }
 
 void TypePrinter::handle(const VoidType&) {
-    buffer << "void";
+    buffer.append("void");
 }
 
 void TypePrinter::handle(const NullType&) {
-    buffer << "null";
+    buffer.append("null");
 }
 
 void TypePrinter::handle(const CHandleType&) {
-    buffer << "chandle";
+    buffer.append("chandle");
 }
 
 void TypePrinter::handle(const StringType&) {
-    buffer << "string";
+    buffer.append("string");
 }
 
 void TypePrinter::handle(const EventType&) {
-    buffer << "event";
+    buffer.append("event");
 }
 
 void TypePrinter::handle(const TypeAliasType& type) {
@@ -128,7 +128,7 @@ void TypePrinter::handle(const TypeAliasType& type) {
         case SymbolKind::PackedStructType:
         case SymbolKind::UnpackedStructType:
             // TODO: prepend scope name
-            buffer << type.name;
+            buffer.append(type.name);
             break;
         default:
             break;
@@ -136,37 +136,37 @@ void TypePrinter::handle(const TypeAliasType& type) {
 }
 
 void TypePrinter::handle(const ErrorType&) {
-    buffer << "<error>";
+    buffer.append("<error>");
 }
 
 void TypePrinter::handle(const NetType& type) {
     switch (type.netKind) {
-        case NetType::Unknown: buffer << "<error-nettype>"; break;
-        case NetType::Wire: buffer << "wire"; break;
-        case NetType::WAnd:  buffer << "wand"; break;
-        case NetType::WOr: buffer << "wor"; break;
-        case NetType::Tri: buffer << "tri"; break;
-        case NetType::TriAnd: buffer << "triand"; break;
-        case NetType::TriOr: buffer << "trior"; break;
-        case NetType::Tri0: buffer << "tri0"; break;
-        case NetType::Tri1: buffer << "tri1"; break;
-        case NetType::TriReg: buffer << "trireg"; break;
-        case NetType::Supply0: buffer << "supply0"; break;
-        case NetType::Supply1: buffer << "supply1"; break;
-        case NetType::UWire: buffer << "uwire"; break;
+        case NetType::Unknown: buffer.append("<error-nettype>"); break;
+        case NetType::Wire: buffer.append("wire"); break;
+        case NetType::WAnd:  buffer.append("wand"); break;
+        case NetType::WOr: buffer.append("wor"); break;
+        case NetType::Tri: buffer.append("tri"); break;
+        case NetType::TriAnd: buffer.append("triand"); break;
+        case NetType::TriOr: buffer.append("trior"); break;
+        case NetType::Tri0: buffer.append("tri0"); break;
+        case NetType::Tri1: buffer.append("tri1"); break;
+        case NetType::TriReg: buffer.append("trireg"); break;
+        case NetType::Supply0: buffer.append("supply0"); break;
+        case NetType::Supply1: buffer.append("supply1"); break;
+        case NetType::UWire: buffer.append("uwire"); break;
         case NetType::UserDefined: break; // TODO:
         case NetType::Alias: break; // TODO:
     }
 }
 
 void TypePrinter::appendStructMembers(const Scope& scope) {
-    buffer << "{";
-    for (const auto& member : scope.members()) {
-        const auto& var = member.as<VariableSymbol>();
+    buffer.append("{");
+    for (auto& member : scope.members()) {
+        auto& var = member.as<VariableSymbol>();
         append(var.getType());
-        format_to(buffer, " {};", var.name);
+        buffer.format(" {};", var.name);
     }
-    buffer << "}";
+    buffer.append("}");
 }
 
 }

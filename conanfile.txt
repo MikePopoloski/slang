@@ -2,6 +2,7 @@
 catch2/2.4.0@bincrafters/stable
 jsonformoderncpp/3.2.0@vthiery/stable
 CLI11/1.6.1@cliutils/stable
+fmt/5.2.0@bincrafters/stable
 
 [generators]
 cmake

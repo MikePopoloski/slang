@@ -6,10 +6,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "fmt/format.h"
-
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypeSymbols.h"
+#include "slang/text/FormatBuffer.h"
 
 namespace slang {
 
@@ -42,7 +41,7 @@ public:
 private:
     void appendStructMembers(const Scope& scope);
 
-    fmt::memory_buffer buffer;
+    FormatBuffer buffer;
 };
 
 }
