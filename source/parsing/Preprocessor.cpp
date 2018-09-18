@@ -409,6 +409,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         // In SystemVerilog macros can actually contain other directives, such as ifdef. We
         // therefore have to keep track of where EndOfDirective tokens need to be so that
         // when the macro gets expanded they parse correctly.
+        // TODO: set token location correctly
         Token t = peek();
         if (needEod && (t.hasTrivia(TriviaKind::EndOfLine) || t.hasTrivia(TriviaKind::LineContinuation))) {
             scratchTokenBuffer.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
@@ -939,14 +940,6 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     }
 
     if (!expandedTokens.empty()) {
-        // Verify that we haven't failed to expand any nested macros.
-        for (Token token : expandedTokens) {
-            if (token.kind == TokenKind::Directive && token.directiveKind() == SyntaxKind::MacroUsage) {
-                addDiag(DiagCode::UnknownDirective, token.location()) << token.valueText();
-                return actualArgs;
-            }
-        }
-
         // if the macro expanded into any tokens at all, set the pointer
         // so that we'll pull from them next
         currentMacroToken = expandedTokens.begin();
