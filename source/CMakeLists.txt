@@ -100,4 +100,4 @@ endif()
 target_link_libraries(slang PUBLIC CONAN_PKG::jsonformoderncpp)
 
 target_include_directories(slang PUBLIC ../include/)
-target_include_directories(slang PUBLIC ../external/)
+target_include_directories(slang SYSTEM PUBLIC ../external/)
