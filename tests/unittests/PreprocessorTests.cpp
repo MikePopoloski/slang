@@ -383,6 +383,29 @@ $display("left side: \"right side\"");
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Macro string expansions 3") {
+    auto& text = R"**(
+`define MACRO(a="==)", b = "((((", c = () ) a b c
+`MACRO()
+
+`define FOO(a, b) a b
+`FOO(asdf, blah[1,2,3])
+
+`define JOIN(a,b) `"a``b``\n`"`"asdf\n`"123foo
+`JOIN(a1,b2)
+)**";
+
+    auto& expected = R"**(
+"==)" "((((" ()
+asdf blah[1,2,3]
+"a1b2\n""asdf\n"123foo
+)**";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Macro meta repetition") {
     auto& text = R"(
 `define REPEAT(n, d) `REPEAT_``n(d)

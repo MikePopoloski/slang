@@ -73,9 +73,15 @@ public:
     static Token stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
                            Token* begin, Token* end, bool noWhitespace = false);
 
+    /// Splits the given token at the specified offset into its raw source text. The trailing portion
+    /// of the split is lexed into new tokens and appened to @a results
+    static void splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics, const SourceManager& sourceManager,
+                            Token sourceToken, size_t offset, KeywordVersion keywordVersion,
+                            SmallVector<Token>& results);
+
 private:
-    Lexer(BufferID bufferId, string_view source, BumpAllocator& alloc,
-          Diagnostics& diagnostics, LexerOptions options);
+    Lexer(BufferID bufferId, string_view source, const char* startPtr,
+          BumpAllocator& alloc, Diagnostics& diagnostics, LexerOptions options);
 
     TokenKind lexToken(Token::Info* info, bool directiveMode, KeywordVersion keywordVersion);
     TokenKind lexNumericLiteral(Token::Info* info);

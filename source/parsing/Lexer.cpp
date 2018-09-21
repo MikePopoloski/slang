@@ -74,18 +74,18 @@ inline double computeRealValue(uint64_t value, int decPoint, int digits, uint64_
 SyntaxKind getDirectiveKind(string_view directive);
 
 Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics, LexerOptions options) :
-    Lexer(buffer.id, buffer.data, alloc, diagnostics, options)
+    Lexer(buffer.id, buffer.data, buffer.data.data(), alloc, diagnostics, options)
 {
 }
 
-Lexer::Lexer(BufferID bufferId, string_view source, BumpAllocator& alloc,
-             Diagnostics& diagnostics, LexerOptions options) :
+Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr,
+             BumpAllocator& alloc, Diagnostics& diagnostics, LexerOptions options) :
     alloc(alloc),
     diagnostics(diagnostics),
     options(options),
     bufferId(bufferId),
     originalBegin(source.data()),
-    sourceBuffer(source.data()),
+    sourceBuffer(startPtr),
     sourceEnd(source.data() + source.length()),
     marker(nullptr)
 {
@@ -131,7 +131,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     string_view combined { mem, newLength };
 
     Diagnostics unused;
-    Lexer lexer { BufferID(), combined, alloc, unused, LexerOptions{} };
+    Lexer lexer { BufferID(), combined, combined.data(), alloc, unused, LexerOptions{} };
 
     auto token = lexer.lex();
     if (token.kind == TokenKind::Unknown || token.rawText().empty())
@@ -178,7 +178,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     string_view raw = to_string_view(text.copy(alloc));
 
     Diagnostics unused;
-    Lexer lexer { BufferID(), raw, alloc, unused, LexerOptions{} };
+    Lexer lexer { BufferID(), raw, raw.data(), alloc, unused, LexerOptions{} };
 
     auto token = lexer.lex();
     ASSERT(token.kind == TokenKind::StringLiteral);
@@ -189,6 +189,30 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     info->trivia = trivia;
     info->rawText = raw.substr(0, raw.length() - 1);
     return Token(token.kind, info);
+}
+
+void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics, const SourceManager& sourceManager,
+                        Token sourceToken, size_t offset, KeywordVersion keywordVersion,
+                        SmallVector<Token>& results) {
+    auto loc = sourceToken.location();
+    if (sourceManager.isMacroLoc(loc))
+        loc = sourceManager.getOriginalLoc(loc);
+
+    auto sourceText = sourceManager.getSourceText(loc.buffer());
+    ASSERT(!sourceText.empty());
+
+    Lexer lexer{ loc.buffer(), sourceText, sourceToken.rawText().substr(offset).data(),
+                 alloc, diagnostics, LexerOptions{} };
+
+    size_t endOffset = loc.offset() + sourceToken.rawText().length();
+    while (true) {
+        Token token = lexer.lex(LexerMode::Normal, keywordVersion);
+        if (token.kind == TokenKind::EndOfFile || token.location().buffer() != loc.buffer() ||
+            token.location().offset() > endOffset)
+            break;
+
+        results.append(token);
+    }
 }
 
 Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {

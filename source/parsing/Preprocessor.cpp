@@ -850,102 +850,138 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
             return actualArgs;
 
         // Now that all macros have been expanded, handle token concatenation and stringification.
-        SmallVectorSized<Trivia, 16> emptyArgTrivia;
-        Token stringify;
-        buffer.clear();
         expandedTokens.clear();
-        bool anyNewMacros = false;
-
-        for (uint32_t i = 0; i < tokens.size(); i++) {
-            Token newToken;
-
-            // Once we see a `" token, we start collecting tokens into their own
-            // buffer for stringification. Otherwise, just add them to the final
-            // expansion buffer.
-            Token token = tokens[i];
-            switch (token.kind) {
-                case TokenKind::MacroQuote:
-                    if (!stringify)
-                        stringify = token;
-                    else {
-                        // all done stringifying; convert saved tokens to string
-                        newToken = Lexer::stringify(alloc, stringify.location(),
-                                                    stringify.trivia(),
-                                                    buffer.begin(), buffer.end());
-                        stringify = Token();
-                    }
-                    break;
-                case TokenKind::MacroPaste:
-                    // Paste together previous token and next token; a macro paste on either end
-                    // of the buffer or one that borders whitespace should be ignored.
-                    // This isn't specified in the standard so I'm just guessing.
-                    if (i == 0 || i == tokens.size() - 1 || !token.trivia().empty() ||
-                        !tokens[i + 1].trivia().empty()) {
-
-                        addDiag(DiagCode::IgnoredMacroPaste, token.location());
-                    }
-                    else if (stringify) {
-                        // if this is right after the opening quote or right before the closing quote, we're
-                        // trying to concatenate something with nothing, so assume an error
-                        if (buffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote)
-                            addDiag(DiagCode::IgnoredMacroPaste, token.location());
-                        else {
-                            newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[i + 1]);
-                            if (newToken) {
-                                buffer.pop();
-                                ++i;
-                            }
-                        }
-                    }
-                    else {
-                        newToken = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[i + 1]);
-                        if (newToken) {
-                            expandedTokens.pop();
-                            ++i;
-
-                            anyNewMacros |= newToken.kind == TokenKind::Directive &&
-                                            newToken.directiveKind() == SyntaxKind::MacroUsage;
-                        }
-                    }
-                    break;
-                default:
-                    newToken = token;
-                    break;
-            }
-
-            if (newToken) {
-                // If we have an empty macro argument just collect its trivia and use it on the next token we find.
-                if (newToken.kind == TokenKind::EmptyMacroArgument)
-                    emptyArgTrivia.appendRange(newToken.trivia());
-                else {
-                    if (!emptyArgTrivia.empty()) {
-                        emptyArgTrivia.appendRange(newToken.trivia());
-                        newToken = newToken.withTrivia(alloc, emptyArgTrivia.copy(alloc));
-                        emptyArgTrivia.clear();
-                    }
-
-                    // TODO: error if no closing quote
-                    if (stringify)
-                        buffer.append(newToken);
-                    else
-                        expandedTokens.append(newToken);
-                }
-            }
-        }
-
-        if (!anyNewMacros)
+        if (!applyMacroOps(tokens, expandedTokens))
             break;
 
         tokens = expandedTokens;
     }
 
-    if (!expandedTokens.empty()) {
-        // if the macro expanded into any tokens at all, set the pointer
-        // so that we'll pull from them next
+    // if the macro expanded into any tokens at all, set the pointer
+    // so that we'll pull from them next
+    if (!expandedTokens.empty())
         currentMacroToken = expandedTokens.begin();
-    }
 
     return actualArgs;
+}
+
+bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest) {
+    SmallVectorSized<Trivia, 16> emptyArgTrivia;
+    SmallVectorSized<Token, 16> stringifyBuffer;
+    Token stringify;
+    bool anyNewMacros = false;
+
+    // TODO: audit trivia usage here, use of dest.back(), etc
+
+    for (uint32_t i = 0; i < tokens.size(); i++) {
+        Token newToken;
+
+        // Once we see a `" token, we start collecting tokens into their own
+        // buffer for stringification. Otherwise, just add them to the final
+        // expansion buffer.
+        Token token = tokens[i];
+        switch (token.kind) {
+            case TokenKind::MacroQuote:
+                if (!stringify) {
+                    stringify = token;
+                    stringifyBuffer.clear();
+                }
+                else {
+                    // all done stringifying; convert saved tokens to string
+                    newToken = Lexer::stringify(alloc, stringify.location(),
+                                                stringify.trivia(),
+                                                stringifyBuffer.begin(),
+                                                stringifyBuffer.end());
+                    stringify = Token();
+                }
+                break;
+            case TokenKind::MacroPaste:
+                // Paste together previous token and next token; a macro paste on either end
+                // of the buffer or one that borders whitespace should be ignored.
+                // This isn't specified in the standard so I'm just guessing.
+                if (i == 0 || i == tokens.size() - 1 || !token.trivia().empty() ||
+                    !tokens[i + 1].trivia().empty()) {
+
+                    addDiag(DiagCode::IgnoredMacroPaste, token.location());
+                }
+                else if (stringify) {
+                    // if this is right after the opening quote or right before the closing quote, we're
+                    // trying to concatenate something with nothing, so assume an error
+                    if (stringifyBuffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote)
+                        addDiag(DiagCode::IgnoredMacroPaste, token.location());
+                    else {
+                        newToken = Lexer::concatenateTokens(alloc, stringifyBuffer.back(), tokens[i + 1]);
+                        if (newToken) {
+                            stringifyBuffer.pop();
+                            ++i;
+                        }
+                    }
+                }
+                else {
+                    newToken = Lexer::concatenateTokens(alloc, dest.back(), tokens[i + 1]);
+                    if (newToken) {
+                        dest.pop();
+                        ++i;
+
+                        anyNewMacros |= newToken.kind == TokenKind::Directive &&
+                            newToken.directiveKind() == SyntaxKind::MacroUsage;
+                    }
+                }
+                break;
+            default:
+                newToken = token;
+                break;
+        }
+
+        if (!newToken)
+            continue;
+
+        // If we have an empty macro argument just collect its trivia and use it on the next token we find.
+        if (newToken.kind == TokenKind::EmptyMacroArgument) {
+            emptyArgTrivia.appendRange(newToken.trivia());
+            continue;
+        }
+
+        if (!emptyArgTrivia.empty()) {
+            emptyArgTrivia.appendRange(newToken.trivia());
+            newToken = newToken.withTrivia(alloc, emptyArgTrivia.copy(alloc));
+            emptyArgTrivia.clear();
+        }
+
+        if (!stringify) {
+            dest.append(newToken);
+            continue;
+        }
+
+        // If this is an escaped identifier that includes a `" within it, we need to split the
+        // token up to match the behavior of other simulators.
+        if (newToken.kind == TokenKind::Identifier && newToken.identifierType() == IdentifierType::Escaped) {
+            size_t offset = newToken.rawText().find("`\"");
+            if (offset != std::string_view::npos) {
+                // Split the token, finish the stringification.
+                auto splitInfo = alloc.emplace<Token::Info>(*newToken.getInfo());
+                splitInfo->rawText = splitInfo->rawText.substr(0, offset);
+                stringifyBuffer.append(Token(TokenKind::Identifier, splitInfo));
+
+                dest.append(Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
+                                             stringifyBuffer.begin(), stringifyBuffer.end()));
+                stringify = Token();
+
+                // Now we have the unfortunate task of re-lexing the remaining stuff after the split
+                // and then appending those tokens to the destination as well.
+                SmallVectorSized<Token, 8> splits;
+                Lexer::splitTokens(alloc, diagnostics, sourceManager, newToken,
+                                   offset + 2, keywordVersionStack.back(), splits);
+                anyNewMacros |= applyMacroOps(splits, dest);
+                continue;
+            }
+        }
+
+        // TODO: error if no closing quote
+        stringifyBuffer.append(newToken);
+    }
+
+    return anyNewMacros;
 }
 
 bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs,

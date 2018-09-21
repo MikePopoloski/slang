@@ -171,6 +171,7 @@ private:
     bool expandReplacementList(span<Token const>& tokens, SmallSet<DefineDirectiveSyntax*, 8>& alreadyExpanded);
     void appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
                          SourceLocation expansionLoc, Token usageSite, bool& isFirst, bool isTopLevel);
+    bool applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest);
 
     // functions to advance the underlying token stream
     Token peek(LexerMode mode = LexerMode::Directive);
