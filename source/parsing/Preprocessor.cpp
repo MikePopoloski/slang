@@ -411,7 +411,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         // when the macro gets expanded they parse correctly.
         // TODO: set token location correctly
         Token t = peek();
-        if (needEod && (t.hasTrivia(TriviaKind::EndOfLine) || t.hasTrivia(TriviaKind::LineContinuation))) {
+        if (needEod && t.hasTrivia(TriviaKind::EndOfLine)) {
             scratchTokenBuffer.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
             needEod = false;
         }
@@ -507,7 +507,6 @@ bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf, 
 }
 
 Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool taken) {
-    auto eod = parseEndOfDirective();
     scratchTokenBuffer.clear();
     if (!taken) {
         // skip over everything until we find another conditional compilation directive
@@ -555,7 +554,6 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
             directive.directiveKind(),
             directive,
             condition,
-            eod,
             scratchTokenBuffer.copy(alloc)
         );
     }
@@ -563,7 +561,6 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
         syntax = alloc.emplace<UnconditionalBranchDirectiveSyntax>(
             directive.directiveKind(),
             directive,
-            eod,
             scratchTokenBuffer.copy(alloc)
         );
     }

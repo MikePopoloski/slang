@@ -5167,11 +5167,10 @@ struct IncludeDirectiveSyntax : public DirectiveSyntax {
 
 struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
     Token name;
-    Token endOfDirective;
     TokenList disabledTokens;
 
-    ConditionalBranchDirectiveSyntax(SyntaxKind kind, Token directive, Token name, Token endOfDirective, TokenList disabledTokens) :
-        DirectiveSyntax(kind, directive), name(name), endOfDirective(endOfDirective), disabledTokens(disabledTokens) {
+    ConditionalBranchDirectiveSyntax(SyntaxKind kind, Token directive, Token name, TokenList disabledTokens) :
+        DirectiveSyntax(kind, directive), name(name), disabledTokens(disabledTokens) {
         this->disabledTokens.parent = this;
     }
 
@@ -5185,11 +5184,10 @@ struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
 };
 
 struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
-    Token endOfDirective;
     TokenList disabledTokens;
 
-    UnconditionalBranchDirectiveSyntax(SyntaxKind kind, Token directive, Token endOfDirective, TokenList disabledTokens) :
-        DirectiveSyntax(kind, directive), endOfDirective(endOfDirective), disabledTokens(disabledTokens) {
+    UnconditionalBranchDirectiveSyntax(SyntaxKind kind, Token directive, TokenList disabledTokens) :
+        DirectiveSyntax(kind, directive), disabledTokens(disabledTokens) {
         this->disabledTokens.parent = this;
     }
 
@@ -5466,7 +5464,7 @@ public:
     ConcatenationExpressionSyntax& concatenationExpression(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> expressions, Token closeBrace);
     ConcurrentAssertionMemberSyntax& concurrentAssertionMember(SyntaxList<AttributeInstanceSyntax> attributes, ConcurrentAssertionStatementSyntax& statement);
     ConcurrentAssertionStatementSyntax& concurrentAssertionStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token propertyOrSequence, Token openParen, PropertySpecSyntax& propertySpec, Token closeParen, ActionBlockSyntax& action);
-    ConditionalBranchDirectiveSyntax& conditionalBranchDirective(SyntaxKind kind, Token directive, Token name, Token endOfDirective, TokenList disabledTokens);
+    ConditionalBranchDirectiveSyntax& conditionalBranchDirective(SyntaxKind kind, Token directive, Token name, TokenList disabledTokens);
     ConditionalConstraintSyntax& conditionalConstraint(Token ifKeyword, Token openParen, ExpressionSyntax& condition, Token closeParen, ConstraintItemSyntax& constraints, ElseConstraintClauseSyntax* elseClause);
     ConditionalExpressionSyntax& conditionalExpression(ConditionalPredicateSyntax& predicate, Token question, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& left, Token colon, ExpressionSyntax& right);
     ConditionalPatternSyntax& conditionalPattern(ExpressionSyntax& expr, MatchesClauseSyntax* matchesClause);
@@ -5663,7 +5661,7 @@ public:
     TransSetSyntax& transSet(Token openParen, SeparatedSyntaxList<TransRangeSyntax> ranges, Token closeParen);
     TypeReferenceSyntax& typeReference(Token typeKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen);
     TypedefDeclarationSyntax& typedefDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, DataTypeSyntax& type, Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token semi);
-    UnconditionalBranchDirectiveSyntax& unconditionalBranchDirective(SyntaxKind kind, Token directive, Token endOfDirective, TokenList disabledTokens);
+    UnconditionalBranchDirectiveSyntax& unconditionalBranchDirective(SyntaxKind kind, Token directive, TokenList disabledTokens);
     UndefDirectiveSyntax& undefDirective(Token directive, Token name, Token endOfDirective);
     UniquenessConstraintSyntax& uniquenessConstraint(Token unique, OpenRangeListSyntax& ranges, Token semi);
     VarDataTypeSyntax& varDataType(Token var, DataTypeSyntax& type);

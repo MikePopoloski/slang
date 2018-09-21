@@ -611,6 +611,15 @@ TEST_CASE("EndIf not done") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Ifdef same line") {
+    auto& text = "`ifndef BLAH 1000 `endif";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.intValue() == 1000);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Nested branches") {
     auto& text =
 "`define FOO\n"

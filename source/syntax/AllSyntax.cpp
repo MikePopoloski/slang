@@ -129,17 +129,17 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::DriveStrength: return 5;
         case SyntaxKind::ElementSelect: return 3;
         case SyntaxKind::ElementSelectExpression: return 2;
-        case SyntaxKind::ElsIfDirective: return 4;
+        case SyntaxKind::ElsIfDirective: return 3;
         case SyntaxKind::ElseClause: return 2;
         case SyntaxKind::ElseConstraintClause: return 2;
-        case SyntaxKind::ElseDirective: return 3;
+        case SyntaxKind::ElseDirective: return 2;
         case SyntaxKind::EmptyArgument: return 0;
         case SyntaxKind::EmptyIdentifierName: return 0;
         case SyntaxKind::EmptyMember: return 3;
         case SyntaxKind::EmptyQueueExpression: return 2;
         case SyntaxKind::EmptyStatement: return 3;
         case SyntaxKind::EndCellDefineDirective: return 2;
-        case SyntaxKind::EndIfDirective: return 3;
+        case SyntaxKind::EndIfDirective: return 2;
         case SyntaxKind::EndKeywordsDirective: return 2;
         case SyntaxKind::EnumType: return 6;
         case SyntaxKind::EqualityExpression: return 4;
@@ -180,9 +180,9 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::IdentifierList: return 3;
         case SyntaxKind::IdentifierName: return 1;
         case SyntaxKind::IdentifierSelectName: return 2;
-        case SyntaxKind::IfDefDirective: return 4;
+        case SyntaxKind::IfDefDirective: return 3;
         case SyntaxKind::IfGenerate: return 7;
-        case SyntaxKind::IfNDefDirective: return 4;
+        case SyntaxKind::IfNDefDirective: return 3;
         case SyntaxKind::IffClause: return 4;
         case SyntaxKind::IffPropertyExpression: return 4;
         case SyntaxKind::ImmediateAssertStatement: return 6;
@@ -1926,8 +1926,7 @@ TokenOrSyntax ConditionalBranchDirectiveSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return directive;
         case 1: return name;
-        case 2: return endOfDirective;
-        case 3: return &disabledTokens;
+        case 2: return &disabledTokens;
         default: return nullptr;
     }
 }
@@ -1936,8 +1935,7 @@ ConstTokenOrSyntax ConditionalBranchDirectiveSyntax::getChild(uint32_t index) co
     switch (index) {
         case 0: return directive;
         case 1: return name;
-        case 2: return endOfDirective;
-        case 3: return &disabledTokens;
+        case 2: return &disabledTokens;
         default: return nullptr;
     }
 }
@@ -1946,8 +1944,7 @@ void ConditionalBranchDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax ch
     switch (index) {
         case 0: directive = child.token(); return;
         case 1: name = child.token(); return;
-        case 2: endOfDirective = child.token(); return;
-        case 3: disabledTokens = child.node()->as<TokenList>(); return;
+        case 2: disabledTokens = child.node()->as<TokenList>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10098,8 +10095,7 @@ bool UnconditionalBranchDirectiveSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax UnconditionalBranchDirectiveSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return directive;
-        case 1: return endOfDirective;
-        case 2: return &disabledTokens;
+        case 1: return &disabledTokens;
         default: return nullptr;
     }
 }
@@ -10107,8 +10103,7 @@ TokenOrSyntax UnconditionalBranchDirectiveSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax UnconditionalBranchDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
-        case 1: return endOfDirective;
-        case 2: return &disabledTokens;
+        case 1: return &disabledTokens;
         default: return nullptr;
     }
 }
@@ -10116,8 +10111,7 @@ ConstTokenOrSyntax UnconditionalBranchDirectiveSyntax::getChild(uint32_t index) 
 void UnconditionalBranchDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: directive = child.token(); return;
-        case 1: endOfDirective = child.token(); return;
-        case 2: disabledTokens = child.node()->as<TokenList>(); return;
+        case 1: disabledTokens = child.node()->as<TokenList>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10886,8 +10880,8 @@ ConcurrentAssertionStatementSyntax& SyntaxFactory::concurrentAssertionStatement(
     return *alloc.emplace<ConcurrentAssertionStatementSyntax>(kind, label, attributes, keyword, propertyOrSequence, openParen, propertySpec, closeParen, action);
 }
 
-ConditionalBranchDirectiveSyntax& SyntaxFactory::conditionalBranchDirective(SyntaxKind kind, Token directive, Token name, Token endOfDirective, TokenList disabledTokens) {
-    return *alloc.emplace<ConditionalBranchDirectiveSyntax>(kind, directive, name, endOfDirective, disabledTokens);
+ConditionalBranchDirectiveSyntax& SyntaxFactory::conditionalBranchDirective(SyntaxKind kind, Token directive, Token name, TokenList disabledTokens) {
+    return *alloc.emplace<ConditionalBranchDirectiveSyntax>(kind, directive, name, disabledTokens);
 }
 
 ConditionalConstraintSyntax& SyntaxFactory::conditionalConstraint(Token ifKeyword, Token openParen, ExpressionSyntax& condition, Token closeParen, ConstraintItemSyntax& constraints, ElseConstraintClauseSyntax* elseClause) {
@@ -11674,8 +11668,8 @@ TypedefDeclarationSyntax& SyntaxFactory::typedefDeclaration(SyntaxList<Attribute
     return *alloc.emplace<TypedefDeclarationSyntax>(attributes, typedefKeyword, type, name, dimensions, semi);
 }
 
-UnconditionalBranchDirectiveSyntax& SyntaxFactory::unconditionalBranchDirective(SyntaxKind kind, Token directive, Token endOfDirective, TokenList disabledTokens) {
-    return *alloc.emplace<UnconditionalBranchDirectiveSyntax>(kind, directive, endOfDirective, disabledTokens);
+UnconditionalBranchDirectiveSyntax& SyntaxFactory::unconditionalBranchDirective(SyntaxKind kind, Token directive, TokenList disabledTokens) {
+    return *alloc.emplace<UnconditionalBranchDirectiveSyntax>(kind, directive, disabledTokens);
 }
 
 UndefDirectiveSyntax& SyntaxFactory::undefDirective(Token directive, Token name, Token endOfDirective) {
