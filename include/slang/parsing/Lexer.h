@@ -18,20 +18,6 @@ class VectorBuilder;
 class BumpAllocator;
 struct SourceBuffer;
 
-/// The lexer can interpret source characters differently depending on mode.
-enum class LexerMode {
-    /// Normal lexing mode.
-    Normal,
-
-    /// We're inside a directive; end of line turns into EndOfDirective
-    /// tokens instead of whitespace.
-    Directive,
-
-    /// We're lexing an include file name; we're looking at a special
-    /// kind of string that might be delimited by angle brackets.
-    IncludeFileName
-};
-
 /// Contains various options that can control lexing behavior.
 struct LexerOptions {
     /// The maximum number of errors that can occur before the rest of the source
@@ -57,7 +43,7 @@ public:
     /// Lexes the next token from the source code.
     /// This will never return a null pointer; at the end of the buffer,
     /// an infinite stream of EndOfFile tokens will be generated
-    Token lex(LexerMode mode = LexerMode::Normal, KeywordVersion keywordVersion = getDefaultKeywordVersion());
+    Token lex(KeywordVersion keywordVersion = getDefaultKeywordVersion());
 
     BufferID getBufferID() const;
     BumpAllocator& getAllocator() { return alloc; }
@@ -71,7 +57,7 @@ public:
     /// The range of tokens to stringify is given by @a begin and @a end.
     /// If @a noWhitespace is set to true, all whitespace in between tokens will be stripped.
     static Token stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
-                           Token* begin, Token* end, bool noWhitespace = false);
+                           Token* begin, Token* end);
 
     /// Splits the given token at the specified offset into its raw source text. The trailing portion
     /// of the split is lexed into new tokens and appened to @a results
@@ -83,23 +69,21 @@ private:
     Lexer(BufferID bufferId, string_view source, const char* startPtr,
           BumpAllocator& alloc, Diagnostics& diagnostics, LexerOptions options);
 
-    TokenKind lexToken(Token::Info* info, bool directiveMode, KeywordVersion keywordVersion);
+    TokenKind lexToken(Token::Info* info, KeywordVersion keywordVersion);
     TokenKind lexNumericLiteral(Token::Info* info);
     TokenKind lexEscapeSequence(Token::Info* info);
     TokenKind lexDollarSign(Token::Info* info);
     TokenKind lexDirective(Token::Info* info);
     TokenKind lexApostrophe(Token::Info* info);
 
-    Token lexIncludeFileName();
-
     void lexStringLiteral(Token::Info* info);
     bool lexIntegerBase(Token::Info* info, bool isSigned);
     bool lexTimeLiteral(Token::Info* info);
 
-    bool lexTrivia(SmallVector<Trivia>& triviaBuffer, bool directiveMode);
+    void lexTrivia(SmallVector<Trivia>& triviaBuffer);
 
-    bool scanBlockComment(SmallVector<Trivia>& triviaBuffer, bool directiveMode);
-    void scanLineComment(SmallVector<Trivia>& triviaBuffer, bool directiveMode);
+    void scanBlockComment(SmallVector<Trivia>& triviaBuffer);
+    void scanLineComment(SmallVector<Trivia>& triviaBuffer);
     void scanWhitespace(SmallVector<Trivia>& triviaBuffer);
     void scanIdentifier();
     void scanUnsignedNumber(uint64_t& value, int& digits);

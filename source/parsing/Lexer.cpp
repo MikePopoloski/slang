@@ -149,18 +149,16 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
 }
 
 Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
-                       Token* begin, Token* end, bool noWhitespace) {
+                       Token* begin, Token* end) {
     SmallVectorSized<char, 64> text;
     text.append('"');
 
     while (begin != end) {
         Token cur = *begin;
 
-        if (!noWhitespace) {
-            for (const Trivia& t : cur.trivia()) {
-                if (t.kind == TriviaKind::Whitespace)
-                    text.appendRange(t.getRawText());
-            }
+        for (const Trivia& t : cur.trivia()) {
+            if (t.kind == TriviaKind::Whitespace)
+                text.appendRange(t.getRawText());
         }
 
         if (cur.kind == TokenKind::MacroEscapedQuote) {
@@ -206,7 +204,7 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics, const So
 
     size_t endOffset = loc.offset() + sourceToken.rawText().length();
     while (true) {
-        Token token = lexer.lex(LexerMode::Normal, keywordVersion);
+        Token token = lexer.lex(keywordVersion);
         if (token.kind == TokenKind::EndOfFile || token.location().buffer() != loc.buffer() ||
             token.location().offset() > endOffset)
             break;
@@ -215,30 +213,20 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics, const So
     }
 }
 
-Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
-    if (mode == LexerMode::IncludeFileName)
-        return lexIncludeFileName();
-
+Token Lexer::lex(KeywordVersion keywordVersion) {
     auto info = alloc.emplace<Token::Info>();
     SmallVectorSized<Trivia, 32> triviaBuffer;
-    bool directiveMode = mode == LexerMode::Directive;
-
-    // Lex any leading trivia; if we're in directive mode this might require
-    // us to return an EndOfDirective token right away.
-    if (lexTrivia(triviaBuffer, directiveMode)) {
-        info->trivia = triviaBuffer.copy(alloc);
-        info->location = SourceLocation(getBufferID(), currentOffset());
-        return Token(TokenKind::EndOfDirective, info);
-    }
+    lexTrivia(triviaBuffer);
 
     // lex the next token
     mark();
-    TokenKind kind = lexToken(info, directiveMode, keywordVersion);
+    TokenKind kind = lexToken(info, keywordVersion);
     onNewLine = false;
     info->rawText = lexeme();
 
     if (kind != TokenKind::EndOfFile && diagnostics.size() > options.maxErrors) {
         // Stop any further lexing by claiming to be at the end of the buffer.
+        // TODO: this check needs work
         addDiag(DiagCode::TooManyLexerErrors, currentOffset());
         sourceBuffer = sourceEnd - 1;
         triviaBuffer.append(Trivia(TriviaKind::DisabledText, lexeme()));
@@ -248,7 +236,7 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
     return Token(kind, info);
 }
 
-TokenKind Lexer::lexToken(Token::Info* info, bool directiveMode, KeywordVersion keywordVersion) {
+TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
     uint32_t offset = currentOffset();
     info->location = SourceLocation(getBufferID(), offset);
 
@@ -265,10 +253,6 @@ TokenKind Lexer::lexToken(Token::Info* info, bool directiveMode, KeywordVersion 
                 addDiag(DiagCode::EmbeddedNull, offset);
                 return TokenKind::Unknown;
             }
-
-            // if we're lexing a directive, issue an EndOfDirective before the EndOfFile
-            if (directiveMode)
-                return TokenKind::EndOfDirective;
 
             // otherwise, end of file
             return TokenKind::EndOfFile;
@@ -638,6 +622,14 @@ void Lexer::lexStringLiteral(Token::Info* info) {
 TokenKind Lexer::lexEscapeSequence(Token::Info* info) {
     char c = peek();
     if (isWhitespace(c) || c == '\0') {
+        // Check for a line continuation sequence.
+        if (isNewline(c)) {
+            advance();
+            if (c == '\r' && peek() == '\n')
+                advance();
+            return TokenKind::LineContinuation;
+        }
+
         addDiag(DiagCode::EscapedWhitespace, currentOffset());
         return TokenKind::Unknown;
     }
@@ -687,56 +679,6 @@ TokenKind Lexer::lexDirective(Token::Info* info) {
         addDiag(DiagCode::IncludeNotFirstOnLine, startingOffset);
 
     return TokenKind::Directive;
-}
-
-Token Lexer::lexIncludeFileName() {
-    // leading whitespace should lex into trivia
-    SmallVectorSized<Trivia, 8> triviaBuffer;
-    if (isHorizontalWhitespace(peek())) {
-        mark();
-        scanWhitespace(triviaBuffer);
-    }
-
-    span<Trivia const> trivia = triviaBuffer.copy(alloc);
-    uint32_t offset = currentOffset();
-    auto location = SourceLocation(getBufferID(), offset);
-
-    mark();
-    char delim = peek();
-    if (delim == '`') {
-        advance();
-        // macro file name
-        auto info = alloc.emplace<Token::Info>();
-        auto token = Token(lexDirective(info), info);
-        info->trivia = trivia;
-        info->rawText = lexeme();
-        info->location = location;
-        return token;
-    }
-    else if (delim != '"' && delim != '<') {
-        addDiag(DiagCode::ExpectedIncludeFileName, offset);
-        return Token(TokenKind::IncludeFileName, alloc.emplace<Token::Info>(trivia, "", location, TokenFlags::Missing));
-    }
-    else if (delim == '<') {
-        delim = '>';
-    }
-
-    advance();
-    char c;
-    do {
-        c = peek();
-        if (c == '\0' || isNewline(c)) {
-            addDiag(DiagCode::ExpectedIncludeFileName, offset);
-            break;
-        }
-        advance();
-    } while (c != delim);
-
-    string_view rawText = lexeme();
-    auto info = alloc.emplace<Token::Info>(trivia, rawText, location, TokenFlags::None);
-    info->extra = rawText;
-
-    return Token(TokenKind::IncludeFileName, info);
 }
 
 TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
@@ -908,7 +850,7 @@ bool Lexer::lexTimeLiteral(Token::Info* info) {
     return false;
 }
 
-bool Lexer::lexTrivia(SmallVector<Trivia>& triviaBuffer, bool directiveMode) {
+void Lexer::lexTrivia(SmallVector<Trivia>& triviaBuffer) {
     while (true) {
         mark();
 
@@ -924,16 +866,15 @@ bool Lexer::lexTrivia(SmallVector<Trivia>& triviaBuffer, bool directiveMode) {
                 switch (peek(1)) {
                     case '/':
                         advance(2);
-                        scanLineComment(triviaBuffer, directiveMode);
+                        scanLineComment(triviaBuffer);
                         break;
                     case '*': {
                         advance(2);
-                        if (scanBlockComment(triviaBuffer, directiveMode))
-                            return true;
+                        scanBlockComment(triviaBuffer);
                         break;
                     }
                     default:
-                        return false;
+                        return;
                 }
                 break;
             case '\r':
@@ -941,35 +882,14 @@ bool Lexer::lexTrivia(SmallVector<Trivia>& triviaBuffer, bool directiveMode) {
                 consume('\n');
                 onNewLine = true;
                 addTrivia(TriviaKind::EndOfLine, triviaBuffer);
-                if (directiveMode)
-                    return true;
                 break;
             case '\n':
                 advance();
                 onNewLine = true;
                 addTrivia(TriviaKind::EndOfLine, triviaBuffer);
-                if (directiveMode)
-                    return true;
                 break;
-            case '\\': {
-                // if we're lexing a directive, this might escape a newline
-                char n = peek(1);
-                if (!directiveMode || !isNewline(n))
-                    return false;
-
-                advance(2);
-                if (n == '\r')
-                    consume('\n');
-
-                onNewLine = true;
-                addTrivia(TriviaKind::LineContinuation, triviaBuffer);
-                break;
-            }
-            case '\0':
-                // in directive mode, return an EOD first to wrap up any directive processing
-                return directiveMode;
             default:
-                return false;
+                return;
         }
     }
 }
@@ -1020,18 +940,11 @@ void Lexer::scanWhitespace(SmallVector<Trivia>& triviaBuffer) {
     addTrivia(TriviaKind::Whitespace, triviaBuffer);
 }
 
-void Lexer::scanLineComment(SmallVector<Trivia>& triviaBuffer, bool directiveMode) {
+void Lexer::scanLineComment(SmallVector<Trivia>& triviaBuffer) {
     while (true) {
         char c = peek();
         if (isNewline(c))
             break;
-
-        // If we're in a directive, we want the continuation character to continue
-        // the directive on to the next line, so don't consume it as part of the comment.
-        if (c == '\\' && directiveMode) {
-            if (isNewline(peek(1)))
-                break;
-        }
 
         if (c == '\0') {
             if (reallyAtEnd())
@@ -1045,8 +958,7 @@ void Lexer::scanLineComment(SmallVector<Trivia>& triviaBuffer, bool directiveMod
     addTrivia(TriviaKind::LineComment, triviaBuffer);
 }
 
-bool Lexer::scanBlockComment(SmallVector<Trivia>& triviaBuffer, bool directiveMode) {
-    bool eod = false;
+void Lexer::scanBlockComment(SmallVector<Trivia>& triviaBuffer) {
     while (true) {
         char c = peek();
         if (c == '\0') {
@@ -1069,18 +981,11 @@ bool Lexer::scanBlockComment(SmallVector<Trivia>& triviaBuffer, bool directiveMo
             advance(2);
         }
         else {
-            if (directiveMode && isNewline(c)) {
-                // found a newline in a block comment inside a directive; this is not allowed
-                // we need to stop lexing trivia and issue an EndOfDirective token after this comment
-                addDiag(DiagCode::SplitBlockCommentInDirective, currentOffset());
-                eod = true;
-            }
             advance();
         }
     }
 
     addTrivia(TriviaKind::BlockComment, triviaBuffer);
-    return eod;
 }
 
 void Lexer::addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer) {

@@ -33,6 +33,29 @@ bool checkTimeMagnitude(double value, string_view& text, TimescaleMagnitude& mag
     return true;
 }
 
+bool isOnSameLine(Token token) {
+    for (auto& t : token.trivia()) {
+        switch (t.kind) {
+            case TriviaKind::LineComment:
+            case TriviaKind::EndOfLine:
+            case TriviaKind::Directive:
+            case TriviaKind::SkippedSyntax:
+            case TriviaKind::SkippedTokens:
+            case TriviaKind::DisabledText:
+                return false;
+            case TriviaKind::BlockComment:
+                if (size_t offset = t.getRawText().find_first_of("\r\n");
+                    offset != std::string_view::npos) {
+                    return true;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return true;
+}
+
 }
 
 namespace slang {
@@ -126,16 +149,16 @@ void Preprocessor::resetAllDirectives() {
     defaultNetType = TokenKind::WireKeyword;
 }
 
-Token Preprocessor::next() { return consume(LexerMode::Normal); }
+Token Preprocessor::next() { return consume(); }
 
-Token Preprocessor::next(LexerMode mode) {
+Token Preprocessor::nextProcessed() {
     // The core preprocessing routine; this method pulls raw tokens from various text
     // files and converts them into a unified logical stream of sanitized tokens that
     // future stages like a parser can ingest without difficulty.
     //
     // Start off by grabbing the next raw token, either from the current file, an
     // active include file, or an expanded macro.
-    auto token = nextRaw(mode);
+    auto token = nextRaw();
 
     // If we're currently within a macro body, return whatever we got right away.
     // If it was a directive it will be deferred until the macro is used.
@@ -146,25 +169,12 @@ Token Preprocessor::next(LexerMode mode) {
     // to return directives to the caller; we handle them ourselves and turn them
     // into trivia.
     if (token.kind == TokenKind::Directive)
-        token = handleDirectives(mode, token);
-
-    // There is an additional complication to handle; if the next raw token is right
-    // next to this one (no whitespace) and is a macro expansion or include, we may
-    // need to end up concatenating two tokens together before we return this one.
-    // For example:
-    //      `define FOO 9
-    //      int i = 8`FOO;
-    // This should result in "int i = 89", where the '89' is one integer token.
-    if (mode == LexerMode::Normal && token.kind != TokenKind::EndOfFile) {
-        lookaheadToken = nextRaw(mode);
-        if (lookaheadToken.kind == TokenKind::Directive)
-            token = handlePossibleConcatenation(mode, token, lookaheadToken);
-    }
+        token = handleDirectives(token);
 
     return token;
 }
 
-Token Preprocessor::handleDirectives(LexerMode mode, Token token) {
+Token Preprocessor::handleDirectives(Token token) {
     // burn through any preprocessor directives we find and convert them to trivia
     SmallVectorSized<Trivia, 16> trivia;
     do {
@@ -197,46 +207,17 @@ Token Preprocessor::handleDirectives(LexerMode mode, Token token) {
                 trivia.append(createSimpleDirective(token));
                 break;
         }
-        token = nextRaw(mode);
+        token = nextRaw();
     } while (token.kind == TokenKind::Directive);
 
     trivia.appendRange(token.trivia());
     return token.withTrivia(alloc, trivia.copy(alloc));
 }
 
-Token Preprocessor::handlePossibleConcatenation(LexerMode mode, Token left, Token right) {
-    while (true) {
-        // Only perform concatenation if the next upcoming token is a macro usage
-        // or include directive and there is no trivia in the way.
-        if (!right.trivia().empty())
-            return left;
-
-        if (right.directiveKind() != SyntaxKind::MacroUsage && right.directiveKind() != SyntaxKind::IncludeDirective)
-            return left;
-
-        lookaheadToken = Token();
-        right = handleDirectives(mode, right);
-
-        Token result = Lexer::concatenateTokens(alloc, left, right);
-        if (!result) {
-            // Failed to concatenate; put the token back and deal with it later.
-            lookaheadToken = right;
-            return left;
-        }
-
-        left = result;
-        right = lookaheadToken = nextRaw(mode);
-        if (lookaheadToken.kind != TokenKind::Directive)
-            return left;
-    }
-}
-
-Token Preprocessor::nextRaw(LexerMode mode) {
+Token Preprocessor::nextRaw() {
     // it's possible we have a token buffered from looking ahead when handling a directive
     if (currentToken)
         return std::exchange(currentToken, Token());
-    if (lookaheadToken)
-        return std::exchange(lookaheadToken, Token());
 
     // if we just expanded a macro we'll have tokens from that to return
     if (currentMacroToken) {
@@ -255,7 +236,7 @@ Token Preprocessor::nextRaw(LexerMode mode) {
     // Pull the next token from the active source.
     // This is the common case.
     auto& source = lexerStack.back();
-    auto token = source->lex(mode, keywordVersionStack.back());
+    auto token = source->lex(keywordVersionStack.back());
     if (token.kind != TokenKind::EndOfFile)
         return token;
 
@@ -279,7 +260,7 @@ Token Preprocessor::nextRaw(LexerMode mode) {
 
     while (true) {
         auto& nextSource = lexerStack.back();
-        token = nextSource->lex(mode, keywordVersionStack.back());
+        token = nextSource->lex(keywordVersionStack.back());
         appendTrivia(token);
         if (token.kind != TokenKind::EndOfFile)
             break;
@@ -294,71 +275,72 @@ Token Preprocessor::nextRaw(LexerMode mode) {
 }
 
 Trivia Preprocessor::handleIncludeDirective(Token directive) {
-    // next token should be a filename, or something the preprocessor generated
-    // that we will make into a filename
-    Token fileName = consume(LexerMode::IncludeFileName);
+    // A (valid) macro-expanded include filename will be lexed as either
+    // a StringLiteral or the token sequence '<' ... '>'
+    Token fileName = peek();
+    if (fileName.kind == TokenKind::LessThan) {
+        // In this case, we know that the first token is LessThan, and if things are proper, the last
+        // token is >, but there can be an arbitrary number of tokens that the macro expanded to in-between
+        // (as file names have no restrictions like identifiers do) so let us now concatenate all of the
+        // tokens from the macro expansion up to the '>' in order to get the file name.
+        SourceLocation rootExpansionLoc = sourceManager.getExpansionLoc(fileName.location());
+        SmallVectorSized<Token, 8> tokens;
+        consume();
 
-    // If we have a macro-expanded filename, there won't be an EOD token
-    bool suppressEODError = false;
-    if (fileName.kind != TokenKind::IncludeFileName) {
-        suppressEODError = true;
+        while (true) {
+            Token token = peek();
 
-        // A raw include file name will always yield a IncludeFileName token.
-        // A (valid) macro-expanded include filename will be lexed as either
-        // a StringLiteral or the token sequence '<' ... '>'
-        if (fileName.kind == TokenKind::LessThan) {
-            // In this case, we know that the first token is LessThan, and
-            // if things are proper, the last token is >, but there can be an
-            // arbitrary number of tokens that the macro expanded to in-between
-            // (as file names have no restrictions like identifiers do)
-            // so let us now concatenate all of the tokens from the macro expansion
-            // up to the '>'' in order to get the file name.
-            SourceLocation rootExpansionLoc = sourceManager.getExpansionLoc(fileName.location());
-            SmallVectorSized<Token, 8> tokens;
-            tokens.append(fileName);
-            Token nextToken = peek();
-            while (nextToken.kind != TokenKind::GreaterThan) {
-                if (!sourceManager.isMacroLoc(nextToken.location()) ||
-                    sourceManager.getExpansionLoc(nextToken.location()) != rootExpansionLoc) {
-                    addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
-                    break;
-                }
-                consume();
-                tokens.append(nextToken);
-                nextToken = peek();
-                if (nextToken.kind == TokenKind::GreaterThan) {
-                    tokens.append(nextToken);
-                    fileName = Lexer::stringify(alloc, fileName.location(), fileName.trivia(),
-                                                tokens.begin(), tokens.end(), true);
-                    fileName.kind = TokenKind::IncludeFileName;
-                }
+            // TODO: check for newlines / EoF here
+            if (!sourceManager.isMacroLoc(token.location()) ||
+                sourceManager.getExpansionLoc(token.location()) != rootExpansionLoc) {
+
+                // TODO: create missing filename token here
+                addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
+                break;
             }
-        }
-        else if (fileName.kind == TokenKind::StringLiteral) {
-            uint32_t len = (uint32_t)fileName.valueText().length();
-            char* stringBuffer = (char*)alloc.allocate(len + 3, 1);
-            stringBuffer[0] = '"';
-            fileName.valueText().copy(stringBuffer + 1, len);
-            stringBuffer[len + 1] = '"';
-            stringBuffer[len + 2] = '\0';
 
-            auto fileNameInfo = alloc.emplace<Token::Info>(fileName.trivia(),
-                fileName.rawText(), fileName.location(), fileName.getInfo()->flags);
+            if (token.kind == TokenKind::GreaterThan) {
+                consume();
+                SmallVectorSized<char, 64> text;
+                text.append('<');
 
-            fileNameInfo->extra = string_view(stringBuffer, len + 2);
-            fileName = Token(TokenKind::IncludeFileName, fileNameInfo);
-        }
-        else {
-            addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
+                for (Token cur : tokens) {
+                    for (Trivia t : cur.trivia())
+                        text.appendRange(t.getRawText());
+                    text.appendRange(cur.rawText());
+                }
+
+                for (Trivia t : token.trivia())
+                    text.appendRange(t.getRawText());
+                text.append('>');
+
+                string_view raw = to_string_view(text.copy(alloc));
+                auto info = alloc.emplace<Token::Info>(fileName.trivia(), raw, fileName.location());
+                fileName = Token(TokenKind::IncludeFileName, info);
+                break;
+            }
+
+            tokens.append(consume());
         }
     }
-
-    Token end = parseEndOfDirective(suppressEODError);
+    else if (fileName.kind == TokenKind::StringLiteral) {
+        // TODO: add tests for including weird raw string literals
+        consume();
+        auto info = alloc.emplace<Token::Info>(fileName.trivia(), fileName.rawText(),
+                                               fileName.location(), fileName.getInfo()->flags);
+        fileName = Token(TokenKind::IncludeFileName, info);
+    }
+    else {
+        addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
+        fileName = Token::createMissing(alloc, TokenKind::IncludeFileName, fileName.location());
+    }
 
     // path should be at least three chars: "a" or <a>
     string_view path = fileName.valueText();
-    if (path.length() < 3)
-        addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
+    if (path.length() < 3) {
+        if (!fileName.isMissing())
+            addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
+    }
     else {
         // remove delimiters
         bool isSystem = path[0] == '<';
@@ -372,7 +354,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             pushSource(buffer);
     }
 
-    auto syntax = alloc.emplace<IncludeDirectiveSyntax>(directive, fileName, end);
+    auto syntax = alloc.emplace<IncludeDirectiveSyntax>(directive, fileName);
     return Trivia(TriviaKind::Directive, syntax);
 }
 
@@ -403,35 +385,64 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     }
 
     // consume all remaining tokens as macro text
-    bool needEod = false;
     scratchTokenBuffer.clear();
-    while (!peek(TokenKind::EndOfDirective)) {
-        // In SystemVerilog macros can actually contain other directives, such as ifdef. We
-        // therefore have to keep track of where EndOfDirective tokens need to be so that
-        // when the macro gets expanded they parse correctly.
-        // TODO: set token location correctly
+    while (true) {
+        // Figure out when to stop consuming macro text. This involves looking for new lines in the trivia
+        // of each token as we grab it. If there's a new line without a preceeding line continuation
+        // token we know the macro is finished.
         Token t = peek();
-        if (needEod && t.hasTrivia(TriviaKind::EndOfLine)) {
-            scratchTokenBuffer.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
-            needEod = false;
+        if (t.kind == TokenKind::EndOfFile)
+            break;
+        if (t.kind == TokenKind::LineContinuation) {
+            scratchTokenBuffer.append(consume());
+            continue;
         }
 
-        if (t.kind == TokenKind::Directive && t.directiveKind() != SyntaxKind::MacroUsage)
-            needEod = true;
+        bool hasContinuation = false;
+        bool done = false;
+        for (const Trivia& trivia : t.trivia()) {
+            switch (trivia.kind) {
+                case TriviaKind::EndOfLine:
+                    if (hasContinuation)
+                        hasContinuation = false;
+                    else
+                        done = true;
+                    break;
+
+                case TriviaKind::LineComment:
+                    // A line comment can have a trailing line continuation.
+                    if (trivia.getRawText().back() == '\\')
+                        hasContinuation = true;
+                    break;
+
+                case TriviaKind::BlockComment:
+                    if (size_t offset = trivia.getRawText().find_first_of("\r\n");
+                        offset != std::string_view::npos) {
+
+                        SourceLocation loc; // TODO: set location!
+                        addDiag(DiagCode::SplitBlockCommentInDirective, loc);
+                        done = true;
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+            if (done)
+                break;
+        }
+        if (done)
+            break;
 
         scratchTokenBuffer.append(consume());
     }
     inMacroBody = false;
 
-    if (needEod)
-        scratchTokenBuffer.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
-
     auto result = alloc.emplace<DefineDirectiveSyntax>(
         directive,
         name,
         formalArguments,
-        scratchTokenBuffer.copy(alloc),
-        consume()
+        scratchTokenBuffer.copy(alloc)
     );
 
     if (noErrors)
@@ -511,7 +522,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
     if (!taken) {
         // skip over everything until we find another conditional compilation directive
         while (true) {
-            auto token = nextRaw(LexerMode::Normal);
+            auto token = nextRaw();
 
             // EoF or conditional directive stops the skipping process
             bool done = false;
@@ -519,14 +530,6 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
                 done = true;
             else if (token.kind == TokenKind::Directive) {
                 switch (token.directiveKind()) {
-                    // we still need to handle line continuations correctly for macro defines
-                    case SyntaxKind::DefineDirective:
-                        do {
-                            scratchTokenBuffer.append(token);
-                            token = nextRaw(LexerMode::Directive);
-                        } while (token.kind != TokenKind::EndOfDirective);
-                        break;
-
                     case SyntaxKind::IfDefDirective:
                     case SyntaxKind::IfNDefDirective:
                     case SyntaxKind::ElsIfDirective:
@@ -631,8 +634,6 @@ Trivia Preprocessor::handleTimescaleDirective(Token directive) {
     auto slash = expect(TokenKind::Slash);
     foundSpecifiers |= expectTimescaleSpecifier(precision, precisionUnit, precisionMagnitude);
 
-    auto eod = parseEndOfDirective();
-
     if (foundSpecifiers) {
         TimeUnit unitValue, unitPrecision;
         bool success1 = suffixToTimeUnit(valueUnit.valueText(), unitValue);
@@ -652,7 +653,7 @@ Trivia Preprocessor::handleTimescaleDirective(Token directive) {
         }
     }
     auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, value, valueUnit, slash,
-                                                             precision, precisionUnit, eod);
+                                                             precision, precisionUnit);
     return Trivia(TriviaKind::Directive, timescale);
 }
 
@@ -661,8 +662,7 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
     Token fileName = expect(TokenKind::StringLiteral);
     Token level = expect(TokenKind::IntegerLiteral);
 
-    auto result = alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName,
-                                                     level, parseEndOfDirective());
+    auto result = alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName, level);
 
     if (!lineNumber.isMissing() && !fileName.isMissing() && !level.isMissing()) {
         optional<uint8_t> levNum = level.intValue().as<uint8_t>();
@@ -715,7 +715,7 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
         netType = Token::createMissing(alloc, TokenKind::WireKeyword, peek().location());
     }
 
-    auto result = alloc.emplace<DefaultNetTypeDirectiveSyntax>(directive, netType, parseEndOfDirective());
+    auto result = alloc.emplace<DefaultNetTypeDirectiveSyntax>(directive, netType);
     return Trivia(TriviaKind::Directive, result);
 }
 
@@ -734,7 +734,7 @@ Trivia Preprocessor::handleUndefDirective(Token directive) {
         }
     }
 
-    auto result = alloc.emplace<UndefDirectiveSyntax>(directive, nameToken, parseEndOfDirective());
+    auto result = alloc.emplace<UndefDirectiveSyntax>(directive, nameToken);
     return Trivia(TriviaKind::Directive, result);
 }
 
@@ -753,7 +753,7 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
             keywordVersionStack.push_back(*versionOpt);
     }
 
-    auto result = alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionToken, parseEndOfDirective());
+    auto result = alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionToken);
     return Trivia(TriviaKind::Directive, result);
 }
 
@@ -766,33 +766,31 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
     return createSimpleDirective(directive);
 }
 
-Token Preprocessor::parseEndOfDirective(bool suppressError) {
-    // consume all extraneous tokens as SkippedToken trivia
-    SmallVectorSized<Token, 32> skipped;
-    if (!peek(TokenKind::EndOfDirective)) {
-        if (!suppressError)
-            addDiag(DiagCode::ExpectedEndOfDirective, peek().location());
-        do {
-            skipped.append(consume());
-        } while (!peek(TokenKind::EndOfDirective));
-    }
+//Token Preprocessor::parseEndOfDirective(bool suppressError) {
+//    // consume all extraneous tokens as SkippedToken trivia
+//    SmallVectorSized<Token, 32> skipped;
+//    if (!peek(TokenKind::EndOfDirective)) {
+//        if (!suppressError)
+//            addDiag(DiagCode::ExpectedEndOfDirective, peek().location());
+//        do {
+//            skipped.append(consume());
+//        } while (!peek(TokenKind::EndOfDirective));
+//    }
+//
+//    Token eod = consume();
+//    if (!skipped.empty()) {
+//        // splice together the trivia
+//        SmallVectorSized<Trivia, 16> trivia;
+//        trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
+//        trivia.appendRange(eod.trivia());
+//        eod = eod.withTrivia(alloc, trivia.copy(alloc));
+//    }
+//
+//    return eod;
+//}
 
-    Token eod = consume();
-    if (!skipped.empty()) {
-        // splice together the trivia
-        SmallVectorSized<Trivia, 16> trivia;
-        trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
-        trivia.appendRange(eod.trivia());
-        eod = eod.withTrivia(alloc, trivia.copy(alloc));
-    }
-
-    return eod;
-}
-
-Trivia Preprocessor::createSimpleDirective(Token directive, bool suppressError) {
-    DirectiveSyntax* syntax = alloc.emplace<SimpleDirectiveSyntax>(
-        directive.directiveKind(), directive, parseEndOfDirective(suppressError));
-
+Trivia Preprocessor::createSimpleDirective(Token directive) {
+    auto syntax = alloc.emplace<SimpleDirectiveSyntax>(directive.directiveKind(), directive);
     return Trivia(TriviaKind::Directive, syntax);
 }
 
@@ -813,7 +811,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
         // If we see a parenthesis next, let's assume they tried to invoke a function-like macro
         // and skip over the tokens.
-        if (peek(TokenKind::OpenParenthesis, LexerMode::Normal))
+        if (peek(TokenKind::OpenParenthesis))
             return MacroParser(*this).parseActualArgumentList();
         return nullptr;
     }
@@ -934,6 +932,7 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
             continue;
 
         // If we have an empty macro argument just collect its trivia and use it on the next token we find.
+        // TODO: what about trailing trivia that's left over?
         if (newToken.kind == TokenKind::EmptyMacroArgument) {
             emptyArgTrivia.appendRange(newToken.trivia());
             continue;
@@ -1142,19 +1141,22 @@ void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, Source
         else
             token = token.withTrivia(alloc, {});
         isFirst = false;
-
-        // If our usageSite had no whitespace, we should concatenate with whatever was previously in the buffer.
-        if (usageSite.trivia().empty() && !dest.empty()) {
-            Token concat = Lexer::concatenateTokens(alloc, dest.back(), token);
-            if (concat) {
-                dest.back() = concat;
-                return;
-            }
-        }
     }
 
     int delta = int(token.location().offset()) - int(startLoc.offset());
-    dest.append(token.withLocation(alloc, expansionLoc + delta));
+
+    // Line continuations gets stripped out when we expand macros and become newline trivia instead.
+    if (token.kind == TokenKind::LineContinuation) {
+        SmallVectorSized<Trivia, 8> newTrivia;
+        newTrivia.appendRange(token.trivia());
+        newTrivia.append(Trivia(TriviaKind::EndOfLine, token.rawText().substr(1)));
+
+        auto info = alloc.emplace<Token::Info>(newTrivia.copy(alloc), "", expansionLoc + delta);
+        dest.append(Token(TokenKind::EmptyMacroArgument, info));
+    }
+    else {
+        dest.append(token.withLocation(alloc, expansionLoc + delta));
+    }
 }
 
 bool Preprocessor::expandReplacementList(span<Token const>& tokens,
@@ -1263,21 +1265,21 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite,
     return true;
 }
 
-Token Preprocessor::peek(LexerMode mode) {
+Token Preprocessor::peek() {
     if (!currentToken)
-        currentToken = next(mode);
+        currentToken = nextProcessed();
     return currentToken;
 }
 
-Token Preprocessor::consume(LexerMode mode) {
-    auto result = peek(mode);
+Token Preprocessor::consume() {
+    auto result = peek();
     lastConsumed = currentToken;
     currentToken = Token();
     return result;
 }
 
-Token Preprocessor::expect(TokenKind kind, LexerMode mode) {
-    auto result = peek(mode);
+Token Preprocessor::expect(TokenKind kind) {
+    auto result = peek();
     if (result.kind != kind)
         return Token::createExpected(alloc, diagnostics, result, kind, lastConsumed);
 
@@ -1296,7 +1298,6 @@ bool Preprocessor::MacroDef::needsArgs() const {
 
 MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentList() {
     // parse all formal arguments
-    currentMode = LexerMode::Directive;
     auto openParen = consume();
     SmallVectorSized<TokenOrSyntax, 16> arguments;
     parseArgumentList(arguments, [this]() { return parseFormalArgument(); });
@@ -1310,7 +1311,6 @@ MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentLis
 
 MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentList() {
     // macro has arguments, so we expect to see them here
-    currentMode = LexerMode::Normal;
     if (!peek(TokenKind::OpenParenthesis)) {
         pp.addDiag(DiagCode::ExpectedMacroArgs, peek().location());
         return nullptr;
@@ -1340,7 +1340,7 @@ void Preprocessor::MacroParser::parseArgumentList(SmallVector<TokenOrSyntax>& re
 }
 
 MacroActualArgumentSyntax* Preprocessor::MacroParser::parseActualArgument() {
-    auto arg = parseTokenList();
+    auto arg = parseTokenList(true);
     return pp.alloc.emplace<MacroActualArgumentSyntax>(arg);
 }
 
@@ -1354,13 +1354,13 @@ MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
     MacroArgumentDefaultSyntax* argDef = nullptr;
     if (peek(TokenKind::Equals)) {
         auto equals = consume();
-        argDef = pp.alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseTokenList());
+        argDef = pp.alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseTokenList(false));
     }
 
     return pp.alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef);
 }
 
-span<Token> Preprocessor::MacroParser::parseTokenList() {
+span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
     // comma and right parenthesis only end the default token list if they are
     // not inside a nested pair of (), [], or {}
     // otherwise, keep swallowing tokens as part of the default
@@ -1368,9 +1368,11 @@ span<Token> Preprocessor::MacroParser::parseTokenList() {
     SmallVectorSized<TokenKind, 16> delimPairStack;
     while (true) {
         auto kind = peek().kind;
-        if (kind == TokenKind::EndOfDirective || kind == TokenKind::EndOfFile) {
-            if (!delimPairStack.empty())
-                pp.addDiag(DiagCode::UnbalancedMacroArgDims, peek().location()) << getTokenKindText(delimPairStack.back());
+        if (kind == TokenKind::EndOfFile || (!allowNewlines && !isOnSameLine(peek()))) {
+            if (!delimPairStack.empty()) {
+                pp.addDiag(DiagCode::UnbalancedMacroArgDims, tokens.back().location())
+                    << getTokenKindText(delimPairStack.back());
+            }
             break;
         }
 
@@ -1413,19 +1415,19 @@ Token Preprocessor::MacroParser::next() {
 Token Preprocessor::MacroParser::peek() {
     if (currentIndex < buffer.size())
         return buffer[currentIndex];
-    return pp.peek(currentMode);
+    return pp.peek();
 }
 
 Token Preprocessor::MacroParser::consume() {
     auto result = next();
     if (result)
         return result;
-    return pp.consume(currentMode);
+    return pp.consume();
 }
 
 Token Preprocessor::MacroParser::expect(TokenKind kind) {
     if (currentIndex >= buffer.size())
-        return pp.expect(kind, currentMode);
+        return pp.expect(kind);
 
     if (buffer[currentIndex].kind != kind) {
         Token last = currentIndex > 0 ? buffer[currentIndex - 1] : Token();

@@ -53,11 +53,8 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
 
     if (includeTrivia) {
         if (includePreprocessed || !sourceManager) {
-            bool isFromMacro = sourceManager && sourceManager->isMacroLoc(token.location());
-            for (const auto& t : token.trivia()) {
-                if (!isFromMacro || t.kind != TriviaKind::LineContinuation)
-                    print(t);
-            }
+            for (const auto& t : token.trivia())
+                print(t);
         }
         else {
             // Exclude any trivia that is from a preprocessed location as well. In order

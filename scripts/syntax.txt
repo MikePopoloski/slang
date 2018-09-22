@@ -1472,7 +1472,6 @@ DirectiveSyntax final=false
 token directive
 
 SimpleDirectiveSyntax base=DirectiveSyntax
-token endOfDirective
 
 kindmap<SimpleDirectiveSyntax>
 CellDefineDirective PragmaDirective UnconnectedDriveDirective
@@ -1481,7 +1480,6 @@ ResetAllDirective UndefineAllDirective
 
 IncludeDirectiveSyntax base=DirectiveSyntax kind=IncludeDirective
 token fileName
-token endOfDirective
 
 ConditionalBranchDirectiveSyntax base=DirectiveSyntax
 token name
@@ -1513,7 +1511,6 @@ DefineDirectiveSyntax base=DirectiveSyntax kind=DefineDirective
 token name
 MacroFormalArgumentListSyntax? formalArguments
 tokenlist body
-token endOfDirective
 
 MacroActualArgumentSyntax kind=MacroActualArgument
 tokenlist tokens
@@ -1532,22 +1529,17 @@ token timeUnitUnit
 token slash
 token timePrecision
 token timePrecisionUnit
-token endOfDirective
 
 DefaultNetTypeDirectiveSyntax base=DirectiveSyntax kind=DefaultNetTypeDirective
 token netType
-token endOfDirective
 
 LineDirectiveSyntax base=DirectiveSyntax kind=LineDirective
 token lineNumber
 token fileName
 token level
-token endOfDirective
 
 UndefDirectiveSyntax base=DirectiveSyntax kind=UndefDirective
 token name
-token endOfDirective
 
 BeginKeywordsDirectiveSyntax base=DirectiveSyntax kind=BeginKeywordsDirective
 token versionSpecifier
-token endOfDirective

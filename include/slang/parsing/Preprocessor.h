@@ -105,12 +105,11 @@ public:
 
 private:
     // Internal methods to grab and handle the next token
-    Token next(LexerMode mode);
-    Token nextRaw(LexerMode mode);
+    Token nextProcessed();
+    Token nextRaw();
 
     // directive handling methods
-    Token handleDirectives(LexerMode mode, Token token);
-    Token handlePossibleConcatenation(LexerMode mode, Token left, Token right);
+    Token handleDirectives(Token token);
     Trivia handleIncludeDirective(Token directive);
     Trivia handleResetAllDirective(Token directive);
     Trivia handleDefineDirective(Token directive);
@@ -126,10 +125,7 @@ private:
     Trivia handleUndefineAllDirective(Token directive);
     Trivia handleBeginKeywordsDirective(Token directive);
     Trivia handleEndKeywordsDirective(Token directive);
-
-    // Shared method to consume up to the end of a directive line
-    Token parseEndOfDirective(bool suppressError = false);
-    Trivia createSimpleDirective(Token directive, bool suppressError = false);
+    Trivia createSimpleDirective(Token directive);
 
     // Determines whether the else branch of a conditional directive should be taken
     bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, string_view macroName);
@@ -174,10 +170,10 @@ private:
     bool applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest);
 
     // functions to advance the underlying token stream
-    Token peek(LexerMode mode = LexerMode::Directive);
-    Token consume(LexerMode mode = LexerMode::Directive);
-    Token expect(TokenKind kind, LexerMode mode = LexerMode::Directive);
-    bool peek(TokenKind kind, LexerMode mode = LexerMode::Directive) { return peek(mode).kind == kind; }
+    Token peek();
+    Token consume();
+    Token expect(TokenKind kind);
+    bool peek(TokenKind kind) { return peek().kind == kind; }
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
 
@@ -223,7 +219,7 @@ private:
 
         MacroActualArgumentSyntax* parseActualArgument();
         MacroFormalArgumentSyntax* parseFormalArgument();
-        span<Token> parseTokenList();
+        span<Token> parseTokenList(bool allowNewlines);
 
         Token peek();
         Token consume();
@@ -233,11 +229,6 @@ private:
         Preprocessor& pp;
         span<Token const> buffer;
         uint32_t currentIndex = 0;
-
-        // When we're parsing formal arguments, we're in directive mode since the macro needs to
-        // end at the current line (unless there's a continuation character). For actual arguments,
-        // we want to freely span multiple lines.
-        LexerMode currentMode = LexerMode::Normal;
     };
 
     SourceManager& sourceManager;
@@ -261,9 +252,6 @@ private:
 
     // the latest token pulled from a lexer
     Token currentToken;
-
-    // holds a token for looking ahead to check for macro concatenation
-    Token lookaheadToken;
 
     // the last token consumed before the currentToken; used to back up and
     // report errors in a different location in certain scenarios

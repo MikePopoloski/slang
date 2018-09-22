@@ -135,17 +135,6 @@ TEST_CASE("Block comment (embedded null)") {
     CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
 }
 
-TEST_CASE("Block comment (directive with newline)") {
-    auto& text = "`resetall /* comment\n asdf */";
-    Token token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(token.trivia().size() == 1);
-    CHECK(token.trivia()[0].kind == TriviaKind::Directive);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::SplitBlockCommentInDirective);
-}
-
 TEST_CASE("Block Comment (nested)") {
     auto& text = "/* comment /* stuff */";
     Token token = lexToken(text);
@@ -584,8 +573,8 @@ TEST_CASE("Directive continuation") {
     REQUIRE(t.syntax()->kind == SyntaxKind::DefineDirective);
 
     const DefineDirectiveSyntax& define = t.syntax()->as<DefineDirectiveSyntax>();
-    REQUIRE(define.body.size() == 3);
-    CHECK(define.body[2].valueText() == "baz");
+    REQUIRE(define.body.size() == 5);
+    CHECK(define.body[4].valueText() == "baz");
 
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -1003,7 +992,7 @@ void testDirectivePunctuation(TokenKind kind) {
     auto buffer = getSourceManager().assignText(text);
     Lexer lexer(buffer, alloc, diagnostics);
 
-    Token token = lexer.lex(LexerMode::Directive);
+    Token token = lexer.lex();
 
     CHECK(token.kind == kind);
     CHECK(token.toString() == text);
@@ -1039,32 +1028,4 @@ TEST_CASE("Punctuation corner cases") {
     token = lexToken("|-");
     CHECK(token.kind == TokenKind::Or);
     CHECK_DIAGNOSTICS_EMPTY;
-}
-
-TEST_CASE("Include file name") {
-    auto& text = "  <asdf>";
-    Token token = lexRawToken(text, LexerMode::IncludeFileName);
-
-    CHECK(token.kind == TokenKind::IncludeFileName);
-    CHECK(token.toString() == text);
-    CHECK(token.valueText() == "<asdf>");
-    CHECK_DIAGNOSTICS_EMPTY;
-}
-
-TEST_CASE("Include file name (bad)") {
-    auto& text = "  asdf";
-    Token token = lexRawToken(text, LexerMode::IncludeFileName);
-
-    CHECK(token.kind == TokenKind::IncludeFileName);
-    REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics.back().code == DiagCode::ExpectedIncludeFileName);
-}
-
-TEST_CASE("Include file name (unterminated)") {
-    auto& text = "  \"asdf";
-    Token token = lexRawToken(text, LexerMode::IncludeFileName);
-
-    CHECK(token.kind == TokenKind::IncludeFileName);
-    REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics.back().code == DiagCode::ExpectedIncludeFileName);
 }

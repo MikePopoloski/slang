@@ -5133,10 +5133,9 @@ struct DirectiveSyntax : public SyntaxNode {
 };
 
 struct SimpleDirectiveSyntax : public DirectiveSyntax {
-    Token endOfDirective;
 
-    SimpleDirectiveSyntax(SyntaxKind kind, Token directive, Token endOfDirective) :
-        DirectiveSyntax(kind, directive), endOfDirective(endOfDirective) {
+    SimpleDirectiveSyntax(SyntaxKind kind, Token directive) :
+        DirectiveSyntax(kind, directive) {
     }
 
     static bool isKind(SyntaxKind kind);
@@ -5150,10 +5149,9 @@ struct SimpleDirectiveSyntax : public DirectiveSyntax {
 
 struct IncludeDirectiveSyntax : public DirectiveSyntax {
     Token fileName;
-    Token endOfDirective;
 
-    IncludeDirectiveSyntax(Token directive, Token fileName, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::IncludeDirective, directive), fileName(fileName), endOfDirective(endOfDirective) {
+    IncludeDirectiveSyntax(Token directive, Token fileName) :
+        DirectiveSyntax(SyntaxKind::IncludeDirective, directive), fileName(fileName) {
     }
 
     static bool isKind(SyntaxKind kind);
@@ -5261,10 +5259,9 @@ struct DefineDirectiveSyntax : public DirectiveSyntax {
     Token name;
     MacroFormalArgumentListSyntax* formalArguments;
     TokenList body;
-    Token endOfDirective;
 
-    DefineDirectiveSyntax(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::DefineDirective, directive), name(name), formalArguments(formalArguments), body(body), endOfDirective(endOfDirective) {
+    DefineDirectiveSyntax(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body) :
+        DirectiveSyntax(SyntaxKind::DefineDirective, directive), name(name), formalArguments(formalArguments), body(body) {
         if (this->formalArguments) this->formalArguments->parent = this;
         this->body.parent = this;
     }
@@ -5339,10 +5336,9 @@ struct TimescaleDirectiveSyntax : public DirectiveSyntax {
     Token slash;
     Token timePrecision;
     Token timePrecisionUnit;
-    Token endOfDirective;
 
-    TimescaleDirectiveSyntax(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::TimescaleDirective, directive), timeUnit(timeUnit), timeUnitUnit(timeUnitUnit), slash(slash), timePrecision(timePrecision), timePrecisionUnit(timePrecisionUnit), endOfDirective(endOfDirective) {
+    TimescaleDirectiveSyntax(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit) :
+        DirectiveSyntax(SyntaxKind::TimescaleDirective, directive), timeUnit(timeUnit), timeUnitUnit(timeUnitUnit), slash(slash), timePrecision(timePrecision), timePrecisionUnit(timePrecisionUnit) {
     }
 
     static bool isKind(SyntaxKind kind);
@@ -5356,10 +5352,9 @@ struct TimescaleDirectiveSyntax : public DirectiveSyntax {
 
 struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
     Token netType;
-    Token endOfDirective;
 
-    DefaultNetTypeDirectiveSyntax(Token directive, Token netType, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::DefaultNetTypeDirective, directive), netType(netType), endOfDirective(endOfDirective) {
+    DefaultNetTypeDirectiveSyntax(Token directive, Token netType) :
+        DirectiveSyntax(SyntaxKind::DefaultNetTypeDirective, directive), netType(netType) {
     }
 
     static bool isKind(SyntaxKind kind);
@@ -5375,10 +5370,9 @@ struct LineDirectiveSyntax : public DirectiveSyntax {
     Token lineNumber;
     Token fileName;
     Token level;
-    Token endOfDirective;
 
-    LineDirectiveSyntax(Token directive, Token lineNumber, Token fileName, Token level, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::LineDirective, directive), lineNumber(lineNumber), fileName(fileName), level(level), endOfDirective(endOfDirective) {
+    LineDirectiveSyntax(Token directive, Token lineNumber, Token fileName, Token level) :
+        DirectiveSyntax(SyntaxKind::LineDirective, directive), lineNumber(lineNumber), fileName(fileName), level(level) {
     }
 
     static bool isKind(SyntaxKind kind);
@@ -5392,10 +5386,9 @@ struct LineDirectiveSyntax : public DirectiveSyntax {
 
 struct UndefDirectiveSyntax : public DirectiveSyntax {
     Token name;
-    Token endOfDirective;
 
-    UndefDirectiveSyntax(Token directive, Token name, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::UndefDirective, directive), name(name), endOfDirective(endOfDirective) {
+    UndefDirectiveSyntax(Token directive, Token name) :
+        DirectiveSyntax(SyntaxKind::UndefDirective, directive), name(name) {
     }
 
     static bool isKind(SyntaxKind kind);
@@ -5409,10 +5402,9 @@ struct UndefDirectiveSyntax : public DirectiveSyntax {
 
 struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
     Token versionSpecifier;
-    Token endOfDirective;
 
-    BeginKeywordsDirectiveSyntax(Token directive, Token versionSpecifier, Token endOfDirective) :
-        DirectiveSyntax(SyntaxKind::BeginKeywordsDirective, directive), versionSpecifier(versionSpecifier), endOfDirective(endOfDirective) {
+    BeginKeywordsDirectiveSyntax(Token directive, Token versionSpecifier) :
+        DirectiveSyntax(SyntaxKind::BeginKeywordsDirective, directive), versionSpecifier(versionSpecifier) {
     }
 
     static bool isKind(SyntaxKind kind);
@@ -5438,7 +5430,7 @@ public:
     AttributeInstanceSyntax& attributeInstance(Token openParen, SeparatedSyntaxList<AttributeSpecSyntax> specs, Token closeParen);
     AttributeSpecSyntax& attributeSpec(Token name, EqualsValueClauseSyntax* value);
     BadExpressionSyntax& badExpression(ExpressionSyntax& expr);
-    BeginKeywordsDirectiveSyntax& beginKeywordsDirective(Token directive, Token versionSpecifier, Token endOfDirective);
+    BeginKeywordsDirectiveSyntax& beginKeywordsDirective(Token directive, Token versionSpecifier);
     BinaryBlockEventExpressionSyntax& binaryBlockEventExpression(BlockEventExpressionSyntax& left, Token orKeyword, BlockEventExpressionSyntax& right);
     BinaryEventExpressionSyntax& binaryEventExpression(EventExpressionSyntax& left, Token operatorToken, EventExpressionSyntax& right);
     BinaryExpressionSyntax& binaryExpression(SyntaxKind kind, ExpressionSyntax& left, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& right);
@@ -5484,9 +5476,9 @@ public:
     DefParamSyntax& defParam(SyntaxList<AttributeInstanceSyntax> attributes, Token defparam, SeparatedSyntaxList<DefParamAssignmentSyntax> assignments, Token semi);
     DefaultCaseItemSyntax& defaultCaseItem(Token defaultKeyword, Token colon, SyntaxNode& clause);
     DefaultCoverageBinInitializerSyntax& defaultCoverageBinInitializer(Token defaultKeyword, Token sequenceKeyword);
-    DefaultNetTypeDirectiveSyntax& defaultNetTypeDirective(Token directive, Token netType, Token endOfDirective);
+    DefaultNetTypeDirectiveSyntax& defaultNetTypeDirective(Token directive, Token netType);
     DeferredAssertionSyntax& deferredAssertion(Token hash, Token zero, Token finalKeyword);
-    DefineDirectiveSyntax& defineDirective(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body, Token endOfDirective);
+    DefineDirectiveSyntax& defineDirective(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body);
     DelaySyntax& delay(SyntaxKind kind, Token hash, ExpressionSyntax& delayValue);
     DisableConstraintSyntax& disableConstraint(Token disable, Token soft, NameSyntax& name, Token semi);
     DisableForkStatementSyntax& disableForkStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, Token fork, Token semi);
@@ -5551,7 +5543,7 @@ public:
     ImplicitEventControlSyntax& implicitEventControl(Token atStar);
     ImplicitNonAnsiPortSyntax& implicitNonAnsiPort(ExpressionSyntax& expr);
     ImplicitTypeSyntax& implicitType(Token signing, SyntaxList<VariableDimensionSyntax> dimensions);
-    IncludeDirectiveSyntax& includeDirective(Token directive, Token fileName, Token endOfDirective);
+    IncludeDirectiveSyntax& includeDirective(Token directive, Token fileName);
     InsideExpressionSyntax& insideExpression(ExpressionSyntax& expr, Token inside, OpenRangeListSyntax& ranges);
     IntegerTypeSyntax& integerType(SyntaxKind kind, Token keyword, Token signing, SyntaxList<VariableDimensionSyntax> dimensions);
     IntegerVectorExpressionSyntax& integerVectorExpression(Token size, Token base, Token value);
@@ -5562,7 +5554,7 @@ public:
     KeywordNameSyntax& keywordName(SyntaxKind kind, Token keyword);
     KeywordTypeSyntax& keywordType(SyntaxKind kind, Token keyword);
     LetDeclarationSyntax& letDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token let, Token identifier, AssertionItemPortListSyntax* portList, EqualsValueClauseSyntax& initializer, Token semi);
-    LineDirectiveSyntax& lineDirective(Token directive, Token lineNumber, Token fileName, Token level, Token endOfDirective);
+    LineDirectiveSyntax& lineDirective(Token directive, Token lineNumber, Token fileName, Token level);
     LiteralExpressionSyntax& literalExpression(SyntaxKind kind, Token literal);
     LoopConstraintSyntax& loopConstraint(Token foreachKeyword, ForeachLoopListSyntax& loopList, ConstraintItemSyntax& constraints);
     LoopGenerateSyntax& loopGenerate(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, Token genvar, Token identifier, Token equals, ExpressionSyntax& initialExpr, Token semi1, ExpressionSyntax& stopExpr, Token semi2, ExpressionSyntax& iterationExpr, Token closeParen, MemberSyntax& block);
@@ -5638,7 +5630,7 @@ public:
     SignalEventExpressionSyntax& signalEventExpression(Token edge, ExpressionSyntax& expr);
     SignedCastExpressionSyntax& signedCastExpression(Token signing, Token apostrophe, ParenthesizedExpressionSyntax& inner);
     SimpleAssignmentPatternSyntax& simpleAssignmentPattern(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token closeBrace);
-    SimpleDirectiveSyntax& simpleDirective(SyntaxKind kind, Token directive, Token endOfDirective);
+    SimpleDirectiveSyntax& simpleDirective(SyntaxKind kind, Token directive);
     SolveBeforeConstraintSyntax& solveBeforeConstraint(Token solve, SeparatedSyntaxList<ExpressionSyntax> beforeExpr, Token before, SeparatedSyntaxList<ExpressionSyntax> afterExpr, Token semi);
     StandardCaseItemSyntax& standardCaseItem(SeparatedSyntaxList<ExpressionSyntax> expressions, Token colon, SyntaxNode& clause);
     StreamExpressionSyntax& streamExpression(ExpressionSyntax& expression, StreamExpressionWithRange* withRange);
@@ -5651,7 +5643,7 @@ public:
     TaggedPatternSyntax& taggedPattern(Token tagged, Token memberName, PatternSyntax* pattern);
     TaggedUnionExpressionSyntax& taggedUnionExpression(Token tagged, Token member, ExpressionSyntax* expr);
     TimeUnitsDeclarationSyntax& timeUnitsDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token time, DividerClauseSyntax* divider, Token semi);
-    TimescaleDirectiveSyntax& timescaleDirective(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit, Token endOfDirective);
+    TimescaleDirectiveSyntax& timescaleDirective(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit);
     TimingControlExpressionConcatenationSyntax& timingControlExpressionConcatenation(ExpressionSyntax& left, TimingControlSyntax& timing, ExpressionSyntax& right);
     TimingControlExpressionSyntax& timingControlExpression(TimingControlSyntax& timing, ExpressionSyntax& expr);
     TimingControlStatementSyntax& timingControlStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, TimingControlSyntax& timingControl, StatementSyntax& statement);
@@ -5662,7 +5654,7 @@ public:
     TypeReferenceSyntax& typeReference(Token typeKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen);
     TypedefDeclarationSyntax& typedefDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, DataTypeSyntax& type, Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token semi);
     UnconditionalBranchDirectiveSyntax& unconditionalBranchDirective(SyntaxKind kind, Token directive, TokenList disabledTokens);
-    UndefDirectiveSyntax& undefDirective(Token directive, Token name, Token endOfDirective);
+    UndefDirectiveSyntax& undefDirective(Token directive, Token name);
     UniquenessConstraintSyntax& uniquenessConstraint(Token unique, OpenRangeListSyntax& ranges, Token semi);
     VarDataTypeSyntax& varDataType(Token var, DataTypeSyntax& type);
     VariableDeclaratorSyntax& variableDeclarator(Token name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* initializer);

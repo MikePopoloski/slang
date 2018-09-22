@@ -89,12 +89,12 @@ inline Token lexToken(string_view text) {
     return token;
 }
 
-inline Token lexRawToken(string_view text, LexerMode mode = LexerMode::Normal) {
+inline Token lexRawToken(string_view text) {
     diagnostics.clear();
     auto buffer = getSourceManager().assignText(text);
     Lexer lexer(buffer, alloc, diagnostics);
 
-    Token token = lexer.lex(mode);
+    Token token = lexer.lex();
     REQUIRE(token);
     return token;
 }

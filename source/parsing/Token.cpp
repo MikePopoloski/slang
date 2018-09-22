@@ -196,9 +196,9 @@ string_view Token::valueText() const {
                     return "";
             }
             break;
-        case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
             return info->stringText();
+        case TokenKind::IncludeFileName:
         case TokenKind::Directive:
         case TokenKind::MacroUsage:
             return info->rawText;
@@ -227,8 +227,8 @@ string_view Token::rawText() const {
             case TokenKind::Directive:
             case TokenKind::MacroUsage:
             case TokenKind::EmptyMacroArgument:
+            case TokenKind::LineContinuation:
                 return info->rawText;
-            case TokenKind::EndOfDirective:
             case TokenKind::EndOfFile:
                 return "";
             default: THROW_UNREACHABLE;
@@ -273,14 +273,6 @@ IdentifierType Token::identifierType() const {
 SyntaxKind Token::directiveKind() const {
     ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
     return info->directiveKind();
-}
-
-bool Token::hasTrivia(TriviaKind triviaKind) const {
-    for (const auto& t : info->trivia) {
-        if (t.kind == triviaKind)
-            return true;
-    }
-    return false;
 }
 
 Token Token::withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const {

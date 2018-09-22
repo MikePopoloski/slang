@@ -35,7 +35,7 @@ void testDirective(SyntaxKind kind) {
     auto buffer = getSourceManager().assignText(text);
     Lexer lexer(buffer, alloc, diagnostics);
 
-    Token token = lexer.lex(LexerMode::Directive);
+    Token token = lexer.lex();
     REQUIRE(token);
 
     CHECK(token.kind == TokenKind::Directive);
@@ -83,7 +83,6 @@ TEST_CASE("Macro define (simple)") {
 
     const auto& def = token.trivia()[0].syntax()->as<DefineDirectiveSyntax>();
     CHECK(def.name.valueText() == "FOO");
-    CHECK(def.endOfDirective);
     CHECK(def.directive);
     CHECK(!def.formalArguments);
     REQUIRE(def.body.size() == 3);
@@ -104,7 +103,6 @@ TEST_CASE("Macro define (function-like)") {
 
     const auto& def = token.trivia()[0].syntax()->as<DefineDirectiveSyntax>();
     CHECK(def.name.valueText() == "FOO");
-    CHECK(def.endOfDirective);
     CHECK(def.directive);
     REQUIRE(def.formalArguments);
     CHECK(def.formalArguments->args.size() == 1);
@@ -517,38 +515,6 @@ TEST_CASE("Macro bonkers arg substitution") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro implicit concatenate") {
-    auto& text = "`define FOO 8\r\n`define BAR 9\n1`FOO`BAR";
-
-    diagnostics.clear();
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Token token = preprocessor.next();
-    REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.intValue() == 189);
-
-    token = preprocessor.next();
-    CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK_DIAGNOSTICS_EMPTY;
-}
-
-TEST_CASE("Macro nested implicit concatenate") {
-    auto& text = "`define FOO 8\n`define BAR 9`FOO\n1`BAR";
-
-    diagnostics.clear();
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Token token = preprocessor.next();
-    REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.intValue() == 198);
-
-    token = preprocessor.next();
-    CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK_DIAGNOSTICS_EMPTY;
-}
-
 TEST_CASE("Recursive macros") {
     auto& text = R"(
 `define A `A 1
@@ -678,11 +644,11 @@ TEST_CASE("LINE Directive") {
 }
 
 TEST_CASE("LINE Directive as actual arg") {
-    auto& text = "`define FOO(x) x\n`define BAR `FOO(`__LINE__)`__LINE__\n`BAR";
+    auto& text = "`define FOO(x) x\n`define BAR `FOO(`__LINE__)\n`BAR";
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.intValue() == 33);
+    CHECK(token.intValue() == 3);
     CHECK_DIAGNOSTICS_EMPTY;
 }
 

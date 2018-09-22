@@ -50,7 +50,7 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::AttributeInstance: return 3;
         case SyntaxKind::AttributeSpec: return 2;
         case SyntaxKind::BadExpression: return 1;
-        case SyntaxKind::BeginKeywordsDirective: return 3;
+        case SyntaxKind::BeginKeywordsDirective: return 2;
         case SyntaxKind::BinaryAndExpression: return 4;
         case SyntaxKind::BinaryBlockEventExpression: return 3;
         case SyntaxKind::BinaryEventExpression: return 3;
@@ -69,7 +69,7 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::CaseInequalityExpression: return 4;
         case SyntaxKind::CaseStatement: return 10;
         case SyntaxKind::CastExpression: return 3;
-        case SyntaxKind::CellDefineDirective: return 2;
+        case SyntaxKind::CellDefineDirective: return 1;
         case SyntaxKind::ChargeStrength: return 3;
         case SyntaxKind::ClassDeclaration: return 12;
         case SyntaxKind::ClassMethodDeclaration: return 3;
@@ -108,10 +108,10 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::DefParamAssignment: return 2;
         case SyntaxKind::DefaultCaseItem: return 3;
         case SyntaxKind::DefaultCoverageBinInitializer: return 2;
-        case SyntaxKind::DefaultNetTypeDirective: return 3;
+        case SyntaxKind::DefaultNetTypeDirective: return 2;
         case SyntaxKind::DefaultPatternKeyExpression: return 1;
         case SyntaxKind::DeferredAssertion: return 3;
-        case SyntaxKind::DefineDirective: return 5;
+        case SyntaxKind::DefineDirective: return 4;
         case SyntaxKind::DelayControl: return 2;
         case SyntaxKind::DescendingRangeSelect: return 3;
         case SyntaxKind::DisableConstraint: return 4;
@@ -138,9 +138,9 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::EmptyMember: return 3;
         case SyntaxKind::EmptyQueueExpression: return 2;
         case SyntaxKind::EmptyStatement: return 3;
-        case SyntaxKind::EndCellDefineDirective: return 2;
+        case SyntaxKind::EndCellDefineDirective: return 1;
         case SyntaxKind::EndIfDirective: return 2;
-        case SyntaxKind::EndKeywordsDirective: return 2;
+        case SyntaxKind::EndKeywordsDirective: return 1;
         case SyntaxKind::EnumType: return 6;
         case SyntaxKind::EqualityExpression: return 4;
         case SyntaxKind::EqualsValueClause: return 2;
@@ -196,7 +196,7 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::ImplicitNonAnsiPort: return 1;
         case SyntaxKind::ImplicitType: return 2;
         case SyntaxKind::ImpliesPropertyExpression: return 4;
-        case SyntaxKind::IncludeDirective: return 3;
+        case SyntaxKind::IncludeDirective: return 2;
         case SyntaxKind::InequalityExpression: return 4;
         case SyntaxKind::InitialBlock: return 3;
         case SyntaxKind::InsideExpression: return 3;
@@ -214,7 +214,7 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::LessThanEqualExpression: return 4;
         case SyntaxKind::LessThanExpression: return 4;
         case SyntaxKind::LetDeclaration: return 6;
-        case SyntaxKind::LineDirective: return 5;
+        case SyntaxKind::LineDirective: return 4;
         case SyntaxKind::LocalScope: return 1;
         case SyntaxKind::LogicType: return 3;
         case SyntaxKind::LogicalAndExpression: return 4;
@@ -265,7 +265,7 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::NewClassExpression: return 3;
         case SyntaxKind::NewExpression: return 2;
         case SyntaxKind::NextTimePropertyExpression: return 3;
-        case SyntaxKind::NoUnconnectedDriveDirective: return 2;
+        case SyntaxKind::NoUnconnectedDriveDirective: return 1;
         case SyntaxKind::NonAnsiPortList: return 3;
         case SyntaxKind::NonOverlappedFollowedByPropertyExpression: return 4;
         case SyntaxKind::NonOverlappedImplicationPropertyExpression: return 4;
@@ -298,7 +298,7 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::PostdecrementExpression: return 3;
         case SyntaxKind::PostincrementExpression: return 3;
         case SyntaxKind::PowerExpression: return 4;
-        case SyntaxKind::PragmaDirective: return 2;
+        case SyntaxKind::PragmaDirective: return 1;
         case SyntaxKind::PrimaryBlockEventExpression: return 2;
         case SyntaxKind::ProceduralAssignStatement: return 7;
         case SyntaxKind::ProceduralDeassignStatement: return 5;
@@ -322,7 +322,7 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::RejectOnPropertyExpression: return 3;
         case SyntaxKind::RepeatedEventControl: return 5;
         case SyntaxKind::ReplicatedAssignmentPattern: return 6;
-        case SyntaxKind::ResetAllDirective: return 2;
+        case SyntaxKind::ResetAllDirective: return 1;
         case SyntaxKind::RestrictPropertyStatement: return 8;
         case SyntaxKind::ReturnStatement: return 5;
         case SyntaxKind::RootScope: return 1;
@@ -367,7 +367,7 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::TimeLiteralExpression: return 1;
         case SyntaxKind::TimeType: return 3;
         case SyntaxKind::TimeUnitsDeclaration: return 5;
-        case SyntaxKind::TimescaleDirective: return 7;
+        case SyntaxKind::TimescaleDirective: return 6;
         case SyntaxKind::TimingControlExpression: return 2;
         case SyntaxKind::TimingControlExpressionConcatenation: return 3;
         case SyntaxKind::TimingControlStatement: return 4;
@@ -394,9 +394,9 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::UnarySequenceDelayExpression: return 3;
         case SyntaxKind::UnarySequenceEventExpression: return 3;
         case SyntaxKind::UnbasedUnsizedLiteralExpression: return 1;
-        case SyntaxKind::UnconnectedDriveDirective: return 2;
-        case SyntaxKind::UndefDirective: return 3;
-        case SyntaxKind::UndefineAllDirective: return 2;
+        case SyntaxKind::UnconnectedDriveDirective: return 1;
+        case SyntaxKind::UndefDirective: return 2;
+        case SyntaxKind::UndefineAllDirective: return 1;
         case SyntaxKind::UnionType: return 8;
         case SyntaxKind::UniquenessConstraint: return 3;
         case SyntaxKind::UnitScope: return 1;
@@ -799,7 +799,6 @@ TokenOrSyntax BeginKeywordsDirectiveSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return directive;
         case 1: return versionSpecifier;
-        case 2: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -808,7 +807,6 @@ ConstTokenOrSyntax BeginKeywordsDirectiveSyntax::getChild(uint32_t index) const 
     switch (index) {
         case 0: return directive;
         case 1: return versionSpecifier;
-        case 2: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -817,7 +815,6 @@ void BeginKeywordsDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child)
     switch (index) {
         case 0: directive = child.token(); return;
         case 1: versionSpecifier = child.token(); return;
-        case 2: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -2816,7 +2813,6 @@ TokenOrSyntax DefaultNetTypeDirectiveSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return directive;
         case 1: return netType;
-        case 2: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -2825,7 +2821,6 @@ ConstTokenOrSyntax DefaultNetTypeDirectiveSyntax::getChild(uint32_t index) const
     switch (index) {
         case 0: return directive;
         case 1: return netType;
-        case 2: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -2834,7 +2829,6 @@ void DefaultNetTypeDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child
     switch (index) {
         case 0: directive = child.token(); return;
         case 1: netType = child.token(); return;
-        case 2: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -2888,7 +2882,6 @@ TokenOrSyntax DefineDirectiveSyntax::getChild(uint32_t index) {
         case 1: return name;
         case 2: return formalArguments;
         case 3: return &body;
-        case 4: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -2899,7 +2892,6 @@ ConstTokenOrSyntax DefineDirectiveSyntax::getChild(uint32_t index) const {
         case 1: return name;
         case 2: return formalArguments;
         case 3: return &body;
-        case 4: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -2910,7 +2902,6 @@ void DefineDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 1: name = child.token(); return;
         case 2: formalArguments = &child.node()->as<MacroFormalArgumentListSyntax>(); return;
         case 3: body = child.node()->as<TokenList>(); return;
-        case 4: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5555,7 +5546,6 @@ TokenOrSyntax IncludeDirectiveSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return directive;
         case 1: return fileName;
-        case 2: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -5564,7 +5554,6 @@ ConstTokenOrSyntax IncludeDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return fileName;
-        case 2: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -5573,7 +5562,6 @@ void IncludeDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: directive = child.token(); return;
         case 1: fileName = child.token(); return;
-        case 2: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -5982,7 +5970,6 @@ TokenOrSyntax LineDirectiveSyntax::getChild(uint32_t index) {
         case 1: return lineNumber;
         case 2: return fileName;
         case 3: return level;
-        case 4: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -5993,7 +5980,6 @@ ConstTokenOrSyntax LineDirectiveSyntax::getChild(uint32_t index) const {
         case 1: return lineNumber;
         case 2: return fileName;
         case 3: return level;
-        case 4: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -6004,7 +5990,6 @@ void LineDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 1: lineNumber = child.token(); return;
         case 2: fileName = child.token(); return;
         case 3: level = child.token(); return;
-        case 4: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -9124,7 +9109,6 @@ bool SimpleDirectiveSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax SimpleDirectiveSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return directive;
-        case 1: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -9132,7 +9116,6 @@ TokenOrSyntax SimpleDirectiveSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax SimpleDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
-        case 1: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -9140,7 +9123,6 @@ ConstTokenOrSyntax SimpleDirectiveSyntax::getChild(uint32_t index) const {
 void SimpleDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: directive = child.token(); return;
-        case 1: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -9707,7 +9689,6 @@ TokenOrSyntax TimescaleDirectiveSyntax::getChild(uint32_t index) {
         case 3: return slash;
         case 4: return timePrecision;
         case 5: return timePrecisionUnit;
-        case 6: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -9720,7 +9701,6 @@ ConstTokenOrSyntax TimescaleDirectiveSyntax::getChild(uint32_t index) const {
         case 3: return slash;
         case 4: return timePrecision;
         case 5: return timePrecisionUnit;
-        case 6: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -9733,7 +9713,6 @@ void TimescaleDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 3: slash = child.token(); return;
         case 4: timePrecision = child.token(); return;
         case 5: timePrecisionUnit = child.token(); return;
-        case 6: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10128,7 +10107,6 @@ TokenOrSyntax UndefDirectiveSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return directive;
         case 1: return name;
-        case 2: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -10137,7 +10115,6 @@ ConstTokenOrSyntax UndefDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return name;
-        case 2: return endOfDirective;
         default: return nullptr;
     }
 }
@@ -10146,7 +10123,6 @@ void UndefDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: directive = child.token(); return;
         case 1: name = child.token(); return;
-        case 2: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -10776,8 +10752,8 @@ BadExpressionSyntax& SyntaxFactory::badExpression(ExpressionSyntax& expr) {
     return *alloc.emplace<BadExpressionSyntax>(expr);
 }
 
-BeginKeywordsDirectiveSyntax& SyntaxFactory::beginKeywordsDirective(Token directive, Token versionSpecifier, Token endOfDirective) {
-    return *alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionSpecifier, endOfDirective);
+BeginKeywordsDirectiveSyntax& SyntaxFactory::beginKeywordsDirective(Token directive, Token versionSpecifier) {
+    return *alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionSpecifier);
 }
 
 BinaryBlockEventExpressionSyntax& SyntaxFactory::binaryBlockEventExpression(BlockEventExpressionSyntax& left, Token orKeyword, BlockEventExpressionSyntax& right) {
@@ -10960,16 +10936,16 @@ DefaultCoverageBinInitializerSyntax& SyntaxFactory::defaultCoverageBinInitialize
     return *alloc.emplace<DefaultCoverageBinInitializerSyntax>(defaultKeyword, sequenceKeyword);
 }
 
-DefaultNetTypeDirectiveSyntax& SyntaxFactory::defaultNetTypeDirective(Token directive, Token netType, Token endOfDirective) {
-    return *alloc.emplace<DefaultNetTypeDirectiveSyntax>(directive, netType, endOfDirective);
+DefaultNetTypeDirectiveSyntax& SyntaxFactory::defaultNetTypeDirective(Token directive, Token netType) {
+    return *alloc.emplace<DefaultNetTypeDirectiveSyntax>(directive, netType);
 }
 
 DeferredAssertionSyntax& SyntaxFactory::deferredAssertion(Token hash, Token zero, Token finalKeyword) {
     return *alloc.emplace<DeferredAssertionSyntax>(hash, zero, finalKeyword);
 }
 
-DefineDirectiveSyntax& SyntaxFactory::defineDirective(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body, Token endOfDirective) {
-    return *alloc.emplace<DefineDirectiveSyntax>(directive, name, formalArguments, body, endOfDirective);
+DefineDirectiveSyntax& SyntaxFactory::defineDirective(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body) {
+    return *alloc.emplace<DefineDirectiveSyntax>(directive, name, formalArguments, body);
 }
 
 DelaySyntax& SyntaxFactory::delay(SyntaxKind kind, Token hash, ExpressionSyntax& delayValue) {
@@ -11228,8 +11204,8 @@ ImplicitTypeSyntax& SyntaxFactory::implicitType(Token signing, SyntaxList<Variab
     return *alloc.emplace<ImplicitTypeSyntax>(signing, dimensions);
 }
 
-IncludeDirectiveSyntax& SyntaxFactory::includeDirective(Token directive, Token fileName, Token endOfDirective) {
-    return *alloc.emplace<IncludeDirectiveSyntax>(directive, fileName, endOfDirective);
+IncludeDirectiveSyntax& SyntaxFactory::includeDirective(Token directive, Token fileName) {
+    return *alloc.emplace<IncludeDirectiveSyntax>(directive, fileName);
 }
 
 InsideExpressionSyntax& SyntaxFactory::insideExpression(ExpressionSyntax& expr, Token inside, OpenRangeListSyntax& ranges) {
@@ -11272,8 +11248,8 @@ LetDeclarationSyntax& SyntaxFactory::letDeclaration(SyntaxList<AttributeInstance
     return *alloc.emplace<LetDeclarationSyntax>(attributes, let, identifier, portList, initializer, semi);
 }
 
-LineDirectiveSyntax& SyntaxFactory::lineDirective(Token directive, Token lineNumber, Token fileName, Token level, Token endOfDirective) {
-    return *alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName, level, endOfDirective);
+LineDirectiveSyntax& SyntaxFactory::lineDirective(Token directive, Token lineNumber, Token fileName, Token level) {
+    return *alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName, level);
 }
 
 LiteralExpressionSyntax& SyntaxFactory::literalExpression(SyntaxKind kind, Token literal) {
@@ -11576,8 +11552,8 @@ SimpleAssignmentPatternSyntax& SyntaxFactory::simpleAssignmentPattern(Token open
     return *alloc.emplace<SimpleAssignmentPatternSyntax>(openBrace, items, closeBrace);
 }
 
-SimpleDirectiveSyntax& SyntaxFactory::simpleDirective(SyntaxKind kind, Token directive, Token endOfDirective) {
-    return *alloc.emplace<SimpleDirectiveSyntax>(kind, directive, endOfDirective);
+SimpleDirectiveSyntax& SyntaxFactory::simpleDirective(SyntaxKind kind, Token directive) {
+    return *alloc.emplace<SimpleDirectiveSyntax>(kind, directive);
 }
 
 SolveBeforeConstraintSyntax& SyntaxFactory::solveBeforeConstraint(Token solve, SeparatedSyntaxList<ExpressionSyntax> beforeExpr, Token before, SeparatedSyntaxList<ExpressionSyntax> afterExpr, Token semi) {
@@ -11628,8 +11604,8 @@ TimeUnitsDeclarationSyntax& SyntaxFactory::timeUnitsDeclaration(SyntaxList<Attri
     return *alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, semi);
 }
 
-TimescaleDirectiveSyntax& SyntaxFactory::timescaleDirective(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit, Token endOfDirective) {
-    return *alloc.emplace<TimescaleDirectiveSyntax>(directive, timeUnit, timeUnitUnit, slash, timePrecision, timePrecisionUnit, endOfDirective);
+TimescaleDirectiveSyntax& SyntaxFactory::timescaleDirective(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit) {
+    return *alloc.emplace<TimescaleDirectiveSyntax>(directive, timeUnit, timeUnitUnit, slash, timePrecision, timePrecisionUnit);
 }
 
 TimingControlExpressionConcatenationSyntax& SyntaxFactory::timingControlExpressionConcatenation(ExpressionSyntax& left, TimingControlSyntax& timing, ExpressionSyntax& right) {
@@ -11672,8 +11648,8 @@ UnconditionalBranchDirectiveSyntax& SyntaxFactory::unconditionalBranchDirective(
     return *alloc.emplace<UnconditionalBranchDirectiveSyntax>(kind, directive, disabledTokens);
 }
 
-UndefDirectiveSyntax& SyntaxFactory::undefDirective(Token directive, Token name, Token endOfDirective) {
-    return *alloc.emplace<UndefDirectiveSyntax>(directive, name, endOfDirective);
+UndefDirectiveSyntax& SyntaxFactory::undefDirective(Token directive, Token name) {
+    return *alloc.emplace<UndefDirectiveSyntax>(directive, name);
 }
 
 UniquenessConstraintSyntax& SyntaxFactory::uniquenessConstraint(Token unique, OpenRangeListSyntax& ranges, Token semi) {

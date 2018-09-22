@@ -54,7 +54,6 @@ enum class TriviaKind : uint8_t {
     Unknown,
     Whitespace,
     EndOfLine,
-    LineContinuation,
     LineComment,
     BlockComment,
     DisabledText,
@@ -203,9 +202,6 @@ public:
     NumericTokenFlags numericFlags() const;
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
-
-    /// Determines whether the token has the given trivia.
-    bool hasTrivia(TriviaKind triviaKind) const;
 
     bool valid() const { return info != nullptr; }
     explicit operator bool() const { return valid(); }
@@ -603,13 +599,13 @@ enum class TokenKind : uint16_t {
 
     // directives (these get consumed by the preprocessor and don't make it downstream to the parser)
     Directive,
-    EndOfDirective,
     IncludeFileName,
     MacroUsage,
     MacroQuote,
     MacroEscapedQuote,
     MacroPaste,
-    EmptyMacroArgument
+    EmptyMacroArgument,
+    LineContinuation
 };
 
 }
