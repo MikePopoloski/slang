@@ -552,9 +552,13 @@ TEST_CASE("Two expansions of same macro") {
 `define FOO foo
 `define BAR `FOO `FOO
 `BAR
+
+`define BAZ(a) a
+`BAZ(`FOO`FOO)
 )";
     auto& expected = R"(
 foo foo
+foofoo
 )";
 
     std::string result = preprocess(text);

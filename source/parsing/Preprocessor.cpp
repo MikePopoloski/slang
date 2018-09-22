@@ -830,8 +830,17 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
     // if the macro expanded into any tokens at all, set the pointer
     // so that we'll pull from them next
-    if (!expandedTokens.empty())
+    if (!expandedTokens.empty()) {
+        // Verify that we haven't failed to expand any nested macros.
+        for (Token token : expandedTokens) {
+            if (token.kind == TokenKind::Directive && token.directiveKind() == SyntaxKind::MacroUsage) {
+                addDiag(DiagCode::UnknownDirective, token.location()) << token.valueText();
+                return actualArgs;
+            }
+        }
+
         currentMacroToken = expandedTokens.begin();
+    }
 
     return actualArgs;
 }
@@ -1170,9 +1179,7 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
         // loop through each token in the replacement list and expand it if it's a nested macro
         Token token;
         while ((token = parser.next())) {
-            if ((expandedSomething && token.trivia().empty()) || token.kind != TokenKind::Directive ||
-                token.directiveKind() != SyntaxKind::MacroUsage) {
-
+            if (token.kind != TokenKind::Directive || token.directiveKind() != SyntaxKind::MacroUsage) {
                 currentBuffer->append(token);
             }
             else {
