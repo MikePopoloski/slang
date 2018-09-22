@@ -246,9 +246,8 @@ Token Preprocessor::nextRaw() {
     if (lexerStack.empty())
         return token;
 
-    // Rare case: we have an EoF from an include file... we don't want to
-    // return that one, but we do want to merge its trivia with whatever comes
-    // next.
+    // Rare case: we have an EoF from an include file... we don't want to return
+    // that one, but we do want to merge its trivia with whatever comes next.
     SmallVectorSized<Trivia, 16> trivia;
     auto appendTrivia = [&trivia, this](Token token) {
         SourceLocation loc = token.location();
@@ -766,29 +765,6 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
     return createSimpleDirective(directive);
 }
 
-//Token Preprocessor::parseEndOfDirective(bool suppressError) {
-//    // consume all extraneous tokens as SkippedToken trivia
-//    SmallVectorSized<Token, 32> skipped;
-//    if (!peek(TokenKind::EndOfDirective)) {
-//        if (!suppressError)
-//            addDiag(DiagCode::ExpectedEndOfDirective, peek().location());
-//        do {
-//            skipped.append(consume());
-//        } while (!peek(TokenKind::EndOfDirective));
-//    }
-//
-//    Token eod = consume();
-//    if (!skipped.empty()) {
-//        // splice together the trivia
-//        SmallVectorSized<Trivia, 16> trivia;
-//        trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
-//        trivia.appendRange(eod.trivia());
-//        eod = eod.withTrivia(alloc, trivia.copy(alloc));
-//    }
-//
-//    return eod;
-//}
-
 Trivia Preprocessor::createSimpleDirective(Token directive) {
     auto syntax = alloc.emplace<SimpleDirectiveSyntax>(directive.directiveKind(), directive);
     return Trivia(TriviaKind::Directive, syntax);
@@ -1022,7 +998,12 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
         return false;
     }
 
-    SmallMap<string_view, span<const Token>, 8> argumentMap;
+    struct ArgTokens : public span<const Token> {
+        using span<const Token>::span;
+        bool isExpanded = false;
+    };
+    SmallMap<string_view, ArgTokens, 8> argumentMap;
+
     for (uint32_t i = 0; i < formalList.size(); i++) {
         auto formal = formalList[i];
         auto name = formal->name.valueText();
@@ -1046,14 +1027,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
             }
         }
 
-        // Fully expand out arguments before substitution to make sure we can detect whether
-        // a usage of a macro in a replacement list is valid or an illegal recursion.
-        span<const Token> argTokens = *tokenList;
-        SmallSet<DefineDirectiveSyntax*, 8> alreadyExpanded;
-        if (!expandReplacementList(argTokens, alreadyExpanded))
-            return false;
-
-        argumentMap[name] = argTokens;
+        argumentMap.emplace(name, ArgTokens(*tokenList));
     }
 
     Token endOfArgs = actualArgs->getLastToken();
@@ -1086,6 +1060,18 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
         if (it == argumentMap.end()) {
             appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst, isTopLevel);
             continue;
+        }
+
+        // Fully expand out arguments before substitution to make sure we can detect whether
+        // a usage of a macro in a replacement list is valid or an illegal recursion.
+        if (!it->second.isExpanded) {
+            span<const Token> argTokens = it->second;
+            SmallSet<DefineDirectiveSyntax*, 8> alreadyExpanded;
+            if (!expandReplacementList(argTokens, alreadyExpanded))
+                return false;
+
+            it->second = argTokens;
+            it->second.isExpanded = true;
         }
 
         auto begin = it->second.begin();

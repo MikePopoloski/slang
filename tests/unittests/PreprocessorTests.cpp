@@ -533,6 +533,20 @@ TEST_CASE("Recursive macros") {
     CHECK(diagnostics[1].code == DiagCode::RecursiveMacro);
 }
 
+TEST_CASE("Unknown macro as arg not an error") {
+    auto& text = R"(
+`define FOO(a) foo
+`FOO(`BAZ)
+)";
+    auto& expected = R"(
+foo
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("IfDef branch (taken)") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     Token token = lexToken(text);
