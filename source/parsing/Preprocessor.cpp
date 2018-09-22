@@ -1161,6 +1161,12 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
         MacroParser parser(*this);
         parser.setBuffer(tokens);
 
+        // Each round we will fully expand all macros that we come across. We use the `alreadyExpanded`
+        // set to avoid recursively expanding macros infinitely. On a given iteration through the tokens
+        // though we don't want duplicates uses of the same macro to trigger an error (since it's not
+        // recursive) so defer adding them to the real set until next round.
+        SmallVectorSized<DefineDirectiveSyntax*, 8> nextRoundAlreadyExpanded;
+
         // loop through each token in the replacement list and expand it if it's a nested macro
         Token token;
         while ((token = parser.next())) {
@@ -1179,7 +1185,7 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
                     continue;
                 }
 
-                if (!macro.isIntrinsic() && !alreadyExpanded.insert(macro.syntax).second) {
+                if (!macro.isIntrinsic() && alreadyExpanded.count(macro.syntax)) {
                     addDiag(DiagCode::RecursiveMacro, token.location()) << token.valueText();
                     return false;
                 }
@@ -1195,11 +1201,13 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
                 if (!expandMacro(macro, token, actualArgs, *currentBuffer, false))
                     return false;
 
+                nextRoundAlreadyExpanded.append(macro.syntax);
                 expandedSomething = true;
             }
         }
 
         // keep shaking until there's no more noise!
+        alreadyExpanded.insert(nextRoundAlreadyExpanded.begin(), nextRoundAlreadyExpanded.end());
         tokens = span<Token const>(currentBuffer->begin(), currentBuffer->end());
         std::swap(currentBuffer, nextBuffer);
         currentBuffer->clear();

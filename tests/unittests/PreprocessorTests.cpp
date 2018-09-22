@@ -547,6 +547,21 @@ foo
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Two expansions of same macro") {
+    auto& text = R"(
+`define FOO foo
+`define BAR `FOO `FOO
+`BAR
+)";
+    auto& expected = R"(
+foo foo
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("IfDef branch (taken)") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     Token token = lexToken(text);
