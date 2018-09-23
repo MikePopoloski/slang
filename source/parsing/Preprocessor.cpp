@@ -165,53 +165,74 @@ Token Preprocessor::nextProcessed() {
     if (inMacroBody)
         return token;
 
-    // If we found a directive token, process it and pull another. We don't want
-    // to return directives to the caller; we handle them ourselves and turn them
-    // into trivia.
-    if (token.kind == TokenKind::Directive)
-        token = handleDirectives(token);
-
-    return token;
+    switch (token.kind) {
+        // If we found a directive token, process it and pull another. We don't want
+        // to return directives to the caller; we handle them ourselves and turn them
+        // into trivia.
+        case TokenKind::Directive:
+        case TokenKind::MacroQuote:
+        case TokenKind::MacroEscapedQuote:
+        case TokenKind::MacroPaste:
+        case TokenKind::LineContinuation:
+            return handleDirectives(token);
+        default:
+            return token;
+    }
 }
 
 Token Preprocessor::handleDirectives(Token token) {
     // burn through any preprocessor directives we find and convert them to trivia
     SmallVectorSized<Trivia, 16> trivia;
-    do {
+    while (true) {
         lastConsumed = token;
-        switch (token.directiveKind()) {
-            case SyntaxKind::IncludeDirective: trivia.append(handleIncludeDirective(token)); break;
-            case SyntaxKind::ResetAllDirective: trivia.append(handleResetAllDirective(token)); break;
-            case SyntaxKind::DefineDirective: trivia.append(handleDefineDirective(token)); break;
-            case SyntaxKind::MacroUsage: trivia.append(handleMacroUsage(token)); break;
-            case SyntaxKind::IfDefDirective: trivia.append(handleIfDefDirective(token, false)); break;
-            case SyntaxKind::IfNDefDirective: trivia.append(handleIfDefDirective(token, true)); break;
-            case SyntaxKind::ElsIfDirective: trivia.append(handleElsIfDirective(token)); break;
-            case SyntaxKind::ElseDirective: trivia.append(handleElseDirective(token)); break;
-            case SyntaxKind::EndIfDirective: trivia.append(handleEndIfDirective(token)); break;
-            case SyntaxKind::TimescaleDirective: trivia.append(handleTimescaleDirective(token)); break;
-            case SyntaxKind::DefaultNetTypeDirective: trivia.append(handleDefaultNetTypeDirective(token)); break;
-            case SyntaxKind::LineDirective: trivia.append(handleLineDirective(token)); break;
-            case SyntaxKind::UndefDirective: trivia.append(handleUndefDirective(token)); break;
-            case SyntaxKind::UndefineAllDirective: trivia.append(handleUndefineAllDirective(token)); break;
-            case SyntaxKind::BeginKeywordsDirective: trivia.append(handleBeginKeywordsDirective(token)); break;
-            case SyntaxKind::EndKeywordsDirective: trivia.append(handleEndKeywordsDirective(token)); break;
-            case SyntaxKind::PragmaDirective: // TODO, support pragmas
-            case SyntaxKind::UnconnectedDriveDirective: // Nothing to do for the rest of these
-            case SyntaxKind::NoUnconnectedDriveDirective:
-            case SyntaxKind::CellDefineDirective:
-            case SyntaxKind::EndCellDefineDirective:
-            default:
-                // TODO:
-                // default can be reached in certain error cases
-                trivia.append(createSimpleDirective(token));
+        switch (token.kind) {
+            case TokenKind::MacroQuote:
+            case TokenKind::MacroEscapedQuote:
+            case TokenKind::MacroPaste:
+            case TokenKind::LineContinuation: {
+                SmallVectorSized<Token, 2> tokens;
+                tokens.append(token);
+                trivia.append(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
+                addDiag(DiagCode::MacroOpsOutsideDefinition, token.location());
                 break;
+            }
+            case TokenKind::Directive:
+                switch (token.directiveKind()) {
+                    case SyntaxKind::IncludeDirective: trivia.append(handleIncludeDirective(token)); break;
+                    case SyntaxKind::ResetAllDirective: trivia.append(handleResetAllDirective(token)); break;
+                    case SyntaxKind::DefineDirective: trivia.append(handleDefineDirective(token)); break;
+                    case SyntaxKind::MacroUsage: trivia.append(handleMacroUsage(token)); break;
+                    case SyntaxKind::IfDefDirective: trivia.append(handleIfDefDirective(token, false)); break;
+                    case SyntaxKind::IfNDefDirective: trivia.append(handleIfDefDirective(token, true)); break;
+                    case SyntaxKind::ElsIfDirective: trivia.append(handleElsIfDirective(token)); break;
+                    case SyntaxKind::ElseDirective: trivia.append(handleElseDirective(token)); break;
+                    case SyntaxKind::EndIfDirective: trivia.append(handleEndIfDirective(token)); break;
+                    case SyntaxKind::TimescaleDirective: trivia.append(handleTimescaleDirective(token)); break;
+                    case SyntaxKind::DefaultNetTypeDirective: trivia.append(handleDefaultNetTypeDirective(token)); break;
+                    case SyntaxKind::LineDirective: trivia.append(handleLineDirective(token)); break;
+                    case SyntaxKind::UndefDirective: trivia.append(handleUndefDirective(token)); break;
+                    case SyntaxKind::UndefineAllDirective: trivia.append(handleUndefineAllDirective(token)); break;
+                    case SyntaxKind::BeginKeywordsDirective: trivia.append(handleBeginKeywordsDirective(token)); break;
+                    case SyntaxKind::EndKeywordsDirective: trivia.append(handleEndKeywordsDirective(token)); break;
+                    case SyntaxKind::PragmaDirective: // TODO, support pragmas
+                    case SyntaxKind::UnconnectedDriveDirective: // Nothing to do for the rest of these
+                    case SyntaxKind::NoUnconnectedDriveDirective:
+                    case SyntaxKind::CellDefineDirective:
+                    case SyntaxKind::EndCellDefineDirective:
+                    default:
+                        // TODO:
+                        // default can be reached in certain error cases
+                        trivia.append(createSimpleDirective(token));
+                        break;
+                }
+                break;
+            default:
+                trivia.appendRange(token.trivia());
+                return token.withTrivia(alloc, trivia.copy(alloc));
         }
-        token = nextRaw();
-    } while (token.kind == TokenKind::Directive);
 
-    trivia.appendRange(token.trivia());
-    return token.withTrivia(alloc, trivia.copy(alloc));
+        token = nextRaw();
+    }
 }
 
 Token Preprocessor::nextRaw() {

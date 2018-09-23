@@ -81,6 +81,7 @@ enum class DiagCode : uint8_t {
     InvalidTimescaleSpecifier,
     IgnoredMacroPaste,
     RecursiveMacro,
+    MacroOpsOutsideDefinition,
 
     // parser
     ExpectedIdentifier,

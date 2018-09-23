@@ -158,6 +158,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::InvalidTimescaleSpecifier] = { "timescale specifiers must be powers of ten with precision more precise than unit", DiagnosticSeverity::Error };
     descriptors[DiagCode::IgnoredMacroPaste] = { "paste token is pointless because it is adjacent to whitespace", DiagnosticSeverity::Warning };
     descriptors[DiagCode::RecursiveMacro] = { "expansion of macro '{}' is recursive", DiagnosticSeverity::Error };
+    descriptors[DiagCode::MacroOpsOutsideDefinition] = { "macro operators may only be used within a macro definition", DiagnosticSeverity::Error };
 
     // parser
     descriptors[DiagCode::ExpectedIdentifier] = { "expected identifier", DiagnosticSeverity::Error };

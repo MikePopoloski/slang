@@ -609,6 +609,25 @@ source:4:15: note: expanded from here
 )");
 }
 
+TEST_CASE("Macro op outside define") {
+    auto& text = R"(
+asdf``llkj
+foo \
+bar
+)";
+    auto& expected = R"(
+asdfllkj
+foobar
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == DiagCode::MacroOpsOutsideDefinition);
+    CHECK(diagnostics[1].code == DiagCode::MacroOpsOutsideDefinition);
+}
+
 TEST_CASE("IfDef branch (taken)") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     Token token = lexToken(text);
