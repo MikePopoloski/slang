@@ -683,6 +683,24 @@ TEST_CASE("IfDef inside macro") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Nested ifdef and macros") {
+    auto& text = R"(
+`define stuff asdfasdf
+`define FOO \
+    `ifdef NEVER \
+        `blahblah \
+    `else \
+        `stuff \
+    `endif
+`FOO
+)";
+    auto& expected = "\n     \n     \n        asdfasdf \n    \n";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("LINE Directive") {
     auto& text = "`__LINE__";
     Token token = lexToken(text);

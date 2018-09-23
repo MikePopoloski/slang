@@ -782,9 +782,6 @@ Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
 }
 
 MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive) {
-    // if this assert fires, we failed to fully expand nested macros at a previous point
-    ASSERT(!currentMacroToken);
-
     auto macro = findMacro(directive);
     if (!macro.valid()) {
         addDiag(DiagCode::UnknownDirective, directive.location()) << directive.valueText();
@@ -795,6 +792,9 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
             return MacroParser(*this).parseActualArgumentList();
         return nullptr;
     }
+
+    // if this assert fires, we failed to fully expand nested macros at a previous point
+    ASSERT(!currentMacroToken);
 
     // parse arguments if necessary
     MacroActualArgumentListSyntax* actualArgs = nullptr;
@@ -834,17 +834,8 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
     // if the macro expanded into any tokens at all, set the pointer
     // so that we'll pull from them next
-    if (!expandedTokens.empty()) {
-        // Verify that we haven't failed to expand any nested macros.
-        for (Token token : expandedTokens) {
-            if (token.kind == TokenKind::Directive && token.directiveKind() == SyntaxKind::MacroUsage) {
-                addDiag(DiagCode::UnknownDirective, token.location()) << token.valueText();
-                return actualArgs;
-            }
-        }
-
+    if (!expandedTokens.empty())
         currentMacroToken = expandedTokens.begin();
-    }
 
     return actualArgs;
 }
