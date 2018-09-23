@@ -566,6 +566,22 @@ foofoo
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Macro with escaped name") {
+    auto& text = R"(
+`define \FOO foo
+`ifdef \FOO
+`\FOO
+`endif
+)";
+    auto& expected = R"(
+foo
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("IfDef branch (taken)") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     Token token = lexToken(text);

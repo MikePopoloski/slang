@@ -663,6 +663,16 @@ TokenKind Lexer::lexDollarSign(Token::Info* info) {
 }
 
 TokenKind Lexer::lexDirective(Token::Info* info) {
+    if (peek() == '\\') {
+        // Handle escaped macro names as well.
+        TokenKind kind = lexEscapeSequence(info);
+        if (kind == TokenKind::Identifier) {
+            info->extra = SyntaxKind::MacroUsage;
+            return TokenKind::Directive;
+        }
+        return TokenKind::Unknown;
+    }
+
     // store the offset before scanning in order to easily report error locations
     uint32_t startingOffset = currentOffset();
     scanIdentifier();

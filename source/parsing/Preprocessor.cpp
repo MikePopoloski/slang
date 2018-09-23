@@ -771,7 +771,11 @@ Trivia Preprocessor::createSimpleDirective(Token directive) {
 }
 
 Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
-    auto it = macros.find(directive.valueText().substr(1));
+    string_view name = directive.valueText().substr(1);
+    if (!name.empty() && name[0] == '\\')
+        name = name.substr(1);
+
+    auto it = macros.find(name);
     if (it == macros.end())
         return nullptr;
     return it->second;
