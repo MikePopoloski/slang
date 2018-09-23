@@ -1004,6 +1004,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
 
     struct ArgTokens : public span<const Token> {
         using span<const Token>::span;
+        using span<const Token>::operator=;
         bool isExpanded = false;
     };
     SmallMap<string_view, ArgTokens, 8> argumentMap;
