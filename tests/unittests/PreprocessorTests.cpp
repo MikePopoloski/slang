@@ -2,11 +2,11 @@
 
 #include "slang/syntax/SyntaxPrinter.h"
 
-std::string preprocess(string_view text) {
+std::string preprocess(string_view text, string_view name = "source") {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
+    preprocessor.pushSource(getSourceManager().assignText(name, text));
 
     std::string result;
     while (true) {
@@ -580,6 +580,33 @@ foo
     std::string result = preprocess(text);
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro arg location bug") {
+    auto& text = R"(
+`define FOO(name) name \
+
+   `FOO(      `bar      )   asdfasdfasdfasdfasdfasdfsadfasdfasdfasdfasdf
+)";
+    auto& expected = R"(
+      asdfasdfasdfasdfasdfasdfsadfasdfasdfasdfasdf
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+
+    result = "\n" + DiagnosticWriter(getSourceManager()).report(diagnostics);
+    CHECK(result == R"(
+source:4:4: error: unknown macro or compiler directive '`bar'
+   `FOO(      `bar      )   asdfasdfasdfasdfasdfasdfsadfasdfasdfasdfasdf
+   ^
+source:2:19: note: expanded from here
+`define FOO(name) name \
+                  ^
+source:4:15: note: expanded from here
+   `FOO(      `bar      )   asdfasdfasdfasdfasdfasdfsadfasdfasdfasdfasdf
+              ^
+)");
 }
 
 TEST_CASE("IfDef branch (taken)") {

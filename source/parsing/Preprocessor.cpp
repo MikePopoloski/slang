@@ -1099,7 +1099,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
         // Arguments need their own expansion location created; the original
         // location comes from the source file itself, and the expansion location
         // points into the macro body where the formal argument was used.
-        SourceLocation formalLoc = expansionLoc + (int(token.location().offset()) - int(firstLoc.offset()));
+        SourceLocation formalLoc = expansionLoc + (int(token.location().offset()) - int(start.offset()));
         SourceLocation argLoc = sourceManager.createExpansionLoc(
             firstLoc,
             formalLoc,
