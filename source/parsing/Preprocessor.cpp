@@ -38,15 +38,18 @@ bool isOnSameLine(Token token) {
         switch (t.kind) {
             case TriviaKind::LineComment:
             case TriviaKind::EndOfLine:
-            case TriviaKind::Directive:
             case TriviaKind::SkippedSyntax:
             case TriviaKind::SkippedTokens:
             case TriviaKind::DisabledText:
                 return false;
+            case TriviaKind::Directive:
+                if (t.syntax()->kind != SyntaxKind::MacroUsage)
+                    return false;
+                break;
             case TriviaKind::BlockComment:
                 if (size_t offset = t.getRawText().find_first_of("\r\n");
                     offset != std::string_view::npos) {
-                    return true;
+                    return false;
                 }
                 break;
             default:
@@ -298,24 +301,24 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     // A (valid) macro-expanded include filename will be lexed as either
     // a StringLiteral or the token sequence '<' ... '>'
     Token fileName = peek();
-    if (fileName.kind == TokenKind::LessThan) {
-        // In this case, we know that the first token is LessThan, and if things are proper, the last
-        // token is >, but there can be an arbitrary number of tokens that the macro expanded to in-between
-        // (as file names have no restrictions like identifiers do) so let us now concatenate all of the
-        // tokens from the macro expansion up to the '>' in order to get the file name.
-        SourceLocation rootExpansionLoc = sourceManager.getExpansionLoc(fileName.location());
+    if (!isOnSameLine(fileName)) {
+        fileName = expect(TokenKind::IncludeFileName);
+    }
+    else if (fileName.kind == TokenKind::LessThan) {
+        // Piece together all tokens to form a single filename string.
         SmallVectorSized<Token, 8> tokens;
         consume();
 
         while (true) {
             Token token = peek();
-
-            // TODO: check for newlines / EoF here
-            if (!sourceManager.isMacroLoc(token.location()) ||
-                sourceManager.getExpansionLoc(token.location()) != rootExpansionLoc) {
-
-                // TODO: create missing filename token here
-                addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
+            if (token.kind == TokenKind::EndOfFile || !isOnSameLine(token)) {
+                fileName = expect(TokenKind::IncludeFileName);
+                if (!tokens.empty()) {
+                    SmallVectorSized<Trivia, 4> trivia;
+                    trivia.append(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
+                    trivia.appendRange(fileName.trivia());
+                    fileName = fileName.withTrivia(alloc, trivia.copy(alloc));
+                }
                 break;
             }
 
@@ -344,15 +347,11 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         }
     }
     else if (fileName.kind == TokenKind::StringLiteral) {
-        // TODO: add tests for including weird raw string literals
         consume();
-        auto info = alloc.emplace<Token::Info>(fileName.trivia(), fileName.rawText(),
-                                               fileName.location(), fileName.getInfo()->flags);
-        fileName = Token(TokenKind::IncludeFileName, info);
+        fileName = Token(TokenKind::IncludeFileName, fileName.getInfo());
     }
     else {
-        addDiag(DiagCode::ExpectedIncludeFileName, fileName.location());
-        fileName = Token::createMissing(alloc, TokenKind::IncludeFileName, fileName.location());
+        fileName = expect(TokenKind::IncludeFileName);
     }
 
     // path should be at least three chars: "a" or <a>

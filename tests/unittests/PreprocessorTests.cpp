@@ -28,6 +28,15 @@ TEST_CASE("Include File") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("System include file") {
+    auto& text = "`include <system.svh>";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "system stuff!");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 void testDirective(SyntaxKind kind) {
     string_view text = getDirectiveText(kind);
 

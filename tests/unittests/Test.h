@@ -62,6 +62,7 @@ inline SourceManager& getSourceManager() {
         sourceManager = new SourceManager();
         sourceManager->addUserDirectory(string_view(testDir));
         sourceManager->addSystemDirectory(string_view(testDir));
+        sourceManager->addSystemDirectory(string_view(testDir + "system/"));
     }
     return *sourceManager;
 }

@@ -364,6 +364,9 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
             case TokenKind::TimeLiteral:
                 diagnostics.add(DiagCode::ExpectedTimeLiteral, location);
                 break;
+            case TokenKind::IncludeFileName:
+                diagnostics.add(DiagCode::ExpectedIncludeFileName, location);
+                break;
             default:
                 diagnostics.add(DiagCode::ExpectedToken, location) << getTokenKindText(expected);
                 break;
