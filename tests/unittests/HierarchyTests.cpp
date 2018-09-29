@@ -409,9 +409,9 @@ module mh22(ref wire x); endmodule
 
 TEST_CASE("Module ANSI interface ports") {
     auto tree = SyntaxTree::fromText(R"(
-interface I; endinterface
+interface I; modport bar(); endinterface
 interface J; endinterface
-interface K; endinterface
+interface K; logic f; endinterface
 module L; endmodule
 
 parameter int I = 3;
@@ -422,13 +422,15 @@ module m1(J j); endmodule
 module m2(L l); endmodule
 module m3(var K k, wire w); endmodule
 module m4(output K k, output var v); endmodule
+module m5(J.foo a1, K.f a2); endmodule
+module m6(I.bar bar); endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     Diagnostics diags = compilation.getAllDiagnostics();
 
-    #define checkIfacePort(moduleName, index, ifaceName) {\
+    #define checkIfacePort(moduleName, index, ifaceName, modportName) {\
         auto def = compilation.getDefinition(moduleName);\
         REQUIRE(def);\
         REQUIRE(def->ports().size() > index);\
@@ -438,20 +440,32 @@ module m4(output K k, output var v); endmodule
         CHECK(port.getType().isError());\
         REQUIRE(port.interfaceDef);\
         CHECK(port.interfaceDef->name == ifaceName);\
+        if (modportName) {\
+            REQUIRE(port.modport); \
+            CHECK(port.modport->name == modportName); \
+        } \
+        else { \
+            CHECK(!port.modport); \
+        } \
     };
 
-    checkIfacePort("m0", 0, "I");
-    checkIfacePort("m0", 1, "I");
+    checkIfacePort("m0", 0, "I", nullptr);
+    checkIfacePort("m0", 1, "I", nullptr);
     checkPort("m0", 2, PortDirection::In, PortKind::Net, "logic");
     checkPort("m1", 0, PortDirection::InOut, PortKind::Net, "struct{logic f;}J");
-    checkIfacePort("m3", 0, "K");
+    checkIfacePort("m3", 0, "K", nullptr);
     checkPort("m3", 1, PortDirection::InOut, PortKind::Net, "logic");
     checkPort("m4", 1, PortDirection::Out, PortKind::Variable, "logic");
+    checkIfacePort("m5", 0, "J", nullptr);
+    checkIfacePort("m5", 1, "K", nullptr);
+    checkIfacePort("m6", 0, "I", "bar");
 
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == DiagCode::PortTypeNotInterfaceOrData);
     CHECK(diags[1].code == DiagCode::VarWithInterfacePort);
     CHECK(diags[2].code == DiagCode::DirectionWithInterfacePort);
+    CHECK(diags[3].code == DiagCode::UnknownMember);
+    CHECK(diags[4].code == DiagCode::NotAModport);
 }
 
 TEST_CASE("Module non-ANSI ports") {

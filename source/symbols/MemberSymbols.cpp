@@ -329,6 +329,45 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
             port.internalSymbol = net;
             break;
         }
+        case SyntaxKind::InterfacePortHeader: {
+            // TODO: handle generic interface header
+            auto& header = syntax.header->as<InterfacePortHeaderSyntax>();
+            port.portKind = PortKind::Interface;
+            port.direction = PortDirection::NotApplicable;
+
+            port.interfaceDef = comp.getDefinition(header.nameOrKeyword.valueText(), scope);
+            if (!port.interfaceDef) {
+                // TODO: report error if unable to find definition
+            }
+            else if (port.interfaceDef->definitionKind != DefinitionKind::Interface) {
+                // TODO: report error here
+                /*auto& diag = scope.addDiag(DiagCode::PortTypeNotInterfaceOrData,
+                                            header.dataType->sourceRange());
+                diag << definition->name;
+                diag.addNote(DiagCode::NoteDeclarationHere, definition->location);*/
+                port.interfaceDef = nullptr;
+            }
+            else if (header.modport && !header.modport->member.valueText().empty()) {
+                // TODO: error if unfound or not actually a modport
+                // TODO: handle arrays
+                auto member = header.modport->member;
+                auto symbol = port.interfaceDef->find(member.valueText());
+                if (!symbol) {
+                    auto& diag = scope.addDiag(DiagCode::UnknownMember, member.range());
+                    diag << member.valueText();
+                    diag << port.interfaceDef->name;
+                }
+                else if (symbol->kind != SymbolKind::Modport) {
+                    auto& diag = scope.addDiag(DiagCode::NotAModport, member.range());
+                    diag << member.valueText();
+                    diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+                }
+                else {
+                    port.modport = &symbol->as<ModportSymbol>();
+                }
+            }
+            break;
+        }
         default:
             // TODO:
             THROW_UNREACHABLE;

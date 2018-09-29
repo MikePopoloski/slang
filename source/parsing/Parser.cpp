@@ -154,8 +154,9 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
             );
             ports = &factory.nonAnsiPortList(openParen, buffer.copy(alloc), closeParen);
         }
-        else
+        else {
             ports = &parseAnsiPortList(openParen);
+        }
     }
 
     auto semi = expect(TokenKind::Semicolon);
@@ -347,23 +348,18 @@ bool Parser::isNonAnsiPort() {
         return false;
 
     // this might be a port name or the start of a data type
-    // scan over select expressions until we find out
+    // scan over a potential select expressions to find out
     uint32_t index = 1;
-    while (true) {
-        kind = peek(index++).kind;
-        if (kind == TokenKind::Dot) {
-            if (peek(index++).kind != TokenKind::Identifier)
-                return false;
-        }
-        else if (kind == TokenKind::OpenBracket) {
-            if (!scanTypePart<isNotInPortReference>(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
-                return false;
-        }
-        else {
-            // found the end; comma or close paren means this is a non-ansi port
-            return kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis;
-        }
+    kind = peek(index++).kind;
+    if (kind == TokenKind::OpenBracket) {
+        if (!scanTypePart<isNotInPortReference>(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
+            return false;
+
+        kind = peek(index).kind;
     }
+
+    // found the end; comma or close paren means this is a non-ansi port
+    return kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis;
 }
 
 MemberSyntax* Parser::parseMember() {

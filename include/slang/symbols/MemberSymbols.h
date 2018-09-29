@@ -16,6 +16,7 @@
 namespace slang {
 
 class DefinitionSymbol;
+class ModportSymbol;
 class PackageSymbol;
 
 /// A class that wraps a hoisted transparent type member (such as an enum value)
@@ -130,6 +131,9 @@ public:
 
     /// If this is an interface port, a pointer to the definition for the interface.
     const DefinitionSymbol* interfaceDef = nullptr;
+
+    /// If this is an interface port with a modport restriction, a pointer to that modport.
+    const ModportSymbol* modport = nullptr;
 
     PortSymbol(string_view name, SourceLocation loc) :
         ValueSymbol(SymbolKind::Port, name, loc) {}

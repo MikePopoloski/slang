@@ -198,6 +198,7 @@ enum class DiagCode : uint8_t {
     NotAValue,
     NotASubroutine,
     NotAHierarchicalScope,
+    NotAModport,
     HierarchicalNotAllowedInConstant,
     UnknownMember,
     RecursiveDefinition,
