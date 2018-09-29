@@ -876,14 +876,26 @@ empty
 NonAnsiPortSyntax final=false
 empty
 
+PortExpressionSyntax final=false
+empty
+
+PortReferenceSyntax base=PortExpressionSyntax kind=PortReference
+token name
+ElementSelectSyntax? select
+
+PortConcatenationSyntax base=PortExpressionSyntax kind=PortConcatenation
+token openBrace
+separated_list<PortReferenceSyntax> references
+token closeBrace
+
 ImplicitNonAnsiPortSyntax base=NonAnsiPortSyntax kind=ImplicitNonAnsiPort
-ExpressionSyntax expr
+PortExpressionSyntax? expr
 
 ExplicitNonAnsiPortSyntax base=NonAnsiPortSyntax kind=ExplicitNonAnsiPort
 token dot
 token name
 token openParen
-ExpressionSyntax? expr
+PortExpressionSyntax? expr
 token closeParen
 
 NonAnsiPortListSyntax base=PortListSyntax kind=NonAnsiPortList

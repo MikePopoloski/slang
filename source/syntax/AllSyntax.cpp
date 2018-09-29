@@ -294,7 +294,9 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::ParenthesizedEventExpression: return 3;
         case SyntaxKind::ParenthesizedExpression: return 3;
         case SyntaxKind::PatternCaseItem: return 5;
+        case SyntaxKind::PortConcatenation: return 3;
         case SyntaxKind::PortDeclaration: return 4;
+        case SyntaxKind::PortReference: return 2;
         case SyntaxKind::PostdecrementExpression: return 3;
         case SyntaxKind::PostincrementExpression: return 3;
         case SyntaxKind::PowerExpression: return 4;
@@ -3989,7 +3991,7 @@ void ExplicitNonAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: dot = child.token(); return;
         case 1: name = child.token(); return;
         case 2: openParen = child.token(); return;
-        case 3: expr = &child.node()->as<ExpressionSyntax>(); return;
+        case 3: expr = &child.node()->as<PortExpressionSyntax>(); return;
         case 4: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
@@ -5483,21 +5485,21 @@ bool ImplicitNonAnsiPortSyntax::isKind(SyntaxKind kind) {
 
 TokenOrSyntax ImplicitNonAnsiPortSyntax::getChild(uint32_t index) {
     switch (index) {
-        case 0: return expr.get();
+        case 0: return expr;
         default: return nullptr;
     }
 }
 
 ConstTokenOrSyntax ImplicitNonAnsiPortSyntax::getChild(uint32_t index) const {
     switch (index) {
-        case 0: return expr.get();
+        case 0: return expr;
         default: return nullptr;
     }
 }
 
 void ImplicitNonAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: expr = &child.node()->as<ExpressionSyntax>(); return;
+        case 0: expr = &child.node()->as<PortExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -7981,6 +7983,41 @@ bool PatternSyntax::isKind(SyntaxKind kind) {
     }
 }
 
+bool PortConcatenationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::PortConcatenation;
+}
+
+TokenOrSyntax PortConcatenationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return &references;
+        case 2: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PortConcatenationSyntax::getChild(uint32_t index) const {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return &references;
+        case 2: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+void PortConcatenationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
+    switch (index) {
+        case 0: openBrace = child.token(); return;
+        case 1: references = child.node()->as<SeparatedSyntaxList<PortReferenceSyntax>>(); return;
+        case 2: closeBrace = child.token(); return;
+        default: THROW_UNREACHABLE;
+    }
+}
+
+PortConcatenationSyntax* PortConcatenationSyntax::clone(BumpAllocator& alloc) const {
+    return alloc.emplace<PortConcatenationSyntax>(*this);
+}
+
 bool PortConnectionSyntax::isKind(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::NamedPortConnection:
@@ -8055,6 +8092,16 @@ PortDeclarationSyntax* PortDeclarationSyntax::clone(BumpAllocator& alloc) const 
     return alloc.emplace<PortDeclarationSyntax>(*this);
 }
 
+bool PortExpressionSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::PortConcatenation:
+        case SyntaxKind::PortReference:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool PortHeaderSyntax::isKind(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::InterconnectPortHeader:
@@ -8076,6 +8123,38 @@ bool PortListSyntax::isKind(SyntaxKind kind) {
         default:
             return false;
     }
+}
+
+bool PortReferenceSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::PortReference;
+}
+
+TokenOrSyntax PortReferenceSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return name;
+        case 1: return select;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PortReferenceSyntax::getChild(uint32_t index) const {
+    switch (index) {
+        case 0: return name;
+        case 1: return select;
+        default: return nullptr;
+    }
+}
+
+void PortReferenceSyntax::setChild(uint32_t index, TokenOrSyntax child) {
+    switch (index) {
+        case 0: name = child.token(); return;
+        case 1: select = &child.node()->as<ElementSelectSyntax>(); return;
+        default: THROW_UNREACHABLE;
+    }
+}
+
+PortReferenceSyntax* PortReferenceSyntax::clone(BumpAllocator& alloc) const {
+    return alloc.emplace<PortReferenceSyntax>(*this);
 }
 
 bool PostfixUnaryExpressionSyntax::isKind(SyntaxKind kind) {
@@ -11056,7 +11135,7 @@ ExplicitAnsiPortSyntax& SyntaxFactory::explicitAnsiPort(SyntaxList<AttributeInst
     return *alloc.emplace<ExplicitAnsiPortSyntax>(attributes, direction, dot, name, openParen, expr, closeParen);
 }
 
-ExplicitNonAnsiPortSyntax& SyntaxFactory::explicitNonAnsiPort(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) {
+ExplicitNonAnsiPortSyntax& SyntaxFactory::explicitNonAnsiPort(Token dot, Token name, Token openParen, PortExpressionSyntax* expr, Token closeParen) {
     return *alloc.emplace<ExplicitNonAnsiPortSyntax>(dot, name, openParen, expr, closeParen);
 }
 
@@ -11196,7 +11275,7 @@ ImplicitEventControlSyntax& SyntaxFactory::implicitEventControl(Token atStar) {
     return *alloc.emplace<ImplicitEventControlSyntax>(atStar);
 }
 
-ImplicitNonAnsiPortSyntax& SyntaxFactory::implicitNonAnsiPort(ExpressionSyntax& expr) {
+ImplicitNonAnsiPortSyntax& SyntaxFactory::implicitNonAnsiPort(PortExpressionSyntax* expr) {
     return *alloc.emplace<ImplicitNonAnsiPortSyntax>(expr);
 }
 
@@ -11452,8 +11531,16 @@ PatternCaseItemSyntax& SyntaxFactory::patternCaseItem(PatternSyntax& pattern, To
     return *alloc.emplace<PatternCaseItemSyntax>(pattern, tripleAnd, expr, colon, statement);
 }
 
+PortConcatenationSyntax& SyntaxFactory::portConcatenation(Token openBrace, SeparatedSyntaxList<PortReferenceSyntax> references, Token closeBrace) {
+    return *alloc.emplace<PortConcatenationSyntax>(openBrace, references, closeBrace);
+}
+
 PortDeclarationSyntax& SyntaxFactory::portDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) {
     return *alloc.emplace<PortDeclarationSyntax>(attributes, header, declarators, semi);
+}
+
+PortReferenceSyntax& SyntaxFactory::portReference(Token name, ElementSelectSyntax* select) {
+    return *alloc.emplace<PortReferenceSyntax>(name, select);
 }
 
 PostfixUnaryExpressionSyntax& SyntaxFactory::postfixUnaryExpression(SyntaxKind kind, ExpressionSyntax& operand, SyntaxList<AttributeInstanceSyntax> attributes, Token operatorToken) {

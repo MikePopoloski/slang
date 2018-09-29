@@ -185,21 +185,54 @@ ParameterPortListSyntax* Parser::parseParameterPortList() {
     return &factory.parameterPortList(hash, openParen, parameters, closeParen);
 }
 
+PortReferenceSyntax& Parser::parsePortReference() {
+    auto name = expect(TokenKind::Identifier);
+
+    ElementSelectSyntax* select = nullptr;
+    if (peek(TokenKind::OpenBracket))
+        select = &parseElementSelect();
+
+    return factory.portReference(name, select);
+}
+
+PortExpressionSyntax& Parser::parsePortExpression() {
+    if (peek(TokenKind::OpenBrace)) {
+        Token openBrace, closeBrace;
+        span<TokenOrSyntax> items;
+
+        parseSeparatedList<isIdentifierOrComma, isEndOfBracedList>(
+            TokenKind::OpenBrace,
+            TokenKind::CloseBrace,
+            TokenKind::Comma,
+            openBrace,
+            items,
+            closeBrace,
+            DiagCode::ExpectedExpression,
+            [this](bool) { return &parsePortReference(); }
+        );
+
+        return factory.portConcatenation(openBrace, items, closeBrace);
+    }
+    return parsePortReference();
+}
+
 NonAnsiPortSyntax& Parser::parseNonAnsiPort() {
-    // TODO: error if unsupported expressions are used here
+    if (peek(TokenKind::Comma))
+        return factory.implicitNonAnsiPort(nullptr);
+
     if (peek(TokenKind::Dot)) {
         auto dot = consume();
         auto name = expect(TokenKind::Identifier);
         auto openParen = expect(TokenKind::OpenParenthesis);
 
-        ExpressionSyntax* expr = nullptr;
+        PortExpressionSyntax* expr = nullptr;
         if (!peek(TokenKind::CloseParenthesis))
-            expr = &parsePrimaryExpression();
+            expr = &parsePortExpression();
 
         return factory.explicitNonAnsiPort(dot, name, openParen, expr, expect(TokenKind::CloseParenthesis));
     }
 
-    return factory.implicitNonAnsiPort(parsePrimaryExpression());
+    return factory.implicitNonAnsiPort(&parsePortExpression());
 }
 
 PortHeaderSyntax& Parser::parsePortHeader(Token direction) {

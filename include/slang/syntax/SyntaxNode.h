@@ -661,6 +661,8 @@ enum class SyntaxKind : uint16_t {
     ExpectPropertyStatement,
 
     // modules
+    PortReference,
+    PortConcatenation,
     ImplicitNonAnsiPort,
     ExplicitNonAnsiPort,
     NonAnsiPortList,

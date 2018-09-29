@@ -3029,12 +3029,60 @@ struct NonAnsiPortSyntax : public SyntaxNode {
     static bool isKind(SyntaxKind kind);
 };
 
-struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
-    not_null<ExpressionSyntax*> expr;
+struct PortExpressionSyntax : public SyntaxNode {
 
-    ImplicitNonAnsiPortSyntax(ExpressionSyntax& expr) :
-        NonAnsiPortSyntax(SyntaxKind::ImplicitNonAnsiPort), expr(&expr) {
-        this->expr->parent = this;
+    PortExpressionSyntax(SyntaxKind kind) :
+        SyntaxNode(kind) {
+    }
+
+    static bool isKind(SyntaxKind kind);
+};
+
+struct PortReferenceSyntax : public PortExpressionSyntax {
+    Token name;
+    ElementSelectSyntax* select;
+
+    PortReferenceSyntax(Token name, ElementSelectSyntax* select) :
+        PortExpressionSyntax(SyntaxKind::PortReference), name(name), select(select) {
+        if (this->select) this->select->parent = this;
+    }
+
+    static bool isKind(SyntaxKind kind);
+
+    TokenOrSyntax getChild(uint32_t index);
+    ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
+
+    PortReferenceSyntax* clone(BumpAllocator& alloc) const;
+};
+
+struct PortConcatenationSyntax : public PortExpressionSyntax {
+    Token openBrace;
+    SeparatedSyntaxList<PortReferenceSyntax> references;
+    Token closeBrace;
+
+    PortConcatenationSyntax(Token openBrace, SeparatedSyntaxList<PortReferenceSyntax> references, Token closeBrace) :
+        PortExpressionSyntax(SyntaxKind::PortConcatenation), openBrace(openBrace), references(references), closeBrace(closeBrace) {
+        this->references.parent = this;
+        for (auto child : this->references)
+            child->parent = this;
+    }
+
+    static bool isKind(SyntaxKind kind);
+
+    TokenOrSyntax getChild(uint32_t index);
+    ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
+
+    PortConcatenationSyntax* clone(BumpAllocator& alloc) const;
+};
+
+struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
+    PortExpressionSyntax* expr;
+
+    ImplicitNonAnsiPortSyntax(PortExpressionSyntax* expr) :
+        NonAnsiPortSyntax(SyntaxKind::ImplicitNonAnsiPort), expr(expr) {
+        if (this->expr) this->expr->parent = this;
     }
 
     static bool isKind(SyntaxKind kind);
@@ -3050,10 +3098,10 @@ struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
     Token dot;
     Token name;
     Token openParen;
-    ExpressionSyntax* expr;
+    PortExpressionSyntax* expr;
     Token closeParen;
 
-    ExplicitNonAnsiPortSyntax(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
+    ExplicitNonAnsiPortSyntax(Token dot, Token name, Token openParen, PortExpressionSyntax* expr, Token closeParen) :
         NonAnsiPortSyntax(SyntaxKind::ExplicitNonAnsiPort), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen) {
         if (this->expr) this->expr->parent = this;
     }
@@ -5506,7 +5554,7 @@ public:
     EventControlWithExpressionSyntax& eventControlWithExpression(Token at, EventExpressionSyntax& expr);
     EventTriggerStatementSyntax& eventTriggerStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token trigger, TimingControlSyntax* timing, NameSyntax& name);
     ExplicitAnsiPortSyntax& explicitAnsiPort(SyntaxList<AttributeInstanceSyntax> attributes, Token direction, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen);
-    ExplicitNonAnsiPortSyntax& explicitNonAnsiPort(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen);
+    ExplicitNonAnsiPortSyntax& explicitNonAnsiPort(Token dot, Token name, Token openParen, PortExpressionSyntax* expr, Token closeParen);
     ExpressionConstraintSyntax& expressionConstraint(Token soft, ExpressionSyntax& expr, Token semi);
     ExpressionCoverageBinInitializerSyntax& expressionCoverageBinInitializer(ExpressionSyntax& expr, WithClauseSyntax* withClause);
     ExpressionOrDistSyntax& expressionOrDist(ExpressionSyntax& expr, DistConstraintListSyntax& distribution);
@@ -5541,7 +5589,7 @@ public:
     ImplicationConstraintSyntax& implicationConstraint(ExpressionSyntax& left, Token arrow, ConstraintItemSyntax& constraints);
     ImplicitAnsiPortSyntax& implicitAnsiPort(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, VariableDeclaratorSyntax& declarator);
     ImplicitEventControlSyntax& implicitEventControl(Token atStar);
-    ImplicitNonAnsiPortSyntax& implicitNonAnsiPort(ExpressionSyntax& expr);
+    ImplicitNonAnsiPortSyntax& implicitNonAnsiPort(PortExpressionSyntax* expr);
     ImplicitTypeSyntax& implicitType(Token signing, SyntaxList<VariableDimensionSyntax> dimensions);
     IncludeDirectiveSyntax& includeDirective(Token directive, Token fileName);
     InsideExpressionSyntax& insideExpression(ExpressionSyntax& expr, Token inside, OpenRangeListSyntax& ranges);
@@ -5605,7 +5653,9 @@ public:
     ParenthesizedEventExpressionSyntax& parenthesizedEventExpression(Token openParen, EventExpressionSyntax& expr, Token closeParen);
     ParenthesizedExpressionSyntax& parenthesizedExpression(Token openParen, ExpressionSyntax& expression, Token closeParen);
     PatternCaseItemSyntax& patternCaseItem(PatternSyntax& pattern, Token tripleAnd, ExpressionSyntax* expr, Token colon, StatementSyntax& statement);
+    PortConcatenationSyntax& portConcatenation(Token openBrace, SeparatedSyntaxList<PortReferenceSyntax> references, Token closeBrace);
     PortDeclarationSyntax& portDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi);
+    PortReferenceSyntax& portReference(Token name, ElementSelectSyntax* select);
     PostfixUnaryExpressionSyntax& postfixUnaryExpression(SyntaxKind kind, ExpressionSyntax& operand, SyntaxList<AttributeInstanceSyntax> attributes, Token operatorToken);
     PrefixUnaryExpressionSyntax& prefixUnaryExpression(SyntaxKind kind, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& operand);
     PrimaryBlockEventExpressionSyntax& primaryBlockEventExpression(Token keyword, NameSyntax& name);
@@ -5962,7 +6012,9 @@ decltype(auto) visitSyntaxNode(TNode* node, TVisitor& visitor, Args&&... args) {
         case SyntaxKind::ParenthesizedEventExpression: return visitor.visit(*static_cast<std::conditional_t<isConst, const ParenthesizedEventExpressionSyntax*, ParenthesizedEventExpressionSyntax*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::ParenthesizedExpression: return visitor.visit(*static_cast<std::conditional_t<isConst, const ParenthesizedExpressionSyntax*, ParenthesizedExpressionSyntax*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::PatternCaseItem: return visitor.visit(*static_cast<std::conditional_t<isConst, const PatternCaseItemSyntax*, PatternCaseItemSyntax*>>(node), std::forward<Args>(args)...);
+        case SyntaxKind::PortConcatenation: return visitor.visit(*static_cast<std::conditional_t<isConst, const PortConcatenationSyntax*, PortConcatenationSyntax*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::PortDeclaration: return visitor.visit(*static_cast<std::conditional_t<isConst, const PortDeclarationSyntax*, PortDeclarationSyntax*>>(node), std::forward<Args>(args)...);
+        case SyntaxKind::PortReference: return visitor.visit(*static_cast<std::conditional_t<isConst, const PortReferenceSyntax*, PortReferenceSyntax*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::PostdecrementExpression: return visitor.visit(*static_cast<std::conditional_t<isConst, const PostfixUnaryExpressionSyntax*, PostfixUnaryExpressionSyntax*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::PostincrementExpression: return visitor.visit(*static_cast<std::conditional_t<isConst, const PostfixUnaryExpressionSyntax*, PostfixUnaryExpressionSyntax*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::PowerExpression: return visitor.visit(*static_cast<std::conditional_t<isConst, const BinaryExpressionSyntax*, BinaryExpressionSyntax*>>(node), std::forward<Args>(args)...);

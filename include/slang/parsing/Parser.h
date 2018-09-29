@@ -117,6 +117,8 @@ private:
     MemberSyntax& parseModportPort();
     ModportItemSyntax& parseModportItem();
     ModportDeclarationSyntax& parseModportDeclaration(span<AttributeInstanceSyntax*> attributes);
+    PortReferenceSyntax& parsePortReference();
+    PortExpressionSyntax& parsePortExpression();
     NonAnsiPortSyntax& parseNonAnsiPort();
     MemberSyntax& parseAnsiPort();
     AnsiPortListSyntax& parseAnsiPortList(Token openParen);
