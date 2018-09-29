@@ -234,4 +234,17 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
 };
 
+/// Represents a modport within an interface definition.
+class ModportSymbol : public Symbol, public Scope {
+public:
+    ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+
+    void toJson(json&) const {}
+
+    static ModportSymbol& fromSyntax(Compilation& compilation, const ModportItemSyntax& syntax,
+                                     const Scope& parent);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
+};
+
 }

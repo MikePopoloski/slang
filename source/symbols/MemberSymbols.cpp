@@ -548,6 +548,7 @@ void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& synt
                             span<const PortDeclarationSyntax* const> portDeclarations) {
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
+            // TODO: error if we have port declaration members
             AnsiPortListBuilder builder { compilation, results };
             for (auto port : syntax.as<AnsiPortListSyntax>().ports) {
                 switch (port->kind) {
@@ -730,6 +731,21 @@ void SubroutineSymbol::toJson(json& j) const {
     j["returnType"] = getReturnType();
     j["defaultLifetime"] = defaultLifetime; // TODO: tostring
     j["isTask"] = isTask;
+}
+
+ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::Modport, name, loc),
+    Scope(compilation, this)
+{
+}
+
+ModportSymbol& ModportSymbol::fromSyntax(Compilation& compilation, const ModportItemSyntax& syntax,
+                                         const Scope&) {
+    auto& result = *compilation.emplace<ModportSymbol>(compilation, syntax.name.valueText(),
+                                                       syntax.name.location());
+
+    // TODO: handle port list
+    return result;
 }
 
 }

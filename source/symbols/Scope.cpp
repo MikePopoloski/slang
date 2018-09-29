@@ -175,7 +175,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             getOrAddDeferredData().addPortDeclaration(syntax.as<PortDeclarationSyntax>());
             break;
         case SyntaxKind::ModportDeclaration:
-            // TODO: modports
+            for (auto item : syntax.as<ModportDeclarationSyntax>().items)
+                addMember(ModportSymbol::fromSyntax(compilation, *item, *this));
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
