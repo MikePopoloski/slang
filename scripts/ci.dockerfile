@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
 	doxygen \
 	xz-utils \
 	g++-8 \
-	clang-6.0 \
-	clang-tidy-6.0 \
+	clang-7 \
+	clang-tidy-7 \
 	cmake \
 	python3 \
 	python3-distutils \
