@@ -386,6 +386,8 @@ struct NonAnsiPortListBuilder {
         PortDirection direction;
         PortKind kind;
         bool used = false;
+
+        PortInfo(const VariableDeclaratorSyntax* syntax) : syntax(syntax) {}
     };
     SmallMap<string_view, PortInfo, 8> portInfos;
 
