@@ -17,7 +17,8 @@
 
 using namespace slang;
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+try {
     if (argc != 2) {
         fprintf(stderr, "usage: rewriter file");
         return 1;
@@ -31,4 +32,8 @@ int main(int argc, char** argv) {
     auto tree = SyntaxTree::fromFile(argv[1]);
     printf("%s", SyntaxPrinter::printFile(*tree).c_str());
     return 0;
+}
+catch (const std::exception& e) {
+    printf("internal compiler error (exception): %s\n", e.what());
+    return 2;
 }

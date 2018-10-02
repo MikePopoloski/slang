@@ -606,9 +606,7 @@ TEST_CASE("Escaped keyword identifiers") {
 }
 
 TEST_CASE("Too many errors") {
-    std::vector<char> buf;
-    for (int i = 0; i < 10; i++)
-        buf.push_back('\x01');
+    std::vector<char> buf(10, '\x01');
 
     LexerOptions options;
     options.maxErrors = 9;

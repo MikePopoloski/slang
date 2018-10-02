@@ -306,7 +306,7 @@ TEST_CASE("Arithmetic") {
     CHECK_THAT(-SVInt(logic_t::z), exactlyEquals(SVInt(logic_t::x)));
 }
 
-void testDiv(SVInt a, SVInt b, SVInt c) {
+void testDiv(const SVInt& a, const SVInt& b, const SVInt& c) {
     // Test division and remainder using: (a * b + c) / a
     REQUIRE(a >= b);
     REQUIRE(a > c);

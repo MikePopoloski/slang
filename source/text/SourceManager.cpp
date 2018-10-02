@@ -330,7 +330,7 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
         return SourceBuffer();
     }
 
-    return cacheBuffer(std::move(absPath), includedFrom, std::move(buffer));
+    return cacheBuffer(absPath, includedFrom, std::move(buffer));
 }
 
 SourceBuffer SourceManager::cacheBuffer(const fs::path& path, SourceLocation includedFrom, std::vector<char>&& buffer) {

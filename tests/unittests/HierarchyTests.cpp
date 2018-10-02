@@ -364,11 +364,11 @@ module mh22(ref wire x); endmodule
     #define checkPort(moduleName, index, dir, kind, type) {\
         auto def = compilation.getDefinition(moduleName);\
         REQUIRE(def);\
-        REQUIRE(def->ports().size() > index);\
+        REQUIRE(def->ports().size() > (index));\
         auto& port = *def->ports()[index];\
-        CHECK(port.direction == dir);\
-        CHECK(port.portKind == kind);\
-        CHECK(port.getType().toString() == type);\
+        CHECK(port.direction == (dir));\
+        CHECK(port.portKind == (kind));\
+        CHECK(port.getType().toString() == (type));\
     };
 
     checkPort("mh0", 0, PortDirection::InOut, PortKind::Net, "logic");
@@ -433,16 +433,16 @@ module m6(I.bar bar); endmodule
     #define checkIfacePort(moduleName, index, ifaceName, modportName) {\
         auto def = compilation.getDefinition(moduleName);\
         REQUIRE(def);\
-        REQUIRE(def->ports().size() > index);\
+        REQUIRE(def->ports().size() > (index));\
         auto& port = *def->ports()[index];\
         CHECK(port.direction == PortDirection::NotApplicable);\
         CHECK(port.portKind == PortKind::Interface);\
         CHECK(port.getType().isError());\
         REQUIRE(port.interfaceDef);\
-        CHECK(port.interfaceDef->name == ifaceName);\
+        CHECK(port.interfaceDef->name == (ifaceName));\
         if (modportName) {\
             REQUIRE(port.modport); \
-            CHECK(port.modport->name == modportName); \
+            CHECK(port.modport->name == (modportName)); \
         } \
         else { \
             CHECK(!port.modport); \

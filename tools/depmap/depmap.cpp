@@ -75,7 +75,8 @@ private:
     std::unordered_map<std::string, std::unordered_set<std::string>> fileToDeps;
 };
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+try {
     if (argc < 2) {
         fprintf(stderr, "Usage: slang-depmap [directories...]\n");
         return 1;
@@ -109,4 +110,9 @@ int main(int argc, char* argv[]) {
         mapper.parseFile(path.string());
 
     mapper.printDeps();
+    return 0;
+}
+catch (const std::exception& e) {
+    printf("internal compiler error (exception): %s\n", e.what());
+    return 2;
 }
