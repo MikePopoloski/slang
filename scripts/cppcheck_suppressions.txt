@@ -1,4 +1,4 @@
 *:*external/*
-syntaxError:*SmallVector.h:91
+syntaxError:*
 toomanyconfigs
 constStatement
