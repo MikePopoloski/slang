@@ -5,7 +5,6 @@
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #include "slang/binding/Expressions.h"
-
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTVisitor.h"
 
@@ -15,8 +14,7 @@ struct Expression::PropagationVisitor {
     Compilation& compilation;
     const Type& newType;
 
-    PropagationVisitor(Compilation& compilation, const Type& newType) :
-        compilation(compilation), newType(newType) {}
+    PropagationVisitor(Compilation& compilation, const Type& newType) : compilation(compilation), newType(newType) {}
 
     template<typename T>
     Expression& visit(T& expr) {
@@ -40,9 +38,7 @@ struct Expression::PropagationVisitor {
         return result;
     }
 
-    Expression& visitInvalid(Expression& expr) {
-        return expr;
-    }
+    Expression& visitInvalid(Expression& expr) { return expr; }
 };
 
 void Expression::contextDetermined(Compilation& compilation, Expression*& expr, const Type& newType) {
@@ -63,8 +59,7 @@ Expression& Expression::selfDetermined(Compilation& compilation, const Expressio
     return *expr;
 }
 
-Expression& IntegerLiteral::propagateType(Compilation& compilation, IntegerLiteral& expr,
-                                          const Type& newType) {
+Expression& IntegerLiteral::propagateType(Compilation& compilation, IntegerLiteral& expr, const Type& newType) {
     ASSERT(newType.isIntegral());
     ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
 
@@ -86,8 +81,7 @@ Expression& RealLiteral::propagateType(Compilation& compilation, RealLiteral& ex
     return expr;
 }
 
-Expression& UnbasedUnsizedIntegerLiteral::propagateType(Compilation&,
-                                                        UnbasedUnsizedIntegerLiteral& expr,
+Expression& UnbasedUnsizedIntegerLiteral::propagateType(Compilation&, UnbasedUnsizedIntegerLiteral& expr,
                                                         const Type& newType) {
     ASSERT(newType.isIntegral());
     ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
@@ -96,13 +90,11 @@ Expression& UnbasedUnsizedIntegerLiteral::propagateType(Compilation&,
     return expr;
 }
 
-Expression& NullLiteral::propagateType(Compilation&, NullLiteral& expr,
-                                       const Type&) {
+Expression& NullLiteral::propagateType(Compilation&, NullLiteral& expr, const Type&) {
     return expr;
 }
 
-Expression& StringLiteral::propagateType(Compilation&, StringLiteral& expr,
-                                         const Type& newType) {
+Expression& StringLiteral::propagateType(Compilation&, StringLiteral& expr, const Type& newType) {
     ASSERT(newType.isIntegral());
     ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
 
@@ -114,13 +106,11 @@ Expression& StringLiteral::propagateType(Compilation&, StringLiteral& expr,
     return expr;
 }
 
-Expression& NamedValueExpression::propagateType(Compilation&, NamedValueExpression& expr,
-                                                const Type&) {
+Expression& NamedValueExpression::propagateType(Compilation&, NamedValueExpression& expr, const Type&) {
     return expr;
 }
 
-Expression& UnaryExpression::propagateType(Compilation& compilation, UnaryExpression& expr,
-                                           const Type& newType) {
+Expression& UnaryExpression::propagateType(Compilation& compilation, UnaryExpression& expr, const Type& newType) {
     switch (expr.op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
@@ -148,8 +138,7 @@ Expression& UnaryExpression::propagateType(Compilation& compilation, UnaryExpres
     return expr;
 }
 
-Expression& BinaryExpression::propagateType(Compilation& compilation, BinaryExpression& expr,
-                                            const Type& newType) {
+Expression& BinaryExpression::propagateType(Compilation& compilation, BinaryExpression& expr, const Type& newType) {
     switch (expr.op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -208,34 +197,28 @@ Expression& ConditionalExpression::propagateType(Compilation& compilation, Condi
     return expr;
 }
 
-Expression& AssignmentExpression::propagateType(Compilation&, AssignmentExpression& expr,
-                                                const Type&) {
+Expression& AssignmentExpression::propagateType(Compilation&, AssignmentExpression& expr, const Type&) {
     return expr;
 }
 
-Expression& ElementSelectExpression::propagateType(Compilation&, ElementSelectExpression& expr,
-                                                   const Type&) {
+Expression& ElementSelectExpression::propagateType(Compilation&, ElementSelectExpression& expr, const Type&) {
     return expr;
 }
 
-Expression& RangeSelectExpression::propagateType(Compilation&, RangeSelectExpression& expr,
-                                                 const Type&) {
+Expression& RangeSelectExpression::propagateType(Compilation&, RangeSelectExpression& expr, const Type&) {
     return expr;
 }
 
-Expression& ConcatenationExpression::propagateType(Compilation&, ConcatenationExpression& expr,
-                                                   const Type&) {
+Expression& ConcatenationExpression::propagateType(Compilation&, ConcatenationExpression& expr, const Type&) {
     // All operands are self-determined.
     return expr;
 }
 
-Expression& ReplicationExpression::propagateType(Compilation&, ReplicationExpression& expr,
-                                                 const Type&) {
+Expression& ReplicationExpression::propagateType(Compilation&, ReplicationExpression& expr, const Type&) {
     return expr;
 }
 
-Expression& CallExpression::propagateType(Compilation&, CallExpression& expr,
-                                          const Type&) {
+Expression& CallExpression::propagateType(Compilation&, CallExpression& expr, const Type&) {
     return expr;
 }
 
@@ -250,5 +233,4 @@ Expression& ConversionExpression::propagateType(Compilation& compilation, Conver
 Expression& DataTypeExpression::propagateType(Compilation&, DataTypeExpression& expr, const Type&) {
     return expr;
 }
-
 }

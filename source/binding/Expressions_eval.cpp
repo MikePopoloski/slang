@@ -5,7 +5,6 @@
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #include "slang/binding/Expressions.h"
-
 #include "slang/binding/Statements.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTVisitor.h"
@@ -28,15 +27,13 @@ struct EvalVisitor {
         return expr.evalImpl(context);
     }
 
-    ConstantValue visitInvalid(const Expression&, EvalContext&) {
-        return nullptr;
-    }
+    ConstantValue visitInvalid(const Expression&, EvalContext&) { return nullptr; }
 };
 
 class LValueVisitor {
     HAS_METHOD_TRAIT(evalLValueImpl);
 
-public:
+  public:
     template<typename T>
     LValue visit(const T& expr, EvalContext& context) {
         if constexpr (has_evalLValueImpl_v<T, LValue, EvalContext&>) {
@@ -52,9 +49,7 @@ public:
         }
     }
 
-    LValue visitInvalid(const Expression&, EvalContext&) {
-        return nullptr;
-    }
+    LValue visitInvalid(const Expression&, EvalContext&) { return nullptr; }
 };
 
 ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl, const ConstantValue& cvr) {
@@ -65,7 +60,8 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl, co
     const SVInt& l = cvl.integer();
     const SVInt& r = cvr.integer();
 
-#define OP(k, v) case BinaryOperator::k: return v
+#define OP(k, v) \
+    case BinaryOperator::k: return v
     switch (op) {
         OP(Add, l + r);
         OP(Subtract, l - r);
@@ -99,7 +95,6 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl, co
     THROW_UNREACHABLE;
 #undef OP
 }
-
 }
 
 namespace slang {
@@ -172,10 +167,8 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     switch (symbol.kind) {
-        case SymbolKind::Parameter:
-            return symbol.as<ParameterSymbol>().getValue();
-        case SymbolKind::EnumValue:
-            return symbol.as<EnumValueSymbol>().getValue();
+        case SymbolKind::Parameter: return symbol.as<ParameterSymbol>().getValue();
+        case SymbolKind::EnumValue: return symbol.as<EnumValueSymbol>().getValue();
         default:
             ConstantValue* v = context.findLocal(&symbol);
             if (v)
@@ -272,11 +265,11 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
             lvalue = context.findLocal(&((const NamedValueExpression&)operand()).symbol);
             ASSERT(lvalue);
             break;
-        default:
-            break;
+        default: break;
     }
 
-#define OP(k, v) case UnaryOperator::k: return v;
+#define OP(k, v) \
+    case UnaryOperator::k: return v;
     switch (op) {
         OP(Plus, v);
         OP(Minus, -v);
@@ -425,8 +418,7 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
     return lval.selectRange(*range);
 }
 
-optional<ConstantRange> RangeSelectExpression::getRange(EvalContext&,
-                                                        const ConstantValue& cl,
+optional<ConstantRange> RangeSelectExpression::getRange(EvalContext&, const ConstantValue& cl,
                                                         const ConstantValue& cr) const {
     optional<int32_t> l = cl.integer().as<int32_t>();
     optional<int32_t> r = cr.integer().as<int32_t>();
@@ -462,8 +454,7 @@ optional<ConstantRange> RangeSelectExpression::getRange(EvalContext&,
             result = { msb, msb - count };
             break;
         }
-        default:
-            THROW_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 
     result.left += width - 1;
@@ -506,7 +497,7 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
     }
 
     // TODO: add support for other Nary Expressions, like stream concatenation
-    //switch (expr.syntax.kind) {
+    // switch (expr.syntax.kind) {
     //  case SyntaxKind::ConcatenationExpression: return concatenate(values);
     //}
 
@@ -573,16 +564,13 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
             // TODO: add a truncate() method
             return value.integer().slice((int32_t)type->getBitWidth() - 1, 0);
 
-        case ConversionKind::FloatExtension:
-            return value;
+        case ConversionKind::FloatExtension: return value;
 
-        default:
-            THROW_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 }
 
 ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {
     return nullptr;
 }
-
 }
