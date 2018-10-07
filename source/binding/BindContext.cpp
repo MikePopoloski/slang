@@ -58,4 +58,4 @@ BindContext BindContext::resetFlags(bitmask<BindFlags> addedFlags) const {
     return result;
 }
 
-}
+} // namespace slang

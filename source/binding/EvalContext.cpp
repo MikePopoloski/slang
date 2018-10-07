@@ -12,9 +12,7 @@
 
 namespace slang {
 
-EvalContext::EvalContext(bool isScriptEval) :
-    isScriptEval_(isScriptEval)
-{
+EvalContext::EvalContext(bool isScriptEval) : isScriptEval_(isScriptEval) {
     stack.emplace_back(Frame{});
 }
 
@@ -26,7 +24,8 @@ ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue
         result = symbol->getType().getDefaultValue();
     else {
         // TODO: The provided initial value must be the correct bit width when it's an integer.
-        //ASSERT(!value.isInteger() || value.integer().getBitWidth() == symbol->getType().getBitWidth());
+        // ASSERT(!value.isInteger() || value.integer().getBitWidth() ==
+        // symbol->getType().getBitWidth());
         result = std::move(value);
     }
 
@@ -105,7 +104,7 @@ void EvalContext::reportStack() {
     if (std::exchange(reportedCallstack, true))
         return;
 
-    FormatBuffer buffer;;
+    FormatBuffer buffer;
     for (const Frame& frame : make_reverse_range(stack)) {
         if (!frame.subroutine)
             break;
@@ -128,4 +127,4 @@ void EvalContext::reportStack() {
     }
 }
 
-}
+} // namespace slang

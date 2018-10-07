@@ -7,7 +7,7 @@
 #pragma once
 
 #ifdef __GNUC__
-#include <x86intrin.h>
+#    include <x86intrin.h>
 #endif
 
 namespace slang {
@@ -22,7 +22,8 @@ static void lshrNear(uint64_t* dst, uint64_t* src, uint32_t words, uint32_t amou
     }
 }
 
-static void lshrFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset, uint32_t start, uint32_t numWords) {
+static void lshrFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset,
+                    uint32_t start, uint32_t numWords) {
     // this function is split out so that if we have an unknown value we can reuse the code
     // optimization: move whole words
     if (wordShift == 0) {
@@ -33,14 +34,16 @@ static void lshrFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t o
         // shift low order words
         uint32_t breakWord = start + numWords - offset - 1;
         for (uint32_t i = start; i < breakWord; i++)
-            dst[i] = (src[i + offset] >> wordShift) | (src[i + offset + 1] << (SVInt::BITS_PER_WORD - wordShift));
+            dst[i] = (src[i + offset] >> wordShift) |
+                     (src[i + offset + 1] << (SVInt::BITS_PER_WORD - wordShift));
 
         // shift the "break" word
         dst[breakWord] = src[breakWord + offset] >> wordShift;
     }
 }
 
-static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset, uint32_t start, uint32_t numWords) {
+static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset,
+                   uint32_t start, uint32_t numWords) {
     // optimization: move whole words
     if (wordShift == 0) {
         for (uint32_t i = start + offset; i < start + numWords; i++)
@@ -48,7 +51,8 @@ static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t of
     }
     else {
         for (uint32_t i = start + numWords - 1; i > start + offset; i--)
-            dst[i] = src[i - offset] << wordShift | src[i - offset - 1] >> (SVInt::BITS_PER_WORD - wordShift);
+            dst[i] = src[i - offset] << wordShift |
+                     src[i - offset - 1] >> (SVInt::BITS_PER_WORD - wordShift);
         dst[start + offset] = src[start] << wordShift;
     }
 
@@ -146,7 +150,8 @@ static uint64_t mulOne(uint64_t* dst, const uint64_t* x, uint32_t len, uint64_t 
     return carry;
 }
 
-static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y, uint32_t ylen);
+static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y,
+                         uint32_t ylen);
 
 // Generalized multiplier
 NO_SANITIZE("unsigned-integer-overflow")
@@ -170,7 +175,8 @@ static void mul(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t*
     }
 }
 
-static void unevenAdd(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y, uint32_t ylen) {
+static void unevenAdd(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y,
+                      uint32_t ylen) {
     if (xlen < ylen) {
         std::swap(xlen, ylen);
         std::swap(x, y);
@@ -191,7 +197,8 @@ static void unevenAdd(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uin
     dst[i] = carry;
 }
 
-static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y, uint32_t ylen) {
+static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y,
+                         uint32_t ylen) {
     if (xlen > ylen) {
         std::swap(x, y);
         std::swap(xlen, ylen);
@@ -209,12 +216,14 @@ static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const 
     const uint64_t* yl = y;
     const uint64_t* yh = y + ylSize;
 
-    TempBuffer<uint64_t, 128> t1(xlen + ylen); t1.fill(0);
+    TempBuffer<uint64_t, 128> t1(xlen + ylen);
+    t1.fill(0);
     mul(t1.get(), xh, xhSize, yh, yhSize);
     memset(dst, 0, (xlen + ylen) * sizeof(uint64_t));
     memcpy(dst + 2 * shift, t1.get(), (xhSize + yhSize) * sizeof(uint64_t));
 
-    TempBuffer<uint64_t, 128> t2(xlen + ylen); t2.fill(0);
+    TempBuffer<uint64_t, 128> t2(xlen + ylen);
+    t2.fill(0);
     mul(t2.get(), xl, xlSize, yl, ylSize);
     memcpy(dst, t2.get(), (xlSize + ylSize) * sizeof(uint64_t));
 
@@ -222,12 +231,15 @@ static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const 
     subGeneral(dst + shift, dst + shift, t2.get(), remaining);
     subGeneral(dst + shift, dst + shift, t1.get(), remaining);
 
-    t1.fill(0); unevenAdd(t1.get(), xh, xhSize, xl, xlSize);
-    t2.fill(0); unevenAdd(t2.get(), yh, yhSize, yl, ylSize);
+    t1.fill(0);
+    unevenAdd(t1.get(), xh, xhSize, xl, xlSize);
+    t2.fill(0);
+    unevenAdd(t2.get(), yh, yhSize, yl, ylSize);
 
     ASSERT(std::max(xlSize, xhSize) + 1 + std::max(ylSize, yhSize) + 1 < xlen + ylen);
 
-    TempBuffer<uint64_t, 128> t3(xlen + ylen); t3.fill(0);
+    TempBuffer<uint64_t, 128> t3(xlen + ylen);
+    t3.fill(0);
     mul(t3.get(), t1.get(), std::max(xlSize, xhSize) + 1, t2.get(), std::max(ylSize, yhSize) + 1);
 
     addGeneral(dst + shift, dst + shift, t3.get(), remaining);
@@ -357,14 +369,17 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
 }
 
 // Does a word-by-word copy, but using bit offsets and lengths.
-static void bitcpy(uint64_t* dest, uint32_t destOffset, const uint64_t* src, uint32_t length, uint32_t srcOffset = 0) {
+static void bitcpy(uint64_t* dest, uint32_t destOffset, const uint64_t* src, uint32_t length,
+                   uint32_t srcOffset = 0) {
     if (length == 0)
         return;
 
     // Get the first word we want to write to, and the remaining bits are an offset.
     const uint32_t BitsPerWord = SVInt::BITS_PER_WORD;
-    dest += destOffset / BitsPerWord; destOffset %= BitsPerWord;
-    src += srcOffset / BitsPerWord; srcOffset %= BitsPerWord;
+    dest += destOffset / BitsPerWord;
+    destOffset %= BitsPerWord;
+    src += srcOffset / BitsPerWord;
+    srcOffset %= BitsPerWord;
 
     // Writing to the first word is a special case, due to the bit offset
     if (destOffset) {
@@ -387,13 +402,15 @@ static void bitcpy(uint64_t* dest, uint32_t destOffset, const uint64_t* src, uin
 
         dest++;
         srcOffset += bitsToWrite;
-        src += srcOffset / BitsPerWord; srcOffset %= BitsPerWord;
+        src += srcOffset / BitsPerWord;
+        srcOffset %= BitsPerWord;
     }
 
     // Do a bulk copy of whole words, with all writes to dest word-aligned.
     for (uint32_t i = 0; i < length / BitsPerWord; i++) {
         *dest = srcOffset ? (*src >> srcOffset) | (src[1] << (BitsPerWord - srcOffset)) : *src;
-        dest++; src++;
+        dest++;
+        src++;
     }
 
     // Handle leftover bits in the final word.
@@ -421,7 +438,8 @@ static void setBits(uint64_t* dest, uint32_t destOffset, uint32_t length) {
 
     // Get the first word we want to write to, and the remaining bits are an offset.
     const uint32_t BitsPerWord = SVInt::BITS_PER_WORD;
-    dest += destOffset / BitsPerWord; destOffset %= BitsPerWord;
+    dest += destOffset / BitsPerWord;
+    destOffset %= BitsPerWord;
 
     // Writing to the first word is a special case, due to the bit offset
     if (destOffset) {
@@ -447,7 +465,8 @@ static void clearBits(uint64_t* dest, uint32_t destOffset, uint32_t length) {
 
     // Get the first word we want to write to, and the remaining bits are an offset.
     const uint32_t BitsPerWord = SVInt::BITS_PER_WORD;
-    dest += destOffset / BitsPerWord; destOffset %= BitsPerWord;
+    dest += destOffset / BitsPerWord;
+    destOffset %= BitsPerWord;
 
     // Writing to the first word is a special case, due to the bit offset
     if (destOffset) {
@@ -467,4 +486,4 @@ static void clearBits(uint64_t* dest, uint32_t destOffset, uint32_t length) {
         *dest &= ~((1ull << length) - 1);
 }
 
-}
+} // namespace slang

@@ -9,6 +9,7 @@
 
 namespace slang {
 
+// clang-format off
 const static StringTable<TokenKind> systemIdentifierKeywords = {
     { "$root", TokenKind::RootSystemName },
     { "$unit", TokenKind::UnitSystemName }
@@ -360,6 +361,7 @@ const static StringTable<TokenKind> allKeywords[8] =
     NEWKEYWORDS_1800_2012
 } };
 
+// clang-format on
 bool isKeyword(TokenKind kind) {
     switch (kind) {
         case TokenKind::OneStep:
@@ -646,6 +648,7 @@ const StringTable<TokenKind>* getKeywordTable(KeywordVersion version) {
     return &allKeywords[(uint8_t)version];
 }
 
+// clang-format off
 string_view getDirectiveText(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::BeginKeywordsDirective: return "`begin_keywords";
@@ -1025,5 +1028,6 @@ string_view getTokenKindText(TokenKind kind) {
         default: return "";
     }
 }
+// clang-format on
 
-}
+} // namespace slang

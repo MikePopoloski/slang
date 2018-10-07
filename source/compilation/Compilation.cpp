@@ -6,10 +6,10 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/Compilation.h"
 
-#include "slang/syntax/SyntaxTree.h"
-#include "slang/symbols/ASTVisitor.h"
-
 #include "BuiltInSubroutines.h"
+
+#include "slang/symbols/ASTVisitor.h"
+#include "slang/syntax/SyntaxTree.h"
 
 namespace {
 
@@ -18,33 +18,28 @@ using namespace slang;
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
 struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
-    void handle(const ValueSymbol& value) { value.getType(); value.getInitializer(); }
+    void handle(const ValueSymbol& value) {
+        value.getType();
+        value.getInitializer();
+    }
     void handle(const ExplicitImportSymbol& symbol) { symbol.importedSymbol(); }
     void handle(const WildcardImportSymbol& symbol) { symbol.getPackage(); }
     void handle(const SubroutineSymbol& symbol) { symbol.getReturnType(); }
 };
 
-}
+} // namespace
 
 namespace slang {
 
 Compilation::Compilation() :
-    bitType(ScalarType::Bit),
-    logicType(ScalarType::Logic),
-    regType(ScalarType::Reg),
-    signedBitType(ScalarType::Bit, true),
-    signedLogicType(ScalarType::Logic, true),
-    signedRegType(ScalarType::Reg, true),
-    shortIntType(PredefinedIntegerType::ShortInt),
-    intType(PredefinedIntegerType::Int),
-    longIntType(PredefinedIntegerType::LongInt),
-    byteType(PredefinedIntegerType::Byte),
-    integerType(PredefinedIntegerType::Integer),
-    timeType(PredefinedIntegerType::Time),
-    realType(FloatingType::Real),
-    realTimeType(FloatingType::RealTime),
-    shortRealType(FloatingType::ShortReal)
-{
+    bitType(ScalarType::Bit), logicType(ScalarType::Logic), regType(ScalarType::Reg),
+    signedBitType(ScalarType::Bit, true), signedLogicType(ScalarType::Logic, true),
+    signedRegType(ScalarType::Reg, true), shortIntType(PredefinedIntegerType::ShortInt),
+    intType(PredefinedIntegerType::Int), longIntType(PredefinedIntegerType::LongInt),
+    byteType(PredefinedIntegerType::Byte), integerType(PredefinedIntegerType::Integer),
+    timeType(PredefinedIntegerType::Time), realType(FloatingType::Real),
+    realTimeType(FloatingType::RealTime), shortRealType(FloatingType::ShortReal) {
+
     // Register built-in types for lookup by syntax kind.
     knownTypes[SyntaxKind::ShortIntType] = &shortIntType;
     knownTypes[SyntaxKind::IntType] = &intType;
@@ -81,7 +76,9 @@ Compilation::Compilation() :
     wireNetType = knownNetTypes[TokenKind::WireKeyword].get();
 
     // Scalar types are indexed by bit flags.
-    auto registerScalar = [this](auto& type) { scalarTypeTable[type.getIntegralFlags().bits() & 0x7] = &type; };
+    auto registerScalar = [this](auto& type) {
+        scalarTypeTable[type.getIntegralFlags().bits() & 0x7] = &type;
+    };
     registerScalar(bitType);
     registerScalar(logicType);
     registerScalar(regType);
@@ -111,8 +108,10 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     if (&tree->sourceManager() != sourceManager) {
         if (!sourceManager)
             sourceManager = &tree->sourceManager();
-        else
-            throw std::logic_error("All syntax trees added to the compilation must use the same source manager");
+        else {
+            throw std::logic_error(
+                "All syntax trees added to the compilation must use the same source manager");
+        }
     }
 
     auto unit = emplace<CompilationUnitSymbol>(*this);
@@ -123,8 +122,8 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         for (auto member : node.as<CompilationUnitSyntax>().members) {
             unit->addMembers(*member);
 
-            // Because of the requirement that we look at uninstantiated branches of generate blocks,
-            // we need to look at the syntax nodes instead of any bound symbols.
+            // Because of the requirement that we look at uninstantiated branches of generate
+            // blocks, we need to look at the syntax nodes instead of any bound symbols.
             if (member->kind == SyntaxKind::ModuleDeclaration) {
                 SmallVectorSized<NameSet, 2> scopeStack;
                 findInstantiations(member->as<MemberSyntax>(), scopeStack, instances);
@@ -180,11 +179,13 @@ const RootSymbol& Compilation::getRoot() {
 
         // Sort the list of definitions so that we get deterministic ordering of instances;
         // the order is otherwise dependent on iterating over a hash table.
-        std::sort(topDefinitions.begin(), topDefinitions.end(), [](auto a, auto b) { return a->name < b->name; });
+        std::sort(topDefinitions.begin(), topDefinitions.end(),
+                  [](auto a, auto b) { return a->name < b->name; });
 
         SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
         for (auto def : topDefinitions) {
-            auto& instance = ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def);
+            auto& instance =
+                ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def);
             root->addMember(instance);
             topList.append(&instance);
         }
@@ -196,7 +197,9 @@ const RootSymbol& Compilation::getRoot() {
     return *root;
 }
 
-const CompilationUnitSymbol* Compilation::getCompilationUnit(const CompilationUnitSyntax& syntax) const {
+const CompilationUnitSymbol* Compilation::getCompilationUnit(
+    const CompilationUnitSyntax& syntax) const {
+
     for (auto unit : compilationUnits) {
         if (unit->getSyntax() == &syntax)
             return unit;
@@ -204,7 +207,8 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(const CompilationUn
     return nullptr;
 }
 
-const DefinitionSymbol* Compilation::getDefinition(string_view lookupName, const Scope& scope) const {
+const DefinitionSymbol* Compilation::getDefinition(string_view lookupName,
+                                                   const Scope& scope) const {
     const Scope* searchScope = &scope;
     while (true) {
         auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
@@ -223,8 +227,8 @@ const DefinitionSymbol* Compilation::getDefinition(string_view lookupName) const
 }
 
 void Compilation::addDefinition(const DefinitionSymbol& definition) {
-    // Record that the given scope contains this definition. If the scope is a compilation unit, add it to
-    // the root scope instead so that lookups from other compilation units will find it.
+    // Record that the given scope contains this definition. If the scope is a compilation unit, add
+    // it to the root scope instead so that lookups from other compilation units will find it.
     const Scope* scope = definition.getScope();
     ASSERT(scope);
 
@@ -294,7 +298,8 @@ Diagnostics Compilation::getSemanticDiagnostics() {
     // actual diagnostic. The purpose is to find duplicate diagnostics issued by several
     // instantiations and collapse them down to one output for the user.
     flat_hash_map<std::tuple<DiagCode, SourceLocation>,
-                  std::pair<const Diagnostic*, std::vector<const Diagnostic*>>> diagMap;
+                  std::pair<const Diagnostic*, std::vector<const Diagnostic*>>>
+        diagMap;
 
     for (auto& diag : diags) {
         ASSERT(diag.symbol);
@@ -320,7 +325,8 @@ Diagnostics Compilation::getSemanticDiagnostics() {
             results.append(*diagList.front());
         else {
             // If we get here there are multiple duplicate diagnostics issued. Pick the one that
-            // came from a Definition, if there is one. Otherwise just pick whatever the first one is.
+            // came from a Definition, if there is one. Otherwise just pick whatever the first one
+            // is.
             // TODO: in the future this could print out the hierarchical paths or parameter values
             // involves with the instantiations to provide more insight as to what caused the error.
             if (definition)
@@ -362,8 +368,8 @@ const Type& Compilation::getType(SyntaxKind typeKind) const {
     return it == knownTypes.end() ? errorType : *it->second;
 }
 
-const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
-                                 bool allowNetType, bool forceSigned) {
+const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation location,
+                                 const Scope& parent, bool allowNetType, bool forceSigned) {
     const Type& result = Type::fromSyntax(*this, node, location, parent, forceSigned);
     if (!allowNetType && result.isNetType()) {
         parent.addDiag(DiagCode::NetTypeNotAllowed, node.sourceRange()) << result.name;
@@ -372,7 +378,8 @@ const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation loca
     return result;
 }
 
-const Type& Compilation::getType(const Type& elementType, const SyntaxList<VariableDimensionSyntax>& dimensions,
+const Type& Compilation::getType(const Type& elementType,
+                                 const SyntaxList<VariableDimensionSyntax>& dimensions,
                                  LookupLocation location, const Scope& scope) {
     return UnpackedArrayType::fromSyntax(*this, elementType, location, scope, dimensions);
 }
@@ -385,7 +392,8 @@ const PackedArrayType& Compilation::getType(bitwidth_t width, bitmask<IntegralFl
     if (it != vectorTypeCache.end())
         return *it->second;
 
-    auto type = emplace<PackedArrayType>(getScalarType(flags), ConstantRange { int32_t(width - 1), 0 });
+    auto type =
+        emplace<PackedArrayType>(getScalarType(flags), ConstantRange{ int32_t(width - 1), 0 });
     vectorTypeCache.emplace_hint(it, key, type);
     return *type;
 }
@@ -398,7 +406,8 @@ const ScalarType& Compilation::getScalarType(bitmask<IntegralFlags> flags) {
 
 const NetType& Compilation::getNetType(TokenKind kind) const {
     auto it = knownNetTypes.find(kind);
-    return it == knownNetTypes.end() ? *knownNetTypes.find(TokenKind::Unknown)->second : *it->second;
+    return it == knownNetTypes.end() ? *knownNetTypes.find(TokenKind::Unknown)->second
+                                     : *it->second;
 }
 
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
@@ -420,8 +429,8 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
     return importData[index];
 }
 
-optional<int32_t> Compilation::evalIntegerExpr(const ExpressionSyntax& syntax, LookupLocation location,
-                                               const Scope& scope) {
+optional<int32_t> Compilation::evalIntegerExpr(const ExpressionSyntax& syntax,
+                                               LookupLocation location, const Scope& scope) {
     BindContext context(scope, location, BindFlags::IntegralConstant);
     const auto& expr = Expression::bind(*this, syntax, context);
     if (!expr.constant || !expr.constant->isInteger())
@@ -441,8 +450,8 @@ optional<int32_t> Compilation::evalIntegerExpr(const ExpressionSyntax& syntax, L
     return coerced;
 }
 
-void Compilation::findInstantiations(const ModuleDeclarationSyntax& module, SmallVector<NameSet>& scopeStack,
-                                     NameSet& found) {
+void Compilation::findInstantiations(const ModuleDeclarationSyntax& module,
+                                     SmallVector<NameSet>& scopeStack, NameSet& found) {
     // If there are nested modules that shadow global module names, we need to
     // ignore them when considering instantiations.
     NameSet* localDefs = nullptr;
@@ -476,7 +485,8 @@ void Compilation::findInstantiations(const ModuleDeclarationSyntax& module, Smal
         scopeStack.pop();
 }
 
-static bool containsName(const SmallVector<flat_hash_set<string_view>>& scopeStack, string_view name) {
+static bool containsName(const SmallVector<flat_hash_set<string_view>>& scopeStack,
+                         string_view name) {
     for (const auto& set : scopeStack) {
         if (set.find(name) != set.end())
             return true;
@@ -516,12 +526,14 @@ void Compilation::findInstantiations(const MemberSyntax& node, SmallVector<NameS
             for (auto& item : node.as<CaseGenerateSyntax>().items) {
                 switch (item->kind) {
                     case SyntaxKind::DefaultCaseItem:
-                        findInstantiations(item->as<DefaultCaseItemSyntax>().clause->as<MemberSyntax>(),
-                                           scopeStack, found);
+                        findInstantiations(
+                            item->as<DefaultCaseItemSyntax>().clause->as<MemberSyntax>(),
+                            scopeStack, found);
                         break;
                     case SyntaxKind::StandardCaseItem:
-                        findInstantiations(item->as<StandardCaseItemSyntax>().clause->as<MemberSyntax>(),
-                                           scopeStack, found);
+                        findInstantiations(
+                            item->as<StandardCaseItemSyntax>().clause->as<MemberSyntax>(),
+                            scopeStack, found);
                         break;
                     default:
                         break;
@@ -540,4 +552,4 @@ void Compilation::findInstantiations(const MemberSyntax& node, SmallVector<NameS
     }
 }
 
-}
+} // namespace slang

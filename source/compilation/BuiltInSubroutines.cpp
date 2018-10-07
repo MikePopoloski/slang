@@ -80,4 +80,4 @@ ConstantValue IncrementSubroutine::eval(EvalContext&, const Args& args) const {
     return SVInt(range.isLittleEndian() ? 1 : -1);
 }
 
-}
+} // namespace slang::Builtins

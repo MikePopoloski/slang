@@ -46,4 +46,4 @@ SUBROUTINE(IncrementSubroutine, ArrayQueryFunction, "$increment");
 
 #undef SUBROUTINE
 
-}
+} // namespace slang::Builtins

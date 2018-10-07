@@ -14,17 +14,14 @@
 
 namespace slang {
 
-static const char* severityToString[] = {
-    "note",
-    "warning",
-    "error"
-};
+static const char* severityToString[] = { "note", "warning", "error" };
 
-Diagnostic::Diagnostic(DiagCode code, SourceLocation location) :
-    code(code), location(location) {}
+Diagnostic::Diagnostic(DiagCode code, SourceLocation location) : code(code), location(location) {
+}
 
 Diagnostic::Diagnostic(const Symbol& source, DiagCode code, SourceLocation location) :
-    code(code), location(location), symbol(&source) {}
+    code(code), location(location), symbol(&source) {
+}
 
 Diagnostic& Diagnostic::addNote(DiagCode noteCode, SourceLocation noteLocation) {
     notes.emplace_back(noteCode, noteLocation);
@@ -57,16 +54,18 @@ Diagnostic& operator<<(Diagnostic& diag, const ConstantValue& arg) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
-    return std::visit([&](auto&& t) -> auto& {
-        if constexpr (std::is_same_v<std::decay_t<decltype(t)>, const Type*>) {
-            TypePrinter printer;
-            printer.append(*t);
-            return os << printer.toString();
-        }
-        else {
-            return os << t;
-        }
-    }, static_cast<const Diagnostic::ArgVariantType&>(arg));
+    return std::visit(
+        [&](auto&& t) -> auto& {
+            if constexpr (std::is_same_v<std::decay_t<decltype(t)>, const Type*>) {
+                TypePrinter printer;
+                printer.append(*t);
+                return os << printer.toString();
+            }
+            else {
+                return os << t;
+            }
+        },
+        static_cast<const Diagnostic::ArgVariantType&>(arg));
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
@@ -98,8 +97,8 @@ void Diagnostics::sort(const SourceManager& sourceManager) {
 }
 
 DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
-    sourceManager(sourceManager)
-{
+    sourceManager(sourceManager) {
+    // clang-format off
     // lexer
     descriptors[DiagCode::NonPrintableChar] = { "non-printable character in source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
     descriptors[DiagCode::UTF8Char] = { "UTF-8 sequence in source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
@@ -290,6 +289,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NoteHierarchicalNameInCE] = { "reference to '{}' by hierarchical name is not allowed in a constant expression", DiagnosticSeverity::Note };
     descriptors[DiagCode::NoteFunctionIdentifiersMustBeLocal] = { "all identifiers that are not parameters must be declared locally to a constant function", DiagnosticSeverity::Note };
     descriptors[DiagCode::NoteParamUsedInCEBeforeDecl] = { "parameter '{}' is declared after the invocation of the current constant function", DiagnosticSeverity::Note };
+    // clang-format on
 
     // if this assert fails, you added a new diagnostic without adding a descriptor for it
     ASSERT((int)DiagCode::MaxValue == descriptors.size());
@@ -322,8 +322,10 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     // build the error message from arguments, if we have any
     FormatBuffer buffer;
     Descriptor& desc = descriptors[diagnostic.code];
-    if (diagnostic.args.empty())
-        formatDiag(buffer, location, diagnostic.ranges, severityToString[(int)desc.severity], desc.format);
+    if (diagnostic.args.empty()) {
+        formatDiag(buffer, location, diagnostic.ranges, severityToString[(int)desc.severity],
+                   desc.format);
+    }
     else {
         // The fmtlib API for arg lists isn't very pretty, but it gets the job done
         using ctx = fmt::format_context;
@@ -331,7 +333,8 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         for (auto& arg : diagnostic.args)
             args.push_back(fmt::internal::make_arg<ctx>(arg));
 
-        std::string msg = fmt::vformat(desc.format, fmt::basic_format_args<ctx>(args.data(), (unsigned)args.size()));
+        std::string msg = fmt::vformat(
+            desc.format, fmt::basic_format_args<ctx>(args.data(), (unsigned)args.size()));
         formatDiag(buffer, location, diagnostic.ranges, severityToString[(int)desc.severity], msg);
     }
 
@@ -364,9 +367,8 @@ std::string DiagnosticWriter::report(const Diagnostics& diagnostics) {
 
             for (auto& includeLoc : includeStack) {
                 buffer.format("In file included from {}:{}:\n",
-                    sourceManager.getFileName(includeLoc),
-                    sourceManager.getLineNumber(includeLoc)
-                );
+                              sourceManager.getFileName(includeLoc),
+                              sourceManager.getLineNumber(includeLoc));
             }
         }
         buffer.append(report(diag));
@@ -450,16 +452,12 @@ void DiagnosticWriter::highlightRange(SourceRange range, SourceLocation caretLoc
 }
 
 template<typename T>
-void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc, const std::vector<SourceRange>& ranges,
-                                  const char* severity, const std::string& msg) {
+void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc,
+                                  const std::vector<SourceRange>& ranges, const char* severity,
+                                  const std::string& msg) {
     uint32_t col = sourceManager.getColumnNumber(loc);
-    buffer.format("{}:{}:{}: {}: {}",
-        sourceManager.getFileName(loc),
-        sourceManager.getLineNumber(loc),
-        col,
-        severity,
-        msg
-    );
+    buffer.format("{}:{}:{}: {}: {}", sourceManager.getFileName(loc),
+                  sourceManager.getLineNumber(loc), col, severity, msg);
 
     string_view line = getBufferLine(loc, col);
     if (!line.empty()) {
@@ -484,4 +482,4 @@ void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc, const std::vect
     buffer.append("\n");
 }
 
-}
+} // namespace slang

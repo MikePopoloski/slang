@@ -22,24 +22,18 @@ void NumericTokenFlags::set(TimeUnit unit_) {
     raw |= uint8_t(unit_) << 3;
 }
 
-Trivia::Trivia() :
-    rawText{ "", 0 }, kind(TriviaKind::Unknown)
-{
+Trivia::Trivia() : rawText{ "", 0 }, kind(TriviaKind::Unknown) {
 }
 
 Trivia::Trivia(TriviaKind kind, string_view rawText) :
-    rawText{ rawText.data(), (uint32_t)rawText.size() }, kind(kind)
-{
+    rawText{ rawText.data(), (uint32_t)rawText.size() }, kind(kind) {
 }
 
 Trivia::Trivia(TriviaKind kind, span<Token const> tokens) :
-    tokens{ tokens.data(), (uint32_t)tokens.size() }, kind(kind)
-{
+    tokens{ tokens.data(), (uint32_t)tokens.size() }, kind(kind) {
 }
 
-Trivia::Trivia(TriviaKind kind, SyntaxNode* syntax) :
-    syntaxNode(syntax), kind(kind)
-{
+Trivia::Trivia(TriviaKind kind, SyntaxNode* syntax) : syntaxNode(syntax), kind(kind) {
 }
 
 Trivia Trivia::withLocation(BumpAllocator& alloc, SourceLocation location) const {
@@ -102,9 +96,10 @@ span<Token const> Trivia::getSkippedTokens() const {
     return { tokens.ptr, tokens.len };
 }
 
-Token::Info::Info(span<Trivia const> trivia, string_view rawText, SourceLocation location, bitmask<TokenFlags> flags) :
-    trivia(trivia), rawText(rawText), location(location), flags(flags)
-{
+Token::Info::Info(span<Trivia const> trivia, string_view rawText, SourceLocation location,
+                  bitmask<TokenFlags> flags) :
+    trivia(trivia),
+    rawText(rawText), location(location), flags(flags) {
 }
 
 void Token::Info::setBit(logic_t value) {
@@ -134,7 +129,8 @@ void Token::Info::setInt(BumpAllocator& alloc, const SVInt& value) {
     if (value.isSingleWord())
         storage.val = *value.getRawData();
     else {
-        storage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
+        storage.pVal =
+            (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
         memcpy(storage.pVal, value.getRawData(), sizeof(uint64_t) * value.getNumWords());
     }
 
@@ -170,14 +166,10 @@ void Token::Info::setTimeUnit(TimeUnit unit) {
     }
 }
 
-Token::Token() :
-    kind(TokenKind::Unknown), info(nullptr)
-{
+Token::Token() : kind(TokenKind::Unknown), info(nullptr) {
 }
 
-Token::Token(TokenKind kind, const Info* info) :
-    kind(kind), info(info)
-{
+Token::Token(TokenKind kind, const Info* info) : kind(kind), info(info) {
     ASSERT(info);
 }
 
@@ -231,7 +223,8 @@ string_view Token::rawText() const {
                 return info->rawText;
             case TokenKind::EndOfFile:
                 return "";
-            default: THROW_UNREACHABLE;
+            default:
+                THROW_UNREACHABLE;
         }
     }
 }
@@ -326,7 +319,8 @@ Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation 
     return Token(kind, info);
 }
 
-Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual, TokenKind expected, Token lastConsumed) {
+Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual,
+                            TokenKind expected, Token lastConsumed) {
     // Figure out the best place to report this error based on the current
     // token as well as the last real token we consumed.
     SourceLocation location;
@@ -344,8 +338,7 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     if (!diagnostics.empty()) {
         const Diagnostic& diag = diagnostics.back();
         if ((diag.location == location || diag.location == actual.location()) &&
-            (diag.code == DiagCode::ExpectedIdentifier ||
-             diag.code == DiagCode::ExpectedToken)) {
+            (diag.code == DiagCode::ExpectedIdentifier || diag.code == DiagCode::ExpectedToken)) {
             report = false;
         }
     }
@@ -375,4 +368,4 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     return Token::createMissing(alloc, expected, location);
 }
 
-}
+} // namespace slang

@@ -11,12 +11,9 @@
 namespace slang {
 
 const static StringTable<TimeUnit> strToUnit = {
-    { "s", TimeUnit::Seconds },
-    { "ms", TimeUnit::Milliseconds },
-    { "us", TimeUnit::Microseconds },
-    { "ns", TimeUnit::Nanoseconds },
-    { "ps", TimeUnit::Picoseconds },
-    { "fs", TimeUnit::Femtoseconds }
+    { "s", TimeUnit::Seconds },       { "ms", TimeUnit::Milliseconds },
+    { "us", TimeUnit::Microseconds }, { "ns", TimeUnit::Nanoseconds },
+    { "ps", TimeUnit::Picoseconds },  { "fs", TimeUnit::Femtoseconds }
 };
 
 bool suffixToTimeUnit(string_view timeSuffix, TimeUnit& unit) {
@@ -25,14 +22,20 @@ bool suffixToTimeUnit(string_view timeSuffix, TimeUnit& unit) {
 
 string_view timeUnitToSuffix(TimeUnit unit) {
     switch (unit) {
-        case TimeUnit::Seconds: return "s";
-        case TimeUnit::Milliseconds: return "ms";
-        case TimeUnit::Microseconds: return "us";
-        case TimeUnit::Nanoseconds: return "ns";
-        case TimeUnit::Picoseconds: return "ps";
-        case TimeUnit::Femtoseconds: return "fs";
+        case TimeUnit::Seconds:
+            return "s";
+        case TimeUnit::Milliseconds:
+            return "ms";
+        case TimeUnit::Microseconds:
+            return "us";
+        case TimeUnit::Nanoseconds:
+            return "ns";
+        case TimeUnit::Picoseconds:
+            return "ps";
+        case TimeUnit::Femtoseconds:
+            return "fs";
     }
     THROW_UNREACHABLE;
 }
 
-}
+} // namespace slang

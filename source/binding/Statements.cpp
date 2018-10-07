@@ -15,14 +15,22 @@ const StatementList StatementList::Empty({});
 
 bool Statement::eval(EvalContext& context) const {
     switch (kind) {
-        case StatementKind::Invalid: return false;
-        case StatementKind::List: return as<StatementList>().eval(context);
-        case StatementKind::SequentialBlock: return as<SequentialBlockStatement>().eval(context);
-        case StatementKind::ExpressionStatement: return as<ExpressionStatement>().eval(context);
-        case StatementKind::VariableDeclaration: return as<VariableDeclStatement>().eval(context);
-        case StatementKind::Return: return as<ReturnStatement>().eval(context);
-        case StatementKind::Conditional: return as<ConditionalStatement>().eval(context);
-        case StatementKind::ForLoop: return as<ForLoopStatement>().eval(context);
+        case StatementKind::Invalid:
+            return false;
+        case StatementKind::List:
+            return as<StatementList>().eval(context);
+        case StatementKind::SequentialBlock:
+            return as<SequentialBlockStatement>().eval(context);
+        case StatementKind::ExpressionStatement:
+            return as<ExpressionStatement>().eval(context);
+        case StatementKind::VariableDeclaration:
+            return as<VariableDeclStatement>().eval(context);
+        case StatementKind::Return:
+            return as<ReturnStatement>().eval(context);
+        case StatementKind::Conditional:
+            return as<ConditionalStatement>().eval(context);
+        case StatementKind::ForLoop:
+            return as<ForLoopStatement>().eval(context);
     }
     THROW_UNREACHABLE;
 }
@@ -104,4 +112,4 @@ bool ForLoopStatement::eval(EvalContext& context) const {
     return true;
 }
 
-}
+} // namespace slang

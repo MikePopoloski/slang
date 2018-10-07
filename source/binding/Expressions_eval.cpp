@@ -33,7 +33,7 @@ struct EvalVisitor {
 class LValueVisitor {
     HAS_METHOD_TRAIT(evalLValueImpl);
 
-  public:
+public:
     template<typename T>
     LValue visit(const T& expr, EvalContext& context) {
         if constexpr (has_evalLValueImpl_v<T, LValue, EvalContext&>) {
@@ -52,7 +52,8 @@ class LValueVisitor {
     LValue visitInvalid(const Expression&, EvalContext&) { return nullptr; }
 };
 
-ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl, const ConstantValue& cvr) {
+ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
+                                 const ConstantValue& cvr) {
     // TODO: handle non-integer
     if (!cvl.isInteger() || !cvr.isInteger())
         return nullptr;
@@ -60,8 +61,10 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl, co
     const SVInt& l = cvl.integer();
     const SVInt& r = cvr.integer();
 
-#define OP(k, v) \
-    case BinaryOperator::k: return v
+#define OP(k, v)            \
+    case BinaryOperator::k: \
+        return v
+
     switch (op) {
         OP(Add, l + r);
         OP(Subtract, l - r);
@@ -95,7 +98,8 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl, co
     THROW_UNREACHABLE;
 #undef OP
 }
-}
+
+} // namespace
 
 namespace slang {
 
@@ -137,15 +141,19 @@ ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
     bool isSigned = type->isSigned();
 
     switch (value.value) {
-        case 0: return SVInt(width, 0, isSigned);
+        case 0:
+            return SVInt(width, 0, isSigned);
         case 1: {
             SVInt tmp(width, 0, isSigned);
             tmp.setAllOnes();
             return tmp;
         }
-        case logic_t::X_VALUE: return SVInt::createFillX(width, isSigned);
-        case logic_t::Z_VALUE: return SVInt::createFillZ(width, isSigned);
-        default: THROW_UNREACHABLE;
+        case logic_t::X_VALUE:
+            return SVInt::createFillX(width, isSigned);
+        case logic_t::Z_VALUE:
+            return SVInt::createFillZ(width, isSigned);
+        default:
+            THROW_UNREACHABLE;
     }
 }
 
@@ -167,8 +175,10 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     switch (symbol.kind) {
-        case SymbolKind::Parameter: return symbol.as<ParameterSymbol>().getValue();
-        case SymbolKind::EnumValue: return symbol.as<EnumValueSymbol>().getValue();
+        case SymbolKind::Parameter:
+            return symbol.as<ParameterSymbol>().getValue();
+        case SymbolKind::EnumValue:
+            return symbol.as<EnumValueSymbol>().getValue();
         default:
             ConstantValue* v = context.findLocal(&symbol);
             if (v)
@@ -265,11 +275,14 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
             lvalue = context.findLocal(&((const NamedValueExpression&)operand()).symbol);
             ASSERT(lvalue);
             break;
-        default: break;
+        default:
+            break;
     }
 
-#define OP(k, v) \
-    case UnaryOperator::k: return v;
+#define OP(k, v)           \
+    case UnaryOperator::k: \
+        return v;
+
     switch (op) {
         OP(Plus, v);
         OP(Minus, -v);
@@ -281,10 +294,18 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
         OP(BitwiseNor, SVInt(!v.reductionOr()));
         OP(BitwiseXnor, SVInt(!v.reductionXor()));
         OP(LogicalNot, SVInt(!v));
-        case UnaryOperator::Preincrement: *lvalue = ++v; return v;
-        case UnaryOperator::Predecrement: *lvalue = --v; return v;
-        case UnaryOperator::Postincrement: *lvalue = v + 1; return v;
-        case UnaryOperator::Postdecrement: *lvalue = v - 1; return v;
+        case UnaryOperator::Preincrement:
+            *lvalue = ++v;
+            return v;
+        case UnaryOperator::Predecrement:
+            *lvalue = --v;
+            return v;
+        case UnaryOperator::Postincrement:
+            *lvalue = v + 1;
+            return v;
+        case UnaryOperator::Postdecrement:
+            *lvalue = v - 1;
+            return v;
     }
     THROW_UNREACHABLE;
 #undef OP
@@ -367,8 +388,9 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     return lval.selectRange(*range);
 }
 
-optional<ConstantRange> ElementSelectExpression::getRange(EvalContext& context,
-                                                          const ConstantValue& selectorValue) const {
+optional<ConstantRange> ElementSelectExpression::getRange(
+    EvalContext& context, const ConstantValue& selectorValue) const {
+
     const Type& t = value().type->getCanonicalType();
     optional<int32_t> index = selectorValue.integer().as<int32_t>();
     if (index) {
@@ -454,7 +476,8 @@ optional<ConstantRange> RangeSelectExpression::getRange(EvalContext&, const Cons
             result = { msb, msb - count };
             break;
         }
-        default: THROW_UNREACHABLE;
+        default:
+            THROW_UNREACHABLE;
     }
 
     result.left += width - 1;
@@ -557,20 +580,24 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
             return (double)value.integer().as<int64_t>().value();
 
         case ConversionKind::IntExtension:
-            ASSERT(value.isInteger() && value.integer().getBitWidth() == operand().type->getBitWidth());
+            ASSERT(value.isInteger() &&
+                   value.integer().getBitWidth() == operand().type->getBitWidth());
             return extend(value.integer(), type->getBitWidth(), type->as<IntegralType>().isSigned);
 
         case ConversionKind::IntTruncation:
             // TODO: add a truncate() method
             return value.integer().slice((int32_t)type->getBitWidth() - 1, 0);
 
-        case ConversionKind::FloatExtension: return value;
+        case ConversionKind::FloatExtension:
+            return value;
 
-        default: THROW_UNREACHABLE;
+        default:
+            THROW_UNREACHABLE;
     }
 }
 
 ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {
     return nullptr;
 }
-}
+
+} // namespace slang

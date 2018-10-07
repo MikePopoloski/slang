@@ -6,18 +6,17 @@
 //------------------------------------------------------------------------------
 #include "slang/numeric/VectorBuilder.h"
 
-#include "slang/diagnostics/Diagnostics.h"
-
 #include "../text/CharInfo.h"
+
+#include "slang/diagnostics/Diagnostics.h"
 
 namespace slang {
 
-VectorBuilder::VectorBuilder(Diagnostics& diagnostics) :
-    diagnostics(diagnostics)
-{
+VectorBuilder::VectorBuilder(Diagnostics& diagnostics) : diagnostics(diagnostics) {
 }
 
-void VectorBuilder::start(LiteralBase base, bitwidth_t size, bool isSigned, SourceLocation location) {
+void VectorBuilder::start(LiteralBase base, bitwidth_t size, bool isSigned,
+                          SourceLocation location) {
     literalBase = base;
     sizeBits = size;
     firstLocation = location;
@@ -112,7 +111,8 @@ void VectorBuilder::append(Token token) {
                 index++;
             }
             break;
-        default: THROW_UNREACHABLE;
+        default:
+            THROW_UNREACHABLE;
     }
 
     first = false;
@@ -150,7 +150,8 @@ SVInt VectorBuilder::finish() {
             case LiteralBase::Hex:
                 multiplier = 4;
                 break;
-            default: THROW_UNREACHABLE;
+            default:
+                THROW_UNREACHABLE;
         }
         // All of the digits in the number require `multiplier` bits, except for
         // possibly the first (leading) digit. This one has leading zeros in it,
@@ -171,9 +172,10 @@ SVInt VectorBuilder::finish() {
                 bits = SVInt::MAX_BITS;
             }
             if (sizeBits == 0) {
-                return SVInt::fromDigits(std::max(32u, bits), literalBase,
-                                         signFlag, hasUnknown, digits);
-            } else {
+                return SVInt::fromDigits(std::max(32u, bits), literalBase, signFlag, hasUnknown,
+                                         digits);
+            }
+            else {
                 // we should warn about overflow here, but the spec says it is valid and
                 // the literal gets truncated. Definitely a warning though.
                 diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
@@ -196,4 +198,4 @@ void VectorBuilder::addDigit(logic_t digit, int maxValue) {
     }
 }
 
-}
+} // namespace slang

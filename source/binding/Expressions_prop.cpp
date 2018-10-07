@@ -14,7 +14,8 @@ struct Expression::PropagationVisitor {
     Compilation& compilation;
     const Type& newType;
 
-    PropagationVisitor(Compilation& compilation, const Type& newType) : compilation(compilation), newType(newType) {}
+    PropagationVisitor(Compilation& compilation, const Type& newType) :
+        compilation(compilation), newType(newType) {}
 
     template<typename T>
     Expression& visit(T& expr) {
@@ -23,7 +24,8 @@ struct Expression::PropagationVisitor {
 
         // If we're propagating a floating type down to a non-floating type, that operand
         // will instead be converted in a self-determined context.
-        if (newType.isFloating() && !expr.type->isFloating() && expr.kind != ExpressionKind::Conversion)
+        if (newType.isFloating() && !expr.type->isFloating() &&
+            expr.kind != ExpressionKind::Conversion)
             return Expression::convert(compilation, ConversionKind::IntToFloat, newType, expr);
 
         // Perform type-specific propagation.
@@ -41,7 +43,8 @@ struct Expression::PropagationVisitor {
     Expression& visitInvalid(Expression& expr) { return expr; }
 };
 
-void Expression::contextDetermined(Compilation& compilation, Expression*& expr, const Type& newType) {
+void Expression::contextDetermined(Compilation& compilation, Expression*& expr,
+                                   const Type& newType) {
     PropagationVisitor visitor(compilation, newType);
     expr = &expr->visit(visitor);
 }
@@ -59,7 +62,8 @@ Expression& Expression::selfDetermined(Compilation& compilation, const Expressio
     return *expr;
 }
 
-Expression& IntegerLiteral::propagateType(Compilation& compilation, IntegerLiteral& expr, const Type& newType) {
+Expression& IntegerLiteral::propagateType(Compilation& compilation, IntegerLiteral& expr,
+                                          const Type& newType) {
     ASSERT(newType.isIntegral());
     ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
 
@@ -70,7 +74,8 @@ Expression& IntegerLiteral::propagateType(Compilation& compilation, IntegerLiter
     return expr;
 }
 
-Expression& RealLiteral::propagateType(Compilation& compilation, RealLiteral& expr, const Type& newType) {
+Expression& RealLiteral::propagateType(Compilation& compilation, RealLiteral& expr,
+                                       const Type& newType) {
     ASSERT(newType.isFloating());
     ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
 
@@ -81,7 +86,8 @@ Expression& RealLiteral::propagateType(Compilation& compilation, RealLiteral& ex
     return expr;
 }
 
-Expression& UnbasedUnsizedIntegerLiteral::propagateType(Compilation&, UnbasedUnsizedIntegerLiteral& expr,
+Expression& UnbasedUnsizedIntegerLiteral::propagateType(Compilation&,
+                                                        UnbasedUnsizedIntegerLiteral& expr,
                                                         const Type& newType) {
     ASSERT(newType.isIntegral());
     ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
@@ -106,11 +112,13 @@ Expression& StringLiteral::propagateType(Compilation&, StringLiteral& expr, cons
     return expr;
 }
 
-Expression& NamedValueExpression::propagateType(Compilation&, NamedValueExpression& expr, const Type&) {
+Expression& NamedValueExpression::propagateType(Compilation&, NamedValueExpression& expr,
+                                                const Type&) {
     return expr;
 }
 
-Expression& UnaryExpression::propagateType(Compilation& compilation, UnaryExpression& expr, const Type& newType) {
+Expression& UnaryExpression::propagateType(Compilation& compilation, UnaryExpression& expr,
+                                           const Type& newType) {
     switch (expr.op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
@@ -138,7 +146,8 @@ Expression& UnaryExpression::propagateType(Compilation& compilation, UnaryExpres
     return expr;
 }
 
-Expression& BinaryExpression::propagateType(Compilation& compilation, BinaryExpression& expr, const Type& newType) {
+Expression& BinaryExpression::propagateType(Compilation& compilation, BinaryExpression& expr,
+                                            const Type& newType) {
     switch (expr.op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -187,8 +196,8 @@ Expression& BinaryExpression::propagateType(Compilation& compilation, BinaryExpr
     return expr;
 }
 
-Expression& ConditionalExpression::propagateType(Compilation& compilation, ConditionalExpression& expr,
-                                                 const Type& newType) {
+Expression& ConditionalExpression::propagateType(Compilation& compilation,
+                                                 ConditionalExpression& expr, const Type& newType) {
     // predicate is self determined
     expr.type = &newType;
     selfDetermined(compilation, expr.pred_);
@@ -197,24 +206,29 @@ Expression& ConditionalExpression::propagateType(Compilation& compilation, Condi
     return expr;
 }
 
-Expression& AssignmentExpression::propagateType(Compilation&, AssignmentExpression& expr, const Type&) {
+Expression& AssignmentExpression::propagateType(Compilation&, AssignmentExpression& expr,
+                                                const Type&) {
     return expr;
 }
 
-Expression& ElementSelectExpression::propagateType(Compilation&, ElementSelectExpression& expr, const Type&) {
+Expression& ElementSelectExpression::propagateType(Compilation&, ElementSelectExpression& expr,
+                                                   const Type&) {
     return expr;
 }
 
-Expression& RangeSelectExpression::propagateType(Compilation&, RangeSelectExpression& expr, const Type&) {
+Expression& RangeSelectExpression::propagateType(Compilation&, RangeSelectExpression& expr,
+                                                 const Type&) {
     return expr;
 }
 
-Expression& ConcatenationExpression::propagateType(Compilation&, ConcatenationExpression& expr, const Type&) {
+Expression& ConcatenationExpression::propagateType(Compilation&, ConcatenationExpression& expr,
+                                                   const Type&) {
     // All operands are self-determined.
     return expr;
 }
 
-Expression& ReplicationExpression::propagateType(Compilation&, ReplicationExpression& expr, const Type&) {
+Expression& ReplicationExpression::propagateType(Compilation&, ReplicationExpression& expr,
+                                                 const Type&) {
     return expr;
 }
 
@@ -222,8 +236,8 @@ Expression& CallExpression::propagateType(Compilation&, CallExpression& expr, co
     return expr;
 }
 
-Expression& ConversionExpression::propagateType(Compilation& compilation, ConversionExpression& expr,
-                                                const Type& newType) {
+Expression& ConversionExpression::propagateType(Compilation& compilation,
+                                                ConversionExpression& expr, const Type& newType) {
     // predicate is self determined
     expr.type = &newType;
     selfDetermined(compilation, expr.operand_);
@@ -233,4 +247,5 @@ Expression& ConversionExpression::propagateType(Compilation& compilation, Conver
 Expression& DataTypeExpression::propagateType(Compilation&, DataTypeExpression& expr, const Type&) {
     return expr;
 }
-}
+
+} // namespace slang

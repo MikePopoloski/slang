@@ -10,8 +10,8 @@
 
 namespace slang {
 
-SemanticModel::SemanticModel(Compilation& compilation) :
-    compilation(compilation) {}
+SemanticModel::SemanticModel(Compilation& compilation) : compilation(compilation) {
+}
 
 void SemanticModel::withContext(const SyntaxNode& node, const Symbol& symbol) {
     symbolCache[&node] = &symbol;
@@ -109,4 +109,4 @@ const TypeAliasType* SemanticModel::getDeclaredSymbol(const TypedefDeclarationSy
     return result ? &result->as<TypeAliasType>() : nullptr;
 }
 
-}
+} // namespace slang

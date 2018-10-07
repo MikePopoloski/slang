@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/Lexer.h"
 
+#include "../text/CharInfo.h"
 #include <algorithm>
 #include <cmath>
 
@@ -13,24 +14,13 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
 
-#include "../text/CharInfo.h"
-
 namespace slang {
 
 static const int MaxMantissaDigits = 18;
 
 inline bool composeDouble(double fraction, int exp, double& result) {
-    static const double powersOf10[] = {
-        10.0,
-        100.0,
-        1.0e4,
-        1.0e8,
-        1.0e16,
-        1.0e32,
-        1.0e64,
-        1.0e128,
-        1.0e256
-    };
+    static const double powersOf10[] = { 10.0,   100.0,  1.0e4,   1.0e8,  1.0e16,
+                                         1.0e32, 1.0e64, 1.0e128, 1.0e256 };
 
     bool neg = false;
     if (exp < 0) {
@@ -57,7 +47,8 @@ inline bool composeDouble(double fraction, int exp, double& result) {
     return std::isfinite(result);
 }
 
-inline double computeRealValue(uint64_t value, int decPoint, int digits, uint64_t expValue, bool negative) {
+inline double computeRealValue(uint64_t value, int decPoint, int digits, uint64_t expValue,
+                               bool negative) {
     int fracExp = decPoint - std::min(digits, MaxMantissaDigits);
     int exp;
     if (negative)
@@ -73,22 +64,16 @@ inline double computeRealValue(uint64_t value, int decPoint, int digits, uint64_
 
 SyntaxKind getDirectiveKind(string_view directive);
 
-Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics, LexerOptions options) :
-    Lexer(buffer.id, buffer.data, buffer.data.data(), alloc, diagnostics, options)
-{
+Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics,
+             LexerOptions options) :
+    Lexer(buffer.id, buffer.data, buffer.data.data(), alloc, diagnostics, options) {
 }
 
-Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr,
-             BumpAllocator& alloc, Diagnostics& diagnostics, LexerOptions options) :
+Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAllocator& alloc,
+             Diagnostics& diagnostics, LexerOptions options) :
     alloc(alloc),
-    diagnostics(diagnostics),
-    options(options),
-    bufferId(bufferId),
-    originalBegin(source.data()),
-    sourceBuffer(startPtr),
-    sourceEnd(source.data() + source.length()),
-    marker(nullptr)
-{
+    diagnostics(diagnostics), options(options), bufferId(bufferId), originalBegin(source.data()),
+    sourceBuffer(startPtr), sourceEnd(source.data() + source.length()), marker(nullptr) {
     ptrdiff_t count = sourceEnd - sourceBuffer;
     ASSERT(count);
     ASSERT(sourceEnd[-1] == '\0');
@@ -96,15 +81,12 @@ Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr,
     // detect BOMs so we can give nice errors for invaild encoding
     if (count >= 2) {
         const unsigned char* ubuf = reinterpret_cast<const unsigned char*>(sourceBuffer);
-        if ((ubuf[0] == 0xFF && ubuf[1] == 0xFE) ||
-            (ubuf[0] == 0xFE && ubuf[1] == 0xFF)) {
+        if ((ubuf[0] == 0xFF && ubuf[1] == 0xFE) || (ubuf[0] == 0xFE && ubuf[1] == 0xFF)) {
             addDiag(DiagCode::UnicodeBOM, 0);
             advance(2);
         }
         else if (count >= 3) {
-            if (ubuf[0] == 0xEF &&
-                ubuf[1] == 0xBB &&
-                ubuf[2] == 0xBF) {
+            if (ubuf[0] == 0xEF && ubuf[1] == 0xBB && ubuf[2] == 0xBF) {
                 addDiag(DiagCode::UnicodeBOM, 0);
                 advance(3);
             }
@@ -116,7 +98,8 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     auto location = left.location();
     auto trivia = left.trivia();
 
-    // if either side is empty, we have an error; the user tried to concatenate some weird kind of token
+    // if either side is empty, we have an error; the user tried to concatenate some weird kind of
+    // token
     auto leftText = left.rawText();
     auto rightText = right.rawText();
     if (leftText.empty() || rightText.empty())
@@ -128,10 +111,10 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     leftText.copy(mem, leftText.length());
     rightText.copy(mem + leftText.length(), rightText.length());
     mem[newLength - 1] = '\0';
-    string_view combined { mem, newLength };
+    string_view combined{ mem, newLength };
 
     Diagnostics unused;
-    Lexer lexer { BufferID(), combined, combined.data(), alloc, unused, LexerOptions{} };
+    Lexer lexer{ BufferID(), combined, combined.data(), alloc, unused, LexerOptions{} };
 
     auto token = lexer.lex();
     if (token.kind == TokenKind::Unknown || token.rawText().empty())
@@ -176,7 +159,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     string_view raw = to_string_view(text.copy(alloc));
 
     Diagnostics unused;
-    Lexer lexer { BufferID(), raw, raw.data(), alloc, unused, LexerOptions{} };
+    Lexer lexer{ BufferID(), raw, raw.data(), alloc, unused, LexerOptions{} };
 
     auto token = lexer.lex();
     ASSERT(token.kind == TokenKind::StringLiteral);
@@ -189,9 +172,9 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     return Token(token.kind, info);
 }
 
-void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics, const SourceManager& sourceManager,
-                        Token sourceToken, size_t offset, KeywordVersion keywordVersion,
-                        SmallVector<Token>& results) {
+void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
+                        const SourceManager& sourceManager, Token sourceToken, size_t offset,
+                        KeywordVersion keywordVersion, SmallVector<Token>& results) {
     auto loc = sourceToken.location();
     if (sourceManager.isMacroLoc(loc))
         loc = sourceManager.getOriginalLoc(loc);
@@ -199,8 +182,8 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics, const So
     auto sourceText = sourceManager.getSourceText(loc.buffer());
     ASSERT(!sourceText.empty());
 
-    Lexer lexer{ loc.buffer(), sourceText, sourceToken.rawText().substr(offset).data(),
-                 alloc, diagnostics, LexerOptions{} };
+    Lexer lexer{ loc.buffer(), sourceText,  sourceToken.rawText().substr(offset).data(),
+                 alloc,        diagnostics, LexerOptions{} };
 
     size_t endOffset = loc.offset() + sourceToken.rawText().length();
     while (true) {
@@ -259,9 +242,14 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
         case '!':
             if (consume('=')) {
                 switch (peek()) {
-                    case '=': advance(); return TokenKind::ExclamationDoubleEquals;
-                    case '?': advance(); return TokenKind::ExclamationEqualsQuestion;
-                    default: return TokenKind::ExclamationEquals;
+                    case '=':
+                        advance();
+                        return TokenKind::ExclamationDoubleEquals;
+                    case '?':
+                        advance();
+                        return TokenKind::ExclamationEqualsQuestion;
+                    default:
+                        return TokenKind::ExclamationEquals;
                 }
             }
             return TokenKind::Exclamation;
@@ -270,7 +258,9 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
             return TokenKind::StringLiteral;
         case '#':
             switch (peek()) {
-                case '#': advance(); return TokenKind::DoubleHash;
+                case '#':
+                    advance();
+                    return TokenKind::DoubleHash;
                 case '-':
                     if (peek(1) == '#') {
                         advance(2);
@@ -287,7 +277,8 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                     return TokenKind::Hash;
             }
             return TokenKind::Hash;
-        case '$': return lexDollarSign(info);
+        case '$':
+            return lexDollarSign(info);
         case '%':
             if (consume('='))
                 return TokenKind::PercentEqual;
@@ -300,7 +291,9 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                         return TokenKind::TripleAnd;
                     else
                         return TokenKind::DoubleAnd;
-                case '=': advance(); return TokenKind::AndEqual;
+                case '=':
+                    advance();
+                    return TokenKind::AndEqual;
             }
             return TokenKind::And;
         case '\'':
@@ -315,13 +308,22 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                 return TokenKind::OpenParenthesisStarCloseParenthesis;
             else
                 return TokenKind::OpenParenthesisStar;
-        case ')': return TokenKind::CloseParenthesis;
+        case ')':
+            return TokenKind::CloseParenthesis;
         case '*':
             switch (peek()) {
-                case '*': advance(); return TokenKind::DoubleStar;
-                case '=': advance(); return TokenKind::StarEqual;
-                case '>': advance(); return TokenKind::StarArrow;
-                case ')': advance(); return TokenKind::StarCloseParenthesis;
+                case '*':
+                    advance();
+                    return TokenKind::DoubleStar;
+                case '=':
+                    advance();
+                    return TokenKind::StarEqual;
+                case '>':
+                    advance();
+                    return TokenKind::StarArrow;
+                case ')':
+                    advance();
+                    return TokenKind::StarCloseParenthesis;
                 case ':':
                     if (peek(1) == ':' && peek(2) == '*') {
                         advance(3);
@@ -332,17 +334,30 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
             return TokenKind::Star;
         case '+':
             switch (peek()) {
-                case '+': advance(); return TokenKind::DoublePlus;
-                case '=': advance(); return TokenKind::PlusEqual;
-                case ':': advance(); return TokenKind::PlusColon;
+                case '+':
+                    advance();
+                    return TokenKind::DoublePlus;
+                case '=':
+                    advance();
+                    return TokenKind::PlusEqual;
+                case ':':
+                    advance();
+                    return TokenKind::PlusColon;
             }
             return TokenKind::Plus;
-        case ',': return TokenKind::Comma;
+        case ',':
+            return TokenKind::Comma;
         case '-':
             switch (peek()) {
-                case '-': advance(); return TokenKind::DoubleMinus;
-                case '=': advance(); return TokenKind::MinusEqual;
-                case ':': advance(); return TokenKind::MinusColon;
+                case '-':
+                    advance();
+                    return TokenKind::DoubleMinus;
+                case '=':
+                    advance();
+                    return TokenKind::MinusEqual;
+                case ':':
+                    advance();
+                    return TokenKind::MinusColon;
                 case '>':
                     advance();
                     if (consume('>'))
@@ -361,23 +376,39 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                 return TokenKind::SlashEqual;
             else
                 return TokenKind::Slash;
-        case '0': case '1': case '2': case '3':
-        case '4': case '5': case '6': case '7':
-        case '8': case '9':
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
             // back up so that lexNumericLiteral can look at this digit again
             sourceBuffer--;
             return lexNumericLiteral(info);
         case ':':
             switch (peek()) {
-                case '=': advance(); return TokenKind::ColonEquals;
-                case '/': advance(); return TokenKind::ColonSlash;
-                case ':': advance(); return TokenKind::DoubleColon;
+                case '=':
+                    advance();
+                    return TokenKind::ColonEquals;
+                case '/':
+                    advance();
+                    return TokenKind::ColonSlash;
+                case ':':
+                    advance();
+                    return TokenKind::DoubleColon;
             }
             return TokenKind::Colon;
-        case ';': return TokenKind::Semicolon;
+        case ';':
+            return TokenKind::Semicolon;
         case '<':
             switch (peek()) {
-                case '=': advance(); return TokenKind::LessThanEquals;
+                case '=':
+                    advance();
+                    return TokenKind::LessThanEquals;
                 case '-':
                     if (peek(1) == '>') {
                         advance(2);
@@ -396,7 +427,9 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                                 advance();
                                 return TokenKind::TripleLeftShift;
                             }
-                        case '=': advance(); return TokenKind::LeftShiftEqual;
+                        case '=':
+                            advance();
+                            return TokenKind::LeftShiftEqual;
                     }
                     return TokenKind::LeftShift;
             }
@@ -406,16 +439,24 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                 case '=':
                     advance();
                     switch (peek()) {
-                        case '=': advance(); return TokenKind::TripleEquals;
-                        case '?': advance(); return TokenKind::DoubleEqualsQuestion;
+                        case '=':
+                            advance();
+                            return TokenKind::TripleEquals;
+                        case '?':
+                            advance();
+                            return TokenKind::DoubleEqualsQuestion;
                     }
                     return TokenKind::DoubleEquals;
-                case '>': advance(); return TokenKind::EqualsArrow;
+                case '>':
+                    advance();
+                    return TokenKind::EqualsArrow;
             }
             return TokenKind::Equals;
         case '>':
             switch (peek()) {
-                case '=': advance(); return TokenKind::GreaterThanEquals;
+                case '=':
+                    advance();
+                    return TokenKind::GreaterThanEquals;
                 case '>':
                     advance();
                     switch (peek()) {
@@ -428,18 +469,27 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                                 advance();
                                 return TokenKind::TripleRightShift;
                             }
-                        case '=': advance(); return TokenKind::RightShiftEqual;
+                        case '=':
+                            advance();
+                            return TokenKind::RightShiftEqual;
                     }
                     return TokenKind::RightShift;
             }
             return TokenKind::GreaterThan;
-        case '?': return TokenKind::Question;
+        case '?':
+            return TokenKind::Question;
         case '@':
             switch (peek()) {
-                case '@': advance(); return TokenKind::DoubleAt;
-                case '*': advance(); return TokenKind::AtStar;
-                default: return TokenKind::At;
+                case '@':
+                    advance();
+                    return TokenKind::DoubleAt;
+                case '*':
+                    advance();
+                    return TokenKind::AtStar;
+                default:
+                    return TokenKind::At;
             }
+            // clang-format off
         case 'A': case 'B': case 'C': case 'D':
         case 'E': case 'F': case 'G': case 'H':
         case 'I': case 'J': case 'L': case 'K':
@@ -455,6 +505,7 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
         case 'u': case 'v': case 'w': case 'x':
         case 'y': case 'z':
         case '_': {
+            // clang-format on
             scanIdentifier();
 
             // might be a keyword
@@ -465,19 +516,30 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
             info->extra = IdentifierType::Normal;
             return TokenKind::Identifier;
         }
-        case '[': return TokenKind::OpenBracket;
-        case '\\': return lexEscapeSequence(info);
-        case ']': return TokenKind::CloseBracket;
+        case '[':
+            return TokenKind::OpenBracket;
+        case '\\':
+            return lexEscapeSequence(info);
+        case ']':
+            return TokenKind::CloseBracket;
         case '^':
             switch (peek()) {
-                case '~': advance(); return TokenKind::XorTilde;
-                case '=': advance(); return TokenKind::XorEqual;
+                case '~':
+                    advance();
+                    return TokenKind::XorTilde;
+                case '=':
+                    advance();
+                    return TokenKind::XorEqual;
             }
             return TokenKind::Xor;
         case '`':
             switch (peek()) {
-                case '"': advance(); return TokenKind::MacroQuote;
-                case '`': advance(); return TokenKind::MacroPaste;
+                case '"':
+                    advance();
+                    return TokenKind::MacroQuote;
+                case '`':
+                    advance();
+                    return TokenKind::MacroPaste;
                 case '\\':
                     if (peek(1) == '`' && peek(2) == '"') {
                         advance(3);
@@ -486,10 +548,13 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                     return lexDirective(info);
             }
             return lexDirective(info);
-        case '{': return TokenKind::OpenBrace;
+        case '{':
+            return TokenKind::OpenBrace;
         case '|':
             switch (peek()) {
-                case '|': advance(); return TokenKind::DoubleOr;
+                case '|':
+                    advance();
+                    return TokenKind::DoubleOr;
                 case '-':
                     if (peek(1) == '>') {
                         advance(2);
@@ -510,12 +575,19 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                     }
             }
             return TokenKind::Or;
-        case '}': return TokenKind::CloseBrace;
+        case '}':
+            return TokenKind::CloseBrace;
         case '~':
             switch (peek()) {
-                case '&': advance(); return TokenKind::TildeAnd;
-                case '|': advance(); return TokenKind::TildeOr;
-                case '^': advance(); return TokenKind::TildeXor;
+                case '&':
+                    advance();
+                    return TokenKind::TildeAnd;
+                case '|':
+                    advance();
+                    return TokenKind::TildeOr;
+                case '^':
+                    advance();
+                    return TokenKind::TildeXor;
             }
             return TokenKind::Tilde;
         default:
@@ -543,6 +615,7 @@ void Lexer::lexStringLiteral(Token::Info* info) {
 
             uint32_t charCode;
             switch (c) {
+                    // clang-format off
                 case 'n': stringBuffer.append('\n'); break;
                 case 't': stringBuffer.append('\t'); break;
                 case '\\': stringBuffer.append('\\'); break;
@@ -554,6 +627,7 @@ void Lexer::lexStringLiteral(Token::Info* info) {
                 case '\r': consume('\n'); break;
                 case '0': case '1': case '2': case '3':
                 case '4': case '5': case '6': case '7':
+                    // clang-format on
                     // octal character code
                     charCode = getDigitValue(c);
                     if (isOctalDigit(c = peek())) {
@@ -836,13 +910,16 @@ bool Lexer::lexIntegerBase(Token::Info* info, bool isSigned) {
 }
 
 bool Lexer::lexTimeLiteral(Token::Info* info) {
-#define CASE(c, flag) \
-    case c: if (peek(1) == 's') { \
-        advance(2); \
-        info->setTimeUnit(TimeUnit::flag); \
-        return true; \
-    } break;
+#define CASE(c, flag)                          \
+    case c:                                    \
+        if (peek(1) == 's') {                  \
+            advance(2);                        \
+            info->setTimeUnit(TimeUnit::flag); \
+            return true;                       \
+        }                                      \
+        break;
 
+    // clang-format off
     switch (peek()) {
         case 's':
             advance();
@@ -857,6 +934,7 @@ bool Lexer::lexTimeLiteral(Token::Info* info) {
             break;
     }
 #undef CASE
+    // clang-format on
     return false;
 }
 
@@ -1015,4 +1093,4 @@ BufferID Lexer::getBufferID() const {
     return bufferId;
 }
 
-}
+} // namespace slang
