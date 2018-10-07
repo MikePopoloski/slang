@@ -8,8 +8,8 @@
 
 #include <cstdio>
 #if defined(_WIN32)
-  #include <fcntl.h>
-  #include <io.h>
+#    include <fcntl.h>
+#    include <io.h>
 #endif
 
 #include "slang/syntax/SyntaxPrinter.h"
@@ -17,8 +17,7 @@
 
 using namespace slang;
 
-int main(int argc, char** argv)
-try {
+int main(int argc, char** argv) try {
     if (argc != 2) {
         fprintf(stderr, "usage: rewriter file");
         return 1;

@@ -57,8 +57,8 @@ endmodule
 
     // Lookup at (1); should return the local parameter
     LookupResult result;
-    gen_b.lookupName(compilation.parseName("x"), LookupLocation::after(param), LookupNameKind::Variable,
-                     LookupFlags::None, result);
+    gen_b.lookupName(compilation.parseName("x"), LookupLocation::after(param),
+                     LookupNameKind::Variable, LookupFlags::None, result);
 
     const Symbol* symbol = result.found;
     CHECK(!result.wasImported);
@@ -68,8 +68,8 @@ endmodule
     CHECK(compilation.getSemanticDiagnostics().empty());
 
     // Lookup at (2); should return the package parameter
-    gen_b.lookupName(compilation.parseName("x"), LookupLocation::before(param), LookupNameKind::Variable,
-                     LookupFlags::None, result);
+    gen_b.lookupName(compilation.parseName("x"), LookupLocation::before(param),
+                     LookupNameKind::Variable, LookupFlags::None, result);
     symbol = result.found;
 
     CHECK(result.wasImported);
@@ -139,10 +139,13 @@ endmodule
 
     const auto& top = *compilation.getRoot().topInstances[0];
     const auto& x = top.memberAt<GenerateBlockSymbol>(1)
-                       .memberAt<ProceduralBlockSymbol>(0)
-                       .getBody()->as<ExpressionStatement>()
-                       .expr.as<AssignmentExpression>()
-                       .left().as<NamedValueExpression>().symbol;
+                        .memberAt<ProceduralBlockSymbol>(0)
+                        .getBody()
+                        ->as<ExpressionStatement>()
+                        .expr.as<AssignmentExpression>()
+                        .left()
+                        .as<NamedValueExpression>()
+                        .symbol;
 
     auto p_x = compilation.getPackage("p")->find("x");
     auto p2_x = compilation.getPackage("p2")->find("x");
@@ -183,8 +186,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     const auto& top = *compilation.getRoot().topInstances[0];
-    const auto& x = top.memberAt<GenerateBlockSymbol>(2)
-                       .memberAt<ParameterSymbol>(0);
+    const auto& x = top.memberAt<GenerateBlockSymbol>(2).memberAt<ParameterSymbol>(0);
 
     CHECK(x.getValue().integer() == 2);
 

@@ -164,7 +164,8 @@ TEST_CASE("Function macro (no tokens)") {
 }
 
 TEST_CASE("Function macro (simple nesting)") {
-    auto& text = "`define BLAHBLAH(x) x\n`define BAR(x) `BLAHBLAH(x)\n`define BAZ(x) `BAR(x)\n`define FOO(y) `BAZ(y)\n`FOO(15)";
+    auto& text = "`define BLAHBLAH(x) x\n`define BAR(x) `BLAHBLAH(x)\n`define BAZ(x) "
+                 "`BAR(x)\n`define FOO(y) `BAZ(y)\n`FOO(15)";
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
@@ -691,28 +692,27 @@ TEST_CASE("Ifdef same line") {
 }
 
 TEST_CASE("Nested branches") {
-    auto& text =
-"`define FOO\n"
-"`ifdef BLAH\n"
-"   `define BAZ\n"
-"`elsif BAZ\n"
-"   42\n"
-"`else\n"
-"   `define YEP\n"
-"   `ifdef YEP\n"
-"       `ifdef FOO\n"
-"           `ifdef NOPE1\n"
-"               blahblah\n"
-"           `elsif NOPE2\n"
-"               blahblah2\n"
-"           `elsif YEP\n"
-"               `ifdef FOO\n"
-"                   99\n"
-"               `endif\n"
-"           `endif\n"
-"       `endif\n"
-"   `endif\n"
-"`endif";
+    auto& text = "`define FOO\n"
+                 "`ifdef BLAH\n"
+                 "   `define BAZ\n"
+                 "`elsif BAZ\n"
+                 "   42\n"
+                 "`else\n"
+                 "   `define YEP\n"
+                 "   `ifdef YEP\n"
+                 "       `ifdef FOO\n"
+                 "           `ifdef NOPE1\n"
+                 "               blahblah\n"
+                 "           `elsif NOPE2\n"
+                 "               blahblah2\n"
+                 "           `elsif YEP\n"
+                 "               `ifdef FOO\n"
+                 "                   99\n"
+                 "               `endif\n"
+                 "           `endif\n"
+                 "       `endif\n"
+                 "   `endif\n"
+                 "`endif";
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
@@ -721,16 +721,15 @@ TEST_CASE("Nested branches") {
 }
 
 TEST_CASE("IfDef inside macro") {
-    auto& text =
-"`define FOO \\\n"
-"  `ifdef BAR \\\n"
-"    32 \\\n"
-"  `else \\\n"
-"    63 \\\n"
-"  `endif \\\n"
-"\n"
-"`define BAR\n"
-"`FOO";
+    auto& text = "`define FOO \\\n"
+                 "  `ifdef BAR \\\n"
+                 "    32 \\\n"
+                 "  `else \\\n"
+                 "    63 \\\n"
+                 "  `endif \\\n"
+                 "\n"
+                 "`define BAR\n"
+                 "`FOO";
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
@@ -775,12 +774,11 @@ TEST_CASE("LINE Directive as actual arg") {
 }
 
 TEST_CASE("LINE Directive (include+nesting)") {
-    auto& text =
-"`include \"local.svh\"\n"
-"`define BAZ `__LINE__\n"
-"`define BAR `BAZ\n"
-"`define FOO `BAR\n"
-"`FOO";
+    auto& text = "`include \"local.svh\"\n"
+                 "`define BAZ `__LINE__\n"
+                 "`define BAR `BAZ\n"
+                 "`define FOO `BAR\n"
+                 "`FOO";
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -803,7 +801,7 @@ TEST_CASE("FILE Directive") {
     REQUIRE(token.kind == TokenKind::StringLiteral);
     // we set the name by default for files created this way as
     // <unnamed_bufferN> for some N, let's not be sensitive to that number
-    CHECK(token.valueText().substr(0,15) == "<unnamed_buffer");
+    CHECK(token.valueText().substr(0, 15) == "<unnamed_buffer");
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
@@ -812,9 +810,8 @@ TEST_CASE("FILE Directive (include+nesting)") {
     // `define FOO `__FILE__
     // and file_uses_defn.svh then has `FOO; that should expand to file_defn.svh
     // but when we expand FOO here, it shouldn't
-    auto& text =
-"`include \"file_uses_defn.svh\"\n"
-"`BAR";
+    auto& text = "`include \"file_uses_defn.svh\"\n"
+                 "`BAR";
 
     diagnostics.clear();
 
@@ -837,11 +834,10 @@ TEST_CASE("FILE Directive (include+nesting)") {
 }
 
 TEST_CASE("`line + FILE + LINE Directive") {
-    auto& text =
-"`line 6 \"other.sv\" 0\n"
-"`__LINE__\n"
-"`include \"file_uses_defn.svh\"\n"
-"`__FILE__";
+    auto& text = "`line 6 \"other.sv\" 0\n"
+                 "`__LINE__\n"
+                 "`include \"file_uses_defn.svh\"\n"
+                 "`__FILE__";
 
     diagnostics.clear();
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -864,10 +860,9 @@ TEST_CASE("`line + FILE + LINE Directive") {
 }
 
 TEST_CASE("undef Directive") {
-    auto& text =
-"`define FOO 45\n"
-"`undef FOO\n"
-"`FOO";
+    auto& text = "`define FOO 45\n"
+                 "`undef FOO\n"
+                 "`FOO";
     Token token = lexToken(text);
 
     // The macro doesn't expand at all, so we go to end of file,
@@ -877,10 +872,9 @@ TEST_CASE("undef Directive") {
 }
 
 TEST_CASE("undef Directive 2") {
-    auto& text =
-"`define FOO 45\n"
-"`FOO\n"
-"`undef FOO\n";
+    auto& text = "`define FOO 45\n"
+                 "`FOO\n"
+                 "`undef FOO\n";
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
@@ -889,10 +883,9 @@ TEST_CASE("undef Directive 2") {
 }
 
 TEST_CASE("undefineall") {
-    auto& text =
-"`define FOO 45\n"
-"`undefineall\n"
-"`FOO";
+    auto& text = "`define FOO 45\n"
+                 "`undefineall\n"
+                 "`FOO";
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::EndOfFile);
@@ -900,11 +893,10 @@ TEST_CASE("undefineall") {
 }
 
 TEST_CASE("begin_keywords") {
-    auto& text =
-"`begin_keywords \"1364-1995\"\n"
-"soft\n"
-"`end_keywords\n"
-"soft";
+    auto& text = "`begin_keywords \"1364-1995\"\n"
+                 "soft\n"
+                 "`end_keywords\n"
+                 "soft";
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -923,15 +915,14 @@ TEST_CASE("begin_keywords") {
 }
 
 TEST_CASE("begin_keywords (nested)") {
-    auto& text =
-"`begin_keywords \"1800-2009\"\n"
-"`begin_keywords \"1800-2005\"\n"
-"`begin_keywords \"1364-2001\"\n"
-"uwire\n"
-"`end_keywords\n"
-"uwire\n"
-"`end_keywords\n"
-"`end_keywords\n";
+    auto& text = "`begin_keywords \"1800-2009\"\n"
+                 "`begin_keywords \"1800-2005\"\n"
+                 "`begin_keywords \"1364-2001\"\n"
+                 "uwire\n"
+                 "`end_keywords\n"
+                 "uwire\n"
+                 "`end_keywords\n"
+                 "`end_keywords\n";
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -1002,37 +993,32 @@ TEST_CASE("timescale directive") {
 }
 
 TEST_CASE("macro-defined include file") {
-    auto& text =
-"`define FILE <include.svh>\n"
-"`include `FILE";
+    auto& text = "`define FILE <include.svh>\n"
+                 "`include `FILE";
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == "test string");
     CHECK_DIAGNOSTICS_EMPTY;
 
-    auto& text2 =
-"`define FILE \"include.svh\"\n"
-"`include `FILE";
+    auto& text2 = "`define FILE \"include.svh\"\n"
+                  "`include `FILE";
     token = lexToken(text2);
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == "test string");
     CHECK_DIAGNOSTICS_EMPTY;
 
-    auto& text3 =
-"`define FILE(arg) `\"arg`\"\n"
-"`include `FILE(include.svh)";
+    auto& text3 = "`define FILE(arg) `\"arg`\"\n"
+                  "`include `FILE(include.svh)";
     token = lexToken(text3);
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == "test string");
     CHECK_DIAGNOSTICS_EMPTY;
 
-
-    auto& text4 =
-"`define FILE <includesh\n"
-"`include `FILE";
+    auto& text4 = "`define FILE <includesh\n"
+                  "`include `FILE";
     token = lexToken(text4);
 
     CHECK(!diagnostics.empty());

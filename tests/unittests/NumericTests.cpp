@@ -64,12 +64,12 @@ TEST_CASE("Construction") {
     CHECK_THAT(value8[877], exactlyEquals(logic_t::z));
 
 #ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wself-move"
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wself-move"
 #endif
     value1 = std::move(value1);
 #ifdef __clang__
-#pragma clang diagnostic pop
+#    pragma clang diagnostic pop
 #endif
 
     value1 = value5;
@@ -200,9 +200,15 @@ TEST_CASE("SVInt to string (and back)") {
     CHECK("1'b1"_si.toString() == "1'b1");
     CHECK(SVInt(32, 0, true).toString() == "0");
 
-    ss.str(""); ss << logic_t::x; CHECK(ss.str() == "x");
-    ss.str(""); ss << logic_t::z; CHECK(ss.str() == "z");
-    ss.str(""); ss << logic_t(1); CHECK(ss.str() == "1");
+    ss.str("");
+    ss << logic_t::x;
+    CHECK(ss.str() == "x");
+    ss.str("");
+    ss << logic_t::z;
+    CHECK(ss.str() == "z");
+    ss.str("");
+    ss << logic_t(1);
+    CHECK(ss.str() == "1");
 }
 
 TEST_CASE("Comparison") {
@@ -250,8 +256,10 @@ TEST_CASE("Comparison") {
 
     CHECK(SVInt::conditional(SVInt(1), SVInt(10, 2, false), SVInt(8, 3, false)) == SVInt(2));
     CHECK(SVInt::conditional(SVInt(0), SVInt(7, 2, false), SVInt(12, 3, false)) == SVInt(3));
-    CHECK_THAT(SVInt::conditional(SVInt(logic_t::x), "4'bx1z0"_si, "4'bz1x0"_si), exactlyEquals("4'bx1x0"_si));
-    CHECK_THAT(SVInt::conditional(SVInt(logic_t::x), "4'b1111"_si, "4'bz1x0"_si), exactlyEquals("4'bx1xx"_si));
+    CHECK_THAT(SVInt::conditional(SVInt(logic_t::x), "4'bx1z0"_si, "4'bz1x0"_si),
+               exactlyEquals("4'bx1x0"_si));
+    CHECK_THAT(SVInt::conditional(SVInt(logic_t::x), "4'b1111"_si, "4'bz1x0"_si),
+               exactlyEquals("4'bx1xx"_si));
 }
 
 TEST_CASE("Arithmetic") {
@@ -363,10 +371,10 @@ TEST_CASE("Division") {
             "1024'd7919"_si);
 
     testDiv("512'hffffffffffffffff00000000000000000000000001"_si,
-            "512'h10000000000000001000000000000001"_si,
-            "512'h10000000000000000000000000000000"_si);
+            "512'h10000000000000001000000000000001"_si, "512'h10000000000000000000000000000000"_si);
 
-    testDiv("224'h800000008000000200000005"_si, "224'hfffffffd"_si, "224'h80000000800000010000000f"_si);
+    testDiv("224'h800000008000000200000005"_si, "224'hfffffffd"_si,
+            "224'h80000000800000010000000f"_si);
     testDiv("256'h80000001ffffffffffffffff"_si, "256'hffffffffffffff0000000"_si, "256'd4219"_si);
     testDiv("4096'd5"_si.shl(2001), "4096'd1"_si.shl(2000), "4096'd54847"_si);
     testDiv("1024'd19"_si.shl(811), "1024'd4356013"_si, "1024'd1"_si);
@@ -409,13 +417,18 @@ TEST_CASE("Power") {
     CHECK("-3"_si.pow("3"_si) == "-27"_si);
     CHECK("-3"_si.pow("4"_si) == "81"_si);
     CHECK(SVInt(64, 3, false).pow(SVInt(918245)) == "64'd12951281834385883507"_si);
-    CHECK(SVInt(99, 3, false).pow("123'd786578657865786587657658765"_si) == "99'd179325900022335079144376663507"_si);
+    CHECK(SVInt(99, 3, false).pow("123'd786578657865786587657658765"_si) ==
+          "99'd179325900022335079144376663507"_si);
 
-    CHECK("512'd90871234987239847"_si.pow("512'd9872389712392373"_si).lshr(400) == "512'd3290136519027357223933765911149590"_si);
+    CHECK("512'd90871234987239847"_si.pow("512'd9872389712392373"_si).lshr(400) ==
+          "512'd3290136519027357223933765911149590"_si);
 
-    // Test huge values. This test is pretty slow so only enable it when building from the CI server.
+    // Test huge values. This test is pretty slow so only enable it when building from the CI
+    // server.
 #ifdef CI_BUILD
-    SVInt v = "16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si.shl(7000);
+    SVInt v =
+        "16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si
+            .shl(7000);
     v = v.pow(1234)(9000000, 8994500);
     CHECK(v == "5500'd64053931454776197655165648478290003146695"_si);
 #endif
@@ -456,7 +469,8 @@ TEST_CASE("Bitwise") {
     CHECK_THAT("100'b11xx1Z00x10"_si & "90'b10101xzx01z"_si, exactlyEquals("90'b10x01x00010"_si));
     CHECK_THAT("90'b11xx1Z00x10"_si & "100'b10101xzx01z"_si, exactlyEquals("90'b10x01x00010"_si));
     CHECK_THAT("100'b11xx1Z00x10"_si ^ "90'b10101xzx01z"_si, exactlyEquals("90'b01xx0xxxx0x"_si));
-    CHECK_THAT("11'b11xx1Z00x10"_si.xnor("11'b10101xzx01z"_si), exactlyEquals("11'b10xx1xxxx1x"_si));
+    CHECK_THAT("11'b11xx1Z00x10"_si.xnor("11'b10101xzx01z"_si),
+               exactlyEquals("11'b10xx1xxxx1x"_si));
     CHECK_THAT(~"11'b11xx1Z00x10"_si, exactlyEquals("12'b00xx0x11x01"_si));
     CHECK_THAT(~"6'b101011"_si, exactlyEquals("6'b010100"_si));
 
@@ -506,15 +520,23 @@ TEST_CASE("Slicing") {
     CHECK_THAT(v2, exactlyEquals("128'b0"_si));
 
     // Test huge values
-    SVInt v3 = ("16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si.shl(16777000) +
-                "16777215'd1234"_si.shl(16777206)).slice(16777214, 16777000);
-    CHECK(v3.toString(LiteralBase::Decimal) == "215'd47111210086086240918128115148156713906029950526455712219410726911");
-    CHECK(v3.toString(LiteralBase::Hex) == "215'h728560c56c16d0b0be23da38038624767fffffffffffffffffffff");
+    SVInt v3 =
+        ("16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si
+             .shl(16777000) +
+         "16777215'd1234"_si.shl(16777206))
+            .slice(16777214, 16777000);
+    CHECK(v3.toString(LiteralBase::Decimal) ==
+          "215'd47111210086086240918128115148156713906029950526455712219410726911");
+    CHECK(v3.toString(LiteralBase::Hex) ==
+          "215'h728560c56c16d0b0be23da38038624767fffffffffffffffffffff");
 
-    SVInt v4 = "16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si.shl(16777000) +
-               "16777215'd1234"_si.shl(16777206);
+    SVInt v4 =
+        "16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si
+            .shl(16777000) +
+        "16777215'd1234"_si.shl(16777206);
     v4.set(16777001, 16777000, "2'b01"_si);
-    CHECK(v4.slice(16777214, 16777000).toString(LiteralBase::Hex) == "215'h728560c56c16d0b0be23da38038624767ffffffffffffffffffffd");
+    CHECK(v4.slice(16777214, 16777000).toString(LiteralBase::Hex) ==
+          "215'h728560c56c16d0b0be23da38038624767ffffffffffffffffffffd");
 }
 
 TEST_CASE("SVInt misc functions") {

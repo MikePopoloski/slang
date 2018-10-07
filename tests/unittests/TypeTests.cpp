@@ -24,9 +24,12 @@ endmodule
     const auto& et = someVar.getType().as<EnumType>();
 
     auto values = et.values().begin();
-    CHECK(values->getValue().integer() == 0); values++;
-    CHECK(values->getValue().integer() == 4); values++;
-    CHECK(values->getValue().integer() == 5); values++;
+    CHECK(values->getValue().integer() == 0);
+    values++;
+    CHECK(values->getValue().integer() == 4);
+    values++;
+    CHECK(values->getValue().integer() == 5);
+    values++;
 
     // TODO: test (and implement) all the restrictions on enum and enum values
     NO_COMPILATION_ERRORS;
@@ -49,7 +52,8 @@ endmodule
     CHECK(instance.find("BAR"));
 
     // Try to look up after the parameter but before the function; should fail.
-    CHECK(!instance.lookupName("SDF", LookupLocation::before(instance.memberAt<TransparentMemberSymbol>(0))));
+    CHECK(!instance.lookupName(
+        "SDF", LookupLocation::before(instance.memberAt<TransparentMemberSymbol>(0))));
 
     const auto& foshizzle = instance.memberAt<SubroutineSymbol>(5);
     CHECK(instance.lookupName("SDF", LookupLocation::after(foshizzle)));
@@ -189,7 +193,8 @@ module Top;
     typedef struct s1_t;
 
 endmodule
-)", "source");
+)",
+                                     "source");
 
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
@@ -203,7 +208,7 @@ endmodule
     CHECK(diags[2].code == DiagCode::ForwardTypedefDoesNotMatch);
 
     CHECK(report(diags) ==
-R"(source:5:18: error: forward typedef 'e1_t' does not resolve to a data type
+          R"(source:5:18: error: forward typedef 'e1_t' does not resolve to a data type
     typedef enum e1_t;
                  ^
 source:6:13: error: forward typedef 'e2' does not resolve to a data type
@@ -230,7 +235,7 @@ endmodule
 
     const auto& fType = instance.find<VariableSymbol>("f").getType();
     CHECK(fType.isUnpackedArray());
-    CHECK(fType.as<UnpackedArrayType>().range == ConstantRange { 0, 2 });
+    CHECK(fType.as<UnpackedArrayType>().range == ConstantRange{ 0, 2 });
 
     const auto& gType = instance.find<VariableSymbol>("g").getType();
     CHECK(!gType.isUnpackedArray());
@@ -252,7 +257,8 @@ module Top(logic f[3'b1x0],
     struct packed { logic j[3]; } foo;
 
 endmodule
-)", "source");
+)",
+                                     "source");
 
     Compilation compilation;
     evalModule(tree, compilation);
@@ -268,7 +274,7 @@ endmodule
     // TODO: reporting for value out of range is bad
     // TODO: report type names correctly
     CHECK(report(diags) ==
-R"(source:2:20: error: value must not have any unknown bits
+          R"(source:2:20: error: value must not have any unknown bits
 module Top(logic f[3'b1x0],
                    ^~~~~~
 source:3:14: error: value must be positive

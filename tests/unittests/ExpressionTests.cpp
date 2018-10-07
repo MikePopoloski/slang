@@ -35,7 +35,7 @@ TEST_CASE("Evaluate assignment expression") {
     auto& scope = compilation.createScriptScope();
 
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local { varToken.valueText(), varToken.location() };
+    VariableSymbol local{ varToken.valueText(), varToken.location() };
     local.setType(compilation.getIntType());
 
     // Bind the expression tree to the symbol
@@ -67,7 +67,7 @@ TEST_CASE("Check type propagation") {
     auto& scope = compilation.createScriptScope();
 
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local { varToken.valueText(), varToken.location() };
+    VariableSymbol local{ varToken.valueText(), varToken.location() };
     local.setType(compilation.getType(20, IntegralFlags::Unsigned));
 
     // Bind the expression tree to the symbol
@@ -94,7 +94,7 @@ TEST_CASE("Check type propagation 2") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local { varToken.valueText(), varToken.location() };
+    VariableSymbol local{ varToken.valueText(), varToken.location() };
     local.setType(compilation.getType(20, IntegralFlags::Unsigned));
 
     // Bind the expression tree to the symbol
@@ -127,7 +127,7 @@ TEST_CASE("Check type propagation real") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local { varToken.valueText(), varToken.location() };
+    VariableSymbol local{ varToken.valueText(), varToken.location() };
     local.setType(compilation.getType(20, IntegralFlags::Unsigned));
 
     // Bind the expression tree to the symbol
@@ -144,7 +144,8 @@ TEST_CASE("Check type propagation real") {
     CHECK(rrhs.type->getBitWidth() == 1);
 
     const Expression& op1 = rrhs.as<BinaryExpression>().left();
-    const ConversionExpression& convExpr = op1.as<BinaryExpression>().left().as<ConversionExpression>();
+    const ConversionExpression& convExpr =
+        op1.as<BinaryExpression>().left().as<ConversionExpression>();
     CHECK(convExpr.type->getBitWidth() == 64);
     CHECK(convExpr.type->isFloating());
     CHECK(convExpr.conversionKind == ConversionKind::IntToFloat);
@@ -180,7 +181,9 @@ TEST_CASE("Expression types") {
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
         BindContext context(scope, LookupLocation::max);
-        return Expression::bind(scope.getCompilation(), tree->root().as<ExpressionSyntax>(), context).type->toString();
+        return Expression::bind(scope.getCompilation(), tree->root().as<ExpressionSyntax>(),
+                                context)
+            .type->toString();
     };
 
     declare("logic [7:0] l;");
@@ -210,9 +213,9 @@ TEST_CASE("Expression types") {
     CHECK(typeof("l + pa") == "logic[15:0]");
     CHECK(typeof("sl - pa") == "logic[15:0]");
     CHECK(typeof("sl * 16'sd5") == "logic signed[15:0]"); // both signed, result is signed
-    CHECK(typeof("b1 * i") == "bit[31:0]"); // 2 state result
-    CHECK(typeof("b1 / i") == "logic[31:0]"); // divide always produces 4 state
-    CHECK(typeof("b1 ** (9234'd234)") == "logic[8:0]"); // self determined from lhs
+    CHECK(typeof("b1 * i") == "bit[31:0]");               // 2 state result
+    CHECK(typeof("b1 / i") == "logic[31:0]");             // divide always produces 4 state
+    CHECK(typeof("b1 ** (9234'd234)") == "logic[8:0]");   // self determined from lhs
     CHECK(typeof("r + sr") == "real");
     CHECK(typeof("sr + sr") == "shortreal");
     CHECK(typeof("l + r") == "real");

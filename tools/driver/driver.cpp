@@ -5,17 +5,17 @@
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 
+#include <CLI/CLI.hpp>
+#include <nlohmann/json.hpp>
+
 #include "slang/compilation/Compilation.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 
-#include <CLI/CLI.hpp>
-#include <nlohmann/json.hpp>
-
 using namespace slang;
 
 bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
-                    const std::vector<SourceBuffer>& buffers) {
+                     const std::vector<SourceBuffer>& buffers) {
     BumpAllocator alloc;
     DiagnosticWriter writer(sourceManager);
 
@@ -59,8 +59,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
     return diagnostics.empty();
 }
 
-int main(int argc, char** argv)
-try {
+int main(int argc, char** argv) try {
     std::vector<std::string> sourceFiles;
     std::vector<std::string> includeDirs;
     std::vector<std::string> includeSystemDirs;
@@ -72,10 +71,14 @@ try {
     CLI::App cmd("SystemVerilog compiler");
     cmd.add_option("files", sourceFiles, "Source files to compile");
     cmd.add_option("-I,--include-directory", includeDirs, "Additional include search paths");
-    cmd.add_option("--include-system-directory", includeSystemDirs, "Additional system include search paths");
-    cmd.add_option("-D,--define-macro", defines, "Define <macro>=<value> (or 1 if <value> ommitted) in all source files");
-    cmd.add_option("-U,--undefine-macro", undefines, "Undefine macro name at the start of all source files");
-    cmd.add_flag("-E,--preprocess", onlyPreprocess, "Only run the preprocessor (and print preprocessed files to stdout)");
+    cmd.add_option("--include-system-directory", includeSystemDirs,
+                   "Additional system include search paths");
+    cmd.add_option("-D,--define-macro", defines,
+                   "Define <macro>=<value> (or 1 if <value> ommitted) in all source files");
+    cmd.add_option("-U,--undefine-macro", undefines,
+                   "Undefine macro name at the start of all source files");
+    cmd.add_flag("-E,--preprocess", onlyPreprocess,
+                 "Only run the preprocessor (and print preprocessed files to stdout)");
 
     try {
         cmd.parse(argc, argv);

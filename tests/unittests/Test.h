@@ -1,13 +1,13 @@
 #pragma once
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4459)   // annoying warning about global "alloc" being shadowed by locals
+#    pragma warning(push)
+#    pragma warning( \
+        disable : 4459) // annoying warning about global "alloc" being shadowed by locals
 #endif
 
-#include <sstream>
-
 #include <catch2/catch.hpp>
+#include <sstream>
 
 #include "slang/binding/Expressions.h"
 #include "slang/binding/Statements.h"
@@ -24,19 +24,24 @@ namespace slang {
 extern BumpAllocator alloc;
 extern Diagnostics diagnostics;
 
-}
+} // namespace slang
 
 using namespace slang;
 
-#define CHECK_DIAGNOSTICS_EMPTY do {\
-    diagnostics.sort(getSourceManager()); \
-    if (!diagnostics.empty()) FAIL_CHECK(DiagnosticWriter(getSourceManager()).report(diagnostics)); \
-} while (0)
+#define CHECK_DIAGNOSTICS_EMPTY                                                   \
+    do {                                                                          \
+        diagnostics.sort(getSourceManager());                                     \
+        if (!diagnostics.empty())                                                 \
+            FAIL_CHECK(DiagnosticWriter(getSourceManager()).report(diagnostics)); \
+    } while (0)
 
-#define NO_COMPILATION_ERRORS do {\
-    Diagnostics diags = compilation.getAllDiagnostics(); \
-    if (!diags.empty()) { FAIL_CHECK(report(diags)); } \
-} while (0)
+#define NO_COMPILATION_ERRORS                                \
+    do {                                                     \
+        Diagnostics diags = compilation.getAllDiagnostics(); \
+        if (!diags.empty()) {                                \
+            FAIL_CHECK(report(diags));                       \
+        }                                                    \
+    } while (0)
 
 inline std::string report(Diagnostics& diags) {
     if (diags.empty())
@@ -152,7 +157,8 @@ inline const ExpressionSyntax& parseExpression(const std::string& text) {
     return parser.parseExpression();
 }
 
-inline const ModuleInstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax, Compilation& compilation) {
+inline const ModuleInstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax,
+                                              Compilation& compilation) {
     compilation.addSyntaxTree(syntax);
     const RootSymbol& root = compilation.getRoot();
 

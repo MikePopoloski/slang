@@ -31,7 +31,8 @@ TEST_CASE("Simple program") {
 }
 
 TEST_CASE("Complex header") {
-    auto& text = "(* foo = 4 *) macromodule automatic foo import blah::*, foo::bar; #(foo = bar, parameter blah, stuff) (input wire i = 3); endmodule";
+    auto& text = "(* foo = 4 *) macromodule automatic foo import blah::*, foo::bar; #(foo = bar, "
+                 "parameter blah, stuff) (input wire i = 3); endmodule";
     const auto& module = parseModule(text);
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
@@ -45,7 +46,8 @@ TEST_CASE("Complex header") {
 }
 
 TEST_CASE("Parameter ports") {
-    auto& text = "module foo #(foo, foo [3:1][9:0] = 4:3:9, parameter blah = blah, localparam type blah = shortint); endmodule";
+    auto& text = "module foo #(foo, foo [3:1][9:0] = 4:3:9, parameter blah = blah, localparam type "
+                 "blah = shortint); endmodule";
     const auto& module = parseModule(text);
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
@@ -76,7 +78,8 @@ const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) 
 }
 
 TEST_CASE("Module members") {
-    parseModuleMember("Foo #(stuff) bar(.*), baz(.clock, .rst(rst + 2));", SyntaxKind::HierarchyInstantiation);
+    parseModuleMember("Foo #(stuff) bar(.*), baz(.clock, .rst(rst + 2));",
+                      SyntaxKind::HierarchyInstantiation);
     parseModuleMember("timeunit 30ns / 40ns;", SyntaxKind::TimeUnitsDeclaration);
     parseModuleMember("timeprecision 30ns;", SyntaxKind::TimeUnitsDeclaration);
     parseModuleMember("module foo; endmodule", SyntaxKind::ModuleDeclaration);
@@ -86,10 +89,12 @@ TEST_CASE("Module members") {
     parseModuleMember("initial begin logic foo = 4; end", SyntaxKind::InitialBlock);
     parseModuleMember("final begin logic foo = 4; end", SyntaxKind::FinalBlock);
     parseModuleMember("always @* begin logic foo = 4; end", SyntaxKind::AlwaysBlock);
-    parseModuleMember("always_ff @(posedge clk) begin logic foo = 4; end", SyntaxKind::AlwaysFFBlock);
+    parseModuleMember("always_ff @(posedge clk) begin logic foo = 4; end",
+                      SyntaxKind::AlwaysFFBlock);
     parseModuleMember("input [31:0] foo, bar;", SyntaxKind::PortDeclaration);
     parseModuleMember("parameter foo = 1, bar = 2;", SyntaxKind::ParameterDeclarationStatement);
-    parseModuleMember("for (genvar i = 1; i != 10; i++) parameter foo = i;", SyntaxKind::LoopGenerate);
+    parseModuleMember("for (genvar i = 1; i != 10; i++) parameter foo = i;",
+                      SyntaxKind::LoopGenerate);
     parseModuleMember("typedef foo #(T, B) bar;", SyntaxKind::TypedefDeclaration);
 }
 
@@ -108,8 +113,10 @@ const MemberSyntax* parseClassMember(const std::string& text, SyntaxKind kind) {
 
 TEST_CASE("Class members", "[parser:class]") {
     parseClassMember("function void blah(); endfunction", SyntaxKind::ClassMethodDeclaration);
-    parseClassMember("virtual function void blah(); endfunction", SyntaxKind::ClassMethodDeclaration);
-    parseClassMember("static function type_id blah(); endfunction", SyntaxKind::ClassMethodDeclaration);
+    parseClassMember("virtual function void blah(); endfunction",
+                     SyntaxKind::ClassMethodDeclaration);
+    parseClassMember("static function type_id blah(); endfunction",
+                     SyntaxKind::ClassMethodDeclaration);
 }
 
 TEST_CASE("Property declarations") {

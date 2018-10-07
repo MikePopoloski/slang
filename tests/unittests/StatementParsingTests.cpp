@@ -6,7 +6,8 @@ TEST_CASE("If statement") {
 
     REQUIRE(stmt.kind == SyntaxKind::ConditionalStatement);
     CHECK(stmt.toString() == text);
-    CHECK(stmt.as<ConditionalStatementSyntax>().predicate->conditions[0]->expr->kind == SyntaxKind::LogicalAndExpression);
+    CHECK(stmt.as<ConditionalStatementSyntax>().predicate->conditions[0]->expr->kind ==
+          SyntaxKind::LogicalAndExpression);
 }
 
 TEST_CASE("Case statement (empty)") {
@@ -122,7 +123,8 @@ TEST_CASE("Timing control statements") {
     testTimingControl("@* ;", SyntaxKind::ImplicitEventControl);
     testTimingControl("@ (*) ;", SyntaxKind::ParenImplicitEventControl);
     testTimingControl("@* ;", SyntaxKind::ImplicitEventControl);
-    testTimingControl("@(posedge foo iff foo+92 == 76 or negedge clk, (edge clk)) ;", SyntaxKind::EventControlWithExpression);
+    testTimingControl("@(posedge foo iff foo+92 == 76 or negedge clk, (edge clk)) ;",
+                      SyntaxKind::EventControlWithExpression);
 }
 
 void testStatement(string_view text, SyntaxKind kind) {

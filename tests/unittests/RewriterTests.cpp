@@ -1,5 +1,4 @@
 #include "Test.h"
-
 #include <fmt/format.h>
 
 #include "slang/compilation/SemanticModel.h"
@@ -11,9 +10,7 @@ public:
     Compilation compilation;
     SemanticModel model;
 
-    TestRewriter(const std::shared_ptr<SyntaxTree>& tree) :
-        model(compilation)
-    {
+    TestRewriter(const std::shared_ptr<SyntaxTree>& tree) : model(compilation) {
         compilation.addSyntaxTree(tree);
     }
 
@@ -26,8 +23,8 @@ public:
         REQUIRE(type);
 
         ptrdiff_t count = type->as<EnumType>().members().size();
-        auto& newNode = parse(fmt::format("\n    localparam int {}__count = {};",
-                                          decl.name.valueText(), count));
+        auto& newNode = parse(
+            fmt::format("\n    localparam int {}__count = {};", decl.name.valueText(), count));
         insertAfter(decl, newNode);
     }
 };

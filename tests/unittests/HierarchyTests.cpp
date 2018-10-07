@@ -1,8 +1,10 @@
 #include "Test.h"
 
 TEST_CASE("Finding top level") {
-    auto file1 = SyntaxTree::fromText("module A; endmodule\nmodule B; A a(); endmodule\nmodule C; endmodule");
-    auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
+    auto file1 = SyntaxTree::fromText(
+        "module A; endmodule\nmodule B; A a(); endmodule\nmodule C; endmodule");
+    auto file2 = SyntaxTree::fromText(
+        "module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
     Compilation compilation;
     compilation.addSyntaxTree(file1);
@@ -44,15 +46,24 @@ endmodule
 
     Compilation compilation;
     auto it = evalModule(tree, compilation).membersOfType<ModuleInstanceSymbol>().begin();
-    CHECK(it->name == "l1"); it++;
-    CHECK(it->name == "l2"); it++;
-    CHECK(it->name == "l3"); it++;
-    CHECK(it->name == "l4"); it++;
-    CHECK(it->name == "l5"); it++;
-    CHECK(it->name == "l6"); it++;
-    CHECK(it->name == "l7"); it++;
-    CHECK(it->name == "l8"); it++;
-    CHECK(it->name == "l9"); it++;
+    CHECK(it->name == "l1");
+    it++;
+    CHECK(it->name == "l2");
+    it++;
+    CHECK(it->name == "l3");
+    it++;
+    CHECK(it->name == "l4");
+    it++;
+    CHECK(it->name == "l5");
+    it++;
+    CHECK(it->name == "l6");
+    it++;
+    CHECK(it->name == "l7");
+    it++;
+    CHECK(it->name == "l8");
+    it++;
+    CHECK(it->name == "l9");
+    it++;
 
     Diagnostics diags = compilation.getSemanticDiagnostics();
     REQUIRE(diags.size() == 10);
@@ -120,10 +131,9 @@ endmodule
 
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
-    const auto& leaf = instance
-        .memberAt<ModuleInstanceSymbol>(0)
-        .memberAt<GenerateBlockSymbol>(1)
-        .memberAt<ModuleInstanceSymbol>(0);
+    const auto& leaf = instance.memberAt<ModuleInstanceSymbol>(0)
+                           .memberAt<GenerateBlockSymbol>(1)
+                           .memberAt<ModuleInstanceSymbol>(0);
 
     const auto& foo = leaf.find<ParameterSymbol>("foo");
     CHECK(foo.getValue().integer() == 1);
@@ -148,7 +158,8 @@ endmodule
     REQUIRE(instance.members().size() == 10);
 
     for (uint32_t i = 0; i < 10; i++) {
-        const auto& leaf = instance.memberAt<GenerateBlockSymbol>(i).memberAt<ModuleInstanceSymbol>(1);
+        const auto& leaf =
+            instance.memberAt<GenerateBlockSymbol>(i).memberAt<ModuleInstanceSymbol>(1);
         const auto& foo = leaf.find<ParameterSymbol>("foo");
         CHECK(foo.getValue().integer() == i);
     }
@@ -321,13 +332,13 @@ endmodule
 
     Diagnostics diags = compilation.getAllDiagnostics();
     // TODO: $bits() function should check argument even though it's not evaluated
-    //REQUIRE(diags.size() == 5);
+    // REQUIRE(diags.size() == 5);
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == DiagCode::RecursiveDefinition);
     CHECK(diags[1].code == DiagCode::RecursiveDefinition);
     CHECK(diags[2].code == DiagCode::ExpressionNotConstant);
     CHECK(diags[3].code == DiagCode::RecursiveDefinition);
-    //CHECK(diags[4].code == DiagCode::ExpressionNotConstant);
+    // CHECK(diags[4].code == DiagCode::ExpressionNotConstant);
 }
 
 TEST_CASE("Module ANSI ports") {
@@ -361,14 +372,15 @@ module mh22(ref wire x); endmodule
     compilation.addSyntaxTree(tree);
     Diagnostics diags = compilation.getAllDiagnostics();
 
-    #define checkPort(moduleName, index, dir, kind, type) {\
-        auto def = compilation.getDefinition(moduleName);\
-        REQUIRE(def);\
-        REQUIRE(def->ports().size() > (index));\
-        auto& port = *def->ports()[index];\
-        CHECK(port.direction == (dir));\
-        CHECK(port.portKind == (kind));\
-        CHECK(port.getType().toString() == (type));\
+#define checkPort(moduleName, index, dir, kind, type)     \
+    {                                                     \
+        auto def = compilation.getDefinition(moduleName); \
+        REQUIRE(def);                                     \
+        REQUIRE(def->ports().size() > (index));           \
+        auto& port = *def->ports()[index];                \
+        CHECK(port.direction == (dir));                   \
+        CHECK(port.portKind == (kind));                   \
+        CHECK(port.getType().toString() == (type));       \
     };
 
     checkPort("mh0", 0, PortDirection::InOut, PortKind::Net, "logic");
@@ -430,23 +442,24 @@ module m6(I.bar bar); endmodule
     compilation.addSyntaxTree(tree);
     Diagnostics diags = compilation.getAllDiagnostics();
 
-    #define checkIfacePort(moduleName, index, ifaceName, modportName) {\
-        auto def = compilation.getDefinition(moduleName);\
-        REQUIRE(def);\
-        REQUIRE(def->ports().size() > (index));\
-        auto& port = *def->ports()[index];\
-        CHECK(port.direction == PortDirection::NotApplicable);\
-        CHECK(port.portKind == PortKind::Interface);\
-        CHECK(port.getType().isError());\
-        REQUIRE(port.interfaceDef);\
-        CHECK(port.interfaceDef->name == (ifaceName));\
-        if (modportName) {\
-            REQUIRE(port.modport); \
-            CHECK(port.modport->name == (modportName)); \
-        } \
-        else { \
-            CHECK(!port.modport); \
-        } \
+#define checkIfacePort(moduleName, index, ifaceName, modportName) \
+    {                                                             \
+        auto def = compilation.getDefinition(moduleName);         \
+        REQUIRE(def);                                             \
+        REQUIRE(def->ports().size() > (index));                   \
+        auto& port = *def->ports()[index];                        \
+        CHECK(port.direction == PortDirection::NotApplicable);    \
+        CHECK(port.portKind == PortKind::Interface);              \
+        CHECK(port.getType().isError());                          \
+        REQUIRE(port.interfaceDef);                               \
+        CHECK(port.interfaceDef->name == (ifaceName));            \
+        if (modportName) {                                        \
+            REQUIRE(port.modport);                                \
+            CHECK(port.modport->name == (modportName));           \
+        }                                                         \
+        else {                                                    \
+            CHECK(!port.modport);                                 \
+        }                                                         \
     };
 
     checkIfacePort("m0", 0, "I", nullptr);
@@ -531,8 +544,10 @@ endmodule
     checkPort("test", 13, PortDirection::In, PortKind::Variable, "logic$[0:2]");
     checkPort("test", 14, PortDirection::In, PortKind::Variable, "logic[2:0]$[0:2]");
     checkPort("test", 15, PortDirection::In, PortKind::Variable, "logic[2:0][3:1]$[1:2][2:0][0:4]");
-    checkPort("test", 16, PortDirection::In, PortKind::Variable, "logic signed[2:0][3:1]$[1:2][2:0][0:4]");
-    checkPort("test", 17, PortDirection::In, PortKind::Variable, "logic signed[2:0][3:2]$[1:2][2:0][0:4]");
+    checkPort("test", 16, PortDirection::In, PortKind::Variable,
+              "logic signed[2:0][3:1]$[1:2][2:0][0:4]");
+    checkPort("test", 17, PortDirection::In, PortKind::Variable,
+              "logic signed[2:0][3:2]$[1:2][2:0][0:4]");
 
     Diagnostics diags = compilation.getAllDiagnostics();
 

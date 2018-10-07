@@ -15,38 +15,36 @@ using namespace slang;
 
 class DependencyMapper : public SyntaxVisitor<DependencyMapper> {
 public:
-    void addIncludeDir(const std::string& dir) {
-        sourceManager.addUserDirectory(string_view(dir));
-    }
+    void addIncludeDir(const std::string& dir) { sourceManager.addUserDirectory(string_view(dir)); }
 
     void parseFile(const std::string& path) {
         currentFile = path;
         auto tree = SyntaxTree::fromFile(currentFile, sourceManager);
-        //visitNode(&tree->root());
+        // visitNode(&tree->root());
 
-        //printf("%s", tree->root().toString(SyntaxToStringFlags::IncludePreprocessed | SyntaxToStringFlags::IncludeTrivia).c_str());
+        // printf("%s", tree->root().toString(SyntaxToStringFlags::IncludePreprocessed |
+        // SyntaxToStringFlags::IncludeTrivia).c_str());
     }
 
     void visit(const ModuleHeaderSyntax& header) {
-        std::string name { header.name.valueText() };
+        std::string name{ header.name.valueText() };
         if (!name.empty()) {
             auto pair = declToFile.try_emplace(name, currentFile);
             if (!pair.second) {
-                printf("Duplicate declaration: %s (%s, %s)\n",
-                       name.c_str(), currentFile.c_str(),
+                printf("Duplicate declaration: %s (%s, %s)\n", name.c_str(), currentFile.c_str(),
                        pair.first->second.c_str());
             }
         }
     }
 
     void visit(const HierarchyInstantiationSyntax& instantiation) {
-        std::string name { instantiation.type.valueText() };
+        std::string name{ instantiation.type.valueText() };
         if (!name.empty())
             fileToDeps[currentFile].insert(name);
     }
 
     void visit(const PackageImportItemSyntax& packageImport) {
-        std::string name { packageImport.package.valueText() };
+        std::string name{ packageImport.package.valueText() };
         if (!name.empty())
             fileToDeps[currentFile].insert(name);
     }
@@ -75,8 +73,7 @@ private:
     std::unordered_map<std::string, std::unordered_set<std::string>> fileToDeps;
 };
 
-int main(int argc, char* argv[])
-try {
+int main(int argc, char* argv[]) try {
     if (argc < 2) {
         fprintf(stderr, "Usage: slang-depmap [directories...]\n");
         return 1;

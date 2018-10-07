@@ -39,7 +39,9 @@ TEST_CASE("Read header (relative)") {
     CHECK(!manager.readHeader("relative", SourceLocation(), false));
 
     // get a file ID to load relative to
-    SourceBuffer buffer1 = manager.readHeader(string_view(manager.makeAbsolutePath(string_view(getTestInclude()))), SourceLocation(), false);
+    SourceBuffer buffer1 =
+        manager.readHeader(string_view(manager.makeAbsolutePath(string_view(getTestInclude()))),
+                           SourceLocation(), false);
     REQUIRE(buffer1);
 
     // reading the same header by name should return the same ID
@@ -61,7 +63,8 @@ TEST_CASE("Read header (include dirs)") {
     SourceBuffer buffer = manager.readHeader("include.svh", SourceLocation(), true);
     REQUIRE(buffer);
 
-    manager.addUserDirectory(string_view(manager.makeAbsolutePath(string_view(findTestDir() + "/nested"))));
+    manager.addUserDirectory(
+        string_view(manager.makeAbsolutePath(string_view(findTestDir() + "/nested"))));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), false);
     CHECK(buffer);
 }

@@ -18,10 +18,9 @@ TEST_CASE("Diagnostic Line Number") {
 }
 
 TEST_CASE("Diagnostic reporting with `line") {
-    auto& text =
-"`line 100 \"foo.svh\" 0\n"
-"`include \"foofile\"\n"
-"ident";
+    auto& text = "`line 100 \"foo.svh\" 0\n"
+                 "`include \"foofile\"\n"
+                 "ident";
 
     lexToken(text);
     CHECK(diagnostics.size() == 1);
