@@ -138,4 +138,4 @@ inline int utf8SeqBytes(char c) {
     return 0;
 }
 
-}
+} // namespace slang

@@ -26,10 +26,12 @@ void StatementBodiedScope::bindBody() {
     if (sourceSyntax->kind == SyntaxKind::SyntaxList)
         setBody(&bindStatementList(*(const SyntaxList<SyntaxNode>*)sourceSyntax));
     else
-        setBody(&bindStatement(sourceSyntax->as<StatementSyntax>(), BindContext(*this, LookupLocation::max)));
+        setBody(&bindStatement(sourceSyntax->as<StatementSyntax>(),
+                               BindContext(*this, LookupLocation::max)));
 }
 
-Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax, const BindContext& context) {
+Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax,
+                                               const BindContext& context) {
     switch (syntax.kind) {
         case SyntaxKind::ReturnStatement:
             return bindReturnStatement(syntax.as<ReturnStatementSyntax>(), context);
@@ -117,7 +119,8 @@ Statement& StatementBodiedScope::bindConditionalStatement(const ConditionalState
     return *comp.emplace<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
-Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSyntax& syntax, const BindContext& context) {
+Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSyntax& syntax,
+                                                      const BindContext& context) {
     // If the initializers here involve doing variable declarations, then the spec says we create
     // an implicit sequential block and do the declaration there. Otherwise we'll just
     // end up returning the for statement directly.
@@ -128,8 +131,11 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
     const BindContext* forContext = &context;
 
     Compilation& comp = getCompilation();
-    if (!syntax.initializers.empty() && syntax.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
-        auto implicitBlock = comp.emplace<SequentialBlockSymbol>(comp, syntax.forKeyword.location());
+    if (!syntax.initializers.empty() &&
+        syntax.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
+
+        auto implicitBlock =
+            comp.emplace<SequentialBlockSymbol>(comp, syntax.forKeyword.location());
         implicitBlockStmt = comp.emplace<SequentialBlockStatement>(*implicitBlock);
 
         addMember(*implicitBlock);
@@ -141,7 +147,8 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
             // If one entry is a variable declaration, they should all be. Checked by the parser.
             ASSERT(initializer->kind == SyntaxKind::ForVariableDeclaration);
 
-            auto& var = VariableSymbol::fromSyntax(comp, initializer->as<ForVariableDeclarationSyntax>());
+            auto& var =
+                VariableSymbol::fromSyntax(comp, initializer->as<ForVariableDeclarationSyntax>());
             implicitBlock->addMember(var);
             initializers.append(comp.emplace<VariableDeclStatement>(var));
         }
@@ -160,7 +167,8 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
 
     const auto& bodyStmt = forScope->bindStatement(*syntax.statement, *forContext);
     auto initList = comp.emplace<StatementList>(initializers.copy(comp));
-    auto loop = comp.emplace<ForLoopStatement>(syntax, *initList, &stopExpr, steps.copy(comp), bodyStmt);
+    auto loop =
+        comp.emplace<ForLoopStatement>(syntax, *initList, &stopExpr, steps.copy(comp), bodyStmt);
 
     // If we had an implicit block created to wrap the for loop, set the loop as the body
     // of that block and return it. Otherwise, just return the loop itself.
@@ -178,7 +186,8 @@ Statement& StatementBodiedScope::bindExpressionStatement(const ExpressionStateme
     return *comp.emplace<ExpressionStatement>(syntax, expr);
 }
 
-Statement& StatementBodiedScope::bindBlockStatement(const BlockStatementSyntax& syntax, const BindContext&) {
+Statement& StatementBodiedScope::bindBlockStatement(const BlockStatementSyntax& syntax,
+                                                    const BindContext&) {
     Compilation& comp = getCompilation();
     auto& symbol = SequentialBlockSymbol::fromSyntax(comp, syntax);
     addMember(symbol);
@@ -189,4 +198,4 @@ Statement& StatementBodiedScope::badStmt(const Statement* stmt) {
     return *getCompilation().emplace<InvalidStatement>(stmt);
 }
 
-}
+} // namespace slang

@@ -17,18 +17,21 @@ std::string TypePrinter::toString() const {
 }
 
 void TypePrinter::handle(const ScalarType& type) {
+    // clang-format off
     switch (type.scalarKind) {
         case ScalarType::Bit: buffer.append("bit"); break;
         case ScalarType::Logic: buffer.append("logic"); break;
         case ScalarType::Reg: buffer.append("reg"); break;
         default: THROW_UNREACHABLE;
     }
+    // clang-format on
 
     if (type.isSigned)
         buffer.append(" signed");
 }
 
 void TypePrinter::handle(const PredefinedIntegerType& type) {
+    // clang-format off
     switch (type.integerKind) {
         case PredefinedIntegerType::ShortInt: buffer.append("shortint"); break;
         case PredefinedIntegerType::Int: buffer.append("int"); break;
@@ -38,17 +41,21 @@ void TypePrinter::handle(const PredefinedIntegerType& type) {
         case PredefinedIntegerType::Time: buffer.append("time"); break;
         default: THROW_UNREACHABLE;
     }
+    // clang-format on
+
     if (type.isSigned != PredefinedIntegerType::isDefaultSigned(type.integerKind))
         buffer.append((type.isSigned ? " signed" : " unsigned"));
 }
 
 void TypePrinter::handle(const FloatingType& type) {
+    // clang-format off
     switch (type.floatKind) {
         case FloatingType::Real: buffer.append("real"); break;
         case FloatingType::ShortReal: buffer.append("shortreal"); break;
         case FloatingType::RealTime: buffer.append("realtime"); break;
         default: THROW_UNREACHABLE;
     }
+    // clang-format on
 }
 
 void TypePrinter::handle(const EnumType& type) {
@@ -56,7 +63,8 @@ void TypePrinter::handle(const EnumType& type) {
     buffer.append("enum{");
     for (const auto& member : type.values()) {
         // TODO: write value with correct prefix
-        buffer.format("{}={},", member.name, member.getValue().integer().toString(LiteralBase::Decimal));
+        buffer.format("{}={},", member.name,
+                      member.getValue().integer().toString(LiteralBase::Decimal));
     }
     buffer.pop_back();
     buffer.append("}");
@@ -140,10 +148,11 @@ void TypePrinter::handle(const ErrorType&) {
 }
 
 void TypePrinter::handle(const NetType& type) {
+    // clang-format off
     switch (type.netKind) {
         case NetType::Unknown: buffer.append("<error-nettype>"); break;
         case NetType::Wire: buffer.append("wire"); break;
-        case NetType::WAnd:  buffer.append("wand"); break;
+        case NetType::WAnd: buffer.append("wand"); break;
         case NetType::WOr: buffer.append("wor"); break;
         case NetType::Tri: buffer.append("tri"); break;
         case NetType::TriAnd: buffer.append("triand"); break;
@@ -155,8 +164,9 @@ void TypePrinter::handle(const NetType& type) {
         case NetType::Supply1: buffer.append("supply1"); break;
         case NetType::UWire: buffer.append("uwire"); break;
         case NetType::UserDefined: break; // TODO:
-        case NetType::Alias: break; // TODO:
+        case NetType::Alias: break;       // TODO:
     }
+    // clang-format on
 }
 
 void TypePrinter::appendStructMembers(const Scope& scope) {
@@ -169,4 +179,4 @@ void TypePrinter::appendStructMembers(const Scope& scope) {
     buffer.append("}");
 }
 
-}
+} // namespace slang

@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/util/TempBuffer.h"
+
 #ifdef __GNUC__
 #    include <x86intrin.h>
 #endif

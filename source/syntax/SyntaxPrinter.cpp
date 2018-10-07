@@ -11,8 +11,8 @@
 
 namespace slang {
 
-SyntaxPrinter::SyntaxPrinter(const SourceManager& sourceManager) :
-    sourceManager(&sourceManager) {}
+SyntaxPrinter::SyntaxPrinter(const SourceManager& sourceManager) : sourceManager(&sourceManager) {
+}
 
 SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
     switch (trivia.kind) {
@@ -153,4 +153,4 @@ void SyntaxPrinter::append(string_view text) {
     buffer.append(text);
 }
 
-}
+} // namespace slang

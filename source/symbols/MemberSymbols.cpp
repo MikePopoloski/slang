@@ -46,16 +46,18 @@ void WildcardImportSymbol::toJson(json& j) const {
 }
 
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort) :
-    ValueSymbol(SymbolKind::Parameter, name, loc, DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant),
-    isLocal(isLocal), isPort(isPort)
-{
+    ValueSymbol(SymbolKind::Parameter, name, loc,
+                DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant),
+    isLocal(isLocal), isPort(isPort) {
 }
 
 void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
-                                 bool isLocal, bool isPort, SmallVector<ParameterSymbol*>& results) {
+                                 bool isLocal, bool isPort,
+                                 SmallVector<ParameterSymbol*>& results) {
     for (auto decl : syntax.declarators) {
         auto loc = decl->name.location();
-        auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText(), loc, isLocal, isPort);
+        auto param =
+            compilation.emplace<ParameterSymbol>(decl->name.valueText(), loc, isLocal, isPort);
         param->setDeclaredType(*syntax.type);
         param->setFromDeclarator(*decl);
 
@@ -71,7 +73,8 @@ void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclar
     }
 }
 
-ParameterSymbol& ParameterSymbol::createOverride(Compilation& compilation, const Expression* newInitializer) const {
+ParameterSymbol& ParameterSymbol::createOverride(Compilation& compilation,
+                                                 const Expression* newInitializer) const {
     auto result = compilation.emplace<ParameterSymbol>(name, location, isLocal, isPort);
     if (auto syntax = getSyntax())
         result->setSyntax(*syntax);
@@ -126,10 +129,7 @@ struct AnsiPortListBuilder {
     const DefinitionSymbol* lastInterface = nullptr;
 
     AnsiPortListBuilder(Compilation& compilation, SmallVector<const PortSymbol*>& ports) :
-        compilation(compilation),
-        ports(ports)
-    {
-    }
+        compilation(compilation), ports(ports) {}
 
     void add(const PortSymbol& port) {
         ports.append(&port);
@@ -172,7 +172,8 @@ void copyTypeFrom(ValueSymbol& dest, const DeclaredType& source) {
         dest.setType(source.getType());
 }
 
-void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBuilder& builder, const Scope& scope) {
+void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBuilder& builder,
+                            const Scope& scope) {
     Compilation& comp = builder.compilation;
     auto token = syntax.declarator->name;
     auto& port = *comp.emplace<PortSymbol>(token.valueText(), token.location());
@@ -194,7 +195,6 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
             port.direction = builder.lastDirection;
         else
             port.direction = SemanticFacts::getPortDirection(header.direction.kind);
-
     };
 
     switch (syntax.header->kind) {
@@ -229,9 +229,11 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                         scope.lookupName(*namedType.name, LookupLocation::max, LookupNameKind::Type,
                                          LookupFlags::None, lookupResult);
 
-                        if (lookupResult.hasError() || !lookupResult.found || !lookupResult.found->isType()) {
+                        if (lookupResult.hasError() || !lookupResult.found ||
+                            !lookupResult.found->isType()) {
                             // Didn't find a valid type; try to find a definition.
-                            auto name = namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
+                            auto name =
+                                namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
                             definition = comp.getDefinition(name, scope);
                         }
                     }
@@ -252,10 +254,15 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                     else {
                         port.interfaceDef = definition;
 
-                        if (header.varKeyword)
-                            scope.addDiag(DiagCode::VarWithInterfacePort, header.varKeyword.location());
-                        if (header.direction)
-                            scope.addDiag(DiagCode::DirectionWithInterfacePort, header.direction.location());
+                        if (header.varKeyword) {
+                            scope.addDiag(DiagCode::VarWithInterfacePort,
+                                          header.varKeyword.location());
+                        }
+
+                        if (header.direction) {
+                            scope.addDiag(DiagCode::DirectionWithInterfacePort,
+                                          header.direction.location());
+                        }
                     }
                 }
                 else {
@@ -288,10 +295,16 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                         }
                     }
 
-                    if (port.direction == PortDirection::InOut && port.portKind == PortKind::Variable)
-                        scope.addDiag(DiagCode::InOutPortCannotBeVariable, port.location) << port.name;
-                    else if (port.direction == PortDirection::Ref && port.portKind != PortKind::Variable)
+                    if (port.direction == PortDirection::InOut &&
+                        port.portKind == PortKind::Variable) {
+
+                        scope.addDiag(DiagCode::InOutPortCannotBeVariable, port.location)
+                            << port.name;
+                    }
+                    else if (port.direction == PortDirection::Ref &&
+                             port.portKind != PortKind::Variable) {
                         scope.addDiag(DiagCode::RefPortMustBeVariable, port.location) << port.name;
+                    }
                 }
             }
 
@@ -302,7 +315,8 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                 // Create a new symbol to represent this port internally to the instance.
                 // TODO: interconnect ports don't have a datatype
                 // TODO: variable lifetime
-                auto variable = comp.emplace<VariableSymbol>(port.name, syntax.declarator->name.location());
+                auto variable =
+                    comp.emplace<VariableSymbol>(port.name, syntax.declarator->name.location());
                 variable->setSyntax(syntax);
                 copyTypeFrom(*variable, *port.getDeclaredType());
                 port.internalSymbol = variable;
@@ -391,11 +405,11 @@ struct NonAnsiPortListBuilder {
     };
     SmallMap<string_view, PortInfo, 8> portInfos;
 
-    NonAnsiPortListBuilder(Compilation& compilation, SmallVector<const PortSymbol*>& ports, const Scope& scope,
+    NonAnsiPortListBuilder(Compilation& compilation, SmallVector<const PortSymbol*>& ports,
+                           const Scope& scope,
                            span<const PortDeclarationSyntax* const> portDeclarations) :
         compilation(compilation),
-        ports(ports)
-    {
+        ports(ports) {
         // All port declarations in the scope have been collected; index them for easy lookup.
         // The additional boolean is for tracking whether the declaration has been used by the
         // time we're done creating ports.
@@ -409,7 +423,8 @@ struct NonAnsiPortListBuilder {
                     else {
                         auto& diag = scope.addDiag(DiagCode::Redefinition, name.location());
                         diag << name.valueText();
-                        diag.addNote(DiagCode::NotePreviousDefinition, result.first->second.syntax->name.location());
+                        diag.addNote(DiagCode::NotePreviousDefinition,
+                                     result.first->second.syntax->name.location());
                     }
                 }
             }
@@ -495,14 +510,17 @@ void NonAnsiPortListBuilder::handleIODecl(const PortHeaderSyntax& header, PortIn
                 info.internalSymbol = variable;
             }
             else if (auto symbol = scope.find(name);
-                     symbol && (symbol->kind == SymbolKind::Variable || symbol->kind == SymbolKind::Net)) {
+                     symbol &&
+                     (symbol->kind == SymbolKind::Variable || symbol->kind == SymbolKind::Net)) {
 
                 // Port kind and type come from the matching symbol
-                info.kind = symbol->kind == SymbolKind::Variable ? PortKind::Variable : PortKind::Net;
+                info.kind =
+                    symbol->kind == SymbolKind::Variable ? PortKind::Variable : PortKind::Net;
                 info.internalSymbol = symbol;
 
-                mergePortTypes(symbol->as<ValueSymbol>(), varHeader.dataType->as<ImplicitTypeSyntax>(),
-                               declLoc, scope, decl.dimensions);
+                mergePortTypes(symbol->as<ValueSymbol>(),
+                               varHeader.dataType->as<ImplicitTypeSyntax>(), declLoc, scope,
+                               decl.dimensions);
             }
             else {
                 // No symbol and no data type defaults to a basic net.
@@ -544,8 +562,8 @@ void NonAnsiPortListBuilder::handleIODecl(const PortHeaderSyntax& header, PortIn
     }
 }
 
-void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax, NonAnsiPortListBuilder& builder,
-                               const Scope& scope) {
+void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax,
+                               NonAnsiPortListBuilder& builder, const Scope& scope) {
 
     auto& comp = builder.compilation;
     auto& port = *comp.emplace<PortSymbol>("", SourceLocation());
@@ -590,7 +608,7 @@ void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& synt
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
             // TODO: error if we have port declaration members
-            AnsiPortListBuilder builder { compilation, results };
+            AnsiPortListBuilder builder{ compilation, results };
             for (auto port : syntax.as<AnsiPortListSyntax>().ports) {
                 switch (port->kind) {
                     case SyntaxKind::ImplicitAnsiPort:
@@ -604,11 +622,12 @@ void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& synt
             break;
         }
         case SyntaxKind::NonAnsiPortList: {
-            NonAnsiPortListBuilder builder { compilation, results, scope, portDeclarations };
+            NonAnsiPortListBuilder builder{ compilation, results, scope, portDeclarations };
             for (auto port : syntax.as<NonAnsiPortListSyntax>().ports) {
                 switch (port->kind) {
                     case SyntaxKind::ImplicitNonAnsiPort:
-                        handleImplicitNonAnsiPort(port->as<ImplicitNonAnsiPortSyntax>(), builder, scope);
+                        handleImplicitNonAnsiPort(port->as<ImplicitNonAnsiPortSyntax>(), builder,
+                                                  scope);
                         break;
                     default:
                         THROW_UNREACHABLE;
@@ -640,7 +659,7 @@ void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax&
 
 void NetSymbol::toJson(json&) const {
     // TODO:
-    //j["dataType"] = *dataType;
+    // j["dataType"] = *dataType;
 }
 
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
@@ -671,7 +690,7 @@ void VariableSymbol::toJson(json& j) const {
     j["isConst"] = isConst;
 
     // TODO:
-    //if (initializer)
+    // if (initializer)
     //    j["initializer"] =
 }
 
@@ -688,13 +707,9 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     Token nameToken = proto->name->getFirstToken();
 
     auto result = compilation.emplace<SubroutineSymbol>(
-        compilation,
-        nameToken.valueText(),
-        nameToken.location(),
+        compilation, nameToken.valueText(), nameToken.location(),
         SemanticFacts::getVariableLifetime(proto->lifetime).value_or(VariableLifetime::Automatic),
-        syntax.kind == SyntaxKind::TaskDeclaration,
-        parent
-    );
+        syntax.kind == SyntaxKind::TaskDeclaration, parent);
     result->setSyntax(syntax);
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
@@ -706,9 +721,15 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
             FormalArgumentDirection direction;
             bool directionSpecified = true;
             switch (portSyntax->direction.kind) {
-                case TokenKind::InputKeyword: direction = FormalArgumentDirection::In; break;
-                case TokenKind::OutputKeyword: direction = FormalArgumentDirection::Out; break;
-                case TokenKind::InOutKeyword: direction = FormalArgumentDirection::InOut; break;
+                case TokenKind::InputKeyword:
+                    direction = FormalArgumentDirection::In;
+                    break;
+                case TokenKind::OutputKeyword:
+                    direction = FormalArgumentDirection::Out;
+                    break;
+                case TokenKind::InOutKeyword:
+                    direction = FormalArgumentDirection::InOut;
+                    break;
                 case TokenKind::RefKeyword:
                     if (portSyntax->constKeyword)
                         direction = FormalArgumentDirection::ConstRef;
@@ -726,10 +747,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
             auto declarator = portSyntax->declarator;
             auto arg = compilation.emplace<FormalArgumentSymbol>(
-                declarator->name.valueText(),
-                declarator->name.location(),
-                direction
-            );
+                declarator->name.valueText(), declarator->name.location(), direction);
             arg->setSyntax(*portSyntax);
 
             // If we're given a type, use that. Otherwise, if we were given a
@@ -775,9 +793,7 @@ void SubroutineSymbol::toJson(json& j) const {
 }
 
 ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-    Symbol(SymbolKind::Modport, name, loc),
-    Scope(compilation, this)
-{
+    Symbol(SymbolKind::Modport, name, loc), Scope(compilation, this) {
 }
 
 ModportSymbol& ModportSymbol::fromSyntax(Compilation& compilation, const ModportItemSyntax& syntax,
@@ -789,4 +805,4 @@ ModportSymbol& ModportSymbol::fromSyntax(Compilation& compilation, const Modport
     return result;
 }
 
-}
+} // namespace slang

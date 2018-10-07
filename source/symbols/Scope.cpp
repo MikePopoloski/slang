@@ -34,15 +34,12 @@ public:
     const SyntaxNode& node;
 
     explicit DeferredMemberSymbol(const SyntaxNode& node) :
-        Symbol(SymbolKind::DeferredMember, "", SourceLocation()),
-        node(node) {}
+        Symbol(SymbolKind::DeferredMember, "", SourceLocation()), node(node) {}
 
-    static bool isKind(SymbolKind kind) {
-        return kind == SymbolKind::DeferredMember;
-    }
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::DeferredMember; }
 };
 
-}
+} // namespace
 
 namespace slang {
 
@@ -83,9 +80,7 @@ void LookupResult::clear() {
 }
 
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
-    compilation(compilation_), thisSym(thisSym_),
-    nameMap(compilation.allocSymbolMap())
-{
+    compilation(compilation_), thisSym(thisSym_), nameMap(compilation.allocSymbolMap()) {
 }
 
 Scope::iterator& Scope::iterator::operator++() {
@@ -125,7 +120,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ProgramDeclaration: {
             // Definitions exist in their own namespace and are tracked in the Compilation.
             // TODO: make this not going into the scope's name map
-            auto& def = DefinitionSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
+            auto& def =
+                DefinitionSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
             addMember(def);
             compilation.addDefinition(def);
             break;
@@ -133,7 +129,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::PackageDeclaration: {
             // Packages exist in their own namespace and are tracked in the Compilation.
             // TODO: make this not going into the scope's name map
-            auto& package = PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
+            auto& package =
+                PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
             addMember(package);
             compilation.addPackage(package);
             break;
@@ -142,8 +139,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             for (auto item : syntax.as<PackageImportDeclarationSyntax>().items) {
                 if (item->item.kind == TokenKind::Star) {
                     auto import = compilation.emplace<WildcardImportSymbol>(
-                        item->package.valueText(),
-                        item->item.location());
+                        item->package.valueText(), item->item.location());
 
                     import->setSyntax(*item);
                     addMember(*import);
@@ -151,9 +147,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 }
                 else {
                     auto import = compilation.emplace<ExplicitImportSymbol>(
-                        item->package.valueText(),
-                        item->item.valueText(),
-                        item->item.location());
+                        item->package.valueText(), item->item.valueText(), item->item.location());
 
                     import->setSyntax(*item);
                     addMember(*import);
@@ -180,7 +174,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
-            addMember(SubroutineSymbol::fromSyntax(compilation, syntax.as<FunctionDeclarationSyntax>(), *this));
+            addMember(SubroutineSymbol::fromSyntax(compilation,
+                                                   syntax.as<FunctionDeclarationSyntax>(), *this));
             break;
         case SyntaxKind::DataDeclaration: {
             SmallVectorSized<const VariableSymbol*, 4> variables;
@@ -215,24 +210,25 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::AlwaysFFBlock:
         case SyntaxKind::InitialBlock:
         case SyntaxKind::FinalBlock:
-            addMember(ProceduralBlockSymbol::fromSyntax(compilation, syntax.as<ProceduralBlockSyntax>()));
+            addMember(
+                ProceduralBlockSymbol::fromSyntax(compilation, syntax.as<ProceduralBlockSyntax>()));
             break;
         case SyntaxKind::EmptyMember:
             break;
         case SyntaxKind::TypedefDeclaration:
-            addMember(TypeAliasType::fromSyntax(compilation, syntax.as<TypedefDeclarationSyntax>()));
+            addMember(
+                TypeAliasType::fromSyntax(compilation, syntax.as<TypedefDeclarationSyntax>()));
             break;
         case SyntaxKind::ForwardTypedefDeclaration: {
-            const auto& symbol = ForwardingTypedefSymbol::fromSyntax(compilation, syntax.as<ForwardTypedefDeclarationSyntax>());
+            const auto& symbol = ForwardingTypedefSymbol::fromSyntax(
+                compilation, syntax.as<ForwardTypedefDeclarationSyntax>());
             addMember(symbol);
             getOrAddDeferredData().addForwardingTypedef(symbol);
             break;
         }
         case SyntaxKind::ForwardInterfaceClassTypedefDeclaration: {
             const auto& symbol = ForwardingTypedefSymbol::fromSyntax(
-                compilation,
-                syntax.as<ForwardInterfaceClassTypedefDeclarationSyntax>()
-            );
+                compilation, syntax.as<ForwardInterfaceClassTypedefDeclarationSyntax>());
             addMember(symbol);
             getOrAddDeferredData().addForwardingTypedef(symbol);
             break;
@@ -257,10 +253,14 @@ const Symbol* Scope::find(string_view name) const {
     // symbols; this function is for querying direct members only.
     const Symbol* symbol = it->second;
     switch (symbol->kind) {
-        case SymbolKind::ExplicitImport: return nullptr;
-        case SymbolKind::ForwardingTypedef: return nullptr;
-        case SymbolKind::TransparentMember: return &symbol->as<TransparentMemberSymbol>().wrapped;
-        default: return symbol;
+        case SymbolKind::ExplicitImport:
+            return nullptr;
+        case SymbolKind::ForwardingTypedef:
+            return nullptr;
+        case SymbolKind::TransparentMember:
+            return &symbol->as<TransparentMemberSymbol>().wrapped;
+        default:
+            return symbol;
     }
 }
 
@@ -294,8 +294,10 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
     if (nameToken.identifierType() == IdentifierType::System) {
         result.found = nullptr;
         result.systemSubroutine = compilation.getSystemSubroutine(nameToken.valueText());
-        if (!result.systemSubroutine)
-            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+        if (!result.systemSubroutine) {
+            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range())
+                << nameToken.valueText();
+        }
         return;
     }
 
@@ -325,8 +327,10 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
             }
         }
 
-        if (!usedBeforeDeclared)
-            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+        if (!usedBeforeDeclared) {
+            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range())
+                << nameToken.valueText();
+        }
         else {
             auto& diag = result.addDiag(*this, DiagCode::UsedBeforeDeclared, nameToken.range());
             diag << nameToken.valueText();
@@ -335,8 +339,8 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
     }
 }
 
-const Symbol* Scope::lookupName(string_view name, LookupLocation location,
-                                LookupNameKind nameKind, bitmask<LookupFlags> flags) const {
+const Symbol* Scope::lookupName(string_view name, LookupLocation location, LookupNameKind nameKind,
+                                bitmask<LookupFlags> flags) const {
     LookupResult result;
     lookupName(compilation.parseName(name), location, nameKind, flags, result);
     return result.found;
@@ -365,31 +369,39 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
 
     // Add to the name map if the symbol has a name, unless it's a port or definition symbol.
     // Per the spec, ports and definitions exist in their own namespaces.
-    if (!member->name.empty() && member->kind != SymbolKind::Port && member->kind != SymbolKind::Definition) {
+    if (!member->name.empty() && member->kind != SymbolKind::Port &&
+        member->kind != SymbolKind::Definition) {
+
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second) {
-            // We have a name collision; first check if this is ok (forwarding typedefs share a name with
-            // the actual typedef) and if not give the user a helpful error message.
+            // We have a name collision; first check if this is ok (forwarding typedefs share a name
+            // with the actual typedef) and if not give the user a helpful error message.
             const Symbol* existing = pair.first->second;
-            if (existing->kind == SymbolKind::TypeAlias && member->kind == SymbolKind::ForwardingTypedef) {
-                // Just add this forwarding typedef to a deferred list so we can process them once we
-                // know the kind of symbol the alias points to.
+            if (existing->kind == SymbolKind::TypeAlias &&
+                member->kind == SymbolKind::ForwardingTypedef) {
+                // Just add this forwarding typedef to a deferred list so we can process them once
+                // we know the kind of symbol the alias points to.
                 existing->as<TypeAliasType>().addForwardDecl(member->as<ForwardingTypedefSymbol>());
             }
             else if (existing->kind == SymbolKind::ForwardingTypedef &&
                      member->kind == SymbolKind::ForwardingTypedef) {
                 // Found another forwarding typedef; link it to the previous one.
-                existing->as<ForwardingTypedefSymbol>().addForwardDecl(member->as<ForwardingTypedefSymbol>());
+                existing->as<ForwardingTypedefSymbol>().addForwardDecl(
+                    member->as<ForwardingTypedefSymbol>());
             }
-            else if (existing->kind == SymbolKind::ForwardingTypedef && member->kind == SymbolKind::TypeAlias) {
-                // We found the actual type for a previous forwarding declaration. Replace it in the name map.
+            else if (existing->kind == SymbolKind::ForwardingTypedef &&
+                     member->kind == SymbolKind::TypeAlias) {
+                // We found the actual type for a previous forwarding declaration. Replace it in the
+                // name map.
                 member->as<TypeAliasType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
                 pair.first->second = member;
             }
-            else if (existing->kind == SymbolKind::ExplicitImport && member->kind == SymbolKind::ExplicitImport &&
+            else if (existing->kind == SymbolKind::ExplicitImport &&
+                     member->kind == SymbolKind::ExplicitImport &&
                      existing->as<ExplicitImportSymbol>().packageName ==
-                     member->as<ExplicitImportSymbol>().packageName) {
-                // Duplicate explicit imports are specifically allowed, so just ignore the other one.
+                         member->as<ExplicitImportSymbol>().packageName) {
+                // Duplicate explicit imports are specifically allowed, so just ignore the other
+                // one.
             }
             else {
                 Diagnostic* diag;
@@ -454,7 +466,8 @@ void Scope::elaborate() const {
                 case SyntaxKind::HierarchyInstantiation: {
                     SmallVectorSized<const Symbol*, 8> instances;
                     LookupLocation location = LookupLocation::before(*symbol);
-                    InstanceSymbol::fromSyntax(compilation, member.node.as<HierarchyInstantiationSyntax>(),
+                    InstanceSymbol::fromSyntax(compilation,
+                                               member.node.as<HierarchyInstantiationSyntax>(),
                                                location, *this, instances);
 
                     const Symbol* last = symbol;
@@ -467,8 +480,8 @@ void Scope::elaborate() const {
                 case SyntaxKind::AnsiPortList:
                 case SyntaxKind::NonAnsiPortList: {
                     SmallVectorSized<const PortSymbol*, 8> ports;
-                    PortSymbol::fromSyntax(compilation, member.node.as<PortListSyntax>(),
-                                           *this, ports, deferredData.getPortDeclarations());
+                    PortSymbol::fromSyntax(compilation, member.node.as<PortListSyntax>(), *this,
+                                           ports, deferredData.getPortDeclarations());
 
                     const Symbol* last = symbol;
                     for (auto port : ports) {
@@ -494,17 +507,17 @@ void Scope::elaborate() const {
 
             switch (member.node.kind) {
                 case SyntaxKind::IfGenerate: {
-                    auto block = GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
-                                                                 location, *this);
+                    auto block = GenerateBlockSymbol::fromSyntax(
+                        compilation, member.node.as<IfGenerateSyntax>(), location, *this);
                     if (block)
                         insertMember(block, symbol);
                     break;
                 }
                 case SyntaxKind::LoopGenerate:
-                    insertMember(&GenerateBlockArraySymbol::fromSyntax(compilation,
-                                                                       member.node.as<LoopGenerateSyntax>(),
-                                                                       location, *this),
-                                 symbol);
+                    insertMember(
+                        &GenerateBlockArraySymbol::fromSyntax(
+                            compilation, member.node.as<LoopGenerateSyntax>(), location, *this),
+                        symbol);
                     break;
                 default:
                     break;
@@ -572,7 +585,8 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
                 // A type alias can have forward definitions, so check those locations as well.
                 // The forward decls form a linked list that are always ordered by location,
                 // so we only need to check the first one.
-                const ForwardingTypedefSymbol* forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
+                const ForwardingTypedefSymbol* forward =
+                    symbol->as<TypeAliasType>().getFirstForwardDecl();
                 if (forward)
                     locationGood = LookupLocation::before(*forward) < location;
             }
@@ -589,22 +603,24 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
                     result.found = &symbol->as<TransparentMemberSymbol>().wrapped;
                     break;
                 case SymbolKind::ForwardingTypedef:
-                    // If we find a forwarding typedef, the actual typedef was never defined. Just ignore it,
-                    // we'll issue a better error later.
+                    // If we find a forwarding typedef, the actual typedef was never defined. Just
+                    // ignore it, we'll issue a better error later.
                     break;
                 default:
                     result.found = symbol;
                     break;
             }
 
-            // We have a fully resolved and valid symbol. Before we return back to the caller, make sure that
-            // the symbol we're returning isn't in the process of having its type evaluated. This can only happen
-            // with a mutually recursive definition of something like a parameter and a function, so detect and
-            // report the error here to avoid a stack overflow.
+            // We have a fully resolved and valid symbol. Before we return back to the caller, make
+            // sure that the symbol we're returning isn't in the process of having its type
+            // evaluated. This can only happen with a mutually recursive definition of something
+            // like a parameter and a function, so detect and report the error here to avoid a stack
+            // overflow.
             if (result.found) {
                 const DeclaredType* declaredType = result.found->getDeclaredType();
                 if (declaredType && declaredType->isEvaluating()) {
-                    auto& diag = result.addDiag(*this, DiagCode::RecursiveDefinition, sourceRange) << name;
+                    auto& diag = result.addDiag(*this, DiagCode::RecursiveDefinition, sourceRange)
+                                 << name;
                     diag.addNote(DiagCode::NoteDeclarationHere, result.found->location);
                     result.found = nullptr;
                 }
@@ -632,12 +648,13 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
 
         const Symbol* imported = package->find(name);
         if (imported)
-            imports.emplace(Import { imported, import });
+            imports.emplace(Import{ imported, import });
     }
 
     if (!imports.empty()) {
         if (imports.size() > 1) {
-            auto& diag = result.addDiag(*this, DiagCode::AmbiguousWildcardImport, sourceRange) << name;
+            auto& diag = result.addDiag(*this, DiagCode::AmbiguousWildcardImport, sourceRange)
+                         << name;
             for (const auto& pair : imports) {
                 diag.addNote(DiagCode::NoteImportedFrom, pair.import->location);
                 diag.addNote(DiagCode::NoteDeclarationHere, pair.imported->location);
@@ -670,9 +687,9 @@ namespace {
 
 using namespace slang;
 
-// A downward lookup starts from a given scope and tries to match pieces of a name with subsequent members
-// of scopes. If the entire path matches, the found member will be returned. Otherwise, the last name piece
-// we looked up will be returned, along with whatever symbol was last found.
+// A downward lookup starts from a given scope and tries to match pieces of a name with subsequent
+// members of scopes. If the entire path matches, the found member will be returned. Otherwise, the
+// last name piece we looked up will be returned, along with whatever symbol was last found.
 struct DownwardLookupResult {
     const Symbol* found;
     const NameSyntax* last;
@@ -692,7 +709,8 @@ DownwardLookupResult lookupDownward(span<const NamePlusLoc> nameParts, const Sco
         const Symbol* symbol;
         switch (part.name->kind) {
             case SyntaxKind::IdentifierName:
-                symbol = current->find(part.name->as<IdentifierNameSyntax>().identifier.valueText());
+                symbol =
+                    current->find(part.name->as<IdentifierNameSyntax>().identifier.valueText());
                 break;
             default:
                 THROW_UNREACHABLE;
@@ -713,10 +731,11 @@ DownwardLookupResult lookupDownward(span<const NamePlusLoc> nameParts, const Sco
     return { found, nullptr };
 }
 
-}
+} // namespace
 
 void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
-                            LookupNameKind nameKind, bitmask<LookupFlags> flags, LookupResult& result) const {
+                            LookupNameKind nameKind, bitmask<LookupFlags> flags,
+                            LookupResult& result) const {
     // Split the name into easier to manage chunks. The parser will always produce a left-recursive
     // name tree, so that's all we'll bother to handle.
     int colonParts = 0;
@@ -743,8 +762,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             break;
         case SyntaxKind::IdentifierSelectName:
             // TODO:
-            //nameToken = first->as<IdentifierSelectNameSyntax>().identifier;
-            //break;
+            // nameToken = first->as<IdentifierSelectNameSyntax>().identifier;
+            // break;
         default:
             THROW_UNREACHABLE;
     }
@@ -757,8 +776,9 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     if (result.hasError())
         return;
 
-    // If we are starting with a colon separator, always do a downwards name resolution. If the prefix name can
-    // be resolved normally, we have a class scope, otherwise it's a package lookup. See [23.7.1]
+    // If we are starting with a colon separator, always do a downwards name resolution. If the
+    // prefix name can be resolved normally, we have a class scope, otherwise it's a package lookup.
+    // See [23.7.1]
     if (colonParts) {
         if (result.found && result.found->kind != SymbolKind::Package) {
             // TODO: handle classes
@@ -766,11 +786,12 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
         }
 
         // Otherwise, it should be a package name.
-        const PackageSymbol* package = result.found ?
-            &result.found->as<PackageSymbol>() : compilation.getPackage(nameToken.valueText());
+        const PackageSymbol* package = result.found ? &result.found->as<PackageSymbol>()
+                                                    : compilation.getPackage(nameToken.valueText());
 
         if (!package) {
-            result.addDiag(*this, DiagCode::UnknownClassOrPackage, nameToken.range()) << nameToken.valueText();
+            result.addDiag(*this, DiagCode::UnknownClassOrPackage, nameToken.range())
+                << nameToken.valueText();
             return;
         }
 
@@ -783,7 +804,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     // 1. The name resolves to a value symbol. The dotted name is a member select.
     // 2. The name resolves to a local scope. The dotted name is a hierarchical reference.
     // 3. The name resolves to an imported scope. The dotted name is a hierarchical reference,
-    //    but with an added restriction that only a direct downward lookup from the package is allowed.
+    //    but with an added restriction that only a direct downward lookup from the package is
+    //    allowed.
     // 4. The name is not found; it's considered a hierarchical reference and participates in
     //    upwards name resolution.
     if (result.found && result.found->isValue()) {
@@ -804,11 +826,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
                     THROW_UNREACHABLE;
             }
 
-            result.selectors.append(LookupResult::MemberSelector {
-                nameToken.valueText(),
-                part.dotLocation,
-                nameToken.range()
-            });
+            result.selectors.append(LookupResult::MemberSelector{
+                nameToken.valueText(), part.dotLocation, nameToken.range() });
 
             if (selectors)
                 result.selectors.appendRange(*selectors);
@@ -821,7 +840,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     result.isHierarchical = true;
     if (flags & LookupFlags::Constant) {
         NamePlusLoc& part = nameParts.back();
-        auto& diag = result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
+        auto& diag =
+            result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
         diag << nameToken.range();
 
         result.found = nullptr;
@@ -845,7 +865,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     }
 
     // TODO: upward name resolution
-    result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+    result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range())
+        << nameToken.valueText();
 }
 
 void Scope::DeferredMemberData::addMember(Symbol* symbol) {
@@ -868,12 +889,13 @@ StatementBodiedScope* Scope::DeferredMemberData::getStatement() const {
     return std::get<1>(membersOrStatement);
 }
 
-void Scope::DeferredMemberData::registerTransparentType(const Symbol* insertion, const Symbol& parent) {
+void Scope::DeferredMemberData::registerTransparentType(const Symbol* insertion,
+                                                        const Symbol& parent) {
     transparentTypes.emplace(insertion, &parent);
 }
 
-iterator_range<Scope::DeferredMemberData::TransparentTypeMap::const_iterator>
-Scope::DeferredMemberData::getTransparentTypes() const {
+iterator_range<Scope::DeferredMemberData::TransparentTypeMap::const_iterator> Scope::
+    DeferredMemberData::getTransparentTypes() const {
     return { transparentTypes.begin(), transparentTypes.end() };
 }
 
@@ -881,7 +903,9 @@ void Scope::DeferredMemberData::addForwardingTypedef(const ForwardingTypedefSymb
     forwardingTypedefs.push_back(&symbol);
 }
 
-span<const ForwardingTypedefSymbol* const> Scope::DeferredMemberData::getForwardingTypedefs() const {
+span<const ForwardingTypedefSymbol* const> Scope::DeferredMemberData::getForwardingTypedefs()
+    const {
+
     return forwardingTypedefs;
 }
 
@@ -893,4 +917,4 @@ span<const PortDeclarationSyntax* const> Scope::DeferredMemberData::getPortDecla
     return portDecls;
 }
 
-}
+} // namespace slang

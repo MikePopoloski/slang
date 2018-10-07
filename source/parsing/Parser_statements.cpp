@@ -32,7 +32,8 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
                     return parseCaseStatement(label, attributes, modifier, consume());
                 }
                 default: {
-                    addDiag(DiagCode::ExpectedIfOrCase, peek(1).location()) << getTokenKindText(peek().kind);
+                    addDiag(DiagCode::ExpectedIfOrCase, peek(1).location())
+                        << getTokenKindText(peek().kind);
                     skipToken(std::nullopt);
                     return factory.emptyStatement(label, attributes, Token());
                 }
@@ -69,22 +70,29 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
         case TokenKind::AtStar: {
             auto timingControl = parseTimingControl();
             ASSERT(timingControl);
-            return factory.timingControlStatement(label, attributes, *timingControl, parseStatement());
+            return factory.timingControlStatement(label, attributes, *timingControl,
+                                                  parseStatement());
         }
         case TokenKind::AssignKeyword:
-            return parseProceduralAssignStatement(label, attributes, SyntaxKind::ProceduralAssignStatement);
+            return parseProceduralAssignStatement(label, attributes,
+                                                  SyntaxKind::ProceduralAssignStatement);
         case TokenKind::ForceKeyword:
-            return parseProceduralAssignStatement(label, attributes, SyntaxKind::ProceduralForceStatement);
+            return parseProceduralAssignStatement(label, attributes,
+                                                  SyntaxKind::ProceduralForceStatement);
         case TokenKind::DeassignKeyword:
-            return parseProceduralDeassignStatement(label, attributes, SyntaxKind::ProceduralDeassignStatement);
+            return parseProceduralDeassignStatement(label, attributes,
+                                                    SyntaxKind::ProceduralDeassignStatement);
         case TokenKind::ReleaseKeyword:
-            return parseProceduralDeassignStatement(label, attributes, SyntaxKind::ProceduralReleaseStatement);
+            return parseProceduralDeassignStatement(label, attributes,
+                                                    SyntaxKind::ProceduralReleaseStatement);
         case TokenKind::DisableKeyword:
             return parseDisableStatement(label, attributes);
         case TokenKind::BeginKeyword:
-            return parseBlock(SyntaxKind::SequentialBlockStatement, TokenKind::EndKeyword, label, attributes);
+            return parseBlock(SyntaxKind::SequentialBlockStatement, TokenKind::EndKeyword, label,
+                              attributes);
         case TokenKind::ForkKeyword:
-            return parseBlock(SyntaxKind::ParallelBlockStatement, TokenKind::JoinKeyword, label, attributes);
+            return parseBlock(SyntaxKind::ParallelBlockStatement, TokenKind::JoinKeyword, label,
+                              attributes);
         case TokenKind::AssertKeyword:
         case TokenKind::AssumeKeyword:
         case TokenKind::CoverKeyword:
@@ -130,29 +138,24 @@ ElseClauseSyntax* Parser::parseElseClause() {
     return nullptr;
 }
 
-ConditionalStatementSyntax& Parser::parseConditionalStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority) {
+ConditionalStatementSyntax& Parser::parseConditionalStatement(
+    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority) {
     auto ifKeyword = expect(TokenKind::IfKeyword);
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     Token closeParen;
-    auto& predicate = parseConditionalPredicate(parseSubExpression(ExpressionOptions::None, 0), TokenKind::CloseParenthesis, closeParen);
+    auto& predicate = parseConditionalPredicate(parseSubExpression(ExpressionOptions::None, 0),
+                                                TokenKind::CloseParenthesis, closeParen);
     auto& statement = parseStatement();
     auto elseClause = parseElseClause();
 
-    return factory.conditionalStatement(
-        label,
-        attributes,
-        uniqueOrPriority,
-        ifKeyword,
-        openParen,
-        predicate,
-        closeParen,
-        statement,
-        elseClause
-    );
+    return factory.conditionalStatement(label, attributes, uniqueOrPriority, ifKeyword, openParen,
+                                        predicate, closeParen, statement, elseClause);
 }
 
-CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority, Token caseKeyword) {
+CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
+                                                span<AttributeInstanceSyntax*> attributes,
+                                                Token uniqueOrPriority, Token caseKeyword) {
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& caseExpr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
@@ -179,7 +182,8 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, span<At
                     }
 
                     auto colon = expect(TokenKind::Colon);
-                    itemBuffer.append(&factory.patternCaseItem(pattern, tripleAnd, patternExpr, colon, parseStatement()));
+                    itemBuffer.append(&factory.patternCaseItem(pattern, tripleAnd, patternExpr,
+                                                               colon, parseStatement()));
                 }
                 else {
                     // no idea what this is; break out and clean up
@@ -200,14 +204,11 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, span<At
                     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
                     parseSeparatedList<isPossibleOpenRangeElement, isEndOfCaseItem>(
-                        buffer,
-                        TokenKind::Colon,
-                        TokenKind::Comma,
-                        colon,
+                        buffer, TokenKind::Colon, TokenKind::Comma, colon,
                         DiagCode::ExpectedOpenRangeElement,
-                        [this](bool) { return &parseOpenRangeElement(); }
-                    );
-                    itemBuffer.append(&factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
+                        [this](bool) { return &parseOpenRangeElement(); });
+                    itemBuffer.append(
+                        &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
                 }
                 else {
                     // no idea what this is; break out and clean up
@@ -227,14 +228,10 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, span<At
                     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
                     parseSeparatedList<isPossibleExpressionOrComma, isEndOfCaseItem>(
-                        buffer,
-                        TokenKind::Colon,
-                        TokenKind::Comma,
-                        colon,
-                        DiagCode::ExpectedExpression,
-                        [this](bool) { return &parseExpression(); }
-                    );
-                    itemBuffer.append(&factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
+                        buffer, TokenKind::Colon, TokenKind::Comma, colon,
+                        DiagCode::ExpectedExpression, [this](bool) { return &parseExpression(); });
+                    itemBuffer.append(
+                        &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
                 }
                 else {
                     // no idea what this is; break out and clean up
@@ -245,17 +242,9 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, span<At
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
-    return factory.caseStatement(
-        label,
-        attributes,
-        uniqueOrPriority,
-        caseKeyword,
-        openParen,
-        caseExpr,
-        closeParen,
-        matchesOrInside,
-        itemBuffer.copy(alloc),
-        endcase);
+    return factory.caseStatement(label, attributes, uniqueOrPriority, caseKeyword, openParen,
+                                 caseExpr, closeParen, matchesOrInside, itemBuffer.copy(alloc),
+                                 endcase);
 }
 
 DefaultCaseItemSyntax& Parser::parseDefaultCaseItem() {
@@ -268,16 +257,19 @@ DefaultCaseItemSyntax& Parser::parseDefaultCaseItem() {
     return factory.defaultCaseItem(defaultKeyword, colon, parseStatement());
 }
 
-LoopStatementSyntax& Parser::parseLoopStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+LoopStatementSyntax& Parser::parseLoopStatement(NamedLabelSyntax* label,
+                                                span<AttributeInstanceSyntax*> attributes) {
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& expr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
     auto& statement = parseStatement();
-    return factory.loopStatement(label, attributes, keyword, openParen, expr, closeParen, statement);
+    return factory.loopStatement(label, attributes, keyword, openParen, expr, closeParen,
+                                 statement);
 }
 
-DoWhileStatementSyntax& Parser::parseDoWhileStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+DoWhileStatementSyntax& Parser::parseDoWhileStatement(NamedLabelSyntax* label,
+                                                      span<AttributeInstanceSyntax*> attributes) {
     auto doKeyword = consume();
     auto& statement = parseStatement();
     auto whileKeyword = expect(TokenKind::WhileKeyword);
@@ -285,32 +277,30 @@ DoWhileStatementSyntax& Parser::parseDoWhileStatement(NamedLabelSyntax* label, s
     auto& expr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
     auto semi = expect(TokenKind::Semicolon);
-    return factory.doWhileStatement(label, attributes, doKeyword, statement, whileKeyword, openParen, expr, closeParen, semi);
+    return factory.doWhileStatement(label, attributes, doKeyword, statement, whileKeyword,
+                                    openParen, expr, closeParen, semi);
 }
 
 SyntaxNode& Parser::parseForInitializer() {
     if (isVariableDeclaration()) {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto& type = parseDataType(/* allowImplicit */ false);
-        return factory.forVariableDeclaration(varKeyword, type, parseVariableDeclarator(/* isFirst */ true));
+        return factory.forVariableDeclaration(varKeyword, type,
+                                              parseVariableDeclarator(/* isFirst */ true));
     }
     return parseExpression();
 }
 
-ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
+                                                      span<AttributeInstanceSyntax*> attributes) {
     auto forKeyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     Token semi1;
     SmallVectorSized<TokenOrSyntax, 4> initializers;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
-        initializers,
-        TokenKind::Semicolon,
-        TokenKind::Comma,
-        semi1,
-        DiagCode::ExpectedForInitializer,
-        [this](bool) { return &parseForInitializer(); }
-    );
+        initializers, TokenKind::Semicolon, TokenKind::Comma, semi1,
+        DiagCode::ExpectedForInitializer, [this](bool) { return &parseForInitializer(); });
 
     auto& stopExpr = parseExpression();
     auto semi2 = expect(TokenKind::Semicolon);
@@ -318,27 +308,12 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label, s
     Token closeParen;
     SmallVectorSized<TokenOrSyntax, 4> steps;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
-        steps,
-        TokenKind::CloseParenthesis,
-        TokenKind::Comma,
-        closeParen,
-        DiagCode::ExpectedExpression,
-        [this](bool) { return &parseExpression(); }
-    );
+        steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
+        DiagCode::ExpectedExpression, [this](bool) { return &parseExpression(); });
 
-    return factory.forLoopStatement(
-        label,
-        attributes,
-        forKeyword,
-        openParen,
-        initializers.copy(alloc),
-        semi1,
-        stopExpr,
-        semi2,
-        steps.copy(alloc),
-        closeParen,
-        parseStatement()
-    );
+    return factory.forLoopStatement(label, attributes, forKeyword, openParen,
+                                    initializers.copy(alloc), semi1, stopExpr, semi2,
+                                    steps.copy(alloc), closeParen, parseStatement());
 }
 
 ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
@@ -348,33 +323,24 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     Token openBracket;
     Token closeBracket;
     parseSeparatedList<isIdentifierOrComma, isEndOfBracketedList>(
-        TokenKind::OpenBracket,
-        TokenKind::CloseBracket,
-        TokenKind::Comma,
-        openBracket,
-        list,
-        closeBracket,
-        DiagCode::ExpectedIdentifier,
-        [this](bool) { return &parseName(true); }
-    );
-    auto closeParen = expect(TokenKind::CloseParenthesis);
+        TokenKind::OpenBracket, TokenKind::CloseBracket, TokenKind::Comma, openBracket, list,
+        closeBracket, DiagCode::ExpectedIdentifier, [this](bool) { return &parseName(true); });
 
-    return factory.foreachLoopList(openParen, arrayName, openBracket, list, closeBracket, closeParen);
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    return factory.foreachLoopList(openParen, arrayName, openBracket, list, closeBracket,
+                                   closeParen);
 }
 
-ForeachLoopStatementSyntax& Parser::parseForeachLoopStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+ForeachLoopStatementSyntax& Parser::parseForeachLoopStatement(
+    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+
     auto keyword = consume();
     auto& vars = parseForeachLoopVariables();
-    return factory.foreachLoopStatement(
-        label,
-        attributes,
-        keyword,
-        vars,
-        parseStatement(false)
-    );
+    return factory.foreachLoopStatement(label, attributes, keyword, vars, parseStatement(false));
 }
 
-ReturnStatementSyntax& Parser::parseReturnStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+ReturnStatementSyntax& Parser::parseReturnStatement(NamedLabelSyntax* label,
+                                                    span<AttributeInstanceSyntax*> attributes) {
     auto keyword = consume();
 
     ExpressionSyntax* expr = nullptr;
@@ -385,40 +351,49 @@ ReturnStatementSyntax& Parser::parseReturnStatement(NamedLabelSyntax* label, spa
     return factory.returnStatement(label, attributes, keyword, expr, semi);
 }
 
-JumpStatementSyntax& Parser::parseJumpStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+JumpStatementSyntax& Parser::parseJumpStatement(NamedLabelSyntax* label,
+                                                span<AttributeInstanceSyntax*> attributes) {
     auto keyword = consume();
     auto semi = expect(TokenKind::Semicolon);
     return factory.jumpStatement(label, attributes, keyword, semi);
 }
 
-ProceduralAssignStatementSyntax& Parser::parseProceduralAssignStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {
+ProceduralAssignStatementSyntax& Parser::parseProceduralAssignStatement(
+    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {
+
     auto keyword = consume();
     auto& lvalue = parsePrimaryExpression();
     auto equals = expect(TokenKind::Equals);
     auto& expr = parseExpression();
     auto semi = expect(TokenKind::Semicolon);
-    return factory.proceduralAssignStatement(kind, label, attributes, keyword, lvalue, equals, expr, semi);
+    return factory.proceduralAssignStatement(kind, label, attributes, keyword, lvalue, equals, expr,
+                                             semi);
 }
 
-ProceduralDeassignStatementSyntax& Parser::parseProceduralDeassignStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {
+ProceduralDeassignStatementSyntax& Parser::parseProceduralDeassignStatement(
+    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {
+
     auto keyword = consume();
     auto& variable = parsePrimaryExpression();
     auto semi = expect(TokenKind::Semicolon);
     return factory.proceduralDeassignStatement(kind, label, attributes, keyword, variable, semi);
 }
 
-StatementSyntax& Parser::parseDisableStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+StatementSyntax& Parser::parseDisableStatement(NamedLabelSyntax* label,
+                                               span<AttributeInstanceSyntax*> attributes) {
     auto disable = consume();
     if (peek(TokenKind::ForkKeyword)) {
         auto fork = consume();
-        return factory.disableForkStatement(label, attributes, disable, fork, expect(TokenKind::Semicolon));
+        return factory.disableForkStatement(label, attributes, disable, fork,
+                                            expect(TokenKind::Semicolon));
     }
 
     auto& name = parseName();
     return factory.disableStatement(label, attributes, disable, name, expect(TokenKind::Semicolon));
 }
 
-StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label,
+                                                 span<AttributeInstanceSyntax*> attributes) {
     // figure out what kind of assertion we're looking at; concurrent assertions
     // are involved and get their own handling
     SyntaxKind assertionKind = SyntaxKind::Unknown;
@@ -439,7 +414,8 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, span<A
                 return parseConcurrentAssertion(label, attributes);
             assertionKind = SyntaxKind::ImmediateCoverStatement;
             break;
-        default: THROW_UNREACHABLE;
+        default:
+            THROW_UNREACHABLE;
     }
 
     Token keyword = consume();
@@ -457,12 +433,16 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, span<A
 
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& expr = parseExpression();
-    auto& parenExpr = factory.parenthesizedExpression(openParen, expr, expect(TokenKind::CloseParenthesis));
+    auto& parenExpr =
+        factory.parenthesizedExpression(openParen, expr, expect(TokenKind::CloseParenthesis));
     auto& actionBlock = parseActionBlock();
-    return factory.immediateAssertionStatement(assertionKind, label, attributes, keyword, deferred, parenExpr, actionBlock);
+    return factory.immediateAssertionStatement(assertionKind, label, attributes, keyword, deferred,
+                                               parenExpr, actionBlock);
 }
 
-ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(
+    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+
     SyntaxKind kind = SyntaxKind::Unknown;
     Token propertyOrSequence;
     auto keyword = consume();
@@ -493,7 +473,8 @@ ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelS
         case TokenKind::ExpectKeyword:
             kind = SyntaxKind::ExpectPropertyStatement;
             break;
-        default: THROW_UNREACHABLE;
+        default:
+            THROW_UNREACHABLE;
     }
 
     auto openParen = expect(TokenKind::OpenParenthesis);
@@ -501,7 +482,8 @@ ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelS
     auto closeParen = expect(TokenKind::CloseParenthesis);
     auto& action = parseActionBlock();
 
-    return factory.concurrentAssertionStatement(kind, label, attributes, keyword, propertyOrSequence, openParen, spec, closeParen, action);
+    return factory.concurrentAssertionStatement(
+        kind, label, attributes, keyword, propertyOrSequence, openParen, spec, closeParen, action);
 }
 
 PropertySpecSyntax& Parser::parsePropertySpec() {
@@ -515,7 +497,8 @@ PropertySpecSyntax& Parser::parsePropertySpec() {
         auto iff = expect(TokenKind::IffKeyword);
         auto openParen = expect(TokenKind::OpenParenthesis);
         auto& expr = parseExpressionOrDist();
-        disable = &factory.disableIff(keyword, iff, openParen, expr, expect(TokenKind::CloseParenthesis));
+        disable =
+            &factory.disableIff(keyword, iff, openParen, expr, expect(TokenKind::CloseParenthesis));
     }
     // TODO: Parse all property expressions
     return factory.propertySpec(timing, disable, parseExpression());
@@ -597,7 +580,9 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
     return buffer.copy(alloc);
 }
 
-BlockStatementSyntax& Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind, NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+BlockStatementSyntax& Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind,
+                                         NamedLabelSyntax* label,
+                                         span<AttributeInstanceSyntax*> attributes) {
     auto begin = consume();
     auto name = parseNamedBlockClause();
 
@@ -607,46 +592,39 @@ BlockStatementSyntax& Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind
     return factory.blockStatement(blockKind, label, attributes, begin, name, items, end, endName);
 }
 
-StatementSyntax& Parser::parseWaitStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+StatementSyntax& Parser::parseWaitStatement(NamedLabelSyntax* label,
+                                            span<AttributeInstanceSyntax*> attributes) {
     auto wait = consume();
     if (peek(TokenKind::ForkKeyword)) {
         auto fork = consume();
-        return factory.waitForkStatement(label, attributes, wait, fork, expect(TokenKind::Semicolon));
+        return factory.waitForkStatement(label, attributes, wait, fork,
+                                         expect(TokenKind::Semicolon));
     }
 
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& expr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
-    return factory.waitStatement(label, attributes, wait, openParen, expr, closeParen, parseStatement());
+    return factory.waitStatement(label, attributes, wait, openParen, expr, closeParen,
+                                 parseStatement());
 }
 
-WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(
+    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     SmallVectorSized<TokenOrSyntax, 4> buffer;
 
     Token closeParen;
     parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
-        buffer,
-        TokenKind::CloseParenthesis,
-        TokenKind::Comma,
-        closeParen,
-        DiagCode::ExpectedIdentifier,
-        [this](bool) { return &parseName(); }
-    );
+        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
+        DiagCode::ExpectedIdentifier, [this](bool) { return &parseName(); });
 
-    return factory.waitOrderStatement(
-        label,
-        attributes,
-        keyword,
-        openParen,
-        buffer.copy(alloc),
-        closeParen,
-        parseActionBlock()
-    );
+    return factory.waitOrderStatement(label, attributes, keyword, openParen, buffer.copy(alloc),
+                                      closeParen, parseActionBlock());
 }
 
-RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
+                                                        span<AttributeInstanceSyntax*> attributes) {
     auto randCase = consume();
     SmallVectorSized<RandCaseItemSyntax*, 16> itemBuffer;
 
@@ -657,16 +635,11 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
-    return factory.randCaseStatement(
-        label,
-        attributes,
-        randCase,
-        itemBuffer.copy(alloc),
-        endcase
-    );
+    return factory.randCaseStatement(label, attributes, randCase, itemBuffer.copy(alloc), endcase);
 }
 
-EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(
+    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
     auto trigger = consume();
     SyntaxKind kind = SyntaxKind::BlockingEventTriggerStatement;
     TimingControlSyntax* timing = nullptr;
@@ -677,4 +650,4 @@ EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(NamedLabelSyntax
     return factory.eventTriggerStatement(kind, label, attributes, trigger, timing, parseName());
 }
 
-}
+} // namespace slang

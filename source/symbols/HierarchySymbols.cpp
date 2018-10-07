@@ -13,7 +13,8 @@
 
 namespace slang {
 
-PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax) {
+PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation,
+                                         const ModuleDeclarationSyntax& syntax) {
     auto result = compilation.emplace<PackageSymbol>(compilation, syntax.header->name.valueText(),
                                                      syntax.header->name.location());
     for (auto member : syntax.members)
@@ -23,10 +24,11 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleD
     return *result;
 }
 
-DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax) {
-    auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header->name.valueText(),
-                                                        syntax.header->name.location(),
-                                                        SemanticFacts::getDefinitionKind(syntax.kind));
+DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
+                                               const ModuleDeclarationSyntax& syntax) {
+    auto result = compilation.emplace<DefinitionSymbol>(
+        compilation, syntax.header->name.valueText(), syntax.header->name.location(),
+        SemanticFacts::getDefinitionKind(syntax.kind));
     result->setSyntax(syntax);
 
     SmallVectorSized<const ParameterSymbol*, 8> parameters;
@@ -35,8 +37,9 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const M
         bool lastLocal = false;
         for (auto declaration : syntax.header->parameters->declarations) {
             // It's legal to leave off the parameter keyword in the parameter port list.
-            // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
-            // This isn't allowed in a module body, but the parser will take care of the error for us.
+            // If you do so, we "inherit" the parameter or localparam keyword from the previous
+            // entry. This isn't allowed in a module body, but the parser will take care of the
+            // error for us.
             if (declaration->keyword)
                 lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
 
@@ -58,7 +61,8 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const M
             result->addMembers(*member);
         else {
             auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
-            bool isLocal = hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
+            bool isLocal =
+                hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
 
             SmallVectorSized<ParameterSymbol*, 8> params;
             ParameterSymbol::fromSyntax(compilation, *declaration, isLocal, false, params);
@@ -74,8 +78,9 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation, const M
     return *result;
 }
 
-void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
-                                LookupLocation location, const Scope& scope, SmallVector<const Symbol*>& results) {
+void InstanceSymbol::fromSyntax(Compilation& compilation,
+                                const HierarchyInstantiationSyntax& syntax, LookupLocation location,
+                                const Scope& scope, SmallVector<const Symbol*>& results) {
 
     auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
     if (!definition) {
@@ -101,7 +106,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 orderedAssignments = isOrdered;
             }
             else if (isOrdered != orderedAssignments) {
-                scope.addDiag(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
+                scope.addDiag(DiagCode::MixingOrderedAndNamedParams,
+                              paramBase->getFirstToken().location());
                 break;
             }
 
@@ -113,9 +119,11 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 if (!name.empty()) {
                     auto pair = namedParams.emplace(name, std::make_pair(&nas, false));
                     if (!pair.second) {
-                        auto& diag = scope.addDiag(DiagCode::DuplicateParamAssignment, nas.name.location());
+                        auto& diag =
+                            scope.addDiag(DiagCode::DuplicateParamAssignment, nas.name.location());
                         diag << name;
-                        diag.addNote(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
+                        diag.addNote(DiagCode::NotePreviousUsage,
+                                     pair.first->second.first->name.location());
                     }
                 }
             }
@@ -154,15 +162,16 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 it->second.second = true;
                 if (param->isLocalParam()) {
                     // Can't assign to localparams, so this is an error.
-                    DiagCode code = param->isPortParam() ?
-                        DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam;
+                    DiagCode code = param->isPortParam() ? DiagCode::AssignedToLocalPortParam
+                                                         : DiagCode::AssignedToLocalBodyParam;
 
                     auto& diag = scope.addDiag(code, arg->name.location());
                     diag.addNote(DiagCode::NoteDeclarationHere, param->location);
                     continue;
                 }
 
-                // It's allowed to have no initializer in the assignment; it means to just use the default
+                // It's allowed to have no initializer in the assignment; it means to just use the
+                // default.
                 if (!arg->expr)
                     continue;
 
@@ -173,7 +182,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 // We marked all the args that we used, so anything left over is a param assignment
                 // for a non-existent parameter.
                 if (!pair.second.second) {
-                    auto& diag = scope.addDiag(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
+                    auto& diag = scope.addDiag(DiagCode::ParameterDoesNotExist,
+                                               pair.second.first->name.location());
                     diag << pair.second.first->name.valueText();
                     diag << definition->name;
                 }
@@ -189,14 +199,16 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
             auto typeSyntax = declared->getTypeSyntax();
             ASSERT(typeSyntax);
 
-            auto& expr = DeclaredType::resolveInitializer(*typeSyntax, declared->getDimensionSyntax(), *it->second,
-                                                          it->second->getFirstToken().location(),
-                                                          BindContext(scope, location, BindFlags::Constant),
-                                                          DeclaredTypeFlags::InferImplicit);
+            auto& expr = DeclaredType::resolveInitializer(
+                *typeSyntax, declared->getDimensionSyntax(), *it->second,
+                it->second->getFirstToken().location(),
+                BindContext(scope, location, BindFlags::Constant),
+                DeclaredTypeFlags::InferImplicit);
             overrides.append(&expr);
         }
         else if (!param->getInitializer() && !param->isLocalParam() && param->isPortParam()) {
-            auto& diag = scope.addDiag(DiagCode::ParamHasNoValue, syntax.getFirstToken().location());
+            auto& diag =
+                scope.addDiag(DiagCode::ParamHasNoValue, syntax.getFirstToken().location());
             diag << definition->name;
             diag << param->name;
             overrides.append(nullptr);
@@ -210,12 +222,14 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
         Symbol* inst;
         switch (definition->definitionKind) {
             case DefinitionKind::Module:
-                inst = &ModuleInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
-                                                          instanceSyntax->name.location(), *definition, overrides);
+                inst = &ModuleInstanceSymbol::instantiate(
+                    compilation, instanceSyntax->name.valueText(), instanceSyntax->name.location(),
+                    *definition, overrides);
                 break;
             case DefinitionKind::Interface:
-                inst = &InterfaceInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
-                                                             instanceSyntax->name.location(), *definition, overrides);
+                inst = &InterfaceInstanceSymbol::instantiate(
+                    compilation, instanceSyntax->name.valueText(), instanceSyntax->name.location(),
+                    *definition, overrides);
                 break;
             default:
                 THROW_UNREACHABLE;
@@ -238,7 +252,8 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
     }
 }
 
-void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const Expression*> parameterOverides) {
+void InstanceSymbol::populate(const DefinitionSymbol& definition,
+                              span<const Expression*> parameterOverides) {
     // Add all port parameters as members first.
     Compilation& comp = getCompilation();
     auto paramIt = definition.parameters.begin();
@@ -256,17 +271,21 @@ void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const Exp
         overrideIt++;
     }
 
-    auto& syntax = definition.getSyntax()->as<ModuleDeclarationSyntax>(); // TODO: getSyntax dependency
+    auto& syntax =
+        definition.getSyntax()->as<ModuleDeclarationSyntax>(); // TODO: getSyntax dependency
     if (syntax.header->ports)
         addMembers(*syntax.header->ports);
 
     for (auto member : syntax.members) {
-        // If this is a parameter declaration, we should already have metadata for it in our parameters list.
-        // The list is given in declaration order, so we should be be able to move through them incrementally.
+        // If this is a parameter declaration, we should already have metadata for it in our
+        // parameters list. The list is given in declaration order, so we should be be able to move
+        // through them incrementally.
         if (member->kind != SyntaxKind::ParameterDeclarationStatement)
             addMembers(*member);
         else {
-            for (auto declarator : member->as<ParameterDeclarationStatementSyntax>().parameter->declarators) {
+            for (auto declarator :
+                 member->as<ParameterDeclarationStatementSyntax>().parameter->declarators) {
+
                 ASSERT(paramIt != definition.parameters.end());
                 ASSERT(overrideIt != parameterOverides.end());
                 ASSERT(declarator->name.valueText() == (*paramIt)->name);
@@ -281,7 +300,8 @@ void InstanceSymbol::populate(const DefinitionSymbol& definition, span<const Exp
 }
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
-                                                        SourceLocation loc, const DefinitionSymbol& definition) {
+                                                        SourceLocation loc,
+                                                        const DefinitionSymbol& definition) {
     SmallVectorSized<const Expression*, 8> overrides;
     for (auto param : definition.parameters) {
         (void)param;
@@ -291,18 +311,18 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
     return instantiate(compilation, name, loc, definition, overrides);
 }
 
-ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
-                                                        SourceLocation loc, const DefinitionSymbol& definition,
-                                                        span<const Expression*> parameterOverrides) {
+ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
+    Compilation& compilation, string_view name, SourceLocation loc,
+    const DefinitionSymbol& definition, span<const Expression*> parameterOverrides) {
 
     auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc);
     instance->populate(definition, parameterOverrides);
     return *instance;
 }
 
-InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(Compilation& compilation, string_view name,
-                                                              SourceLocation loc, const DefinitionSymbol& definition,
-                                                              span<const Expression*> parameterOverrides) {
+InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
+    Compilation& compilation, string_view name, SourceLocation loc,
+    const DefinitionSymbol& definition, span<const Expression*> parameterOverrides) {
 
     auto instance = compilation.emplace<InterfaceInstanceSymbol>(compilation, name, loc);
     instance->populate(definition, parameterOverrides);
@@ -320,9 +340,8 @@ SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilatio
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Compilation& compilation,
                                                          const ProceduralBlockSyntax& syntax) {
     auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
-    auto result = compilation.emplace<ProceduralBlockSymbol>(compilation,
-                                                             syntax.keyword.location(),
-                                                             kind);
+    auto result =
+        compilation.emplace<ProceduralBlockSymbol>(compilation, syntax.keyword.location(), kind);
     result->setBody(*syntax.statement);
     result->setSyntax(syntax);
     return *result;
@@ -338,7 +357,8 @@ static string_view getGenerateBlockName(const SyntaxNode& node) {
         return "";
 
     // Try to find a name for this block. Generate blocks allow the name to be specified twice
-    // (for no good reason) so check both locations. The parser has already checked for inconsistencies here.
+    // (for no good reason) so check both locations. The parser has already checked for
+    // inconsistencies here.
     const GenerateBlockSyntax& block = node.as<GenerateBlockSyntax>();
     if (block.label)
         return block.label->name.valueText();
@@ -349,7 +369,8 @@ static string_view getGenerateBlockName(const SyntaxNode& node) {
     return "";
 }
 
-GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
+GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation,
+                                                     const IfGenerateSyntax& syntax,
                                                      LookupLocation location, const Scope& parent) {
     // TODO: better error checking
     BindContext bindContext(parent, location, BindFlags::Constant);
@@ -397,13 +418,15 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     // Fabricate a local variable that will serve as the loop iteration variable.
     SequentialBlockSymbol iterScope(compilation, SourceLocation());
-    VariableSymbol local { syntax.identifier.valueText(), syntax.identifier.location() };
+    VariableSymbol local{ syntax.identifier.valueText(), syntax.identifier.location() };
     local.setType(compilation.getIntType());
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    const auto& stopExpr = Expression::bind(compilation, *syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
-    const auto& iterExpr = Expression::bind(compilation, *syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
+    const auto& stopExpr = Expression::bind(compilation, *syntax.stopExpr,
+                                            BindContext(iterScope, LookupLocation::max));
+    const auto& iterExpr = Expression::bind(compilation, *syntax.iterationExpr,
+                                            BindContext(iterScope, LookupLocation::max));
 
     // Create storage for the iteration variable.
     EvalContext context;
@@ -416,10 +439,9 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         // localparam of the same name as the genvar.
         // TODO: scope name
         auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
-        auto implicitParam = compilation.emplace<ParameterSymbol>(syntax.identifier.valueText(),
-                                                                  syntax.identifier.location(),
-                                                                  true /* isLocal */,
-                                                                  false /* isPort */);
+        auto implicitParam = compilation.emplace<ParameterSymbol>(
+            syntax.identifier.valueText(), syntax.identifier.location(), true /* isLocal */,
+            false /* isPort */);
         block->addMember(*implicitParam);
         block->addMembers(*syntax.block);
         result->addMember(*block);
@@ -431,4 +453,4 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     return *result;
 }
 
-}
+} // namespace slang

@@ -18,8 +18,8 @@ struct CloneVisitor {
         alloc(alloc), changes(changes) {}
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4127)  // conditional expression is constant
+#    pragma warning(push)
+#    pragma warning(disable : 4127) // conditional expression is constant
 #endif
     template<typename T>
     SyntaxNode* visit(const T& node) {
@@ -95,20 +95,22 @@ struct CloneVisitor {
         return cloned;
     }
 #ifdef _MSC_VER
-#pragma warning(pop)
+#    pragma warning(pop)
 #endif
 
     SyntaxNode* visitInvalid(const SyntaxNode&) { THROW_UNREACHABLE; }
 };
 
-}
+} // namespace
 
 namespace slang {
 
 namespace detail {
 
-std::shared_ptr<SyntaxTree> transformTree(const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
-                                          const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees) {
+std::shared_ptr<SyntaxTree> transformTree(
+    const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
+    const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees) {
+
     BumpAllocator alloc;
     CloneVisitor visitor(alloc, changes);
 
@@ -122,6 +124,6 @@ std::shared_ptr<SyntaxTree> transformTree(const std::shared_ptr<SyntaxTree>& tre
     return std::make_shared<SyntaxTree>(root, tree->sourceManager(), std::move(alloc), tree);
 }
 
-}
+} // namespace detail
 
-}
+} // namespace slang

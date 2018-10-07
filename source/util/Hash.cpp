@@ -29,4 +29,4 @@ uint64_t xxhash64(const void* input, size_t len, uint64_t seed) {
     return XXH64(input, len, seed);
 }
 
-}
+} // namespace slang

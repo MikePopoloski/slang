@@ -12,9 +12,7 @@
 namespace slang {
 
 ParserBase::ParserBase(Preprocessor& preprocessor) :
-    alloc(preprocessor.getAllocator()),
-    window(preprocessor)
-{
+    alloc(preprocessor.getAllocator()), window(preprocessor) {
 }
 
 void ParserBase::prependSkippedTokens(Token& token) {
@@ -125,4 +123,4 @@ void ParserBase::Window::moveToNext() {
     currentOffset++;
 }
 
-}
+} // namespace slang

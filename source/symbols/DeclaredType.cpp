@@ -13,18 +13,15 @@
 namespace slang {
 
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
-    parent(parent), flags(flags)
-{
+    parent(parent), flags(flags) {
     // If this assert fires you need to update Symbol::getDeclaredType
     ASSERT(parent.getDeclaredType() == this);
 }
 
-std::tuple<const Type*, const Expression*>
-DeclaredType::resolveType(const DataTypeSyntax& typeSyntax,
-                          const SyntaxList<VariableDimensionSyntax>* dimensions,
-                          const ExpressionSyntax* initializerSyntax,
-                          const BindContext& context,
-                          bitmask<DeclaredTypeFlags> flags) {
+std::tuple<const Type*, const Expression*> DeclaredType::resolveType(
+    const DataTypeSyntax& typeSyntax, const SyntaxList<VariableDimensionSyntax>* dimensions,
+    const ExpressionSyntax* initializerSyntax, const BindContext& context,
+    bitmask<DeclaredTypeFlags> flags) {
 
     auto& scope = context.scope;
     auto& comp = scope.getCompilation();
@@ -32,7 +29,8 @@ DeclaredType::resolveType(const DataTypeSyntax& typeSyntax,
     const Type* type = nullptr;
     const Expression* initializer = nullptr;
 
-    if (typeSyntax.kind == SyntaxKind::ImplicitType && (flags & DeclaredTypeFlags::InferImplicit) != 0) {
+    if (typeSyntax.kind == SyntaxKind::ImplicitType &&
+        (flags & DeclaredTypeFlags::InferImplicit) != 0) {
         // TODO: handle unpacked dimensions here?
         // TODO: make sure errors are issued elsewhere for when implicit is not allowed
         if (!initializerSyntax)
@@ -52,8 +50,10 @@ DeclaredType::resolveType(const DataTypeSyntax& typeSyntax,
     return { type, initializer };
 }
 
-const Expression& DeclaredType::resolveInitializer(const Type& type, const ExpressionSyntax& initializerSyntax,
-                                                   SourceLocation initializerLocation, const BindContext& context) {
+const Expression& DeclaredType::resolveInitializer(const Type& type,
+                                                   const ExpressionSyntax& initializerSyntax,
+                                                   SourceLocation initializerLocation,
+                                                   const BindContext& context) {
     // Enums are special in that their initializers target the base type of the enum
     // instead of the actual enum type (which doesn't allow implicit conversions from
     // normal integral values).
@@ -62,17 +62,17 @@ const Expression& DeclaredType::resolveInitializer(const Type& type, const Expre
     if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType)
         targetType = &targetType->as<EnumType>().baseType;
 
-    return Expression::bind(scope.getCompilation(), *targetType, initializerSyntax, initializerLocation, context);
+    return Expression::bind(scope.getCompilation(), *targetType, initializerSyntax,
+                            initializerLocation, context);
 }
 
-const Expression& DeclaredType::resolveInitializer(const DataTypeSyntax& typeSyntax,
-                                                   const SyntaxList<VariableDimensionSyntax>* dimensions,
-                                                   const ExpressionSyntax& initializerSyntax,
-                                                   SourceLocation initializerLocation,
-                                                   const BindContext& context,
-                                                   bitmask<DeclaredTypeFlags> flags) {
+const Expression& DeclaredType::resolveInitializer(
+    const DataTypeSyntax& typeSyntax, const SyntaxList<VariableDimensionSyntax>* dimensions,
+    const ExpressionSyntax& initializerSyntax, SourceLocation initializerLocation,
+    const BindContext& context, bitmask<DeclaredTypeFlags> flags) {
 
-    auto [type, initializer] = resolveType(typeSyntax, dimensions, &initializerSyntax, context, flags);
+    auto [type, initializer] =
+        resolveType(typeSyntax, dimensions, &initializerSyntax, context, flags);
     if (initializer)
         return *initializer;
 
@@ -114,7 +114,8 @@ const Expression* DeclaredType::getInitializer() const {
     evaluating = true;
     auto guard = finally([this] { evaluating = false; });
 
-    initializer = &resolveInitializer(*type, *initializerSyntax, initializerLocation, getBindContext());
+    initializer =
+        &resolveInitializer(*type, *initializerSyntax, initializerLocation, getBindContext());
     return initializer;
 }
 
@@ -144,4 +145,4 @@ T DeclaredType::getBindContext() const {
     return BindContext(getScope(), LookupLocation::after(parent), bindFlags);
 }
 
-}
+} // namespace slang

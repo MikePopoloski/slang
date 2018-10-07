@@ -10,9 +10,9 @@
 
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/HierarchySymbols.h"
 #include "slang/symbols/MemberSymbols.h"
-#include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypeSymbols.h"
 #include "slang/text/SourceManager.h"
 
@@ -51,14 +51,14 @@ struct ToJsonVisitor {
                 for (const auto& member : symbol.members()) {
                     j["members"].push_back(member);
                     // TODO: ?
-                    //member.visit(*this, j);
+                    // member.visit(*this, j);
                 }
             }
         }
     }
 };
 
-}
+} // namespace
 
 namespace slang {
 
@@ -106,8 +106,7 @@ const Scope* Symbol::scopeOrNull() const {
 ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
                          bitmask<DeclaredTypeFlags> flags) :
     Symbol(kind, name, location),
-    declaredType(*this, flags)
-{
+    declaredType(*this, flags) {
 }
 
 bool ValueSymbol::isKind(SymbolKind kind) {
@@ -127,4 +126,4 @@ void to_json(json& j, const Symbol& symbol) {
     symbol.visit(visitor, j);
 }
 
-}
+} // namespace slang

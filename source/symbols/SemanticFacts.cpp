@@ -10,6 +10,7 @@ namespace slang {
 
 namespace SemanticFacts {
 
+// clang-format off
 std::optional<VariableLifetime> getVariableLifetime(Token token) {
     switch (token.kind) {
         case TokenKind::AutomaticKeyword: return VariableLifetime::Automatic;
@@ -49,6 +50,7 @@ DefinitionKind getDefinitionKind(SyntaxKind kind) {
         default: THROW_UNREACHABLE;
     }
 }
+// clang-format on
 
 }
 

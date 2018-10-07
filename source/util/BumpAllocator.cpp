@@ -25,8 +25,7 @@ BumpAllocator::~BumpAllocator() {
 }
 
 BumpAllocator::BumpAllocator(BumpAllocator&& other) noexcept :
-    head(std::exchange(other.head, nullptr)), endPtr(other.endPtr)
-{
+    head(std::exchange(other.head, nullptr)), endPtr(other.endPtr) {
 }
 
 BumpAllocator& BumpAllocator::operator=(BumpAllocator&& other) noexcept {
@@ -70,4 +69,4 @@ BumpAllocator::Segment* BumpAllocator::allocSegment(Segment* prev, size_t size) 
     return seg;
 }
 
-}
+} // namespace slang

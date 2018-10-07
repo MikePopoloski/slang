@@ -16,6 +16,7 @@ namespace {
 
 using namespace slang;
 
+// clang-format off
 bitwidth_t getWidth(PredefinedIntegerType::Kind kind) {
     switch (kind) {
         case PredefinedIntegerType::ShortInt: return 16;
@@ -51,6 +52,7 @@ bool getFourState(PredefinedIntegerType::Kind kind) {
         default: THROW_UNREACHABLE;
     }
 }
+// clang-format on
 
 struct GetDefaultVisitor {
     HAS_METHOD_TRAIT(getDefaultValueImpl);
@@ -66,7 +68,7 @@ struct GetDefaultVisitor {
     }
 };
 
-}
+} // namespace
 
 namespace slang {
 
@@ -76,12 +78,17 @@ bitwidth_t Type::getBitWidth() const {
     const Type& ct = getCanonicalType();
     if (ct.isIntegral())
         return ct.as<IntegralType>().bitWidth;
+
     if (ct.isFloating()) {
         switch (ct.as<FloatingType>().floatKind) {
-            case FloatingType::Real: return 64;
-            case FloatingType::RealTime: return 64;
-            case FloatingType::ShortReal: return 32;
-            default: THROW_UNREACHABLE;
+            case FloatingType::Real:
+                return 64;
+            case FloatingType::RealTime:
+                return 64;
+            case FloatingType::ShortReal:
+                return 32;
+            default:
+                THROW_UNREACHABLE;
         }
     }
     return 0;
@@ -118,7 +125,8 @@ bool Type::isSimpleBitVector() const {
     if (ct.isPredefinedInteger() || ct.isScalar())
         return true;
 
-    return ct.kind == SymbolKind::PackedArrayType && ct.as<PackedArrayType>().elementType.isScalar();
+    return ct.kind == SymbolKind::PackedArrayType &&
+           ct.as<PackedArrayType>().elementType.isScalar();
 }
 
 bool Type::isStructUnion() const {
@@ -156,8 +164,10 @@ bool Type::isMatching(const Type& rhs) const {
     }
 
     // Handle check (f): matching packed array types
-    if (l->kind == SymbolKind::PackedArrayType && r->kind == SymbolKind::PackedArrayType)
-        return l->as<PackedArrayType>().elementType.isMatching(r->as<PackedArrayType>().elementType);
+    if (l->kind == SymbolKind::PackedArrayType && r->kind == SymbolKind::PackedArrayType) {
+        return l->as<PackedArrayType>().elementType.isMatching(
+            r->as<PackedArrayType>().elementType);
+    }
 
     return false;
 }
@@ -172,7 +182,8 @@ bool Type::isEquivalent(const Type& rhs) const {
     if (l->isIntegral() && r->isIntegral() && !l->isEnum() && !r->isEnum()) {
         const auto& li = l->as<IntegralType>();
         const auto& ri = r->as<IntegralType>();
-        return li.isSigned == ri.isSigned && li.isFourState && ri.isFourState && li.bitWidth == ri.bitWidth;
+        return li.isSigned == ri.isSigned && li.isFourState && ri.isFourState &&
+               li.bitWidth == ri.bitWidth;
     }
 
     return false;
@@ -233,14 +244,14 @@ std::string Type::toString() const {
     return printer.toString();
 }
 
-const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node, LookupLocation location,
-                             const Scope& parent, bool forceSigned) {
+const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node,
+                             LookupLocation location, const Scope& parent, bool forceSigned) {
     switch (node.kind) {
         case SyntaxKind::BitType:
         case SyntaxKind::LogicType:
         case SyntaxKind::RegType:
-            return IntegralType::fromSyntax(compilation, node.as<IntegerTypeSyntax>(),
-                                            location, parent, forceSigned);
+            return IntegralType::fromSyntax(compilation, node.as<IntegerTypeSyntax>(), location,
+                                            parent, forceSigned);
         case SyntaxKind::ByteType:
         case SyntaxKind::ShortIntType:
         case SyntaxKind::IntType:
@@ -249,11 +260,12 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::TimeType: {
             // TODO: signing
             // TODO: report this error in the parser?
-            //auto& its = syntax->as<IntegerTypeSyntax>();
-            //if (its.dimensions.count() > 0) {
+            // auto& its = syntax->as<IntegerTypeSyntax>();
+            // if (its.dimensions.count() > 0) {
             //    // Error but don't fail out; just remove the dims and keep trucking
-            //    auto& diag = addDiag(DiagCode::PackedDimsOnPredefinedType, its.dimensions[0]->openBracket.location());
-            //    diag << getTokenKindText(its.keyword.kind);
+            //    auto& diag = addDiag(DiagCode::PackedDimsOnPredefinedType,
+            //    its.dimensions[0]->openBracket.location()); diag <<
+            //    getTokenKindText(its.keyword.kind);
             //}
             return compilation.getType(node.kind);
         }
@@ -266,20 +278,21 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::VoidType:
             return compilation.getType(node.kind);
         case SyntaxKind::EnumType:
-            return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), location, parent, forceSigned);
+            return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), location, parent,
+                                        forceSigned);
         case SyntaxKind::StructType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
-            return structUnion.packed ?
-                PackedStructType::fromSyntax(compilation, structUnion, location, parent, forceSigned) :
-                UnpackedStructType::fromSyntax(compilation, structUnion);
+            return structUnion.packed ? PackedStructType::fromSyntax(compilation, structUnion,
+                                                                     location, parent, forceSigned)
+                                      : UnpackedStructType::fromSyntax(compilation, structUnion);
         }
         case SyntaxKind::NamedType:
             return lookupNamedType(compilation, *node.as<NamedTypeSyntax>().name, location, parent);
         case SyntaxKind::ImplicitType: {
             auto& implicit = node.as<ImplicitTypeSyntax>();
-            return IntegralType::fromSyntax(compilation, SyntaxKind::LogicType, implicit.dimensions,
-                                            implicit.signing.kind == TokenKind::SignedKeyword || forceSigned,
-                                            location, parent);
+            return IntegralType::fromSyntax(
+                compilation, SyntaxKind::LogicType, implicit.dimensions,
+                implicit.signing.kind == TokenKind::SignedKeyword || forceSigned, location, parent);
         }
         default:
             THROW_UNREACHABLE;
@@ -318,12 +331,11 @@ void Type::resolveCanonical() const {
     canonical = this;
     do {
         canonical = &canonical->as<TypeAliasType>().targetType.getType();
-    }
-    while (canonical->isAlias());
+    } while (canonical->isAlias());
 }
 
-const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& syntax, LookupLocation location,
-                                  const Scope& parent) {
+const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& syntax,
+                                  LookupLocation location, const Scope& parent) {
     LookupResult result;
     parent.lookupName(syntax, location, LookupNameKind::Type, LookupFlags::None, result);
 
@@ -360,7 +372,8 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
     return *finalType;
 }
 
-optional<ConstantRange> Type::evaluateDimension(Compilation& compilation, const SelectorSyntax& syntax,
+optional<ConstantRange> Type::evaluateDimension(Compilation& compilation,
+                                                const SelectorSyntax& syntax,
                                                 LookupLocation location, const Scope& scope) {
     if (syntax.kind != SyntaxKind::SimpleRangeSelect) {
         scope.addDiag(DiagCode::PackedDimRequiresConstantRange, syntax.sourceRange());
@@ -384,14 +397,13 @@ optional<ConstantRange> Type::evaluateDimension(Compilation& compilation, const 
         return std::nullopt;
     }
 
-    return ConstantRange { *left, *right };
+    return ConstantRange{ *left, *right };
 }
 
-IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc, bitwidth_t bitWidth_,
-                           bool isSigned_, bool isFourState_) :
+IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc,
+                           bitwidth_t bitWidth_, bool isSigned_, bool isFourState_) :
     Type(kind, name, loc),
-    bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_)
-{
+    bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_) {
 }
 
 bool IntegralType::isKind(SymbolKind kind) {
@@ -436,8 +448,10 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     SmallVectorSized<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
     for (auto dimSyntax : dimensions) {
         // TODO: better checking for these cases
-        if (!dimSyntax->specifier || dimSyntax->specifier->kind != SyntaxKind::RangeDimensionSpecifier)
+        if (!dimSyntax->specifier ||
+            dimSyntax->specifier->kind != SyntaxKind::RangeDimensionSpecifier) {
             return compilation.getErrorType();
+        }
 
         auto selector = dimSyntax->specifier->as<RangeDimensionSpecifierSyntax>().selector;
         auto dim = evaluateDimension(compilation, *selector, location, scope);
@@ -479,10 +493,11 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
 }
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                     LookupLocation location, const Scope& scope, bool forceSigned) {
+                                     LookupLocation location, const Scope& scope,
+                                     bool forceSigned) {
     return fromSyntax(compilation, syntax.kind, syntax.dimensions,
-                      syntax.signing.kind == TokenKind::SignedKeyword || forceSigned,
-                      location, scope);
+                      syntax.signing.kind == TokenKind::SignedKeyword || forceSigned, location,
+                      scope);
 }
 
 ConstantValue IntegralType::getDefaultValueImpl() const {
@@ -496,36 +511,30 @@ ConstantValue IntegralType::getDefaultValueImpl() const {
 }
 
 PredefinedIntegerType::PredefinedIntegerType(Kind integerKind) :
-    PredefinedIntegerType(integerKind, getSigned(integerKind))
-{
+    PredefinedIntegerType(integerKind, getSigned(integerKind)) {
 }
 
 PredefinedIntegerType::PredefinedIntegerType(Kind integerKind, bool isSigned) :
-    IntegralType(SymbolKind::PredefinedIntegerType, "", SourceLocation(),
-                 getWidth(integerKind), isSigned, getFourState(integerKind)),
-    integerKind(integerKind)
-{
+    IntegralType(SymbolKind::PredefinedIntegerType, "", SourceLocation(), getWidth(integerKind),
+                 isSigned, getFourState(integerKind)),
+    integerKind(integerKind) {
 }
 
 bool PredefinedIntegerType::isDefaultSigned(Kind integerKind) {
     return getSigned(integerKind);
 }
 
-ScalarType::ScalarType(Kind scalarKind) :
-    ScalarType(scalarKind, false)
-{
+ScalarType::ScalarType(Kind scalarKind) : ScalarType(scalarKind, false) {
 }
 
 ScalarType::ScalarType(Kind scalarKind, bool isSigned) :
-    IntegralType(SymbolKind::ScalarType, "", SourceLocation(), 1, isSigned, scalarKind != Kind::Bit),
-    scalarKind(scalarKind)
-{
+    IntegralType(SymbolKind::ScalarType, "", SourceLocation(), 1, isSigned,
+                 scalarKind != Kind::Bit),
+    scalarKind(scalarKind) {
 }
 
 FloatingType::FloatingType(Kind floatKind_) :
-    Type(SymbolKind::FloatingType, "", SourceLocation()),
-    floatKind(floatKind_)
-{
+    Type(SymbolKind::FloatingType, "", SourceLocation()), floatKind(floatKind_) {
 }
 
 ConstantValue FloatingType::getDefaultValueImpl() const {
@@ -534,13 +543,13 @@ ConstantValue FloatingType::getDefaultValueImpl() const {
 
 EnumType::EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType_,
                    const Scope& scope) :
-    IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(),
-                 baseType_.isSigned, baseType_.isFourState),
-    Scope(compilation, this),
-    baseType(baseType_)
-{
-    // Enum types don't live as members of the parent scope (they're "owned" by the declaration containing
-    // them) but we hook up the parent pointer so that it can participate in name lookups.
+    IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(), baseType_.isSigned,
+                 baseType_.isFourState),
+    Scope(compilation, this), baseType(baseType_) {
+
+    // Enum types don't live as members of the parent scope (they're "owned" by the declaration
+    // containing them) but we hook up the parent pointer so that it can participate in name
+    // lookups.
     setParent(scope);
 }
 
@@ -557,21 +566,23 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             return canonicalBase;
 
         if (!canonicalBase.isSimpleBitVector()) {
-            scope.addDiag(DiagCode::InvalidEnumBase, syntax.baseType->getFirstToken().location()) << *base;
+            scope.addDiag(DiagCode::InvalidEnumBase, syntax.baseType->getFirstToken().location())
+                << *base;
             return compilation.getErrorType();
         }
     }
 
     const IntegralType& integralBase = base->as<IntegralType>();
-    auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(),
-                                                    integralBase, scope);
+    auto resultType =
+        compilation.emplace<EnumType>(compilation, syntax.keyword.location(), integralBase, scope);
     resultType->setSyntax(syntax);
 
     SVInt one(integralBase.bitWidth, 1, integralBase.isSigned);
     SVInt current(integralBase.bitWidth, 0, integralBase.isSigned);
 
     for (auto member : syntax.members) {
-        auto ev = compilation.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location());
+        auto ev =
+            compilation.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location());
         ev->setType(*resultType);
         ev->setSyntax(*member);
         resultType->addMember(*ev);
@@ -582,7 +593,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         }
         else {
             // TODO: require integer in binding
-            ev->setInitializerSyntax(*member->initializer->expr, member->initializer->equals.location());
+            ev->setInitializerSyntax(*member->initializer->expr,
+                                     member->initializer->equals.location());
             if (auto& cv = ev->getConstantValue())
                 current = cv.integer() + one;
             else
@@ -594,8 +606,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 }
 
 EnumValueSymbol::EnumValueSymbol(string_view name, SourceLocation loc) :
-    ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::RequireIntegerConstant)
-{
+    ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::RequireIntegerConstant) {
 }
 
 const ConstantValue& EnumValueSymbol::getValue() const {
@@ -614,16 +625,15 @@ void EnumValueSymbol::toJson(json& j) const {
 }
 
 PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
-    IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(), elementType.getBitWidth() * range.width(),
-                 elementType.isSigned(), elementType.isFourState()),
-    elementType(elementType), range(range)
-{
+    IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(),
+                 elementType.getBitWidth() * range.width(), elementType.isSigned(),
+                 elementType.isFourState()),
+    elementType(elementType), range(range) {
 }
 
 UnpackedArrayType::UnpackedArrayType(const Type& elementType, ConstantRange range) :
-    Type(SymbolKind::UnpackedArrayType, "", SourceLocation()),
-    elementType(elementType), range(range)
-{
+    Type(SymbolKind::UnpackedArrayType, "", SourceLocation()), elementType(elementType),
+    range(range) {
 }
 
 const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& elementType,
@@ -641,7 +651,8 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
         auto selector = dim.specifier->as<RangeDimensionSpecifierSyntax>().selector;
         switch (selector->kind) {
             case SyntaxKind::BitSelect: {
-                auto left = compilation.evalIntegerExpr(*selector->as<BitSelectSyntax>().expr, location, scope);
+                auto left = compilation.evalIntegerExpr(*selector->as<BitSelectSyntax>().expr,
+                                                        location, scope);
                 if (!left)
                     return compilation.getErrorType();
 
@@ -689,15 +700,17 @@ bool FieldSymbol::isPacked() const {
            scope->asSymbol().kind == SymbolKind::UnpackedStructType;
 }
 
-PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth,
-                                   bool isSigned, bool isFourState) :
-    IntegralType(SymbolKind::PackedStructType, "", SourceLocation(), bitWidth, isSigned, isFourState),
-    Scope(compilation, this)
-{
+PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
+                                   bool isFourState) :
+    IntegralType(SymbolKind::PackedStructType, "", SourceLocation(), bitWidth, isSigned,
+                 isFourState),
+    Scope(compilation, this) {
 }
 
-const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                         LookupLocation location, const Scope& scope, bool forceSigned) {
+const Type& PackedStructType::fromSyntax(Compilation& compilation,
+                                         const StructUnionTypeSyntax& syntax,
+                                         LookupLocation location, const Scope& scope,
+                                         bool forceSigned) {
     ASSERT(syntax.packed);
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword || forceSigned;
     bool isFourState = false;
@@ -714,7 +727,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
         if (!type.isIntegral() && !type.isError()) {
             issuedError = true;
             auto& diag = scope.addDiag(DiagCode::PackedMemberNotIntegral,
-                                        member->type->getFirstToken().location());
+                                       member->type->getFirstToken().location());
             diag << type;
             diag << member->type->sourceRange();
         }
@@ -739,13 +752,14 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
 
             if (decl->initializer) {
                 auto& diag = scope.addDiag(DiagCode::PackedMemberHasInitializer,
-                                            decl->initializer->equals.location());
+                                           decl->initializer->equals.location());
                 diag << decl->initializer->expr->sourceRange();
             }
         }
     }
 
-    auto result = compilation.emplace<PackedStructType>(compilation, bitWidth, isSigned, isFourState);
+    auto result =
+        compilation.emplace<PackedStructType>(compilation, bitWidth, isSigned, isFourState);
     for (auto member : make_reverse_range(members))
         result->addMember(*member);
 
@@ -754,9 +768,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
 }
 
 UnpackedStructType::UnpackedStructType(Compilation& compilation) :
-    Type(SymbolKind::UnpackedStructType, "", SourceLocation()),
-    Scope(compilation, this)
-{
+    Type(SymbolKind::UnpackedStructType, "", SourceLocation()), Scope(compilation, this) {
 }
 
 ConstantValue UnpackedStructType::getDefaultValueImpl() const {
@@ -764,7 +776,8 @@ ConstantValue UnpackedStructType::getDefaultValueImpl() const {
     THROW_UNREACHABLE;
 }
 
-const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax) {
+const Type& UnpackedStructType::fromSyntax(Compilation& compilation,
+                                           const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
     uint32_t fieldIndex = 0;
@@ -804,29 +817,36 @@ ConstantValue EventType::getDefaultValueImpl() const {
     THROW_UNREACHABLE;
 }
 
-const ForwardingTypedefSymbol&
-ForwardingTypedefSymbol::fromSyntax(Compilation& compilation, const ForwardTypedefDeclarationSyntax& syntax) {
+const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
+    Compilation& compilation, const ForwardTypedefDeclarationSyntax& syntax) {
     Category category;
     switch (syntax.keyword.kind) {
-        case TokenKind::EnumKeyword: category = Category::Enum; break;
-        case TokenKind::StructKeyword: category = Category::Struct; break;
-        case TokenKind::UnionKeyword: category = Category::Union; break;
-        case TokenKind::ClassKeyword: category = Category::Class; break;
-        default: category = Category::None; break;
+        case TokenKind::EnumKeyword:
+            category = Category::Enum;
+            break;
+        case TokenKind::StructKeyword:
+            category = Category::Struct;
+            break;
+        case TokenKind::UnionKeyword:
+            category = Category::Union;
+            break;
+        case TokenKind::ClassKeyword:
+            category = Category::Class;
+            break;
+        default:
+            category = Category::None;
+            break;
     }
     auto result = compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
-                                                               syntax.name.location(),
-                                                               category);
+                                                               syntax.name.location(), category);
     result->setSyntax(syntax);
     return *result;
 }
 
-const ForwardingTypedefSymbol&
-ForwardingTypedefSymbol::fromSyntax(Compilation& compilation,
-                                    const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
-    auto result = compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
-                                                               syntax.name.location(),
-                                                               Category::InterfaceClass);
+const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
+    Compilation& compilation, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
+    auto result = compilation.emplace<ForwardingTypedefSymbol>(
+        syntax.name.valueText(), syntax.name.location(), Category::InterfaceClass);
     result->setSyntax(syntax);
     return *result;
 }
@@ -845,7 +865,8 @@ void ForwardingTypedefSymbol::toJson(json& j) const {
 const TypeAliasType& TypeAliasType::fromSyntax(Compilation& compilation,
                                                const TypedefDeclarationSyntax& syntax) {
     // TODO: unpacked dimensions
-    auto result = compilation.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
+    auto result =
+        compilation.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
     result->targetType.setTypeSyntax(*syntax.type);
     result->setSyntax(syntax);
     return *result;
@@ -875,14 +896,26 @@ void TypeAliasType::checkForwardDecls() const {
     const ForwardingTypedefSymbol* forward = firstForward;
     while (forward) {
         if (forward->category != ForwardingTypedefSymbol::None && forward->category != category) {
-            auto& diag = getScope()->addDiag(DiagCode::ForwardTypedefDoesNotMatch, forward->location);
+            auto& diag =
+                getScope()->addDiag(DiagCode::ForwardTypedefDoesNotMatch, forward->location);
             switch (forward->category) {
-                case ForwardingTypedefSymbol::Enum: diag << "enum"; break;
-                case ForwardingTypedefSymbol::Struct: diag << "struct"; break;
-                case ForwardingTypedefSymbol::Union: diag << "union"; break;
-                case ForwardingTypedefSymbol::Class: diag << "class"; break;
-                case ForwardingTypedefSymbol::InterfaceClass: diag << "interface class"; break;
-                default: THROW_UNREACHABLE;
+                case ForwardingTypedefSymbol::Enum:
+                    diag << "enum";
+                    break;
+                case ForwardingTypedefSymbol::Struct:
+                    diag << "struct";
+                    break;
+                case ForwardingTypedefSymbol::Union:
+                    diag << "union";
+                    break;
+                case ForwardingTypedefSymbol::Class:
+                    diag << "class";
+                    break;
+                case ForwardingTypedefSymbol::InterfaceClass:
+                    diag << "interface class";
+                    break;
+                default:
+                    THROW_UNREACHABLE;
             }
             diag.addNote(DiagCode::NoteDeclarationHere, location);
             return;
@@ -896,9 +929,7 @@ ConstantValue TypeAliasType::getDefaultValueImpl() const {
 }
 
 NetType::NetType(NetKind netKind) :
-    Type(SymbolKind::NetType, "", SourceLocation()),
-    netKind(netKind)
-{
+    Type(SymbolKind::NetType, "", SourceLocation()), netKind(netKind) {
 }
 
-}
+} // namespace slang

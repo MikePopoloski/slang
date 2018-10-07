@@ -4,12 +4,12 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "slang/syntax/SyntaxNode.h"
-
 #include "slang/parsing/Token.h"
+#include "slang/syntax/SyntaxNode.h"
 
 namespace slang {
 
+// clang-format off
 SyntaxKind getUnaryPrefixExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::Plus: return SyntaxKind::UnaryPlusExpression;
@@ -1081,5 +1081,6 @@ bool isExpression(SyntaxKind kind) {
             return false;
     }
 }
+// clang-format on
 
-}
+} // namespace slang

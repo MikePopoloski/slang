@@ -19,12 +19,10 @@ struct GetChildVisitor {
         return node.getChild(index);
     }
 
-    ConstTokenOrSyntax visitInvalid(const SyntaxNode&, uint32_t) {
-        return nullptr;
-    }
+    ConstTokenOrSyntax visitInvalid(const SyntaxNode&, uint32_t) { return nullptr; }
 };
 
-}
+} // namespace
 
 namespace slang {
 
@@ -109,4 +107,4 @@ bool SyntaxListBase::isKind(SyntaxKind kind) {
     }
 }
 
-}
+} // namespace slang
