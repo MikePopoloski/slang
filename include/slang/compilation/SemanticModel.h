@@ -40,4 +40,4 @@ private:
     flat_hash_map<const SyntaxNode*, const Symbol*> symbolCache;
 };
 
-}
+} // namespace slang

@@ -88,4 +88,4 @@ private:
     bool isScriptEval_ = false;
 };
 
-}
+} // namespace slang

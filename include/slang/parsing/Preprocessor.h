@@ -137,14 +137,10 @@ private:
     bool expectTimescaleSpecifier(Token& value, Token& unit, TimescaleMagnitude& magnitude);
 
     // Specifies possible macro intrinsics.
-    enum class MacroIntrinsic {
-        None,
-        Line,
-        File
-    };
+    enum class MacroIntrinsic { None, Line, File };
 
-    // A saved macro definition; if it came from source code, we will have a parsed DefineDirectiveSyntax.
-    // Otherwise, it's an intrinsic macro and we'll note that here.
+    // A saved macro definition; if it came from source code, we will have a parsed
+    // DefineDirectiveSyntax. Otherwise, it's an intrinsic macro and we'll note that here.
     struct MacroDef {
         DefineDirectiveSyntax* syntax = nullptr;
         MacroIntrinsic intrinsic = MacroIntrinsic::None;
@@ -163,10 +159,13 @@ private:
     MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
     bool expandMacro(MacroDef macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs,
                      SmallVector<Token>& dest, bool isTopLevel);
-    bool expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, SmallVector<Token>& dest, bool isTopLevel);
-    bool expandReplacementList(span<Token const>& tokens, SmallSet<DefineDirectiveSyntax*, 8>& alreadyExpanded);
+    bool expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, SmallVector<Token>& dest,
+                         bool isTopLevel);
+    bool expandReplacementList(span<Token const>& tokens,
+                               SmallSet<DefineDirectiveSyntax*, 8>& alreadyExpanded);
     void appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
-                         SourceLocation expansionLoc, Token usageSite, bool& isFirst, bool isTopLevel);
+                         SourceLocation expansionLoc, Token usageSite, bool& isFirst,
+                         bool isTopLevel);
     bool applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest);
 
     // functions to advance the underlying token stream
@@ -180,8 +179,8 @@ private:
     // This is a small collection of state used to keep track of where we are in a tree of
     // nested conditional directives.
     struct BranchEntry {
-        // Whether any of the sibling directives in this branch have been taken; used to decide whether
-        // to take an `elsif or `else branch.
+        // Whether any of the sibling directives in this branch have been taken; used to decide
+        // whether to take an `elsif or `else branch.
         bool anyTaken;
 
         // Whether the current branch is active.
@@ -194,9 +193,10 @@ private:
         BranchEntry(bool taken) : anyTaken(taken), currentActive(taken) {}
     };
 
-    // Helper class for parsing macro arguments. There's a lot of otherwise overlapping code that this
-    // class consolidates, but it makes it a little confusing. If a buffer is provided via setBuffer(),
-    // tokens are pulled from there first. Otherwise it just pulls from the main preprocessor stream.
+    // Helper class for parsing macro arguments. There's a lot of otherwise overlapping code that
+    // this class consolidates, but it makes it a little confusing. If a buffer is provided via
+    // setBuffer(), tokens are pulled from there first. Otherwise it just pulls from the main
+    // preprocessor stream.
     class MacroParser {
     public:
         MacroParser(Preprocessor& preprocessor) : pp(preprocessor) {}
@@ -270,4 +270,4 @@ private:
     TokenKind defaultNetType;
 };
 
-}
+} // namespace slang

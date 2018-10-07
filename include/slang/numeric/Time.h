@@ -25,11 +25,7 @@ string_view timeUnitToSuffix(TimeUnit unit);
 
 /// As allowed by SystemVerilog, time scales can be expressed
 /// in one of only a few magnitudes.
-enum class TimescaleMagnitude : uint8_t {
-    One = 1,
-    Ten = 10,
-    Hundred = 100
-};
+enum class TimescaleMagnitude : uint8_t { One = 1, Ten = 10, Hundred = 100 };
 
 /// A combination of a unit and magnitude for a timescale value.
 struct TimescaleValue {
@@ -48,8 +44,7 @@ struct Timescale {
     TimescaleValue precision;
 
     Timescale() = default;
-    Timescale(TimescaleValue base, TimescaleValue precision) :
-        base(base), precision(precision) {}
+    Timescale(TimescaleValue base, TimescaleValue precision) : base(base), precision(precision) {}
 };
 
-}
+} // namespace slang

@@ -6,17 +6,17 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cmath>
 #include <climits>
+#include <cmath>
 
-#if defined (_MSC_VER)
+#if defined(_MSC_VER)
 #include <intrin.h>
 #endif
 
 namespace slang {
 
 inline uint32_t clog2(uint64_t value) {
-#if defined (_MSC_VER)
+#if defined(_MSC_VER)
     unsigned long index;
     if (!_BitScanReverse64(&index, value))
         return 0;
@@ -34,7 +34,7 @@ inline uint32_t clog2(uint64_t value) {
 inline uint32_t countLeadingZeros32(uint32_t value) {
     if (value == 0)
         return 32;
-#if defined (_MSC_VER)
+#if defined(_MSC_VER)
     unsigned long index;
     _BitScanReverse(&index, value);
     return index ^ 31;
@@ -48,7 +48,7 @@ inline uint32_t countLeadingZeros32(uint32_t value) {
 inline uint32_t countLeadingZeros64(uint64_t value) {
     if (value == 0)
         return 64;
-#if defined (_MSC_VER)
+#if defined(_MSC_VER)
     unsigned long index;
     _BitScanReverse64(&index, value);
     return index ^ 63;
@@ -62,7 +62,7 @@ inline uint32_t countLeadingOnes64(uint64_t value) {
 }
 
 inline uint32_t countPopulation64(uint64_t value) {
-#if defined (_MSC_VER)
+#if defined(_MSC_VER)
     return (uint32_t)__popcnt64(value);
 #else
     return (uint32_t)__builtin_popcountll(value);
@@ -73,4 +73,4 @@ inline constexpr bool isPowerOfTwo(uint32_t value) {
     return value && ((value & (value - 1)) == 0);
 }
 
-}
+} // namespace slang

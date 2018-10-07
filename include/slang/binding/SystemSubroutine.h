@@ -36,8 +36,10 @@ public:
     virtual ConstantValue eval(EvalContext& context, const Args& args) const = 0;
 
 protected:
-    SystemSubroutine(std::string name, bitmask<SystemSubroutineFlags> flags = SystemSubroutineFlags::None) :
-        name(std::move(name)), flags(flags) {}
+    SystemSubroutine(std::string name,
+                     bitmask<SystemSubroutineFlags> flags = SystemSubroutineFlags::None) :
+        name(std::move(name)),
+        flags(flags) {}
 };
 
-}
+} // namespace slang

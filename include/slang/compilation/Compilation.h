@@ -50,7 +50,8 @@ public:
     const CompilationUnitSymbol* getCompilationUnit(const CompilationUnitSyntax& syntax) const;
 
     /// Gets the definition with the given name, or null if there is no such definition.
-    /// This takes into account the given scope so that nested definitions are found before more global ones.
+    /// This takes into account the given scope so that nested definitions are found before more
+    /// global ones.
     const DefinitionSymbol* getDefinition(string_view name, const Scope& scope) const;
 
     /// Gets the top level definition with the given name, or null if there is no such definition.
@@ -68,7 +69,8 @@ public:
     /// Registers a system subroutine handler, which can be accessed by compiled code.
     void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
 
-    /// Gets a system subroutine with the given na,e or null if there is no such subroutine registered.
+    /// Gets a system subroutine with the given na,e or null if there is no such subroutine
+    /// registered.
     const SystemSubroutine* getSystemSubroutine(string_view name) const;
 
     /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
@@ -106,7 +108,8 @@ public:
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
                         bool allowNetType = false, bool forceSigned = false);
-    const Type& getType(const Type& elementType, const SyntaxList<VariableDimensionSyntax>& dimensions,
+    const Type& getType(const Type& elementType,
+                        const SyntaxList<VariableDimensionSyntax>& dimensions,
                         LookupLocation location, const Scope& parent);
 
     const PackedArrayType& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
@@ -137,9 +140,12 @@ public:
     /// that we don't bother providing dedicated accessors for them.
     const NetType& getWireNetType() const { return *wireNetType; }
 
-    ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
+    ConstantValue* createConstant(ConstantValue&& value) {
+        return constantAllocator.emplace(std::move(value));
+    }
 
-    optional<int32_t> evalIntegerExpr(const ExpressionSyntax& syntax, LookupLocation location, const Scope& scope);
+    optional<int32_t> evalIntegerExpr(const ExpressionSyntax& syntax, LookupLocation location,
+                                      const Scope& scope);
 
 private:
     // These functions are called by Scopes to create and track various members.
@@ -153,7 +159,8 @@ private:
     using NameSet = flat_hash_set<string_view>;
     static void findInstantiations(const ModuleDeclarationSyntax& module,
                                    SmallVector<NameSet>& scopeStack, NameSet& found);
-    static void findInstantiations(const MemberSyntax& node, SmallVector<NameSet>& scopeStack, NameSet& found);
+    static void findInstantiations(const MemberSyntax& node, SmallVector<NameSet>& scopeStack,
+                                   NameSet& found);
 
     Diagnostics diags;
     std::unique_ptr<RootSymbol> root;
@@ -201,9 +208,9 @@ private:
     // Map from token kinds to the built-in net types.
     flat_hash_map<TokenKind, std::unique_ptr<NetType>> knownNetTypes;
 
-    // A table to look up scalar types based on combinations of the three flags: signed, fourstate, reg
-    // Two of the entries are not valid and will be nullptr (!fourstate & reg).
-    ScalarType* scalarTypeTable[8] {nullptr};
+    // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
+    // reg Two of the entries are not valid and will be nullptr (!fourstate & reg).
+    ScalarType* scalarTypeTable[8]{ nullptr };
 
     // Instances of all the built-in types.
     ScalarType bitType;
@@ -230,4 +237,4 @@ private:
     NetType* wireNetType;
 };
 
-}
+} // namespace slang

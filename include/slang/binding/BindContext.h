@@ -26,8 +26,10 @@ struct BindContext {
     LookupLocation lookupLocation;
     bitmask<BindFlags> flags;
 
-    BindContext(const Scope& scope, LookupLocation lookupLocation, bitmask<BindFlags> flags = BindFlags::None) :
-        scope(scope), lookupLocation(lookupLocation), flags(flags) {}
+    BindContext(const Scope& scope, LookupLocation lookupLocation,
+                bitmask<BindFlags> flags = BindFlags::None) :
+        scope(scope),
+        lookupLocation(lookupLocation), flags(flags) {}
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
@@ -44,4 +46,4 @@ struct BindContext {
     BindContext resetFlags(bitmask<BindFlags> addedFlags) const;
 };
 
-}
+} // namespace slang

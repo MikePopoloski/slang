@@ -208,7 +208,7 @@ enum class DiagCode : uint8_t {
     NoteInCallTo,
     NoteNonConstVariable,
     NoteArrayIndexInvalid,
-    NotePartSelectInvalid,  // TODO:
+    NotePartSelectInvalid, // TODO:
     NoteHierarchicalNameInCE,
     NoteFunctionIdentifiersMustBeLocal,
     NoteParamUsedInCEBeforeDecl,
@@ -218,11 +218,7 @@ enum class DiagCode : uint8_t {
 
 /// The severity of a given diagnostic. This is not tied to the diagnostic itself;
 /// it can be configured on a per-diagnostic basis at runtime.
-enum class DiagnosticSeverity {
-    Note,
-    Warning,
-    Error
-};
+enum class DiagnosticSeverity { Note, Warning, Error };
 
 /// Wraps up a reported diagnostic along with location in source and any arguments.
 class Diagnostic {
@@ -268,7 +264,8 @@ public:
         return diag;
     }
 
-    template<typename T, typename = void, typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>>
+    template<typename T, typename = void,
+             typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>>
     inline friend Diagnostic& operator<<(Diagnostic& diag, T arg) {
         diag.args.emplace_back((uint64_t)arg);
         return diag;
@@ -280,8 +277,7 @@ class Diagnostics : public SmallVectorSized<Diagnostic, 8> {
 public:
     Diagnostics() = default;
 
-    Diagnostics(Diagnostics&& other) noexcept :
-        SmallVectorSized<Diagnostic, 8>(std::move(other)) {}
+    Diagnostics(Diagnostics&& other) noexcept : SmallVectorSized<Diagnostic, 8>(std::move(other)) {}
     Diagnostics& operator=(Diagnostics&& other) = default;
 
     /// Adds a new diagnostic to the collection, pointing to the given source location.
@@ -323,7 +319,8 @@ public:
 private:
     string_view getBufferLine(SourceLocation location, uint32_t col);
     void getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack);
-    void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col, string_view sourceLine, std::string& buffer);
+    void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col,
+                        string_view sourceLine, std::string& buffer);
 
     template<typename T>
     void formatDiag(T& buffer, SourceLocation loc, const std::vector<SourceRange>& ranges,
@@ -340,4 +337,4 @@ private:
     std::unordered_map<DiagCode, Descriptor> descriptors;
 };
 
-}
+} // namespace slang

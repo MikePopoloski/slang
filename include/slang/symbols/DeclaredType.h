@@ -34,7 +34,8 @@ BITMASK_DEFINE_MAX_ELEMENT(DeclaredTypeFlags, ForceSigned);
 /// along with the logic necessary to resolve that type.
 class DeclaredType {
 public:
-    explicit DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
+    explicit DeclaredType(const Symbol& parent,
+                          bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
     DeclaredType(const DeclaredType&) = delete;
 
     const Type& getType() const {
@@ -45,7 +46,10 @@ public:
 
     void setType(const Type& newType) { type = &newType; }
 
-    void setTypeSyntax(const DataTypeSyntax& newType) { typeSyntax = &newType; type = nullptr; }
+    void setTypeSyntax(const DataTypeSyntax& newType) {
+        typeSyntax = &newType;
+        type = nullptr;
+    }
     const DataTypeSyntax* getTypeSyntax() const { return typeSyntax; }
 
     void setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>& newDimensions) {
@@ -53,9 +57,7 @@ public:
         type = nullptr;
     }
 
-    const SyntaxList<VariableDimensionSyntax>* getDimensionSyntax() const {
-        return dimensions;
-    }
+    const SyntaxList<VariableDimensionSyntax>* getDimensionSyntax() const { return dimensions; }
 
     const Expression* getInitializer() const;
     void setInitializer(const Expression& expr) { initializer = &expr; }
@@ -77,25 +79,25 @@ public:
     bool isTypeResolved() const { return type != nullptr; }
     bitmask<DeclaredTypeFlags> getFlags() const { return flags; }
 
-    void setForceSigned() { type = nullptr; flags |= DeclaredTypeFlags::ForceSigned; }
+    void setForceSigned() {
+        type = nullptr;
+        flags |= DeclaredTypeFlags::ForceSigned;
+    }
 
-    static std::tuple<const Type*, const Expression*>
-        resolveType(const DataTypeSyntax& typeSyntax,
-                    const SyntaxList<VariableDimensionSyntax>* dimensions,
-                    const ExpressionSyntax* initializerSyntax,
-                    const BindContext& context,
-                    bitmask<DeclaredTypeFlags> flags);
+    static std::tuple<const Type*, const Expression*> resolveType(
+        const DataTypeSyntax& typeSyntax, const SyntaxList<VariableDimensionSyntax>* dimensions,
+        const ExpressionSyntax* initializerSyntax, const BindContext& context,
+        bitmask<DeclaredTypeFlags> flags);
 
-    static const Expression& resolveInitializer(const Type& type, const ExpressionSyntax& initializerSyntax,
-                                                SourceLocation initializerLocation, const BindContext& context);
+    static const Expression& resolveInitializer(const Type& type,
+                                                const ExpressionSyntax& initializerSyntax,
+                                                SourceLocation initializerLocation,
+                                                const BindContext& context);
 
-    static const Expression&
-        resolveInitializer(const DataTypeSyntax& typeSyntax,
-                           const SyntaxList<VariableDimensionSyntax>* dimensions,
-                           const ExpressionSyntax& initializerSyntax,
-                           SourceLocation initializerLocation,
-                           const BindContext& context,
-                           bitmask<DeclaredTypeFlags> flags);
+    static const Expression& resolveInitializer(
+        const DataTypeSyntax& typeSyntax, const SyntaxList<VariableDimensionSyntax>* dimensions,
+        const ExpressionSyntax& initializerSyntax, SourceLocation initializerLocation,
+        const BindContext& context, bitmask<DeclaredTypeFlags> flags);
 
 private:
     const Scope& getScope() const;
@@ -118,4 +120,4 @@ private:
     bitmask<DeclaredTypeFlags> flags;
 };
 
-}
+} // namespace slang

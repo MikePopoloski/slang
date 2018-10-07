@@ -39,9 +39,9 @@ public:
     bool isNullHandle() const { return std::holds_alternative<NullPlaceholder>(value); }
 
     SVInt& integer() & { return std::get<SVInt>(value); }
-    const SVInt& integer() const & { return std::get<SVInt>(value); }
+    const SVInt& integer() const& { return std::get<SVInt>(value); }
     SVInt integer() && { return std::get<SVInt>(std::move(value)); }
-    SVInt integer() const && { return std::get<SVInt>(std::move(value)); }
+    SVInt integer() const&& { return std::get<SVInt>(std::move(value)); }
 
     double real() const { return std::get<double>(value); }
 
@@ -103,9 +103,7 @@ struct ConstantRange {
         return left == rhs.left && right == rhs.right;
     }
 
-    bool operator!=(const ConstantRange& rhs) const {
-        return !(*this == rhs);
-    }
+    bool operator!=(const ConstantRange& rhs) const { return !(*this == rhs); }
 };
 
 /// An lvalue is anything that can appear on the left hand side of an assignment
@@ -131,7 +129,7 @@ public:
     LValue selectRange(ConstantRange range) const;
 
 private:
-    LValue(ConstantValue& base, ConstantRange range) : value(CVRange { &base, range }) {}
+    LValue(ConstantValue& base, ConstantRange range) : value(CVRange{ &base, range }) {}
 
     struct CVRange {
         ConstantValue* cv;
@@ -141,4 +139,4 @@ private:
     std::variant<std::monostate, Concat, ConstantValue*, CVRange> value;
 };
 
-}
+} // namespace slang

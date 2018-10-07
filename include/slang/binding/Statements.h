@@ -54,10 +54,8 @@ public:
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
 protected:
-    explicit Statement(StatementKind kind) :
-        kind(kind), syntax(nullptr) {}
-    Statement(StatementKind kind, const StatementSyntax& syntax) :
-        kind(kind), syntax(&syntax) {}
+    explicit Statement(StatementKind kind) : kind(kind), syntax(nullptr) {}
+    Statement(StatementKind kind, const StatementSyntax& syntax) : kind(kind), syntax(&syntax) {}
 };
 
 /// Represents an invalid statement, which is usually generated and inserted
@@ -80,8 +78,7 @@ class StatementList : public Statement {
 public:
     span<const Statement* const> list;
 
-    StatementList(span<const Statement* const> list) :
-        Statement(StatementKind::List), list(list) {}
+    StatementList(span<const Statement* const> list) : Statement(StatementKind::List), list(list) {}
 
     bool eval(EvalContext& context) const;
 
@@ -133,7 +130,7 @@ public:
     const Statement* ifFalse;
 
     ConditionalStatement(const StatementSyntax& syntax, const Expression& cond,
-                              const Statement& ifTrue, const Statement* ifFalse) :
+                         const Statement& ifTrue, const Statement* ifFalse) :
         Statement(StatementKind::Conditional, syntax),
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
@@ -172,4 +169,4 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }
 };
 
-}
+} // namespace slang

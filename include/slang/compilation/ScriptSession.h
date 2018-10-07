@@ -57,7 +57,8 @@ public:
     }
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {
-        const auto& bound = Expression::bind(compilation, expr, BindContext(scope, LookupLocation::max));
+        const auto& bound =
+            Expression::bind(compilation, expr, BindContext(scope, LookupLocation::max));
         return bound.eval(evalContext);
     }
 
@@ -70,7 +71,8 @@ public:
         if (syntaxTrees.empty())
             return "";
 
-        return DiagnosticWriter{syntaxTrees[0]->sourceManager()}.report(compilation.getAllDiagnostics());
+        return DiagnosticWriter{ syntaxTrees[0]->sourceManager() }.report(
+            compilation.getAllDiagnostics());
     }
 
 private:
@@ -80,4 +82,4 @@ private:
     EvalContext evalContext;
 };
 
-}
+} // namespace slang

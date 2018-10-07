@@ -86,11 +86,7 @@ enum class BinaryOperator {
     Power
 };
 
-enum class RangeSelectionKind {
-    Simple,
-    IndexedUp,
-    IndexedDown
-};
+enum class RangeSelectionKind { Simple, IndexedUp, IndexedDown };
 
 enum class ConversionKind {
     IntToFloat,
@@ -126,8 +122,9 @@ public:
                                   const BindContext& context);
 
     /// Binds an assignment-like expression from the given syntax nodes.
-    static const Expression& bind(Compilation& compilation, const Type& lhs, const ExpressionSyntax& rhs,
-                                  SourceLocation location, const BindContext& context);
+    static const Expression& bind(Compilation& compilation, const Type& lhs,
+                                  const ExpressionSyntax& rhs, SourceLocation location,
+                                  const BindContext& context);
 
     /// Indicates whether the expression is invalid.
     bool bad() const;
@@ -173,17 +170,24 @@ protected:
 
     void checkBindFlags(const BindContext& context) const;
 
-    static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context,
+    static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax,
+                              const BindContext& context,
                               bitmask<BindFlags> extraFlags = BindFlags::None);
-    static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
+    static Expression& convert(Compilation& compilation, ConversionKind conversionKind,
+                               const Type& type, Expression& expr);
 
-    static Expression& convertAssignment(Compilation& compilation, const Type& type, Expression& expr,
-                                         SourceLocation location, optional<SourceRange> lhsRange,
+    static Expression& convertAssignment(Compilation& compilation, const Type& type,
+                                         Expression& expr, SourceLocation location,
+                                         optional<SourceRange> lhsRange,
                                          const BindContext& context);
 
-    static Expression& bindName(Compilation& compilation, const NameSyntax& syntax, const BindContext& context);
-    static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const BindContext& context);
-    static Expression& bindSelector(Compilation& compilation, Expression& value, const ElementSelectSyntax& syntax, const BindContext& context);
+    static Expression& bindName(Compilation& compilation, const NameSyntax& syntax,
+                                const BindContext& context);
+    static Expression& bindSelectExpression(Compilation& compilation,
+                                            const ElementSelectExpressionSyntax& syntax,
+                                            const BindContext& context);
+    static Expression& bindSelector(Compilation& compilation, Expression& value,
+                                    const ElementSelectSyntax& syntax, const BindContext& context);
 
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 
@@ -192,9 +196,9 @@ protected:
 
     // Perform type propagation and constant folding of a self-determined subexpression.
     static void selfDetermined(Compilation& compilation, Expression*& expr);
-    [[nodiscard]] static Expression& selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
-                                                    const BindContext& context,
-                                                    bitmask<BindFlags> extraFlags = BindFlags::None);
+    [[nodiscard]] static Expression& selfDetermined(
+        Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context,
+        bitmask<BindFlags> extraFlags = BindFlags::None);
     struct PropagationVisitor;
 };
 
@@ -216,15 +220,18 @@ public:
 /// Represents an integer literal.
 class IntegerLiteral : public Expression {
 public:
-    IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value, SourceRange sourceRange);
+    IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
+                   SourceRange sourceRange);
 
     SVInt getValue() const { return valueStorage; }
 
     ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-    static Expression& fromSyntax(Compilation& compilation, const IntegerVectorExpressionSyntax& syntax);
-    static Expression& propagateType(Compilation& compilation, IntegerLiteral& expr, const Type& newType);
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const IntegerVectorExpressionSyntax& syntax);
+    static Expression& propagateType(Compilation& compilation, IntegerLiteral& expr,
+                                     const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::IntegerLiteral; }
 
@@ -243,7 +250,8 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-    static Expression& propagateType(Compilation& compilation, RealLiteral& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, RealLiteral& expr,
+                                     const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RealLiteral; }
 
@@ -262,9 +270,12 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-    static Expression& propagateType(Compilation& compilation, UnbasedUnsizedIntegerLiteral& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, UnbasedUnsizedIntegerLiteral& expr,
+                                     const Type& newType);
 
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnbasedUnsizedIntegerLiteral; }
+    static bool isKind(ExpressionKind kind) {
+        return kind == ExpressionKind::UnbasedUnsizedIntegerLiteral;
+    }
 
 private:
     logic_t value;
@@ -279,7 +290,8 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-    static Expression& propagateType(Compilation& compilation, NullLiteral& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, NullLiteral& expr,
+                                     const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NullLiteral; }
 };
@@ -295,7 +307,8 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-    static Expression& propagateType(Compilation& compilation, StringLiteral& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, StringLiteral& expr,
+                                     const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::StringLiteral; }
 
@@ -310,13 +323,14 @@ public:
     bool isHierarchical;
 
     NamedValueExpression(const ValueSymbol& symbol, bool isHierarchical, SourceRange sourceRange) :
-        Expression(ExpressionKind::NamedValue, symbol.getType(), sourceRange),
-        symbol(symbol), isHierarchical(isHierarchical) {}
+        Expression(ExpressionKind::NamedValue, symbol.getType(), sourceRange), symbol(symbol),
+        isHierarchical(isHierarchical) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
-    static Expression& propagateType(Compilation& compilation, NamedValueExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, NamedValueExpression& expr,
+                                     const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 
 private:
@@ -328,7 +342,8 @@ class UnaryExpression : public Expression {
 public:
     UnaryOperator op;
 
-    UnaryExpression(UnaryOperator op, const Type& type, Expression& operand, SourceRange sourceRange) :
+    UnaryExpression(UnaryOperator op, const Type& type, Expression& operand,
+                    SourceRange sourceRange) :
         Expression(ExpressionKind::UnaryOp, type, sourceRange),
         op(op), operand_(&operand) {}
 
@@ -337,13 +352,16 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
-    static Expression& fromSyntax(Compilation& compilation, const PrefixUnaryExpressionSyntax& syntax,
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const PrefixUnaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& fromSyntax(Compilation& compilation, const PostfixUnaryExpressionSyntax& syntax,
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const PostfixUnaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateType(Compilation& compilation, UnaryExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, UnaryExpression& expr,
+                                     const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnaryOp; }
 
 private:
@@ -355,7 +373,8 @@ class BinaryExpression : public Expression {
 public:
     BinaryOperator op;
 
-    BinaryExpression(BinaryOperator op, const Type& type, Expression& left, Expression& right, SourceRange sourceRange) :
+    BinaryExpression(BinaryOperator op, const Type& type, Expression& left, Expression& right,
+                     SourceRange sourceRange) :
         Expression(ExpressionKind::BinaryOp, type, sourceRange),
         op(op), left_(&left), right_(&right) {}
 
@@ -370,7 +389,8 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateType(Compilation& compilation, BinaryExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, BinaryExpression& expr,
+                                     const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
 
 private:
@@ -381,8 +401,8 @@ private:
 /// Represents a conditional operator expression.
 class ConditionalExpression : public Expression {
 public:
-    ConditionalExpression(const Type& type, Expression& pred, Expression& left,
-                          Expression& right, SourceRange sourceRange) :
+    ConditionalExpression(const Type& type, Expression& pred, Expression& left, Expression& right,
+                          SourceRange sourceRange) :
         Expression(ExpressionKind::ConditionalOp, type, sourceRange),
         pred_(&pred), left_(&left), right_(&right) {}
 
@@ -397,10 +417,12 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
-    static Expression& fromSyntax(Compilation& compilation, const ConditionalExpressionSyntax& syntax,
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const ConditionalExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateType(Compilation& compilation, ConditionalExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, ConditionalExpression& expr,
+                                     const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ConditionalOp; }
 
 private:
@@ -432,7 +454,8 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateType(Compilation& compilation, AssignmentExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, AssignmentExpression& expr,
+                                     const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Assignment; }
 
 private:
@@ -443,7 +466,8 @@ private:
 /// Represents a single element selection expression.
 class ElementSelectExpression : public Expression {
 public:
-    ElementSelectExpression(const Type& type, Expression& value, Expression& selector, SourceRange sourceRange) :
+    ElementSelectExpression(const Type& type, Expression& value, Expression& selector,
+                            SourceRange sourceRange) :
         Expression(ExpressionKind::ElementSelect, type, sourceRange),
         value_(&value), selector_(&selector) {}
 
@@ -456,14 +480,17 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
-    static Expression& fromSyntax(Compilation& compilation, Expression& value, const ExpressionSyntax& syntax,
-                                  SourceRange fullRange, const BindContext& context);
-    static Expression& propagateType(Compilation& compilation, ElementSelectExpression& expr, const Type& newType);
+    static Expression& fromSyntax(Compilation& compilation, Expression& value,
+                                  const ExpressionSyntax& syntax, SourceRange fullRange,
+                                  const BindContext& context);
+    static Expression& propagateType(Compilation& compilation, ElementSelectExpression& expr,
+                                     const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
 
 private:
-    optional<ConstantRange> getRange(EvalContext& context, const ConstantValue& selectorValue) const;
+    optional<ConstantRange> getRange(EvalContext& context,
+                                     const ConstantValue& selectorValue) const;
 
     Expression* value_;
     Expression* selector_;
@@ -491,14 +518,17 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
-    static Expression& fromSyntax(Compilation& compilation, Expression& value, const RangeSelectSyntax& syntax,
-                                  SourceRange fullRange, const BindContext& context);
-    static Expression& propagateType(Compilation& compilation, RangeSelectExpression& expr, const Type& newType);
+    static Expression& fromSyntax(Compilation& compilation, Expression& value,
+                                  const RangeSelectSyntax& syntax, SourceRange fullRange,
+                                  const BindContext& context);
+    static Expression& propagateType(Compilation& compilation, RangeSelectExpression& expr,
+                                     const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
 
 private:
-    optional<ConstantRange> getRange(EvalContext& context, const ConstantValue& cl, const ConstantValue& cr) const;
+    optional<ConstantRange> getRange(EvalContext& context, const ConstantValue& cl,
+                                     const ConstantValue& cr) const;
 
     Expression* value_;
     Expression* left_;
@@ -510,7 +540,8 @@ class MemberAccessExpression : public Expression {
 public:
     const FieldSymbol& field;
 
-    MemberAccessExpression(const Type& type, Expression& value, const FieldSymbol& field, SourceRange sourceRange) :
+    MemberAccessExpression(const Type& type, Expression& value, const FieldSymbol& field,
+                           SourceRange sourceRange) :
         Expression(ExpressionKind::MemberAccess, type, sourceRange),
         field(field), value_(&value) {}
 
@@ -520,7 +551,9 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
-    static Expression& propagateType(Compilation&, MemberAccessExpression& expr, const Type&) { return expr; }
+    static Expression& propagateType(Compilation&, MemberAccessExpression& expr, const Type&) {
+        return expr;
+    }
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::MemberAccess; }
 
@@ -531,18 +564,22 @@ private:
 /// Represents a concatenation expression.
 class ConcatenationExpression : public Expression {
 public:
-    ConcatenationExpression(const Type& type, span<const Expression*> operands, SourceRange sourceRange) :
-        Expression(ExpressionKind::Concatenation, type, sourceRange), operands_(operands) {}
+    ConcatenationExpression(const Type& type, span<const Expression*> operands,
+                            SourceRange sourceRange) :
+        Expression(ExpressionKind::Concatenation, type, sourceRange),
+        operands_(operands) {}
 
     span<const Expression* const> operands() const { return operands_; }
     span<const Expression*> operands() { return operands_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
 
-    static Expression& fromSyntax(Compilation& compilation, const ConcatenationExpressionSyntax& syntax,
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const ConcatenationExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateType(Compilation& compilation, ConcatenationExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, ConcatenationExpression& expr,
+                                     const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Concatenation; }
 
 private:
@@ -552,7 +589,8 @@ private:
 /// Represents a replication expression.
 class ReplicationExpression : public Expression {
 public:
-    ReplicationExpression(const Type& type, Expression& count, Expression& concat, SourceRange sourceRange) :
+    ReplicationExpression(const Type& type, Expression& count, Expression& concat,
+                          SourceRange sourceRange) :
         Expression(ExpressionKind::Replication, type, sourceRange),
         count_(&count), concat_(&concat) {}
 
@@ -564,10 +602,12 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
-    static Expression& fromSyntax(Compilation& compilation, const MultipleConcatenationExpressionSyntax& syntax,
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const MultipleConcatenationExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateType(Compilation& compilation, ReplicationExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, ReplicationExpression& expr,
+                                     const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Replication; }
 
 private:
@@ -581,8 +621,9 @@ public:
     using Subroutine = std::variant<const SubroutineSymbol*, const SystemSubroutine*>;
     Subroutine subroutine;
 
-    CallExpression(const Subroutine& subroutine, const Type& returnType, span<const Expression*> arguments,
-                   LookupLocation lookupLocation, SourceRange sourceRange) :
+    CallExpression(const Subroutine& subroutine, const Type& returnType,
+                   span<const Expression*> arguments, LookupLocation lookupLocation,
+                   SourceRange sourceRange) :
         Expression(ExpressionKind::Call, returnType, sourceRange),
         subroutine(subroutine), arguments_(arguments), lookupLocation(lookupLocation) {}
 
@@ -593,10 +634,12 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
-    static Expression& fromSyntax(Compilation& compilation, const InvocationExpressionSyntax& syntax,
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const InvocationExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateType(Compilation& compilation, CallExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, CallExpression& expr,
+                                     const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
 
 private:
@@ -619,7 +662,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
-    static Expression& propagateType(Compilation& compilation, ConversionExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, ConversionExpression& expr,
+                                     const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 
 private:
@@ -636,11 +680,12 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
-    static Expression& propagateType(Compilation& compilation, DataTypeExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, DataTypeExpression& expr,
+                                     const Type& newType);
     static Expression& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::DataType; }
 };
 
-}
+} // namespace slang

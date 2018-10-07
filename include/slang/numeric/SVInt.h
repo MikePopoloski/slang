@@ -17,12 +17,7 @@ namespace slang {
 using bitwidth_t = uint32_t;
 
 /// Specifies the base of an integer (for converting to/from a string)
-enum class LiteralBase : uint8_t {
-    Binary,
-    Octal,
-    Decimal,
-    Hex
-};
+enum class LiteralBase : uint8_t { Binary, Octal, Decimal, Hex };
 
 bool literalBaseFromChar(char base, LiteralBase& result);
 
@@ -112,14 +107,12 @@ public:
         uint64_t* pVal; // value used when bits > 64
     };
 
-    enum {
-        BITWIDTH_BITS = 24
-    };
+    enum { BITWIDTH_BITS = 24 };
 
     // 32-bits of control data
-    bitwidth_t bitWidth : BITWIDTH_BITS;    // number of bits in the integer
-    bool signFlag : 1;                      // whether the number should be treated as signed
-    bool unknownFlag : 1;                   // whether we have at least one X or Z value in the number
+    bitwidth_t bitWidth : BITWIDTH_BITS; // number of bits in the integer
+    bool signFlag : 1;                   // whether the number should be treated as signed
+    bool unknownFlag : 1;                // whether we have at least one X or Z value in the number
 };
 
 ///
@@ -142,9 +135,7 @@ public:
     SVInt() {}
 
     /// Construct from a single bit that can be unknown.
-    explicit SVInt(logic_t bit) :
-        SVIntStorage(1, false, bit.isUnknown())
-    {
+    explicit SVInt(logic_t bit) : SVIntStorage(1, false, bit.isUnknown()) {
         if (isSingleWord())
             val = bit.value;
         else
@@ -153,9 +144,7 @@ public:
 
     /// Construct from a given integer value. Uses only the bits necessary to hold the value.
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>>>
-    SVInt(T value) :
-        SVIntStorage(0, false, false)
-    {
+    SVInt(T value) : SVIntStorage(0, false, false) {
         val = (uint64_t)value;
         if constexpr (IsSignedHelper<T>::type::value) {
             signFlag = true;
@@ -178,9 +167,7 @@ public:
 
     /// Construct from a 64-bit value that can be given an arbitrarily large number of bits (sign
     /// extended if necessary).
-    SVInt(bitwidth_t bits, uint64_t value, bool isSigned) :
-        SVIntStorage(bits, isSigned, false)
-    {
+    SVInt(bitwidth_t bits, uint64_t value, bool isSigned) : SVIntStorage(bits, isSigned, false) {
         ASSERT(bits > 0 && bits <= MAX_BITS);
         if (isSingleWord())
             val = value;
@@ -190,9 +177,8 @@ public:
     }
 
     /// Construct from numeric data already in memory as a range of bytes.
-    SVInt(bitwidth_t bits, span<const byte> bytes, bool isSigned)  :
-        SVIntStorage(bits, isSigned, false)
-    {
+    SVInt(bitwidth_t bits, span<const byte> bytes, bool isSigned) :
+        SVIntStorage(bits, isSigned, false) {
         ASSERT(bits > 0 && bits <= MAX_BITS);
         initSlowCase(bytes);
     }
@@ -205,8 +191,7 @@ public:
     /// Copy construct.
     SVInt(const SVInt& other) : SVInt(static_cast<const SVIntStorage&>(other)) {}
     SVInt(const SVIntStorage& other) :
-        SVIntStorage(other.bitWidth, other.signFlag, other.unknownFlag)
-    {
+        SVIntStorage(other.bitWidth, other.signFlag, other.unknownFlag) {
         if (isSingleWord())
             val = other.val;
         else
@@ -215,8 +200,7 @@ public:
 
     /// Move construct.
     SVInt(SVInt&& other) noexcept :
-        SVIntStorage(other.bitWidth, other.signFlag, other.unknownFlag)
-    {
+        SVIntStorage(other.bitWidth, other.signFlag, other.unknownFlag) {
         if (isSingleWord())
             val = other.val;
         else
@@ -444,8 +428,8 @@ public:
     static SVInt fromString(string_view str);
 
     /// Construct from an array of digits.
-    static SVInt fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned,
-                            bool anyUnknown, span<logic_t const> digits);
+    static SVInt fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool anyUnknown,
+                            span<logic_t const> digits);
 
     /// Evaluates a conditional expression; i.e. condition ? left : right
     static SVInt conditional(const SVInt& condition, const SVInt& lhs, const SVInt& rhs);
@@ -453,7 +437,8 @@ public:
     /// Implements logical implication: lhs -> rhs. This is equivalent to (!lhs || rhs).
     static logic_t logicalImplication(const SVInt& lhs, const SVInt& rhs);
 
-    /// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs -> lhs)).
+    /// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs ->
+    /// lhs)).
     static logic_t logicalEquivalence(const SVInt& lhs, const SVInt& rhs);
 
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
@@ -502,7 +487,9 @@ private:
     bitwidth_t countLeadingOnesSlowCase() const;
 
     // Get a specific word holding the given bit index.
-    uint64_t getWord(bitwidth_t bitIndex) const { return isSingleWord() ? val : pVal[whichWord(bitIndex)]; }
+    uint64_t getWord(bitwidth_t bitIndex) const {
+        return isSingleWord() ? val : pVal[whichWord(bitIndex)];
+    }
 
     // Get the number of bits that are useful in the top word
     void getTopWordMask(bitwidth_t& bitsInMsw, uint64_t& mask) const;
@@ -526,7 +513,8 @@ private:
     static void buildDivideResult(SVInt* result, uint32_t* value, bitwidth_t bitWidth,
                                   bool signFlag, uint32_t numWords);
 
-    // Entry point for Knuth divide that handles corner cases and splitting the integers into 32-bit words.
+    // Entry point for Knuth divide that handles corner cases and splitting the integers into 32-bit
+    // words.
     static void divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords,
                        SVInt* quotient, SVInt* remainder);
 
@@ -547,7 +535,9 @@ private:
     static constexpr uint64_t Seed = 0x3765936aa9a6c480; // chosen by fair dice roll
 
     template<typename T, typename = void>
-    struct IsSignedHelper { using type = std::is_signed<T>; };
+    struct IsSignedHelper {
+        using type = std::is_signed<T>;
+    };
 
     template<typename T>
     struct IsSignedHelper<T, std::enable_if_t<std::is_enum_v<T>>> {
@@ -555,20 +545,39 @@ private:
     };
 };
 
-inline logic_t operator||(const SVInt& lhs, logic_t rhs) { return lhs != 0 || rhs; }
-inline logic_t operator||(logic_t lhs, const SVInt& rhs) { return lhs || rhs != 0; }
-inline logic_t operator&&(const SVInt& lhs, logic_t rhs) { return lhs != 0 && rhs; }
-inline logic_t operator&&(logic_t lhs, const SVInt& rhs) { return lhs && rhs != 0; }
+inline logic_t operator||(const SVInt& lhs, logic_t rhs) {
+    return lhs != 0 || rhs;
+}
+inline logic_t operator||(logic_t lhs, const SVInt& rhs) {
+    return lhs || rhs != 0;
+}
+inline logic_t operator&&(const SVInt& lhs, logic_t rhs) {
+    return lhs != 0 && rhs;
+}
+inline logic_t operator&&(logic_t lhs, const SVInt& rhs) {
+    return lhs && rhs != 0;
+}
 
-inline bool operator||(bool lhs, logic_t rhs) { return lhs || (bool)rhs; }
-inline bool operator||(logic_t lhs, bool rhs) { return (bool)lhs || rhs; }
-inline bool operator&&(bool lhs, logic_t rhs) { return lhs && (bool)rhs; }
-inline bool operator&&(logic_t lhs, bool rhs) { return (bool)lhs && rhs; }
+inline bool operator||(bool lhs, logic_t rhs) {
+    return lhs || (bool)rhs;
+}
+inline bool operator||(logic_t lhs, bool rhs) {
+    return (bool)lhs || rhs;
+}
+inline bool operator&&(bool lhs, logic_t rhs) {
+    return lhs && (bool)rhs;
+}
+inline bool operator&&(logic_t lhs, bool rhs) {
+    return (bool)lhs && rhs;
+}
 
 /// Implements logical implication: lhs -> rhs. This is equivalent to (!lhs || rhs).
-inline logic_t SVInt::logicalImplication(const SVInt& lhs, const SVInt& rhs) { return !lhs || rhs; }
+inline logic_t SVInt::logicalImplication(const SVInt& lhs, const SVInt& rhs) {
+    return !lhs || rhs;
+}
 
-/// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs -> lhs)).
+/// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs ->
+/// lhs)).
 inline logic_t SVInt::logicalEquivalence(const SVInt& lhs, const SVInt& rhs) {
     return logicalImplication(lhs, rhs) && logicalImplication(rhs, lhs);
 }
@@ -582,21 +591,19 @@ inline uint32_t clog2(const SVInt& v) {
 
 inline namespace literals {
 
-inline SVInt operator ""_si(const char* str, size_t size) {
+inline SVInt operator""_si(const char* str, size_t size) {
     return SVInt::fromString(string_view(str, size));
 }
 
-}
+} // namespace literals
 
-}
+} // namespace slang
 
 namespace std {
 
 template<>
 struct hash<slang::SVInt> {
-    size_t operator()(const slang::SVInt& sv) const {
-        return sv.hash();
-    }
+    size_t operator()(const slang::SVInt& sv) const { return sv.hash(); }
 };
 
-}
+} // namespace std

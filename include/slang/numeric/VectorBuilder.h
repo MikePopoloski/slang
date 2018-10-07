@@ -45,4 +45,4 @@ private:
     bool first = false;
 };
 
-}
+} // namespace slang

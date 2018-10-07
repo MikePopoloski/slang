@@ -23,10 +23,7 @@ class SyntaxNode;
 class Token;
 
 /// Various flags that we track on the token.
-enum class TokenFlags : uint8_t {
-    None = 0,
-    Missing = 1
-};
+enum class TokenFlags : uint8_t { None = 0, Missing = 1 };
 BITMASK_DEFINE_MAX_ELEMENT(TokenFlags, Missing);
 
 /// Various flags for numeric tokens.
@@ -42,12 +39,7 @@ struct NumericTokenFlags {
 };
 
 /// The original kind of identifier represented by a token.
-enum class IdentifierType : uint8_t {
-    Unknown,
-    Normal,
-    Escaped,
-    System
-};
+enum class IdentifierType : uint8_t { Unknown, Normal, Escaped, System };
 
 /// The kind of trivia we've stored.
 enum class TriviaKind : uint8_t {
@@ -68,9 +60,18 @@ enum class TriviaKind : uint8_t {
 class Trivia {
 private:
 #pragma pack(push, 4)
-    struct ShortStringView { const char* ptr; uint32_t len; };
-    struct ShortTokenSpan { const Token* ptr; uint32_t len; };
-    struct FullLocation { string_view text; SourceLocation location; };
+    struct ShortStringView {
+        const char* ptr;
+        uint32_t len;
+    };
+    struct ShortTokenSpan {
+        const Token* ptr;
+        uint32_t len;
+    };
+    struct FullLocation {
+        string_view text;
+        SourceLocation location;
+    };
 
     union {
         ShortStringView rawText;
@@ -211,7 +212,8 @@ public:
     [[nodiscard]] Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
 
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
-    static Token createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual, TokenKind expected, Token lastConsumed);
+    static Token createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual,
+                                TokenKind expected, Token lastConsumed);
 
 private:
     const Info* info;
@@ -597,7 +599,8 @@ enum class TokenKind : uint16_t {
     UnitSystemName,
     RootSystemName,
 
-    // directives (these get consumed by the preprocessor and don't make it downstream to the parser)
+    // directives (these get consumed by the preprocessor and don't make it downstream to the
+    // parser)
     Directive,
     IncludeFileName,
     MacroUsage,
@@ -608,4 +611,4 @@ enum class TokenKind : uint16_t {
     LineContinuation
 };
 
-}
+} // namespace slang

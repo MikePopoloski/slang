@@ -52,6 +52,7 @@ public:
 
 template<typename TVisitor, typename... Args>
 decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
+    // clang-format off
 #define SYMBOL(k) case SymbolKind::k: return visitor.visit(*static_cast<const k##Symbol*>(this), std::forward<Args>(args)...)
 #define TYPE(k) case SymbolKind::k: return visitor.visit(*static_cast<const k*>(this), std::forward<Args>(args)...)
     switch (kind) {
@@ -106,11 +107,13 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
     }
 #undef TYPE
 #undef SYMBOL
+    // clang-format on
     THROW_UNREACHABLE;
 }
 
 template<typename TVisitor, typename... Args>
 decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
+    // clang-format off
 #define CASE(k, n) case StatementKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
         case StatementKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
@@ -123,6 +126,7 @@ decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
         CASE(ForLoop, ForLoopStatement);
     }
 #undef CASE
+    // clang-format on
     THROW_UNREACHABLE;
 }
 
@@ -130,6 +134,7 @@ namespace detail {
 
 template<typename TExpression, typename TVisitor, typename... Args>
 decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... args) {
+    // clang-format off
 #define CASE(k, n) case ExpressionKind::k: return visitor.visit(\
                         *static_cast<std::conditional_t<std::is_const_v<TExpression>, const n*, n*>>(expr),\
                             std::forward<Args>(args)...)
@@ -156,10 +161,11 @@ decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... a
         CASE(DataType, DataTypeExpression);
     }
 #undef CASE
+    // clang-format on
     THROW_UNREACHABLE;
 }
 
-}
+} // namespace detail
 
 template<typename TVisitor, typename... Args>
 decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) const {
@@ -171,4 +177,4 @@ decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) {
     return detail::visitExpression(this, visitor, std::forward<Args>(args)...);
 }
 
-}
+} // namespace slang

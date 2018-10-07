@@ -39,9 +39,7 @@ protected:
     /// Helper class that maintains a sliding window of tokens, with lookahead.
     class Window {
     public:
-        explicit Window(Preprocessor& source) :
-            tokenSource(source)
-        {
+        explicit Window(Preprocessor& source) : tokenSource(source) {
             capacity = 32;
             buffer = new Token[capacity];
         }
@@ -75,10 +73,7 @@ protected:
 
     BumpAllocator& alloc;
 
-    enum class SkipAction {
-        Continue,
-        Abort
-    };
+    enum class SkipAction { Continue, Abort };
 
     template<typename T, typename... Args>
     T& allocate(Args&&... args) {
@@ -90,11 +85,12 @@ protected:
     /// token is missing, we don't even bother trying to parse the rest of the group.
     template<typename TParserFunc,
              typename TResult = decltype(std::declval<typename std::decay<TParserFunc>::type&>()())>
-    std::tuple<Token, Token, TResult>
-    parseGroupOrSkip(TokenKind startKind, TokenKind endKind, TParserFunc&& parseItem) {
+    std::tuple<Token, Token, TResult> parseGroupOrSkip(TokenKind startKind, TokenKind endKind,
+                                                       TParserFunc&& parseItem) {
         Token start = expect(startKind);
         if (start.isMissing())
-            return std::make_tuple(start, Token::createMissing(alloc, endKind, start.location()), nullptr);
+            return std::make_tuple(start, Token::createMissing(alloc, endKind, start.location()),
+                                   nullptr);
 
         TResult result = parseItem();
         Token end = expect(endKind);
@@ -103,17 +99,10 @@ protected:
 
     /// This is a generalized method for parsing a delimiter separated list of things
     /// with bookend tokens in a way that robustly handles bad tokens.
-    template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-    void parseSeparatedList(
-        TokenKind openKind,
-        TokenKind closeKind,
-        TokenKind separatorKind,
-        Token& openToken,
-        span<TokenOrSyntax>& list,
-        Token& closeToken,
-        DiagCode code,
-        TParserFunc&& parseItem
-    ) {
+    template<bool (*IsExpected)(TokenKind), bool (*IsEnd)(TokenKind), typename TParserFunc>
+    void parseSeparatedList(TokenKind openKind, TokenKind closeKind, TokenKind separatorKind,
+                            Token& openToken, span<TokenOrSyntax>& list, Token& closeToken,
+                            DiagCode code, TParserFunc&& parseItem) {
         openToken = expect(openKind);
         if (openToken.isMissing()) {
             closeToken = Token::createMissing(alloc, closeKind, openToken.location());
@@ -122,20 +111,16 @@ protected:
         }
 
         SmallVectorSized<TokenOrSyntax, 32> buffer;
-        parseSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken,
-                                                           code, std::forward<TParserFunc>(parseItem));
+        parseSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind,
+                                                           closeToken, code,
+                                                           std::forward<TParserFunc>(parseItem));
         list = buffer.copy(alloc);
     }
 
-    template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-    void parseSeparatedList(
-        SmallVector<TokenOrSyntax>& buffer,
-        TokenKind closeKind,
-        TokenKind separatorKind,
-        Token& closeToken,
-        DiagCode code,
-        TParserFunc&& parseItem
-    ) {
+    template<bool (*IsExpected)(TokenKind), bool (*IsEnd)(TokenKind), typename TParserFunc>
+    void parseSeparatedList(SmallVector<TokenOrSyntax>& buffer, TokenKind closeKind,
+                            TokenKind separatorKind, Token& closeToken, DiagCode code,
+                            TParserFunc&& parseItem) {
         auto current = peek();
         if (IsEnd(current.kind)) {
             closeToken = expect(closeKind);
@@ -146,13 +131,14 @@ protected:
         if (!IsExpected(current.kind)) {
             // If there's already an error here don't report another; otherwise use
             // the provided diagnostic code to report an error.
-            auto location = window.lastConsumed ?
-                            window.lastConsumed.location() + window.lastConsumed.rawText().length() :
-                            current.location();
+            auto location = window.lastConsumed ? window.lastConsumed.location() +
+                                                      window.lastConsumed.rawText().length()
+                                                : current.location();
 
             Diagnostics& diagnostics = getDiagnostics();
             if (diagnostics.empty() || diagnostics.back().code != DiagCode::ExpectedToken ||
-                (diagnostics.back().location != location && diagnostics.back().location != current.location())) {
+                (diagnostics.back().location != location &&
+                 diagnostics.back().location != current.location())) {
 
                 addDiag(code, location);
             }
@@ -174,7 +160,8 @@ protected:
 
                         if (IsEnd(peek().kind)) {
                             // Specific check for misplaced trailing separators here.
-                            auto& diag = addDiag(DiagCode::MisplacedTrailingSeparator, window.lastConsumed.location());
+                            auto& diag = addDiag(DiagCode::MisplacedTrailingSeparator,
+                                                 window.lastConsumed.location());
                             diag << getTokenKindText(window.lastConsumed.kind);
                             break;
                         }
@@ -197,7 +184,7 @@ protected:
         closeToken = expect(closeKind);
     }
 
-    template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
+    template<bool (*IsExpected)(TokenKind), bool (*IsAbort)(TokenKind)>
     SkipAction skipBadTokens(DiagCode code) {
         auto current = peek();
         bool first = true;
@@ -220,4 +207,4 @@ private:
     SmallVectorSized<Token, 4> skippedTokens;
 };
 
-}
+} // namespace slang
