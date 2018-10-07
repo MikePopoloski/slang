@@ -34,14 +34,18 @@ private:
     friend class Scope;
 
     void bindBody();
-    void bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const Statement*>& statements);
+    void bindVariableDecl(const DataDeclarationSyntax& syntax,
+                          SmallVector<const Statement*>& statements);
 
     Statement& bindStatementList(const SyntaxList<SyntaxNode>& items);
     Statement& bindStatement(const StatementSyntax& syntax, const BindContext& context);
     Statement& bindReturnStatement(const ReturnStatementSyntax& syntax, const BindContext& context);
-    Statement& bindConditionalStatement(const ConditionalStatementSyntax& syntax, const BindContext& context);
-    Statement& bindForLoopStatement(const ForLoopStatementSyntax& syntax, const BindContext& context);
-    Statement& bindExpressionStatement(const ExpressionStatementSyntax& syntax, const BindContext& context);
+    Statement& bindConditionalStatement(const ConditionalStatementSyntax& syntax,
+                                        const BindContext& context);
+    Statement& bindForLoopStatement(const ForLoopStatementSyntax& syntax,
+                                    const BindContext& context);
+    Statement& bindExpressionStatement(const ExpressionStatementSyntax& syntax,
+                                       const BindContext& context);
     Statement& bindBlockStatement(const BlockStatementSyntax& syntax, const BindContext& context);
 
     Statement& badStmt(const Statement* stmt);
@@ -50,4 +54,4 @@ private:
     const SyntaxNode* sourceSyntax = nullptr;
 };
 
-}
+} // namespace slang

@@ -111,11 +111,13 @@ public:
 
     /// Instead of loading source from a file, copy it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignText(string_view path, string_view text, SourceLocation includedFrom = SourceLocation());
+    SourceBuffer assignText(string_view path, string_view text,
+                            SourceLocation includedFrom = SourceLocation());
 
     /// Instead of loading source from a file, move it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignBuffer(string_view path, std::vector<char>&& buffer, SourceLocation includedFrom = SourceLocation());
+    SourceBuffer assignBuffer(string_view path, std::vector<char>&& buffer,
+                              SourceLocation includedFrom = SourceLocation());
 
     /// Read in a source file from disk.
     SourceBuffer readSource(string_view path);
@@ -124,7 +126,8 @@ public:
     SourceBuffer readHeader(string_view path, SourceLocation includedFrom, bool isSystemPath);
 
     /// Adds a line directive at the given location.
-    void addLineDirective(SourceLocation location, uint32_t lineNum, string_view name, uint8_t level);
+    void addLineDirective(SourceLocation location, uint32_t lineNum, string_view name,
+                          uint8_t level);
 
 private:
     uint32_t unnamedBufferCount = 0;
@@ -132,10 +135,10 @@ private:
     // Stores information specified in a `line directive, which alters the
     // line number and file name that we report in diagnostics.
     struct LineDirectiveInfo {
-        std::string name;           // File name set by directive
-        uint32_t lineInFile;        // Actual file line where directive occurred
-        uint32_t lineOfDirective;   // Line number set by directive
-        uint8_t level;              // Level of directive. Either 0, 1, or 2.
+        std::string name;         // File name set by directive
+        uint32_t lineInFile;      // Actual file line where directive occurred
+        uint32_t lineOfDirective; // Line number set by directive
+        uint8_t level;            // Level of directive. Either 0, 1, or 2.
 
         LineDirectiveInfo(std::string&& fname, uint32_t lif, uint32_t lod, uint8_t level) :
             name(std::move(fname)), lineInFile(lif), lineOfDirective(lod), level(level) {}
@@ -144,16 +147,14 @@ private:
     // Stores actual file contents and metadata; only one per loaded file
     class FileData {
     public:
-        std::string name;                               // name of the file
-        std::vector<char> mem;                          // file contents
-        std::vector<uint32_t> lineOffsets;              // cache of compute line offsets
-        std::vector<LineDirectiveInfo> lineDirectives;  // cache of line directives
-        const fs::path* directory;                      // directory in which the file exists
+        std::string name;                              // name of the file
+        std::vector<char> mem;                         // file contents
+        std::vector<uint32_t> lineOffsets;             // cache of compute line offsets
+        std::vector<LineDirectiveInfo> lineDirectives; // cache of line directives
+        const fs::path* directory;                     // directory in which the file exists
 
         FileData(const fs::path* directory, std::string name, std::vector<char>&& data) :
-            name(std::move(name)),
-            mem(std::move(data)),
-            directory(directory) {}
+            name(std::move(name)), mem(std::move(data)), directory(directory) {}
 
         // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
         // line directive of the given raw line number, or nullptr if there is none
@@ -184,8 +185,10 @@ private:
         SourceLocation expansionEnd;
 
         ExpansionInfo() {}
-        ExpansionInfo(SourceLocation originalLoc, SourceLocation expansionStart, SourceLocation expansionEnd) :
-            originalLoc(originalLoc), expansionStart(expansionStart), expansionEnd(expansionEnd) {}
+        ExpansionInfo(SourceLocation originalLoc, SourceLocation expansionStart,
+                      SourceLocation expansionEnd) :
+            originalLoc(originalLoc),
+            expansionStart(expansionStart), expansionEnd(expansionEnd) {}
     };
 
     // index from BufferID to buffer metadata
@@ -208,7 +211,8 @@ private:
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom);
 
     SourceBuffer openCached(const fs::path& fullPath, SourceLocation includedFrom);
-    SourceBuffer cacheBuffer(const fs::path& path, SourceLocation includedFrom, std::vector<char>&& buffer);
+    SourceBuffer cacheBuffer(const fs::path& path, SourceLocation includedFrom,
+                             std::vector<char>&& buffer);
 
     // Get raw line number of a file location, ignoring any line directives
     uint32_t getRawLineNumber(SourceLocation location) const;
@@ -218,4 +222,4 @@ private:
     static bool readFile(const fs::path& path, std::vector<char>& buffer);
 };
 
-}
+} // namespace slang

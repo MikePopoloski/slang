@@ -26,13 +26,34 @@ public:
     SyntaxPrinter& print(const SyntaxNode& node);
     SyntaxPrinter& print(const SyntaxTree& tree);
 
-    SyntaxPrinter& setIncludeTrivia(bool include) { includeTrivia = include; return *this; }
-    SyntaxPrinter& setIncludeMissing(bool include) { includeMissing = include; return *this; }
-    SyntaxPrinter& setIncludeSkipped(bool include) { includeSkipped = include; return *this; }
-    SyntaxPrinter& setIncludeDirectives(bool include) { includeDirectives = include; return *this; }
-    SyntaxPrinter& setIncludePreprocessed(bool include) { includePreprocessed = include; return *this; }
-    SyntaxPrinter& setIncludeComments(bool include) { includeComments = include; return *this; }
-    SyntaxPrinter& setSquashNewlines(bool include) { squashNewlines = include; return *this; }
+    SyntaxPrinter& setIncludeTrivia(bool include) {
+        includeTrivia = include;
+        return *this;
+    }
+    SyntaxPrinter& setIncludeMissing(bool include) {
+        includeMissing = include;
+        return *this;
+    }
+    SyntaxPrinter& setIncludeSkipped(bool include) {
+        includeSkipped = include;
+        return *this;
+    }
+    SyntaxPrinter& setIncludeDirectives(bool include) {
+        includeDirectives = include;
+        return *this;
+    }
+    SyntaxPrinter& setIncludePreprocessed(bool include) {
+        includePreprocessed = include;
+        return *this;
+    }
+    SyntaxPrinter& setIncludeComments(bool include) {
+        includeComments = include;
+        return *this;
+    }
+    SyntaxPrinter& setSquashNewlines(bool include) {
+        squashNewlines = include;
+        return *this;
+    }
 
     std::string str() const { return buffer; }
 
@@ -52,4 +73,4 @@ private:
     bool squashNewlines = true;
 };
 
-}
+} // namespace slang

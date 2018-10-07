@@ -41,8 +41,7 @@ public:
         size_t hc = std::hash<string_view>()(key);
         uint32_t index = hc & (capacity - 1);
         do {
-            if (table[index].hashCode == hc &&
-                table[index].key == key) {
+            if (table[index].hashCode == hc && table[index].key == key) {
                 value = table[index].value;
                 return true;
             }
@@ -73,4 +72,4 @@ private:
     }
 };
 
-}
+} // namespace slang

@@ -160,7 +160,7 @@ private:
     // determine ordering during lookups) will be set here.
     mutable const Scope* parentScope = nullptr;
     mutable const Symbol* nextInScope = nullptr;
-    mutable Index indexInScope {0};
+    mutable Index indexInScope{ 0 };
 
     const SyntaxNode* originatingSyntax = nullptr;
 };
@@ -180,7 +180,8 @@ public:
 
     /// Sets the symbol's declared type.
     void setDeclaredType(const DataTypeSyntax& newType) { declaredType.setTypeSyntax(newType); }
-    void setDeclaredType(const DataTypeSyntax& newType, const SyntaxList<VariableDimensionSyntax>& newDimensions) {
+    void setDeclaredType(const DataTypeSyntax& newType,
+                         const SyntaxList<VariableDimensionSyntax>& newDimensions) {
         declaredType.setTypeSyntax(newType);
         declaredType.setDimensionSyntax(newDimensions);
     }
@@ -197,7 +198,9 @@ public:
     }
 
     /// Initializes the value's dimension and initializer syntax from the given declarator.
-    void setFromDeclarator(const VariableDeclaratorSyntax& decl) { declaredType.setFromDeclarator(decl); }
+    void setFromDeclarator(const VariableDeclaratorSyntax& decl) {
+        declaredType.setFromDeclarator(decl);
+    }
 
     /// Gets the value of the symbol if it is a compile time constant.
     const ConstantValue& getConstantValue() const { return declaredType.getConstantValue(); }
@@ -215,4 +218,4 @@ private:
 /// Serialization of arbitrary symbols to JSON.
 void to_json(json& j, const Symbol& symbol);
 
-}
+} // namespace slang

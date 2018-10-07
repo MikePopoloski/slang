@@ -47,35 +47,43 @@ BITMASK_DEFINE_MAX_ELEMENT(IntegralFlags, Reg);
 class Type : public Symbol {
 public:
     /// Gets the canonical type for this type, which involves unwrapping any type aliases.
-    const Type& getCanonicalType() const { if (!canonical) resolveCanonical(); return *canonical; }
+    const Type& getCanonicalType() const {
+        if (!canonical)
+            resolveCanonical();
+        return *canonical;
+    }
 
-    /// Gets the total width of the type in bits. Returns zero if the type does not have a statically known size.
+    /// Gets the total width of the type in bits. Returns zero if the type does not have a
+    /// statically known size.
     bitwidth_t getBitWidth() const;
 
-    /// Indicates whether the type can represent negative numeric values. For non-numeric types, this
-    /// always returns false.
+    /// Indicates whether the type can represent negative numeric values. For non-numeric types,
+    /// this always returns false.
     bool isSigned() const;
 
-    /// Indicates whether the type can represent unknown and high impedance numeric values. For non-numeric
-    /// types, this always returns false.
+    /// Indicates whether the type can represent unknown and high impedance numeric values. For
+    /// non-numeric types, this always returns false.
     bool isFourState() const;
 
-    /// Indicates whether this is an aggregate type, which includes all unpacked structs, unions, and arrays.
+    /// Indicates whether this is an aggregate type, which includes all unpacked structs, unions,
+    /// and arrays.
     bool isAggregate() const;
 
-    /// Indicates whether this is a singular type, which is the opposite of an aggregate type (that is,
-    /// all types except unpacked structs, unions, and arrays).
+    /// Indicates whether this is a singular type, which is the opposite of an aggregate type (that
+    /// is, all types except unpacked structs, unions, and arrays).
     bool isSingular() const { return !isAggregate(); }
 
-    /// Indicates whether this is an integral type, which includes all scalar types, predefined integer types,
-    /// packed arrays, packed structures, packed unions, and enum types.
+    /// Indicates whether this is an integral type, which includes all scalar types, predefined
+    /// integer types, packed arrays, packed structures, packed unions, and enum types.
     bool isIntegral() const;
 
     /// Indicates whether this is a scalar integral type (bit, logic, or reg).
     bool isScalar() const { return getCanonicalType().kind == SymbolKind::ScalarType; }
 
     /// Indicates whether this is a predefined integer type.
-    bool isPredefinedInteger() const { return getCanonicalType().kind == SymbolKind::PredefinedIntegerType; }
+    bool isPredefinedInteger() const {
+        return getCanonicalType().kind == SymbolKind::PredefinedIntegerType;
+    }
 
     /// Indicates whether this is a simple bit vector type, which encompasses all predefined integer
     /// types as well as scalar and vector types.
@@ -91,7 +99,9 @@ public:
     bool isPackedArray() const { return getCanonicalType().kind == SymbolKind::PackedArrayType; }
 
     /// Indicates whether this is an unpacked array type.
-    bool isUnpackedArray() const { return getCanonicalType().kind == SymbolKind::UnpackedArrayType; }
+    bool isUnpackedArray() const {
+        return getCanonicalType().kind == SymbolKind::UnpackedArrayType;
+    }
 
     /// Indicates whether this is an enum type.
     bool isEnum() const { return getCanonicalType().kind == SymbolKind::EnumType; }
@@ -175,7 +185,8 @@ protected:
 
     mutable const Type* canonical;
 
-    static optional<ConstantRange> evaluateDimension(Compilation& compilation, const SelectorSyntax& syntax,
+    static optional<ConstantRange> evaluateDimension(Compilation& compilation,
+                                                     const SelectorSyntax& syntax,
                                                      LookupLocation location, const Scope& scope);
 
 private:
@@ -224,11 +235,7 @@ protected:
 /// Represents the single-bit scalar types.
 class ScalarType : public IntegralType {
 public:
-    enum Kind {
-        Bit,
-        Logic,
-        Reg
-    } scalarKind;
+    enum Kind { Bit, Logic, Reg } scalarKind;
 
     ScalarType(Kind scalarKind);
     ScalarType(Kind scalarKind, bool isSigned);
@@ -239,14 +246,7 @@ public:
 /// Represents the predefined integer types, which are essentially predefined vector types.
 class PredefinedIntegerType : public IntegralType {
 public:
-    enum Kind {
-        ShortInt,
-        Int,
-        LongInt,
-        Byte,
-        Integer,
-        Time
-    } integerKind;
+    enum Kind { ShortInt, Int, LongInt, Byte, Integer, Time } integerKind;
 
     PredefinedIntegerType(Kind integerKind);
     PredefinedIntegerType(Kind integerKind, bool isSigned);
@@ -256,14 +256,11 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PredefinedIntegerType; }
 };
 
-/// Represents one of the predefined floating point types, which are used for representing real numbers.
+/// Represents one of the predefined floating point types, which are used for representing real
+/// numbers.
 class FloatingType : public Type {
 public:
-    enum Kind {
-        Real,
-        ShortReal,
-        RealTime
-    } floatKind;
+    enum Kind { Real, ShortReal, RealTime } floatKind;
 
     explicit FloatingType(Kind floatKind);
 
@@ -279,7 +276,8 @@ class EnumType : public IntegralType, public Scope {
 public:
     const IntegralType& baseType;
 
-    EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType, const Scope& scope);
+    EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType,
+             const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope, bool forceSigned);
@@ -306,7 +304,8 @@ private:
     const ConstantValue* value = nullptr;
 };
 
-/// Represents a packed array of some simple element type (vectors, packed structures, other packed arrays).
+/// Represents a packed array of some simple element type (vectors, packed structures, other packed
+/// arrays).
 class PackedArrayType : public IntegralType {
 public:
     const Type& elementType;
@@ -342,8 +341,7 @@ public:
     uint32_t offset;
 
     FieldSymbol(string_view name, SourceLocation loc, uint32_t offset) :
-        VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic),
-        offset(offset) {}
+        VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic), offset(offset) {}
 
     /// Indicates whether the field is part of a packed structure or union.
     bool isPacked() const;
@@ -354,7 +352,8 @@ public:
 /// Represents a packed structure of members.
 class PackedStructType : public IntegralType, public Scope {
 public:
-    PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState);
+    PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
+                     bool isFourState);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope, bool forceSigned);
@@ -432,22 +431,15 @@ public:
 /// forms a linked list, headed by the actual type definition.
 class ForwardingTypedefSymbol : public Symbol {
 public:
-    enum Category {
-        None,
-        Enum,
-        Struct,
-        Union,
-        Class,
-        InterfaceClass
-    } category;
+    enum Category { None, Enum, Struct, Union, Class, InterfaceClass } category;
 
     ForwardingTypedefSymbol(string_view name, SourceLocation loc, Category category) :
         Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}
 
     static const ForwardingTypedefSymbol& fromSyntax(Compilation& compilation,
                                                      const ForwardTypedefDeclarationSyntax& syntax);
-    static const ForwardingTypedefSymbol& fromSyntax(Compilation& compilation,
-                                                     const ForwardInterfaceClassTypedefDeclarationSyntax& syntax);
+    static const ForwardingTypedefSymbol& fromSyntax(
+        Compilation& compilation, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getNextForwardDecl() const { return next; }
@@ -466,13 +458,12 @@ public:
     DeclaredType targetType;
 
     TypeAliasType(string_view name, SourceLocation loc) :
-        Type(SymbolKind::TypeAlias, name, loc),
-        targetType(*this)
-    {
+        Type(SymbolKind::TypeAlias, name, loc), targetType(*this) {
         canonical = nullptr;
     }
 
-    static const TypeAliasType& fromSyntax(Compilation& compilation, const TypedefDeclarationSyntax& syntax);
+    static const TypeAliasType& fromSyntax(Compilation& compilation,
+                                           const TypedefDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getFirstForwardDecl() const { return firstForward; }
@@ -538,4 +529,4 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::NetType; }
 };
 
-}
+} // namespace slang

@@ -58,17 +58,14 @@ protected:
     Segment* head;
     byte* endPtr;
 
-    enum {
-        INITIAL_SIZE = 512,
-        SEGMENT_SIZE = 4096
-    };
+    enum { INITIAL_SIZE = 512, SEGMENT_SIZE = 4096 };
 
     // Slow path handling of allocation.
     byte* allocateSlow(size_t size, size_t alignment);
 
     static byte* alignPtr(byte* ptr, size_t alignment) {
-        return reinterpret_cast<byte*>(
-            (reinterpret_cast<uintptr_t>(ptr) + alignment - 1) & ~(alignment - 1));
+        return reinterpret_cast<byte*>((reinterpret_cast<uintptr_t>(ptr) + alignment - 1) &
+                                       ~(alignment - 1));
     }
 
     static Segment* allocSegment(Segment* prev, size_t size);
@@ -95,4 +92,4 @@ public:
     }
 };
 
-}
+} // namespace slang

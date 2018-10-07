@@ -44,4 +44,4 @@ private:
     FormatBuffer buffer;
 };
 
-}
+} // namespace slang

@@ -7,8 +7,8 @@
 #pragma once
 
 #include <cmath>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 
 #include "slang/parsing/Token.h"
@@ -220,7 +220,9 @@ public:
 private:
     TokenOrSyntax getChild(uint32_t index) override final { return (*this)[index]; }
     ConstTokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
-    void setChild(uint32_t index, TokenOrSyntax child) override final { (*this)[index] = child.token(); }
+    void setChild(uint32_t index, TokenOrSyntax child) override final {
+        (*this)[index] = child.token();
+    }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const override final {
         return alloc.emplace<TokenList>(*this);
@@ -242,14 +244,12 @@ public:
     using size_type = span<TokenOrSyntax>::size_type;
 
     template<typename U>
-    class iterator_base : public iterator_facade<iterator_base<U>,
-                                                 std::random_access_iterator_tag,
-                                                 U, size_type> {
+    class iterator_base
+        : public iterator_facade<iterator_base<U>, std::random_access_iterator_tag, U, size_type> {
     public:
         using ParentList = std::conditional_t<std::is_const_v<std::remove_pointer_t<U>>,
                                               const SeparatedSyntaxList, SeparatedSyntaxList>;
-        iterator_base(ParentList& list, size_type index) :
-            list(list), index(index) {}
+        iterator_base(ParentList& list, size_type index) : list(list), index(index) {}
 
         bool operator==(const iterator_base& other) const {
             return &list == &other.list && index == other.index;
@@ -261,11 +261,17 @@ public:
 
         size_type operator-(const iterator_base& other) const { return index - other.index; }
 
-        iterator_base& operator+=(int32_t n) { index += n; return *this; }
-        iterator_base& operator-=(int32_t n) { index -= n; return *this; }
+        iterator_base& operator+=(int32_t n) {
+            index += n;
+            return *this;
+        }
+        iterator_base& operator-=(int32_t n) {
+            index -= n;
+            return *this;
+        }
 
     private:
-        ParentList & list;
+        ParentList& list;
         size_type index;
     };
 
@@ -778,16 +784,16 @@ enum class SyntaxKind : uint16_t {
 
 template<typename T>
 SyntaxList<T>::SyntaxList(span<T*> elements) :
-    SyntaxListBase(SyntaxKind::SyntaxList, (uint32_t)elements.size()),
-    span<T*>(elements) {}
+    SyntaxListBase(SyntaxKind::SyntaxList, (uint32_t)elements.size()), span<T*>(elements) {
+}
 
 inline TokenList::TokenList(span<Token> elements) :
-    SyntaxListBase(SyntaxKind::TokenList, (uint32_t)elements.size()),
-    span<Token>(elements) {}
+    SyntaxListBase(SyntaxKind::TokenList, (uint32_t)elements.size()), span<Token>(elements) {
+}
 
 template<typename T>
 SeparatedSyntaxList<T>::SeparatedSyntaxList(span<TokenOrSyntax> elements) :
-    SyntaxListBase(SyntaxKind::SeparatedList, (uint32_t)elements.size()),
-    elements(elements) {}
-
+    SyntaxListBase(SyntaxKind::SeparatedList, (uint32_t)elements.size()), elements(elements) {
 }
+
+} // namespace slang

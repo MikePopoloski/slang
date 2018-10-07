@@ -8,8 +8,8 @@
 
 #include <flat_hash_map.hpp>
 
-#include "slang/syntax/AllSyntax.h"
 #include "slang/symbols/Symbol.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/util/Iterator.h"
 #include "slang/util/Util.h"
 
@@ -92,8 +92,7 @@ public:
 private:
     friend class Scope;
 
-    LookupLocation(const Scope* scope_, uint32_t index) :
-        scope(scope_), index(index) {}
+    LookupLocation(const Scope* scope_, uint32_t index) : scope(scope_), index(index) {}
 
     const Scope* scope = nullptr;
     uint32_t index = 0;
@@ -147,13 +146,13 @@ public:
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 
     /// Finds a direct child member with the given name. This won't return anything weird like
-    /// forwarding typedefs or imported symbols, but will return things like transparent enum members.
-    /// If no symbol is found with the given name, nullptr is returned.
+    /// forwarding typedefs or imported symbols, but will return things like transparent enum
+    /// members. If no symbol is found with the given name, nullptr is returned.
     const Symbol* find(string_view name) const;
 
     /// Finds a direct child member with the given name. This won't return anything weird like
-    /// forwarding typdefs or imported symbols, but will return things like transparent enum members.
-    /// This method expects that the symbol will be found and be of the given type `T`.
+    /// forwarding typdefs or imported symbols, but will return things like transparent enum
+    /// members. This method expects that the symbol will be found and be of the given type `T`.
     template<typename T>
     const T& find(string_view name) const {
         const Symbol* sym = find(name);
@@ -161,17 +160,20 @@ public:
         return sym->as<T>();
     }
 
-    void lookupName(const NameSyntax& syntax, LookupLocation location,
-                    LookupNameKind nameKind, bitmask<LookupFlags> flags, LookupResult& result) const;
+    void lookupName(const NameSyntax& syntax, LookupLocation location, LookupNameKind nameKind,
+                    bitmask<LookupFlags> flags, LookupResult& result) const;
 
     const Symbol* lookupName(string_view name, LookupLocation location = LookupLocation::max,
                              LookupNameKind nameKind = LookupNameKind::Variable,
                              bitmask<LookupFlags> flags = LookupFlags::None) const;
 
-    /// Gets a specific member at the given zero-based index, expecting it to be of the specified type.
-    /// This expects (and asserts) that the member at the given index is of the specified type `T`.
+    /// Gets a specific member at the given zero-based index, expecting it to be of the specified
+    /// type. This expects (and asserts) that the member at the given index is of the specified type
+    /// `T`.
     template<typename T>
-    const T& memberAt(uint32_t index) const { return std::next(members().begin(), index)->as<T>(); }
+    const T& memberAt(uint32_t index) const {
+        return std::next(members().begin(), index)->as<T>();
+    }
 
     /// An iterator for members in the scope.
     class iterator : public iterator_facade<iterator, std::forward_iterator_tag, const Symbol> {
@@ -201,22 +203,20 @@ public:
     };
 
     template<typename SpecificType>
-    class specific_symbol_iterator : public iterator_facade<specific_symbol_iterator<SpecificType>,
-                                                            std::forward_iterator_tag,
-                                                            const SpecificType> {
+    class specific_symbol_iterator
+        : public iterator_facade<specific_symbol_iterator<SpecificType>, std::forward_iterator_tag,
+                                 const SpecificType> {
     public:
-        specific_symbol_iterator(const Symbol* firstSymbol) :
-            current(firstSymbol)
-        {
-            skipToNext();
-        }
+        specific_symbol_iterator(const Symbol* firstSymbol) : current(firstSymbol) { skipToNext(); }
 
         specific_symbol_iterator& operator=(const specific_symbol_iterator& other) {
             current = other.current;
             return *this;
         }
 
-        bool operator==(const specific_symbol_iterator& other) const { return current == other.current; }
+        bool operator==(const specific_symbol_iterator& other) const {
+            return current == other.current;
+        }
 
         const SpecificType& operator*() const { return current->as<SpecificType>(); }
         const SpecificType& operator*() { return current->as<SpecificType>(); }
@@ -260,7 +260,10 @@ protected:
 
     /// Before we access any members to do lookups or return iterators, make sure
     /// the scope is fully elaborated.
-    void ensureElaborated() const { if (deferredMemberIndex != DeferredMemberIndex::Invalid) elaborate(); }
+    void ensureElaborated() const {
+        if (deferredMemberIndex != DeferredMemberIndex::Invalid)
+            elaborate();
+    }
 
     void setStatement(StatementBodiedScope& stmt) { getOrAddDeferredData().setStatement(stmt); }
 
@@ -337,9 +340,11 @@ private:
     void lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
                            SourceRange sourceRange, LookupResult& result) const;
 
-    // Performs a qualified lookup in this scope using all of the various language rules for name resolution.
+    // Performs a qualified lookup in this scope using all of the various language rules for name
+    // resolution.
     void lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
-                         LookupNameKind nameKind, bitmask<LookupFlags> flags, LookupResult& result) const;
+                         LookupNameKind nameKind, bitmask<LookupFlags> flags,
+                         LookupResult& result) const;
 
     // The compilation that owns this scope.
     Compilation& compilation;
@@ -359,11 +364,11 @@ private:
 
     // If this scope has any deferred member symbols they'll be temporarily
     // stored in a sideband list in the compilation object until we expand them.
-    mutable DeferredMemberIndex deferredMemberIndex {0};
+    mutable DeferredMemberIndex deferredMemberIndex{ 0 };
 
     // If this scope has any wildcard import directives we'll keep track of them
     // in a sideband list in the compilation object.
-    ImportDataIndex importDataIndex {0};
+    ImportDataIndex importDataIndex{ 0 };
 };
 
-}
+} // namespace slang

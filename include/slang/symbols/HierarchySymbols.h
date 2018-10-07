@@ -21,8 +21,7 @@ class PortSymbol;
 class CompilationUnitSymbol : public Symbol, public Scope {
 public:
     explicit CompilationUnitSymbol(Compilation& compilation) :
-        Symbol(SymbolKind::CompilationUnit, "", SourceLocation()),
-        Scope(compilation, this) {}
+        Symbol(SymbolKind::CompilationUnit, "", SourceLocation()), Scope(compilation, this) {}
 
     void toJson(json&) const {}
 
@@ -33,12 +32,12 @@ public:
 class PackageSymbol : public Symbol, public Scope {
 public:
     PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::Package, name, loc),
-        Scope(compilation, this) {}
+        Symbol(SymbolKind::Package, name, loc), Scope(compilation, this) {}
 
     void toJson(json&) const {}
 
-    static PackageSymbol& fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax);
+    static PackageSymbol& fromSyntax(Compilation& compilation,
+                                     const ModuleDeclarationSyntax& syntax);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Package; }
 };
 
@@ -49,10 +48,10 @@ public:
     span<const ParameterSymbol* const> parameters;
     DefinitionKind definitionKind;
 
-    DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc, DefinitionKind definitionKind) :
+    DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                     DefinitionKind definitionKind) :
         Symbol(SymbolKind::Definition, name, loc),
-        Scope(compilation, this),
-        definitionKind(definitionKind) {}
+        Scope(compilation, this), definitionKind(definitionKind) {}
 
     iterator_range<specific_symbol_iterator<PortSymbol>> ports() const {
         return membersOfType<PortSymbol>();
@@ -60,7 +59,8 @@ public:
 
     void toJson(json&) const {}
 
-    static DefinitionSymbol& fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax);
+    static DefinitionSymbol& fromSyntax(Compilation& compilation,
+                                        const ModuleDeclarationSyntax& syntax);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Definition; }
 };
 
@@ -68,12 +68,14 @@ public:
 class InstanceSymbol : public Symbol, public Scope {
 public:
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
-                           LookupLocation location, const Scope& scope, SmallVector<const Symbol*>& results);
+                           LookupLocation location, const Scope& scope,
+                           SmallVector<const Symbol*>& results);
 
     static bool isKind(SymbolKind kind);
 
 protected:
-    InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc) :
+    InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name,
+                   SourceLocation loc) :
         Symbol(kind, name, loc),
         Scope(compilation, this) {}
 
@@ -87,11 +89,12 @@ public:
 
     void toJson(json&) const {}
 
-    static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
+    static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name,
+                                             SourceLocation loc,
                                              const DefinitionSymbol& definition);
 
-    static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
-                                             const DefinitionSymbol& definition,
+    static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name,
+                                             SourceLocation loc, const DefinitionSymbol& definition,
                                              span<const Expression*> parameterOverrides);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
@@ -104,7 +107,8 @@ public:
 
     void toJson(json&) const {}
 
-    static InterfaceInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
+    static InterfaceInstanceSymbol& instantiate(Compilation& compilation, string_view name,
+                                                SourceLocation loc,
                                                 const DefinitionSymbol& definition,
                                                 span<const Expression*> parameterOverrides);
 
@@ -114,12 +118,12 @@ public:
 class SequentialBlockSymbol : public Symbol, public StatementBodiedScope {
 public:
     SequentialBlockSymbol(Compilation& compilation, SourceLocation loc) :
-        Symbol(SymbolKind::SequentialBlock, "", loc),
-        StatementBodiedScope(compilation, this) {}
+        Symbol(SymbolKind::SequentialBlock, "", loc), StatementBodiedScope(compilation, this) {}
 
     void toJson(json&) const {}
 
-    static SequentialBlockSymbol& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax);
+    static SequentialBlockSymbol& fromSyntax(Compilation& compilation,
+                                             const BlockStatementSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::SequentialBlock; }
 };
@@ -128,14 +132,15 @@ class ProceduralBlockSymbol : public Symbol, public StatementBodiedScope {
 public:
     ProceduralBlockKind procedureKind;
 
-    ProceduralBlockSymbol(Compilation& compilation, SourceLocation loc, ProceduralBlockKind procedureKind) :
+    ProceduralBlockSymbol(Compilation& compilation, SourceLocation loc,
+                          ProceduralBlockKind procedureKind) :
         Symbol(SymbolKind::ProceduralBlock, "", loc),
-        StatementBodiedScope(compilation, this),
-        procedureKind(procedureKind) {}
+        StatementBodiedScope(compilation, this), procedureKind(procedureKind) {}
 
     void toJson(json& j) const;
 
-    static ProceduralBlockSymbol& fromSyntax(Compilation& compilation, const ProceduralBlockSyntax& syntax);
+    static ProceduralBlockSymbol& fromSyntax(Compilation& compilation,
+                                             const ProceduralBlockSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ProceduralBlock; }
 };
@@ -145,8 +150,7 @@ public:
 class GenerateBlockSymbol : public Symbol, public Scope {
 public:
     GenerateBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::GenerateBlock, name, loc),
-        Scope(compilation, this) {}
+        Symbol(SymbolKind::GenerateBlock, name, loc), Scope(compilation, this) {}
 
     void toJson(json&) const {}
 
@@ -162,8 +166,7 @@ public:
 class GenerateBlockArraySymbol : public Symbol, public Scope {
 public:
     GenerateBlockArraySymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::GenerateBlockArray, name, loc),
-        Scope(compilation, this) {}
+        Symbol(SymbolKind::GenerateBlockArray, name, loc), Scope(compilation, this) {}
 
     void toJson(json&) const {}
 
@@ -189,4 +192,4 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Root; }
 };
 
-}
+} // namespace slang

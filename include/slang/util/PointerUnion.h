@@ -63,25 +63,26 @@ public:
         return reinterpret_cast<T>(getPointer());
     }
 
-    explicit operator bool() const {
-        return reinterpret_cast<T1>(getPointer());
+    explicit operator bool() const { return reinterpret_cast<T1>(getPointer()); }
+
+    const PointerUnion& operator=(std::nullptr_t) {
+        value = 0;
+        return *this;
+    }
+    const PointerUnion& operator=(T1 v) {
+        set(v, 0);
+        return *this;
+    }
+    const PointerUnion& operator=(T2 v) {
+        set(v, 1);
+        return *this;
     }
 
-    const PointerUnion& operator=(std::nullptr_t) { value = 0; return *this; }
-    const PointerUnion& operator=(T1 v) { set(v, 0); return *this; }
-    const PointerUnion& operator=(T2 v) { set(v, 1); return *this; }
+    bool operator==(const PointerUnion& other) const { return value == other.value; }
 
-    bool operator==(const PointerUnion& other) const {
-        return value == other.value;
-    }
+    bool operator!=(const PointerUnion& other) const { return value != other.value; }
 
-    bool operator!=(const PointerUnion& other) const {
-        return value != other.value;
-    }
-
-    bool operator<(const PointerUnion& other) const {
-        return value < other.value;
-    }
+    bool operator<(const PointerUnion& other) const { return value < other.value; }
 };
 
-}
+} // namespace slang

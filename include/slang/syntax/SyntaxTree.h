@@ -26,7 +26,8 @@ class SyntaxTree {
 public:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
                std::shared_ptr<SyntaxTree> parent = nullptr) :
-        rootNode(root), sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {
+        rootNode(root),
+        sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {
         if (parentTree)
             eof = parentTree->eof;
     }
@@ -53,12 +54,12 @@ public:
     }
 
     static std::shared_ptr<SyntaxTree> fromText(string_view text, SourceManager& sourceManager,
-                                                string_view name = "",
-                                                const Bag& options = {}) {
+                                                string_view name = "", const Bag& options = {}) {
         return create(sourceManager, sourceManager.assignText(name, text), options, true);
     }
 
-    static std::shared_ptr<SyntaxTree> fromBuffer(const SourceBuffer& buffer, SourceManager& sourceManager,
+    static std::shared_ptr<SyntaxTree> fromBuffer(const SourceBuffer& buffer,
+                                                  SourceManager& sourceManager,
                                                   const Bag& options = {}) {
         return create(sourceManager, buffer, options, false);
     }
@@ -101,12 +102,11 @@ public:
     }
 
 private:
-    SyntaxTree(SyntaxNode* root, SourceManager& sourceManager,
-               BumpAllocator&& alloc, Diagnostics&& diagnostics,
-               const Bag& options, Token eof) :
-        rootNode(root), sourceMan(sourceManager),
-        alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)),
-        options_(options), eof(eof) {}
+    SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
+               Diagnostics&& diagnostics, const Bag& options, Token eof) :
+        rootNode(root),
+        sourceMan(sourceManager), alloc(std::move(alloc)),
+        diagnosticsBuffer(std::move(diagnostics)), options_(options), eof(eof) {}
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager, SourceBuffer source,
                                               const Bag& options, bool guess) {
@@ -128,9 +128,9 @@ private:
             }
         }
 
-        return std::shared_ptr<SyntaxTree>(new SyntaxTree(
-            root, sourceManager, std::move(alloc),
-            std::move(diagnostics), options, parser.getEOFToken()));
+        return std::shared_ptr<SyntaxTree>(new SyntaxTree(root, sourceManager, std::move(alloc),
+                                                          std::move(diagnostics), options,
+                                                          parser.getEOFToken()));
     }
 
     SyntaxNode* rootNode;
@@ -142,4 +142,4 @@ private:
     Token eof;
 };
 
-}
+} // namespace slang

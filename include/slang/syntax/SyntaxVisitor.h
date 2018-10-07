@@ -58,22 +58,18 @@ struct SyntaxChange {
     const SyntaxNode* first = nullptr;
     SyntaxNode* second = nullptr;
 
-    enum Kind {
-        Remove,
-        Replace,
-        InsertBefore,
-        InsertAfter
-    } kind;
+    enum Kind { Remove, Replace, InsertBefore, InsertAfter } kind;
 
     SyntaxChange(Kind kind, const SyntaxNode* first, SyntaxNode* second) :
         first(first), second(second), kind(kind) {}
 };
 
 using ChangeMap = flat_hash_map<const SyntaxNode*, detail::SyntaxChange>;
-std::shared_ptr<SyntaxTree> transformTree(const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
-                                          const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees);
+std::shared_ptr<SyntaxTree> transformTree(
+    const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
+    const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees);
 
-}
+} // namespace detail
 
 template<typename TDerived>
 class SyntaxRewriter : public SyntaxVisitor<TDerived> {
@@ -98,19 +94,23 @@ protected:
     }
 
     void remove(const SyntaxNode& oldNode) {
-        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::Remove, &oldNode, nullptr });
+        changes.emplace(&oldNode,
+                        detail::SyntaxChange{ detail::SyntaxChange::Remove, &oldNode, nullptr });
     }
 
     void replace(const SyntaxNode& oldNode, SyntaxNode& newNode) {
-        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::Replace, &oldNode, &newNode });
+        changes.emplace(&oldNode,
+                        detail::SyntaxChange{ detail::SyntaxChange::Replace, &oldNode, &newNode });
     }
 
     void insertBefore(const SyntaxNode& oldNode, SyntaxNode& newNode) {
-        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::InsertBefore, &oldNode, &newNode });
+        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::InsertBefore,
+                                                        &oldNode, &newNode });
     }
 
     void insertAfter(const SyntaxNode& oldNode, SyntaxNode& newNode) {
-        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::InsertAfter, &oldNode, &newNode });
+        changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::InsertAfter, &oldNode,
+                                                        &newNode });
     }
 
 private:
@@ -121,4 +121,4 @@ private:
 
 #undef DERIVED
 
-}
+} // namespace slang

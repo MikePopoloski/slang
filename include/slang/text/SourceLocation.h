@@ -75,9 +75,7 @@ public:
         return bufferID == rhs.bufferID && charOffset == rhs.charOffset;
     }
 
-    bool operator!=(const SourceLocation& rhs) const {
-        return !(*this == rhs);
-    }
+    bool operator!=(const SourceLocation& rhs) const { return !(*this == rhs); }
 
     bool operator<(const SourceLocation& rhs) const {
         if (bufferID != rhs.bufferID)
@@ -96,9 +94,7 @@ class SourceRange {
 public:
     SourceRange() {}
     SourceRange(SourceLocation startLoc, SourceLocation endLoc) :
-        startLoc(startLoc), endLoc(endLoc)
-    {
-    }
+        startLoc(startLoc), endLoc(endLoc) {}
 
     SourceLocation start() const { return startLoc; }
     SourceLocation end() const { return endLoc; }
@@ -108,15 +104,13 @@ private:
     SourceLocation endLoc;
 };
 
-}
+} // namespace slang
 
 namespace std {
 
 template<>
 struct hash<slang::BufferID> {
-    size_t operator()(const slang::BufferID& obj) const {
-        return obj.getId();
-    }
+    size_t operator()(const slang::BufferID& obj) const { return obj.getId(); }
 };
 
 template<>
@@ -129,4 +123,4 @@ struct hash<slang::SourceLocation> {
     }
 };
 
-}
+} // namespace std

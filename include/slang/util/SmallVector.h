@@ -130,9 +130,7 @@ public:
         len += size;
     }
 
-    void reserve(uint32_t size) {
-        ensureSize(size);
-    }
+    void reserve(uint32_t size) { ensureSize(size); }
 
     /// Creates a copy of the array using the given allocator.
     span<T> copy(BumpAllocator& alloc) const {
@@ -233,9 +231,7 @@ class SmallVectorSized : public SmallVector<T> {
 public:
     SmallVectorSized() : SmallVector<T>(N) {}
 
-    explicit SmallVectorSized(uint32_t capacity) : SmallVector<T>(N) {
-        this->reserve(capacity);
-    }
+    explicit SmallVectorSized(uint32_t capacity) : SmallVector<T>(N) { this->reserve(capacity); }
 
     SmallVectorSized(SmallVectorSized<T, N>&& other) noexcept :
         SmallVectorSized(static_cast<SmallVector<T>&&>(other)) {}
@@ -274,4 +270,4 @@ private:
     alignas(T) char stackBase[(N - 1) * sizeof(T)];
 };
 
-}
+} // namespace slang

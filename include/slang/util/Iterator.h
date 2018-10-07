@@ -14,8 +14,7 @@ template<typename TIterator>
 class iterator_range {
 public:
     template<typename TContainer>
-    iterator_range(TContainer&& container) :
-        m_begin(begin(container)), m_end(end(container)) {}
+    iterator_range(TContainer&& container) : m_begin(begin(container)), m_end(end(container)) {}
 
     iterator_range(TIterator beginIt, TIterator endIt) :
         m_begin(std::move(beginIt)), m_end(std::move(endIt)) {}
@@ -34,7 +33,9 @@ private:
 };
 
 template<typename T>
-iterator_range<T> make_range(T begin, T end) { return iterator_range<T>(begin, end); }
+iterator_range<T> make_range(T begin, T end) {
+    return iterator_range<T>(begin, end);
+}
 
 template<typename TContainer>
 auto make_reverse_range(TContainer&& container) {
@@ -70,14 +71,15 @@ auto make_reverse_range(TContainer&& container) {
 ///   - DerivedT& operator+=(difference_type N);
 ///   - DerivedT& operator-=(difference_type N);
 ///
-template <typename DerivedT, typename IteratorCategoryT, typename T,
-          typename DifferenceTypeT = std::ptrdiff_t, typename PointerT = T*,
-          typename ReferenceT = T&>
+template<typename DerivedT, typename IteratorCategoryT, typename T,
+         typename DifferenceTypeT = std::ptrdiff_t, typename PointerT = T*,
+         typename ReferenceT = T&>
 class iterator_facade {
 protected:
     enum {
         IsRandomAccess = std::is_base_of<std::random_access_iterator_tag, IteratorCategoryT>::value,
-        IsBidirectional = std::is_base_of<std::bidirectional_iterator_tag, IteratorCategoryT>::value,
+        IsBidirectional =
+            std::is_base_of<std::bidirectional_iterator_tag, IteratorCategoryT>::value,
     };
 
     /// A proxy object for computing a reference via indirecting a copy of an
@@ -106,19 +108,22 @@ public:
     DerivedT operator+(difference_type n) const {
         static_assert(std::is_base_of<iterator_facade, DerivedT>::value,
                       "Must pass the derived type to this template!");
-        static_assert(IsRandomAccess, "The '+' operator is only defined for random access iterators.");
+        static_assert(IsRandomAccess,
+                      "The '+' operator is only defined for random access iterators.");
         DerivedT tmp = *static_cast<const DerivedT*>(this);
         tmp += n;
         return tmp;
     }
 
     friend DerivedT operator+(difference_type n, const DerivedT& i) {
-        static_assert(IsRandomAccess, "The '+' operator is only defined for random access iterators.");
+        static_assert(IsRandomAccess,
+                      "The '+' operator is only defined for random access iterators.");
         return i + n;
     }
 
     DerivedT operator-(difference_type n) const {
-        static_assert(IsRandomAccess, "The '-' operator is only defined for random access iterators.");
+        static_assert(IsRandomAccess,
+                      "The '-' operator is only defined for random access iterators.");
         DerivedT tmp = *static_cast<const DerivedT*>(this);
         tmp -= n;
         return tmp;
@@ -154,20 +159,20 @@ public:
         return !static_cast<const DerivedT*>(this)->operator==(RHS);
     }
 
-    bool operator>(const DerivedT &RHS) const {
+    bool operator>(const DerivedT& RHS) const {
         static_assert(IsRandomAccess,
                       "Relational operators are only defined for random access iterators.");
         return !static_cast<const DerivedT*>(this)->operator<(RHS) &&
                !static_cast<const DerivedT*>(this)->operator==(RHS);
     }
 
-    bool operator<=(const DerivedT &RHS) const {
+    bool operator<=(const DerivedT& RHS) const {
         static_assert(IsRandomAccess,
-                     "Relational operators are only defined for random access iterators.");
+                      "Relational operators are only defined for random access iterators.");
         return !static_cast<const DerivedT*>(this)->operator>(RHS);
     }
 
-    bool operator>=(const DerivedT &RHS) const {
+    bool operator>=(const DerivedT& RHS) const {
         static_assert(IsRandomAccess,
                       "Relational operators are only defined for random access iterators.");
         return !static_cast<const DerivedT*>(this)->operator<(RHS);
@@ -177,16 +182,14 @@ public:
     pointer operator->() const { return &static_cast<const DerivedT*>(this)->operator*(); }
 
     ReferenceProxy operator[](difference_type n) {
-        static_assert(IsRandomAccess,
-                      "Subscripting is only defined for random access iterators.");
+        static_assert(IsRandomAccess, "Subscripting is only defined for random access iterators.");
         return ReferenceProxy(static_cast<DerivedT*>(this)->operator+(n));
     }
 
     ReferenceProxy operator[](difference_type n) const {
-        static_assert(IsRandomAccess,
-                      "Subscripting is only defined for random access iterators.");
+        static_assert(IsRandomAccess, "Subscripting is only defined for random access iterators.");
         return ReferenceProxy(static_cast<const DerivedT*>(this)->operator+(n));
     }
 };
 
-}
+} // namespace slang

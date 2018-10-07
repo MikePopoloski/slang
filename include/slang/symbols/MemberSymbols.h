@@ -27,10 +27,11 @@ public:
     const Symbol& wrapped;
 
     TransparentMemberSymbol(const Symbol& wrapped_) :
-        Symbol(SymbolKind::TransparentMember, wrapped_.name, wrapped_.location),
-        wrapped(wrapped_) {}
+        Symbol(SymbolKind::TransparentMember, wrapped_.name, wrapped_.location), wrapped(wrapped_) {
+    }
 
-    void toJson(json&) const { /* enum members will be exposed in their containing enum */ }
+    void toJson(json&) const { /* enum members will be exposed in their containing enum */
+    }
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TransparentMember; }
 };
@@ -42,8 +43,8 @@ public:
     string_view importName;
 
     ExplicitImportSymbol(string_view packageName, string_view importName, SourceLocation location) :
-        Symbol(SymbolKind::ExplicitImport, importName, location),
-        packageName(packageName), importName(importName) {}
+        Symbol(SymbolKind::ExplicitImport, importName, location), packageName(packageName),
+        importName(importName) {}
 
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
@@ -67,8 +68,7 @@ public:
     string_view packageName;
 
     WildcardImportSymbol(string_view packageName, SourceLocation location) :
-        Symbol(SymbolKind::WildcardImport, "", location),
-        packageName(packageName) {}
+        Symbol(SymbolKind::WildcardImport, "", location), packageName(packageName) {}
 
     const PackageSymbol* getPackage() const;
 
@@ -90,7 +90,8 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
-    ParameterSymbol& createOverride(Compilation& compilation, const Expression* newInitializer) const;
+    ParameterSymbol& createOverride(Compilation& compilation,
+                                    const Expression* newInitializer) const;
 
     const ConstantValue& getValue() const;
     void setValue(ConstantValue value);
@@ -135,8 +136,7 @@ public:
     /// If this is an interface port with a modport restriction, a pointer to that modport.
     const ModportSymbol* modport = nullptr;
 
-    PortSymbol(string_view name, SourceLocation loc) :
-        ValueSymbol(SymbolKind::Port, name, loc) {}
+    PortSymbol(string_view name, SourceLocation loc) : ValueSymbol(SymbolKind::Port, name, loc) {}
 
     void toJson(json& j) const;
 
@@ -150,8 +150,7 @@ public:
 /// Represents a net declaration.
 class NetSymbol : public ValueSymbol {
 public:
-    NetSymbol(string_view name, SourceLocation loc) :
-        ValueSymbol(SymbolKind::Net, name, loc) {}
+    NetSymbol(string_view name, SourceLocation loc) : ValueSymbol(SymbolKind::Net, name, loc) {}
 
     void toJson(json& j) const;
 
@@ -177,18 +176,19 @@ public:
     static void fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                            SmallVector<const VariableSymbol*>& results);
 
-    static VariableSymbol& fromSyntax(Compilation& compilation, const ForVariableDeclarationSyntax& syntax);
+    static VariableSymbol& fromSyntax(Compilation& compilation,
+                                      const ForVariableDeclarationSyntax& syntax);
 
     static bool isKind(SymbolKind kind) {
-        return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument || kind == SymbolKind::Field;
+        return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument ||
+               kind == SymbolKind::Field;
     }
 
 protected:
     VariableSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false) :
         ValueSymbol(childKind, name, loc),
-        lifetime(lifetime),
-        isConst(isConst) {}
+        lifetime(lifetime), isConst(isConst) {}
 };
 
 /// Represents a formal argument in subroutine (task or function).
@@ -196,8 +196,7 @@ class FormalArgumentSymbol : public VariableSymbol {
 public:
     FormalArgumentDirection direction = FormalArgumentDirection::In;
 
-    FormalArgumentSymbol() :
-        VariableSymbol(SymbolKind::FormalArgument, "", SourceLocation()) {}
+    FormalArgumentSymbol() : VariableSymbol(SymbolKind::FormalArgument, "", SourceLocation()) {}
 
     FormalArgumentSymbol(string_view name, SourceLocation loc,
                          FormalArgumentDirection direction = FormalArgumentDirection::In) :
@@ -224,15 +223,15 @@ public:
     SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                      VariableLifetime defaultLifetime, bool isTask, const Scope&) :
         Symbol(SymbolKind::Subroutine, name, loc),
-        StatementBodiedScope(compilation, this),
-        declaredReturnType(*this),
+        StatementBodiedScope(compilation, this), declaredReturnType(*this),
         defaultLifetime(defaultLifetime), isTask(isTask) {}
 
     const Type& getReturnType() const { return declaredReturnType.getType(); }
 
     void toJson(json& j) const;
 
-    static SubroutineSymbol& fromSyntax(Compilation& compilation, const FunctionDeclarationSyntax& syntax,
+    static SubroutineSymbol& fromSyntax(Compilation& compilation,
+                                        const FunctionDeclarationSyntax& syntax,
                                         const Scope& parent);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
@@ -251,4 +250,4 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
 };
 
-}
+} // namespace slang

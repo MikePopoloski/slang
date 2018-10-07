@@ -80,21 +80,15 @@ public:
         storage.emplace_back();
     }
 
-    size_t size() const {
-        return storage.size() - freelist.size() - 1;
-    }
+    size_t size() const { return storage.size() - freelist.size() - 1; }
 
-    const T& operator[](Index index) const {
-        return storage[static_cast<size_t>(index)];
-    }
+    const T& operator[](Index index) const { return storage[static_cast<size_t>(index)]; }
 
-    T& operator[](Index index) {
-        return storage[static_cast<size_t>(index)];
-    }
+    T& operator[](Index index) { return storage[static_cast<size_t>(index)]; }
 
 private:
     std::vector<T> storage;
     std::deque<Index> freelist;
 };
 
-}
+} // namespace slang

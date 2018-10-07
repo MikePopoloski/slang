@@ -25,9 +25,7 @@ public:
         }
     }
 
-    void fill(uint8_t b) {
-        memset(ptr, b, size * sizeof(T));
-    }
+    void fill(uint8_t b) { memset(ptr, b, size * sizeof(T)); }
 
     ~TempBuffer() {
         if (size > StackCount)
@@ -42,7 +40,6 @@ private:
     T* ptr;
     size_t size;
     alignas(T) char stackBase[StackCount * sizeof(T)];
-
 };
 
-}
+} // namespace slang

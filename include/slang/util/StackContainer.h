@@ -26,10 +26,12 @@ public:
     StackAllocator(const StackAllocator&) = default;
     StackAllocator& operator=(const StackAllocator&) = delete;
 
-    StackAllocator(StackAllocStorage<T, N>* storage) noexcept :
-        storage(storage) {}
+    StackAllocator(StackAllocStorage<T, N>* storage) noexcept : storage(storage) {}
 
-    template<typename U> struct rebind { using other = StackAllocator<U, N>; };
+    template<typename U>
+    struct rebind {
+        using other = StackAllocator<U, N>;
+    };
 
     T* allocate(size_t n) {
         if (N - size_t(storage->ptr - storage->getBuffer()) >= n) {
@@ -42,9 +44,10 @@ public:
     }
 
     void deallocate(T* p, std::size_t n) noexcept {
-        // If the pointer is in our buffer, possibly "deallocate" by moving the high water mark back.
-        // Otherwise it was heap allocated and we must free with delete.
-        if (std::less_equal<T*>()(storage->getBuffer(), p) && std::less<T*>()(p, storage->getBuffer() + N)) {
+        // If the pointer is in our buffer, possibly "deallocate" by moving the high water mark
+        // back. Otherwise it was heap allocated and we must free with delete.
+        if (std::less_equal<T*>()(storage->getBuffer(), p) &&
+            std::less<T*>()(p, storage->getBuffer() + N)) {
             if (p + n == storage->ptr)
                 storage->ptr = p;
         }
@@ -54,7 +57,8 @@ public:
     }
 
     template<typename T1, size_t N1, class T2, size_t N2>
-    friend bool operator==(const StackAllocator<T1, N1>& x, const StackAllocator<T2, N2>& y) noexcept;
+    friend bool operator==(const StackAllocator<T1, N1>& x,
+                           const StackAllocator<T2, N2>& y) noexcept;
 
 private:
     template<typename U, size_t M>
@@ -85,8 +89,7 @@ public:
     SmallMap() : BaseType(Alloc(this)) {}
 };
 
-template<typename T, size_t N,
-         typename Entry = ska::detailv3::sherwood_v3_entry<T>,
+template<typename T, size_t N, typename Entry = ska::detailv3::sherwood_v3_entry<T>,
          typename Alloc = StackAllocator<Entry, N>>
 class SmallSet : private StackAllocStorage<Entry, N>,
                  public flat_hash_set<T, std::hash<T>, std::equal_to<T>, Alloc> {
@@ -97,4 +100,4 @@ public:
     SmallSet() : BaseType(Alloc(this)) {}
 };
 
-}
+} // namespace slang
