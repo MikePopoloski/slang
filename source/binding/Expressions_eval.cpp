@@ -574,26 +574,35 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
     if (!value)
         return nullptr;
 
-    switch (conversionKind) {
-        case ConversionKind::IntToFloat:
-            // TODO: make this more robust
-            return (double)value.integer().as<int64_t>().value();
+    // TODO: handle non-integral
 
-        case ConversionKind::IntExtension:
-            ASSERT(value.isInteger() &&
-                   value.integer().getBitWidth() == operand().type->getBitWidth());
-            return extend(value.integer(), type->getBitWidth(), type->as<IntegralType>().isSigned);
+    const Type& rt = *operand().type;
+    const Type& lt = *type;
 
-        case ConversionKind::IntTruncation:
-            // TODO: add a truncate() method
-            return value.integer().slice((int32_t)type->getBitWidth() - 1, 0);
-
-        case ConversionKind::FloatExtension:
-            return value;
-
-        default:
-            THROW_UNREACHABLE;
+    SVInt& result = value.integer();
+    if (lt.isFloating()) {
+        // TODO: make this more robust
+        return (double)result.as<int64_t>().value();
     }
+
+    // TODO: handle four state changes
+    // TODO: sign handling is not quite right
+    result.setSigned(lt.isSigned());
+
+    bitwidth_t lw = lt.getBitWidth();
+    bitwidth_t rw = rt.getBitWidth();
+    if (lw != rw) {
+        if (lw < rw) {
+            // TODO: add a truncate() method
+            return result.slice((int32_t)lw - 1, 0);
+        }
+        else {
+            ASSERT(result.getBitWidth() == rw);
+            return extend(result, lw, result.isSigned());
+        }
+    }
+
+    return result;
 }
 
 ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {

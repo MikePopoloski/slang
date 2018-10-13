@@ -107,7 +107,8 @@ TEST_CASE("Check type propagation 2") {
     const Expression& rhs = bound.as<AssignmentExpression>().right();
     CHECK(rhs.type->getBitWidth() == 20);
 
-    const Expression& rrhs = rhs.as<BinaryExpression>().right();
+    const Expression& rrhs =
+        rhs.as<BinaryExpression>().right().as<ConversionExpression>().operand();
     CHECK(rrhs.type->getBitWidth() == 1);
 
     const Expression& op1 = rrhs.as<BinaryExpression>().left();
@@ -140,7 +141,8 @@ TEST_CASE("Check type propagation real") {
     const Expression& rhs = bound.as<AssignmentExpression>().right();
     CHECK(rhs.type->getBitWidth() == 20);
 
-    const Expression& rrhs = rhs.as<BinaryExpression>().right();
+    const Expression& rrhs =
+        rhs.as<BinaryExpression>().right().as<ConversionExpression>().operand();
     CHECK(rrhs.type->getBitWidth() == 1);
 
     const Expression& op1 = rrhs.as<BinaryExpression>().left();
@@ -148,7 +150,6 @@ TEST_CASE("Check type propagation real") {
         op1.as<BinaryExpression>().left().as<ConversionExpression>();
     CHECK(convExpr.type->getBitWidth() == 64);
     CHECK(convExpr.type->isFloating());
-    CHECK(convExpr.conversionKind == ConversionKind::IntToFloat);
 
     const Expression& shiftExpr = convExpr.operand();
     CHECK(shiftExpr.type->getBitWidth() == 17);

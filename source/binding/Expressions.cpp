@@ -372,9 +372,14 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
     }
 }
 
-Expression& Expression::convert(Compilation& compilation, ConversionKind conversionKind,
-                                const Type& type, Expression& expr) {
-    return *compilation.emplace<ConversionExpression>(conversionKind, type, expr, expr.sourceRange);
+Expression& Expression::implicitConversion(Compilation& compilation, const Type& targetType,
+                                           Expression& expr) {
+    ASSERT(targetType.isAssignmentCompatible(*expr.type));
+    ASSERT(!targetType.isEquivalent(*expr.type));
+
+    Expression* result = &expr;
+    selfDetermined(compilation, result);
+    return *compilation.emplace<ConversionExpression>(targetType, *result, result->sourceRange);
 }
 
 Expression& Expression::convertAssignment(Compilation& compilation, const Type& type,
@@ -394,22 +399,24 @@ Expression& Expression::convertAssignment(Compilation& compilation, const Type& 
         return badExpr(compilation, &expr);
     }
 
-    // TODO: handle non-integral
-
     Expression* result = &expr;
-    rt = binaryOperatorType(compilation, &type, rt, false);
-    contextDetermined(compilation, result, *rt);
-
-    // Once we've converted up, we may still need to truncate back down to the actual size of
-    // the lvalue we're assigning to.
-    if (rt->getBitWidth() > type.getBitWidth()) {
-        result = &convert(compilation, ConversionKind::IntTruncation, type, *result);
-        EvalContext evalContext;
-        ConstantValue value = result->eval(evalContext);
-        if (value)
-            result->constant = compilation.createConstant(std::move(value));
+    if (type.isEquivalent(*rt)) {
+        selfDetermined(compilation, result);
+        return *result;
     }
 
+    if (type.isNumeric() && rt->isNumeric()) {
+        rt = binaryOperatorType(compilation, &type, rt, false);
+        if (type.isEquivalent(*rt)) {
+            contextDetermined(compilation, result, *rt);
+            return *result;
+        }
+
+        result->type = rt;
+    }
+
+    result = &implicitConversion(compilation, type, *result);
+    selfDetermined(compilation, result);
     return *result;
 }
 
@@ -500,8 +507,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     Expression& operand = create(compilation, *syntax.operand, context);
     const Type* type = operand.type;
 
-    Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
-                                                              operand, syntax.sourceRange());
+    auto result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
+                                                       operand, syntax.sourceRange());
     if (operand.bad())
         return badExpr(compilation, result);
 
@@ -518,8 +525,14 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             good = type->isNumeric();
             result->type =
                 type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
+            selfDetermined(compilation, result->operand_);
             break;
         case SyntaxKind::UnaryBitwiseNotExpression:
+            // Supported for integral only. Result type is always a single bit.
+            good = type->isIntegral();
+            result->type =
+                type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
+            break;
         case SyntaxKind::UnaryBitwiseAndExpression:
         case SyntaxKind::UnaryBitwiseOrExpression:
         case SyntaxKind::UnaryBitwiseXorExpression:
@@ -530,6 +543,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             good = type->isIntegral();
             result->type =
                 type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
+            selfDetermined(compilation, result->operand_);
             break;
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
@@ -630,11 +644,13 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 result->type = forceFourState(compilation, lt);
             else
                 result->type = lt;
+            selfDetermined(compilation, result->right_);
             break;
         case SyntaxKind::PowerExpression:
             // Result is forced to 4-state because result can be X.
             good = bothNumeric;
             result->type = forceFourState(compilation, lt);
+            selfDetermined(compilation, result->right_);
             break;
         case SyntaxKind::GreaterThanEqualExpression:
         case SyntaxKind::GreaterThanExpression:
@@ -658,6 +674,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
             // Result is always a single bit.
             good = bothNumeric;
             result->type = singleBitType(compilation, lt, rt);
+            selfDetermined(compilation, result->left_);
+            selfDetermined(compilation, result->right_);
             break;
         case SyntaxKind::EqualityExpression:
         case SyntaxKind::InequalityExpression:
@@ -695,22 +713,26 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 contextDetermined(compilation, result->left_, *nt);
                 contextDetermined(compilation, result->right_, *nt);
             }
-            else if (lt->isAggregate() && lt->isEquivalent(*rt)) {
-                // TODO: drill into the aggregate and figure out if it's all 2-state
-                good = true;
-                result->type = &compilation.getLogicType();
-            }
-            else if ((lt->isClass() && lt->isAssignmentCompatible(*rt)) ||
-                     (rt->isClass() && rt->isAssignmentCompatible(*lt))) {
-                good = true;
-                result->type = &compilation.getBitType();
-            }
-            else if ((lt->isCHandle() || lt->isNull()) && (rt->isCHandle() || rt->isNull())) {
-                good = true;
-                result->type = &compilation.getBitType();
-            }
             else {
-                good = false;
+                if (lt->isAggregate() && lt->isEquivalent(*rt)) {
+                    // TODO: drill into the aggregate and figure out if it's all 2-state
+                    good = true;
+                    result->type = &compilation.getLogicType();
+                }
+                else if ((lt->isClass() && lt->isAssignmentCompatible(*rt)) ||
+                         (rt->isClass() && rt->isAssignmentCompatible(*lt))) {
+                    good = true;
+                    result->type = &compilation.getBitType();
+                }
+                else if ((lt->isCHandle() || lt->isNull()) && (rt->isCHandle() || rt->isNull())) {
+                    good = true;
+                    result->type = &compilation.getBitType();
+                }
+                else {
+                    good = false;
+                }
+                selfDetermined(compilation, result->left_);
+                selfDetermined(compilation, result->right_);
             }
             break;
         default:
@@ -735,7 +757,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
     // TODO: handle the pattern matching conditional predicate case, rather than just assuming that
     // it's a simple expression
     ASSERT(syntax.predicate->conditions.size() == 1);
-    Expression& pred = create(compilation, *syntax.predicate->conditions[0]->expr, context);
+    Expression& pred = selfDetermined(compilation, *syntax.predicate->conditions[0]->expr, context);
     Expression& left = create(compilation, *syntax.left, context);
     Expression& right = create(compilation, *syntax.right, context);
 

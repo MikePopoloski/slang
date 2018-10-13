@@ -10,7 +10,13 @@
 
 namespace slang {
 
+// This visitor handles inserting implicit conversions into an expression tree where necessary.
+// SystemVerilog has an additional weird feature where the type of one branch of an expression
+// tree can bubble up and then propagate back down a different branch, which is also implemented
+// here.
 struct Expression::PropagationVisitor {
+    HAS_METHOD_TRAIT(propagateType);
+
     Compilation& compilation;
     const Type& newType;
 
@@ -22,22 +28,36 @@ struct Expression::PropagationVisitor {
         if (expr.bad())
             return expr;
 
-        // If we're propagating a floating type down to a non-floating type, that operand
-        // will instead be converted in a self-determined context.
-        if (newType.isFloating() && !expr.type->isFloating() &&
-            expr.kind != ExpressionKind::Conversion)
-            return Expression::convert(compilation, ConversionKind::IntToFloat, newType, expr);
+        if (newType.isError()) {
+            expr.type = &newType;
+            return expr;
+        }
 
-        // Perform type-specific propagation.
-        Expression& result = T::propagateType(compilation, expr, newType);
+        // If the new type is equivalent to the old type, there's no need for a conversion.
+        // Otherwise if both types are integral or both are real, we have to check if the
+        // conversion should be pushed further down the tree. Otherwise we should insert
+        // the implicit conversion here.
+        bool needConversion = !newType.isEquivalent(*expr.type);
+        if constexpr (has_propagateType_v<T, bool, Compilation&, const Type&>) {
+            if ((newType.isFloating() && expr.type->isFloating()) ||
+                (newType.isIntegral() && expr.type->isIntegral())) {
+
+                if (expr.propagateType(compilation, newType))
+                    needConversion = false;
+            }
+        }
+
+        Expression* result = &expr;
+        if (needConversion)
+            result = &Expression::implicitConversion(compilation, newType, expr);
 
         // Try to fold any constant values.
-        ASSERT(!result.constant);
+        ASSERT(!result->constant);
         EvalContext context;
-        ConstantValue value = result.eval(context);
+        ConstantValue value = result->eval(context);
         if (value)
-            result.constant = compilation.createConstant(std::move(value));
-        return result;
+            result->constant = compilation.createConstant(std::move(value));
+        return *result;
     }
 
     Expression& visitInvalid(Expression& expr) { return expr; }
@@ -62,70 +82,23 @@ Expression& Expression::selfDetermined(Compilation& compilation, const Expressio
     return *expr;
 }
 
-Expression& IntegerLiteral::propagateType(Compilation& compilation, IntegerLiteral& expr,
-                                          const Type& newType) {
+bool UnbasedUnsizedIntegerLiteral::propagateType(Compilation&, const Type& newType) {
+    bitwidth_t newWidth = newType.getBitWidth();
     ASSERT(newType.isIntegral());
-    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
+    ASSERT(newWidth);
 
-    if (newType.getBitWidth() != expr.type->getBitWidth())
-        return convert(compilation, ConversionKind::IntExtension, newType, expr);
-
-    expr.type = &newType;
-    return expr;
+    type = &newType;
+    return true;
 }
 
-Expression& RealLiteral::propagateType(Compilation& compilation, RealLiteral& expr,
-                                       const Type& newType) {
-    ASSERT(newType.isFloating());
-    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
-
-    if (newType.getBitWidth() != expr.type->getBitWidth())
-        return convert(compilation, ConversionKind::FloatExtension, newType, expr);
-
-    expr.type = &newType;
-    return expr;
-}
-
-Expression& UnbasedUnsizedIntegerLiteral::propagateType(Compilation&,
-                                                        UnbasedUnsizedIntegerLiteral& expr,
-                                                        const Type& newType) {
-    ASSERT(newType.isIntegral());
-    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
-
-    expr.type = &newType;
-    return expr;
-}
-
-Expression& NullLiteral::propagateType(Compilation&, NullLiteral& expr, const Type&) {
-    return expr;
-}
-
-Expression& StringLiteral::propagateType(Compilation&, StringLiteral& expr, const Type& newType) {
-    ASSERT(newType.isIntegral());
-    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
-
-    // TODO:
-    /*if (newType.getBitWidth() != expr.type->getBitWidth())
-    return convert(compilation, ConversionKind::IntExtension, newType, expr);*/
-
-    expr.type = &newType;
-    return expr;
-}
-
-Expression& NamedValueExpression::propagateType(Compilation&, NamedValueExpression& expr,
-                                                const Type&) {
-    return expr;
-}
-
-Expression& UnaryExpression::propagateType(Compilation& compilation, UnaryExpression& expr,
-                                           const Type& newType) {
-    switch (expr.op) {
+bool UnaryExpression::propagateType(Compilation& compilation, const Type& newType) {
+    switch (op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
         case UnaryOperator::BitwiseNot:
-            expr.type = &newType;
-            contextDetermined(compilation, expr.operand_, newType);
-            break;
+            type = &newType;
+            contextDetermined(compilation, operand_, newType);
+            return true;
         case UnaryOperator::BitwiseAnd:
         case UnaryOperator::BitwiseOr:
         case UnaryOperator::BitwiseXor:
@@ -133,22 +106,18 @@ Expression& UnaryExpression::propagateType(Compilation& compilation, UnaryExpres
         case UnaryOperator::BitwiseNor:
         case UnaryOperator::BitwiseXnor:
         case UnaryOperator::LogicalNot:
-            // Type is already set (always 1 bit).
-            selfDetermined(compilation, expr.operand_);
-            break;
         case UnaryOperator::Preincrement:
         case UnaryOperator::Predecrement:
         case UnaryOperator::Postincrement:
         case UnaryOperator::Postdecrement:
-            // Type is already set via the lvalue.
-            break;
+            // Operand is self determined and already folded.
+            return false;
     }
-    return expr;
+    THROW_UNREACHABLE;
 }
 
-Expression& BinaryExpression::propagateType(Compilation& compilation, BinaryExpression& expr,
-                                            const Type& newType) {
-    switch (expr.op) {
+bool BinaryExpression::propagateType(Compilation& compilation, const Type& newType) {
+    switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
         case BinaryOperator::Multiply:
@@ -158,10 +127,10 @@ Expression& BinaryExpression::propagateType(Compilation& compilation, BinaryExpr
         case BinaryOperator::BinaryOr:
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
-            expr.type = &newType;
-            contextDetermined(compilation, expr.left_, newType);
-            contextDetermined(compilation, expr.right_, newType);
-            break;
+            type = &newType;
+            contextDetermined(compilation, left_, newType);
+            contextDetermined(compilation, right_, newType);
+            return true;
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
         case BinaryOperator::CaseEquality:
@@ -172,80 +141,31 @@ Expression& BinaryExpression::propagateType(Compilation& compilation, BinaryExpr
         case BinaryOperator::LessThan:
         case BinaryOperator::WildcardEquality:
         case BinaryOperator::WildcardInequality:
-            // Type is already set (always 1 bit) and operands are already folded.
-            break;
         case BinaryOperator::LogicalAnd:
         case BinaryOperator::LogicalOr:
         case BinaryOperator::LogicalImplication:
         case BinaryOperator::LogicalEquivalence:
-            // Type is already set (always 1 bit).
-            selfDetermined(compilation, expr.left_);
-            selfDetermined(compilation, expr.right_);
-            break;
+            // Type is already set (always 1 bit) and operands are already folded.
+            return false;
         case BinaryOperator::LogicalShiftLeft:
         case BinaryOperator::LogicalShiftRight:
         case BinaryOperator::ArithmeticShiftLeft:
         case BinaryOperator::ArithmeticShiftRight:
         case BinaryOperator::Power:
             // Only the left hand side gets propagated; the rhs is self determined.
-            expr.type = &newType;
-            contextDetermined(compilation, expr.left_, newType);
-            selfDetermined(compilation, expr.right_);
-            break;
+            type = &newType;
+            contextDetermined(compilation, left_, newType);
+            return true;
     }
-    return expr;
+    THROW_UNREACHABLE;
 }
 
-Expression& ConditionalExpression::propagateType(Compilation& compilation,
-                                                 ConditionalExpression& expr, const Type& newType) {
-    // predicate is self determined
-    expr.type = &newType;
-    selfDetermined(compilation, expr.pred_);
-    contextDetermined(compilation, expr.left_, newType);
-    contextDetermined(compilation, expr.right_, newType);
-    return expr;
-}
-
-Expression& AssignmentExpression::propagateType(Compilation&, AssignmentExpression& expr,
-                                                const Type&) {
-    return expr;
-}
-
-Expression& ElementSelectExpression::propagateType(Compilation&, ElementSelectExpression& expr,
-                                                   const Type&) {
-    return expr;
-}
-
-Expression& RangeSelectExpression::propagateType(Compilation&, RangeSelectExpression& expr,
-                                                 const Type&) {
-    return expr;
-}
-
-Expression& ConcatenationExpression::propagateType(Compilation&, ConcatenationExpression& expr,
-                                                   const Type&) {
-    // All operands are self-determined.
-    return expr;
-}
-
-Expression& ReplicationExpression::propagateType(Compilation&, ReplicationExpression& expr,
-                                                 const Type&) {
-    return expr;
-}
-
-Expression& CallExpression::propagateType(Compilation&, CallExpression& expr, const Type&) {
-    return expr;
-}
-
-Expression& ConversionExpression::propagateType(Compilation& compilation,
-                                                ConversionExpression& expr, const Type& newType) {
-    // predicate is self determined
-    expr.type = &newType;
-    selfDetermined(compilation, expr.operand_);
-    return expr;
-}
-
-Expression& DataTypeExpression::propagateType(Compilation&, DataTypeExpression& expr, const Type&) {
-    return expr;
+bool ConditionalExpression::propagateType(Compilation& compilation, const Type& newType) {
+    // The predicate is self determined so no need to handle it here.
+    type = &newType;
+    contextDetermined(compilation, left_, newType);
+    contextDetermined(compilation, right_, newType);
+    return true;
 }
 
 } // namespace slang
