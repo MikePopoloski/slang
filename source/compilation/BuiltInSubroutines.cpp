@@ -77,7 +77,7 @@ ConstantValue IncrementSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
-    return SVInt(32, range.isLittleEndian() ? 1 : -1, true);
+    return SVInt(32, (uint64_t)(range.isLittleEndian() ? 1 : -1), true);
 }
 
 } // namespace slang::Builtins
