@@ -31,53 +31,53 @@ ConstantValue Clog2Subroutine::eval(EvalContext& context, const Args& args) cons
         return nullptr;
 
     // TODO: other types?
-    return SVInt(clog2(v.integer()));
+    return SVInt(32, clog2(v.integer()), true);
 }
 
 ConstantValue BitsSubroutine::eval(EvalContext&, const Args& args) const {
-    return SVInt(args[0]->type->getBitWidth());
+    return SVInt(32, args[0]->type->getBitWidth(), true);
 }
 
 ConstantValue LowSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
-    return SVInt(range.lower());
+    return SVInt(32, range.lower(), true);
 }
 
 ConstantValue HighSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
-    return SVInt(range.upper());
+    return SVInt(32, range.upper(), true);
 }
 
 ConstantValue LeftSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
-    return SVInt(range.left);
+    return SVInt(32, range.left, true);
 }
 
 ConstantValue RightSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
-    return SVInt(range.right);
+    return SVInt(32, range.right, true);
 }
 
 ConstantValue SizeSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     // TODO: bitwidth is not quite right here
     const auto& argType = args[0]->type->as<IntegralType>();
-    return SVInt(argType.bitWidth);
+    return SVInt(32, argType.bitWidth, true);
 }
 
 ConstantValue IncrementSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
-    return SVInt(range.isLittleEndian() ? 1 : -1);
+    return SVInt(32, range.isLittleEndian() ? 1 : -1, true);
 }
 
 } // namespace slang::Builtins
