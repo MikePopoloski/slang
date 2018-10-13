@@ -42,28 +42,28 @@ ConstantValue LowSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
-    return SVInt(32, range.lower(), true);
+    return SVInt(32, (uint64_t)range.lower(), true);
 }
 
 ConstantValue HighSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
-    return SVInt(32, range.upper(), true);
+    return SVInt(32, (uint64_t)range.upper(), true);
 }
 
 ConstantValue LeftSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
-    return SVInt(32, range.left, true);
+    return SVInt(32, (uint64_t)range.left, true);
 }
 
 ConstantValue RightSubroutine::eval(EvalContext&, const Args& args) const {
     // TODO: other types?
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
-    return SVInt(32, range.right, true);
+    return SVInt(32, (uint64_t)range.right, true);
 }
 
 ConstantValue SizeSubroutine::eval(EvalContext&, const Args& args) const {
