@@ -419,6 +419,10 @@ module mh22(ref wire x); endmodule
     CHECK(diags[1].code == DiagCode::RefPortMustBeVariable);
 }
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4127)
+#endif
+
 TEST_CASE("Module ANSI interface ports") {
     auto tree = SyntaxTree::fromText(R"(
 interface I; modport bar(); endinterface
@@ -453,7 +457,7 @@ module m6(I.bar bar); endmodule
         CHECK(port.getType().isError());                          \
         REQUIRE(port.interfaceDef);                               \
         CHECK(port.interfaceDef->name == (ifaceName));            \
-        if constexpr (modportName) {                              \
+        if (modportName) {                                        \
             REQUIRE(port.modport);                                \
             CHECK(port.modport->name == (modportName));           \
         }                                                         \
