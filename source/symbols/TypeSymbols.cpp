@@ -182,7 +182,7 @@ bool Type::isEquivalent(const Type& rhs) const {
     if (l->isIntegral() && r->isIntegral() && !l->isEnum() && !r->isEnum()) {
         const auto& li = l->as<IntegralType>();
         const auto& ri = r->as<IntegralType>();
-        return li.isSigned == ri.isSigned && li.isFourState && ri.isFourState &&
+        return li.isSigned == ri.isSigned && li.isFourState == ri.isFourState &&
                li.bitWidth == ri.bitWidth;
     }
 
