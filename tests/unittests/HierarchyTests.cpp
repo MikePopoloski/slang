@@ -453,7 +453,7 @@ module m6(I.bar bar); endmodule
         CHECK(port.getType().isError());                          \
         REQUIRE(port.interfaceDef);                               \
         CHECK(port.interfaceDef->name == (ifaceName));            \
-        if (modportName) {                                        \
+        if constexpr (modportName) {                              \
             REQUIRE(port.modport);                                \
             CHECK(port.modport->name == (modportName));           \
         }                                                         \
