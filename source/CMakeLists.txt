@@ -4,7 +4,6 @@ add_library(slang STATIC
 	binding/EvalContext.cpp
 	binding/Expressions.cpp
 	binding/Expressions_eval.cpp
-	binding/Expressions_prop.cpp
 	binding/Statements.cpp
 
 	compilation/BuiltInSubroutines.cpp
