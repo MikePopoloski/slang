@@ -289,6 +289,8 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NoteHierarchicalNameInCE] = { "reference to '{}' by hierarchical name is not allowed in a constant expression", DiagnosticSeverity::Note };
     descriptors[DiagCode::NoteFunctionIdentifiersMustBeLocal] = { "all identifiers that are not parameters must be declared locally to a constant function", DiagnosticSeverity::Note };
     descriptors[DiagCode::NoteParamUsedInCEBeforeDecl] = { "parameter '{}' is declared after the invocation of the current constant function", DiagnosticSeverity::Note };
+
+    descriptors[DiagCode::NotYetSupported] = { "language feature not yet supported", DiagnosticSeverity::Error };
     // clang-format on
 
     // if this assert fails, you added a new diagnostic without adding a descriptor for it

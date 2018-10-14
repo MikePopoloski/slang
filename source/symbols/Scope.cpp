@@ -238,7 +238,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMembers(*member);
             break;
         default:
-            THROW_UNREACHABLE;
+            // TODO: handle all cases
+            addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            break;
     }
 }
 

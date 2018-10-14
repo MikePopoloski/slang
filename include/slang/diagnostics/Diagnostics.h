@@ -213,6 +213,7 @@ enum class DiagCode : uint8_t {
     NoteFunctionIdentifiersMustBeLocal,
     NoteParamUsedInCEBeforeDecl,
 
+    NotYetSupported,
     MaxValue
 };
 

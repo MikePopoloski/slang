@@ -44,7 +44,9 @@ Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax,
         case SyntaxKind::SequentialBlockStatement:
             return bindBlockStatement(syntax.as<BlockStatementSyntax>(), context);
         default:
-            THROW_UNREACHABLE;
+            // TODO: handle all cases
+            addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            return badStmt(nullptr);
     }
 }
 
