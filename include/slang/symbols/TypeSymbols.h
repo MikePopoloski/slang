@@ -274,9 +274,9 @@ class EnumValueSymbol;
 /// Represents an enumerated type.
 class EnumType : public IntegralType, public Scope {
 public:
-    const IntegralType& baseType;
+    const Type& baseType;
 
-    EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType,
+    EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType,
              const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,

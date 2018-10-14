@@ -541,10 +541,10 @@ ConstantValue FloatingType::getDefaultValueImpl() const {
     return 0.0;
 }
 
-EnumType::EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType_,
+EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType_,
                    const Scope& scope) :
-    IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(), baseType_.isSigned,
-                 baseType_.isFourState),
+    IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(), baseType_.isSigned(),
+                 baseType_.isFourState()),
     Scope(compilation, this), baseType(baseType_) {
 
     // Enum types don't live as members of the parent scope (they're "owned" by the declaration
@@ -556,29 +556,32 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const IntegralT
 const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
                                  LookupLocation location, const Scope& scope, bool forceSigned) {
     const Type* base;
-    if (!syntax.baseType)
+    const Type* canonicalBase;
+    if (!syntax.baseType) {
         base = &compilation.getIntType();
+        canonicalBase = base;
+    }
     else {
         base = &compilation.getType(*syntax.baseType, location, scope, false, forceSigned);
 
-        const Type& canonicalBase = base->getCanonicalType();
-        if (canonicalBase.isError())
-            return canonicalBase;
+        canonicalBase = &base->getCanonicalType();
+        if (canonicalBase->isError())
+            return *canonicalBase;
 
-        if (!canonicalBase.isSimpleBitVector()) {
+        // TODO: better checking of enum base types
+        if (!canonicalBase->isSimpleBitVector()) {
             scope.addDiag(DiagCode::InvalidEnumBase, syntax.baseType->getFirstToken().location())
                 << *base;
             return compilation.getErrorType();
         }
     }
 
-    const IntegralType& integralBase = base->as<IntegralType>();
     auto resultType =
-        compilation.emplace<EnumType>(compilation, syntax.keyword.location(), integralBase, scope);
+        compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base, scope);
     resultType->setSyntax(syntax);
 
-    SVInt one(integralBase.bitWidth, 1, integralBase.isSigned);
-    SVInt current(integralBase.bitWidth, 0, integralBase.isSigned);
+    SVInt one(canonicalBase->getBitWidth(), 1, canonicalBase->isSigned());
+    SVInt current(canonicalBase->getBitWidth(), 0, canonicalBase->isSigned());
 
     for (auto member : syntax.members) {
         auto ev =
