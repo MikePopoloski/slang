@@ -241,6 +241,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::MissingPortIODeclaration] = { "port '{}' has no I/O member declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::CantDeclarePortSigned] = { "port '{}' cannot be declared signed because its type {} is not integral", DiagnosticSeverity::Error };
     descriptors[DiagCode::PortDeclDimensionsMismatch] = { "dimensions of port '{}' do not match its declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UnknownPackage] = { "unknown package '{}'", DiagnosticSeverity::Error };
 
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };
@@ -278,6 +279,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NotAModport] = { "'{}' is not a modport", DiagnosticSeverity::Error };
     descriptors[DiagCode::HierarchicalNotAllowedInConstant] = { "hierarchical names are not allowed in constant expressions", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownMember] = { "no member named '{}' in {}", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UnknownPackageMember] = { "no member named '{}' in package '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::RecursiveDefinition] = { "'{}' recursively depends on its own definition", DiagnosticSeverity::Error };
 
     // constant evaluation

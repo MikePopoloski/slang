@@ -164,6 +164,7 @@ enum class DiagCode : uint8_t {
     MissingPortIODeclaration,
     CantDeclarePortSigned,
     PortDeclDimensionsMismatch,
+    UnknownPackage,
 
     // expressions
     BadUnaryExpression,
@@ -201,6 +202,7 @@ enum class DiagCode : uint8_t {
     NotAModport,
     HierarchicalNotAllowedInConstant,
     UnknownMember,
+    UnknownPackageMember,
     RecursiveDefinition,
 
     // constant evaluation

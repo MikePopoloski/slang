@@ -30,8 +30,8 @@ public:
         Symbol(SymbolKind::TransparentMember, wrapped_.name, wrapped_.location), wrapped(wrapped_) {
     }
 
-    void toJson(json&) const { /* enum members will be exposed in their containing enum */
-    }
+    // enum members will be exposed in their containing enum
+    void toJson(json&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TransparentMember; }
 };

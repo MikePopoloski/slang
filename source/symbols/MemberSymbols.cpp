@@ -23,10 +23,34 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
     if (!initialized) {
         initialized = true;
 
-        package_ = getScope()->getCompilation().getPackage(packageName);
-        // TODO: errors, explicit imports, transparent members?
-        if (package_)
+        const Scope* scope = getScope();
+        ASSERT(scope);
+
+        if (packageName.empty())
+            return nullptr;
+
+        package_ = scope->getCompilation().getPackage(packageName);
+        if (!package_) {
+            auto loc = location;
+            if (auto syntax = getSyntax(); syntax)
+                loc = syntax->as<PackageImportItemSyntax>().package.location();
+
+            scope->addDiag(DiagCode::UnknownPackage, loc) << packageName;
+        }
+        else if (importName.empty()) {
+            return nullptr;
+        }
+        else {
             import = package_->find(importName);
+            if (!import) {
+                auto loc = location;
+                if (auto syntax = getSyntax(); syntax)
+                    loc = syntax->as<PackageImportItemSyntax>().item.location();
+
+                auto& diag = scope->addDiag(DiagCode::UnknownPackageMember, loc);
+                diag << importName << packageName;
+            }
+        }
     }
     return import;
 }
@@ -36,8 +60,24 @@ void ExplicitImportSymbol::toJson(json& j) const {
 }
 
 const PackageSymbol* WildcardImportSymbol::getPackage() const {
-    if (!package)
-        package = getScope()->getCompilation().getPackage(packageName);
+    if (!package) {
+        const Scope* scope = getScope();
+        ASSERT(scope);
+
+        if (packageName.empty()) {
+            package = nullptr;
+        }
+        else {
+            package = scope->getCompilation().getPackage(packageName);
+            if (!package.value()) {
+                auto loc = location;
+                if (auto syntax = getSyntax(); syntax)
+                    loc = syntax->as<PackageImportItemSyntax>().package.location();
+
+                scope->addDiag(DiagCode::UnknownPackage, loc) << packageName;
+            }
+        }
+    }
     return *package;
 }
 
@@ -219,8 +259,9 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                 }
             }
             else {
-                // It's possible that this is actually an interface port if the data type is just
-                // an identifier. The only way to know is to do a lookup and see what comes back.
+                // It's possible that this is actually an interface port if the data type is
+                // just an identifier. The only way to know is to do a lookup and see what comes
+                // back.
                 const DefinitionSymbol* definition = nullptr;
                 if (header.dataType->kind == SyntaxKind::NamedType) {
                     auto& namedType = header.dataType->as<NamedTypeSyntax>();
@@ -497,8 +538,8 @@ void NonAnsiPortListBuilder::handleIODecl(const PortHeaderSyntax& header, PortIn
             auto& varHeader = header.as<VariablePortHeaderSyntax>();
             info.direction = SemanticFacts::getPortDirection(varHeader.direction.kind);
 
-            // If the port has any kind of type declared, this constitutes a full symbol definition.
-            // Otherwise we need to see if there's an existing symbol to match with.
+            // If the port has any kind of type declared, this constitutes a full symbol
+            // definition. Otherwise we need to see if there's an existing symbol to match with.
             if (varHeader.varKeyword || varHeader.dataType->kind != SyntaxKind::ImplicitType) {
                 // TODO: check for user defined net type?
                 info.kind = PortKind::Variable;
