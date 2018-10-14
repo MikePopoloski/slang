@@ -239,6 +239,12 @@ TEST_CASE("Expression types") {
     declare("struct packed { logic [13:0] a; bit b; } foo;");
     CHECK(typeof("foo.a") == "logic[13:0]");
 
+    // Casts
+    declare("parameter int FOO = 1;");
+    CHECK(typeof("(FOO + 2)'(b1)") == "bit[2:0]");
+    CHECK(typeof("int'(b1)") == "int");
+    CHECK(typeof("5'(sp)") == "logic[4:0]");
+
     Diagnostics diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == DiagCode::BadUnaryExpression);

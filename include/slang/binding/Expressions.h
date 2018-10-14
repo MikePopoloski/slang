@@ -621,6 +621,9 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
+    static Expression& fromSyntax(Compilation& compilation, const CastExpressionSyntax& syntax,
+                                  const BindContext& context);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 
 private:

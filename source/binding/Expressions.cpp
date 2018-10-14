@@ -310,6 +310,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &bindSelectExpression(compilation, syntax.as<ElementSelectExpressionSyntax>(),
                                            context);
             break;
+        case SyntaxKind::CastExpression:
+            result = &ConversionExpression::fromSyntax(compilation,
+                                                       syntax.as<CastExpressionSyntax>(), context);
+            break;
         default:
             if (DataTypeSyntax::isKind(syntax.kind)) {
                 result = &DataTypeExpression::fromSyntax(compilation, syntax.as<DataTypeSyntax>(),
@@ -1118,8 +1122,9 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
 
     const SVInt& value = left.constant->integer();
     if (!context.checkNoUnknowns(value, left.sourceRange) ||
-        !context.checkPositive(value, left.sourceRange))
+        !context.checkPositive(value, left.sourceRange)) {
         return badExpr(compilation, result);
+    }
 
     if (value == 0) {
         if ((context.flags & BindFlags::InsideConcatenation) == 0) {
@@ -1226,6 +1231,44 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
     return *compilation.emplace<CallExpression>(&subroutine, subroutine.getReturnType(),
                                                 buffer.copy(compilation), context.lookupLocation,
                                                 syntax.sourceRange());
+}
+
+Expression& ConversionExpression::fromSyntax(Compilation& compilation,
+                                             const CastExpressionSyntax& syntax,
+                                             const BindContext& context) {
+    auto& targetExpr = selfDetermined(compilation, *syntax.left, context,
+                                      BindFlags::AllowDataType | BindFlags::IntegralConstant);
+    auto& operand = selfDetermined(compilation, *syntax.right, context);
+
+    auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(), operand,
+                                                            syntax.sourceRange());
+    if (targetExpr.bad() || operand.bad())
+        return badExpr(compilation, result);
+
+    if (targetExpr.kind == ExpressionKind::DataType) {
+        result->type = targetExpr.type;
+    }
+    else if (!targetExpr.constant || !targetExpr.constant->isInteger()) {
+        return badExpr(compilation, result);
+    }
+    else {
+        // TODO: check for zero
+        const SVInt& value = targetExpr.constant->integer();
+        if (!context.checkNoUnknowns(value, targetExpr.sourceRange) ||
+            !context.checkPositive(value, targetExpr.sourceRange)) {
+            return badExpr(compilation, result);
+        }
+
+        auto width = context.checkValidBitWidth(value, targetExpr.sourceRange);
+        if (!width)
+            return badExpr(compilation, result);
+
+        // TODO: require integer expression
+        result->type = &compilation.getType(*width, operand.type->getIntegralFlags());
+    }
+
+    // TODO: make sure cast compatible
+    return *result;
 }
 
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
