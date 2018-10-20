@@ -93,6 +93,22 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
     return info ? info->includedFrom : SourceLocation();
 }
 
+string_view SourceManager::getMacroName(SourceLocation location) const {
+    while (isMacroArgLoc(location))
+        location = getExpansionLoc(location);
+
+    auto buffer = location.buffer();
+    if (!buffer)
+        return false;
+
+    ASSERT(buffer.id < bufferEntries.size());
+    auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.id]);
+    if (!info)
+        return {};
+
+    return info->macroName;
+}
+
 bool SourceManager::isFileLoc(SourceLocation location) const {
     auto buffer = location.buffer();
     if (!buffer)
@@ -199,8 +215,12 @@ SourceLocation SourceManager::getOriginalLoc(SourceLocation location) const {
 }
 
 SourceLocation SourceManager::getFullyExpandedLoc(SourceLocation location) const {
-    while (isMacroLoc(location))
-        location = getExpansionLoc(location);
+    while (isMacroLoc(location)) {
+        if (isMacroArgLoc(location))
+            location = getOriginalLoc(location);
+        else
+            location = getExpansionLoc(location);
+    }
     return location;
 }
 
@@ -217,6 +237,15 @@ SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
                                                  SourceLocation expansionEnd, bool isMacroArg) {
     bufferEntries.emplace_back(
         ExpansionInfo(originalLoc, expansionStart, expansionEnd, isMacroArg));
+    return SourceLocation(BufferID::get((uint32_t)(bufferEntries.size() - 1)), 0);
+}
+
+SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
+                                                 SourceLocation expansionStart,
+                                                 SourceLocation expansionEnd,
+                                                 string_view macroName) {
+
+    bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionStart, expansionEnd, macroName));
     return SourceLocation(BufferID::get((uint32_t)(bufferEntries.size() - 1)), 0);
 }
 

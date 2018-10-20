@@ -1026,12 +1026,14 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
     if (body.empty())
         return true;
 
+    string_view macroName = directive->name.valueText();
+
     if (!directive->formalArguments) {
         // each macro expansion gets its own location entry
         SourceLocation start = body[0].location();
         SourceLocation usageLoc = usageSite.location();
         SourceLocation expansionLoc = sourceManager.createExpansionLoc(
-            start, usageLoc, usageLoc + usageSite.rawText().length(), false);
+            start, usageLoc, usageLoc + usageSite.rawText().length(), macroName);
 
         // simple macro; just take body tokens
         bool isFirst = true;
@@ -1085,7 +1087,8 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
     Token endOfArgs = actualArgs->getLastToken();
     SourceLocation start = body[0].location();
     SourceLocation expansionLoc = sourceManager.createExpansionLoc(
-        start, usageSite.location(), endOfArgs.location() + endOfArgs.rawText().length(), false);
+        start, usageSite.location(), endOfArgs.location() + endOfArgs.rawText().length(),
+        macroName);
 
     // now add each body token, substituting arguments as necessary
     bool isFirst = true;

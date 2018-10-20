@@ -271,8 +271,15 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     while (!expansionLocs.empty()) {
         location = expansionLocs.back();
         expansionLocs.pop();
+
+        std::string name{ sourceManager.getMacroName(location) };
+        if (name.empty())
+            name = "expanded from here";
+        else
+            name = "expanded from macro '" + name + "'";
+
         formatDiag(buffer, sourceManager.getOriginalLoc(location), std::vector<SourceRange>(),
-                   "note", "expanded from here");
+                   "note", name);
     }
 
     for (const Diagnostic& note : diagnostic.notes)
@@ -295,7 +302,7 @@ std::string DiagnosticWriter::report(const Diagnostics& diagnostics) {
             getIncludeStack(lastBuffer, includeStack);
 
             for (auto& includeLoc : includeStack) {
-                buffer.format("In file included from {}:{}:\n",
+                buffer.format("in file included from {}:{}:\n",
                               sourceManager.getFileName(includeLoc),
                               sourceManager.getLineNumber(includeLoc));
             }
@@ -411,4 +418,4 @@ void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc,
     buffer.append("\n");
 }
 
-}
+} // namespace slang

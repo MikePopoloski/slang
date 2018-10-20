@@ -610,7 +610,7 @@ TEST_CASE("Macro arg location bug") {
 source:4:15: error: unknown macro or compiler directive '`bar'
    `FOO(      `bar      )   asdfasdfasdfasdfasdfasdfsadfasdfasdfasdfasdf
               ^
-source:2:19: note: expanded from here
+source:2:19: note: expanded from macro 'FOO'
 `define FOO(name) name \
                   ^
 )");
@@ -652,11 +652,11 @@ int i = `BAR(asdf);
     CHECK(result == R"(
 source:5:14: error: use of undeclared identifier 'asdf'
 int i = `BAR(asdf);
-        ~~~~~^~~~~
-source:3:21: note: expanded from here
+             ^~~~~
+source:3:21: note: expanded from macro 'BAR'
 `define BAR(a) `FOO(a)
                     ^
-source:2:16: note: expanded from here
+source:2:16: note: expanded from macro 'FOO'
 `define FOO(a) a
                ^
 )");

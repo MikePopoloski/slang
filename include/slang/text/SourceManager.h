@@ -69,6 +69,10 @@ public:
     /// @a location must be a file location.
     SourceLocation getIncludedFrom(BufferID buffer) const;
 
+    /// Attempts to get the name of the macro represented by a macro location.
+    /// If no macro name can be found, returns an empty string view.
+    string_view getMacroName(SourceLocation location) const;
+
     /// Determines whether the given location exists in a source file.
     bool isFileLoc(SourceLocation location) const;
 
@@ -108,6 +112,10 @@ public:
     /// Creates a macro expansion location; used by the preprocessor.
     SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart,
                                       SourceLocation expansionEnd, bool isMacroArg);
+
+    /// Creates a macro expansion location; used by the preprocessor.
+    SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart,
+                                      SourceLocation expansionEnd, string_view macroName);
 
     /// Instead of loading source from a file, copy it from text already in memory.
     SourceBuffer assignText(string_view text, SourceLocation includedFrom = SourceLocation());
@@ -188,11 +196,18 @@ private:
         SourceLocation expansionEnd;
         bool isMacroArg = false;
 
+        string_view macroName;
+
         ExpansionInfo() {}
         ExpansionInfo(SourceLocation originalLoc, SourceLocation expansionStart,
                       SourceLocation expansionEnd, bool isMacroArg) :
             originalLoc(originalLoc),
             expansionStart(expansionStart), expansionEnd(expansionEnd), isMacroArg(isMacroArg) {}
+
+        ExpansionInfo(SourceLocation originalLoc, SourceLocation expansionStart,
+                      SourceLocation expansionEnd, string_view macroName) :
+            originalLoc(originalLoc),
+            expansionStart(expansionStart), expansionEnd(expansionEnd), macroName(macroName) {}
     };
 
     // index from BufferID to buffer metadata
