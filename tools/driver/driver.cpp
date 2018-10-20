@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/DiagnosticWriter.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 

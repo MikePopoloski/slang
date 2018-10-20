@@ -11,6 +11,7 @@ add_library(slang STATIC
 	compilation/SemanticModel.cpp
 
 	diagnostics/Diagnostics.cpp
+	diagnostics/DiagnosticWriter.cpp
 
 	numeric/SVInt.cpp
 	numeric/Time.cpp
