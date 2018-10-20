@@ -46,7 +46,7 @@ private:
                         string_view sourceLine, std::string& buffer);
 
     template<typename T>
-    void formatDiag(T& buffer, SourceLocation loc, const std::vector<SourceRange>& ranges,
+    void formatDiag(T& buffer, SourceLocation loc, span<const SourceRange> ranges,
                     const char* severity, const std::string& msg);
 
     const SourceManager& sourceManager;

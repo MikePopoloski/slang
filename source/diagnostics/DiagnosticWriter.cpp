@@ -234,7 +234,6 @@ DiagnosticSeverity DiagnosticWriter::getSeverity(DiagCode code) const {
     return it->second.severity;
 }
 
-// Helper function to find all expansion locations of a macro argument.
 static void getMacroArgExpansions(const SourceManager& sm, SourceLocation loc, bool isStart,
                                   SmallVector<BufferID>& results) {
     while (sm.isMacroLoc(loc)) {
@@ -301,7 +300,6 @@ static SourceLocation getMatchingMacroLoc(const SourceManager& sm, SourceLocatio
     return getMatchingMacroLoc(sm, argLoc, contextLoc, isStart, commonArgs);
 }
 
-// Helper function that maps highlight ranges to the same context as the given location.
 static void mapDiagnosticRanges(const SourceManager& sm, SourceLocation loc,
                                 span<const SourceRange> ranges, SmallVector<SourceRange>& mapped) {
     for (auto& range : ranges) {
@@ -337,11 +335,38 @@ static void mapDiagnosticRanges(const SourceManager& sm, SourceLocation loc,
     }
 }
 
+static bool checkMacroArgRanges(const SourceManager& sm, SourceLocation loc,
+                                span<const SourceRange> ranges) {
+    if (!sm.isMacroArgLoc(loc))
+        return false;
+
+    SmallVectorSized<SourceRange, 8> mappedRanges;
+    mapDiagnosticRanges(sm, loc, ranges, mappedRanges);
+
+    if (ranges.size() > mappedRanges.size())
+        return false;
+
+    loc = sm.getExpansionLoc(loc);
+
+    for (auto& range : mappedRanges) {
+        if (!sm.isMacroArgLoc(range.start()) || !sm.isMacroArgLoc(range.end()))
+            return false;
+
+        if (sm.getExpansionLoc(range.start()) != loc || sm.getExpansionLoc(range.end()) != loc)
+            return false;
+    }
+
+    return true;
+}
+
 std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     // walk out until we find a location for this diagnostic that isn't inside a macro
     SmallVectorSized<SourceLocation, 8> expansionLocs;
     SourceLocation location = diagnostic.location;
+    size_t ignoreUntil = 0;
+
     while (sourceManager.isMacroLoc(location)) {
+        SourceLocation prevLoc = location;
         if (sourceManager.isMacroArgLoc(location)) {
             expansionLocs.append(sourceManager.getExpansionLoc(location));
             location = sourceManager.getOriginalLoc(location);
@@ -350,13 +375,18 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
             expansionLocs.append(location);
             location = sourceManager.getExpansionLoc(location);
         }
+
+        if (checkMacroArgRanges(sourceManager, prevLoc, diagnostic.ranges))
+            ignoreUntil = expansionLocs.size();
     }
 
     // build the error message from arguments, if we have any
     FormatBuffer buffer;
     Descriptor& desc = descriptors[diagnostic.code];
     if (diagnostic.args.empty()) {
-        formatDiag(buffer, location, diagnostic.ranges, severityToString[(int)desc.severity],
+        SmallVectorSized<SourceRange, 8> mappedRanges;
+        mapDiagnosticRanges(sourceManager, location, diagnostic.ranges, mappedRanges);
+        formatDiag(buffer, location, mappedRanges, severityToString[(int)desc.severity],
                    desc.format);
     }
     else {
@@ -366,15 +396,23 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         for (auto& arg : diagnostic.args)
             args.push_back(fmt::internal::make_arg<ctx>(arg));
 
+        SmallVectorSized<SourceRange, 8> mappedRanges;
+        mapDiagnosticRanges(sourceManager, location, diagnostic.ranges, mappedRanges);
+
         std::string msg = fmt::vformat(
             desc.format, fmt::basic_format_args<ctx>(args.data(), (unsigned)args.size()));
-        formatDiag(buffer, location, diagnostic.ranges, severityToString[(int)desc.severity], msg);
+        formatDiag(buffer, location, mappedRanges, severityToString[(int)desc.severity], msg);
     }
 
     // write out macro expansions, if we have any
+    size_t index = 0;
     while (!expansionLocs.empty()) {
         location = expansionLocs.back();
         expansionLocs.pop();
+        index++;
+
+        if (index <= ignoreUntil)
+            continue;
 
         std::string name{ sourceManager.getMacroName(location) };
         if (name.empty())
@@ -382,8 +420,9 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         else
             name = "expanded from macro '" + name + "'";
 
-        formatDiag(buffer, sourceManager.getFullyOriginalLoc(location), std::vector<SourceRange>(),
-                   "note", name);
+        SmallVectorSized<SourceRange, 8> mappedRanges;
+        mapDiagnosticRanges(sourceManager, location, diagnostic.ranges, mappedRanges);
+        formatDiag(buffer, sourceManager.getFullyOriginalLoc(location), mappedRanges, "note", name);
     }
 
     for (const Diagnostic& note : diagnostic.notes)
@@ -476,9 +515,8 @@ void DiagnosticWriter::highlightRange(SourceRange range, SourceLocation caretLoc
 }
 
 template<typename T>
-void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc,
-                                  const std::vector<SourceRange>& ranges, const char* severity,
-                                  const std::string& msg) {
+void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc, span<const SourceRange> ranges,
+                                  const char* severity, const std::string& msg) {
     uint32_t col = sourceManager.getColumnNumber(loc);
     buffer.format("{}:{}:{}: {}: {}", sourceManager.getFileName(loc),
                   sourceManager.getLineNumber(loc), col, severity, msg);
@@ -496,10 +534,7 @@ void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc,
                 highlight[i] = '\t';
         }
 
-        SmallVectorSized<SourceRange, 8> mappedRanges;
-        mapDiagnosticRanges(sourceManager, loc, ranges, mappedRanges);
-
-        for (SourceRange range : mappedRanges)
+        for (SourceRange range : ranges)
             highlightRange(range, loc, col, line, highlight);
 
         highlight[col - 1] = '^';

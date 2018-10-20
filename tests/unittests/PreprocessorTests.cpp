@@ -610,9 +610,6 @@ TEST_CASE("Macro arg location bug") {
 source:4:15: error: unknown macro or compiler directive '`bar'
    `FOO(      `bar      )   asdfasdfasdfasdfasdfasdfsadfasdfasdfasdfasdf
               ^
-source:2:19: note: expanded from macro 'FOO'
-`define FOO(name) name \
-                  ^
 )");
 }
 
@@ -633,33 +630,6 @@ foobar
     REQUIRE(diagnostics.size() == 2);
     CHECK(diagnostics[0].code == DiagCode::MacroOpsOutsideDefinition);
     CHECK(diagnostics[1].code == DiagCode::MacroOpsOutsideDefinition);
-}
-
-TEST_CASE("Macro argument nested location reporting") {
-    auto tree = SyntaxTree::fromText(R"(
-`define FOO(a) a
-`define BAR(a) `FOO(a)
-
-int i = `BAR(asdf);
-)", "source");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-
-    Diagnostics diagnostics = compilation.getAllDiagnostics();
-    std::string result = "\n" + report(diagnostics);
-    CHECK(result == R"(
-source:5:14: error: use of undeclared identifier 'asdf'
-int i = `BAR(asdf);
-             ^~~~
-source:3:21: note: expanded from macro 'BAR'
-`define BAR(a) `FOO(a)
-                    ^
-source:2:16: note: expanded from macro 'FOO'
-`define FOO(a) a
-               ^
-)");
 }
 
 TEST_CASE("IfDef branch (taken)") {

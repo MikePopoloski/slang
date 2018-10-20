@@ -76,3 +76,153 @@ TEST_CASE("keywords_errors") {
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == DiagCode::MismatchedEndKeywordsDirective);
 }
+
+TEST_CASE("Diag within macro arg") {
+    auto tree = SyntaxTree::fromText(R"(
+`define FOO(blah) blah
+`define BAR(blah) `FOO(blah)
+
+module m;
+    struct { } asdf;
+    int i = `BAR(asdf.bar);
+endmodule
+
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:7:23: error: no member named 'bar' in struct{}
+    int i = `BAR(asdf.bar);
+                 ~~~~~^~~
+source:3:24: note: expanded from macro 'BAR'
+`define BAR(blah) `FOO(blah)
+                       ^~~~
+source:2:19: note: expanded from macro 'FOO'
+`define FOO(blah) blah
+                  ^~~~
+)");
+}
+
+TEST_CASE("Diag within macro body") {
+    auto tree = SyntaxTree::fromText(R"(
+`define FOO(blah) blah.bar
+`define BAR(blah) `FOO(blah)
+
+module m;
+    struct { } asdf;
+    int i = `BAR(asdf);
+endmodule
+
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:7:13: error: no member named 'bar' in struct{}
+    int i = `BAR(asdf);
+            ^~~~~~~~~~
+source:3:19: note: expanded from macro 'BAR'
+`define BAR(blah) `FOO(blah)
+                  ^~~~~~~~~~
+source:2:24: note: expanded from macro 'FOO'
+`define FOO(blah) blah.bar
+                  ~~~~~^~~
+)");
+}
+
+TEST_CASE("Diag range within arg and caret within body") {
+    auto tree = SyntaxTree::fromText(R"(
+`define FOO(blah) blah++
+`define BAR(blah) `FOO(blah)
+
+module m;
+    struct { } asdf;
+    int i = `BAR(asdf);
+endmodule
+
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:7:13: error: invalid operand type struct{} to unary expression
+    int i = `BAR(asdf);
+            ^    ~~~~
+source:3:19: note: expanded from macro 'BAR'
+`define BAR(blah) `FOO(blah)
+                  ^    ~~~~
+source:2:23: note: expanded from macro 'FOO'
+`define FOO(blah) blah++
+                  ~~~~^
+)");
+}
+
+TEST_CASE("Diag caret within macro arg only") {
+    auto tree = SyntaxTree::fromText(R"(
+`define FOO(blah) blah
+`define BAR(blah) `FOO(blah)
+
+module m;
+    int i = `BAR(++);
+endmodule
+
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:6:20: error: expected identifier
+    int i = `BAR(++);
+                   ^
+)");
+}
+
+TEST_CASE("Diag range split across args") {
+    auto tree = SyntaxTree::fromText(R"(
+`define BAZ(xy) xy
+`define FOO(blah, flurb) blah+`BAZ(flurb)
+`define BAR(blah, flurb) `FOO(blah, flurb)
+
+module m;
+    struct { } asdf;
+    struct { } bar;
+    int i = `BAR(asdf, bar);
+endmodule
+
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:9:13: error: invalid operands to binary expression (struct{} and struct{})
+    int i = `BAR(asdf, bar);
+            ^    ~~~~  ~~~
+source:4:26: note: expanded from macro 'BAR'
+`define BAR(blah, flurb) `FOO(blah, flurb)
+                         ^    ~~~~  ~~~~~
+source:3:30: note: expanded from macro 'FOO'
+`define FOO(blah, flurb) blah+`BAZ(flurb)
+                         ~~~~^     ~~~~~
+)");
+}

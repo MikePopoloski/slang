@@ -377,7 +377,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
             const Symbol* member = expr->type->getCanonicalType().as<Scope>().find(name);
             if (!member) {
-                auto& diag = context.addDiag(DiagCode::UnknownMember, memberSelect->nameRange);
+                auto& diag = context.addDiag(DiagCode::UnknownMember, memberSelect->nameRange.start());
                 diag << expr->sourceRange;
                 diag << name;
                 diag << *expr->type;
