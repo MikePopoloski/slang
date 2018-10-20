@@ -652,7 +652,7 @@ int i = `BAR(asdf);
     CHECK(result == R"(
 source:5:14: error: use of undeclared identifier 'asdf'
 int i = `BAR(asdf);
-             ^~~~~
+             ^~~~
 source:3:21: note: expanded from macro 'BAR'
 `define BAR(a) `FOO(a)
                     ^

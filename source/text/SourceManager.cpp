@@ -214,6 +214,12 @@ SourceLocation SourceManager::getOriginalLoc(SourceLocation location) const {
            (size_t)location.offset();
 }
 
+SourceLocation SourceManager::getFullyOriginalLoc(SourceLocation location) const {
+    while (isMacroLoc(location))
+        location = getOriginalLoc(location);
+    return location;
+}
+
 SourceLocation SourceManager::getFullyExpandedLoc(SourceLocation location) const {
     while (isMacroLoc(location)) {
         if (isMacroArgLoc(location))

@@ -10,6 +10,7 @@
 
 #include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/StackContainer.h"
 
 namespace slang {
 
@@ -233,6 +234,109 @@ DiagnosticSeverity DiagnosticWriter::getSeverity(DiagCode code) const {
     return it->second.severity;
 }
 
+// Helper function to find all expansion locations of a macro argument.
+static void getMacroArgExpansions(const SourceManager& sm, SourceLocation loc, bool isStart,
+                                  SmallVector<BufferID>& results) {
+    while (sm.isMacroLoc(loc)) {
+        if (sm.isMacroArgLoc(loc)) {
+            results.append(loc.buffer());
+            loc = sm.getOriginalLoc(loc);
+        }
+        else {
+            auto range = sm.getExpansionRange(loc);
+            loc = isStart ? range.start() : range.end();
+        }
+    }
+}
+
+static void getCommonMacroArgExpansions(const SourceManager& sm, SourceLocation start,
+                                        SourceLocation end, std::vector<BufferID>& results) {
+    SmallVectorSized<BufferID, 8> startArgExpansions;
+    SmallVectorSized<BufferID, 8> endArgExpansions;
+    getMacroArgExpansions(sm, start, true, startArgExpansions);
+    getMacroArgExpansions(sm, end, false, endArgExpansions);
+    std::stable_sort(startArgExpansions.begin(), startArgExpansions.end());
+    std::stable_sort(endArgExpansions.begin(), endArgExpansions.end());
+
+    std::set_intersection(startArgExpansions.begin(), startArgExpansions.end(),
+                          endArgExpansions.begin(), endArgExpansions.end(),
+                          std::back_inserter(results));
+}
+
+static SourceLocation getMatchingMacroLoc(const SourceManager& sm, SourceLocation loc,
+                                          SourceLocation contextLoc, bool isStart,
+                                          span<const BufferID> commonArgs) {
+    if (loc.buffer() == contextLoc.buffer())
+        return loc;
+
+    if (!sm.isMacroLoc(loc))
+        return {};
+
+    SourceRange macroRange;
+    SourceRange macroArgRange;
+    if (sm.isMacroArgLoc(loc)) {
+        // Only look at the original location of this argument if the other location
+        // in the range is also present in the expansion.
+        if (std::binary_search(commonArgs.begin(), commonArgs.end(), loc.buffer())) {
+            SourceLocation orig = sm.getOriginalLoc(loc);
+            macroRange = SourceRange(orig, orig);
+        }
+        macroArgRange = sm.getExpansionRange(loc);
+    }
+    else {
+        macroRange = sm.getExpansionRange(loc);
+
+        SourceLocation orig = sm.getOriginalLoc(loc);
+        macroArgRange = SourceRange(orig, orig);
+    }
+
+    SourceLocation macroLoc = isStart ? macroRange.start() : macroRange.end();
+    if (macroLoc) {
+        macroLoc = getMatchingMacroLoc(sm, macroLoc, contextLoc, isStart, commonArgs);
+        if (macroLoc)
+            return macroLoc;
+    }
+
+    SourceLocation argLoc = isStart ? macroArgRange.start() : macroArgRange.end();
+    return getMatchingMacroLoc(sm, argLoc, contextLoc, isStart, commonArgs);
+}
+
+// Helper function that maps highlight ranges to the same context as the given location.
+static void mapDiagnosticRanges(const SourceManager& sm, SourceLocation loc,
+                                span<const SourceRange> ranges, SmallVector<SourceRange>& mapped) {
+    for (auto& range : ranges) {
+        SourceLocation start = range.start();
+        SourceLocation end = range.end();
+
+        SmallMap<BufferID, SourceLocation, 8> startMap;
+        while (sm.isMacroLoc(start) && start.buffer() != end.buffer()) {
+            startMap[start.buffer()] = start;
+            start = sm.getExpansionLoc(start);
+        }
+
+        if (start.buffer() != end.buffer()) {
+            while (sm.isMacroLoc(end) && !startMap.count(end.buffer()))
+                end = sm.getExpansionRange(end).end();
+
+            if (sm.isMacroLoc(end))
+                start = startMap[end.buffer()];
+        }
+
+        // We now have a common macro location; find common argument expansions.
+        std::vector<BufferID> commonArgs;
+        getCommonMacroArgExpansions(sm, start, end, commonArgs);
+
+        start = getMatchingMacroLoc(sm, start, loc, true, commonArgs);
+        end = getMatchingMacroLoc(sm, end, loc, false, commonArgs);
+        if (!start || !end)
+            continue;
+
+        start = sm.getFullyOriginalLoc(start);
+        end = sm.getFullyOriginalLoc(end);
+        mapped.emplace(start, end);
+    }
+}
+
 std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     // walk out until we find a location for this diagnostic that isn't inside a macro
     SmallVectorSized<SourceLocation, 8> expansionLocs;
@@ -278,7 +382,7 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         else
             name = "expanded from macro '" + name + "'";
 
-        formatDiag(buffer, sourceManager.getOriginalLoc(location), std::vector<SourceRange>(),
+        formatDiag(buffer, sourceManager.getFullyOriginalLoc(location), std::vector<SourceRange>(),
                    "note", name);
     }
 
@@ -339,25 +443,9 @@ void DiagnosticWriter::getIncludeStack(BufferID buffer, std::deque<SourceLocatio
 
 void DiagnosticWriter::highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col,
                                       string_view sourceLine, std::string& buffer) {
-    // If the end location is within a macro, we want to push it out to the
-    // end of the expanded location so that it encompasses the entire macro usage
-    SourceLocation startLoc = sourceManager.getFullyExpandedLoc(range.start());
-    SourceLocation endLoc = range.end();
-    while (sourceManager.isMacroLoc(endLoc)) {
-        SourceRange endRange = sourceManager.getExpansionRange(endLoc);
-        if (!sourceManager.isMacroLoc(endRange.start()))
-            endLoc = endRange.end();
-        else
-            endLoc = endRange.start();
-    }
-
-    // If they're in different files just give up
-    if (startLoc.buffer() != caretLoc.buffer() || endLoc.buffer() != caretLoc.buffer())
-        return;
-
     // Trim the range so that it only falls on the same line as the cursor
-    uint32_t start = startLoc.offset();
-    uint32_t end = endLoc.offset();
+    uint32_t start = range.start().offset();
+    uint32_t end = range.end().offset();
     uint32_t startOfLine = caretLoc.offset() - (col - 1);
     uint32_t endOfLine = startOfLine + (uint32_t)sourceLine.length();
     if (start < startOfLine)
@@ -408,7 +496,10 @@ void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc,
                 highlight[i] = '\t';
         }
 
-        for (SourceRange range : ranges)
+        SmallVectorSized<SourceRange, 8> mappedRanges;
+        mapDiagnosticRanges(sourceManager, loc, ranges, mappedRanges);
+
+        for (SourceRange range : mappedRanges)
             highlightRange(range, loc, col, line, highlight);
 
         highlight[col - 1] = '^';

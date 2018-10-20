@@ -102,6 +102,10 @@ public:
     /// Gets the original source location of a given macro location.
     SourceLocation getOriginalLoc(SourceLocation location) const;
 
+    /// Gets the actual original location where source is written, given a location
+    /// inside a macro. Otherwise just returns the location itself.
+    SourceLocation getFullyOriginalLoc(SourceLocation location) const;
+
     /// If the given location is a macro location, fully expands it out to its actual
     /// file expansion location. Otherwise just returns the location itself.
     SourceLocation getFullyExpandedLoc(SourceLocation location) const;
