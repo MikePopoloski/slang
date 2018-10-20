@@ -383,11 +383,10 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     // build the error message from arguments, if we have any
     FormatBuffer buffer;
     Descriptor& desc = descriptors[diagnostic.code];
+    std::string message;
+
     if (diagnostic.args.empty()) {
-        SmallVectorSized<SourceRange, 8> mappedRanges;
-        mapDiagnosticRanges(sourceManager, location, diagnostic.ranges, mappedRanges);
-        formatDiag(buffer, location, mappedRanges, severityToString[(int)desc.severity],
-                   desc.format);
+        message = desc.format;
     }
     else {
         // The fmtlib API for arg lists isn't very pretty, but it gets the job done
@@ -396,13 +395,13 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         for (auto& arg : diagnostic.args)
             args.push_back(fmt::internal::make_arg<ctx>(arg));
 
-        SmallVectorSized<SourceRange, 8> mappedRanges;
-        mapDiagnosticRanges(sourceManager, location, diagnostic.ranges, mappedRanges);
-
-        std::string msg = fmt::vformat(
-            desc.format, fmt::basic_format_args<ctx>(args.data(), (unsigned)args.size()));
-        formatDiag(buffer, location, mappedRanges, severityToString[(int)desc.severity], msg);
+        message = fmt::vformat(desc.format,
+                               fmt::basic_format_args<ctx>(args.data(), (unsigned)args.size()));
     }
+
+    SmallVectorSized<SourceRange, 8> mappedRanges;
+    mapDiagnosticRanges(sourceManager, location, diagnostic.ranges, mappedRanges);
+    formatDiag(buffer, location, mappedRanges, severityToString[(int)desc.severity], message);
 
     // write out macro expansions, if we have any
     size_t index = 0;
@@ -420,9 +419,9 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         else
             name = "expanded from macro '" + name + "'";
 
-        SmallVectorSized<SourceRange, 8> mappedRanges;
-        mapDiagnosticRanges(sourceManager, location, diagnostic.ranges, mappedRanges);
-        formatDiag(buffer, sourceManager.getFullyOriginalLoc(location), mappedRanges, "note", name);
+        SmallVectorSized<SourceRange, 8> macroRanges;
+        mapDiagnosticRanges(sourceManager, location, diagnostic.ranges, macroRanges);
+        formatDiag(buffer, sourceManager.getFullyOriginalLoc(location), macroRanges, "note", name);
     }
 
     for (const Diagnostic& note : diagnostic.notes)
