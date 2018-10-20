@@ -75,6 +75,9 @@ public:
     /// Determines whether the given location points to a macro expansion.
     bool isMacroLoc(SourceLocation location) const;
 
+    /// Determines whether the given location points to a macro argument expansion.
+    bool isMacroArgLoc(SourceLocation location) const;
+
     /// Determines whether the given location is inside an include file.
     bool isIncludedFileLoc(SourceLocation location) const;
 
@@ -104,7 +107,7 @@ public:
 
     /// Creates a macro expansion location; used by the preprocessor.
     SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart,
-                                      SourceLocation expansionEnd);
+                                      SourceLocation expansionEnd, bool isMacroArg);
 
     /// Instead of loading source from a file, copy it from text already in memory.
     SourceBuffer assignText(string_view text, SourceLocation includedFrom = SourceLocation());
@@ -183,12 +186,13 @@ private:
         SourceLocation originalLoc;
         SourceLocation expansionStart;
         SourceLocation expansionEnd;
+        bool isMacroArg = false;
 
         ExpansionInfo() {}
         ExpansionInfo(SourceLocation originalLoc, SourceLocation expansionStart,
-                      SourceLocation expansionEnd) :
+                      SourceLocation expansionEnd, bool isMacroArg) :
             originalLoc(originalLoc),
-            expansionStart(expansionStart), expansionEnd(expansionEnd) {}
+            expansionStart(expansionStart), expansionEnd(expansionEnd), isMacroArg(isMacroArg) {}
     };
 
     // index from BufferID to buffer metadata

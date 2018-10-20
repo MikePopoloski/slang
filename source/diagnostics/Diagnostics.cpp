@@ -319,8 +319,14 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     SmallVectorSized<SourceLocation, 8> expansionLocs;
     SourceLocation location = diagnostic.location;
     while (sourceManager.isMacroLoc(location)) {
-        expansionLocs.append(location);
-        location = sourceManager.getExpansionLoc(location);
+        if (sourceManager.isMacroArgLoc(location)) {
+            expansionLocs.append(sourceManager.getExpansionLoc(location));
+            location = sourceManager.getOriginalLoc(location);
+        }
+        else {
+            expansionLocs.append(location);
+            location = sourceManager.getExpansionLoc(location);
+        }
     }
 
     // build the error message from arguments, if we have any

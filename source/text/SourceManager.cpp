@@ -111,6 +111,16 @@ bool SourceManager::isMacroLoc(SourceLocation location) const {
     return std::get_if<ExpansionInfo>(&bufferEntries[buffer.id]) != nullptr;
 }
 
+bool SourceManager::isMacroArgLoc(SourceLocation location) const {
+    auto buffer = location.buffer();
+    if (!buffer)
+        return false;
+
+    ASSERT(buffer.id < bufferEntries.size());
+    auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.id]);
+    return info && info->isMacroArg;
+}
+
 bool SourceManager::isIncludedFileLoc(SourceLocation location) const {
     return getIncludedFrom(location.buffer()).valid();
 }
@@ -204,8 +214,9 @@ string_view SourceManager::getSourceText(BufferID buffer) const {
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
                                                  SourceLocation expansionStart,
-                                                 SourceLocation expansionEnd) {
-    bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionStart, expansionEnd));
+                                                 SourceLocation expansionEnd, bool isMacroArg) {
+    bufferEntries.emplace_back(
+        ExpansionInfo(originalLoc, expansionStart, expansionEnd, isMacroArg));
     return SourceLocation(BufferID::get((uint32_t)(bufferEntries.size() - 1)), 0);
 }
 

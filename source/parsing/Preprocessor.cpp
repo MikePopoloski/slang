@@ -1031,7 +1031,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
         SourceLocation start = body[0].location();
         SourceLocation usageLoc = usageSite.location();
         SourceLocation expansionLoc = sourceManager.createExpansionLoc(
-            start, usageLoc, usageLoc + usageSite.rawText().length());
+            start, usageLoc, usageLoc + usageSite.rawText().length(), false);
 
         // simple macro; just take body tokens
         bool isFirst = true;
@@ -1085,7 +1085,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
     Token endOfArgs = actualArgs->getLastToken();
     SourceLocation start = body[0].location();
     SourceLocation expansionLoc = sourceManager.createExpansionLoc(
-        start, usageSite.location(), endOfArgs.location() + endOfArgs.rawText().length());
+        start, usageSite.location(), endOfArgs.location() + endOfArgs.rawText().length(), false);
 
     // now add each body token, substituting arguments as necessary
     bool isFirst = true;
@@ -1147,7 +1147,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
         SourceLocation formalLoc =
             expansionLoc + (int(token.location().offset()) - int(start.offset()));
         SourceLocation argLoc = sourceManager.createExpansionLoc(
-            firstLoc, formalLoc, formalLoc + token.rawText().length());
+            firstLoc, formalLoc, formalLoc + token.rawText().length(), true);
 
         // See note above about weird macro usage being argument replaced.
         // In that case we want to fabricate the correct directive token here.
