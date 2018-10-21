@@ -853,7 +853,8 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
     // Expand out the macro
     SmallVectorSized<Token, 32> buffer;
-    if (!expandMacro(macro, directive, actualArgs, buffer, true))
+    MacroExpansion expansion{ alloc, buffer, directive, true };
+    if (!expandMacro(macro, expansion, actualArgs))
         return actualArgs;
 
     // The macro is now expanded out into tokens, but some of those tokens might
@@ -1009,13 +1010,12 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
     return anyNewMacros;
 }
 
-bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
-                               MacroActualArgumentListSyntax* actualArgs, SmallVector<Token>& dest,
-                               bool isTopLevel) {
+bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
+                               MacroActualArgumentListSyntax* actualArgs) {
     if (macro.isIntrinsic()) {
         // for now, no intrisics can have arguments
         ASSERT(!actualArgs);
-        return expandIntrinsic(macro.intrinsic, usageSite, dest, isTopLevel);
+        return expandIntrinsic(macro.intrinsic, expansion);
     }
 
     DefineDirectiveSyntax* directive = macro.syntax;
@@ -1031,14 +1031,13 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
     if (!directive->formalArguments) {
         // each macro expansion gets its own location entry
         SourceLocation start = body[0].location();
-        SourceLocation usageLoc = usageSite.location();
         SourceLocation expansionLoc = sourceManager.createExpansionLoc(
-            start, usageLoc, usageLoc + usageSite.rawText().length(), macroName);
+            start, expansion.getRange().start(), expansion.getRange().end(), macroName);
 
         // simple macro; just take body tokens
-        bool isFirst = true;
-        for (auto& token : body)
-            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst, isTopLevel);
+        for (auto token : body)
+            expansion.append(token, expansionLoc + (token.location() - start));
+
         return true;
     }
 
@@ -1087,16 +1086,18 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
     Token endOfArgs = actualArgs->getLastToken();
     SourceLocation start = body[0].location();
     SourceLocation expansionLoc = sourceManager.createExpansionLoc(
-        start, usageSite.location(), endOfArgs.location() + endOfArgs.rawText().length(),
+        start, expansion.getRange().start(), endOfArgs.location() + endOfArgs.rawText().length(),
         macroName);
 
     // now add each body token, substituting arguments as necessary
-    bool isFirst = true;
     for (auto& token : body) {
+        SourceLocation location = expansionLoc + (token.location() - start);
+
         if (token.kind != TokenKind::Identifier && !isKeyword(token.kind) &&
             (token.kind != TokenKind::Directive ||
              token.directiveKind() != SyntaxKind::MacroUsage)) {
-            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst, isTopLevel);
+
+            expansion.append(token, location);
             continue;
         }
 
@@ -1111,7 +1112,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
         // check for formal param
         auto it = argumentMap.find(text);
         if (it == argumentMap.end()) {
-            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst, isTopLevel);
+            expansion.append(token, location);
             continue;
         }
 
@@ -1134,7 +1135,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
             // here to ensure that the trivia of the formal parameter is passed on.
             Token empty{ TokenKind::EmptyMacroArgument,
                          alloc.emplace<Token::Info>(token.trivia(), "", token.location()) };
-            appendBodyToken(dest, empty, start, expansionLoc, usageSite, isFirst, isTopLevel);
+            expansion.append(empty, location);
             continue;
         }
 
@@ -1147,10 +1148,8 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
         // Arguments need their own expansion location created; the original
         // location comes from the source file itself, and the expansion location
         // points into the macro body where the formal argument was used.
-        SourceLocation formalLoc =
-            expansionLoc + (int(token.location().offset()) - int(start.offset()));
         SourceLocation argLoc = sourceManager.createExpansionLoc(
-            firstLoc, formalLoc, formalLoc + token.rawText().length(), true);
+            firstLoc, location, location + token.rawText().length(), true);
 
         // See note above about weird macro usage being argument replaced.
         // In that case we want to fabricate the correct directive token here.
@@ -1160,26 +1159,26 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite,
             first = Lexer::concatenateTokens(alloc, grave, first);
         }
 
-        appendBodyToken(dest, first, firstLoc, argLoc, usageSite, isFirst, isTopLevel);
+        expansion.append(first, argLoc);
         for (++begin; begin != end; begin++)
-            appendBodyToken(dest, *begin, firstLoc, argLoc, usageSite, isFirst, isTopLevel);
+            expansion.append(*begin, argLoc + (begin->location() - firstLoc));
     }
 
     return true;
 }
 
-void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
-                                   SourceLocation expansionLoc, Token usageSite, bool& isFirst,
-                                   bool isTopLevel) {
-    if (isFirst) {
+SourceRange Preprocessor::MacroExpansion::getRange() const {
+    return { usageSite.location(), usageSite.location() + usageSite.rawText().length() };
+}
+
+void Preprocessor::MacroExpansion::append(Token token, SourceLocation location) {
+    if (!any) {
         if (!isTopLevel)
             token = token.withTrivia(alloc, usageSite.trivia());
         else
             token = token.withTrivia(alloc, {});
-        isFirst = false;
+        any = true;
     }
-
-    int delta = int(token.location().offset()) - int(startLoc.offset());
 
     // Line continuations gets stripped out when we expand macros and become newline trivia instead.
     if (token.kind == TokenKind::LineContinuation) {
@@ -1187,11 +1186,11 @@ void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, Source
         newTrivia.appendRange(token.trivia());
         newTrivia.append(Trivia(TriviaKind::EndOfLine, token.rawText().substr(1)));
 
-        auto info = alloc.emplace<Token::Info>(newTrivia.copy(alloc), "", expansionLoc + delta);
+        auto info = alloc.emplace<Token::Info>(newTrivia.copy(alloc), "", location);
         dest.append(Token(TokenKind::EmptyMacroArgument, info));
     }
     else {
-        dest.append(token.withLocation(alloc, expansionLoc + delta));
+        dest.append(token.withLocation(alloc, location));
     }
 }
 
@@ -1248,7 +1247,8 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
                         return false;
                 }
 
-                if (!expandMacro(macro, token, actualArgs, *currentBuffer, false))
+                MacroExpansion expansion{ alloc, *currentBuffer, token, false };
+                if (!expandMacro(macro, expansion, actualArgs))
                     return false;
 
                 nextRoundAlreadyExpanded.append(macro.syntax);
@@ -1269,37 +1269,28 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
     return true;
 }
 
-bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite,
-                                   SmallVector<Token>& dest, bool isTopLevel) {
-    // Take the location and trivia from the usage site; the source text we're
-    // going to make up here doesn't actually exist and shouldn't be shown to the
-    // user as an "expanded from here" note.
-    auto info = alloc.emplace<Token::Info>(usageSite.trivia(), "", usageSite.location());
+bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion) {
+    auto info = alloc.emplace<Token::Info>();
+    auto loc = expansion.getRange().start();
 
-    // Create a buffer to hold the raw text for the new tokens we will fabricate.
     SmallVectorSized<char, 64> text;
-
     switch (intrinsic) {
         case MacroIntrinsic::File: {
-            string_view fileName = sourceManager.getFileName(usageSite.location());
+            string_view fileName = sourceManager.getFileName(loc);
             text.appendRange(fileName);
             info->extra = fileName;
             info->rawText = to_string_view(text.copy(alloc));
 
-            dest.append(Token(TokenKind::StringLiteral, info));
+            expansion.append(Token(TokenKind::StringLiteral, info), loc);
             break;
         }
         case MacroIntrinsic::Line: {
-            uint32_t lineNum = sourceManager.getLineNumber(usageSite.location());
+            uint32_t lineNum = sourceManager.getLineNumber(loc);
             text.appendRange(std::to_string(lineNum)); // not the most efficient, but whatever
             info->setInt(alloc, lineNum);
             info->rawText = to_string_view(text.copy(alloc));
 
-            // Use appendBodyToken so that implicit concatenation will occur if something else
-            // was already in the destination buffer.
-            bool isFirst = true;
-            appendBodyToken(dest, Token(TokenKind::IntegerLiteral, info), usageSite.location(),
-                            usageSite.location(), usageSite, isFirst, isTopLevel);
+            expansion.append(Token(TokenKind::IntegerLiteral, info), loc);
             break;
         }
         case MacroIntrinsic::None:

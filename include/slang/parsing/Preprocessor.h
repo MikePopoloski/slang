@@ -154,18 +154,34 @@ private:
         bool needsArgs() const;
     };
 
+    // Helper class for tracking state used during expansion of a macro.
+    class MacroExpansion {
+    public:
+        MacroExpansion(BumpAllocator& alloc, SmallVector<Token>& dest, Token usageSite,
+                       bool isTopLevel) :
+            alloc(alloc),
+            dest(dest), usageSite(usageSite), isTopLevel(isTopLevel) {}
+
+        SourceRange getRange() const;
+
+        void append(Token token, SourceLocation location);
+
+    private:
+        BumpAllocator& alloc;
+        SmallVector<Token>& dest;
+        Token usageSite;
+        bool any = false;
+        bool isTopLevel = false;
+    };
+
     // Macro handling methods
     MacroDef findMacro(Token directive);
     MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
-    bool expandMacro(MacroDef macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs,
-                     SmallVector<Token>& dest, bool isTopLevel);
-    bool expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, SmallVector<Token>& dest,
-                         bool isTopLevel);
+    bool expandMacro(MacroDef macro, MacroExpansion& expansion,
+                     MacroActualArgumentListSyntax* actualArgs);
+    bool expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion);
     bool expandReplacementList(span<Token const>& tokens,
                                SmallSet<DefineDirectiveSyntax*, 8>& alreadyExpanded);
-    void appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
-                         SourceLocation expansionLoc, Token usageSite, bool& isFirst,
-                         bool isTopLevel);
     bool applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest);
 
     // functions to advance the underlying token stream

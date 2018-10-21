@@ -74,7 +74,7 @@ public:
     }
 
    int64_t operator-(SourceLocation loc) const {
-        ASSERT(loc.buffer() == bufferID);
+//        ASSERT(loc.buffer() == bufferID);
         return (int64_t)charOffset - (int64_t)loc.charOffset;
     }
 
