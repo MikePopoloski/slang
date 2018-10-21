@@ -99,7 +99,7 @@ string_view SourceManager::getMacroName(SourceLocation location) const {
 
     auto buffer = location.buffer();
     if (!buffer)
-        return false;
+        return {};
 
     ASSERT(buffer.id < bufferEntries.size());
     auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.id]);
