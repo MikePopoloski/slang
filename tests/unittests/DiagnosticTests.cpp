@@ -226,3 +226,35 @@ source:3:30: note: expanded from macro 'FOO'
                          ~~~~^     ~~~~~
 )");
 }
+
+TEST_CASE("Diag macro args with split locations") {
+    auto tree = SyntaxTree::fromText(R"(
+`define FOO(abc) abc
+`define BAR(blah, flurb) `FOO(blah + flurb)
+
+module m;
+    struct { } asdf;
+    struct { } bar;
+    int i = `BAR(asdf, bar);
+endmodule
+
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:8:13: error: invalid operands to binary expression (struct{} and struct{})
+    int i = `BAR(asdf, bar);
+            ^    ~~~~  ~~~
+source:3:36: note: expanded from macro 'BAR'
+`define BAR(blah, flurb) `FOO(blah + flurb)
+                              ~~~~ ^ ~~~~~
+source:2:18: note: expanded from macro 'FOO'
+`define FOO(abc) abc
+                 ^~~
+)");
+}

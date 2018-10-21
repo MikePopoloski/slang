@@ -1160,8 +1160,18 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         }
 
         expansion.append(first, argLoc);
-        for (++begin; begin != end; begin++)
+
+        for (++begin; begin != end; begin++) {
+            // If this token is in the same buffer as the previous one we can keep using the
+            // same expansion location; otherwise we need to create a new one that points into
+            // the new buffer as its original location.
+            if (begin->location().buffer() != firstLoc.buffer()) {
+                firstLoc = begin->location();
+                argLoc = sourceManager.createExpansionLoc(
+                    firstLoc, location, location + token.rawText().length(), true);
+            }
             expansion.append(*begin, argLoc + (begin->location() - firstLoc));
+        }
     }
 
     return true;
