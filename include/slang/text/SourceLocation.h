@@ -20,9 +20,13 @@ class SourceManager;
 /// the expansion location and original definition location.
 struct BufferID {
     bool valid() const { return id != 0; }
+
     bool operator==(const BufferID& rhs) const { return id == rhs.id; }
     bool operator!=(const BufferID& rhs) const { return !(*this == rhs); }
     bool operator<(const BufferID& rhs) const { return id < rhs.id; }
+    bool operator<=(const BufferID& rhs) const { return id <= rhs.id; }
+    bool operator>(const BufferID& rhs) const { return rhs < *this; }
+    bool operator>=(const BufferID& rhs) const { return rhs <= *this; }
 
     uint32_t getId() const { return id; }
 
@@ -59,16 +63,19 @@ public:
     /// Computes a source location that is offset from the current one.
     /// Note that there is no error checking to ensure that the location
     /// still points to a valid place in the source.
-    SourceLocation operator+(int delta) const {
-        return SourceLocation(bufferID, (uint32_t)((int32_t)charOffset + delta));
+    template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    SourceLocation operator+(T delta) const {
+        return SourceLocation(bufferID, (uint32_t)((T)charOffset + delta));
     }
 
-    SourceLocation operator+(size_t delta) const {
-        return SourceLocation(bufferID, (uint32_t)(charOffset + delta));
+    template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    SourceLocation operator-(T delta) const {
+        return SourceLocation(bufferID, (uint32_t)((T)charOffset - delta));
     }
 
-    SourceLocation operator-(int delta) const {
-        return SourceLocation(bufferID, (uint32_t)((int32_t)charOffset - delta));
+   int64_t operator-(SourceLocation loc) const {
+        ASSERT(loc.buffer() == bufferID);
+        return (int64_t)charOffset - (int64_t)loc.charOffset;
     }
 
     bool operator==(const SourceLocation& rhs) const {
