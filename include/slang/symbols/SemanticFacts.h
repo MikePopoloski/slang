@@ -23,7 +23,7 @@ enum class FormalArgumentDirection { In, Out, InOut, Ref, ConstRef };
 enum class ProceduralBlockKind { Initial, Final, Always, AlwaysComb, AlwaysLatch, AlwaysFF };
 
 /// Specifies possible port kinds.
-enum class PortKind { Net, Variable, Explicit, Interconnect, Interface };
+enum class PortKind { Net, Variable, Explicit, Interconnect };
 
 /// Specifies the behavior of connections to a particular port.
 enum class PortDirection { NotApplicable, In, Out, InOut, Ref };

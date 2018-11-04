@@ -481,18 +481,34 @@ void Scope::elaborate() const {
                 }
                 case SyntaxKind::AnsiPortList:
                 case SyntaxKind::NonAnsiPortList: {
-                    SmallVectorSized<const PortSymbol*, 8> ports;
+                    SmallVectorSized<const Symbol*, 8> ports;
                     PortSymbol::fromSyntax(compilation, member.node.as<PortListSyntax>(), *this,
                                            ports, deferredData.getPortDeclarations());
 
+                    // Only a few kinds of symbols can have port maps; grab that port map
+                    // now so we can add each port to it for future lookup.
+                    // The const_cast here is ugly but valid.
+                    SymbolMap* portMap;
+                    const Symbol& sym = asSymbol();
+                    if (sym.kind == SymbolKind::Definition)
+                        portMap = const_cast<SymbolMap*>(&sym.as<DefinitionSymbol>().getPortMap());
+                    else if (InstanceSymbol::isKind(sym.kind))
+                        portMap = const_cast<SymbolMap*>(&sym.as<InstanceSymbol>().getPortMap());
+                    else
+                        THROW_UNREACHABLE;
+
                     const Symbol* last = symbol;
                     for (auto port : ports) {
+                        portMap->emplace(port->name, port);
                         insertMember(port, last);
                         last = port;
 
-                        if (port->internalSymbol && !port->internalSymbol->getScope()) {
-                            insertMember(port->internalSymbol, last);
-                            last = port->internalSymbol;
+                        if (port->kind == SymbolKind::Port) {
+                            auto& valuePort = port->as<PortSymbol>();
+                            if (valuePort.internalSymbol && !valuePort.internalSymbol->getScope()) {
+                                insertMember(valuePort.internalSymbol, last);
+                                last = valuePort.internalSymbol;
+                            }
                         }
                     }
                     break;
@@ -502,7 +518,8 @@ void Scope::elaborate() const {
             }
         }
 
-        // Now that all instances have been inserted, go back through and elaborate generate blocks.
+        // Now that all instances have been inserted, go back through and elaborate generate
+        // blocks.
         for (auto symbol : deferred) {
             auto& member = symbol->as<DeferredMemberSymbol>();
             LookupLocation location = LookupLocation::before(*symbol);
@@ -577,8 +594,8 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
     const Symbol* symbol = nullptr;
     if (auto it = nameMap->find(name); it != nameMap->end()) {
         // If the lookup is for a local name, check that we can access the symbol (it must be
-        // declared before use). Callables and block names can be referenced anywhere in the scope,
-        // so the location doesn't matter for them.
+        // declared before use). Callables and block names can be referenced anywhere in the
+        // scope, so the location doesn't matter for them.
         symbol = it->second;
         bool locationGood = true;
         if (respectsLookupLocation(nameKind)) {
@@ -605,19 +622,19 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
                     result.found = &symbol->as<TransparentMemberSymbol>().wrapped;
                     break;
                 case SymbolKind::ForwardingTypedef:
-                    // If we find a forwarding typedef, the actual typedef was never defined. Just
-                    // ignore it, we'll issue a better error later.
+                    // If we find a forwarding typedef, the actual typedef was never defined.
+                    // Just ignore it, we'll issue a better error later.
                     break;
                 default:
                     result.found = symbol;
                     break;
             }
 
-            // We have a fully resolved and valid symbol. Before we return back to the caller, make
-            // sure that the symbol we're returning isn't in the process of having its type
+            // We have a fully resolved and valid symbol. Before we return back to the caller,
+            // make sure that the symbol we're returning isn't in the process of having its type
             // evaluated. This can only happen with a mutually recursive definition of something
-            // like a parameter and a function, so detect and report the error here to avoid a stack
-            // overflow.
+            // like a parameter and a function, so detect and report the error here to avoid a
+            // stack overflow.
             if (result.found) {
                 const DeclaredType* declaredType = result.found->getDeclaredType();
                 if (declaredType && declaredType->isEvaluating()) {
@@ -689,9 +706,10 @@ namespace {
 
 using namespace slang;
 
-// A downward lookup starts from a given scope and tries to match pieces of a name with subsequent
-// members of scopes. If the entire path matches, the found member will be returned. Otherwise, the
-// last name piece we looked up will be returned, along with whatever symbol was last found.
+// A downward lookup starts from a given scope and tries to match pieces of a name with
+// subsequent members of scopes. If the entire path matches, the found member will be returned.
+// Otherwise, the last name piece we looked up will be returned, along with whatever symbol was
+// last found.
 struct DownwardLookupResult {
     const Symbol* found;
     const NameSyntax* last;
@@ -738,8 +756,8 @@ DownwardLookupResult lookupDownward(span<const NamePlusLoc> nameParts, const Sco
 void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
                             LookupNameKind nameKind, bitmask<LookupFlags> flags,
                             LookupResult& result) const {
-    // Split the name into easier to manage chunks. The parser will always produce a left-recursive
-    // name tree, so that's all we'll bother to handle.
+    // Split the name into easier to manage chunks. The parser will always produce a
+    // left-recursive name tree, so that's all we'll bother to handle.
     int colonParts = 0;
     SmallVectorSized<NamePlusLoc, 8> nameParts;
     const ScopedNameSyntax* scoped = &syntax;
@@ -779,8 +797,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
         return;
 
     // If we are starting with a colon separator, always do a downwards name resolution. If the
-    // prefix name can be resolved normally, we have a class scope, otherwise it's a package lookup.
-    // See [23.7.1]
+    // prefix name can be resolved normally, we have a class scope, otherwise it's a package
+    // lookup. See [23.7.1]
     if (colonParts) {
         if (result.found && result.found->kind != SymbolKind::Package) {
             // TODO: handle classes
@@ -840,12 +858,11 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     // At this point the name must be considered a hierarchical name, so check now that
     // we're allowed to use one of those.
     result.isHierarchical = true;
-    if (flags & LookupFlags::Constant) {
+    if (result.found && (flags & LookupFlags::Constant)) {
         NamePlusLoc& part = nameParts.back();
         auto& diag =
             result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
         diag << nameToken.range();
-
         result.found = nullptr;
         return;
     }

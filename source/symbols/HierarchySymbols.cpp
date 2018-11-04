@@ -24,6 +24,13 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation,
     return *result;
 }
 
+DefinitionSymbol::DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                                   DefinitionKind definitionKind) :
+    Symbol(SymbolKind::Definition, name, loc),
+    Scope(compilation, this), definitionKind(definitionKind),
+    portMap(compilation.allocSymbolMap()) {
+}
+
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
                                                const ModuleDeclarationSyntax& syntax) {
     auto result = compilation.emplace<DefinitionSymbol>(
@@ -239,6 +246,12 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         inst->setSyntax(*instanceSyntax);
         results.append(inst);
     }
+}
+
+InstanceSymbol::InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name,
+                               SourceLocation loc) :
+    Symbol(kind, name, loc),
+    Scope(compilation, this), portMap(compilation.allocSymbolMap()) {
 }
 
 bool InstanceSymbol::isKind(SymbolKind kind) {

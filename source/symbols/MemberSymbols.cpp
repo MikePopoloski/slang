@@ -161,14 +161,14 @@ namespace {
 // Helper class to build up lists of port symbols.
 struct AnsiPortListBuilder {
     Compilation& compilation;
-    SmallVector<const PortSymbol*>& ports;
+    SmallVector<const Symbol*>& ports;
 
     PortKind lastKind = PortKind::Net;
     PortDirection lastDirection = PortDirection::InOut;
     const DataTypeSyntax* lastType = nullptr;
     const DefinitionSymbol* lastInterface = nullptr;
 
-    AnsiPortListBuilder(Compilation& compilation, SmallVector<const PortSymbol*>& ports) :
+    AnsiPortListBuilder(Compilation& compilation, SmallVector<const Symbol*>& ports) :
         compilation(compilation), ports(ports) {}
 
     void add(const PortSymbol& port) {
@@ -177,12 +177,12 @@ struct AnsiPortListBuilder {
         lastKind = port.portKind;
         lastDirection = port.direction;
         lastType = port.getDeclaredType()->getTypeSyntax();
-        lastInterface = port.interfaceDef;
+        lastInterface = nullptr;
 
         if (lastDirection == PortDirection::NotApplicable)
             lastDirection = PortDirection::InOut;
 
-        if (lastKind == PortKind::Explicit || lastKind == PortKind::Interface) {
+        if (lastKind == PortKind::Explicit) {
             switch (lastDirection) {
                 case PortDirection::In:
                 case PortDirection::InOut:
@@ -197,6 +197,15 @@ struct AnsiPortListBuilder {
                     THROW_UNREACHABLE;
             }
         }
+    }
+
+    void add(const InterfacePortSymbol& port) {
+        ports.append(&port);
+
+        lastKind = PortKind::Net;
+        lastDirection = PortDirection::InOut;
+        lastType = nullptr;
+        lastInterface = port.interfaceDef;
     }
 };
 
@@ -216,8 +225,21 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                             const Scope& scope) {
     Compilation& comp = builder.compilation;
     auto token = syntax.declarator->name;
-    auto& port = *comp.emplace<PortSymbol>(token.valueText(), token.location());
-    port.setSyntax(syntax);
+
+    // Helper function to create a basic port symbol.
+    auto createPort = [&]() {
+        auto result = comp.emplace<PortSymbol>(token.valueText(), token.location());
+        result->setSyntax(syntax);
+        return result;
+    };
+
+    // Helper function to create an interface port symbol.
+    auto createIfacePort = [&](auto def) {
+        auto result = comp.emplace<InterfacePortSymbol>(token.valueText(), token.location());
+        result->interfaceDef = def;
+        result->setSyntax(syntax);
+        return result;
+    };
 
     // Helper function to check if an implicit type syntax is totally empty.
     auto typeSyntaxEmpty = [](const DataTypeSyntax& typeSyntax) {
@@ -229,34 +251,36 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
     };
 
     // Helper function to set the port's direction and data type, which are both optional.
-    auto setDirectionAndType = [&](const auto& header, const auto& dimensions) {
-        port.setDeclaredType(*header.dataType, dimensions);
+    auto setDirectionAndType = [&](auto port, const auto& header, const auto& dimensions) {
+        port->setDeclaredType(*header.dataType, dimensions);
         if (!header.direction)
-            port.direction = builder.lastDirection;
+            port->direction = builder.lastDirection;
         else
-            port.direction = SemanticFacts::getPortDirection(header.direction.kind);
+            port->direction = SemanticFacts::getPortDirection(header.direction.kind);
     };
 
     switch (syntax.header->kind) {
         case SyntaxKind::VariablePortHeader: {
+            PortSymbol* port = nullptr;
             auto& header = syntax.header->as<VariablePortHeaderSyntax>();
+
             if (!header.direction && !header.varKeyword && typeSyntaxEmpty(*header.dataType)) {
                 // If all three are omitted, take all from the previous port.
-                // TODO: default nettype?
-                port.portKind = builder.lastKind;
-                port.direction = builder.lastDirection;
-                port.interfaceDef = builder.lastInterface;
-
-                if (port.interfaceDef) {
-                    port.portKind = PortKind::Interface;
+                if (builder.lastInterface) {
                     // TODO: dimensions
+                    auto result = createIfacePort(builder.lastInterface);
+                    builder.add(*result);
+                    return;
                 }
-                else {
-                    if (builder.lastType)
-                        port.setDeclaredType(*builder.lastType, syntax.declarator->dimensions);
-                    else
-                        port.setDeclaredType(*header.dataType, syntax.declarator->dimensions);
-                }
+
+                // TODO: default nettype?
+                port = createPort();
+                port->portKind = builder.lastKind;
+                port->direction = builder.lastDirection;
+                if (builder.lastType)
+                    port->setDeclaredType(*builder.lastType, syntax.declarator->dimensions);
+                else
+                    port->setDeclaredType(*header.dataType, syntax.declarator->dimensions);
             }
             else {
                 // It's possible that this is actually an interface port if the data type is
@@ -282,7 +306,7 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
 
                 if (definition) {
                     // TODO: dimensions
-                    port.portKind = PortKind::Interface;
+                    auto result = createIfacePort(definition);
 
                     if (definition->definitionKind != DefinitionKind::Interface) {
                         auto& diag = scope.addDiag(DiagCode::PortTypeNotInterfaceOrData,
@@ -290,11 +314,9 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                         diag << definition->name;
                         diag.addNote(DiagCode::NoteDeclarationHere, definition->location);
 
-                        port.interfaceDef = nullptr;
+                        result->interfaceDef = nullptr;
                     }
                     else {
-                        port.interfaceDef = definition;
-
                         if (header.varKeyword) {
                             scope.addDiag(DiagCode::VarWithInterfacePort,
                                           header.varKeyword.location());
@@ -305,112 +327,112 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                                           header.direction.location());
                         }
                     }
+                    builder.add(*result);
+                    return;
                 }
+
+                // TODO: handle user defined nettypes here
+                port = createPort();
+                setDirectionAndType(port, header, syntax.declarator->dimensions);
+                if (header.varKeyword)
+                    port->portKind = PortKind::Variable;
                 else {
-                    // TODO: handle user defined nettypes here
-                    setDirectionAndType(header, syntax.declarator->dimensions);
-                    if (header.varKeyword)
-                        port.portKind = PortKind::Variable;
-                    else {
-                        // Rules from [23.2.2.3]:
-                        // - For input and inout, default to a net
-                        // - For output, if we have a data type it's a var, otherwise net
-                        // - For ref it's always a var
-                        switch (port.direction) {
-                            case PortDirection::In:
-                            case PortDirection::InOut:
-                                // TODO: default nettype
-                                port.portKind = PortKind::Net;
-                                break;
-                            case PortDirection::Out:
-                                if (header.dataType->kind == SyntaxKind::ImplicitType)
-                                    port.portKind = PortKind::Net;
-                                else
-                                    port.portKind = PortKind::Variable;
-                                break;
-                            case PortDirection::Ref:
-                                port.portKind = PortKind::Variable;
-                                break;
-                            case PortDirection::NotApplicable:
-                                THROW_UNREACHABLE;
-                        }
+                    // Rules from [23.2.2.3]:
+                    // - For input and inout, default to a net
+                    // - For output, if we have a data type it's a var, otherwise net
+                    // - For ref it's always a var
+                    switch (port->direction) {
+                        case PortDirection::In:
+                        case PortDirection::InOut:
+                            // TODO: default nettype
+                            port->portKind = PortKind::Net;
+                            break;
+                        case PortDirection::Out:
+                            if (header.dataType->kind == SyntaxKind::ImplicitType)
+                                port->portKind = PortKind::Net;
+                            else
+                                port->portKind = PortKind::Variable;
+                            break;
+                        case PortDirection::Ref:
+                            port->portKind = PortKind::Variable;
+                            break;
+                        case PortDirection::NotApplicable:
+                            THROW_UNREACHABLE;
                     }
+                }
 
-                    if (port.direction == PortDirection::InOut &&
-                        port.portKind == PortKind::Variable) {
+                if (port->direction == PortDirection::InOut &&
+                    port->portKind == PortKind::Variable) {
 
-                        scope.addDiag(DiagCode::InOutPortCannotBeVariable, port.location)
-                            << port.name;
-                    }
-                    else if (port.direction == PortDirection::Ref &&
-                             port.portKind != PortKind::Variable) {
-                        scope.addDiag(DiagCode::RefPortMustBeVariable, port.location) << port.name;
-                    }
+                    scope.addDiag(DiagCode::InOutPortCannotBeVariable, port->location)
+                        << port->name;
+                }
+                else if (port->direction == PortDirection::Ref &&
+                         port->portKind != PortKind::Variable) {
+                    scope.addDiag(DiagCode::RefPortMustBeVariable, port->location) << port->name;
                 }
             }
 
-            if (port.portKind == PortKind::Interface) {
-                port.direction = PortDirection::NotApplicable;
-            }
-            else {
-                // Create a new symbol to represent this port internally to the instance.
-                // TODO: interconnect ports don't have a datatype
-                // TODO: variable lifetime
-                auto variable =
-                    comp.emplace<VariableSymbol>(port.name, syntax.declarator->name.location());
-                variable->setSyntax(syntax);
-                copyTypeFrom(*variable, *port.getDeclaredType());
-                port.internalSymbol = variable;
+            // Create a new symbol to represent this port internally to the instance.
+            // TODO: interconnect ports don't have a datatype
+            // TODO: variable lifetime
+            auto variable =
+                comp.emplace<VariableSymbol>(port->name, syntax.declarator->name.location());
+            variable->setSyntax(syntax);
+            copyTypeFrom(*variable, *port->getDeclaredType());
+            port->internalSymbol = variable;
 
-                // Initializers here are evaluated in the context of the port list and
-                // must always be a constant value.
-                // TODO: handle initializers
-            }
-            break;
+            // Initializers here are evaluated in the context of the port list and
+            // must always be a constant value.
+            // TODO: handle initializers
+            builder.add(*port);
+            return;
         }
         case SyntaxKind::NetPortHeader: {
             auto& header = syntax.header->as<NetPortHeaderSyntax>();
-            port.portKind = PortKind::Net;
-            setDirectionAndType(header, syntax.declarator->dimensions);
+            auto port = createPort();
+            port->portKind = PortKind::Net;
+            setDirectionAndType(port, header, syntax.declarator->dimensions);
 
-            if (port.direction == PortDirection::Ref)
-                scope.addDiag(DiagCode::RefPortMustBeVariable, port.location) << port.name;
+            if (port->direction == PortDirection::Ref)
+                scope.addDiag(DiagCode::RefPortMustBeVariable, port->location) << port->name;
 
             // Create a new symbol to represent this port internally to the instance.
             // TODO: net type
-            auto net = comp.emplace<NetSymbol>(port.name, syntax.declarator->name.location());
+            auto net = comp.emplace<NetSymbol>(port->name, syntax.declarator->name.location());
             net->setSyntax(syntax);
-            copyTypeFrom(*net, *port.getDeclaredType());
-            port.internalSymbol = net;
-            break;
+            copyTypeFrom(*net, *port->getDeclaredType());
+            port->internalSymbol = net;
+
+            builder.add(*port);
+            return;
         }
         case SyntaxKind::InterfacePortHeader: {
             // TODO: handle generic interface header
             auto& header = syntax.header->as<InterfacePortHeaderSyntax>();
-            port.portKind = PortKind::Interface;
-            port.direction = PortDirection::NotApplicable;
+            auto port =
+                createIfacePort(comp.getDefinition(header.nameOrKeyword.valueText(), scope));
 
-            port.interfaceDef = comp.getDefinition(header.nameOrKeyword.valueText(), scope);
-            if (!port.interfaceDef) {
+            if (!port->interfaceDef) {
                 // TODO: report error if unable to find definition
             }
-            else if (port.interfaceDef->definitionKind != DefinitionKind::Interface) {
+            else if (port->interfaceDef->definitionKind != DefinitionKind::Interface) {
                 // TODO: report error here
                 /*auto& diag = scope.addDiag(DiagCode::PortTypeNotInterfaceOrData,
                                             header.dataType->sourceRange());
                 diag << definition->name;
                 diag.addNote(DiagCode::NoteDeclarationHere, definition->location);*/
-                port.interfaceDef = nullptr;
+                port->interfaceDef = nullptr;
             }
             else if (header.modport && !header.modport->member.valueText().empty()) {
                 // TODO: error if unfound or not actually a modport
                 // TODO: handle arrays
                 auto member = header.modport->member;
-                auto symbol = port.interfaceDef->find(member.valueText());
+                auto symbol = port->interfaceDef->find(member.valueText());
                 if (!symbol) {
                     auto& diag = scope.addDiag(DiagCode::UnknownMember, member.range());
                     diag << member.valueText();
-                    diag << port.interfaceDef->name;
+                    diag << port->interfaceDef->name;
                 }
                 else if (symbol->kind != SymbolKind::Modport) {
                     auto& diag = scope.addDiag(DiagCode::NotAModport, member.range());
@@ -418,22 +440,21 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                     diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
                 }
                 else {
-                    port.modport = &symbol->as<ModportSymbol>();
+                    port->modport = &symbol->as<ModportSymbol>();
                 }
             }
-            break;
+            builder.add(*port);
+            return;
         }
         default:
             // TODO:
             THROW_UNREACHABLE;
     }
-
-    builder.add(port);
 }
 
 struct NonAnsiPortListBuilder {
     Compilation& compilation;
-    SmallVector<const PortSymbol*>& ports;
+    SmallVector<const Symbol*>& ports;
 
     struct PortInfo {
         const VariableDeclaratorSyntax* syntax = nullptr;
@@ -446,7 +467,7 @@ struct NonAnsiPortListBuilder {
     };
     SmallMap<string_view, PortInfo, 8> portInfos;
 
-    NonAnsiPortListBuilder(Compilation& compilation, SmallVector<const PortSymbol*>& ports,
+    NonAnsiPortListBuilder(Compilation& compilation, SmallVector<const Symbol*>& ports,
                            const Scope& scope,
                            span<const PortDeclarationSyntax* const> portDeclarations) :
         compilation(compilation),
@@ -644,7 +665,7 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax,
 } // end anonymous namespace
 
 void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
-                            const Scope& scope, SmallVector<const PortSymbol*>& results,
+                            const Scope& scope, SmallVector<const Symbol*>& results,
                             span<const PortDeclarationSyntax* const> portDeclarations) {
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
@@ -682,6 +703,10 @@ void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& synt
 }
 
 void PortSymbol::toJson(json&) const {
+    // TODO: implement this
+}
+
+void InterfacePortSymbol::toJson(json&) const {
     // TODO: implement this
 }
 

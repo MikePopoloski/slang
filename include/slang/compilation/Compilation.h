@@ -144,13 +144,14 @@ public:
         return constantAllocator.emplace(std::move(value));
     }
 
+    SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
+
     optional<int32_t> evalIntegerExpr(const ExpressionSyntax& syntax, LookupLocation location,
                                       const Scope& scope);
 
 private:
     // These functions are called by Scopes to create and track various members.
     friend class Scope;
-    SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
     Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
     void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
     span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);

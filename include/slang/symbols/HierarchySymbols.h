@@ -49,12 +49,11 @@ public:
     DefinitionKind definitionKind;
 
     DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     DefinitionKind definitionKind) :
-        Symbol(SymbolKind::Definition, name, loc),
-        Scope(compilation, this), definitionKind(definitionKind) {}
+                     DefinitionKind definitionKind);
 
-    iterator_range<specific_symbol_iterator<PortSymbol>> ports() const {
-        return membersOfType<PortSymbol>();
+    const SymbolMap& getPortMap() const {
+        ensureElaborated();
+        return *portMap;
     }
 
     void toJson(json&) const {}
@@ -62,11 +61,19 @@ public:
     static DefinitionSymbol& fromSyntax(Compilation& compilation,
                                         const ModuleDeclarationSyntax& syntax);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Definition; }
+
+private:
+    SymbolMap* portMap;
 };
 
 /// Base class for module, interface, and program instance symbols.
 class InstanceSymbol : public Symbol, public Scope {
 public:
+    const SymbolMap& getPortMap() const {
+        ensureElaborated();
+        return *portMap;
+    }
+
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            LookupLocation location, const Scope& scope,
                            SmallVector<const Symbol*>& results);
@@ -74,12 +81,12 @@ public:
     static bool isKind(SymbolKind kind);
 
 protected:
-    InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name,
-                   SourceLocation loc) :
-        Symbol(kind, name, loc),
-        Scope(compilation, this) {}
+    InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc);
 
     void populate(const DefinitionSymbol& definition, span<const Expression*> parameterOverrides);
+
+private:
+    SymbolMap* portMap;
 };
 
 class ModuleInstanceSymbol : public InstanceSymbol {

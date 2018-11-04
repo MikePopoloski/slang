@@ -130,21 +130,33 @@ public:
     /// connects to the instance's internals.
     const Expression* explicitConnection = nullptr;
 
-    /// If this is an interface port, a pointer to the definition for the interface.
-    const DefinitionSymbol* interfaceDef = nullptr;
-
-    /// If this is an interface port with a modport restriction, a pointer to that modport.
-    const ModportSymbol* modport = nullptr;
-
     PortSymbol(string_view name, SourceLocation loc) : ValueSymbol(SymbolKind::Port, name, loc) {}
 
     void toJson(json& j) const;
 
     static void fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
-                           const Scope& scope, SmallVector<const PortSymbol*>& results,
+                           const Scope& scope, SmallVector<const Symbol*>& results,
                            span<const PortDeclarationSyntax* const> portDeclarations = {});
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
+};
+
+/// Represents the public-facing side of a module / program / interface port
+/// that is also a connection to an interface instance (optionally with a modport restriction).
+class InterfacePortSymbol : public Symbol {
+public:
+    /// A pointer to the definition for the interface.
+    const DefinitionSymbol* interfaceDef = nullptr;
+
+    /// A pointer to an optional modport that restricts which interface signals are accessible.
+    const ModportSymbol* modport = nullptr;
+
+    InterfacePortSymbol(string_view name, SourceLocation loc) :
+        Symbol(SymbolKind::InterfacePort, name, loc) {}
+
+    void toJson(json& j) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfacePort; }
 };
 
 /// Represents a net declaration.
