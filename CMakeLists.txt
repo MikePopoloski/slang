@@ -35,7 +35,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 	add_compile_options(/Gy)		# Function-level linking
 
 	# Ignore warnings in external headers
-	add_compile_options(/experimental:external /external:anglebrackets /external:W0 /external:templates-)
+	add_compile_options(/experimental:external /external:anglebrackets /external:W0)
 
 	if(CMAKE_BUILD_TYPE MATCHES "Debug")
 		# Use fast linking
