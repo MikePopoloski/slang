@@ -47,9 +47,6 @@ add_library(slang STATIC
 	util/BumpAllocator.cpp
 	util/Hash.cpp
 	util/Util.cpp
-
-	../external/fmt/format.cc
-	../external/fmt/posix.cc
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -98,6 +95,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 endif()
 
 target_link_libraries(slang PUBLIC CONAN_PKG::jsonformoderncpp)
+target_link_libraries(slang PUBLIC CONAN_PKG::fmt)
 
 target_include_directories(slang PUBLIC ../include/)
 target_include_directories(slang SYSTEM PUBLIC ../external/)
