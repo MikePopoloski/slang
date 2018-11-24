@@ -481,10 +481,9 @@ void Scope::elaborate() const {
                 }
                 case SyntaxKind::AnsiPortList:
                 case SyntaxKind::NonAnsiPortList: {
-                    SmallVectorSized<const Symbol*, 8> ports;
-                    PortSymbol::fromSyntax(compilation, member.node.as<PortListSyntax>(), *this,
-                                           ports, deferredData.getPortDeclarations(),
-                                           deferredData.getPortConnections());
+                    SmallVectorSized<Symbol*, 8> ports;
+                    PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
+                                           deferredData.getPortDeclarations());
 
                     // Only a few kinds of symbols can have port maps; grab that port map
                     // now so we can add each port to it for future lookup.
@@ -512,6 +511,11 @@ void Scope::elaborate() const {
                             }
                         }
                     }
+
+                    // If we have port connections, tie them to the ports now.
+                    if (auto connections = deferredData.getPortConnections())
+                        PortSymbol::makeConnections(*this, ports, *connections);
+
                     break;
                 }
                 default:

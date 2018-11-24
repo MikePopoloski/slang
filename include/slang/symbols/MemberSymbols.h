@@ -126,18 +126,27 @@ public:
     /// this set to nullptr.
     const Symbol* internalSymbol = nullptr;
 
+    /// An optional default value that is used for the port when no connection is provided.
+    const Expression* defaultValue = nullptr;
+
     /// For explicit ports, this is the expression that controls how it
     /// connects to the instance's internals.
-    const Expression* explicitConnection = nullptr;
+    const Expression* internalConnection = nullptr;
+
+    /// If the port is connected during instantiation, this is the expression that
+    /// indicates how it connects to the outside world.
+    const Expression* externalConnection = nullptr;
 
     PortSymbol(string_view name, SourceLocation loc) : ValueSymbol(SymbolKind::Port, name, loc) {}
 
     void toJson(json& j) const;
 
-    static void fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
-                           const Scope& scope, SmallVector<const Symbol*>& results,
-                           span<const PortDeclarationSyntax* const> portDeclarations,
-                           const SeparatedSyntaxList<PortConnectionSyntax>* portConnections);
+    static void fromSyntax(const PortListSyntax& syntax, const Scope& scope,
+                           SmallVector<Symbol*>& results,
+                           span<const PortDeclarationSyntax* const> portDeclarations);
+
+    static void makeConnections(const Scope& scope, span<Symbol* const> ports,
+                                const SeparatedSyntaxList<PortConnectionSyntax>& portConnections);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
 };

@@ -162,6 +162,10 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::CantDeclarePortSigned] = { "port '{}' cannot be declared signed because its type {} is not integral", DiagnosticSeverity::Error };
     descriptors[DiagCode::PortDeclDimensionsMismatch] = { "dimensions of port '{}' do not match its declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownPackage] = { "unknown package '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::MixingOrderedAndNamedPorts] = { "mixing ordered and named port connections is not allowed", DiagnosticSeverity::Error };
+    descriptors[DiagCode::DuplicateWildcardPortConnection] = { "duplicate wildcard port connection", DiagnosticSeverity::Error };
+    descriptors[DiagCode::DuplicatePortConnection] = { "duplicate connection for port '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::TooManyPortConnections] = { "too many port connections given to instantiation of module '{}'", DiagnosticSeverity::Error };
 
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };

@@ -163,6 +163,10 @@ enum class DiagCode : uint8_t {
     CantDeclarePortSigned,
     PortDeclDimensionsMismatch,
     UnknownPackage,
+    MixingOrderedAndNamedPorts,
+    DuplicateWildcardPortConnection,
+    DuplicatePortConnection,
+    TooManyPortConnections,
 
     // expressions
     BadUnaryExpression,

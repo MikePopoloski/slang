@@ -160,18 +160,16 @@ namespace {
 
 // Helper class to build up lists of port symbols.
 struct AnsiPortListBuilder {
-    Compilation& compilation;
-    SmallVector<const Symbol*>& ports;
+    SmallVector<Symbol*>& ports;
 
     PortKind lastKind = PortKind::Net;
     PortDirection lastDirection = PortDirection::InOut;
     const DataTypeSyntax* lastType = nullptr;
     const DefinitionSymbol* lastInterface = nullptr;
 
-    AnsiPortListBuilder(Compilation& compilation, SmallVector<const Symbol*>& ports) :
-        compilation(compilation), ports(ports) {}
+    AnsiPortListBuilder(SmallVector<Symbol*>& ports) : ports(ports) {}
 
-    void add(const PortSymbol& port) {
+    void add(PortSymbol& port) {
         ports.append(&port);
 
         lastKind = port.portKind;
@@ -199,7 +197,7 @@ struct AnsiPortListBuilder {
         }
     }
 
-    void add(const InterfacePortSymbol& port) {
+    void add(InterfacePortSymbol& port) {
         ports.append(&port);
 
         lastKind = PortKind::Net;
@@ -223,7 +221,7 @@ void copyTypeFrom(ValueSymbol& dest, const DeclaredType& source) {
 
 void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBuilder& builder,
                             const Scope& scope) {
-    Compilation& comp = builder.compilation;
+    Compilation& comp = scope.getCompilation();
     auto token = syntax.declarator->name;
 
     // Helper function to create a basic port symbol.
@@ -454,7 +452,7 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
 
 struct NonAnsiPortListBuilder {
     Compilation& compilation;
-    SmallVector<const Symbol*>& ports;
+    SmallVector<Symbol*>& ports;
 
     struct PortInfo {
         const VariableDeclaratorSyntax* syntax = nullptr;
@@ -467,11 +465,11 @@ struct NonAnsiPortListBuilder {
     };
     SmallMap<string_view, PortInfo, 8> portInfos;
 
-    NonAnsiPortListBuilder(Compilation& compilation, SmallVector<const Symbol*>& ports,
-                           const Scope& scope,
+    NonAnsiPortListBuilder(SmallVector<Symbol*>& ports, const Scope& scope,
                            span<const PortDeclarationSyntax* const> portDeclarations) :
-        compilation(compilation),
+        compilation(scope.getCompilation()),
         ports(ports) {
+
         // All port declarations in the scope have been collected; index them for easy lookup.
         // The additional boolean is for tracking whether the declaration has been used by the
         // time we're done creating ports.
@@ -662,16 +660,140 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax,
     }
 }
 
+struct PortConnectionBuilder {
+
+    PortConnectionBuilder(const Scope& scope,
+                          const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
+        scope(scope) {
+
+        bool hasConnections = false;
+        lookupLocation = LookupLocation::before(scope.asSymbol());
+
+        for (auto conn : portConnections) {
+            bool isOrdered = conn->kind == SyntaxKind::OrderedPortConnection;
+            if (!hasConnections) {
+                hasConnections = true;
+                usingOrdered = isOrdered;
+            }
+            else if (isOrdered != usingOrdered) {
+                scope.addDiag(DiagCode::MixingOrderedAndNamedPorts,
+                              conn->getFirstToken().location());
+                break;
+            }
+
+            if (isOrdered) {
+                orderedConns.append(conn->as<OrderedPortConnectionSyntax>().expr);
+            }
+            else if (conn->kind == SyntaxKind::WildcardPortConnection) {
+                if (!std::exchange(hasWildcard, true))
+                    wildcardLocation = conn->getFirstToken().location();
+                else {
+                    auto& diag = scope.addDiag(DiagCode::DuplicateWildcardPortConnection,
+                                               conn->sourceRange());
+                    diag.addNote(DiagCode::NotePreviousUsage, wildcardLocation);
+                }
+            }
+            else {
+                auto& npc = conn->as<NamedPortConnectionSyntax>();
+                auto name = npc.name.valueText();
+                if (!name.empty()) {
+                    auto pair = namedConns.emplace(name, std::make_pair(&npc, false));
+                    if (!pair.second) {
+                        auto& diag =
+                            scope.addDiag(DiagCode::DuplicatePortConnection, npc.name.location());
+                        diag << name;
+                        diag.addNote(DiagCode::NotePreviousUsage,
+                                     pair.first->second.first->name.location());
+                    }
+                }
+            }
+        }
+    }
+
+    const Expression* getConnection(const PortSymbol& port) {
+        if (usingOrdered) {
+            if (orderedIndex >= orderedConns.size()) {
+                orderedIndex++;
+                if (port.defaultValue)
+                    return port.defaultValue;
+
+                // TODO: warning about unconnected port
+                return nullptr;
+            }
+
+            const ExpressionSyntax* expr = orderedConns[orderedIndex++];
+            if (!expr)
+                return port.defaultValue;
+
+            BindContext context(scope, lookupLocation);
+            return &Expression::bind(scope.getCompilation(), port.getType(), *expr, port.location,
+                                     context);
+        }
+
+        if (port.name.empty())
+            return nullptr;
+
+        auto it = namedConns.find(port.name);
+        if (it == namedConns.end()) {
+            // TODO: handle wildcards
+
+            if (port.defaultValue)
+                return port.defaultValue;
+
+            // TODO: warning about unconnected port
+            return nullptr;
+        }
+
+        // We have a named connection; there are two possibilities here:
+        // - An explicit connection (with an optional expression)
+        // - An implicit connection, where we have to look up the name ourselves
+        const NamedPortConnectionSyntax& conn = *it->second.first;
+        it->second.second = true;
+
+        if (conn.openParen) {
+            // For explicit named port connections, having an empty expression means no
+            // connection.
+            if (!conn.expr)
+                return nullptr;
+
+            BindContext context(scope, lookupLocation);
+            return &Expression::bind(scope.getCompilation(), port.getType(), *conn.expr,
+                                     conn.getFirstToken().location(), context);
+        }
+
+        // An implicit named port connection is semantically equivalent to `.port(port)` except:
+        // - Can't create implicit net declarations this way
+        // - Port types need to be equivalent, not just assignment compatible
+        // - An implicit connection between nets of two dissimilar net types shall issue an
+        // error
+        //   when it is a warning in an explicit named port connection
+
+        // TODO: handle this
+        return nullptr;
+
+        // TODO: check that we haven't overspecified (too many connections)
+    }
+
+private:
+    const Scope& scope;
+    SmallVectorSized<const ExpressionSyntax*, 8> orderedConns;
+    SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
+    LookupLocation lookupLocation;
+    SourceLocation wildcardLocation;
+    size_t orderedIndex = 0;
+    bool usingOrdered = true;
+    bool hasWildcard = false;
+};
+
 } // end anonymous namespace
 
-void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
-                            const Scope& scope, SmallVector<const Symbol*>& results,
-                            span<const PortDeclarationSyntax* const> portDeclarations,
-                            const SeparatedSyntaxList<PortConnectionSyntax>*) {
+void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
+                            SmallVector<Symbol*>& results,
+                            span<const PortDeclarationSyntax* const> portDeclarations) {
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
             // TODO: error if we have port declaration members
-            AnsiPortListBuilder builder{ compilation, results };
+            AnsiPortListBuilder builder{ results };
             for (auto port : syntax.as<AnsiPortListSyntax>().ports) {
                 switch (port->kind) {
                     case SyntaxKind::ImplicitAnsiPort:
@@ -685,7 +807,7 @@ void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& synt
             break;
         }
         case SyntaxKind::NonAnsiPortList: {
-            NonAnsiPortListBuilder builder{ compilation, results, scope, portDeclarations };
+            NonAnsiPortListBuilder builder{ results, scope, portDeclarations };
             for (auto port : syntax.as<NonAnsiPortListSyntax>().ports) {
                 switch (port->kind) {
                     case SyntaxKind::ImplicitNonAnsiPort:
@@ -700,6 +822,24 @@ void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& synt
         }
         default:
             THROW_UNREACHABLE;
+    }
+}
+
+void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> ports,
+                                 const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) {
+    const Scope* instanceScope = childScope.getParent();
+    ASSERT(instanceScope);
+
+    PortConnectionBuilder builder(*instanceScope, portConnections);
+    for (auto portBase : ports) {
+        if (portBase->kind == SymbolKind::Port) {
+            PortSymbol& port = portBase->as<PortSymbol>();
+            port.externalConnection = builder.getConnection(port);
+        }
+        else {
+            // TODO: handle this
+            THROW_UNREACHABLE;
+        }
     }
 }
 

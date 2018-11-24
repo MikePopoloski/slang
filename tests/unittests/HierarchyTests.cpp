@@ -596,3 +596,34 @@ endmodule
 
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Module port connections") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic a, b, c);
+endmodule
+
+module test;
+
+    m m1(1, 1, 1);
+    //m m2(1, , 1);
+    m m3(1, 0);             // warning about unconnected
+    m m4(1, .b());          // error: mixing
+    m m5(.*, .a, .*);       // error: duplicate wildcard
+    m m6(.a(), .b);         // warning about unconnected
+    m m7(.a, .a());         // error: duplicate
+    m m8(.a(1+0), .b, .c);
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diags = compilation.getAllDiagnostics();
+
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::MixingOrderedAndNamedPorts);
+    CHECK((it++)->code == DiagCode::DuplicateWildcardPortConnection);
+    CHECK((it++)->code == DiagCode::DuplicatePortConnection);
+    CHECK(it == diags.end());
+}
