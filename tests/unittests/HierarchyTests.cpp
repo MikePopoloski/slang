@@ -605,7 +605,7 @@ endmodule
 module test;
 
     m m1(1, 1, 1);
-    //m m2(1, , 1);
+    m m2(1, , 1);
     m m3(1, 0);             // warning about unconnected
     m m4(1, .b());          // error: mixing
     m m5(.*, .a, .*);       // error: duplicate wildcard

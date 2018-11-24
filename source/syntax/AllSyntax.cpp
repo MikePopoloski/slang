@@ -7560,7 +7560,7 @@ bool OrderedPortConnectionSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax OrderedPortConnectionSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return &attributes;
-        case 1: return expr.get();
+        case 1: return expr;
         default: return nullptr;
     }
 }
@@ -7568,7 +7568,7 @@ TokenOrSyntax OrderedPortConnectionSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax OrderedPortConnectionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
-        case 1: return expr.get();
+        case 1: return expr;
         default: return nullptr;
     }
 }
@@ -11483,7 +11483,7 @@ OrderedArgumentSyntax& SyntaxFactory::orderedArgument(ExpressionSyntax& expr) {
     return *alloc.emplace<OrderedArgumentSyntax>(expr);
 }
 
-OrderedPortConnectionSyntax& SyntaxFactory::orderedPortConnection(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr) {
+OrderedPortConnectionSyntax& SyntaxFactory::orderedPortConnection(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* expr) {
     return *alloc.emplace<OrderedPortConnectionSyntax>(attributes, expr);
 }
 

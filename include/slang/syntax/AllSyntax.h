@@ -3605,11 +3605,11 @@ struct PortConnectionSyntax : public SyntaxNode {
 };
 
 struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
-    not_null<ExpressionSyntax*> expr;
+    ExpressionSyntax* expr;
 
-    OrderedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr) :
-        PortConnectionSyntax(SyntaxKind::OrderedPortConnection, attributes), expr(&expr) {
-        this->expr->parent = this;
+    OrderedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* expr) :
+        PortConnectionSyntax(SyntaxKind::OrderedPortConnection, attributes), expr(expr) {
+        if (this->expr) this->expr->parent = this;
     }
 
     static bool isKind(SyntaxKind kind);
@@ -5641,7 +5641,7 @@ public:
     NonAnsiPortListSyntax& nonAnsiPortList(Token openParen, SeparatedSyntaxList<NonAnsiPortSyntax> ports, Token closeParen);
     OpenRangeListSyntax& openRangeList(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> valueRanges, Token closeBrace);
     OrderedArgumentSyntax& orderedArgument(ExpressionSyntax& expr);
-    OrderedPortConnectionSyntax& orderedPortConnection(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr);
+    OrderedPortConnectionSyntax& orderedPortConnection(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* expr);
     OrderedStructurePatternMemberSyntax& orderedStructurePatternMember(PatternSyntax& pattern);
     PackageImportDeclarationSyntax& packageImportDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<PackageImportItemSyntax> items, Token semi);
     PackageImportItemSyntax& packageImportItem(Token package, Token doubleColon, Token item);

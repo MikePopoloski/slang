@@ -1045,7 +1045,7 @@ PortConnectionSyntax final=false
 list<AttributeInstanceSyntax> attributes
 
 OrderedPortConnectionSyntax base=PortConnectionSyntax kind=OrderedPortConnection
-ExpressionSyntax expr
+ExpressionSyntax? expr
 
 NamedPortConnectionSyntax base=PortConnectionSyntax kind=NamedPortConnection
 token dot

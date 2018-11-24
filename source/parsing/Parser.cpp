@@ -2212,6 +2212,10 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
 PortConnectionSyntax& Parser::parsePortConnection() {
     auto attributes = parseAttributes();
 
+    // Allow for empty port connections.
+    if (peek(TokenKind::Comma))
+        return factory.orderedPortConnection(attributes, nullptr);
+
     if (peek(TokenKind::DotStar))
         return factory.wildcardPortConnection(attributes, consume());
 
@@ -2231,7 +2235,7 @@ PortConnectionSyntax& Parser::parsePortConnection() {
         }
         return factory.namedPortConnection(attributes, dot, name, openParen, expr, closeParen);
     }
-    return factory.orderedPortConnection(attributes, parseExpression());
+    return factory.orderedPortConnection(attributes, &parseExpression());
 }
 
 bool Parser::isPortDeclaration() {
