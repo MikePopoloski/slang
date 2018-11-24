@@ -481,6 +481,8 @@ Expression& Expression::convertAssignment(Compilation& compilation, const Type& 
         return *result;
     }
 
+    // TODO: check for ImplicitNamedPort flag here
+
     if (type.isNumeric() && rt->isNumeric()) {
         rt = binaryOperatorType(compilation, &type, rt, false);
         if (type.isEquivalent(*rt)) {

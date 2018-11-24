@@ -662,12 +662,12 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax,
 
 struct PortConnectionBuilder {
 
-    PortConnectionBuilder(const Scope& scope,
+    PortConnectionBuilder(const Scope& childScope, const Scope& instanceScope,
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
-        scope(scope) {
+        scope(instanceScope) {
 
         bool hasConnections = false;
-        lookupLocation = LookupLocation::before(scope.asSymbol());
+        lookupLocation = LookupLocation::before(childScope.asSymbol());
 
         for (auto conn : portConnections) {
             bool isOrdered = conn->kind == SyntaxKind::OrderedPortConnection;
@@ -726,7 +726,8 @@ struct PortConnectionBuilder {
                 return port.defaultValue;
 
             BindContext context(scope, lookupLocation);
-            return &Expression::bind(port.getType(), *expr, port.location, context);
+            return &Expression::bind(port.getType(), *expr, expr->getFirstToken().location(),
+                                     context);
         }
 
         if (port.name.empty())
@@ -750,13 +751,12 @@ struct PortConnectionBuilder {
         it->second.second = true;
 
         if (conn.openParen) {
-            // For explicit named port connections, having an empty expression means no
-            // connection.
+            // For explicit named port connections, having an empty expression means no connection.
             if (!conn.expr)
                 return nullptr;
 
             BindContext context(scope, lookupLocation);
-            return &Expression::bind(port.getType(), *conn.expr, conn.getFirstToken().location(),
+            return &Expression::bind(port.getType(), *conn.expr, conn.openParen.location(),
                                      context);
         }
 
@@ -764,13 +764,10 @@ struct PortConnectionBuilder {
         // - Can't create implicit net declarations this way
         // - Port types need to be equivalent, not just assignment compatible
         // - An implicit connection between nets of two dissimilar net types shall issue an
-        // error
-        //   when it is a warning in an explicit named port connection
-
-        // TODO: handle this
-        return nullptr;
-
-        // TODO: check that we haven't overspecified (too many connections)
+        //   error when it is a warning in an explicit named port connection
+        BindContext context(scope, lookupLocation, BindFlags::ImplicitNamedPort);
+        auto& nameExpr = scope.getCompilation().parseName(port.name);
+        return &Expression::bind(port.getType(), nameExpr, conn.name.location(), context);
     }
 
 private:
@@ -829,7 +826,7 @@ void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> po
     const Scope* instanceScope = childScope.getParent();
     ASSERT(instanceScope);
 
-    PortConnectionBuilder builder(*instanceScope, portConnections);
+    PortConnectionBuilder builder(childScope, *instanceScope, portConnections);
     for (auto portBase : ports) {
         if (portBase->kind == SymbolKind::Port) {
             PortSymbol& port = portBase->as<PortSymbol>();
@@ -840,6 +837,8 @@ void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> po
             THROW_UNREACHABLE;
         }
     }
+
+    // TODO: check that we haven't overspecified (too many connections)
 }
 
 void PortSymbol::toJson(json&) const {

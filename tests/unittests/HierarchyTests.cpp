@@ -604,6 +604,8 @@ endmodule
 
 module test;
 
+    logic a,b,c;
+
     m m1(1, 1, 1);
     m m2(1, , 1);
     m m3(1, 0);             // warning about unconnected

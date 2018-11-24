@@ -312,6 +312,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
     if (!symbol && !result.hasError()) {
         // Attempt to give a more helpful error if the symbol exists in scope but is declared after
         // the lookup location. Only do this if the symbol is of the kind we were expecting to find.
+        // TODO: check parent scopes for this as well?
         bool usedBeforeDeclared = false;
         symbol = find(nameToken.valueText());
         if (symbol) {
