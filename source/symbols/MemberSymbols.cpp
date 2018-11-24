@@ -666,7 +666,8 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax,
 
 void PortSymbol::fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
                             const Scope& scope, SmallVector<const Symbol*>& results,
-                            span<const PortDeclarationSyntax* const> portDeclarations) {
+                            span<const PortDeclarationSyntax* const> portDeclarations,
+                            const SeparatedSyntaxList<PortConnectionSyntax>*) {
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
             // TODO: error if we have port declaration members

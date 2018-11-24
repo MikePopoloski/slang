@@ -229,14 +229,12 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         Symbol* inst;
         switch (definition->definitionKind) {
             case DefinitionKind::Module:
-                inst = &ModuleInstanceSymbol::instantiate(
-                    compilation, instanceSyntax->name.valueText(), instanceSyntax->name.location(),
-                    *definition, overrides);
+                inst = &ModuleInstanceSymbol::instantiate(compilation, *instanceSyntax, *definition,
+                                                          overrides);
                 break;
             case DefinitionKind::Interface:
-                inst = &InterfaceInstanceSymbol::instantiate(
-                    compilation, instanceSyntax->name.valueText(), instanceSyntax->name.location(),
-                    *definition, overrides);
+                inst = &InterfaceInstanceSymbol::instantiate(compilation, *instanceSyntax,
+                                                             *definition, overrides);
                 break;
             default:
                 THROW_UNREACHABLE;
@@ -266,6 +264,7 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
 }
 
 void InstanceSymbol::populate(const DefinitionSymbol& definition,
+                              const HierarchicalInstanceSyntax* instanceSyntax,
                               span<const Expression*> parameterOverides) {
     // Add all port parameters as members first.
     Compilation& comp = getCompilation();
@@ -284,12 +283,15 @@ void InstanceSymbol::populate(const DefinitionSymbol& definition,
         overrideIt++;
     }
 
-    auto& syntax =
+    auto& declSyntax =
         definition.getSyntax()->as<ModuleDeclarationSyntax>(); // TODO: getSyntax dependency
-    if (syntax.header->ports)
-        addMembers(*syntax.header->ports);
+    if (declSyntax.header->ports)
+        addMembers(*declSyntax.header->ports);
 
-    for (auto member : syntax.members) {
+    if (instanceSyntax)
+        setPortConnections(instanceSyntax->connections);
+
+    for (auto member : declSyntax.members) {
         // If this is a parameter declaration, we should already have metadata for it in our
         // parameters list. The list is given in declaration order, so we should be be able to move
         // through them incrementally.
@@ -321,24 +323,28 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
         overrides.emplace(nullptr);
     }
 
-    return instantiate(compilation, name, loc, definition, overrides);
+    auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc);
+    instance->populate(definition, nullptr, overrides);
+    return *instance;
 }
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
-    Compilation& compilation, string_view name, SourceLocation loc,
+    Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
     const DefinitionSymbol& definition, span<const Expression*> parameterOverrides) {
 
-    auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc);
-    instance->populate(definition, parameterOverrides);
+    auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, syntax.name.valueText(),
+                                                              syntax.name.location());
+    instance->populate(definition, &syntax, parameterOverrides);
     return *instance;
 }
 
 InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
-    Compilation& compilation, string_view name, SourceLocation loc,
+    Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
     const DefinitionSymbol& definition, span<const Expression*> parameterOverrides) {
 
-    auto instance = compilation.emplace<InterfaceInstanceSymbol>(compilation, name, loc);
-    instance->populate(definition, parameterOverrides);
+    auto instance = compilation.emplace<InterfaceInstanceSymbol>(
+        compilation, syntax.name.valueText(), syntax.name.location());
+    instance->populate(definition, &syntax, parameterOverrides);
     return *instance;
 }
 

@@ -83,7 +83,8 @@ public:
 protected:
     InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc);
 
-    void populate(const DefinitionSymbol& definition, span<const Expression*> parameterOverrides);
+    void populate(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
+                  span<const Expression*> parameterOverrides);
 
 private:
     SymbolMap* portMap;
@@ -100,8 +101,9 @@ public:
                                              SourceLocation loc,
                                              const DefinitionSymbol& definition);
 
-    static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name,
-                                             SourceLocation loc, const DefinitionSymbol& definition,
+    static ModuleInstanceSymbol& instantiate(Compilation& compilation,
+                                             const HierarchicalInstanceSyntax& syntax,
+                                             const DefinitionSymbol& definition,
                                              span<const Expression*> parameterOverrides);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
@@ -114,8 +116,8 @@ public:
 
     void toJson(json&) const {}
 
-    static InterfaceInstanceSymbol& instantiate(Compilation& compilation, string_view name,
-                                                SourceLocation loc,
+    static InterfaceInstanceSymbol& instantiate(Compilation& compilation,
+                                                const HierarchicalInstanceSyntax& syntax,
                                                 const DefinitionSymbol& definition,
                                                 span<const Expression*> parameterOverrides);
 

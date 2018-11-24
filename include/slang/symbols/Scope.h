@@ -267,6 +267,10 @@ protected:
 
     void setStatement(StatementBodiedScope& stmt) { getOrAddDeferredData().setStatement(stmt); }
 
+    void setPortConnections(const SeparatedSyntaxList<PortConnectionSyntax>& connections) {
+        getOrAddDeferredData().setPortConnections(connections);
+    }
+
     const Symbol* getLastMember() const { return lastMember; }
 
 private:
@@ -289,6 +293,9 @@ private:
         bool hasStatement() const;
         void setStatement(StatementBodiedScope& stmt);
         StatementBodiedScope* getStatement() const;
+
+        void setPortConnections(const SeparatedSyntaxList<PortConnectionSyntax>& connections);
+        const SeparatedSyntaxList<PortConnectionSyntax>* getPortConnections() const { return portConns; }
 
         using TransparentTypeMap = flat_hash_map<const Symbol*, const Symbol*>;
         void registerTransparentType(const Symbol* insertion, const Symbol& parent);
@@ -319,6 +326,9 @@ private:
         // Track a list of non-ANSI port declarations declared in the scope; once we've fully
         // elaborated we'll go back and make sure they're valid.
         std::vector<const PortDeclarationSyntax*> portDecls;
+
+        // For instances, track port connections.
+        const SeparatedSyntaxList<PortConnectionSyntax>* portConns = nullptr;
     };
 
     // Sideband collection of wildcard imports stored in the Compilation object.

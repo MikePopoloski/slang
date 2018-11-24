@@ -136,7 +136,8 @@ public:
 
     static void fromSyntax(Compilation& compilation, const PortListSyntax& syntax,
                            const Scope& scope, SmallVector<const Symbol*>& results,
-                           span<const PortDeclarationSyntax* const> portDeclarations = {});
+                           span<const PortDeclarationSyntax* const> portDeclarations,
+                           const SeparatedSyntaxList<PortConnectionSyntax>* portConnections);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
 };

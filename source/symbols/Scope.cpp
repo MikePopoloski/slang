@@ -483,7 +483,8 @@ void Scope::elaborate() const {
                 case SyntaxKind::NonAnsiPortList: {
                     SmallVectorSized<const Symbol*, 8> ports;
                     PortSymbol::fromSyntax(compilation, member.node.as<PortListSyntax>(), *this,
-                                           ports, deferredData.getPortDeclarations());
+                                           ports, deferredData.getPortDeclarations(),
+                                           deferredData.getPortConnections());
 
                     // Only a few kinds of symbols can have port maps; grab that port map
                     // now so we can add each port to it for future lookup.
@@ -906,6 +907,11 @@ void Scope::DeferredMemberData::setStatement(StatementBodiedScope& stmt) {
 
 StatementBodiedScope* Scope::DeferredMemberData::getStatement() const {
     return std::get<1>(membersOrStatement);
+}
+
+void Scope::DeferredMemberData::setPortConnections(
+    const SeparatedSyntaxList<PortConnectionSyntax>& connections) {
+    portConns = &connections;
 }
 
 void Scope::DeferredMemberData::registerTransparentType(const Symbol* insertion,
