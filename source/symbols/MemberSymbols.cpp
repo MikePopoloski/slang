@@ -726,8 +726,7 @@ struct PortConnectionBuilder {
                 return port.defaultValue;
 
             BindContext context(scope, lookupLocation);
-            return &Expression::bind(scope.getCompilation(), port.getType(), *expr, port.location,
-                                     context);
+            return &Expression::bind(port.getType(), *expr, port.location, context);
         }
 
         if (port.name.empty())
@@ -757,8 +756,8 @@ struct PortConnectionBuilder {
                 return nullptr;
 
             BindContext context(scope, lookupLocation);
-            return &Expression::bind(scope.getCompilation(), port.getType(), *conn.expr,
-                                     conn.getFirstToken().location(), context);
+            return &Expression::bind(port.getType(), *conn.expr, conn.getFirstToken().location(),
+                                     context);
         }
 
         // An implicit named port connection is semantically equivalent to `.port(port)` except:

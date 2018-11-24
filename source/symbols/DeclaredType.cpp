@@ -36,7 +36,7 @@ std::tuple<const Type*, const Expression*> DeclaredType::resolveType(
         if (!initializerSyntax)
             type = &comp.getErrorType();
         else {
-            initializer = &Expression::bind(comp, *initializerSyntax, context);
+            initializer = &Expression::bind(*initializerSyntax, context);
             type = initializer->type;
         }
     }
@@ -62,8 +62,7 @@ const Expression& DeclaredType::resolveInitializer(const Type& type,
     if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType)
         targetType = &targetType->as<EnumType>().baseType;
 
-    return Expression::bind(scope.getCompilation(), *targetType, initializerSyntax,
-                            initializerLocation, context);
+    return Expression::bind(*targetType, initializerSyntax, initializerLocation, context);
 }
 
 const Expression& DeclaredType::resolveInitializer(

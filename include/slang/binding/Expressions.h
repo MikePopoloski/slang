@@ -111,13 +111,11 @@ public:
     SourceRange sourceRange;
 
     /// Binds an expression tree from the given syntax nodes.
-    static const Expression& bind(Compilation& compilation, const ExpressionSyntax& syntax,
-                                  const BindContext& context);
+    static const Expression& bind(const ExpressionSyntax& syntax, const BindContext& context);
 
     /// Binds an assignment-like expression from the given syntax nodes.
-    static const Expression& bind(Compilation& compilation, const Type& lhs,
-                                  const ExpressionSyntax& rhs, SourceLocation location,
-                                  const BindContext& context);
+    static const Expression& bind(const Type& lhs, const ExpressionSyntax& rhs,
+                                  SourceLocation location, const BindContext& context);
 
     /// Indicates whether the expression is invalid.
     bool bad() const;

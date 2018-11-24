@@ -139,22 +139,20 @@ struct Expression::PropagationVisitor {
 
 const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance);
 
-const Expression& Expression::bind(Compilation& compilation, const ExpressionSyntax& syntax,
-                                   const BindContext& context) {
-    const Expression& result = selfDetermined(compilation, syntax, context);
+const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindContext& context) {
+    const Expression& result = selfDetermined(context.scope.getCompilation(), syntax, context);
     result.checkBindFlags(context);
     return result;
 }
 
-const Expression& Expression::bind(Compilation& compilation, const Type& lhs,
-                                   const ExpressionSyntax& rhs, SourceLocation location,
-                                   const BindContext& context) {
-    Expression& expr = create(compilation, rhs, context);
+const Expression& Expression::bind(const Type& lhs, const ExpressionSyntax& rhs,
+                                   SourceLocation location, const BindContext& context) {
+    Compilation& comp = context.scope.getCompilation();
+    Expression& expr = create(comp, rhs, context);
     if (expr.bad() || lhs.isError())
         return expr;
 
-    const Expression& result =
-        convertAssignment(compilation, lhs, expr, location, std::nullopt, context);
+    const Expression& result = convertAssignment(comp, lhs, expr, location, std::nullopt, context);
     result.checkBindFlags(context);
     return result;
 }
@@ -377,7 +375,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
             const Symbol* member = expr->type->getCanonicalType().as<Scope>().find(name);
             if (!member) {
-                auto& diag = context.addDiag(DiagCode::UnknownMember, memberSelect->nameRange.start());
+                auto& diag =
+                    context.addDiag(DiagCode::UnknownMember, memberSelect->nameRange.start());
                 diag << expr->sourceRange;
                 diag << name;
                 diag << *expr->type;
@@ -1224,7 +1223,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
     SmallVectorSized<const Expression*, 8> buffer;
     for (uint32_t i = 0; i < actualArgs.size(); i++) {
         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-        buffer.append(&Expression::bind(compilation, formalArgs[i]->getType(), *arg.expr,
+        buffer.append(&Expression::bind(formalArgs[i]->getType(), *arg.expr,
                                         arg.getFirstToken().location(), context));
     }
 

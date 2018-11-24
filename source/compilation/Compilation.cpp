@@ -432,7 +432,7 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
 optional<int32_t> Compilation::evalIntegerExpr(const ExpressionSyntax& syntax,
                                                LookupLocation location, const Scope& scope) {
     BindContext context(scope, location, BindFlags::IntegralConstant);
-    const auto& expr = Expression::bind(*this, syntax, context);
+    const auto& expr = Expression::bind(syntax, context);
     if (!expr.constant || !expr.constant->isInteger())
         return std::nullopt;
 

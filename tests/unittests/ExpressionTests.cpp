@@ -40,7 +40,7 @@ TEST_CASE("Evaluate assignment expression") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Expression::bind(compilation, syntax->root().as<ExpressionSyntax>(),
+    const auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
                                          BindContext(scope, LookupLocation::max));
     REQUIRE(syntax->diagnostics().empty());
 
@@ -72,7 +72,7 @@ TEST_CASE("Check type propagation") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Expression::bind(compilation, syntax->root().as<ExpressionSyntax>(),
+    const auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
                                          BindContext(scope, LookupLocation::max));
     REQUIRE(syntax->diagnostics().empty());
 
@@ -99,7 +99,7 @@ TEST_CASE("Check type propagation 2") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Expression::bind(compilation, syntax->root().as<ExpressionSyntax>(),
+    const auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
                                          BindContext(scope, LookupLocation::max));
     REQUIRE(syntax->diagnostics().empty());
 
@@ -133,7 +133,7 @@ TEST_CASE("Check type propagation real") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Expression::bind(compilation, syntax->root().as<ExpressionSyntax>(),
+    const auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
                                          BindContext(scope, LookupLocation::max));
     REQUIRE(syntax->diagnostics().empty());
     CHECK(bound.type->getBitWidth() == 20);
@@ -182,9 +182,7 @@ TEST_CASE("Expression types") {
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
         BindContext context(scope, LookupLocation::max);
-        return Expression::bind(scope.getCompilation(), tree->root().as<ExpressionSyntax>(),
-                                context)
-            .type->toString();
+        return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };
 
     declare("logic [7:0] l;");
