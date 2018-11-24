@@ -122,7 +122,7 @@ endif()
 
 # Install dependencies via conan
 include(cmake/conan.cmake)
-conan_cmake_run(CONANFILE conanfile.txt BASIC_SETUP CMAKE_TARGETS)
+conan_cmake_run(CONANFILE conanfile.txt BASIC_SETUP CMAKE_TARGETS BUILD missing)
 
 add_subdirectory(source)
 add_subdirectory(tools)
