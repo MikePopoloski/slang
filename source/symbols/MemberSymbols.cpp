@@ -289,8 +289,8 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                     auto& namedType = header.dataType->as<NamedTypeSyntax>();
                     if (namedType.name->kind == SyntaxKind::IdentifierName) {
                         LookupResult lookupResult;
-                        scope.lookupName(*namedType.name, LookupLocation::max, LookupNameKind::Type,
-                                         LookupFlags::None, lookupResult);
+                        scope.lookupName(*namedType.name, LookupLocation::max, LookupFlags::Type,
+                                         lookupResult);
 
                         if (lookupResult.hasError() || !lookupResult.found ||
                             !lookupResult.found->isType()) {

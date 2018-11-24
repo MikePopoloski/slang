@@ -14,19 +14,6 @@ namespace {
 
 using namespace slang;
 
-bool respectsLookupLocation(LookupNameKind kind) {
-    switch (kind) {
-        case LookupNameKind::Variable:
-        case LookupNameKind::Type:
-        case LookupNameKind::TypedefTarget:
-        case LookupNameKind::BindTarget:
-            return true;
-        case LookupNameKind::Callable:
-            return false;
-    }
-    THROW_UNREACHABLE;
-}
-
 // This is a placeholder symbol that we insert into a scope's member list where we need to
 // later pull it out and replace it with a real member (that can't be known until full elaboration).
 class DeferredMemberSymbol : public Symbol {
@@ -266,7 +253,7 @@ const Symbol* Scope::find(string_view name) const {
     }
 }
 
-void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, LookupNameKind nameKind,
+void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
                        bitmask<LookupFlags> flags, LookupResult& result) const {
     Token nameToken;
     const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
@@ -282,7 +269,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
         }
         case SyntaxKind::ScopedName:
             // Handle qualified names completely separately.
-            lookupQualified(syntax.as<ScopedNameSyntax>(), location, nameKind, flags, result);
+            lookupQualified(syntax.as<ScopedNameSyntax>(), location, flags, result);
             return;
         default:
             THROW_UNREACHABLE;
@@ -304,7 +291,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
     }
 
     // Perform the lookup.
-    lookupUnqualified(nameToken.valueText(), location, nameKind, nameToken.range(), result);
+    lookupUnqualified(nameToken.valueText(), location, nameToken.range(), flags, result);
     if (selectors)
         result.selectors.appendRange(*selectors);
 
@@ -315,19 +302,11 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
         // TODO: check parent scopes for this as well?
         bool usedBeforeDeclared = false;
         symbol = find(nameToken.valueText());
-        if (symbol) {
-            switch (nameKind) {
-                case LookupNameKind::Variable:
-                    usedBeforeDeclared = symbol->isValue();
-                    break;
-                case LookupNameKind::Type:
-                case LookupNameKind::TypedefTarget:
-                    usedBeforeDeclared = symbol->isType();
-                    break;
-                case LookupNameKind::Callable:
-                case LookupNameKind::BindTarget:
-                    break;
-            }
+        if (symbol && (flags & LookupFlags::AllowDeclaredAfter) == 0) {
+            if (flags & LookupFlags::Type)
+                usedBeforeDeclared = symbol->isType();
+            else
+                usedBeforeDeclared = symbol->isValue();
         }
 
         if (!usedBeforeDeclared) {
@@ -342,10 +321,10 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
     }
 }
 
-const Symbol* Scope::lookupName(string_view name, LookupLocation location, LookupNameKind nameKind,
+const Symbol* Scope::lookupName(string_view name, LookupLocation location,
                                 bitmask<LookupFlags> flags) const {
     LookupResult result;
-    lookupName(compilation.parseName(name), location, nameKind, flags, result);
+    lookupName(compilation.parseName(name), location, flags, result);
     return result.found;
 }
 
@@ -590,8 +569,8 @@ void Scope::elaborate() const {
     }
 }
 
-void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
-                              SourceRange sourceRange, LookupResult& result) const {
+void Scope::lookupUnqualified(string_view name, LookupLocation location, SourceRange sourceRange,
+                              bitmask<LookupFlags> flags, LookupResult& result) const {
     ensureElaborated();
     if (name.empty())
         return;
@@ -604,7 +583,7 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
         // scope, so the location doesn't matter for them.
         symbol = it->second;
         bool locationGood = true;
-        if (respectsLookupLocation(nameKind)) {
+        if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {
             locationGood = LookupLocation::before(*symbol) < location;
             if (!locationGood && symbol->kind == SymbolKind::TypeAlias) {
                 // A type alias can have forward definitions, so check those locations as well.
@@ -705,7 +684,7 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
         return;
 
     location = LookupLocation::after(asSymbol());
-    return nextScope->lookupUnqualified(name, location, nameKind, sourceRange, result);
+    return nextScope->lookupUnqualified(name, location, sourceRange, flags, result);
 }
 
 namespace {
@@ -760,8 +739,7 @@ DownwardLookupResult lookupDownward(span<const NamePlusLoc> nameParts, const Sco
 } // namespace
 
 void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
-                            LookupNameKind nameKind, bitmask<LookupFlags> flags,
-                            LookupResult& result) const {
+                            bitmask<LookupFlags> flags, LookupResult& result) const {
     // Split the name into easier to manage chunks. The parser will always produce a
     // left-recursive name tree, so that's all we'll bother to handle.
     int colonParts = 0;
@@ -798,7 +776,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
         return;
 
     // Start by trying to find the first name segment using normal unqualified lookup.
-    lookupUnqualified(nameToken.valueText(), location, nameKind, nameToken.range(), result);
+    lookupUnqualified(nameToken.valueText(), location, nameToken.range(), flags, result);
     if (result.hasError())
         return;
 

@@ -23,7 +23,6 @@ BITMASK_DEFINE_MAX_ELEMENT(BindFlags, ImplicitNamedPort);
 
 struct BindContext {
     const Scope& scope;
-    LookupNameKind lookupKind = LookupNameKind::Variable;
     LookupLocation lookupLocation;
     bitmask<BindFlags> flags;
 

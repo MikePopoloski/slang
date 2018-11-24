@@ -18,8 +18,7 @@ import Foo::x;
     const CompilationUnitSymbol* unit = compilation.getRoot().compilationUnits[0];
 
     LookupResult result;
-    unit->lookupName(compilation.parseName("x"), LookupLocation::max, LookupNameKind::Variable,
-                     LookupFlags::None, result);
+    unit->lookupName(compilation.parseName("x"), LookupLocation::max, LookupFlags::None, result);
 
     CHECK(result.wasImported);
     REQUIRE(result.found);
@@ -57,8 +56,8 @@ endmodule
 
     // Lookup at (1); should return the local parameter
     LookupResult result;
-    gen_b.lookupName(compilation.parseName("x"), LookupLocation::after(param),
-                     LookupNameKind::Variable, LookupFlags::None, result);
+    gen_b.lookupName(compilation.parseName("x"), LookupLocation::after(param), LookupFlags::None,
+                     result);
 
     const Symbol* symbol = result.found;
     CHECK(!result.wasImported);
@@ -68,8 +67,8 @@ endmodule
     CHECK(compilation.getSemanticDiagnostics().empty());
 
     // Lookup at (2); should return the package parameter
-    gen_b.lookupName(compilation.parseName("x"), LookupLocation::before(param),
-                     LookupNameKind::Variable, LookupFlags::None, result);
+    gen_b.lookupName(compilation.parseName("x"), LookupLocation::before(param), LookupFlags::None,
+                     result);
     symbol = result.found;
 
     CHECK(result.wasImported);

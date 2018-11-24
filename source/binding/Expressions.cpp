@@ -329,7 +329,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                                  const BindContext& context) {
     LookupResult result;
     LookupFlags flags = context.isConstant() ? LookupFlags::Constant : LookupFlags::None;
-    context.scope.lookupName(syntax, context.lookupLocation, context.lookupKind, flags, result);
+    context.scope.lookupName(syntax, context.lookupLocation, flags, result);
 
     if (result.hasError())
         compilation.addDiagnostics(result.getDiagnostics());
@@ -1162,9 +1162,11 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
     }
 
     LookupResult result;
-    LookupFlags flags = context.isConstant() ? LookupFlags::Constant : LookupFlags::None;
-    context.scope.lookupName(syntax.left->as<NameSyntax>(), context.lookupLocation,
-                             LookupNameKind::Callable, flags, result);
+    bitmask<LookupFlags> flags = LookupFlags::AllowDeclaredAfter;
+    if (context.isConstant())
+        flags |= LookupFlags::Constant;
+
+    context.scope.lookupName(syntax.left->as<NameSyntax>(), context.lookupLocation, flags, result);
 
     if (result.hasError())
         compilation.addDiagnostics(result.getDiagnostics());

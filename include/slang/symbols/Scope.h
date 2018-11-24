@@ -24,31 +24,6 @@ class WildcardImportSymbol;
 
 using SymbolMap = flat_hash_map<string_view, const Symbol*>;
 
-/// Specifies possible kinds of lookups that can be done.
-enum class LookupNameKind {
-    /// A lookup of a simple variable name, starting in the local scope. The lookup location
-    /// is used to qualify accessible signals. Imports from packages are considered.
-    Variable,
-
-    /// A lookup for a simple name that is part of a callable expression (task or function).
-    /// This has additional rules; specifically, SystemVerilog allows tasks and functions
-    /// to be referenced before they are declared.
-    Callable,
-
-    /// A lookup for a named data type. These names cannot be hierarchical but can be
-    /// package or class scoped.
-    Type,
-
-    /// A lookup for the target of a typedef. This is similar to looking up any other type
-    /// name, but has an additional allowance for dotting into interface port members.
-    TypedefTarget,
-
-    /// Names referenced as part of a bind instantiation have special rules. For example,
-    /// previously imported wildcard names are visible, but the bind lookup itself will
-    /// not cause non-imported wildcard names to become visible even if they match.
-    BindTarget
-};
-
 /// Additional modifiers for a lookup operation.
 enum class LookupFlags {
     /// No special modifiers.
@@ -56,9 +31,20 @@ enum class LookupFlags {
 
     /// The lookup is occurring in a constant context. This adds an additional
     /// restriction that the symbols cannot be referenced by hierarchical path.
-    Constant = 1
+    Constant = 1,
+
+    /// A lookup for a type name, as opposed to a value. These names cannot be hierarchical
+    /// but can be package or class scoped.
+    Type = 2,
+
+    /// Usually lookups require that the found symbol be declared before the lookup
+    /// location. This flag removes that restriction.
+    AllowDeclaredAfter = 4,
+
+    /// Don't search through wildcard imports to satisfy the lookup.
+    DisallowWildcardImport = 8
 };
-BITMASK_DEFINE_MAX_ELEMENT(LookupFlags, Constant);
+BITMASK_DEFINE_MAX_ELEMENT(LookupFlags, DisallowWildcardImport);
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.
@@ -78,9 +64,6 @@ public:
 
     /// A special location that should always compare before any other.
     static const LookupLocation min;
-
-    /// Gets the scope of the lookup location, if any.
-    const Scope* getScope() const { return scope; }
 
     bool operator==(const LookupLocation& other) const {
         return scope == other.scope && index == other.index;
@@ -160,11 +143,10 @@ public:
         return sym->as<T>();
     }
 
-    void lookupName(const NameSyntax& syntax, LookupLocation location, LookupNameKind nameKind,
-                    bitmask<LookupFlags> flags, LookupResult& result) const;
+    void lookupName(const NameSyntax& syntax, LookupLocation location, bitmask<LookupFlags> flags,
+                    LookupResult& result) const;
 
     const Symbol* lookupName(string_view name, LookupLocation location = LookupLocation::max,
-                             LookupNameKind nameKind = LookupNameKind::Variable,
                              bitmask<LookupFlags> flags = LookupFlags::None) const;
 
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified
@@ -295,7 +277,9 @@ private:
         StatementBodiedScope* getStatement() const;
 
         void setPortConnections(const SeparatedSyntaxList<PortConnectionSyntax>& connections);
-        const SeparatedSyntaxList<PortConnectionSyntax>* getPortConnections() const { return portConns; }
+        const SeparatedSyntaxList<PortConnectionSyntax>* getPortConnections() const {
+            return portConns;
+        }
 
         using TransparentTypeMap = flat_hash_map<const Symbol*, const Symbol*>;
         void registerTransparentType(const Symbol* insertion, const Symbol& parent);
@@ -347,14 +331,13 @@ private:
 
     // Performs an unqualified lookup in this scope, then recursively up the parent
     // chain until we reach root or the symbol is found.
-    void lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
-                           SourceRange sourceRange, LookupResult& result) const;
+    void lookupUnqualified(string_view name, LookupLocation location, SourceRange sourceRange,
+                           bitmask<LookupFlags> flags, LookupResult& result) const;
 
     // Performs a qualified lookup in this scope using all of the various language rules for name
     // resolution.
     void lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
-                         LookupNameKind nameKind, bitmask<LookupFlags> flags,
-                         LookupResult& result) const;
+                         bitmask<LookupFlags> flags, LookupResult& result) const;
 
     // The compilation that owns this scope.
     Compilation& compilation;
