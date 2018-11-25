@@ -850,25 +850,35 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
         return;
     }
 
-    // At this point the name must be considered a hierarchical name, so check now that
-    // we're allowed to use one of those.
+    // At this point the name must be considered a hierarchical name, unless it's an
+    // interface port member select. We'll check for that below.
     result.isHierarchical = true;
-    if (result.found && (flags & LookupFlags::Constant)) {
-        NamePlusLoc& part = nameParts.back();
-        auto& diag =
-            result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
-        diag << nameToken.range();
-        result.found = nullptr;
-        return;
-    }
 
     if (result.found) {
+        if (result.found->kind == SymbolKind::InterfacePort) {
+            // TODO: modports
+            result.isHierarchical = false;
+            result.found = result.found->as<InterfacePortSymbol>().connection;
+            if (!result.found)
+                return;
+        }
+
         if (!result.found->isScope() || result.found->isType()) {
             NamePlusLoc& part = nameParts.back();
             auto& diag = result.addDiag(*this, DiagCode::NotAHierarchicalScope, part.dotLocation);
             diag << nameToken.valueText();
             diag << nameToken.range();
             diag << part.name->sourceRange();
+            result.found = nullptr;
+            return;
+        }
+
+        if (result.isHierarchical && (flags & LookupFlags::Constant) != 0) {
+            NamePlusLoc& part = nameParts.back();
+            auto& diag =
+                result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
+            diag << nameToken.range();
+            result.found = nullptr;
             return;
         }
 

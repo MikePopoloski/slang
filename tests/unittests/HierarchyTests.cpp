@@ -601,6 +601,11 @@ TEST_CASE("Module port connections") {
 module m(input logic a, b, c);
 endmodule
 
+interface I; endinterface
+
+module n(I i);
+endmodule
+
 module test;
 
     logic a,b,c;
@@ -613,6 +618,17 @@ module test;
     m m6(.a(), .b);         // warning about unconnected
     m m7(.a, .a());         // error: duplicate
     m m8(.a(1+0), .b, .c);
+
+    I i();
+
+    n n1();                 // error: iface not assigned
+    n n2(1);                // error: expression assigned to iface
+    n n3(i);
+    n n4(.*);
+    n n5(.i);
+    n n6(.i(i));
+    n n7(.i(foobar));       // error: unknown
+    n n8(.i(m1));           // error: not an interface
 
 endmodule
 )");
@@ -628,5 +644,36 @@ endmodule
     CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
     CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
     CHECK((it++)->code == DiagCode::DuplicatePortConnection);
+    CHECK((it++)->code == DiagCode::InterfacePortNotConnected);
+    CHECK((it++)->code == DiagCode::InterfacePortInvalidExpression);
+    CHECK((it++)->code == DiagCode::UndeclaredIdentifier);
+    CHECK((it++)->code == DiagCode::NotAnInterface);
     CHECK(it == diags.end());
+}
+
+TEST_CASE("Interface port param") {
+    auto tree = SyntaxTree::fromText(R"(
+
+interface I #(parameter int i) ();
+endinterface
+
+module M(I iface, logic [iface.i - 1 : 0] foo);
+    localparam int j = $bits(foo);
+endmodule
+
+module test;
+
+    I #(17) i();
+    M m(i);
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto top = compilation.getRoot().topInstances[0];
+    auto& j = top->find<ModuleInstanceSymbol>("m").find<ParameterSymbol>("j");
+    CHECK(j.getValue().integer() == 17);
 }
