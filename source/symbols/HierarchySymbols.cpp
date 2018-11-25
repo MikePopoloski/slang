@@ -105,8 +105,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         SmallVectorSized<const OrderedArgumentSyntax*, 8> orderedParams;
         SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
 
-        // TODO: syntax node names here are dumb
-        for (auto paramBase : syntax.parameters->parameters->parameters) {
+        for (auto paramBase : syntax.parameters->assignments->parameters) {
             bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
             if (!hasParamAssignments) {
                 hasParamAssignments = true;

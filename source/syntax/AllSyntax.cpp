@@ -7802,7 +7802,7 @@ bool ParameterValueAssignmentSyntax::isKind(SyntaxKind kind) {
 TokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) {
     switch (index) {
         case 0: return hash;
-        case 1: return parameters.get();
+        case 1: return assignments.get();
         default: return nullptr;
     }
 }
@@ -7810,7 +7810,7 @@ TokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) {
 ConstTokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return hash;
-        case 1: return parameters.get();
+        case 1: return assignments.get();
         default: return nullptr;
     }
 }
@@ -7818,7 +7818,7 @@ ConstTokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) cons
 void ParameterValueAssignmentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: hash = child.token(); return;
-        case 1: parameters = &child.node()->as<ArgumentListSyntax>(); return;
+        case 1: assignments = &child.node()->as<ArgumentListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
 }
@@ -11511,8 +11511,8 @@ ParameterPortListSyntax& SyntaxFactory::parameterPortList(Token hash, Token open
     return *alloc.emplace<ParameterPortListSyntax>(hash, openParen, declarations, closeParen);
 }
 
-ParameterValueAssignmentSyntax& SyntaxFactory::parameterValueAssignment(Token hash, ArgumentListSyntax& parameters) {
-    return *alloc.emplace<ParameterValueAssignmentSyntax>(hash, parameters);
+ParameterValueAssignmentSyntax& SyntaxFactory::parameterValueAssignment(Token hash, ArgumentListSyntax& assignments) {
+    return *alloc.emplace<ParameterValueAssignmentSyntax>(hash, assignments);
 }
 
 ParenImplicitEventControlSyntax& SyntaxFactory::parenImplicitEventControl(Token at, Token openParenStarCloseParen) {

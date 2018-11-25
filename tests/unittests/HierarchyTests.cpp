@@ -190,7 +190,6 @@ module Top;
 endmodule
 )");
 
-    // TODO:
     Compilation compilation;
     evalModule(tree, compilation);
     NO_COMPILATION_ERRORS;

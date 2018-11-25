@@ -236,11 +236,11 @@ struct ArgumentListSyntax : public SyntaxNode {
 
 struct ParameterValueAssignmentSyntax : public SyntaxNode {
     Token hash;
-    not_null<ArgumentListSyntax*> parameters;
+    not_null<ArgumentListSyntax*> assignments;
 
-    ParameterValueAssignmentSyntax(Token hash, ArgumentListSyntax& parameters) :
-        SyntaxNode(SyntaxKind::ParameterValueAssignment), hash(hash), parameters(&parameters) {
-        this->parameters->parent = this;
+    ParameterValueAssignmentSyntax(Token hash, ArgumentListSyntax& assignments) :
+        SyntaxNode(SyntaxKind::ParameterValueAssignment), hash(hash), assignments(&assignments) {
+        this->assignments->parent = this;
     }
 
     static bool isKind(SyntaxKind kind);
@@ -5648,7 +5648,7 @@ public:
     ParameterDeclarationStatementSyntax& parameterDeclarationStatement(SyntaxList<AttributeInstanceSyntax> attributes, ParameterDeclarationSyntax& parameter, Token semi);
     ParameterDeclarationSyntax& parameterDeclaration(Token keyword, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators);
     ParameterPortListSyntax& parameterPortList(Token hash, Token openParen, SeparatedSyntaxList<ParameterDeclarationSyntax> declarations, Token closeParen);
-    ParameterValueAssignmentSyntax& parameterValueAssignment(Token hash, ArgumentListSyntax& parameters);
+    ParameterValueAssignmentSyntax& parameterValueAssignment(Token hash, ArgumentListSyntax& assignments);
     ParenImplicitEventControlSyntax& parenImplicitEventControl(Token at, Token openParenStarCloseParen);
     ParenthesizedEventExpressionSyntax& parenthesizedEventExpression(Token openParen, EventExpressionSyntax& expr, Token closeParen);
     ParenthesizedExpressionSyntax& parenthesizedExpression(Token openParen, ExpressionSyntax& expression, Token closeParen);

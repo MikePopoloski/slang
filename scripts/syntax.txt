@@ -55,7 +55,7 @@ token closeParen
 
 ParameterValueAssignmentSyntax kind=ParameterValueAssignment
 token hash
-ArgumentListSyntax parameters
+ArgumentListSyntax assignments
 
 // ----- PATTERNS -----
 
