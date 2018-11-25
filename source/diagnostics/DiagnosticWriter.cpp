@@ -165,8 +165,9 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::MixingOrderedAndNamedPorts] = { "mixing ordered and named port connections is not allowed", DiagnosticSeverity::Error };
     descriptors[DiagCode::DuplicateWildcardPortConnection] = { "duplicate wildcard port connection", DiagnosticSeverity::Error };
     descriptors[DiagCode::DuplicatePortConnection] = { "duplicate connection for port '{}'", DiagnosticSeverity::Error };
-    descriptors[DiagCode::TooManyPortConnections] = { "too many port connections given to instantiation of module '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::TooManyPortConnections] = { "too many port connections given to instantiation of module '{}' ({} given, expected {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnconnectedNamedPort] = { "port '{}' has no connection", DiagnosticSeverity::Warning };
+    descriptors[DiagCode::PortDoesNotExist] = { "port '{}' does not exist in module '{}'", DiagnosticSeverity::Error };
 
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };

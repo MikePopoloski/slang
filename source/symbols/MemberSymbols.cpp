@@ -663,12 +663,11 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax,
 struct PortConnectionBuilder {
     PortConnectionBuilder(const Scope& childScope, const Scope& instanceScope,
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
-        scope(instanceScope) {
+        scope(instanceScope),
+        instance(childScope.asSymbol()) {
 
         bool hasConnections = false;
-        auto& instance = childScope.asSymbol();
         lookupLocation = LookupLocation::before(instance);
-        instanceLoc = instance.location;
 
         for (auto conn : portConnections) {
             bool isOrdered = conn->kind == SyntaxKind::OrderedPortConnection;
@@ -743,7 +742,7 @@ struct PortConnectionBuilder {
             if (port.defaultValue)
                 return port.defaultValue;
 
-            scope.addDiag(DiagCode::UnconnectedNamedPort, instanceLoc) << port.name;
+            scope.addDiag(DiagCode::UnconnectedNamedPort, instance.location) << port.name;
             return nullptr;
         }
 
@@ -764,6 +763,30 @@ struct PortConnectionBuilder {
         }
 
         return implicitNamedPort(port, conn.name.range(), false);
+    }
+
+    void finalize() {
+        if (usingOrdered) {
+            if (orderedIndex < orderedConns.size()) {
+                auto loc = orderedConns[orderedIndex]->getFirstToken().location();
+                auto& diag = scope.addDiag(DiagCode::TooManyPortConnections, loc);
+                diag << instance.name;
+                diag << orderedConns.size();
+                diag << orderedIndex;
+            }
+        }
+        else {
+            for (auto& pair : namedConns) {
+                // We marked all the connections that we used, so anything left over is a connection
+                // for a non-existent port.
+                if (!pair.second.second) {
+                    auto& diag = scope.addDiag(DiagCode::PortDoesNotExist,
+                                               pair.second.first->name.location());
+                    diag << pair.second.first->name.valueText();
+                    diag << instance.name;
+                }
+            }
+        }
     }
 
 private:
@@ -803,11 +826,11 @@ private:
     }
 
     const Scope& scope;
+    const Symbol& instance;
     SmallVectorSized<const ExpressionSyntax*, 8> orderedConns;
     SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
     LookupLocation lookupLocation;
     SourceRange wildcardRange;
-    SourceLocation instanceLoc;
     size_t orderedIndex = 0;
     bool usingOrdered = true;
     bool hasWildcard = false;
@@ -870,7 +893,7 @@ void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> po
         }
     }
 
-    // TODO: check that we haven't overspecified (too many connections)
+    builder.finalize();
 }
 
 void PortSymbol::toJson(json&) const {
