@@ -765,6 +765,57 @@ struct PortConnectionBuilder {
         return implicitNamedPort(port, conn.name.range(), false);
     }
 
+    const InterfaceInstanceSymbol* getConnection(const InterfacePortSymbol& port) {
+        ASSERT(!port.name.empty());
+
+        auto reportUnconnected = [&]() {
+            auto& diag = scope.addDiag(DiagCode::InterfacePortNotConnected, instance.location);
+            diag << port.name;
+            diag.addNote(DiagCode::NoteDeclarationHere, port.location);
+        };
+
+        if (usingOrdered) {
+            const ExpressionSyntax* expr = nullptr;
+            if (orderedIndex < orderedConns.size())
+                expr = orderedConns[orderedIndex];
+
+            orderedIndex++;
+            if (!expr) {
+                reportUnconnected();
+                return nullptr;
+            }
+
+            return lookupInterface(port, *expr);
+        }
+
+        auto it = namedConns.find(port.name);
+        if (it == namedConns.end()) {
+            if (hasWildcard)
+                return lookupImplicitInterface(port, wildcardRange);
+
+            reportUnconnected();
+            return nullptr;
+        }
+
+        // We have a named connection; there are two possibilities here:
+        // - An explicit connection (with an optional expression)
+        // - An implicit connection, where we have to look up the name ourselves
+        const NamedPortConnectionSyntax& conn = *it->second.first;
+        it->second.second = true;
+
+        if (conn.openParen) {
+            // For explicit named port connections, having an empty expression means no connection.
+            if (!conn.expr) {
+                reportUnconnected();
+                return nullptr;
+            }
+
+            return lookupInterface(port, *conn.expr);
+        }
+
+        return lookupImplicitInterface(port, conn.name.range());
+    }
+
     void finalize() {
         if (usingOrdered) {
             if (orderedIndex < orderedConns.size()) {
@@ -823,6 +874,50 @@ private:
         }
 
         return &Expression::convertAssignment(scope, port.getType(), *expr, range.start());
+    }
+
+    const InterfaceInstanceSymbol* lookupInterface(const InterfacePortSymbol& port,
+                                                   const ExpressionSyntax& syntax) {
+        if (!NameSyntax::isKind(syntax.kind)) {
+            scope.addDiag(DiagCode::InterfacePortInvalidExpression, syntax.sourceRange())
+                << port.name;
+            return nullptr;
+        }
+
+        LookupResult result;
+        scope.lookupName(syntax.as<NameSyntax>(), lookupLocation, LookupFlags::None, result);
+
+        if (result.hasError())
+            scope.getCompilation().addDiagnostics(result.getDiagnostics());
+
+        const Symbol* symbol = result.found;
+        if (!symbol)
+            return nullptr;
+
+        return checkInterfaceLookup(port, symbol, syntax.sourceRange());
+    }
+
+    const InterfaceInstanceSymbol* lookupImplicitInterface(const InterfacePortSymbol& port,
+                                                           SourceRange range) {
+
+        auto symbol = scope.lookupUnqualifiedName(port.name, lookupLocation, range);
+        if (!symbol) {
+            scope.addDiag(DiagCode::ImplicitNamedPortNotFound, range) << port.name;
+            return nullptr;
+        }
+
+        return checkInterfaceLookup(port, symbol, range);
+    }
+
+    const InterfaceInstanceSymbol* checkInterfaceLookup(const InterfacePortSymbol&,
+                                                        const Symbol* symbol, SourceRange range) {
+        // TODO: handle interface/modport ports as well
+        if (symbol->kind != SymbolKind::InterfaceInstance) {
+            scope.addDiag(DiagCode::NotAnInterface, range) << symbol->name;
+            return nullptr;
+        }
+
+        return &symbol->as<InterfaceInstanceSymbol>();
     }
 
     const Scope& scope;
@@ -888,8 +983,8 @@ void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> po
             port.externalConnection = builder.getConnection(port);
         }
         else {
-            // TODO: handle this
-            THROW_UNREACHABLE;
+            InterfacePortSymbol& port = portBase->as<InterfacePortSymbol>();
+            port.connection = builder.getConnection(port);
         }
     }
 

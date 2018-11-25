@@ -610,6 +610,7 @@ NameSyntax& Parser::parseNamePart(bool isForEach) {
     auto kind = getKeywordNameExpression(peek().kind);
     if (kind != SyntaxKind::Unknown)
         return factory.keywordName(kind, consume());
+
     TokenKind next = peek().kind;
     if (isForEach && (next == TokenKind::Comma || next == TokenKind::CloseBracket))
         return factory.emptyIdentifierName();

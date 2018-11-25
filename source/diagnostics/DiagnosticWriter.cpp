@@ -168,6 +168,8 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::TooManyPortConnections] = { "too many port connections given to instantiation of module '{}' ({} given, expected {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnconnectedNamedPort] = { "port '{}' has no connection", DiagnosticSeverity::Warning };
     descriptors[DiagCode::PortDoesNotExist] = { "port '{}' does not exist in module '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::InterfacePortNotConnected] = { "interface port '{}' not connected", DiagnosticSeverity::Error };
+    descriptors[DiagCode::InterfacePortInvalidExpression] = { "invalid expression for interface port '{}'", DiagnosticSeverity::Error };
 
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };
@@ -203,6 +205,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NotASubroutine] = { "'{}' is not a task or function", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAHierarchicalScope] = { "'{}' is not a hierarchical scope name", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAModport] = { "'{}' is not a modport", DiagnosticSeverity::Error };
+    descriptors[DiagCode::NotAnInterface] = { "'{}' is not an interface or modport", DiagnosticSeverity::Error };
     descriptors[DiagCode::HierarchicalNotAllowedInConstant] = { "hierarchical names are not allowed in constant expressions", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownMember] = { "no member named '{}' in {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownPackageMember] = { "no member named '{}' in package '{}'", DiagnosticSeverity::Error };

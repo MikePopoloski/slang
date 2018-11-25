@@ -16,6 +16,7 @@
 namespace slang {
 
 class DefinitionSymbol;
+class InterfaceInstanceSymbol;
 class ModportSymbol;
 class PackageSymbol;
 
@@ -160,6 +161,10 @@ public:
 
     /// A pointer to an optional modport that restricts which interface signals are accessible.
     const ModportSymbol* modport = nullptr;
+
+    /// If the port is connected during instantiation, this is the external instance to which it
+    /// connects.
+    const InterfaceInstanceSymbol* connection = nullptr;
 
     InterfacePortSymbol(string_view name, SourceLocation loc) :
         Symbol(SymbolKind::InterfacePort, name, loc) {}

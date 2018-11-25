@@ -169,6 +169,8 @@ enum class DiagCode : uint8_t {
     TooManyPortConnections,
     UnconnectedNamedPort,
     PortDoesNotExist,
+    InterfacePortNotConnected,
+    InterfacePortInvalidExpression,
 
     // expressions
     BadUnaryExpression,
@@ -204,6 +206,7 @@ enum class DiagCode : uint8_t {
     NotASubroutine,
     NotAHierarchicalScope,
     NotAModport,
+    NotAnInterface,
     HierarchicalNotAllowedInConstant,
     UnknownMember,
     UnknownPackageMember,
