@@ -345,13 +345,10 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         return *compilation.emplace<DataTypeExpression>(resultType, syntax.sourceRange());
     }
 
-    if (!symbol->isValue()) {
-        context.addDiag(DiagCode::NotAValue, syntax.sourceRange()) << symbol->name;
-        return badExpr(compilation, nullptr);
-    }
-
-    Expression* expr = compilation.emplace<NamedValueExpression>(
-        symbol->as<ValueSymbol>(), result.isHierarchical, syntax.sourceRange());
+    auto expr = &NamedValueExpression::fromSymbol(context.scope, *symbol, result.isHierarchical,
+                                                  syntax.sourceRange());
+    if (expr->bad())
+        return *expr;
 
     // Drill down into member accesses.
     for (const auto& selector : result.selectors) {
@@ -586,6 +583,18 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
     const auto& type = compilation.getType(width, IntegralFlags::Unsigned);
 
     return *compilation.emplace<StringLiteral>(type, value, syntax.sourceRange());
+}
+
+Expression& NamedValueExpression::fromSymbol(const Scope& scope, const Symbol& symbol,
+                                             bool isHierarchical, SourceRange sourceRange) {
+    Compilation& compilation = scope.getCompilation();
+    if (!symbol.isValue()) {
+        scope.addDiag(DiagCode::NotAValue, sourceRange) << symbol.name;
+        return badExpr(compilation, nullptr);
+    }
+
+    return *compilation.emplace<NamedValueExpression>(symbol.as<ValueSymbol>(), isHierarchical,
+                                                      sourceRange);
 }
 
 Expression& UnaryExpression::fromSyntax(Compilation& compilation,

@@ -311,6 +311,9 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
+    static Expression& fromSymbol(const Scope& scope, const Symbol& symbol,
+                                  bool isHierarchical, SourceRange sourceRange);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 
 private:

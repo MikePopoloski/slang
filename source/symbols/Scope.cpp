@@ -291,9 +291,16 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
     }
 
     // Perform the lookup.
-    lookupUnqualified(nameToken.valueText(), location, nameToken.range(), flags, result);
+    lookupUnqualifiedName(nameToken.valueText(), location, nameToken.range(), flags, result);
     if (selectors)
         result.selectors.appendRange(*selectors);
+}
+
+void Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
+                                  SourceRange sourceRange, bitmask<LookupFlags> flags,
+                                  LookupResult& result) const {
+
+    lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
 
     const Symbol* symbol = result.found;
     if (!symbol && !result.hasError()) {
@@ -301,7 +308,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
         // the lookup location. Only do this if the symbol is of the kind we were expecting to find.
         // TODO: check parent scopes for this as well?
         bool usedBeforeDeclared = false;
-        symbol = find(nameToken.valueText());
+        symbol = find(name);
         if (symbol && (flags & LookupFlags::AllowDeclaredAfter) == 0) {
             if (flags & LookupFlags::Type)
                 usedBeforeDeclared = symbol->isType();
@@ -310,12 +317,11 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
         }
 
         if (!usedBeforeDeclared) {
-            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range())
-                << nameToken.valueText();
+            result.addDiag(*this, DiagCode::UndeclaredIdentifier, sourceRange) << name;
         }
         else {
-            auto& diag = result.addDiag(*this, DiagCode::UsedBeforeDeclared, nameToken.range());
-            diag << nameToken.valueText();
+            auto& diag = result.addDiag(*this, DiagCode::UsedBeforeDeclared, sourceRange);
+            diag << name;
             diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
         }
     }
@@ -569,8 +575,9 @@ void Scope::elaborate() const {
     }
 }
 
-void Scope::lookupUnqualified(string_view name, LookupLocation location, SourceRange sourceRange,
-                              bitmask<LookupFlags> flags, LookupResult& result) const {
+void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
+                                  SourceRange sourceRange, bitmask<LookupFlags> flags,
+                                  LookupResult& result) const {
     ensureElaborated();
     if (name.empty())
         return;
@@ -684,7 +691,7 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, SourceR
         return;
 
     location = LookupLocation::after(asSymbol());
-    return nextScope->lookupUnqualified(name, location, sourceRange, flags, result);
+    return nextScope->lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
 }
 
 namespace {
@@ -776,7 +783,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
         return;
 
     // Start by trying to find the first name segment using normal unqualified lookup.
-    lookupUnqualified(nameToken.valueText(), location, nameToken.range(), flags, result);
+    lookupUnqualifiedImpl(nameToken.valueText(), location, nameToken.range(), flags, result);
     if (result.hasError())
         return;
 

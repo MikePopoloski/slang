@@ -134,7 +134,7 @@ public:
     const Symbol* find(string_view name) const;
 
     /// Finds a direct child member with the given name. This won't return anything weird like
-    /// forwarding typdefs or imported symbols, but will return things like transparent enum
+    /// forwarding typedefs or imported symbols, but will return things like transparent enum
     /// members. This method expects that the symbol will be found and be of the given type `T`.
     template<typename T>
     const T& find(string_view name) const {
@@ -143,11 +143,21 @@ public:
         return sym->as<T>();
     }
 
+    /// Performs a full fledged name lookup starting in the current scope, following all
+    /// SystemVerilog rules for qualified or unqualified name resolution.
     void lookupName(const NameSyntax& syntax, LookupLocation location, bitmask<LookupFlags> flags,
                     LookupResult& result) const;
 
+    /// Performs a full fledged name lookup starting in the current scope, following all
+    /// SystemVerilog rules for qualified or unqualified name resolution. The name to look up
+    /// is parsed from the given input string.
     const Symbol* lookupName(string_view name, LookupLocation location = LookupLocation::max,
                              bitmask<LookupFlags> flags = LookupFlags::None) const;
+
+    /// Performs an unqualified lookup in this scope, then recursively up the parent
+    /// chain until we reach root or the symbol is found.
+    void lookupUnqualifiedName(string_view name, LookupLocation location, SourceRange sourceRange,
+                               bitmask<LookupFlags> flags, LookupResult& result) const;
 
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified
     /// type. This expects (and asserts) that the member at the given index is of the specified type
@@ -331,8 +341,8 @@ private:
 
     // Performs an unqualified lookup in this scope, then recursively up the parent
     // chain until we reach root or the symbol is found.
-    void lookupUnqualified(string_view name, LookupLocation location, SourceRange sourceRange,
-                           bitmask<LookupFlags> flags, LookupResult& result) const;
+    void lookupUnqualifiedImpl(string_view name, LookupLocation location, SourceRange sourceRange,
+                               bitmask<LookupFlags> flags, LookupResult& result) const;
 
     // Performs a qualified lookup in this scope using all of the various language rules for name
     // resolution.

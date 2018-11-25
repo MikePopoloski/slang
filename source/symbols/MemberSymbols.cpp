@@ -661,7 +661,6 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax,
 }
 
 struct PortConnectionBuilder {
-
     PortConnectionBuilder(const Scope& childScope, const Scope& instanceScope,
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
         scope(instanceScope) {
@@ -686,11 +685,11 @@ struct PortConnectionBuilder {
             }
             else if (conn->kind == SyntaxKind::WildcardPortConnection) {
                 if (!std::exchange(hasWildcard, true))
-                    wildcardLocation = conn->getFirstToken().location();
+                    wildcardRange = conn->sourceRange();
                 else {
                     auto& diag = scope.addDiag(DiagCode::DuplicateWildcardPortConnection,
                                                conn->sourceRange());
-                    diag.addNote(DiagCode::NotePreviousUsage, wildcardLocation);
+                    diag.addNote(DiagCode::NotePreviousUsage, wildcardRange.start());
                 }
             }
             else {
@@ -735,12 +734,22 @@ struct PortConnectionBuilder {
 
         auto it = namedConns.find(port.name);
         if (it == namedConns.end()) {
-            // TODO: handle wildcards
+            if (hasWildcard) {
+                LookupResult result;
+                scope.lookupUnqualifiedName(port.name, lookupLocation, wildcardRange,
+                                            LookupFlags::DisallowWildcardImport, result);
+                if (result.hasError())
+                    scope.getCompilation().addDiagnostics(result.getDiagnostics());
+
+                const Symbol* symbol = result.found;
+                if (symbol)
+                    return &NamedValueExpression::fromSymbol(scope, *symbol, false, wildcardRange);
+            }
 
             if (port.defaultValue)
                 return port.defaultValue;
 
-            // TODO: warning about unconnected port
+            // TODO: warning about unconnected port (error if wildcard)
             return nullptr;
         }
 
@@ -775,7 +784,7 @@ private:
     SmallVectorSized<const ExpressionSyntax*, 8> orderedConns;
     SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
     LookupLocation lookupLocation;
-    SourceLocation wildcardLocation;
+    SourceRange wildcardRange;
     size_t orderedIndex = 0;
     bool usingOrdered = true;
     bool hasWildcard = false;
