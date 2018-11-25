@@ -166,6 +166,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::DuplicateWildcardPortConnection] = { "duplicate wildcard port connection", DiagnosticSeverity::Error };
     descriptors[DiagCode::DuplicatePortConnection] = { "duplicate connection for port '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::TooManyPortConnections] = { "too many port connections given to instantiation of module '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UnconnectedNamedPort] = { "port '{}' has no connection", DiagnosticSeverity::Warning };
 
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };
@@ -205,6 +206,8 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::UnknownMember] = { "no member named '{}' in {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownPackageMember] = { "no member named '{}' in package '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::RecursiveDefinition] = { "'{}' recursively depends on its own definition", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ImplicitNamedPortNotFound] = { "could not find connection for implicit named port '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ImplicitNamedPortTypeMismatch] = { "implicit named port '{}' of type {} connects to value of inequivalent type {}", DiagnosticSeverity::Error };
 
     // constant evaluation
     descriptors[DiagCode::ExpressionNotConstant] = { "expression is not constant", DiagnosticSeverity::Error };

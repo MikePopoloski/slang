@@ -666,7 +666,9 @@ struct PortConnectionBuilder {
         scope(instanceScope) {
 
         bool hasConnections = false;
-        lookupLocation = LookupLocation::before(childScope.asSymbol());
+        auto& instance = childScope.asSymbol();
+        lookupLocation = LookupLocation::before(instance);
+        instanceLoc = instance.location;
 
         for (auto conn : portConnections) {
             bool isOrdered = conn->kind == SyntaxKind::OrderedPortConnection;
@@ -729,27 +731,19 @@ struct PortConnectionBuilder {
                                      context);
         }
 
+        // TODO: warning about unconnected?
         if (port.name.empty())
             return nullptr;
 
         auto it = namedConns.find(port.name);
         if (it == namedConns.end()) {
-            if (hasWildcard) {
-                LookupResult result;
-                scope.lookupUnqualifiedName(port.name, lookupLocation, wildcardRange,
-                                            LookupFlags::DisallowWildcardImport, result);
-                if (result.hasError())
-                    scope.getCompilation().addDiagnostics(result.getDiagnostics());
-
-                const Symbol* symbol = result.found;
-                if (symbol)
-                    return &NamedValueExpression::fromSymbol(scope, *symbol, false, wildcardRange);
-            }
+            if (hasWildcard)
+                return implicitNamedPort(port, wildcardRange, true);
 
             if (port.defaultValue)
                 return port.defaultValue;
 
-            // TODO: warning about unconnected port (error if wildcard)
+            scope.addDiag(DiagCode::UnconnectedNamedPort, instanceLoc) << port.name;
             return nullptr;
         }
 
@@ -769,22 +763,51 @@ struct PortConnectionBuilder {
                                      context);
         }
 
+        return implicitNamedPort(port, conn.name.range(), false);
+    }
+
+private:
+    const Expression* implicitNamedPort(const PortSymbol& port, SourceRange range,
+                                        bool isWildcard) {
         // An implicit named port connection is semantically equivalent to `.port(port)` except:
         // - Can't create implicit net declarations this way
         // - Port types need to be equivalent, not just assignment compatible
         // - An implicit connection between nets of two dissimilar net types shall issue an
         //   error when it is a warning in an explicit named port connection
-        BindContext context(scope, lookupLocation, BindFlags::ImplicitNamedPort);
-        auto& nameExpr = scope.getCompilation().parseName(port.name);
-        return &Expression::bind(port.getType(), nameExpr, conn.name.location(), context);
+
+        LookupFlags flags = isWildcard ? LookupFlags::DisallowWildcardImport : LookupFlags::None;
+        auto symbol = scope.lookupUnqualifiedName(port.name, lookupLocation, range, flags);
+        if (!symbol) {
+            // If this is a wildcard connection, we're allowed to use the port's default value,
+            // if it has one.
+            if (isWildcard && port.defaultValue)
+                return port.defaultValue;
+
+            scope.addDiag(DiagCode::ImplicitNamedPortNotFound, range) << port.name;
+            return nullptr;
+        }
+
+        auto expr = &NamedValueExpression::fromSymbol(scope, *symbol, false, range);
+        if (expr->bad())
+            return nullptr;
+
+        if (!expr->type->isEquivalent(port.getType())) {
+            auto& diag = scope.addDiag(DiagCode::ImplicitNamedPortTypeMismatch, range);
+            diag << port.name;
+            diag << port.getType();
+            diag << *expr->type;
+            return nullptr;
+        }
+
+        return &Expression::convertAssignment(scope, port.getType(), *expr, range.start());
     }
 
-private:
     const Scope& scope;
     SmallVectorSized<const ExpressionSyntax*, 8> orderedConns;
     SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
     LookupLocation lookupLocation;
     SourceRange wildcardRange;
+    SourceLocation instanceLoc;
     size_t orderedIndex = 0;
     bool usingOrdered = true;
     bool hasWildcard = false;

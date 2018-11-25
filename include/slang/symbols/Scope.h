@@ -156,8 +156,9 @@ public:
 
     /// Performs an unqualified lookup in this scope, then recursively up the parent
     /// chain until we reach root or the symbol is found.
-    void lookupUnqualifiedName(string_view name, LookupLocation location, SourceRange sourceRange,
-                               bitmask<LookupFlags> flags, LookupResult& result) const;
+    const Symbol* lookupUnqualifiedName(string_view name, LookupLocation location,
+                                        SourceRange sourceRange,
+                                        bitmask<LookupFlags> flags = LookupFlags::None) const;
 
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified
     /// type. This expects (and asserts) that the member at the given index is of the specified type

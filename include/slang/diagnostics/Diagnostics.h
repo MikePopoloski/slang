@@ -167,6 +167,7 @@ enum class DiagCode : uint8_t {
     DuplicateWildcardPortConnection,
     DuplicatePortConnection,
     TooManyPortConnections,
+    UnconnectedNamedPort,
 
     // expressions
     BadUnaryExpression,
@@ -206,6 +207,8 @@ enum class DiagCode : uint8_t {
     UnknownMember,
     UnknownPackageMember,
     RecursiveDefinition,
+    ImplicitNamedPortNotFound,
+    ImplicitNamedPortTypeMismatch,
 
     // constant evaluation
     ExpressionNotConstant,

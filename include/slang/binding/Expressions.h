@@ -117,6 +117,12 @@ public:
     static const Expression& bind(const Type& lhs, const ExpressionSyntax& rhs,
                                   SourceLocation location, const BindContext& context);
 
+    /// Converts the given expression to the specified type, as if the right hand side had been
+    /// assigned (without a cast) to a left hand side of the specified type.
+    static Expression& convertAssignment(const Scope& scope, const Type& type, Expression& expr,
+                                         SourceLocation location,
+                                         optional<SourceRange> lhsRange = std::nullopt);
+
     /// Indicates whether the expression is invalid.
     bool bad() const;
 
@@ -166,11 +172,6 @@ protected:
                               bitmask<BindFlags> extraFlags = BindFlags::None);
     static Expression& implicitConversion(Compilation& compilation, const Type& type,
                                           Expression& expr);
-
-    static Expression& convertAssignment(Compilation& compilation, const Type& type,
-                                         Expression& expr, SourceLocation location,
-                                         optional<SourceRange> lhsRange,
-                                         const BindContext& context);
 
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax,
                                 const BindContext& context);
@@ -311,8 +312,8 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
-    static Expression& fromSymbol(const Scope& scope, const Symbol& symbol,
-                                  bool isHierarchical, SourceRange sourceRange);
+    static Expression& fromSymbol(const Scope& scope, const Symbol& symbol, bool isHierarchical,
+                                  SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 

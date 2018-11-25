@@ -276,31 +276,24 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
     }
 
     // If the parser added a missing identifier token, it already issued an appropriate error.
-    if (nameToken.valueText().empty())
+    auto name = nameToken.valueText();
+    if (name.empty())
         return;
 
     // If this is a system name, look up directly in the compilation.
     if (nameToken.identifierType() == IdentifierType::System) {
         result.found = nullptr;
-        result.systemSubroutine = compilation.getSystemSubroutine(nameToken.valueText());
+        result.systemSubroutine = compilation.getSystemSubroutine(name);
         if (!result.systemSubroutine) {
-            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range())
-                << nameToken.valueText();
+            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << name;
         }
         return;
     }
 
     // Perform the lookup.
-    lookupUnqualifiedName(nameToken.valueText(), location, nameToken.range(), flags, result);
+    lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);
     if (selectors)
         result.selectors.appendRange(*selectors);
-}
-
-void Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
-                                  SourceRange sourceRange, bitmask<LookupFlags> flags,
-                                  LookupResult& result) const {
-
-    lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
 
     const Symbol* symbol = result.found;
     if (!symbol && !result.hasError()) {
@@ -317,14 +310,25 @@ void Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
         }
 
         if (!usedBeforeDeclared) {
-            result.addDiag(*this, DiagCode::UndeclaredIdentifier, sourceRange) << name;
+            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << name;
         }
         else {
-            auto& diag = result.addDiag(*this, DiagCode::UsedBeforeDeclared, sourceRange);
+            auto& diag = result.addDiag(*this, DiagCode::UsedBeforeDeclared, nameToken.range());
             diag << name;
             diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
         }
     }
+}
+
+const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
+                                           SourceRange sourceRange,
+                                           bitmask<LookupFlags> flags) const {
+    LookupResult result;
+    lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
+    if (result.hasError())
+        getCompilation().addDiagnostics(result.getDiagnostics());
+
+    return result.found;
 }
 
 const Symbol* Scope::lookupName(string_view name, LookupLocation location,

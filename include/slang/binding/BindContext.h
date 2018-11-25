@@ -16,10 +16,9 @@ enum class BindFlags : uint8_t {
     Constant = 1,
     IntegralConstant = 2,
     InsideConcatenation = 4,
-    AllowDataType = 8,
-    ImplicitNamedPort = 16
+    AllowDataType = 8
 };
-BITMASK_DEFINE_MAX_ELEMENT(BindFlags, ImplicitNamedPort);
+BITMASK_DEFINE_MAX_ELEMENT(BindFlags, AllowDataType);
 
 struct BindContext {
     const Scope& scope;

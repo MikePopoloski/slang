@@ -149,10 +149,8 @@ const Expression& Expression::bind(const Type& lhs, const ExpressionSyntax& rhs,
                                    SourceLocation location, const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
     Expression& expr = create(comp, rhs, context);
-    if (expr.bad() || lhs.isError())
-        return expr;
 
-    const Expression& result = convertAssignment(comp, lhs, expr, location, std::nullopt, context);
+    const Expression& result = convertAssignment(context.scope, lhs, expr, location);
     result.checkBindFlags(context);
     return result;
 }
@@ -455,15 +453,20 @@ Expression& Expression::implicitConversion(Compilation& compilation, const Type&
     return *compilation.emplace<ConversionExpression>(targetType, *result, result->sourceRange);
 }
 
-Expression& Expression::convertAssignment(Compilation& compilation, const Type& type,
-                                          Expression& expr, SourceLocation location,
-                                          optional<SourceRange> lhsRange,
-                                          const BindContext& context) {
+Expression& Expression::convertAssignment(const Scope& scope, const Type& type, Expression& expr,
+                                          SourceLocation location, optional<SourceRange> lhsRange) {
+    if (expr.bad())
+        return expr;
+
+    Compilation& compilation = scope.getCompilation();
+    if (type.isError())
+        return badExpr(compilation, &expr);
+
     const Type* rt = expr.type;
     if (!type.isAssignmentCompatible(*rt)) {
         DiagCode code =
             type.isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
-        auto& diag = context.addDiag(code, location);
+        auto& diag = scope.addDiag(code, location);
         diag << *rt << type;
         if (lhsRange)
             diag << *lhsRange;
@@ -477,8 +480,6 @@ Expression& Expression::convertAssignment(Compilation& compilation, const Type& 
         selfDetermined(compilation, result);
         return *result;
     }
-
-    // TODO: check for ImplicitNamedPort flag here
 
     if (type.isNumeric() && rt->isNumeric()) {
         rt = binaryOperatorType(compilation, &type, rt, false);
@@ -962,8 +963,8 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     if (!context.checkLValue(lhs, location))
         return badExpr(compilation, result);
 
-    result->right_ = &convertAssignment(compilation, *lhs.type, *result->right_, location,
-                                        lhs.sourceRange, context);
+    result->right_ =
+        &convertAssignment(context.scope, *lhs.type, *result->right_, location, lhs.sourceRange);
     if (result->right_->bad())
         return badExpr(compilation, result);
 

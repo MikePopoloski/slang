@@ -626,6 +626,8 @@ endmodule
     auto it = diags.begin();
     CHECK((it++)->code == DiagCode::MixingOrderedAndNamedPorts);
     CHECK((it++)->code == DiagCode::DuplicateWildcardPortConnection);
+    CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
+    CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
     CHECK((it++)->code == DiagCode::DuplicatePortConnection);
     CHECK(it == diags.end());
 }
