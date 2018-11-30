@@ -341,3 +341,26 @@ endmodule
     CHECK(diags[2].code == DiagCode::ExpressionNotConstant);
     CHECK(diags[3].code == DiagCode::HierarchicalNotAllowedInConstant);
 }
+
+TEST_CASE("Useful error when lookup before declared in parent scope") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+
+    int i;
+    if (1) begin
+        always_comb i = foo;
+    end
+
+    int foo;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::UsedBeforeDeclared);
+    CHECK(it == diags.end());
+}

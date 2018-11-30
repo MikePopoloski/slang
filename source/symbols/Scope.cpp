@@ -299,14 +299,21 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
     if (!symbol && !result.hasError()) {
         // Attempt to give a more helpful error if the symbol exists in scope but is declared after
         // the lookup location. Only do this if the symbol is of the kind we were expecting to find.
-        // TODO: check parent scopes for this as well?
         bool usedBeforeDeclared = false;
-        symbol = find(name);
-        if (symbol && (flags & LookupFlags::AllowDeclaredAfter) == 0) {
-            if (flags & LookupFlags::Type)
-                usedBeforeDeclared = symbol->isType();
-            else
-                usedBeforeDeclared = symbol->isValue();
+        if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {
+            auto scope = this;
+            do {
+                symbol = scope->find(name);
+                if (symbol) {
+                    if (flags & LookupFlags::Type)
+                        usedBeforeDeclared = symbol->isType();
+                    else
+                        usedBeforeDeclared = symbol->isValue();
+                    break;
+                }
+
+                scope = scope->getParent();
+            } while (scope);
         }
 
         if (!usedBeforeDeclared) {
