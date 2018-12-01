@@ -1170,7 +1170,9 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
     }
 
     LookupResult result;
-    bitmask<LookupFlags> flags = LookupFlags::AllowDeclaredAfter;
+    bitmask<LookupFlags> flags;
+    if (syntax.arguments)
+        flags = LookupFlags::AllowDeclaredAfter;
     if (context.isConstant())
         flags |= LookupFlags::Constant;
 
