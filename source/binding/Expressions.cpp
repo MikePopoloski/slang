@@ -345,8 +345,6 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
     auto expr = &NamedValueExpression::fromSymbol(context.scope, *symbol, result.isHierarchical,
                                                   syntax.sourceRange());
-    if (expr->bad())
-        return *expr;
 
     // Drill down into member accesses.
     for (const auto& selector : result.selectors) {

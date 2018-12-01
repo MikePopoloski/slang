@@ -350,6 +350,10 @@ private:
     void lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
                          bitmask<LookupFlags> flags, LookupResult& result) const;
 
+    // Reports an error for an undeclared identifier.
+    void reportUndeclared(string_view name, SourceRange range, bitmask<LookupFlags> flags,
+                          LookupResult& result) const;
+
     // The compilation that owns this scope.
     Compilation& compilation;
 

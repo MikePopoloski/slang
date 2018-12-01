@@ -295,36 +295,8 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
     if (selectors)
         result.selectors.appendRange(*selectors);
 
-    const Symbol* symbol = result.found;
-    if (!symbol && !result.hasError()) {
-        // Attempt to give a more helpful error if the symbol exists in scope but is declared after
-        // the lookup location. Only do this if the symbol is of the kind we were expecting to find.
-        bool usedBeforeDeclared = false;
-        if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {
-            auto scope = this;
-            do {
-                symbol = scope->find(name);
-                if (symbol) {
-                    if (flags & LookupFlags::Type)
-                        usedBeforeDeclared = symbol->isType();
-                    else
-                        usedBeforeDeclared = symbol->isValue();
-                    break;
-                }
-
-                scope = scope->getParent();
-            } while (scope);
-        }
-
-        if (!usedBeforeDeclared) {
-            result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << name;
-        }
-        else {
-            auto& diag = result.addDiag(*this, DiagCode::UsedBeforeDeclared, nameToken.range());
-            diag << name;
-            diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
-        }
-    }
+    if (!result.found && !result.hasError())
+        reportUndeclared(name, nameToken.range(), flags, result);
 }
 
 const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
@@ -857,47 +829,77 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
         return;
     }
 
-    // At this point the name must be considered a hierarchical name, unless it's an
-    // interface port member select. We'll check for that below.
     result.isHierarchical = true;
-
-    if (result.found) {
-        if (result.found->kind == SymbolKind::InterfacePort) {
-            // TODO: modports
-            result.isHierarchical = false;
-            result.found = result.found->as<InterfacePortSymbol>().connection;
-            if (!result.found)
-                return;
-        }
-
-        if (!result.found->isScope() || result.found->isType()) {
-            NamePlusLoc& part = nameParts.back();
-            auto& diag = result.addDiag(*this, DiagCode::NotAHierarchicalScope, part.dotLocation);
-            diag << nameToken.valueText();
-            diag << nameToken.range();
-            diag << part.name->sourceRange();
-            result.found = nullptr;
-            return;
-        }
-
-        if (result.isHierarchical && (flags & LookupFlags::Constant) != 0) {
-            NamePlusLoc& part = nameParts.back();
-            auto& diag =
-                result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
-            diag << nameToken.range();
-            result.found = nullptr;
-            return;
-        }
-
-        // TODO: handle more cases / error conditions
-        auto downward = lookupDownward(nameParts, result.found->as<Scope>());
-        result.found = downward.found;
+    if (!result.found) {
+        // TODO: upward name resolution
+        reportUndeclared(nameToken.valueText(), nameToken.range(), flags, result);
         return;
     }
 
-    // TODO: upward name resolution
-    result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range())
-        << nameToken.valueText();
+    if (result.found->kind == SymbolKind::InterfacePort) {
+        // TODO: modports
+        result.isHierarchical = false;
+        result.found = result.found->as<InterfacePortSymbol>().connection;
+        if (!result.found)
+            return;
+    }
+
+    if (!result.found->isScope() || result.found->isType()) {
+        NamePlusLoc& part = nameParts.back();
+        auto& diag = result.addDiag(*this, DiagCode::NotAHierarchicalScope, part.dotLocation);
+        diag << nameToken.valueText();
+        diag << nameToken.range();
+        diag << part.name->sourceRange();
+
+        diag.addNote(DiagCode::NoteDeclarationHere, result.found->location);
+        result.found = nullptr;
+        return;
+    }
+
+    if (result.isHierarchical && (flags & LookupFlags::Constant) != 0) {
+        NamePlusLoc& part = nameParts.back();
+        auto& diag =
+            result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
+        diag << nameToken.range();
+        result.found = nullptr;
+        return;
+    }
+
+    // TODO: handle more cases / error conditions
+    auto downward = lookupDownward(nameParts, result.found->as<Scope>());
+    result.found = downward.found;
+}
+
+void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<LookupFlags> flags,
+                             LookupResult& result) const {
+    // Attempt to give a more helpful error if the symbol exists in scope but is declared after
+    // the lookup location. Only do this if the symbol is of the kind we were expecting to find.
+    const Symbol* symbol = nullptr;
+    bool usedBeforeDeclared = false;
+    if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {
+        auto scope = this;
+        do {
+            symbol = scope->find(name);
+            if (symbol) {
+                if (flags & LookupFlags::Type)
+                    usedBeforeDeclared = symbol->isType();
+                else
+                    usedBeforeDeclared = symbol->isValue();
+                break;
+            }
+
+            scope = scope->getParent();
+        } while (scope);
+    }
+
+    if (!usedBeforeDeclared) {
+        result.addDiag(*this, DiagCode::UndeclaredIdentifier, range) << name;
+    }
+    else {
+        auto& diag = result.addDiag(*this, DiagCode::UsedBeforeDeclared, range);
+        diag << name;
+        diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+    }
 }
 
 void Scope::DeferredMemberData::addMember(Symbol* symbol) {
