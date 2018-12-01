@@ -174,6 +174,7 @@ protected:
                                           Expression& expr);
 
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax,
+                                const InvocationExpressionSyntax* invocation,
                                 const BindContext& context);
     static Expression& bindSelectExpression(Compilation& compilation,
                                             const ElementSelectExpressionSyntax& syntax,
@@ -603,6 +604,10 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const InvocationExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    static Expression& fromLookup(Compilation& compilation, const Subroutine& subroutine,
+                                  const InvocationExpressionSyntax* syntax, SourceRange range,
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }

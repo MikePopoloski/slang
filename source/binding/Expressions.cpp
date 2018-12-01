@@ -199,7 +199,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
         case SyntaxKind::ScopedName:
-            result = &bindName(compilation, syntax.as<NameSyntax>(), context);
+            result = &bindName(compilation, syntax.as<NameSyntax>(), nullptr, context);
             break;
         case SyntaxKind::RealLiteralExpression:
             result = &RealLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
@@ -324,18 +324,44 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
 }
 
 Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax,
+                                 const InvocationExpressionSyntax* invocation,
                                  const BindContext& context) {
-    LookupResult result;
+
     bitmask<LookupFlags> flags = LookupFlags::AllowSystemSubroutine;
-    flags |= context.isConstant() ? LookupFlags::Constant : LookupFlags::None;
+    if (invocation && invocation->arguments)
+        flags |= LookupFlags::AllowDeclaredAfter;
+    if (context.isConstant())
+        flags |= LookupFlags::Constant;
+
+    LookupResult result;
     context.scope.lookupName(syntax, context.lookupLocation, flags, result);
 
     if (result.hasError())
         compilation.addDiagnostics(result.getDiagnostics());
 
+    SourceRange callRange = invocation ? invocation->sourceRange() : syntax.sourceRange();
+    if (result.systemSubroutine) {
+        // There won't be any selectors here; this gets checked in the lookup call.
+        ASSERT(result.selectors.empty());
+        return CallExpression::fromLookup(compilation, result.systemSubroutine, invocation,
+                                          callRange, context);
+    }
+
     const Symbol* symbol = result.found;
     if (!symbol)
         return badExpr(compilation, nullptr);
+
+    if (symbol->kind == SymbolKind::Subroutine) {
+        // TODO: check selectors
+        return CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), invocation,
+                                          callRange, context);
+    }
+
+    // If we require a subroutine, enforce that now.
+    if (invocation) {
+        context.addDiag(DiagCode::NotASubroutine, syntax.sourceRange()) << symbol->name;
+        return badExpr(compilation, nullptr);
+    }
 
     if (symbol->isType() && (context.flags & BindFlags::AllowDataType) != 0) {
         // We looked up a named data type and we were allowed to do so, so return it.
@@ -1170,38 +1196,34 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, nullptr);
     }
 
-    LookupResult result;
-    bitmask<LookupFlags> flags = LookupFlags::AllowSystemSubroutine;
-    if (syntax.arguments)
-        flags |= LookupFlags::AllowDeclaredAfter;
-    if (context.isConstant())
-        flags |= LookupFlags::Constant;
+    return bindName(compilation, syntax.left->as<NameSyntax>(), &syntax, context);
+}
 
-    context.scope.lookupName(syntax.left->as<NameSyntax>(), context.lookupLocation, flags, result);
+Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutine& subroutine,
+                                       const InvocationExpressionSyntax* syntax, SourceRange range,
+                                       const BindContext& context) {
 
-    if (result.hasError())
-        compilation.addDiagnostics(result.getDiagnostics());
+    if (subroutine.index() == 1) {
+        const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
 
-    if (result.systemSubroutine) {
         SmallVectorSized<const Expression*, 8> buffer;
-        if (syntax.arguments) {
-            auto actualArgs = syntax.arguments->parameters;
+        if (syntax && syntax->arguments) {
+            auto actualArgs = syntax->arguments->parameters;
             for (uint32_t i = 0; i < actualArgs.size(); i++) {
                 // TODO: error if not ordered arguments
                 const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
                 BindFlags extra = BindFlags::None;
                 if (i == 0 &&
-                    (result.systemSubroutine->flags & SystemSubroutineFlags::AllowDataTypeArg) != 0)
+                    (systemSubroutine.flags & SystemSubroutineFlags::AllowDataTypeArg) != 0)
                     extra = BindFlags::AllowDataType;
 
                 buffer.append(&selfDetermined(compilation, *arg.expr, context, extra));
             }
         }
 
-        const Type& type = result.systemSubroutine->checkArguments(compilation, buffer);
+        const Type& type = systemSubroutine.checkArguments(compilation, buffer);
         auto expr = compilation.emplace<CallExpression>(
-            result.systemSubroutine, type, buffer.copy(compilation), context.lookupLocation,
-            syntax.sourceRange());
+            &systemSubroutine, type, buffer.copy(compilation), context.lookupLocation, range);
         if (type.isError())
             return badExpr(compilation, expr);
 
@@ -1213,38 +1235,32 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
         return *expr;
     }
 
-    const Symbol* symbol = result.found;
-    if (!symbol)
-        return badExpr(compilation, nullptr);
+    const SubroutineSymbol& symbol = *std::get<0>(subroutine);
 
-    if (symbol->kind != SymbolKind::Subroutine) {
-        context.addDiag(DiagCode::NotASubroutine, syntax.left->sourceRange()) << symbol->name;
-        return badExpr(compilation, nullptr);
+    SmallVectorSized<const Expression*, 8> argBuffer;
+    if (syntax && syntax->arguments) {
+        auto actualArgs = syntax->arguments->parameters;
+
+        // TODO: handle too few args as well, which requires looking at default values
+        auto formalArgs = symbol.arguments;
+        if (formalArgs.size() < actualArgs.size()) {
+            auto& diag = context.addDiag(DiagCode::TooManyArguments, syntax->left->sourceRange());
+            diag << formalArgs.size();
+            diag << actualArgs.size();
+            return badExpr(compilation, nullptr);
+        }
+
+        // TODO: handle named arguments in addition to ordered
+        for (uint32_t i = 0; i < actualArgs.size(); i++) {
+            const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
+            argBuffer.append(&Expression::bind(formalArgs[i]->getType(), *arg.expr,
+                                               arg.getFirstToken().location(), context));
+        }
     }
 
-    auto actualArgs = syntax.arguments->parameters;
-    const SubroutineSymbol& subroutine = symbol->as<SubroutineSymbol>();
-
-    // TODO: handle too few args as well, which requires looking at default values
-    auto formalArgs = subroutine.arguments;
-    if (formalArgs.size() < actualArgs.size()) {
-        auto& diag = context.addDiag(DiagCode::TooManyArguments, syntax.left->sourceRange());
-        diag << formalArgs.size();
-        diag << actualArgs.size();
-        return badExpr(compilation, nullptr);
-    }
-
-    // TODO: handle named arguments in addition to ordered
-    SmallVectorSized<const Expression*, 8> buffer;
-    for (uint32_t i = 0; i < actualArgs.size(); i++) {
-        const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-        buffer.append(&Expression::bind(formalArgs[i]->getType(), *arg.expr,
-                                        arg.getFirstToken().location(), context));
-    }
-
-    return *compilation.emplace<CallExpression>(&subroutine, subroutine.getReturnType(),
-                                                buffer.copy(compilation), context.lookupLocation,
-                                                syntax.sourceRange());
+    return *compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(),
+                                                argBuffer.copy(compilation), context.lookupLocation,
+                                                range);
 }
 
 Expression& ConversionExpression::fromSyntax(Compilation& compilation,
