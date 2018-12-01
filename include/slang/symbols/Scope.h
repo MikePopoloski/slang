@@ -41,8 +41,11 @@ enum class LookupFlags {
     /// location. This flag removes that restriction.
     AllowDeclaredAfter = 4,
 
+    /// Allow the lookup to return a system subroutine instead of a normal symbol.
+    AllowSystemSubroutine = 8,
+
     /// Don't search through wildcard imports to satisfy the lookup.
-    DisallowWildcardImport = 8
+    DisallowWildcardImport = 16
 };
 BITMASK_DEFINE_MAX_ELEMENT(LookupFlags, DisallowWildcardImport);
 

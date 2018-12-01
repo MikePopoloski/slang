@@ -287,6 +287,10 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
         if (!result.systemSubroutine) {
             result.addDiag(*this, DiagCode::UndeclaredIdentifier, nameToken.range()) << name;
         }
+        else if ((flags & LookupFlags::AllowSystemSubroutine) == 0) {
+            result.addDiag(*this, DiagCode::UnexpectedSystemName, nameToken.range());
+            result.systemSubroutine = nullptr;
+        }
         return;
     }
 

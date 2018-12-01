@@ -212,6 +212,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::RecursiveDefinition] = { "'{}' recursively depends on its own definition", DiagnosticSeverity::Error };
     descriptors[DiagCode::ImplicitNamedPortNotFound] = { "could not find connection for implicit named port '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::ImplicitNamedPortTypeMismatch] = { "implicit named port '{}' of type {} connects to value of inequivalent type {}", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UnexpectedSystemName] = { "unexpected use of system name", DiagnosticSeverity::Error };
 
     // constant evaluation
     descriptors[DiagCode::ExpressionNotConstant] = { "expression is not constant", DiagnosticSeverity::Error };

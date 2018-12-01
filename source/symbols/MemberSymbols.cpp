@@ -288,12 +288,11 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
                 if (header.dataType->kind == SyntaxKind::NamedType) {
                     auto& namedType = header.dataType->as<NamedTypeSyntax>();
                     if (namedType.name->kind == SyntaxKind::IdentifierName) {
-                        LookupResult lookupResult;
-                        scope.lookupName(*namedType.name, LookupLocation::max, LookupFlags::Type,
-                                         lookupResult);
+                        Token id = namedType.name->as<IdentifierNameSyntax>().identifier;
+                        auto found = scope.lookupUnqualifiedName(
+                            id.valueText(), LookupLocation::max, id.range(), LookupFlags::Type);
 
-                        if (lookupResult.hasError() || !lookupResult.found ||
-                            !lookupResult.found->isType()) {
+                        if (!found || !found->isType()) {
                             // Didn't find a valid type; try to find a definition.
                             auto name =
                                 namedType.name->as<IdentifierNameSyntax>().identifier.valueText();

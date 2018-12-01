@@ -326,7 +326,8 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
 Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax,
                                  const BindContext& context) {
     LookupResult result;
-    LookupFlags flags = context.isConstant() ? LookupFlags::Constant : LookupFlags::None;
+    bitmask<LookupFlags> flags = LookupFlags::AllowSystemSubroutine;
+    flags |= context.isConstant() ? LookupFlags::Constant : LookupFlags::None;
     context.scope.lookupName(syntax, context.lookupLocation, flags, result);
 
     if (result.hasError())
@@ -1170,9 +1171,9 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
     }
 
     LookupResult result;
-    bitmask<LookupFlags> flags;
+    bitmask<LookupFlags> flags = LookupFlags::AllowSystemSubroutine;
     if (syntax.arguments)
-        flags = LookupFlags::AllowDeclaredAfter;
+        flags |= LookupFlags::AllowDeclaredAfter;
     if (context.isConstant())
         flags |= LookupFlags::Constant;
 

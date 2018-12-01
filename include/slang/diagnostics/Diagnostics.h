@@ -213,6 +213,7 @@ enum class DiagCode : uint8_t {
     RecursiveDefinition,
     ImplicitNamedPortNotFound,
     ImplicitNamedPortTypeMismatch,
+    UnexpectedSystemName,
 
     // constant evaluation
     ExpressionNotConstant,
