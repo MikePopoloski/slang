@@ -183,7 +183,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::TooManyArguments] = { "too many arguments to subroutine call; expected {} but {} were provided", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpressionNotAssignable] = { "expression is not assignable", DiagnosticSeverity::Error };
     descriptors[DiagCode::ReplicationZeroOutsideConcat] = { "replication constant can only be zero inside of a concatenation", DiagnosticSeverity::Error };
-    descriptors[DiagCode::MemberAccessNotStructUnion] = { "member access type {} is not a structure or union", DiagnosticSeverity::Error };
+    descriptors[DiagCode::InvalidMemberAccess] = { "invalid member access for type {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpressionNotCallable] = { "expression is not callable", DiagnosticSeverity::Error };
 
     // statements
@@ -202,7 +202,6 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::UsedBeforeDeclared] = { "identifier '{}' used before its declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAType] = { "'{}' is not a type", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAValue] = { "'{}' does not refer to a value", DiagnosticSeverity::Error };
-    descriptors[DiagCode::NotASubroutine] = { "'{}' is not a task or function", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAHierarchicalScope] = { "'{}' is not a hierarchical scope name", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAModport] = { "'{}' is not a modport", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAnInterface] = { "'{}' is not an interface or modport", DiagnosticSeverity::Error };
@@ -213,6 +212,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::ImplicitNamedPortNotFound] = { "could not find connection for implicit named port '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::ImplicitNamedPortTypeMismatch] = { "implicit named port '{}' of type {} connects to value of inequivalent type {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnexpectedSystemName] = { "unexpected use of system name", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UnknownSystemMethod] = { "unknown built-in method '{}'", DiagnosticSeverity::Error };
 
     // constant evaluation
     descriptors[DiagCode::ExpressionNotConstant] = { "expression is not constant", DiagnosticSeverity::Error };

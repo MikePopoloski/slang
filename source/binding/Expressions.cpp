@@ -351,27 +351,24 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     if (!symbol)
         return badExpr(compilation, nullptr);
 
-    if (symbol->kind == SymbolKind::Subroutine) {
-        // TODO: check selectors
-        return CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), invocation,
-                                          callRange, context);
-    }
-
-    // If we require a subroutine, enforce that now.
-    if (invocation) {
-        context.addDiag(DiagCode::NotASubroutine, syntax.sourceRange()) << symbol->name;
-        return badExpr(compilation, nullptr);
-    }
-
     if (symbol->isType() && (context.flags & BindFlags::AllowDataType) != 0) {
         // We looked up a named data type and we were allowed to do so, so return it.
+        ASSERT(!invocation);
         const Type& resultType = Type::fromLookupResult(compilation, result, syntax,
                                                         context.lookupLocation, context.scope);
         return *compilation.emplace<DataTypeExpression>(resultType, syntax.sourceRange());
     }
 
-    auto expr = &NamedValueExpression::fromSymbol(context.scope, *symbol, result.isHierarchical,
-                                                  syntax.sourceRange());
+    Expression* expr;
+    if (symbol->kind == SymbolKind::Subroutine) {
+        expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), invocation,
+                                           callRange, context);
+        invocation = nullptr;
+    }
+    else {
+        expr = &NamedValueExpression::fromSymbol(context.scope, *symbol, result.isHierarchical,
+                                                 syntax.sourceRange());
+    }
 
     // Drill down into member accesses.
     for (const auto& selector : result.selectors) {
@@ -384,30 +381,31 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
             if (name.empty())
                 return badExpr(compilation, expr);
 
-            if (!expr->type->isStructUnion()) {
-                auto& diag = context.addDiag(DiagCode::MemberAccessNotStructUnion,
-                                             memberSelect->dotLocation);
-                diag << expr->sourceRange;
-                diag << memberSelect->nameRange;
-                diag << *expr->type;
-                return badExpr(compilation, expr);
-            }
+            const Type& type = expr->type->getCanonicalType();
+            switch (type.kind) {
+                case SymbolKind::PackedStructType:
+                case SymbolKind::UnpackedStructType:
+                case SymbolKind::PackedUnionType:
+                case SymbolKind::UnpackedUnionType:
+                    expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
+                                                                 context);
+                    break;
 
-            const Symbol* member = expr->type->getCanonicalType().as<Scope>().find(name);
-            if (!member) {
-                auto& diag =
-                    context.addDiag(DiagCode::UnknownMember, memberSelect->nameRange.start());
-                diag << expr->sourceRange;
-                diag << name;
-                diag << *expr->type;
-                return badExpr(compilation, expr);
-            }
+                case SymbolKind::EnumType:
+                    expr = &CallExpression::fromSystemMethod(compilation, *expr, *memberSelect,
+                                                             invocation, context);
+                    invocation = nullptr;
+                    break;
 
-            // The source range of the entire member access starts from the value being selected.
-            SourceRange range{ expr->sourceRange.start(), memberSelect->nameRange.end() };
-            const auto& field = member->as<FieldSymbol>();
-            expr =
-                compilation.emplace<MemberAccessExpression>(field.getType(), *expr, field, range);
+                default: {
+                    auto& diag =
+                        context.addDiag(DiagCode::InvalidMemberAccess, memberSelect->dotLocation);
+                    diag << expr->sourceRange;
+                    diag << memberSelect->nameRange;
+                    diag << *expr->type;
+                    return badExpr(compilation, expr);
+                }
+            }
         }
         else {
             // Element / range selectors.
@@ -415,6 +413,16 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                 std::get<const ElementSelectSyntax*>(selector);
             expr = &bindSelector(compilation, *expr, *selectSyntax, context);
         }
+    }
+
+    // If we require a subroutine, enforce that now. The invocation syntax will have been
+    // nulled out if we used it above.
+    if (invocation && !expr->bad()) {
+        SourceLocation loc = invocation->arguments ? invocation->arguments->openParen.location()
+                                                   : syntax.getFirstToken().location();
+        auto& diag = context.addDiag(DiagCode::ExpressionNotCallable, loc);
+        diag << syntax.sourceRange();
+        return badExpr(compilation, nullptr);
     }
 
     return *expr;
@@ -840,7 +848,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
 
                 // For equality and inequality, result is four state if either operand is four
                 // state. For case equality and case inequality, result is never four state. For
-                // wildcard equality / inequality, result is four state only if lhs is four state.
+                // wildcard equality / inequality, result is four state only if lhs is four
+                // state.
                 if (syntax.kind == SyntaxKind::EqualityExpression ||
                     syntax.kind == SyntaxKind::InequalityExpression) {
                     result->type = singleBitType(compilation, lt, rt);
@@ -945,8 +954,8 @@ bool BinaryExpression::propagateType(Compilation& compilation, const Type& newTy
 Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
                                               const ConditionalExpressionSyntax& syntax,
                                               const BindContext& context) {
-    // TODO: handle the pattern matching conditional predicate case, rather than just assuming that
-    // it's a simple expression
+    // TODO: handle the pattern matching conditional predicate case, rather than just assuming
+    // that it's a simple expression
     ASSERT(syntax.predicate->conditions.size() == 1);
     Expression& pred = selfDetermined(compilation, *syntax.predicate->conditions[0]->expr, context);
     Expression& left = create(compilation, *syntax.left, context);
@@ -1085,6 +1094,25 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     return *result;
 }
 
+Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expression& expr,
+                                                 const LookupResult::MemberSelector& selector,
+                                                 const BindContext& context) {
+
+    const Symbol* member = expr.type->getCanonicalType().as<Scope>().find(selector.name);
+    if (!member) {
+        auto& diag = context.addDiag(DiagCode::UnknownMember, selector.nameRange.start());
+        diag << expr.sourceRange;
+        diag << selector.name;
+        diag << *expr.type;
+        return badExpr(compilation, &expr);
+    }
+
+    // The source range of the entire member access starts from the value being selected.
+    SourceRange range{ expr.sourceRange.start(), selector.nameRange.end() };
+    const auto& field = member->as<FieldSymbol>();
+    return *compilation.emplace<MemberAccessExpression>(field.getType(), expr, field, range);
+}
+
 Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                                                 const ConcatenationExpressionSyntax& syntax,
                                                 const BindContext& context) {
@@ -1094,9 +1122,9 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     SmallVectorSized<const Expression*, 8> buffer;
 
     for (auto argSyntax : syntax.expressions) {
-        // Replications inside of concatenations have a special feature that allows them to have a
-        // width of zero. Check now if we're going to be binding a replication and if so set an
-        // additional flag so that it knows it's ok to have that zero count.
+        // Replications inside of concatenations have a special feature that allows them to have
+        // a width of zero. Check now if we're going to be binding a replication and if so set
+        // an additional flag so that it knows it's ok to have that zero count.
         Expression* arg;
         if (argSyntax->kind == SyntaxKind::MultipleConcatenationExpression)
             arg = &selfDetermined(compilation, *argSyntax, context, BindFlags::InsideConcatenation);
@@ -1168,8 +1196,8 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
             return badExpr(compilation, result);
         }
 
-        // Use a placeholder type here to indicate to the parent concatenation that this had a zero
-        // width.
+        // Use a placeholder type here to indicate to the parent concatenation that this had a
+        // zero width.
         result->type = &compilation.getVoidType();
         return *result;
     }
@@ -1205,34 +1233,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
 
     if (subroutine.index() == 1) {
         const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
-
-        SmallVectorSized<const Expression*, 8> buffer;
-        if (syntax && syntax->arguments) {
-            auto actualArgs = syntax->arguments->parameters;
-            for (uint32_t i = 0; i < actualArgs.size(); i++) {
-                // TODO: error if not ordered arguments
-                const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-                BindFlags extra = BindFlags::None;
-                if (i == 0 &&
-                    (systemSubroutine.flags & SystemSubroutineFlags::AllowDataTypeArg) != 0)
-                    extra = BindFlags::AllowDataType;
-
-                buffer.append(&selfDetermined(compilation, *arg.expr, context, extra));
-            }
-        }
-
-        const Type& type = systemSubroutine.checkArguments(compilation, buffer);
-        auto expr = compilation.emplace<CallExpression>(
-            &systemSubroutine, type, buffer.copy(compilation), context.lookupLocation, range);
-        if (type.isError())
-            return badExpr(compilation, expr);
-
-        for (auto arg : expr->arguments()) {
-            if (arg->bad())
-                return badExpr(compilation, expr);
-        }
-
-        return *expr;
+        return createSystemCall(compilation, systemSubroutine, syntax, range, context);
     }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
@@ -1261,6 +1262,54 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     return *compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(),
                                                 argBuffer.copy(compilation), context.lookupLocation,
                                                 range);
+}
+
+Expression& CallExpression::fromSystemMethod(Compilation& compilation, const Expression& expr,
+                                             const LookupResult::MemberSelector& selector,
+                                             const InvocationExpressionSyntax* syntax,
+                                             const BindContext& context) {
+    const Type& type = expr.type->getCanonicalType();
+    auto subroutine = compilation.getSystemMethod(type.kind, selector.name);
+    if (!subroutine) {
+        context.addDiag(DiagCode::UnknownSystemMethod, selector.nameRange) << selector.name;
+        return badExpr(compilation, &expr);
+    }
+
+    return createSystemCall(compilation, *subroutine, syntax,
+                            syntax ? syntax->sourceRange() : expr.sourceRange, context);
+}
+
+Expression& CallExpression::createSystemCall(Compilation& compilation,
+                                             const SystemSubroutine& subroutine,
+                                             const InvocationExpressionSyntax* syntax,
+                                             SourceRange range, const BindContext& context) {
+    SmallVectorSized<const Expression*, 8> buffer;
+    if (syntax && syntax->arguments) {
+        auto actualArgs = syntax->arguments->parameters;
+        for (uint32_t i = 0; i < actualArgs.size(); i++) {
+            // TODO: error if not ordered arguments
+            const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
+            BindFlags extra = BindFlags::None;
+            if (i == 0 && (subroutine.flags & SystemSubroutineFlags::AllowDataTypeArg) != 0)
+                extra = BindFlags::AllowDataType;
+
+            buffer.append(&selfDetermined(compilation, *arg.expr, context, extra));
+        }
+    }
+
+    const Type& type = subroutine.checkArguments(compilation, buffer);
+    auto expr = compilation.emplace<CallExpression>(&subroutine, type, buffer.copy(compilation),
+                                                    context.lookupLocation, range);
+
+    if (type.isError())
+        return badExpr(compilation, expr);
+
+    for (auto arg : expr->arguments()) {
+        if (arg->bad())
+            return badExpr(compilation, expr);
+    }
+
+    return *expr;
 }
 
 Expression& ConversionExpression::fromSyntax(Compilation& compilation,

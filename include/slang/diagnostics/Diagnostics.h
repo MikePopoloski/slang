@@ -184,7 +184,7 @@ enum class DiagCode : uint8_t {
     TooManyArguments,
     ExpressionNotAssignable,
     ReplicationZeroOutsideConcat,
-    MemberAccessNotStructUnion,
+    InvalidMemberAccess,
     ExpressionNotCallable,
 
     // statements
@@ -203,7 +203,6 @@ enum class DiagCode : uint8_t {
     UsedBeforeDeclared,
     NotAType,
     NotAValue,
-    NotASubroutine,
     NotAHierarchicalScope,
     NotAModport,
     NotAnInterface,
@@ -214,6 +213,7 @@ enum class DiagCode : uint8_t {
     ImplicitNamedPortNotFound,
     ImplicitNamedPortTypeMismatch,
     UnexpectedSystemName,
+    UnknownSystemMethod,
 
     // constant evaluation
     ExpressionNotConstant,

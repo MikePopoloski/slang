@@ -886,6 +886,8 @@ private:
         LookupResult result;
         scope.lookupName(syntax.as<NameSyntax>(), lookupLocation, LookupFlags::None, result);
 
+        // TODO: check selectors
+
         if (result.hasError())
             scope.getCompilation().addDiagnostics(result.getDiagnostics());
 

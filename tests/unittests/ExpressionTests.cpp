@@ -255,7 +255,7 @@ module m1;
 
     typedef struct { logic f; } T;
 
-    int i = T + 2;     // not a value
+    int i = T + 2;      // not a value
     int j = (3 + 4)(2); // not callable
     int k = i(2);       // not a task or function
 
@@ -269,7 +269,7 @@ endmodule
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == DiagCode::NotAValue);
     CHECK(diags[1].code == DiagCode::ExpressionNotCallable);
-    CHECK(diags[2].code == DiagCode::NotASubroutine);
+    CHECK(diags[2].code == DiagCode::ExpressionNotCallable);
 }
 
 TEST_CASE("Expression - bad use of data type") {

@@ -253,9 +253,20 @@ void Compilation::addSystemSubroutine(std::unique_ptr<SystemSubroutine> subrouti
     subroutineMap.emplace(subroutine->name, std::move(subroutine));
 }
 
+void Compilation::addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method) {
+    methodMap.emplace(std::make_tuple(method->name, typeKind), std::move(method));
+}
+
 const SystemSubroutine* Compilation::getSystemSubroutine(string_view name) const {
     auto it = subroutineMap.find(name);
     if (it == subroutineMap.end())
+        return nullptr;
+    return it->second.get();
+}
+
+const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind, string_view name) const {
+    auto it = methodMap.find(std::make_tuple(name, typeKind));
+    if (it == methodMap.end())
         return nullptr;
     return it->second.get();
 }

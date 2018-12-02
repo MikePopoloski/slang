@@ -527,6 +527,10 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
+    static Expression& fromSelector(Compilation& compilation, Expression& expr,
+                                    const LookupResult::MemberSelector& selector,
+                                    const BindContext& context);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::MemberAccess; }
 
 private:
@@ -610,9 +614,19 @@ public:
                                   const InvocationExpressionSyntax* syntax, SourceRange range,
                                   const BindContext& context);
 
+    static Expression& fromSystemMethod(Compilation& compilation, const Expression& expr,
+                                        const LookupResult::MemberSelector& selector,
+                                        const InvocationExpressionSyntax* syntax,
+                                        const BindContext& context);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
 
 private:
+    static Expression& createSystemCall(Compilation& compilation,
+                                        const SystemSubroutine& subroutine,
+                                        const InvocationExpressionSyntax* syntax, SourceRange range,
+                                        const BindContext& context);
+
     span<const Expression*> arguments_;
     LookupLocation lookupLocation;
 };

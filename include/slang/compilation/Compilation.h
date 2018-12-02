@@ -69,9 +69,16 @@ public:
     /// Registers a system subroutine handler, which can be accessed by compiled code.
     void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
 
-    /// Gets a system subroutine with the given na,e or null if there is no such subroutine
+    /// Registers a type-based system method handler, which can be accessed by compiled code.
+    void addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method);
+
+    /// Gets a system subroutine with the given name, or null if there is no such subroutine
     /// registered.
     const SystemSubroutine* getSystemSubroutine(string_view name) const;
+
+    /// Gets a system method for the specified type with the given name, or null if there is no such
+    /// method registered.
+    const SystemSubroutine* getSystemMethod(SymbolKind typeKind, string_view name) const;
 
     /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
     /// This is mostly for testing and API purposes; normal compilation never does this.
@@ -197,8 +204,11 @@ private:
     // which is why they can't share the definitions name table.
     flat_hash_map<string_view, const PackageSymbol*> packageMap;
 
-    /// The name map for system subroutines.
+    // The name map for system subroutines.
     flat_hash_map<string_view, std::unique_ptr<SystemSubroutine>> subroutineMap;
+
+    // The name map for system methods.
+    flat_hash_map<std::tuple<string_view, SymbolKind>, std::unique_ptr<SystemSubroutine>> methodMap;
 
     // A cache of vector types, keyed on various properties such as bit width.
     flat_hash_map<uint32_t, const PackedArrayType*> vectorTypeCache;
