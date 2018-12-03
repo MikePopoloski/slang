@@ -99,6 +99,12 @@ Compilation::Compilation() :
     REGISTER(Size);
     REGISTER(Increment);
 #undef REGISTER
+
+#define REGISTER(kind, name, ...) addSystemMethod(kind, std::make_unique<Builtins::name##Method>(__VA_ARGS__))
+    REGISTER(SymbolKind::EnumType, EnumFirstLast, "first", true);
+    REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
+    REGISTER(SymbolKind::EnumType, EnumNum);
+#undef REGISTER
 }
 
 void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
@@ -254,7 +260,7 @@ void Compilation::addSystemSubroutine(std::unique_ptr<SystemSubroutine> subrouti
 }
 
 void Compilation::addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method) {
-    methodMap.emplace(std::make_tuple(method->name, typeKind), std::move(method));
+    methodMap.emplace(std::make_tuple(string_view(method->name), typeKind), std::move(method));
 }
 
 const SystemSubroutine* Compilation::getSystemSubroutine(string_view name) const {

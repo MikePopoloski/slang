@@ -364,3 +364,53 @@ endmodule
     CHECK((it++)->code == DiagCode::UsedBeforeDeclared);
     CHECK(it == diags.end());
 }
+
+TEST_CASE("Subroutine lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+    localparam int foo = 3;
+
+    if (1) begin
+        localparam int a = foo;
+        localparam int b = foo();
+
+        function int foo;
+            return 4;
+        endfunction
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& block = compilation.getRoot().topInstances[0]->memberAt<GenerateBlockSymbol>(1);
+    CHECK(block.find<ParameterSymbol>("a").getValue().integer() == 3);
+    CHECK(block.find<ParameterSymbol>("b").getValue().integer() == 4);
+}
+
+TEST_CASE("Enum method lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+    typedef enum { FOO = 2, BAR = 6, BAZ } e;
+    localparam e asdf = BAR;
+
+    localparam e first = asdf.first;
+    localparam e last = asdf.last();
+    localparam int count1 = asdf.num;
+    localparam int count2 = asdf.num();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& block = *compilation.getRoot().topInstances[0];
+    CHECK(block.find<ParameterSymbol>("first").getValue().integer() == 2);
+    CHECK(block.find<ParameterSymbol>("last").getValue().integer() == 7);
+    CHECK(block.find<ParameterSymbol>("count1").getValue().integer() == 3);
+    CHECK(block.find<ParameterSymbol>("count2").getValue().integer() == 3);
+}

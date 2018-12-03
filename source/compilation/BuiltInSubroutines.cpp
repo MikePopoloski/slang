@@ -10,6 +10,8 @@
 
 namespace slang::Builtins {
 
+// TODO: check all of these for whether return type should be int or integer
+
 const Type& IntegerMathFunction::checkArguments(Compilation& compilation, const Args&) const {
     // TODO: error checking
     return compilation.getIntegerType();
@@ -78,6 +80,51 @@ ConstantValue IncrementSubroutine::eval(EvalContext&, const Args& args) const {
     const auto& argType = args[0]->type->as<IntegralType>();
     ConstantRange range = argType.getBitVectorRange();
     return SVInt(32, (uint64_t)(range.isLittleEndian() ? 1 : -1), true);
+}
+
+EnumFirstLastMethod::EnumFirstLastMethod(std::string name, bool first) :
+    SystemSubroutine(std::move(name)), first(first) {
+}
+
+const Type& EnumFirstLastMethod::checkArguments(Compilation&, const Args& args) const {
+    // TODO: check too many args
+    return *args.at(0)->type;
+}
+
+ConstantValue EnumFirstLastMethod::eval(EvalContext&, const Args& args) const {
+    // Expression isn't actually evaluated here; we know the value to return at compile time.
+    const EnumType& type = args.at(0)->type->getCanonicalType().as<EnumType>();
+
+    auto range = type.values();
+    if (range.begin() == range.end())
+        return nullptr;
+
+    const EnumValueSymbol* value;
+    if (first) {
+        value = &*range.begin();
+    }
+    else {
+        for (auto it = range.begin();;) {
+            auto prev = it++;
+            if (it == range.end()) {
+                value = &*prev;
+                break;
+            }
+        }
+    }
+
+    return value->getValue();
+}
+
+const Type& EnumNumMethod::checkArguments(Compilation& compilation, const Args&) const {
+    // TODO: check too many args
+    return compilation.getIntegerType();
+}
+
+ConstantValue EnumNumMethod::eval(EvalContext&, const Args& args) const {
+    // Expression isn't actually evaluated here; we know the value to return at compile time.
+    const EnumType& type = args.at(0)->type->getCanonicalType().as<EnumType>();
+    return SVInt(32, (uint64_t)type.values().size(), true);
 }
 
 } // namespace slang::Builtins

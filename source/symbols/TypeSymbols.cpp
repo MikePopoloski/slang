@@ -583,6 +583,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     SVInt one(canonicalBase->getBitWidth(), 1, canonicalBase->isSigned());
     SVInt current(canonicalBase->getBitWidth(), 0, canonicalBase->isSigned());
 
+    // TODO: error if no members
     for (auto member : syntax.members) {
         auto ev =
             compilation.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location());

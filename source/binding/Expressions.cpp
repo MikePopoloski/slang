@@ -1233,7 +1233,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
 
     if (subroutine.index() == 1) {
         const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
-        return createSystemCall(compilation, systemSubroutine, syntax, range, context);
+        return createSystemCall(compilation, systemSubroutine, nullptr, syntax, range, context);
     }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
@@ -1271,19 +1271,31 @@ Expression& CallExpression::fromSystemMethod(Compilation& compilation, const Exp
     const Type& type = expr.type->getCanonicalType();
     auto subroutine = compilation.getSystemMethod(type.kind, selector.name);
     if (!subroutine) {
-        context.addDiag(DiagCode::UnknownSystemMethod, selector.nameRange) << selector.name;
+        if (syntax) {
+            context.addDiag(DiagCode::UnknownSystemMethod, selector.nameRange) << selector.name;
+        }
+        else {
+            auto& diag = context.addDiag(DiagCode::InvalidMemberAccess, selector.dotLocation);
+            diag << expr.sourceRange;
+            diag << selector.nameRange;
+            diag << *expr.type;
+        }
         return badExpr(compilation, &expr);
     }
 
-    return createSystemCall(compilation, *subroutine, syntax,
+    return createSystemCall(compilation, *subroutine, &expr, syntax,
                             syntax ? syntax->sourceRange() : expr.sourceRange, context);
 }
 
 Expression& CallExpression::createSystemCall(Compilation& compilation,
                                              const SystemSubroutine& subroutine,
+                                             const Expression* firstArg,
                                              const InvocationExpressionSyntax* syntax,
                                              SourceRange range, const BindContext& context) {
     SmallVectorSized<const Expression*, 8> buffer;
+    if (firstArg)
+        buffer.append(firstArg);
+
     if (syntax && syntax->arguments) {
         auto actualArgs = syntax->arguments->parameters;
         for (uint32_t i = 0; i < actualArgs.size(); i++) {

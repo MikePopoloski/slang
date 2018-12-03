@@ -28,6 +28,23 @@ public:
     const Type& checkArguments(Compilation& compilation, const Args& args) const final;
 };
 
+class EnumFirstLastMethod : public SystemSubroutine {
+public:
+    EnumFirstLastMethod(std::string name, bool first);
+    const Type& checkArguments(Compilation& compilation, const Args& args) const final;
+    ConstantValue eval(EvalContext& context, const Args& args) const final;
+
+private:
+    bool first;
+};
+
+class EnumNumMethod : public SystemSubroutine {
+public:
+    EnumNumMethod() : SystemSubroutine("num") {}
+    const Type& checkArguments(Compilation& compilation, const Args& args) const final;
+    ConstantValue eval(EvalContext& context, const Args& args) const final;
+};
+
 #define SUBROUTINE(className, base, ...)                                        \
     class className : public base {                                             \
     public:                                                                     \
@@ -36,7 +53,9 @@ public:
     }
 
 SUBROUTINE(Clog2Subroutine, IntegerMathFunction, "$clog2");
+
 SUBROUTINE(BitsSubroutine, DataQueryFunction, "$bits", SystemSubroutineFlags::AllowDataTypeArg);
+
 SUBROUTINE(LowSubroutine, ArrayQueryFunction, "$low");
 SUBROUTINE(HighSubroutine, ArrayQueryFunction, "$high");
 SUBROUTINE(LeftSubroutine, ArrayQueryFunction, "$left");

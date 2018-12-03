@@ -624,6 +624,7 @@ public:
 private:
     static Expression& createSystemCall(Compilation& compilation,
                                         const SystemSubroutine& subroutine,
+                                        const Expression* firstArg,
                                         const InvocationExpressionSyntax* syntax, SourceRange range,
                                         const BindContext& context);
 
