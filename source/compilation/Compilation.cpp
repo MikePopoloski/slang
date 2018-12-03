@@ -103,7 +103,7 @@ Compilation::Compilation() :
 #define REGISTER(kind, name, ...) addSystemMethod(kind, std::make_unique<Builtins::name##Method>(__VA_ARGS__))
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "first", true);
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
-    REGISTER(SymbolKind::EnumType, EnumNum);
+    REGISTER(SymbolKind::EnumType, EnumNum, );
 #undef REGISTER
 }
 
