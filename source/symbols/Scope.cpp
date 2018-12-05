@@ -708,6 +708,7 @@ DownwardLookupResult lookupDownward(span<const NamePlusLoc> nameParts, const Sco
         const Symbol* symbol;
         switch (part.name->kind) {
             case SyntaxKind::IdentifierName:
+            case SyntaxKind::IdentifierSelectName:
                 symbol =
                     current->find(part.name->as<IdentifierNameSyntax>().identifier.valueText());
                 break;
