@@ -142,8 +142,8 @@ endmodule
 
 TEST_CASE("Module children (loop generate)") {
     auto tree = SyntaxTree::fromText(R"(
-module Top;
-    for (genvar i = 0; i < 10; i += 1) begin
+module Top #(parameter int limit = 10)();
+    for (genvar i = 0; i < limit; i += 1) begin
         Leaf #(i) leaf();
     end
 endmodule
@@ -153,7 +153,7 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation).memberAt<GenerateBlockArraySymbol>(0);
+    const auto& instance = evalModule(tree, compilation).memberAt<GenerateBlockArraySymbol>(1);
 
     REQUIRE(instance.members().size() == 10);
 

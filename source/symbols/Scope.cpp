@@ -334,7 +334,7 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
         member->nextInScope = std::exchange(firstMember, member);
     }
     else {
-        member->indexInScope = Symbol::Index{ (uint32_t)at->indexInScope + (at == lastMember) };
+        member->indexInScope = getInsertionIndex(*at);
         member->nextInScope = std::exchange(at->nextInScope, member);
     }
 
@@ -404,6 +404,10 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
             }
         }
     }
+}
+
+Symbol::Index Scope::getInsertionIndex(const Symbol& at) const {
+    return Symbol::Index{ (uint32_t)at.indexInScope + (&at == lastMember) };
 }
 
 void Scope::elaborate() const {
@@ -511,10 +515,10 @@ void Scope::elaborate() const {
                     break;
                 }
                 case SyntaxKind::LoopGenerate:
-                    insertMember(
-                        &GenerateBlockArraySymbol::fromSyntax(
-                            compilation, member.node.as<LoopGenerateSyntax>(), location, *this),
-                        symbol);
+                    insertMember(&GenerateBlockArraySymbol::fromSyntax(
+                                     compilation, member.node.as<LoopGenerateSyntax>(),
+                                     getInsertionIndex(*symbol), location, *this),
+                                 symbol);
                     break;
                 default:
                     break;

@@ -149,6 +149,10 @@ protected:
     Symbol(const Symbol&) = delete;
 
     void setParent(const Scope& scope) { parentScope = &scope; }
+    void setParent(const Scope& scope, Index index) {
+        setParent(scope);
+        indexInScope = index;
+    }
 
 private:
     friend class Scope;

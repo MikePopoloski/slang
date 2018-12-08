@@ -129,6 +129,8 @@ public:
     SequentialBlockSymbol(Compilation& compilation, SourceLocation loc) :
         Symbol(SymbolKind::SequentialBlock, "", loc), StatementBodiedScope(compilation, this) {}
 
+    void setTemporaryParent(const Scope& scope, Index index) { setParent(scope, index); }
+
     void toJson(json&) const {}
 
     static SequentialBlockSymbol& fromSyntax(Compilation& compilation,
@@ -181,7 +183,7 @@ public:
 
     /// Creates a generate block array from the given loop-generate syntax node.
     static GenerateBlockArraySymbol& fromSyntax(Compilation& compilation,
-                                                const LoopGenerateSyntax& syntax,
+                                                const LoopGenerateSyntax& syntax, Index index,
                                                 LookupLocation location, const Scope& parent);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenerateBlockArray; }

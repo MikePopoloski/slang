@@ -417,7 +417,7 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation,
 
 GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
                                                                const LoopGenerateSyntax& syntax,
-                                                               LookupLocation location,
+                                                               Index index, LookupLocation location,
                                                                const Scope& parent) {
     // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
     // we need to do a lookup to make sure we have the actual genvar.
@@ -438,6 +438,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     SequentialBlockSymbol iterScope(compilation, SourceLocation());
     VariableSymbol local{ syntax.identifier.valueText(), syntax.identifier.location() };
     local.setType(compilation.getIntType());
+
+    iterScope.setTemporaryParent(parent, index);
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
