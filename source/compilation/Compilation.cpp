@@ -17,7 +17,7 @@ using namespace slang;
 
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
-struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
+struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
     template<typename T>
     void handle(const T& symbol) {
         if constexpr (std::is_base_of_v<Symbol, T>) {
@@ -166,47 +166,56 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     root->addMember(*unit);
     compilationUnits.push_back(unit);
     syntaxTrees.emplace_back(std::move(tree));
-    forcedDiagnostics = false;
 }
 
 span<const std::shared_ptr<SyntaxTree>> Compilation::getSyntaxTrees() const {
     return syntaxTrees;
 }
 
+span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits() const {
+    return compilationUnits;
+}
+
 const RootSymbol& Compilation::getRoot() {
-    if (!finalized) {
-        // Find modules that have no instantiations. Iterate the definitions map
-        // before instantiating any top level modules, since that can cause changes
-        // to the definition map itself.
-        SmallVectorSized<const DefinitionSymbol*, 8> topDefinitions;
-        for (auto& [key, definition] : definitionMap) {
-            // Ignore definitions that are not top level.
-            // TODO: check for no parameters here
-            if (std::get<1>(key) == root.get() &&
-                definition->definitionKind == DefinitionKind::Module &&
-                instantiatedNames.count(definition->name) == 0) {
+    if (finalized)
+        return *root;
 
-                topDefinitions.append(definition);
-            }
+    // Visit all compilation units added to the design.
+    ElaborationVisitor elaborationVisitor;
+    root->visit(elaborationVisitor);
+
+    // Find modules that have no instantiations. Iterate the definitions map
+    // before instantiating any top level modules, since that can cause changes
+    // to the definition map itself.
+    SmallVectorSized<const DefinitionSymbol*, 8> topDefinitions;
+    for (auto& [key, definition] : definitionMap) {
+        // Ignore definitions that are not top level.
+        // TODO: check for no parameters here
+        if (std::get<1>(key) == root.get() &&
+            definition->definitionKind == DefinitionKind::Module &&
+            instantiatedNames.count(definition->name) == 0) {
+
+            topDefinitions.append(definition);
         }
-
-        // Sort the list of definitions so that we get deterministic ordering of instances;
-        // the order is otherwise dependent on iterating over a hash table.
-        std::sort(topDefinitions.begin(), topDefinitions.end(),
-                  [](auto a, auto b) { return a->name < b->name; });
-
-        SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
-        for (auto def : topDefinitions) {
-            auto& instance =
-                ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def);
-            root->addMember(instance);
-            topList.append(&instance);
-        }
-
-        root->topInstances = topList.copy(*this);
-        root->compilationUnits = compilationUnits;
-        finalized = true;
     }
+
+    // Sort the list of definitions so that we get deterministic ordering of instances;
+    // the order is otherwise dependent on iterating over a hash table.
+    std::sort(topDefinitions.begin(), topDefinitions.end(),
+              [](auto a, auto b) { return a->name < b->name; });
+
+    SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
+    for (auto def : topDefinitions) {
+        auto& instance = ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def);
+        root->addMember(instance);
+        topList.append(&instance);
+
+        instance.visit(elaborationVisitor);
+    }
+
+    root->topInstances = topList.copy(*this);
+    root->compilationUnits = compilationUnits;
+    finalized = true;
     return *root;
 }
 
@@ -312,11 +321,7 @@ Diagnostics Compilation::getParseDiagnostics() {
 Diagnostics Compilation::getSemanticDiagnostics() {
     // If we haven't already done so, touch every symbol, scope, statement,
     // and expression tree so that we can be sure we have all the diagnostics.
-    if (!forcedDiagnostics) {
-        forcedDiagnostics = true;
-        DiagnosticVisitor visitor;
-        getRoot().visit(visitor);
-    }
+    getRoot();
 
     // Go through all diagnostics and build a map from source location / code to the
     // actual diagnostic. The purpose is to find duplicate diagnostics issued by several

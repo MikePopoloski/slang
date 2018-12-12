@@ -36,6 +36,13 @@ public:
     /// Gets the set of syntax trees that have been added to the compilation.
     span<const std::shared_ptr<SyntaxTree>> getSyntaxTrees() const;
 
+    /// Gets the compilation unit for the given syntax node. The compilation unit must have
+    /// already been added to the compilation previously via a call to @a addSyntaxTree
+    const CompilationUnitSymbol* getCompilationUnit(const CompilationUnitSyntax& syntax) const;
+
+    /// Gets the set of compilation units that have been added to the compilation.
+    span<const CompilationUnitSymbol* const> getCompilationUnits() const;
+
     /// Gets the root of the design. The first time you call this method all top-level
     /// instances will be elaborated and the compilation finalized. After that you can
     /// no longer make any modifications to the compilation object; any attempts to do
@@ -44,10 +51,6 @@ public:
 
     /// Indicates whether the design has been compiled and can no longer accept modifications.
     bool isFinalized() const { return finalized; }
-
-    /// Gets the compilation unit for the given syntax node. The compilation unit must have
-    /// already been added to the compilation previously via a call to @a addSyntaxTree
-    const CompilationUnitSymbol* getCompilationUnit(const CompilationUnitSyntax& syntax) const;
 
     /// Gets the definition with the given name, or null if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found before more
@@ -98,8 +101,9 @@ public:
     Diagnostics getParseDiagnostics();
 
     /// Gets the diagnostics produced during semantic analysis, including the binding of
-    /// symbols, type checking, and name lookup. Note that this will force evaluation of
-    /// any symbols or expressions that were still waiting for lazy evaluation.
+    /// symbols, type checking, and name lookup. Note that this will finalize the compilation,
+    /// including forcing the evaluation of any symbols or expressions that were still waiting
+    /// for lazy evaluation.
     Diagnostics getSemanticDiagnostics();
 
     /// Gets all of the diagnostics produced during compilation.
@@ -174,7 +178,6 @@ private:
     std::unique_ptr<RootSymbol> root;
     const SourceManager* sourceManager = nullptr;
     bool finalized = false;
-    bool forcedDiagnostics = false;
 
     // A set of names that are instantiated anywhere in the design. This is used to determine
     // which modules should be top-level instances (because nobody ever instantiates them).
