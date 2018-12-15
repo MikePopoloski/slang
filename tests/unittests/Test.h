@@ -164,9 +164,6 @@ inline const ModuleInstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax
     const RootSymbol& root = compilation.getRoot();
 
     REQUIRE(root.topInstances.size() > 0);
-    if (!syntax->diagnostics().empty())
-        WARN(report(syntax->diagnostics()));
-
     return *root.topInstances[0];
 }
 

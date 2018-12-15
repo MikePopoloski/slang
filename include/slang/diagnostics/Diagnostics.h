@@ -261,6 +261,10 @@ public:
     Diagnostic& addNote(DiagCode code, SourceLocation location);
     Diagnostic& addNote(const Diagnostic& diag);
 
+    /// Returns true if this diagnostic should be suppressed. This can happen, e.g. because it was
+    /// issued inside of a generate block that was not instantiated.
+    bool isSuppressed() const;
+
     /// Adds an argument to the diagnostic.
     friend Diagnostic& operator<<(Diagnostic& diag, const Type& arg);
     friend Diagnostic& operator<<(Diagnostic& diag, string_view arg);

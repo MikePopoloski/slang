@@ -28,6 +28,19 @@ Diagnostic& Diagnostic::addNote(const Diagnostic& diag) {
     return notes.back();
 }
 
+bool Diagnostic::isSuppressed() const {
+    const Symbol* sym = symbol;
+    while (sym) {
+        if (sym->kind == SymbolKind::GenerateBlock &&
+            !sym->as<GenerateBlockSymbol>().isInstantiated)
+            return true;
+
+        auto scope = sym->getScope();
+        sym = scope ? &scope->asSymbol() : nullptr;
+    }
+    return false;
+}
+
 Diagnostic& operator<<(Diagnostic& diag, string_view arg) {
     diag.args.emplace_back(std::string(arg));
     return diag;

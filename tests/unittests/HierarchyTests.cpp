@@ -120,6 +120,7 @@ module Child #(parameter foo = 4)();
         Leaf #(1) leaf();
     end
     else begin
+        if (1) always_comb blaz = blob;
         Leaf #(2) leaf();
     end
 endmodule
@@ -130,11 +131,12 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
-    const auto& leaf = instance.memberAt<ModuleInstanceSymbol>(0)
-                           .memberAt<GenerateBlockSymbol>(1)
-                           .memberAt<ModuleInstanceSymbol>(0);
+    auto& instance = evalModule(tree, compilation);
+    auto& child = instance.memberAt<ModuleInstanceSymbol>(0);
+    CHECK(child.memberAt<GenerateBlockSymbol>(1).isInstantiated);
+    CHECK(!child.memberAt<GenerateBlockSymbol>(2).isInstantiated);
 
+    auto& leaf = child.memberAt<GenerateBlockSymbol>(1).memberAt<ModuleInstanceSymbol>(0);
     const auto& foo = leaf.find<ParameterSymbol>("foo");
     CHECK(foo.getValue().integer() == 1);
     NO_COMPILATION_ERRORS;

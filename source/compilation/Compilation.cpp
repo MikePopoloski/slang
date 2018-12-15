@@ -332,6 +332,9 @@ Diagnostics Compilation::getSemanticDiagnostics() {
 
     for (auto& diag : diags) {
         ASSERT(diag.symbol);
+        if (diag.isSuppressed())
+            continue;
+
         if (auto it = diagMap.find({ diag.code, diag.location }); it != diagMap.end()) {
             it->second.second.push_back(&diag);
             if (diag.symbol->kind == SymbolKind::Definition)

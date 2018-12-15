@@ -146,7 +146,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::NonAnsiPortList:
         case SyntaxKind::IfGenerate:
         case SyntaxKind::LoopGenerate: {
-            // TODO: handle special generate block name conflict rules
             auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
             addMember(*sym);
             getOrAddDeferredData().addMember(sym);
@@ -349,6 +348,8 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
 
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second) {
+            // TODO: handle special generate block name conflict rules
+
             // We have a name collision; first check if this is ok (forwarding typedefs share a name
             // with the actual typedef) and if not give the user a helpful error message.
             const Symbol* existing = pair.first->second;
@@ -501,28 +502,37 @@ void Scope::elaborate() const {
         }
 
         // Now that all instances have been inserted, go back through and elaborate generate
-        // blocks.
+        // blocks. The spec requires that we give each generate construct an index, starting from
+        // one. This index is used to generate external names for unnamed generate blocks.
+        uint32_t constructIndex = 1;
         for (auto symbol : deferred) {
             auto& member = symbol->as<DeferredMemberSymbol>();
             LookupLocation location = LookupLocation::before(*symbol);
 
             switch (member.node.kind) {
                 case SyntaxKind::IfGenerate: {
-                    auto block = GenerateBlockSymbol::fromSyntax(
-                        compilation, member.node.as<IfGenerateSyntax>(), location, *this);
-                    if (block)
-                        insertMember(block, symbol);
+                    SmallVectorSized<GenerateBlockSymbol*, 8> blocks;
+                    GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
+                                                    location, *this, constructIndex, true, blocks);
+
+                    const Symbol* last = symbol;
+                    for (auto block : blocks) {
+                        insertMember(block, last);
+                        last = block;
+                    }
                     break;
                 }
                 case SyntaxKind::LoopGenerate:
                     insertMember(&GenerateBlockArraySymbol::fromSyntax(
                                      compilation, member.node.as<LoopGenerateSyntax>(),
-                                     getInsertionIndex(*symbol), location, *this),
+                                     getInsertionIndex(*symbol), location, *this, constructIndex),
                                  symbol);
                     break;
                 default:
                     break;
             }
+
+            constructIndex++;
         }
 
         // Finally unlink any deferred members we had; we no longer need them.

@@ -387,59 +387,100 @@ static string_view getGenerateBlockName(const SyntaxNode& node) {
     return "";
 }
 
-GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation,
-                                                     const IfGenerateSyntax& syntax,
-                                                     LookupLocation location, const Scope& parent) {
-    // TODO: better error checking
-    BindContext bindContext(parent, location, BindFlags::Constant);
-    const auto& cond = Expression::bind(*syntax.condition, bindContext);
-    if (!cond.constant)
-        return nullptr;
+void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
+                                     LookupLocation location, const Scope& parent,
+                                     uint32_t constructIndex, bool isInstantiated,
+                                     SmallVector<GenerateBlockSymbol*>& results) {
+    optional<bool> selector;
+    if (isInstantiated) {
+        // TODO: better error checking
+        BindContext bindContext(parent, location, BindFlags::Constant);
+        const auto& cond = Expression::bind(*syntax.condition, bindContext);
+        if (cond.constant)
+            selector = (bool)(logic_t)cond.constant->integer();
+    }
 
-    const SVInt& value = cond.constant->integer();
+    auto createBlock = [&](const SyntaxNode& syntax, bool isInstantiated) {
+        // [27.5] If a generate block in a conditional generate construct consists of only one item
+        // that is itself a conditional generate construct and if that item is not surrounded by
+        // begin-end keywords, then this generate block is not treated as a separate scope. The
+        // generate construct within this block is said to be directly nested. The generate blocks
+        // of the directly nested construct are treated as if they belong to the outer construct.
+        switch (syntax.kind) {
+            case SyntaxKind::IfGenerate:
+                fromSyntax(compilation, syntax.as<IfGenerateSyntax>(), location, parent,
+                           constructIndex, isInstantiated, results);
+                return;
 
-    const SyntaxNode* memberSyntax = nullptr;
-    if ((logic_t)value)
-        memberSyntax = syntax.block;
-    else if (syntax.elseClause)
-        memberSyntax = syntax.elseClause->clause;
-    else
-        return nullptr;
+            case SyntaxKind::CaseGenerate: // TODO:
+            default:
+                break;
+        }
 
-    string_view name = getGenerateBlockName(*memberSyntax);
-    SourceLocation loc = memberSyntax->getFirstToken().location();
+        string_view name = getGenerateBlockName(syntax);
+        SourceLocation loc = syntax.getFirstToken().location();
 
-    auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc);
-    block->addMembers(*memberSyntax);
-    block->setSyntax(syntax);
-    return block;
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc,
+                                                              constructIndex, isInstantiated);
+
+        block->addMembers(syntax);
+        block->setSyntax(syntax);
+        results.append(block);
+    };
+
+    createBlock(*syntax.block, selector.has_value() && selector.value());
+    if (syntax.elseClause)
+        createBlock(*syntax.elseClause->clause, selector.has_value() && !selector.value());
 }
 
-GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
-                                                               const LoopGenerateSyntax& syntax,
-                                                               Index index, LookupLocation location,
-                                                               const Scope& parent) {
+GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
+    Compilation& compilation, const LoopGenerateSyntax& syntax, Index scopeIndex,
+    LookupLocation location, const Scope& parent, uint32_t constructIndex) {
+
     // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
     // we need to do a lookup to make sure we have the actual genvar.
     // TODO: do the actual lookup
 
     string_view name = getGenerateBlockName(*syntax.block);
     SourceLocation loc = syntax.block->getFirstToken().location();
-    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc);
+    auto result =
+        compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc, constructIndex);
     result->setSyntax(syntax);
+
+    // TODO: verify that localparam type should be int
+
+    auto createBlock = [&](ConstantValue value, bool isInstantiated) {
+        // Spec: each generate block gets their own scope, with an implicit
+        // localparam of the same name as the genvar.
+        // TODO: block name, location?
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation(),
+                                                              isInstantiated, 1);
+        auto implicitParam = compilation.emplace<ParameterSymbol>(
+            syntax.identifier.valueText(), syntax.identifier.location(), true /* isLocal */,
+            false /* isPort */);
+
+        block->addMember(*implicitParam);
+        block->addMembers(*syntax.block);
+        result->addMember(*block);
+
+        implicitParam->setType(compilation.getIntType());
+        implicitParam->setValue(std::move(value));
+    };
 
     // Initialize the genvar
     BindContext bindContext(parent, location, BindFlags::Constant);
     const auto& initial = Expression::bind(*syntax.initialExpr, bindContext);
-    if (!initial.constant)
+    if (!initial.constant) {
+        createBlock(SVInt(32, 0, true), false);
         return *result;
+    }
 
     // Fabricate a local variable that will serve as the loop iteration variable.
     SequentialBlockSymbol iterScope(compilation, SourceLocation());
     VariableSymbol local{ syntax.identifier.valueText(), syntax.identifier.location() };
     local.setType(compilation.getIntType());
 
-    iterScope.setTemporaryParent(parent, index);
+    iterScope.setTemporaryParent(parent, scopeIndex);
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
@@ -453,22 +494,14 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     auto genvar = context.createLocal(&local, *initial.constant);
 
     // Generate blocks!
-    SmallVectorSized<const Symbol*, 16> arrayEntries;
+    bool any = false;
     for (; stopExpr.evalBool(context); iterExpr.eval(context)) {
-        // Spec: each generate block gets their own scope, with an implicit
-        // localparam of the same name as the genvar.
-        // TODO: scope name
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
-        auto implicitParam = compilation.emplace<ParameterSymbol>(
-            syntax.identifier.valueText(), syntax.identifier.location(), true /* isLocal */,
-            false /* isPort */);
-        block->addMember(*implicitParam);
-        block->addMembers(*syntax.block);
-        result->addMember(*block);
-
-        implicitParam->setType(local.getType());
-        implicitParam->setValue(*genvar);
+        createBlock(*genvar, true);
+        any = true;
     }
+
+    if (!any)
+        createBlock(SVInt(32, 0, true), false);
 
     return *result;
 }
