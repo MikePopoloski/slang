@@ -129,34 +129,13 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
 
     auto unit = emplace<CompilationUnitSymbol>(*this);
     const SyntaxNode& node = tree->root();
-    NameSet instances;
-
     if (node.kind == SyntaxKind::CompilationUnit) {
-        for (auto member : node.as<CompilationUnitSyntax>().members) {
+        for (auto member : node.as<CompilationUnitSyntax>().members)
             unit->addMembers(*member);
-
-            // Because of the requirement that we look at uninstantiated branches of generate
-            // blocks, we need to look at the syntax nodes instead of any bound symbols.
-            if (member->kind == SyntaxKind::ModuleDeclaration) {
-                SmallVectorSized<NameSet, 2> scopeStack;
-                findInstantiations(member->as<MemberSyntax>(), scopeStack, instances);
-            }
-        }
     }
     else {
         unit->addMembers(node);
-
-        if (node.kind == SyntaxKind::ModuleDeclaration) {
-            SmallVectorSized<NameSet, 2> scopeStack;
-            findInstantiations(node.as<MemberSyntax>(), scopeStack, instances);
-        }
     }
-
-    // Merge found instantiations into the global list. This is done separately instead of
-    // just passing instantiatedNames into findInstantiations to make it easy in the future
-    // to make this method thread safe by throwing a lock around this stuff.
-    for (auto entry : instances)
-        instantiatedNames.emplace(entry);
 
     const SyntaxNode* topNode = &node;
     while (topNode->parent)
@@ -188,12 +167,12 @@ const RootSymbol& Compilation::getRoot() {
     // before instantiating any top level modules, since that can cause changes
     // to the definition map itself.
     SmallVectorSized<const DefinitionSymbol*, 8> topDefinitions;
-    for (auto& [key, definition] : definitionMap) {
+    for (auto& [key, defTuple] : definitionMap) {
         // Ignore definitions that are not top level.
         // TODO: check for no parameters here
+        auto definition = std::get<0>(defTuple);
         if (std::get<1>(key) == root.get() &&
-            definition->definitionKind == DefinitionKind::Module &&
-            instantiatedNames.count(definition->name) == 0) {
+            definition->definitionKind == DefinitionKind::Module && !std::get<1>(defTuple)) {
 
             topDefinitions.append(definition);
         }
@@ -234,8 +213,10 @@ const DefinitionSymbol* Compilation::getDefinition(string_view lookupName,
     const Scope* searchScope = &scope;
     while (true) {
         auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
-        if (it != definitionMap.end())
-            return it->second;
+        if (it != definitionMap.end()) {
+            std::get<1>(it->second) = true;
+            return std::get<0>(it->second);
+        }
 
         if (searchScope->asSymbol().kind == SymbolKind::Root)
             return nullptr;
@@ -254,10 +235,14 @@ void Compilation::addDefinition(const DefinitionSymbol& definition) {
     const Scope* scope = definition.getScope();
     ASSERT(scope);
 
-    if (scope->asSymbol().kind == SymbolKind::CompilationUnit)
-        definitionMap.emplace(std::make_tuple(definition.name, root.get()), &definition);
-    else
-        definitionMap.emplace(std::make_tuple(definition.name, scope), &definition);
+    if (scope->asSymbol().kind == SymbolKind::CompilationUnit) {
+        definitionMap.emplace(std::make_tuple(definition.name, root.get()),
+                              std::make_tuple(&definition, false));
+    }
+    else {
+        definitionMap.emplace(std::make_tuple(definition.name, scope),
+                              std::make_tuple(&definition, false));
+    }
 }
 
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
@@ -480,108 +465,6 @@ optional<int32_t> Compilation::evalIntegerExpr(const ExpressionSyntax& syntax,
         diag << INT32_MAX;
     }
     return coerced;
-}
-
-void Compilation::findInstantiations(const ModuleDeclarationSyntax& module,
-                                     SmallVector<NameSet>& scopeStack, NameSet& found) {
-    // If there are nested modules that shadow global module names, we need to
-    // ignore them when considering instantiations.
-    NameSet* localDefs = nullptr;
-    for (auto member : module.members) {
-        switch (member->kind) {
-            case SyntaxKind::ModuleDeclaration:
-            case SyntaxKind::InterfaceDeclaration:
-            case SyntaxKind::ProgramDeclaration: {
-                // ignore empty names
-                string_view name = member->as<ModuleDeclarationSyntax>().header->name.valueText();
-                if (!name.empty()) {
-                    // create new scope entry lazily
-                    if (!localDefs) {
-                        scopeStack.emplace();
-                        localDefs = &scopeStack.back();
-                    }
-                    localDefs->insert(name);
-                }
-                break;
-            }
-            default:
-                break;
-        }
-    }
-
-    // now traverse all children
-    for (auto member : module.members)
-        findInstantiations(*member, scopeStack, found);
-
-    if (localDefs)
-        scopeStack.pop();
-}
-
-static bool containsName(const SmallVector<flat_hash_set<string_view>>& scopeStack,
-                         string_view name) {
-    for (const auto& set : scopeStack) {
-        if (set.find(name) != set.end())
-            return true;
-    }
-    return false;
-}
-
-void Compilation::findInstantiations(const MemberSyntax& node, SmallVector<NameSet>& scopeStack,
-                                     NameSet& found) {
-    switch (node.kind) {
-        case SyntaxKind::HierarchyInstantiation: {
-            // Determine whether this is a local or global module we're instantiating;
-            // don't worry about local instantiations right now, they can't be root.
-            const auto& his = node.as<HierarchyInstantiationSyntax>();
-            string_view name = his.type.valueText();
-            if (!name.empty() && !containsName(scopeStack, name))
-                found.insert(name);
-            break;
-        }
-        case SyntaxKind::ModuleDeclaration:
-        case SyntaxKind::InterfaceDeclaration:
-        case SyntaxKind::ProgramDeclaration:
-            findInstantiations(node.as<ModuleDeclarationSyntax>(), scopeStack, found);
-            break;
-        case SyntaxKind::GenerateRegion:
-            for (auto& child : node.as<GenerateRegionSyntax>().members)
-                findInstantiations(*child, scopeStack, found);
-            break;
-        case SyntaxKind::GenerateBlock:
-            for (auto& child : node.as<GenerateBlockSyntax>().members)
-                findInstantiations(*child, scopeStack, found);
-            break;
-        case SyntaxKind::LoopGenerate:
-            findInstantiations(*node.as<LoopGenerateSyntax>().block, scopeStack, found);
-            break;
-        case SyntaxKind::CaseGenerate:
-            for (auto& item : node.as<CaseGenerateSyntax>().items) {
-                switch (item->kind) {
-                    case SyntaxKind::DefaultCaseItem:
-                        findInstantiations(
-                            item->as<DefaultCaseItemSyntax>().clause->as<MemberSyntax>(),
-                            scopeStack, found);
-                        break;
-                    case SyntaxKind::StandardCaseItem:
-                        findInstantiations(
-                            item->as<StandardCaseItemSyntax>().clause->as<MemberSyntax>(),
-                            scopeStack, found);
-                        break;
-                    default:
-                        break;
-                }
-            }
-            break;
-        case SyntaxKind::IfGenerate: {
-            const auto& ifGen = node.as<IfGenerateSyntax>();
-            findInstantiations(*ifGen.block, scopeStack, found);
-            if (ifGen.elseClause)
-                findInstantiations(ifGen.elseClause->clause->as<MemberSyntax>(), scopeStack, found);
-            break;
-        }
-        default:
-            break;
-    }
 }
 
 } // namespace slang

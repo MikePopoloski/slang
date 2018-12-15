@@ -167,21 +167,10 @@ private:
     void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
     span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
 
-    // These functions are used for traversing the syntax hierarchy and finding all instantiations.
-    using NameSet = flat_hash_set<string_view>;
-    static void findInstantiations(const ModuleDeclarationSyntax& module,
-                                   SmallVector<NameSet>& scopeStack, NameSet& found);
-    static void findInstantiations(const MemberSyntax& node, SmallVector<NameSet>& scopeStack,
-                                   NameSet& found);
-
     Diagnostics diags;
     std::unique_ptr<RootSymbol> root;
     const SourceManager* sourceManager = nullptr;
     bool finalized = false;
-
-    // A set of names that are instantiated anywhere in the design. This is used to determine
-    // which modules should be top-level instances (because nobody ever instantiates them).
-    NameSet instantiatedNames;
 
     // A list of compilation units that have been added to the compilation.
     std::vector<const CompilationUnitSymbol*> compilationUnits;
@@ -200,8 +189,12 @@ private:
     // is stored here and queried during name lookups.
     SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
 
-    // The name map for global definitions.
-    flat_hash_map<std::tuple<string_view, const Scope*>, const DefinitionSymbol*> definitionMap;
+    // The name map for global definitions. The key is a combination of definition name +
+    // the scope in which it was declared. The value is the definition symbol along with a
+    // boolean that indicates whether it has ever been instantiated in the design.
+    mutable flat_hash_map<std::tuple<string_view, const Scope*>,
+                          std::tuple<const DefinitionSymbol*, bool>>
+        definitionMap;
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the definitions name table.
