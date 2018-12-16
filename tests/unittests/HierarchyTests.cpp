@@ -17,6 +17,24 @@ TEST_CASE("Finding top level") {
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Top level params") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top #(parameter int foo = 3) ();
+endmodule
+
+module NotTop #(parameter int foo) ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    const RootSymbol& root = compilation.getRoot();
+    REQUIRE(root.topInstances.size() == 1);
+    CHECK(root.topInstances[0]->name == "Top");
+}
+
 TEST_CASE("Module parameterization errors") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;

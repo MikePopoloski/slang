@@ -168,14 +168,28 @@ const RootSymbol& Compilation::getRoot() {
     // to the definition map itself.
     SmallVectorSized<const DefinitionSymbol*, 8> topDefinitions;
     for (auto& [key, defTuple] : definitionMap) {
-        // Ignore definitions that are not top level.
-        // TODO: check for no parameters here
+        // Ignore definitions that are not top level. Top level definitions are:
+        // - Always modules
+        // - Not nested
+        // - Have no non-defaulted parameters
+        // - Not instantiated anywhere
         auto definition = std::get<0>(defTuple);
-        if (std::get<1>(key) == root.get() &&
-            definition->definitionKind == DefinitionKind::Module && !std::get<1>(defTuple)) {
-
-            topDefinitions.append(definition);
+        if (std::get<1>(key) != root.get() ||
+            definition->definitionKind != DefinitionKind::Module || std::get<1>(defTuple)) {
+            continue;
         }
+
+        bool allDefaulted = true;
+        for (auto param : definition->parameters) {
+            if (!param->getDeclaredType()->getInitializerSyntax()) {
+                allDefaulted = false;
+                break;
+            }
+        }
+        if (!allDefaulted)
+            continue;
+
+        topDefinitions.append(definition);
     }
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
