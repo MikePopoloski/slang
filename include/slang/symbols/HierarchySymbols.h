@@ -166,7 +166,7 @@ public:
     GenerateBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                         uint32_t constructIndex, bool isInstantiated) :
         Symbol(SymbolKind::GenerateBlock, name, loc),
-        Scope(compilation, this), isInstantiated(isInstantiated), constructIndex(constructIndex) {}
+        Scope(compilation, this), constructIndex(constructIndex), isInstantiated(isInstantiated) {}
 
     void toJson(json&) const {}
 
