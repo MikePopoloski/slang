@@ -358,15 +358,18 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
     }
 
     const Type* finalType = &symbol->as<Type>();
-    for (const auto& selector : result.selectors) {
+    uint32_t count = result.selectors.size();
+    for (uint32_t i = 0; i < count; i++) {
         // TODO: handle dotted selectors
         // TODO: empty selector syntax?
-        const ElementSelectSyntax* selectSyntax = std::get<const ElementSelectSyntax*>(selector);
+        auto selectSyntax = std::get<const ElementSelectSyntax*>(result.selectors[count - i - 1]);
         auto dim = evaluateDimension(compilation, *selectSyntax->selector, location, parent);
         if (!dim)
             return compilation.getErrorType();
 
-        finalType = compilation.emplace<PackedArrayType>(*finalType, *dim);
+        auto array = compilation.emplace<PackedArrayType>(*finalType, *dim);
+        array->setSyntax(*selectSyntax);
+        finalType = array;
     }
 
     return *finalType;
@@ -483,9 +486,11 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     }
 
     const IntegralType* result = &compilation.getScalarType(flags);
-    for (uint32_t i = 0; i < dims.size(); i++) {
-        auto packed = compilation.emplace<PackedArrayType>(*result, dims[i].first);
-        packed->setSyntax(*dims[i].second);
+    uint32_t count = dims.size();
+    for (uint32_t i = 0; i < count; i++) {
+        auto& pair = dims[count - i - 1];
+        auto packed = compilation.emplace<PackedArrayType>(*result, pair.first);
+        packed->setSyntax(*pair.second);
         result = packed;
     }
 

@@ -30,6 +30,14 @@ std::string ConstantValue::toString() const {
         value);
 }
 
+void to_json(json& j, const ConstantValue& cv) {
+    j = cv.toString();
+}
+
+std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {
+    return os << cv.toString();
+}
+
 ConstantRange ConstantRange::subrange(ConstantRange select) const {
     int32_t l = lower();
     ConstantRange result;
@@ -54,12 +62,8 @@ bool ConstantRange::containsPoint(int32_t index) const {
     return index >= lower() && index <= upper();
 }
 
-void to_json(json& j, const ConstantValue& cv) {
-    j = cv.toString();
-}
-
-std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {
-    return os << cv.toString();
+std::ostream& operator<<(std::ostream& os, const ConstantRange& cr) {
+    return os << "[" << cr.left << ":" << cr.right << "]";
 }
 
 ConstantValue LValue::load() const {

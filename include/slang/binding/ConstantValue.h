@@ -104,6 +104,7 @@ struct ConstantRange {
     }
 
     bool operator!=(const ConstantRange& rhs) const { return !(*this == rhs); }
+    friend std::ostream& operator<<(std::ostream& os, const ConstantRange& cr);
 };
 
 /// An lvalue is anything that can appear on the left hand side of an assignment

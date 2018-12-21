@@ -71,8 +71,19 @@ void TypePrinter::handle(const EnumType& type) {
 }
 
 void TypePrinter::handle(const PackedArrayType& type) {
-    append(type.elementType);
-    buffer.format("[{}:{}]", type.range.left, type.range.right);
+    SmallVectorSized<ConstantRange, 8> dims;
+    const PackedArrayType* curr = &type;
+    while (true) {
+        dims.append(curr->range);
+        if (!curr->elementType.isPackedArray())
+            break;
+
+        curr = &curr->elementType.getCanonicalType().as<PackedArrayType>();
+    }
+
+    append(curr->elementType);
+    for (auto& range : dims)
+        buffer.format("[{}:{}]", range.left, range.right);
 }
 
 void TypePrinter::handle(const PackedStructType& type) {

@@ -223,6 +223,23 @@ source:12:26: note: declared here
 )");
 }
 
+TEST_CASE("Packed arrays") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top(logic[0:3][2:1] f);
+
+endmodule
+)");
+
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
+
+    const auto& fType = instance.find<VariableSymbol>("f").getType();
+    CHECK(fType.isPackedArray());
+    CHECK(fType.as<PackedArrayType>().range == ConstantRange{ 0, 3 });
+
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Unpacked arrays") {
     auto tree = SyntaxTree::fromText(R"(
 module Top(logic f[3], g, h[0:1]);
