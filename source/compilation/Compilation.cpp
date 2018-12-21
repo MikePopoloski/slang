@@ -31,6 +31,7 @@ struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
     }
     void handle(const ExplicitImportSymbol& symbol) { symbol.importedSymbol(); }
     void handle(const WildcardImportSymbol& symbol) { symbol.getPackage(); }
+    void handle(const ContinuousAssignSymbol& symbol) { symbol.getAssignment(); }
 };
 
 } // namespace

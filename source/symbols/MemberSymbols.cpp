@@ -1161,4 +1161,30 @@ ModportSymbol& ModportSymbol::fromSyntax(Compilation& compilation, const Modport
     return result;
 }
 
+ContinuousAssignSymbol::ContinuousAssignSymbol(const ExpressionSyntax& syntax) :
+    Symbol(SymbolKind::ContinuousAssign, "", syntax.getFirstToken().location()) {
+
+    setSyntax(syntax);
+}
+
+ContinuousAssignSymbol::ContinuousAssignSymbol(SourceLocation loc, const Expression& assignment) :
+    Symbol(SymbolKind::ContinuousAssign, "", loc), assign(&assignment) {
+}
+
+const Expression& ContinuousAssignSymbol::getAssignment() const {
+    if (assign)
+        return *assign;
+
+    auto scope = getScope();
+    ASSERT(scope);
+
+    auto syntax = getSyntax();
+    ASSERT(syntax);
+
+    // Parser has ensured that this is a proper variable assignment expression here.
+    assign = &Expression::bind(syntax->as<ExpressionSyntax>(),
+                               BindContext(*scope, LookupLocation::before(*this)));
+    return *assign;
+}
+
 } // namespace slang

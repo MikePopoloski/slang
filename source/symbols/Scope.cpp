@@ -223,6 +223,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             for (auto member : syntax.as<GenerateRegionSyntax>().members)
                 addMembers(*member);
             break;
+        case SyntaxKind::ContinuousAssign:
+            for (auto expr : syntax.as<ContinuousAssignSyntax>().assignments)
+                addMember(*compilation.emplace<ContinuousAssignSymbol>(*expr));
+            break;
         default:
             // TODO: handle all cases
             addDiag(DiagCode::NotYetSupported, syntax.sourceRange());

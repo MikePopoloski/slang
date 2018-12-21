@@ -277,4 +277,18 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
 };
 
+/// Represents a continuous assignment statement.
+class ContinuousAssignSymbol : public Symbol {
+public:
+    explicit ContinuousAssignSymbol(const ExpressionSyntax& syntax);
+    ContinuousAssignSymbol(SourceLocation loc, const Expression& assignment);
+
+    const Expression& getAssignment() const;
+
+    void toJson(json&) const {} // TODO
+
+private:
+    mutable const Expression* assign = nullptr;
+};
+
 } // namespace slang

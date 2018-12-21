@@ -64,7 +64,8 @@ enum class SymbolKind {
     Variable,
     FormalArgument,
     Field,
-    Subroutine
+    Subroutine,
+    ContinuousAssign
 };
 
 /// Base class for all symbols (logical code constructs) such as modules, types,
