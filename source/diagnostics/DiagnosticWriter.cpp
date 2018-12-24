@@ -53,6 +53,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::SignedIntegerOverflow] = { "signed integer overflows 32 bits", DiagnosticSeverity::Error };
     descriptors[DiagCode::DecimalLiteralOverflow] = { "decimal literal overflows 32 bits", DiagnosticSeverity::Error };
     descriptors[DiagCode::VectorLiteralOverflow] = { "vector literal too large for the given number of bits", DiagnosticSeverity::Warning };
+    descriptors[DiagCode::ValueMustBeIntegral] = { "value must be integral", DiagnosticSeverity::Error };
     descriptors[DiagCode::ValueMustNotBeUnknown] = { "value must not have any unknown bits", DiagnosticSeverity::Error };
     descriptors[DiagCode::ValueMustBePositive] = { "value must be positive", DiagnosticSeverity::Error };
     descriptors[DiagCode::ValueExceedsMaxBitWidth] = { "value exceeds maximum vector width ({} bits)", DiagnosticSeverity::Error };
@@ -131,9 +132,9 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NotePreviousDefinition] = { "previous definition here", DiagnosticSeverity::Note };
     descriptors[DiagCode::LocalParamNoInitializer] = { "local parameter is missing an initializer", DiagnosticSeverity::Error };
     descriptors[DiagCode::BodyParamNoInitializer] = { "parameter declaration is missing an initializer", DiagnosticSeverity::Error };
-    descriptors[DiagCode::InvalidUnpackedDimension] = { "invalid unpacked dimension", DiagnosticSeverity::Error };
-    descriptors[DiagCode::UnpackedDimensionRequiresConstRange] = { "unpacked dimension requires a constant range", DiagnosticSeverity::Error };
-    descriptors[DiagCode::PackedDimRequiresConstantRange] = { "packed dimension requires a constant range", DiagnosticSeverity::Error };
+    descriptors[DiagCode::InvalidDimensionRange] = { "invalid dimension range", DiagnosticSeverity::Error };
+    descriptors[DiagCode::DimensionRequiresConstRange] = { "dimension requires a constant range", DiagnosticSeverity::Error };
+    descriptors[DiagCode::PackedDimsRequireFullRange] = { "packed dimensions require a full range specification", DiagnosticSeverity::Error };
     descriptors[DiagCode::PackedDimsOnPredefinedType] = { "packed dimensions not allowed on predefined integer type '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::MixingOrderedAndNamedParams] = { "mixing ordered and named parameter assignments is not allowed", DiagnosticSeverity::Error };
     descriptors[DiagCode::DuplicateParamAssignment] = { "duplicate assignment for parameter '{}'", DiagnosticSeverity::Error };

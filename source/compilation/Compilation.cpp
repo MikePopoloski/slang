@@ -461,25 +461,4 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
     return importData[index];
 }
 
-optional<int32_t> Compilation::evalIntegerExpr(const ExpressionSyntax& syntax,
-                                               LookupLocation location, const Scope& scope) {
-    BindContext context(scope, location, BindFlags::IntegralConstant);
-    const auto& expr = Expression::bind(syntax, context);
-    if (!expr.constant || !expr.constant->isInteger())
-        return std::nullopt;
-
-    const SVInt& value = expr.constant->integer();
-    if (!context.checkNoUnknowns(value, expr.sourceRange))
-        return std::nullopt;
-
-    auto coerced = value.as<int32_t>();
-    if (!coerced) {
-        auto& diag = context.addDiag(DiagCode::ValueOutOfRange, expr.sourceRange);
-        diag << value;
-        diag << INT32_MIN;
-        diag << INT32_MAX;
-    }
-    return coerced;
-}
-
 } // namespace slang

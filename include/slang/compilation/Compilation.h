@@ -157,9 +157,6 @@ public:
 
     SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
 
-    optional<int32_t> evalIntegerExpr(const ExpressionSyntax& syntax, LookupLocation location,
-                                      const Scope& scope);
-
 private:
     // These functions are called by Scopes to create and track various members.
     friend class Scope;

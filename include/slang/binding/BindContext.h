@@ -14,13 +14,26 @@ namespace slang {
 enum class BindFlags : uint8_t {
     None = 0,
     Constant = 1,
-    IntegralConstant = 2,
-    InsideConcatenation = 4,
-    AllowDataType = 8
+    InsideConcatenation = 2,
+    AllowDataType = 4
 };
 BITMASK_DEFINE_MAX_ELEMENT(BindFlags, AllowDataType);
 
-struct BindContext {
+enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
+
+struct EvaluatedDimension {
+    DimensionKind kind = DimensionKind::Unknown;
+    ConstantRange range;
+    const Type* associativeType = nullptr;
+    int32_t queueMaxSize = 0;
+
+    bool isRange() const {
+        return kind == DimensionKind::Range || kind == DimensionKind::AbbreviatedRange;
+    }
+};
+
+class BindContext {
+public:
     const Scope& scope;
     LookupLocation lookupLocation;
     bitmask<BindFlags> flags;
@@ -33,16 +46,25 @@ struct BindContext {
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 
-    bool checkLValue(const Expression& expr, SourceLocation location) const;
-    bool checkNoUnknowns(const SVInt& value, SourceRange range) const;
-    bool checkPositive(const SVInt& value, SourceRange range) const;
-    optional<bitwidth_t> checkValidBitWidth(const SVInt& value, SourceRange range) const;
+    bool requireLValue(const Expression& expr, SourceLocation location) const;
+    bool requireIntegral(const ConstantValue& cv, SourceRange range) const;
+    bool requireNoUnknowns(const SVInt& value, SourceRange range) const;
+    bool requirePositive(const SVInt& value, SourceRange range) const;
+    optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
 
-    bool isConstant() const {
-        return (flags & BindFlags::Constant) || (flags & BindFlags::IntegralConstant);
-    }
+    optional<int32_t> evalInteger(const ExpressionSyntax& syntax) const;
+    optional<int32_t> evalInteger(const Expression& expr) const;
+    EvaluatedDimension evalDimension(const VariableDimensionSyntax& syntax,
+                                     bool requireRange) const;
+
+    optional<ConstantRange> evalPackedDimension(const VariableDimensionSyntax& syntax) const;
+    optional<ConstantRange> evalPackedDimension(const ElementSelectSyntax& syntax) const;
 
     BindContext resetFlags(bitmask<BindFlags> addedFlags) const;
+
+private:
+    bool requireGtZero(optional<int32_t> value, SourceRange range) const;
+    void evalRangeDimension(const SelectorSyntax& syntax, EvaluatedDimension& result) const;
 };
 
 } // namespace slang

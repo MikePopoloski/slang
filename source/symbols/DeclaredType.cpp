@@ -138,8 +138,6 @@ T DeclaredType::getBindContext() const {
     bitmask<BindFlags> bindFlags;
     if (flags & DeclaredTypeFlags::RequireConstant)
         bindFlags = BindFlags::Constant;
-    if (flags & DeclaredTypeFlags::RequireIntegerConstant)
-        bindFlags = BindFlags::IntegralConstant;
 
     return BindContext(getScope(), LookupLocation::after(parent), bindFlags);
 }

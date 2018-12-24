@@ -10,12 +10,12 @@
 
 namespace slang {
 
+class BindContext;
 class ConstantValue;
 class Expression;
 class Scope;
 class Symbol;
 class Type;
-struct BindContext;
 struct DataTypeSyntax;
 struct ExpressionSyntax;
 struct VariableDeclaratorSyntax;
@@ -25,8 +25,7 @@ enum class DeclaredTypeFlags : uint8_t {
     None = 0,
     InferImplicit = 1,
     RequireConstant = 2,
-    RequireIntegerConstant = 4,
-    ForceSigned = 8
+    ForceSigned = 4
 };
 BITMASK_DEFINE_MAX_ELEMENT(DeclaredTypeFlags, ForceSigned);
 

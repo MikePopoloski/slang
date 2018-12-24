@@ -357,50 +357,24 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
         return compilation.getErrorType();
     }
 
+    BindContext context(parent, location);
+
     const Type* finalType = &symbol->as<Type>();
     uint32_t count = result.selectors.size();
     for (uint32_t i = 0; i < count; i++) {
         // TODO: handle dotted selectors
-        // TODO: empty selector syntax?
         auto selectSyntax = std::get<const ElementSelectSyntax*>(result.selectors[count - i - 1]);
-        auto dim = evaluateDimension(compilation, *selectSyntax->selector, location, parent);
+        auto dim = context.evalPackedDimension(*selectSyntax);
         if (!dim)
             return compilation.getErrorType();
 
+        // TODO: check bitwidth of array at each step
         auto array = compilation.emplace<PackedArrayType>(*finalType, *dim);
         array->setSyntax(*selectSyntax);
         finalType = array;
     }
 
     return *finalType;
-}
-
-optional<ConstantRange> Type::evaluateDimension(Compilation& compilation,
-                                                const SelectorSyntax& syntax,
-                                                LookupLocation location, const Scope& scope) {
-    if (syntax.kind != SyntaxKind::SimpleRangeSelect) {
-        scope.addDiag(DiagCode::PackedDimRequiresConstantRange, syntax.sourceRange());
-        return std::nullopt;
-    }
-
-    const RangeSelectSyntax& range = syntax.as<RangeSelectSyntax>();
-    auto left = compilation.evalIntegerExpr(*range.left, location, scope);
-    auto right = compilation.evalIntegerExpr(*range.right, location, scope);
-    if (!left || !right)
-        return std::nullopt;
-
-    // TODO: check should include size of underlying type
-    int64_t diff = *left - *right;
-    diff = (diff < 0 ? -diff : diff) + 1;
-    if (diff > SVInt::MAX_BITS) {
-        auto& diag = scope.addDiag(DiagCode::ValueExceedsMaxBitWidth, range.range.location());
-        diag << range.left->sourceRange();
-        diag << range.right->sourceRange();
-        diag << (int)SVInt::MAX_BITS;
-        return std::nullopt;
-    }
-
-    return ConstantRange{ *left, *right };
 }
 
 IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc,
@@ -448,16 +422,10 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
                                      span<const VariableDimensionSyntax* const> dimensions,
                                      bool isSigned, LookupLocation location, const Scope& scope) {
     // This is a simple integral vector (possibly of just one element).
+    BindContext context(scope, location);
     SmallVectorSized<std::pair<ConstantRange, const SyntaxNode*>, 4> dims;
     for (auto dimSyntax : dimensions) {
-        // TODO: better checking for these cases
-        if (!dimSyntax->specifier ||
-            dimSyntax->specifier->kind != SyntaxKind::RangeDimensionSpecifier) {
-            return compilation.getErrorType();
-        }
-
-        auto selector = dimSyntax->specifier->as<RangeDimensionSpecifierSyntax>().selector;
-        auto dim = evaluateDimension(compilation, *selector, location, scope);
+        auto dim = context.evalPackedDimension(*dimSyntax);
         if (!dim)
             return compilation.getErrorType();
 
@@ -488,6 +456,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     const IntegralType* result = &compilation.getScalarType(flags);
     uint32_t count = dims.size();
     for (uint32_t i = 0; i < count; i++) {
+        // TODO: check bitwidth of array at each step
         auto& pair = dims[count - i - 1];
         auto packed = compilation.emplace<PackedArrayType>(*result, pair.first);
         packed->setSyntax(*pair.second);
@@ -615,7 +584,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 }
 
 EnumValueSymbol::EnumValueSymbol(string_view name, SourceLocation loc) :
-    ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::RequireIntegerConstant) {
+    ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::RequireConstant) {
 }
 
 const ConstantValue& EnumValueSymbol::getValue() const {
@@ -648,49 +617,18 @@ UnpackedArrayType::UnpackedArrayType(const Type& elementType, ConstantRange rang
 const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& elementType,
                                           LookupLocation location, const Scope& scope,
                                           const SyntaxList<VariableDimensionSyntax>& dimensions) {
+    BindContext context(scope, location);
+
     const Type* result = &elementType;
     uint32_t count = (uint32_t)dimensions.size();
     for (uint32_t i = 0; i < count; i++) {
         // TODO: handle other kinds of unpacked arrays
-        const VariableDimensionSyntax& dim = *dimensions[count - i - 1];
-        if (!dim.specifier || dim.specifier->kind != SyntaxKind::RangeDimensionSpecifier)
+        EvaluatedDimension dim = context.evalDimension(*dimensions[count - i - 1], true);
+        if (!dim.isRange())
             return compilation.getErrorType();
 
-        ConstantRange range;
-        auto selector = dim.specifier->as<RangeDimensionSpecifierSyntax>().selector;
-        switch (selector->kind) {
-            case SyntaxKind::BitSelect: {
-                auto left = compilation.evalIntegerExpr(*selector->as<BitSelectSyntax>().expr,
-                                                        location, scope);
-                if (!left)
-                    return compilation.getErrorType();
-
-                if (*left <= 0) {
-                    scope.addDiag(DiagCode::ValueMustBePositive, selector->sourceRange());
-                    return compilation.getErrorType();
-                }
-
-                range = { 0, *left - 1 };
-                break;
-            }
-            case SyntaxKind::SimpleRangeSelect: {
-                auto& rangeSyntax = selector->as<RangeSelectSyntax>();
-                auto left = compilation.evalIntegerExpr(*rangeSyntax.left, location, scope);
-                auto right = compilation.evalIntegerExpr(*rangeSyntax.right, location, scope);
-                if (!left || !right)
-                    return compilation.getErrorType();
-
-                range = { *left, *right };
-                break;
-            }
-            default: {
-                scope.addDiag(DiagCode::InvalidUnpackedDimension, selector->sourceRange());
-                return compilation.getErrorType();
-            }
-        }
-
-        auto unpacked = compilation.emplace<UnpackedArrayType>(*result, range);
-        unpacked->setSyntax(dim);
+        auto unpacked = compilation.emplace<UnpackedArrayType>(*result, dim.range);
+        unpacked->setSyntax(*dimensions[count - i - 1]);
         result = unpacked;
     }
 

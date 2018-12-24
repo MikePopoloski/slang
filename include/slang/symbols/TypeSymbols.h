@@ -185,10 +185,6 @@ protected:
 
     mutable const Type* canonical;
 
-    static optional<ConstantRange> evaluateDimension(Compilation& compilation,
-                                                     const SelectorSyntax& syntax,
-                                                     LookupLocation location, const Scope& scope);
-
 private:
     void resolveCanonical() const;
 

@@ -156,7 +156,7 @@ const Expression& Expression::bind(const Type& lhs, const ExpressionSyntax& rhs,
 }
 
 void Expression::checkBindFlags(const BindContext& context) const {
-    if (context.isConstant()) {
+    if (context.flags & BindFlags::Constant) {
         EvalContext evalContext;
         eval(evalContext);
 
@@ -330,7 +330,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     bitmask<LookupFlags> flags = LookupFlags::AllowSystemSubroutine;
     if (invocation && invocation->arguments)
         flags |= LookupFlags::AllowDeclaredAfter;
-    if (context.isConstant())
+    if (context.flags & BindFlags::Constant)
         flags |= LookupFlags::Constant;
 
     LookupResult result;
@@ -681,7 +681,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             // The operand must also be an assignable lvalue.
             good = type->isNumeric();
             result->type = type;
-            if (!context.checkLValue(operand, syntax.operatorToken.location()))
+            if (!context.requireLValue(operand, syntax.operatorToken.location()))
                 return badExpr(compilation, result);
             break;
         default:
@@ -708,7 +708,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     // the operand must be an lvalue.
     Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
                                                               operand, syntax.sourceRange());
-    if (operand.bad() || !context.checkLValue(operand, syntax.operatorToken.location()))
+    if (operand.bad() || !context.requireLValue(operand, syntax.operatorToken.location()))
         return badExpr(compilation, result);
 
     if (!type->isNumeric()) {
@@ -994,7 +994,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     // Make sure we can actually assign to the thing on the lhs.
     // TODO: check for const assignment
     auto location = syntax.operatorToken.location();
-    if (!context.checkLValue(lhs, location))
+    if (!context.requireLValue(lhs, location))
         return badExpr(compilation, result);
 
     result->right_ =
@@ -1174,19 +1174,21 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
                                               const MultipleConcatenationExpressionSyntax& syntax,
                                               const BindContext& context) {
     Expression& left =
-        selfDetermined(compilation, *syntax.expression, context, BindFlags::IntegralConstant);
+        selfDetermined(compilation, *syntax.expression, context, BindFlags::Constant);
     Expression& right = selfDetermined(compilation, *syntax.concatenation, context);
 
     auto result = compilation.emplace<ReplicationExpression>(compilation.getErrorType(), left,
                                                              right, syntax.sourceRange());
 
     // If left was not a constant we already issued an error, so just bail out.
-    if (left.bad() || right.bad() || !left.constant || !left.constant->isInteger())
+    if (left.bad() || right.bad() || !left.constant ||
+        !context.requireIntegral(*left.constant, left.sourceRange)) {
         return badExpr(compilation, result);
+    }
 
     const SVInt& value = left.constant->integer();
-    if (!context.checkNoUnknowns(value, left.sourceRange) ||
-        !context.checkPositive(value, left.sourceRange)) {
+    if (!context.requireNoUnknowns(value, left.sourceRange) ||
+        !context.requirePositive(value, left.sourceRange)) {
         return badExpr(compilation, result);
     }
 
@@ -1203,7 +1205,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     }
 
     auto width =
-        context.checkValidBitWidth(value * right.type->getBitWidth(), syntax.sourceRange());
+        context.requireValidBitWidth(value * right.type->getBitWidth(), syntax.sourceRange());
     if (!width)
         return badExpr(compilation, result);
 
@@ -1328,7 +1330,7 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const CastExpressionSyntax& syntax,
                                              const BindContext& context) {
     auto& targetExpr = selfDetermined(compilation, *syntax.left, context,
-                                      BindFlags::AllowDataType | BindFlags::IntegralConstant);
+                                      BindFlags::AllowDataType | BindFlags::Constant);
     auto& operand = selfDetermined(compilation, *syntax.right, context);
 
     auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(), operand,
@@ -1339,18 +1341,19 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     if (targetExpr.kind == ExpressionKind::DataType) {
         result->type = targetExpr.type;
     }
-    else if (!targetExpr.constant || !targetExpr.constant->isInteger()) {
+    else if (!targetExpr.constant ||
+             !context.requireIntegral(*targetExpr.constant, targetExpr.sourceRange)) {
         return badExpr(compilation, result);
     }
     else {
         // TODO: check for zero
         const SVInt& value = targetExpr.constant->integer();
-        if (!context.checkNoUnknowns(value, targetExpr.sourceRange) ||
-            !context.checkPositive(value, targetExpr.sourceRange)) {
+        if (!context.requireNoUnknowns(value, targetExpr.sourceRange) ||
+            !context.requirePositive(value, targetExpr.sourceRange)) {
             return badExpr(compilation, result);
         }
 
-        auto width = context.checkValidBitWidth(value, targetExpr.sourceRange);
+        auto width = context.requireValidBitWidth(value, targetExpr.sourceRange);
         if (!width)
             return badExpr(compilation, result);
 
