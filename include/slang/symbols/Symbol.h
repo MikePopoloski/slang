@@ -50,6 +50,7 @@ enum class SymbolKind {
     Modport,
     ModuleInstance,
     InterfaceInstance,
+    InstanceArray,
     Package,
     ExplicitImport,
     WildcardImport,

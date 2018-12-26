@@ -70,6 +70,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         SYMBOL(Definition);
         SYMBOL(ModuleInstance);
         SYMBOL(InterfaceInstance);
+        SYMBOL(InstanceArray);
         SYMBOL(Package);
         SYMBOL(ExplicitImport);
         SYMBOL(WildcardImport);

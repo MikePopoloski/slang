@@ -84,7 +84,7 @@ protected:
     InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc);
 
     void populate(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
-                  span<const Expression*> parameterOverrides);
+                  span<const Expression* const> parameterOverrides);
 
 private:
     SymbolMap* portMap;
@@ -104,7 +104,7 @@ public:
     static ModuleInstanceSymbol& instantiate(Compilation& compilation,
                                              const HierarchicalInstanceSyntax& syntax,
                                              const DefinitionSymbol& definition,
-                                             span<const Expression*> parameterOverrides);
+                                             span<const Expression* const> parameterOverrides);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
 };
@@ -119,9 +119,24 @@ public:
     static InterfaceInstanceSymbol& instantiate(Compilation& compilation,
                                                 const HierarchicalInstanceSyntax& syntax,
                                                 const DefinitionSymbol& definition,
-                                                span<const Expression*> parameterOverrides);
+                                                span<const Expression* const> parameterOverrides);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfaceInstance; }
+};
+
+class InstanceArraySymbol : public Symbol, public Scope {
+public:
+    span<const Symbol* const> elements;
+    ConstantRange range;
+
+    InstanceArraySymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                        span<const Symbol* const> elements, ConstantRange range) :
+        Symbol(SymbolKind::InstanceArray, name, loc),
+        Scope(compilation, this), elements(elements), range(range) {}
+
+    void toJson(json&) const {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }
 };
 
 class SequentialBlockSymbol : public Symbol, public StatementBodiedScope {

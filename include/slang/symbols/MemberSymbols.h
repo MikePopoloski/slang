@@ -287,6 +287,8 @@ public:
 
     void toJson(json&) const {} // TODO
 
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }
+
 private:
     mutable const Expression* assign = nullptr;
 };

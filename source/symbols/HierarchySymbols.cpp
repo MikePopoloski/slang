@@ -85,6 +85,67 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
     return *result;
 }
 
+namespace {
+
+Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definition,
+                       const HierarchicalInstanceSyntax& syntax,
+                       span<const Expression* const> overrides) {
+    Symbol* inst;
+    switch (definition.definitionKind) {
+        case DefinitionKind::Module:
+            inst = &ModuleInstanceSymbol::instantiate(compilation, syntax, definition, overrides);
+            break;
+        case DefinitionKind::Interface:
+            inst =
+                &InterfaceInstanceSymbol::instantiate(compilation, syntax, definition, overrides);
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    inst->setSyntax(syntax);
+    return inst;
+};
+
+using DimIterator = span<VariableDimensionSyntax*>::iterator;
+
+Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& definition,
+                             const HierarchicalInstanceSyntax& instanceSyntax,
+                             span<const Expression* const> overrides, const BindContext& context,
+                             DimIterator it, DimIterator end) {
+    if (it == end)
+        return createInstance(compilation, definition, instanceSyntax, overrides);
+
+    EvaluatedDimension dim = context.evalDimension(**it, true);
+    if (!dim.isRange())
+        return nullptr;
+
+    ++it;
+
+    ConstantRange range = dim.range;
+    SmallVectorSized<const Symbol*, 8> elements;
+    for (bitwidth_t i = 0; i < range.width(); i++) {
+        auto symbol = recurseInstanceArray(compilation, definition, instanceSyntax, overrides,
+                                           context, it, end);
+        if (!symbol)
+            return nullptr;
+
+        symbol->name = "";
+        elements.append(symbol);
+    }
+
+    auto result = compilation.emplace<InstanceArraySymbol>(
+        compilation, instanceSyntax.name.valueText(), instanceSyntax.name.location(),
+        elements.copy(compilation), range);
+
+    for (auto element : elements)
+        result->addMember(*element);
+
+    return result;
+}
+
+} // namespace
+
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax, LookupLocation location,
                                 const Scope& scope, SmallVector<const Symbol*>& results) {
@@ -224,24 +285,13 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
+    BindContext context(scope, location);
     for (auto instanceSyntax : syntax.instances) {
-        Symbol* inst;
-        switch (definition->definitionKind) {
-            case DefinitionKind::Module:
-                inst = &ModuleInstanceSymbol::instantiate(compilation, *instanceSyntax, *definition,
-                                                          overrides);
-                break;
-            case DefinitionKind::Interface:
-                inst = &InterfaceInstanceSymbol::instantiate(compilation, *instanceSyntax,
-                                                             *definition, overrides);
-                break;
-            default:
-                THROW_UNREACHABLE;
-        }
-
-        // TODO: instance arrays
-        inst->setSyntax(*instanceSyntax);
-        results.append(inst);
+        auto symbol = recurseInstanceArray(compilation, *definition, *instanceSyntax, overrides,
+                                           context, instanceSyntax->dimensions.begin(),
+                                           instanceSyntax->dimensions.end());
+        if (symbol)
+            results.append(symbol);
     }
 }
 
@@ -264,7 +314,7 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
 
 void InstanceSymbol::populate(const DefinitionSymbol& definition,
                               const HierarchicalInstanceSyntax* instanceSyntax,
-                              span<const Expression*> parameterOverides) {
+                              span<const Expression* const> parameterOverides) {
     // Add all port parameters as members first.
     Compilation& comp = getCompilation();
     auto paramIt = definition.parameters.begin();
@@ -329,7 +379,7 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const Expression*> parameterOverrides) {
+    const DefinitionSymbol& definition, span<const Expression* const> parameterOverrides) {
 
     auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, syntax.name.valueText(),
                                                               syntax.name.location());
@@ -339,7 +389,7 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
 
 InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const Expression*> parameterOverrides) {
+    const DefinitionSymbol& definition, span<const Expression* const> parameterOverrides) {
 
     auto instance = compilation.emplace<InterfaceInstanceSymbol>(
         compilation, syntax.name.valueText(), syntax.name.location());
