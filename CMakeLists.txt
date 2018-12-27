@@ -90,22 +90,24 @@ else()
 		if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 			add_compile_options(-Xclang -fcolor-diagnostics)
 		else()
-  			add_compile_options(-fdiagnostics-color)
-  		endif()
-  	endif()
+			add_compile_options(-fdiagnostics-color)
+		endif()
+	endif()
 
-  	if(SLANG_COVERAGE)
-  		add_compile_options(--coverage -fno-omit-frame-pointer -fno-optimize-sibling-calls)
-  		link_libraries(--coverage)
-
+	if(SLANG_COVERAGE)
 		if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-			add_compile_options(-O0 -fno-inline-functions)
+			add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+			link_libraries(-fprofile-instr-generate -fcoverage-mapping)
 		else()
 			add_compile_options(
-			    -fno-inline
+				--coverage
+				-fno-omit-frame-pointer
+				-fno-optimize-sibling-calls
+				-fno-inline
 				-fno-inline-small-functions
 				-fno-default-inline
 			)
+			link_libraries(--coverage)
 		endif()
 	endif()
 
@@ -117,7 +119,7 @@ endif()
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
 	# Only MSBuild needs this, other generators will compile one file at a time
-  	add_compile_options("/MP")
+	add_compile_options("/MP")
 endif()
 
 # Install dependencies via conan
