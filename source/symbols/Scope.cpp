@@ -717,6 +717,56 @@ struct NamePlusLoc {
     SourceLocation dotLocation;
 };
 
+bool handleLookupSelectors(const SyntaxList<ElementSelectSyntax>& selectors,
+                           const BindContext& context, LookupResult& result) {
+    if (selectors.empty())
+        return true;
+
+    const Symbol* symbol = std::exchange(result.found, nullptr);
+    ASSERT(symbol);
+
+    for (const ElementSelectSyntax* syntax : selectors) {
+        if (!syntax->selector || syntax->selector->kind != SyntaxKind::BitSelect) {
+            result.addDiag(context.scope, DiagCode::InvalidScopeIndexExpression,
+                           syntax->sourceRange());
+            return false;
+        }
+
+        auto index = context.evalInteger(*syntax->selector->as<BitSelectSyntax>().expr);
+        if (!index)
+            return false;
+
+        switch (symbol->kind) {
+            case SymbolKind::InstanceArray: {
+                auto& array = symbol->as<InstanceArraySymbol>();
+                if (!array.range.containsPoint(*index)) {
+                    auto& diag = result.addDiag(context.scope, DiagCode::ScopeIndexOutOfRange,
+                                                syntax->sourceRange());
+                    diag << *index;
+                    diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+                }
+
+                symbol = array.elements[array.range.translateIndex(*index)];
+                break;
+            }
+            case SymbolKind::GenerateBlockArray:
+                // TODO: handle this
+            default: {
+                // I think it's safe to assume that the symbol name here will not be empty
+                // because if it was, it'd be an instance array or generate array.
+                auto& diag = result.addDiag(context.scope, DiagCode::ScopeNotIndexable,
+                                            syntax->sourceRange());
+                diag << symbol->name;
+                diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+                return false;
+            }
+        }
+    }
+
+    result.found = symbol;
+    return true;
+}
+
 DownwardLookupResult lookupDownward(span<const NamePlusLoc> nameParts, const Scope& scope) {
     const NameSyntax* const final = nameParts[nameParts.size() - 1].name;
     const Scope* current = &scope;
@@ -894,6 +944,11 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
         diag << nameToken.range();
         result.found = nullptr;
         return;
+    }
+
+    if (selectors) {
+        if (!handleLookupSelectors(*selectors, BindContext(*this, location), result))
+            return;
     }
 
     // TODO: handle more cases / error conditions

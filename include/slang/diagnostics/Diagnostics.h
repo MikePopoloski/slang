@@ -215,6 +215,9 @@ enum class DiagCode : uint8_t {
     ImplicitNamedPortTypeMismatch,
     UnexpectedSystemName,
     UnknownSystemMethod,
+    ScopeNotIndexable,
+    InvalidScopeIndexExpression,
+    ScopeIndexOutOfRange,
 
     // constant evaluation
     ExpressionNotConstant,

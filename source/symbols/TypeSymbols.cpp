@@ -622,6 +622,9 @@ UnpackedArrayType::UnpackedArrayType(const Type& elementType, ConstantRange rang
 const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& elementType,
                                           LookupLocation location, const Scope& scope,
                                           const SyntaxList<VariableDimensionSyntax>& dimensions) {
+    if (elementType.isError())
+        return elementType;
+
     BindContext context(scope, location);
 
     const Type* result = &elementType;

@@ -414,3 +414,51 @@ endmodule
     CHECK(block.find<ParameterSymbol>("count1").getValue().integer() == 3);
     CHECK(block.find<ParameterSymbol>("count2").getValue().integer() == 3);
 }
+
+TEST_CASE("Instance array indexing") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic foo;
+endinterface
+
+module m;
+    I array [4] ();
+
+    always_comb array[0].foo = 1;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Instance array indexing errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic foo;
+endinterface
+
+module m;
+    I array [-4:-1] ();
+
+    I notArray ();
+
+    always_comb array[0].foo = 1;
+    always_comb array[-4:-3].foo = 1;
+    always_comb notArray[0].foo = 1;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::ScopeIndexOutOfRange);
+    CHECK((it++)->code == DiagCode::InvalidScopeIndexExpression);
+    CHECK((it++)->code == DiagCode::ScopeNotIndexable);
+    CHECK(it == diags.end());
+}
