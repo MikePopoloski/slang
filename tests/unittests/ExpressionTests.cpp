@@ -235,7 +235,9 @@ TEST_CASE("Expression types") {
 
     // Member access
     declare("struct packed { logic [13:0] a; bit b; } foo;");
+    declare("struct packed { logic [13:0] a; bit b; } [3:0] spPackedArray;");
     CHECK(typeof("foo.a") == "logic[13:0]");
+    CHECK(typeof("spPackedArray") == "struct packed{logic[13:0] a;bit b;}[3:0]");
 
     // Casts
     declare("parameter int FOO = 1;");

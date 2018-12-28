@@ -309,6 +309,9 @@ public:
 
     PackedArrayType(const Type& elementType, ConstantRange range);
 
+    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
+                                  ConstantRange range, const SyntaxNode& syntax);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedArrayType; }
 };
 

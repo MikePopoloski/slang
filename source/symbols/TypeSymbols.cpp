@@ -368,10 +368,7 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
         if (!dim)
             return compilation.getErrorType();
 
-        // TODO: check bitwidth of array at each step
-        auto array = compilation.emplace<PackedArrayType>(*finalType, *dim);
-        array->setSyntax(*selectSyntax);
-        finalType = array;
+        finalType = &PackedArrayType::fromSyntax(compilation, *finalType, *dim, *selectSyntax);
     }
 
     return *finalType;
@@ -453,14 +450,11 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
         return compilation.getType(bitwidth_t(width), flags);
     }
 
-    const IntegralType* result = &compilation.getScalarType(flags);
+    const Type* result = &compilation.getScalarType(flags);
     uint32_t count = dims.size();
     for (uint32_t i = 0; i < count; i++) {
-        // TODO: check bitwidth of array at each step
         auto& pair = dims[count - i - 1];
-        auto packed = compilation.emplace<PackedArrayType>(*result, pair.first);
-        packed->setSyntax(*pair.second);
-        result = packed;
+        result = &PackedArrayType::fromSyntax(compilation, *result, pair.first, *pair.second);
     }
 
     return *result;
@@ -609,6 +603,17 @@ PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
     elementType(elementType), range(range) {
 }
 
+const Type& PackedArrayType::fromSyntax(Compilation& compilation, const Type& elementType,
+                                        ConstantRange range, const SyntaxNode& syntax) {
+    if (elementType.isError())
+        return elementType;
+
+    // TODO: check bitwidth of array
+    auto result = compilation.emplace<PackedArrayType>(elementType, range);
+    result->setSyntax(syntax);
+    return *result;
+}
+
 UnpackedArrayType::UnpackedArrayType(const Type& elementType, ConstantRange range) :
     Type(SymbolKind::UnpackedArrayType, "", SourceLocation()), elementType(elementType),
     range(range) {
@@ -705,12 +710,26 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
         }
     }
 
-    auto result =
+    auto structType =
         compilation.emplace<PackedStructType>(compilation, bitWidth, isSigned, isFourState);
     for (auto member : make_reverse_range(members))
-        result->addMember(*member);
+        structType->addMember(*member);
 
-    result->setSyntax(syntax);
+    structType->setSyntax(syntax);
+
+    const Type* result = structType;
+    BindContext context(scope, location);
+    
+    ptrdiff_t count = syntax.dimensions.size();
+    for (ptrdiff_t i = 0; i < count; i++) {
+        auto& dimSyntax = *syntax.dimensions[count - i - 1];
+        auto dim = context.evalPackedDimension(dimSyntax);
+        if (!dim)
+            return compilation.getErrorType();
+
+        result = &PackedArrayType::fromSyntax(compilation, *result, *dim, dimSyntax);
+    }
+
     return *result;
 }
 
