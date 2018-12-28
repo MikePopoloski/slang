@@ -771,15 +771,18 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     }
 
     Token nameToken;
+    const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
     const NameSyntax* first = scoped->left;
     switch (first->kind) {
         case SyntaxKind::IdentifierName:
             nameToken = first->as<IdentifierNameSyntax>().identifier;
             break;
-        case SyntaxKind::IdentifierSelectName:
-            // TODO:
-            // nameToken = first->as<IdentifierSelectNameSyntax>().identifier;
-            // break;
+        case SyntaxKind::IdentifierSelectName: {
+            const auto& idSelect = first->as<IdentifierSelectNameSyntax>();
+            nameToken = idSelect.identifier;
+            selectors = &idSelect.selectors;
+            break;
+        }
         default:
             THROW_UNREACHABLE;
     }
@@ -811,6 +814,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             return;
         }
 
+        // TODO: error if selectors
+
         auto downward = lookupDownward(nameParts, *package);
         result.found = downward.found;
         return;
@@ -825,9 +830,13 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     // 4. The name is not found; it's considered a hierarchical reference and participates in
     //    upwards name resolution.
     if (result.found && result.found->isValue()) {
+        if (selectors) {
+            result.selectors.appendRange(*selectors);
+            selectors = nullptr;
+        }
+
         // This is a dotted member access.
         for (const auto& part : nameParts) {
-            const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
             switch (part.name->kind) {
                 case SyntaxKind::IdentifierName:
                     nameToken = part.name->as<IdentifierNameSyntax>().identifier;
