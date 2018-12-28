@@ -63,6 +63,7 @@ void LookupResult::clear() {
     systemSubroutine = nullptr;
     wasImported = false;
     isHierarchical = false;
+    selectors.clear();
     diagnostics.clear();
 }
 
@@ -703,38 +704,43 @@ namespace {
 
 using namespace slang;
 
-// A downward lookup starts from a given scope and tries to match pieces of a name with
-// subsequent members of scopes. If the entire path matches, the found member will be returned.
-// Otherwise, the last name piece we looked up will be returned, along with whatever symbol was
-// last found.
-struct DownwardLookupResult {
-    const Symbol* found;
-    const NameSyntax* last;
-};
-
 struct NamePlusLoc {
     const NameSyntax* name;
     SourceLocation dotLocation;
 };
 
-bool handleLookupSelectors(const SyntaxList<ElementSelectSyntax>& selectors,
-                           const BindContext& context, LookupResult& result) {
-    if (selectors.empty())
-        return true;
+using NameComponent = std::tuple<Token, const SyntaxList<ElementSelectSyntax>*>;
 
-    const Symbol* symbol = std::exchange(result.found, nullptr);
+NameComponent decomposeName(const NameSyntax& name) {
+    switch (name.kind) {
+        case SyntaxKind::IdentifierName:
+            return { name.as<IdentifierNameSyntax>().identifier, nullptr };
+        case SyntaxKind::IdentifierSelectName: {
+            auto& idSelect = name.as<IdentifierSelectNameSyntax>();
+            return { idSelect.identifier, &idSelect.selectors };
+        }
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
+const Symbol* handleLookupSelectors(const Symbol* symbol,
+                                    const SyntaxList<ElementSelectSyntax>& selectors,
+                                    const BindContext& context, LookupResult& result) {
     ASSERT(symbol);
+    if (selectors.empty())
+        return symbol;
 
     for (const ElementSelectSyntax* syntax : selectors) {
         if (!syntax->selector || syntax->selector->kind != SyntaxKind::BitSelect) {
             result.addDiag(context.scope, DiagCode::InvalidScopeIndexExpression,
                            syntax->sourceRange());
-            return false;
+            return nullptr;
         }
 
         auto index = context.evalInteger(*syntax->selector->as<BitSelectSyntax>().expr);
         if (!index)
-            return false;
+            return nullptr;
 
         switch (symbol->kind) {
             case SymbolKind::InstanceArray: {
@@ -758,44 +764,111 @@ bool handleLookupSelectors(const SyntaxList<ElementSelectSyntax>& selectors,
                                             syntax->sourceRange());
                 diag << symbol->name;
                 diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
-                return false;
+                return nullptr;
             }
         }
     }
 
-    result.found = symbol;
-    return true;
+    return symbol;
 }
 
-DownwardLookupResult lookupDownward(span<const NamePlusLoc> nameParts, const Scope& scope) {
-    const NameSyntax* const final = nameParts[nameParts.size() - 1].name;
-    const Scope* current = &scope;
-    const Symbol* found = nullptr;
+void lookupDownward(span<const NamePlusLoc> nameParts, Token initialNameToken,
+                    const SyntaxList<ElementSelectSyntax>* initialSelectors,
+                    const BindContext& context, LookupResult& result, bitmask<LookupFlags> flags) {
 
-    for (auto part : nameParts) {
-        const Symbol* symbol;
-        switch (part.name->kind) {
-            case SyntaxKind::IdentifierName:
-                symbol =
-                    current->find(part.name->as<IdentifierNameSyntax>().identifier.valueText());
-                break;
-            default:
-                THROW_UNREACHABLE;
+    Token nameToken = initialNameToken;
+    const SyntaxList<ElementSelectSyntax>* selectors = initialSelectors;
+
+    const Symbol* symbol = std::exchange(result.found, nullptr);
+    ASSERT(symbol);
+
+    // Loop through each dotted name component and try to find it in the preceeding scope.
+    for (auto it = nameParts.rbegin(); it != nameParts.rend(); it++) {
+        // If we found a value, the remaining dots are member access expressions.
+        if (symbol->isValue()) {
+            if (selectors) {
+                result.selectors.appendRange(*selectors);
+                selectors = nullptr;
+            }
+
+            for (; it != nameParts.rend(); it++) {
+                std::tie(nameToken, selectors) = decomposeName(*it->name);
+
+                result.selectors.append(LookupResult::MemberSelector{
+                    nameToken.valueText(), it->dotLocation, nameToken.range() });
+
+                if (selectors)
+                    result.selectors.appendRange(*selectors);
+            }
+
+            result.found = symbol;
+            return;
         }
 
-        if (!symbol)
-            return { found, part.name };
+        // This is a hierarhical lookup unless it's the first component in the path and the
+        // current scope is either an interface port or a package.
+        result.isHierarchical = true;
+        if (it == nameParts.rbegin()) {
+            result.isHierarchical =
+                symbol->kind != SymbolKind::InterfacePort && symbol->kind != SymbolKind::Package;
+        }
 
-        found = symbol;
-        if (part.name != final) {
-            // This needs to be a scope, otherwise we can't do a lookup within it.
-            if (!found->isScope())
-                return { found, part.name };
-            current = &found->as<Scope>();
+        if (symbol->kind == SymbolKind::InterfacePort) {
+            // TODO: modports
+            symbol = symbol->as<InterfacePortSymbol>().connection;
+            if (!symbol)
+                return;
+        }
+
+        if (!symbol->isScope() || symbol->isType()) {
+            auto& diag =
+                result.addDiag(context.scope, DiagCode::NotAHierarchicalScope, it->dotLocation);
+            diag << nameToken.valueText();
+            diag << nameToken.range();
+            diag << it->name->sourceRange();
+
+            diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+            return;
+        }
+
+        if (result.isHierarchical && (flags & LookupFlags::Constant) != 0) {
+            auto& diag = result.addDiag(context.scope, DiagCode::HierarchicalNotAllowedInConstant,
+                                        it->dotLocation);
+            diag << nameToken.range();
+            return;
+        }
+
+        if (selectors) {
+            symbol = handleLookupSelectors(symbol, *selectors, context, result);
+            if (!symbol)
+                return;
+        }
+
+        string_view packageName = symbol->kind == SymbolKind::Package ? symbol->name : "";
+        const Scope& current = symbol->as<Scope>();
+
+        std::tie(nameToken, selectors) = decomposeName(*it->name);
+        symbol = current.find(nameToken.valueText());
+        if (!symbol) {
+            // Give a slightly nicer error if this is the first component in a package lookup.
+            DiagCode code = DiagCode::CouldNotResolveHierarchicalPath;
+            if (!packageName.empty())
+                code = DiagCode::UnknownPackageMember;
+
+            auto& diag = result.addDiag(context.scope, code, it->dotLocation);
+            diag << nameToken.valueText();
+            diag << nameToken.range();
+
+            if (!packageName.empty())
+                diag << packageName;
+
+            return;
         }
     }
 
-    return { found, nullptr };
+    result.found = symbol;
+    if (selectors)
+        result.selectors.appendRange(*selectors);
 }
 
 } // namespace
@@ -820,23 +893,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             break;
     }
 
-    Token nameToken;
-    const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
-    const NameSyntax* first = scoped->left;
-    switch (first->kind) {
-        case SyntaxKind::IdentifierName:
-            nameToken = first->as<IdentifierNameSyntax>().identifier;
-            break;
-        case SyntaxKind::IdentifierSelectName: {
-            const auto& idSelect = first->as<IdentifierSelectNameSyntax>();
-            nameToken = idSelect.identifier;
-            selectors = &idSelect.selectors;
-            break;
-        }
-        default:
-            THROW_UNREACHABLE;
-    }
-
+    auto [nameToken, selectors] = decomposeName(*scoped->left);
     if (nameToken.valueText().empty())
         return;
 
@@ -848,6 +905,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     // If we are starting with a colon separator, always do a downwards name resolution. If the
     // prefix name can be resolved normally, we have a class scope, otherwise it's a package
     // lookup. See [23.7.1]
+    BindContext context(*this, location);
     if (colonParts) {
         if (result.found && result.found->kind != SymbolKind::Package) {
             // TODO: handle classes
@@ -864,10 +922,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             return;
         }
 
-        // TODO: error if selectors
-
-        auto downward = lookupDownward(nameParts, *package);
-        result.found = downward.found;
+        result.found = package;
+        lookupDownward(nameParts, nameToken, selectors, context, result, flags);
         return;
     }
 
@@ -879,81 +935,14 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     //    allowed.
     // 4. The name is not found; it's considered a hierarchical reference and participates in
     //    upwards name resolution.
-    if (result.found && result.found->isValue()) {
-        if (selectors) {
-            result.selectors.appendRange(*selectors);
-            selectors = nullptr;
-        }
 
-        // This is a dotted member access.
-        for (const auto& part : nameParts) {
-            switch (part.name->kind) {
-                case SyntaxKind::IdentifierName:
-                    nameToken = part.name->as<IdentifierNameSyntax>().identifier;
-                    break;
-                case SyntaxKind::IdentifierSelectName: {
-                    const auto& idSelect = part.name->as<IdentifierSelectNameSyntax>();
-                    nameToken = idSelect.identifier;
-                    selectors = &idSelect.selectors;
-                    break;
-                }
-                default:
-                    THROW_UNREACHABLE;
-            }
-
-            result.selectors.append(LookupResult::MemberSelector{
-                nameToken.valueText(), part.dotLocation, nameToken.range() });
-
-            if (selectors)
-                result.selectors.appendRange(*selectors);
-        }
-        return;
-    }
-
-    result.isHierarchical = true;
     if (!result.found) {
         // TODO: upward name resolution
         reportUndeclared(nameToken.valueText(), nameToken.range(), flags, result);
         return;
     }
 
-    if (result.found->kind == SymbolKind::InterfacePort) {
-        // TODO: modports
-        result.isHierarchical = false;
-        result.found = result.found->as<InterfacePortSymbol>().connection;
-        if (!result.found)
-            return;
-    }
-
-    if (!result.found->isScope() || result.found->isType()) {
-        NamePlusLoc& part = nameParts.back();
-        auto& diag = result.addDiag(*this, DiagCode::NotAHierarchicalScope, part.dotLocation);
-        diag << nameToken.valueText();
-        diag << nameToken.range();
-        diag << part.name->sourceRange();
-
-        diag.addNote(DiagCode::NoteDeclarationHere, result.found->location);
-        result.found = nullptr;
-        return;
-    }
-
-    if (result.isHierarchical && (flags & LookupFlags::Constant) != 0) {
-        NamePlusLoc& part = nameParts.back();
-        auto& diag =
-            result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
-        diag << nameToken.range();
-        result.found = nullptr;
-        return;
-    }
-
-    if (selectors) {
-        if (!handleLookupSelectors(*selectors, BindContext(*this, location), result))
-            return;
-    }
-
-    // TODO: handle more cases / error conditions
-    auto downward = lookupDownward(nameParts, result.found->as<Scope>());
-    result.found = downward.found;
+    lookupDownward(nameParts, nameToken, selectors, context, result, flags);
 }
 
 void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<LookupFlags> flags,

@@ -432,6 +432,11 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+
+    auto foo = compilation.getRoot().lookupName("m.array[0].foo");
+    REQUIRE(foo);
+    CHECK(foo->kind == SymbolKind::Variable);
+    CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
 }
 
 TEST_CASE("Instance array indexing errors") {

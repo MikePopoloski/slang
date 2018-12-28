@@ -218,6 +218,7 @@ enum class DiagCode : uint8_t {
     ScopeNotIndexable,
     InvalidScopeIndexExpression,
     ScopeIndexOutOfRange,
+    CouldNotResolveHierarchicalPath,
 
     // constant evaluation
     ExpressionNotConstant,

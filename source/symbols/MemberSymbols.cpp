@@ -44,7 +44,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
             import = package_->find(importName);
             if (!import) {
                 auto loc = location;
-                if (auto syntax = getSyntax(); syntax)
+                if (auto syntax = getSyntax())
                     loc = syntax->as<PackageImportItemSyntax>().item.location();
 
                 auto& diag = scope->addDiag(DiagCode::UnknownPackageMember, loc);

@@ -217,6 +217,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::ScopeNotIndexable] = { "hierarchical scope '{}' is not indexable", DiagnosticSeverity::Error };
     descriptors[DiagCode::InvalidScopeIndexExpression] = { "invalid hierarchical index expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::ScopeIndexOutOfRange] = { "hierarchical index {} is out of scope's declared range", DiagnosticSeverity::Error };
+    descriptors[DiagCode::CouldNotResolveHierarchicalPath] = { "could not resolve hierarchical path name '{}'", DiagnosticSeverity::Error };
 
     // constant evaluation
     descriptors[DiagCode::ExpressionNotConstant] = { "expression is not constant", DiagnosticSeverity::Error };
