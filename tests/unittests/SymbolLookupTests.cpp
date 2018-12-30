@@ -467,3 +467,30 @@ endmodule
     CHECK((it++)->code == DiagCode::ScopeNotIndexable);
     CHECK(it == diags.end());
 }
+
+TEST_CASE("Compilation scope vs instantiation scope") {
+    auto file1 = SyntaxTree::fromText(R"(
+parameter int foo = 42;
+
+module m;
+    N n();
+endmodule
+)");
+    auto file2 = SyntaxTree::fromText(R"(
+parameter int foo = 84;
+
+module N;
+    localparam int baz = foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(file1);
+    compilation.addSyntaxTree(file2);
+    NO_COMPILATION_ERRORS;
+
+    auto baz = compilation.getRoot().lookupName("m.n.baz");
+    REQUIRE(baz);
+    CHECK(baz->kind == SymbolKind::Parameter);
+    CHECK(baz->as<ParameterSymbol>().getValue().integer() == 84);
+}

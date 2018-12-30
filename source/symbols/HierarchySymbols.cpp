@@ -296,9 +296,9 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 }
 
 InstanceSymbol::InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name,
-                               SourceLocation loc) :
+                               SourceLocation loc, const DefinitionSymbol& definition) :
     Symbol(kind, name, loc),
-    Scope(compilation, this), portMap(compilation.allocSymbolMap()) {
+    Scope(compilation, this), portMap(compilation.allocSymbolMap()), definition(definition) {
 }
 
 bool InstanceSymbol::isKind(SymbolKind kind) {
@@ -312,8 +312,7 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
     }
 }
 
-void InstanceSymbol::populate(const DefinitionSymbol& definition,
-                              const HierarchicalInstanceSyntax* instanceSyntax,
+void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
                               span<const Expression* const> parameterOverides) {
     // Add all port parameters as members first.
     Compilation& comp = getCompilation();
@@ -372,8 +371,8 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
         overrides.emplace(nullptr);
     }
 
-    auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc);
-    instance->populate(definition, nullptr, overrides);
+    auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc, definition);
+    instance->populate(nullptr, overrides);
     return *instance;
 }
 
@@ -382,8 +381,8 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
     const DefinitionSymbol& definition, span<const Expression* const> parameterOverrides) {
 
     auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, syntax.name.valueText(),
-                                                              syntax.name.location());
-    instance->populate(definition, &syntax, parameterOverrides);
+                                                              syntax.name.location(), definition);
+    instance->populate(&syntax, parameterOverrides);
     return *instance;
 }
 
@@ -392,8 +391,9 @@ InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
     const DefinitionSymbol& definition, span<const Expression* const> parameterOverrides) {
 
     auto instance = compilation.emplace<InterfaceInstanceSymbol>(
-        compilation, syntax.name.valueText(), syntax.name.location());
-    instance->populate(definition, &syntax, parameterOverrides);
+        compilation, syntax.name.valueText(), syntax.name.location(), definition);
+
+    instance->populate(&syntax, parameterOverrides);
     return *instance;
 }
 

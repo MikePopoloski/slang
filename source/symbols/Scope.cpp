@@ -691,8 +691,14 @@ void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
         return;
     }
 
-    // Continue up the scope chain via our parent.
-    auto nextScope = getParent();
+    // Continue up the scope chain via our parent. If we hit an instance, we need to instead search
+    // within the context of the definition's parent scope.
+    const Scope* nextScope;
+    if (InstanceSymbol::isKind(asSymbol().kind))
+        nextScope = asSymbol().as<InstanceSymbol>().definition.getScope();
+    else
+        nextScope = getParent();
+
     if (!nextScope)
         return;
 

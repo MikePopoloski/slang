@@ -122,10 +122,8 @@ private:
             root = &parser.parseCompilationUnit();
         else {
             root = &parser.parseGuess();
-            if (!parser.isDone()) {
-                throw std::logic_error("Source passed to SyntaxTree::fromText represents "
-                                       "more than one logical node.");
-            }
+            if (!parser.isDone())
+                return create(sourceManager, source, options, false);
         }
 
         return std::shared_ptr<SyntaxTree>(new SyntaxTree(root, sourceManager, std::move(alloc),

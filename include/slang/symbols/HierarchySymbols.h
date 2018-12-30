@@ -69,6 +69,8 @@ private:
 /// Base class for module, interface, and program instance symbols.
 class InstanceSymbol : public Symbol, public Scope {
 public:
+    const DefinitionSymbol& definition;
+
     const SymbolMap& getPortMap() const {
         ensureElaborated();
         return *portMap;
@@ -81,9 +83,10 @@ public:
     static bool isKind(SymbolKind kind);
 
 protected:
-    InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc);
+    InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc,
+                   const DefinitionSymbol& definition);
 
-    void populate(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
+    void populate(const HierarchicalInstanceSyntax* syntax,
                   span<const Expression* const> parameterOverrides);
 
 private:
@@ -92,8 +95,9 @@ private:
 
 class ModuleInstanceSymbol : public InstanceSymbol {
 public:
-    ModuleInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, loc) {}
+    ModuleInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                         const DefinitionSymbol& definition) :
+        InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, loc, definition) {}
 
     void toJson(json&) const {}
 
@@ -111,8 +115,9 @@ public:
 
 class InterfaceInstanceSymbol : public InstanceSymbol {
 public:
-    InterfaceInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        InstanceSymbol(SymbolKind::InterfaceInstance, compilation, name, loc) {}
+    InterfaceInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                            const DefinitionSymbol& definition) :
+        InstanceSymbol(SymbolKind::InterfaceInstance, compilation, name, loc, definition) {}
 
     void toJson(json&) const {}
 
