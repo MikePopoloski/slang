@@ -65,7 +65,7 @@ private:
     ElementSelectSyntax& parseElementSelect();
     SelectorSyntax* parseElementSelector();
     NameSyntax& parseName(bool isForEach);
-    NameSyntax& parseNamePart(bool isForEach);
+    NameSyntax& parseNamePart(bool isForEach, bool isFirst, bool previousWasThis);
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
     ArgumentListSyntax& parseArgumentList();
     ArgumentSyntax& parseArgument();

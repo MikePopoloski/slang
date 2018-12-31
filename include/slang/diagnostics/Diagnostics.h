@@ -91,7 +91,7 @@ enum class DiagCode : uint8_t {
     MisplacedTrailingSeparator,
     ImplicitNotAllowed,
     MultipleTypesInDeclaration,
-    ColonShouldBeDot,
+    InvalidAccessDotColon,
     ExpectedMember,
     ExpectedStatement,
     ExpectedParameterPort,

@@ -93,7 +93,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
 source:7:23: error: no member named 'bar' in struct{}
@@ -124,7 +124,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
 source:7:13: error: no member named 'bar' in struct{}
@@ -155,7 +155,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
 source:7:13: error: invalid operand type struct{} to unary expression
@@ -185,7 +185,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
 source:6:20: error: expected identifier
@@ -212,7 +212,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
 source:9:13: error: invalid operands to binary expression (struct{} and struct{})
@@ -244,7 +244,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
 source:8:13: error: invalid operands to binary expression (struct{} and struct{})

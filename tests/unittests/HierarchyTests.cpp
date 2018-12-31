@@ -83,7 +83,7 @@ endmodule
     CHECK(it->name == "l9");
     it++;
 
-    Diagnostics diags = compilation.getSemanticDiagnostics();
+    auto& diags = compilation.getSemanticDiagnostics();
     REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == DiagCode::ParamHasNoValue);
     CHECK(diags[1].code == DiagCode::TooManyParamAssignments);
@@ -349,7 +349,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     // TODO: $bits() function should check argument even though it's not evaluated
     // REQUIRE(diags.size() == 5);
     REQUIRE(diags.size() == 4);
@@ -389,7 +389,7 @@ module mh22(ref wire x); endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
 
 #define checkPort(moduleName, name, dir, kind, type)               \
     {                                                              \
@@ -462,7 +462,7 @@ module m6(I.bar bar); endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
 
 #define checkIfacePort(moduleName, portName, ifaceName, modportName)            \
     {                                                                           \
@@ -568,7 +568,7 @@ endmodule
     checkPort("test", "r", PortDirection::In, PortKind::Variable,
               "logic signed[2:0][3:2]$[1:2][2:0][0:4]");
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
 
     auto it = diags.begin();
     CHECK((it++)->code == DiagCode::Redefinition);
@@ -656,7 +656,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
 
     auto it = diags.begin();
     CHECK((it++)->code == DiagCode::MixingOrderedAndNamedPorts);

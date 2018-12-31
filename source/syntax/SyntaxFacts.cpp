@@ -147,6 +147,19 @@ SyntaxKind getKeywordNameExpression(TokenKind kind) {
     }
 }
 
+bool isSpecialMethodName(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ArrayUniqueMethod:
+        case SyntaxKind::ArrayAndMethod:
+        case SyntaxKind::ArrayOrMethod:
+        case SyntaxKind::ArrayXorMethod:
+        case SyntaxKind::ConstructorName:
+            return true;
+            default:
+                return false;
+        }
+    }
+
 int getPrecedence(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::AlwaysPropertyExpression:

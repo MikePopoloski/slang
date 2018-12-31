@@ -98,16 +98,16 @@ public:
     const SourceManager* getSourceManager() const { return sourceManager; }
 
     /// Gets the diagnostics produced during lexing, preprocessing, and syntax parsing.
-    Diagnostics getParseDiagnostics();
+    const Diagnostics& getParseDiagnostics();
 
     /// Gets the diagnostics produced during semantic analysis, including the binding of
     /// symbols, type checking, and name lookup. Note that this will finalize the compilation,
     /// including forcing the evaluation of any symbols or expressions that were still waiting
     /// for lazy evaluation.
-    Diagnostics getSemanticDiagnostics();
+    const Diagnostics& getSemanticDiagnostics();
 
     /// Gets all of the diagnostics produced during compilation.
-    Diagnostics getAllDiagnostics();
+    const Diagnostics& getAllDiagnostics();
 
     /// Report an error at the specified location.
     Diagnostic& addDiag(const Symbol& source, DiagCode code, SourceLocation location);
@@ -168,6 +168,11 @@ private:
     std::unique_ptr<RootSymbol> root;
     const SourceManager* sourceManager = nullptr;
     bool finalized = false;
+    bool finalizing = false;    // to prevent reentrant calls to getRoot()
+
+    optional<Diagnostics> cachedParseDiagnostics;
+    optional<Diagnostics> cachedSemanticDiagnostics;
+    optional<Diagnostics> cachedAllDiagnostics;
 
     // A list of compilation units that have been added to the compilation.
     std::vector<const CompilationUnitSymbol*> compilationUnits;

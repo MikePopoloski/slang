@@ -201,7 +201,7 @@ endmodule
     CHECK(instance.find("e1_t") == nullptr);
     CHECK(instance.find("e2") == nullptr);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == DiagCode::UnresolvedForwardTypedef);
     CHECK(diags[1].code == DiagCode::UnresolvedForwardTypedef);
@@ -280,7 +280,7 @@ endmodule
     Compilation compilation;
     evalModule(tree, compilation);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == DiagCode::ValueMustNotBeUnknown);
     CHECK(diags[1].code == DiagCode::ValueMustBePositive);

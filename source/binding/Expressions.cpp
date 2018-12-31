@@ -196,11 +196,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::StringLiteralExpression:
             result = &StringLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
             break;
-        case SyntaxKind::IdentifierName:
-        case SyntaxKind::IdentifierSelectName:
-        case SyntaxKind::ScopedName:
-            result = &bindName(compilation, syntax.as<NameSyntax>(), nullptr, context);
-            break;
         case SyntaxKind::RealLiteralExpression:
             result = &RealLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
             break;
@@ -311,7 +306,11 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                                                        syntax.as<CastExpressionSyntax>(), context);
             break;
         default:
-            if (DataTypeSyntax::isKind(syntax.kind)) {
+            if (NameSyntax::isKind(syntax.kind)) {
+                result = &bindName(compilation, syntax.as<NameSyntax>(), nullptr, context);
+                break;
+            }
+            else if (DataTypeSyntax::isKind(syntax.kind)) {
                 result = &DataTypeExpression::fromSyntax(compilation, syntax.as<DataTypeSyntax>(),
                                                          context);
                 break;

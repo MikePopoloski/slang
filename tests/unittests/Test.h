@@ -12,8 +12,8 @@
 #include "slang/binding/Expressions.h"
 #include "slang/binding/Statements.h"
 #include "slang/compilation/Compilation.h"
-#include "slang/diagnostics/Diagnostics.h"
 #include "slang/diagnostics/DiagnosticWriter.h"
+#include "slang/diagnostics/Diagnostics.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -36,15 +36,15 @@ using namespace slang;
             FAIL_CHECK(DiagnosticWriter(getSourceManager()).report(diagnostics)); \
     } while (0)
 
-#define NO_COMPILATION_ERRORS                                \
-    do {                                                     \
-        Diagnostics diags = compilation.getAllDiagnostics(); \
-        if (!diags.empty()) {                                \
-            FAIL_CHECK(report(diags));                       \
-        }                                                    \
+#define NO_COMPILATION_ERRORS                          \
+    do {                                               \
+        auto& diags = compilation.getAllDiagnostics(); \
+        if (!diags.empty()) {                          \
+            FAIL_CHECK(report(diags));                 \
+        }                                              \
     } while (0)
 
-inline std::string report(Diagnostics& diags) {
+inline std::string report(const Diagnostics& diags) {
     if (diags.empty())
         return "";
 

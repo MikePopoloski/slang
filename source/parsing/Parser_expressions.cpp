@@ -581,10 +581,11 @@ NameSyntax& Parser::parseName() {
 }
 
 NameSyntax& Parser::parseName(bool isForEach) {
-    NameSyntax* name = &parseNamePart(isForEach);
+    NameSyntax* name = &parseNamePart(isForEach, true, false);
 
     bool usedDot = false;
     bool reportedError = false;
+    SyntaxKind previousKind = name->kind;
 
     auto kind = peek().kind;
     while (kind == TokenKind::Dot || kind == TokenKind::DoubleColon) {
@@ -593,23 +594,70 @@ NameSyntax& Parser::parseName(bool isForEach) {
             usedDot = true;
         else if (usedDot && !reportedError) {
             reportedError = true;
-            addDiag(DiagCode::ColonShouldBeDot, separator.location());
+            addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "::"
+                                                                           << ".";
         }
-        if (peek().kind == TokenKind::NewKeyword) {
-            name = &factory.classScope(*name, separator);
-            break;
+        else if (peek().kind == TokenKind::NewKeyword)
+            return factory.classScope(*name, separator);
+
+        switch (previousKind) {
+            case SyntaxKind::UnitScope:
+            case SyntaxKind::LocalScope:
+                if (kind != TokenKind::DoubleColon) {
+                    addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "."
+                                                                                   << "::";
+                }
+                break;
+            case SyntaxKind::RootScope:
+            case SyntaxKind::ThisHandle:
+            case SyntaxKind::SuperHandle:
+                if (kind != TokenKind::Dot) {
+                    addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "::"
+                                                                                   << ".";
+                }
+                break;
+            default:
+                break;
         }
-        name = &factory.scopedName(*name, separator, parseNamePart(isForEach));
+
+        NameSyntax& rhs = parseNamePart(isForEach, false, previousKind == SyntaxKind::ThisHandle);
+        previousKind = rhs.kind;
+
+        name = &factory.scopedName(*name, separator, rhs);
         kind = peek().kind;
+    }
+
+    // If we saw $unit, $root, super, or local, make sure the correct token follows it.
+    TokenKind expectedKind = TokenKind::Unknown;
+    switch (name->kind) {
+        case SyntaxKind::UnitScope:
+        case SyntaxKind::LocalScope:
+            expectedKind = TokenKind::DoubleColon;
+            break;
+        case SyntaxKind::RootScope:
+        case SyntaxKind::SuperHandle:
+            expectedKind = TokenKind::Dot;
+            break;
+        default:
+            break;
+    }
+
+    if (expectedKind != TokenKind::Unknown) {
+        auto separator = expect(expectedKind);
+        name = &factory.scopedName(*name, separator, parseNamePart(isForEach, false, false));
     }
 
     return *name;
 }
 
-NameSyntax& Parser::parseNamePart(bool isForEach) {
+NameSyntax& Parser::parseNamePart(bool isForEach, bool isFirst, bool previousWasThis) {
     auto kind = getKeywordNameExpression(peek().kind);
-    if (kind != SyntaxKind::Unknown)
-        return factory.keywordName(kind, consume());
+    if (kind != SyntaxKind::Unknown) {
+        if ((isFirst && !isSpecialMethodName(kind)) || (!isFirst && isSpecialMethodName(kind)) ||
+            (kind == SyntaxKind::SuperHandle && previousWasThis)) {
+            return factory.keywordName(kind, consume());
+        }
+    }
 
     TokenKind next = peek().kind;
     if (isForEach && (next == TokenKind::Comma || next == TokenKind::CloseBracket))

@@ -246,7 +246,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("int'(b1)") == "int");
     CHECK(typeof("5'(sp)") == "logic[4:0]");
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == DiagCode::BadUnaryExpression);
     CHECK(diags[1].code == DiagCode::BadBinaryExpression);
@@ -268,7 +268,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == DiagCode::NotAValue);
     CHECK(diags[1].code == DiagCode::ExpressionNotCallable);
@@ -292,7 +292,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == DiagCode::ExpectedExpression);
     CHECK(diags[1].code == DiagCode::ExpectedExpression);

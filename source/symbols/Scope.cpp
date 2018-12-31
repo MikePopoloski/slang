@@ -26,6 +26,13 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::DeferredMember; }
 };
 
+const Scope* getLookupParent(const Symbol& symbol) {
+    if (InstanceSymbol::isKind(symbol.kind))
+        return symbol.as<InstanceSymbol>().definition.getScope();
+    else
+        return symbol.getScope();
+}
+
 } // namespace
 
 namespace slang {
@@ -275,6 +282,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
             // Handle qualified names completely separately.
             lookupQualified(syntax.as<ScopedNameSyntax>(), location, flags, result);
             return;
+        case SyntaxKind::ThisHandle: // TODO: handle this
         default:
             THROW_UNREACHABLE;
     }
@@ -299,6 +307,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
     }
 
     // Perform the lookup.
+    ensureElaborated();
     lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);
     if (selectors)
         result.selectors.appendRange(*selectors);
@@ -310,6 +319,10 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
 const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
                                            SourceRange sourceRange,
                                            bitmask<LookupFlags> flags) const {
+    ensureElaborated();
+    if (name.empty())
+        return nullptr;
+
     LookupResult result;
     lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
     if (result.hasError())
@@ -475,10 +488,8 @@ void Scope::elaborate() const {
                     const Symbol& sym = asSymbol();
                     if (sym.kind == SymbolKind::Definition)
                         portMap = const_cast<SymbolMap*>(&sym.as<DefinitionSymbol>().getPortMap());
-                    else if (InstanceSymbol::isKind(sym.kind))
-                        portMap = const_cast<SymbolMap*>(&sym.as<InstanceSymbol>().getPortMap());
                     else
-                        THROW_UNREACHABLE;
+                        portMap = const_cast<SymbolMap*>(&sym.as<InstanceSymbol>().getPortMap());
 
                     const Symbol* last = symbol;
                     for (auto port : ports) {
@@ -584,10 +595,6 @@ void Scope::elaborate() const {
 void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
                                   SourceRange sourceRange, bitmask<LookupFlags> flags,
                                   LookupResult& result) const {
-    ensureElaborated();
-    if (name.empty())
-        return;
-
     // Try a simple name lookup to see if we find anything.
     const Symbol* symbol = nullptr;
     if (auto it = nameMap->find(name); it != nameMap->end()) {
@@ -693,12 +700,7 @@ void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
 
     // Continue up the scope chain via our parent. If we hit an instance, we need to instead search
     // within the context of the definition's parent scope.
-    const Scope* nextScope;
-    if (InstanceSymbol::isKind(asSymbol().kind))
-        nextScope = asSymbol().as<InstanceSymbol>().definition.getScope();
-    else
-        nextScope = getParent();
-
+    auto nextScope = getLookupParent(asSymbol());
     if (!nextScope)
         return;
 
@@ -724,6 +726,19 @@ NameComponent decomposeName(const NameSyntax& name) {
         case SyntaxKind::IdentifierSelectName: {
             auto& idSelect = name.as<IdentifierSelectNameSyntax>();
             return { idSelect.identifier, &idSelect.selectors };
+        }
+        case SyntaxKind::UnitScope:
+        case SyntaxKind::RootScope:
+        case SyntaxKind::LocalScope:
+        case SyntaxKind::ThisHandle:
+        case SyntaxKind::SuperHandle:
+        case SyntaxKind::ArrayUniqueMethod:
+        case SyntaxKind::ArrayAndMethod:
+        case SyntaxKind::ArrayOrMethod:
+        case SyntaxKind::ArrayXorMethod:
+        case SyntaxKind::ConstructorName: {
+            auto& keywordName = name.as<KeywordNameSyntax>();
+            return { keywordName.keyword, nullptr };
         }
         default:
             THROW_UNREACHABLE;
@@ -778,13 +793,9 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
     return symbol;
 }
 
-void lookupDownward(span<const NamePlusLoc> nameParts, Token initialNameToken,
-                    const SyntaxList<ElementSelectSyntax>* initialSelectors,
-                    const BindContext& context, LookupResult& result, bitmask<LookupFlags> flags) {
-
-    Token nameToken = initialNameToken;
-    const SyntaxList<ElementSelectSyntax>* selectors = initialSelectors;
-
+void lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
+                    const SyntaxList<ElementSelectSyntax>* selectors, const BindContext& context,
+                    LookupResult& result, bitmask<LookupFlags> flags) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
     ASSERT(symbol);
 
@@ -811,12 +822,13 @@ void lookupDownward(span<const NamePlusLoc> nameParts, Token initialNameToken,
             return;
         }
 
-        // This is a hierarhical lookup unless it's the first component in the path and the
+        // This is a hierarchical lookup unless it's the first component in the path and the
         // current scope is either an interface port or a package.
         result.isHierarchical = true;
         if (it == nameParts.rbegin()) {
-            result.isHierarchical =
-                symbol->kind != SymbolKind::InterfacePort && symbol->kind != SymbolKind::Package;
+            result.isHierarchical = symbol->kind != SymbolKind::InterfacePort &&
+                                    symbol->kind != SymbolKind::Package &&
+                                    symbol->kind != SymbolKind::CompilationUnit;
         }
 
         if (symbol->kind == SymbolKind::InterfacePort) {
@@ -854,8 +866,12 @@ void lookupDownward(span<const NamePlusLoc> nameParts, Token initialNameToken,
         const Scope& current = symbol->as<Scope>();
 
         std::tie(nameToken, selectors) = decomposeName(*it->name);
+        if (nameToken.valueText().empty())
+            return;
+
         symbol = current.find(nameToken.valueText());
         if (!symbol) {
+            // TODO: do this for compilation unit as well
             // Give a slightly nicer error if this is the first component in a package lookup.
             DiagCode code = DiagCode::CouldNotResolveHierarchicalPath;
             if (!packageName.empty())
@@ -877,12 +893,29 @@ void lookupDownward(span<const NamePlusLoc> nameParts, Token initialNameToken,
         result.selectors.appendRange(*selectors);
 }
 
+const Symbol* getCompilationUnit(const Symbol& symbol) {
+    const Symbol* current = &symbol;
+    while (true) {
+        if (current->kind == SymbolKind::CompilationUnit)
+            return current;
+
+        auto scope = getLookupParent(*current);
+        if (!scope)
+            return nullptr;
+
+        current = &scope->asSymbol();
+    }
+}
+
 } // namespace
 
 void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
                             bitmask<LookupFlags> flags, LookupResult& result) const {
+    ensureElaborated();
+
     // Split the name into easier to manage chunks. The parser will always produce a
     // left-recursive name tree, so that's all we'll bother to handle.
+    // TODO: clean up dot vs colon handling
     int colonParts = 0;
     SmallVectorSized<NamePlusLoc, 8> nameParts;
     const ScopedNameSyntax* scoped = &syntax;
@@ -903,37 +936,60 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     if (nameToken.valueText().empty())
         return;
 
-    // Start by trying to find the first name segment using normal unqualified lookup.
-    lookupUnqualifiedImpl(nameToken.valueText(), location, nameToken.range(), flags, result);
-    if (result.hasError())
-        return;
+    switch (scoped->left->kind) {
+        case SyntaxKind::IdentifierName:
+        case SyntaxKind::IdentifierSelectName:
+            // Start by trying to find the first name segment using normal unqualified lookup.
+            lookupUnqualifiedImpl(nameToken.valueText(), location, nameToken.range(), flags,
+                                  result);
+            if (result.hasError())
+                return;
+            break;
+        case SyntaxKind::UnitScope:
+            result.found = getCompilationUnit(asSymbol());
+            ASSERT(result.found);
+            break;
+        case SyntaxKind::RootScope:
+            // Be careful to avoid calling getRoot() if we're in a constant context (there's a
+            // chance we could already be in the middle of calling getRoot in that case).
+            if (flags & LookupFlags::Constant) {
+                result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant,
+                               nameToken.range());
+                return;
+            }
 
-    // If we are starting with a colon separator, always do a downwards name resolution. If the
-    // prefix name can be resolved normally, we have a class scope, otherwise it's a package
-    // lookup. See [23.7.1]
-    BindContext context(*this, location);
-    if (colonParts) {
-        if (result.found && result.found->kind != SymbolKind::Package) {
-            // TODO: handle classes
+            result.found = &compilation.getRoot();
+            break;
+        case SyntaxKind::LocalScope: // TODO: handle these
+        case SyntaxKind::ThisHandle:
+        case SyntaxKind::SuperHandle:
+        default:
             THROW_UNREACHABLE;
+    }
+
+    BindContext context(*this, location);
+
+    // [23.7.1] If we are starting with a colon separator, always do a downwards name resolution.
+    // If the prefix name can be resolved normally, we have a class scope, otherwise it's a package
+    // lookup.
+    if (colonParts) {
+        if (!result.found) {
+            result.found = compilation.getPackage(nameToken.valueText());
+
+            if (!result.found) {
+                result.addDiag(*this, DiagCode::UnknownClassOrPackage, nameToken.range())
+                    << nameToken.valueText();
+                return;
+            }
         }
 
-        // Otherwise, it should be a package name.
-        const PackageSymbol* package = result.found ? &result.found->as<PackageSymbol>()
-                                                    : compilation.getPackage(nameToken.valueText());
-
-        if (!package) {
-            result.addDiag(*this, DiagCode::UnknownClassOrPackage, nameToken.range())
-                << nameToken.valueText();
-            return;
-        }
-
-        result.found = package;
+        // We can't do upwards name resolution if colon access is involved, so always return after
+        // one downward lookup.
         lookupDownward(nameParts, nameToken, selectors, context, result, flags);
         return;
     }
 
-    // Otherwise we have a dotted name; [23.7] lists the possible cases:
+    // [23.7] lists the possible cases for dotted names:
     // 1. The name resolves to a value symbol. The dotted name is a member select.
     // 2. The name resolves to a local scope. The dotted name is a hierarchical reference.
     // 3. The name resolves to an imported scope. The dotted name is a hierarchical reference,

@@ -15,9 +15,23 @@ namespace {
 
 using namespace slang;
 
+// This visitor is used to make sure we've found all module instantiations in the design.
+struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
+    template<typename T>
+    void handle(const T&) {}
+
+    void handle(const RootSymbol& symbol) { visitDefault(symbol); }
+    void handle(const CompilationUnitSymbol& symbol) { visitDefault(symbol); }
+    void handle(const DefinitionSymbol& symbol) { visitDefault(symbol); }
+    void handle(const InstanceSymbol& symbol) { visitDefault(symbol); }
+    void handle(const InstanceArraySymbol& symbol) { visitDefault(symbol); }
+    void handle(const GenerateBlockSymbol& symbol) { visitDefault(symbol); }
+    void handle(const GenerateBlockArraySymbol& symbol) { visitDefault(symbol); }
+};
+
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
-struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
+struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
     template<typename T>
     void handle(const T& symbol) {
         if constexpr (std::is_base_of_v<Symbol, T>) {
@@ -146,6 +160,7 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     root->addMember(*unit);
     compilationUnits.push_back(unit);
     syntaxTrees.emplace_back(std::move(tree));
+    cachedParseDiagnostics.reset();
 }
 
 span<const std::shared_ptr<SyntaxTree>> Compilation::getSyntaxTrees() const {
@@ -159,6 +174,10 @@ span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits() cons
 const RootSymbol& Compilation::getRoot() {
     if (finalized)
         return *root;
+
+    ASSERT(!finalizing);
+    finalizing = true;
+    auto guard = finally([this] { finalizing = false; });
 
     // Visit all compilation units added to the design.
     ElaborationVisitor elaborationVisitor;
@@ -174,9 +193,9 @@ const RootSymbol& Compilation::getRoot() {
         // - Not nested
         // - Have no non-defaulted parameters
         // - Not instantiated anywhere
-        auto definition = std::get<0>(defTuple);
-        if (std::get<1>(key) != root.get() ||
-            definition->definitionKind != DefinitionKind::Module || std::get<1>(defTuple)) {
+        auto [definition, everInstantiated] = defTuple;
+        if (everInstantiated || std::get<1>(key) != root.get() ||
+            definition->definitionKind != DefinitionKind::Module) {
             continue;
         }
 
@@ -308,20 +327,27 @@ CompilationUnitSymbol& Compilation::createScriptScope() {
     return *unit;
 }
 
-Diagnostics Compilation::getParseDiagnostics() {
-    Diagnostics results;
+const Diagnostics& Compilation::getParseDiagnostics() {
+    if (cachedParseDiagnostics)
+        return *cachedParseDiagnostics;
+
+    cachedParseDiagnostics.emplace();
     for (const auto& tree : syntaxTrees)
-        results.appendRange(tree->diagnostics());
+        cachedParseDiagnostics->appendRange(tree->diagnostics());
 
     if (sourceManager)
-        results.sort(*sourceManager);
-    return results;
+        cachedParseDiagnostics->sort(*sourceManager);
+    return *cachedParseDiagnostics;
 }
 
-Diagnostics Compilation::getSemanticDiagnostics() {
+const Diagnostics& Compilation::getSemanticDiagnostics() {
+    if (cachedSemanticDiagnostics)
+        return *cachedSemanticDiagnostics;
+
     // If we haven't already done so, touch every symbol, scope, statement,
     // and expression tree so that we can be sure we have all the diagnostics.
-    getRoot();
+    DiagnosticVisitor visitor;
+    getRoot().visit(visitor);
 
     // Go through all diagnostics and build a map from source location / code to the
     // actual diagnostic. The purpose is to find duplicate diagnostics issued by several
@@ -371,16 +397,21 @@ Diagnostics Compilation::getSemanticDiagnostics() {
     if (sourceManager)
         results.sort(*sourceManager);
 
-    return results;
+    cachedSemanticDiagnostics.emplace(std::move(results));
+    return *cachedSemanticDiagnostics;
 }
 
-Diagnostics Compilation::getAllDiagnostics() {
-    Diagnostics results = getParseDiagnostics();
-    results.appendRange(getSemanticDiagnostics());
+const Diagnostics& Compilation::getAllDiagnostics() {
+    if (cachedAllDiagnostics)
+        return *cachedAllDiagnostics;
+
+    cachedAllDiagnostics.emplace();
+    cachedAllDiagnostics->appendRange(getParseDiagnostics());
+    cachedAllDiagnostics->appendRange(getSemanticDiagnostics());
 
     if (sourceManager)
-        results.sort(*sourceManager);
-    return results;
+        cachedAllDiagnostics->sort(*sourceManager);
+    return *cachedAllDiagnostics;
 }
 
 Diagnostic& Compilation::addDiag(const Symbol& source, DiagCode code, SourceLocation location) {

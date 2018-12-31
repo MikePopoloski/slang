@@ -38,20 +38,6 @@ TEST_CASE("MinTypMax expression") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-void testImplicitClassHandle(TokenKind kind) {
-    auto text = getTokenKindText(kind);
-    auto& expr = parseExpression(std::string(text));
-
-    REQUIRE(expr.kind == getKeywordNameExpression(kind));
-    CHECK(expr.as<KeywordNameSyntax>().keyword.kind == kind);
-    CHECK_DIAGNOSTICS_EMPTY;
-}
-
-TEST_CASE("Implicit class handles") {
-    testImplicitClassHandle(TokenKind::ThisKeyword);
-    testImplicitClassHandle(TokenKind::SuperKeyword);
-}
-
 TEST_CASE("String literal expression") {
     auto& text = "\"asdf\"";
     auto& expr = parseExpression(text);
@@ -227,7 +213,8 @@ void testScopedName(string_view text) {
 }
 
 TEST_CASE("Scoped identifiers") {
-    testScopedName("$unit::$root");
+    testScopedName("$unit::stuff");
+    testScopedName("$root.asdf");
     testScopedName("foo::bar");
     testScopedName("$unit::foo::bar");
     testScopedName("blah::foo::bar");

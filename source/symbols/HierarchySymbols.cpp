@@ -534,10 +534,9 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    const auto& stopExpr =
-        Expression::bind(*syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
-    const auto& iterExpr =
-        Expression::bind(*syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
+    BindContext iterContext(iterScope, LookupLocation::max); // TODO: should be constant
+    const auto& stopExpr = Expression::bind(*syntax.stopExpr, iterContext);
+    const auto& iterExpr = Expression::bind(*syntax.iterationExpr, iterContext);
 
     // Create storage for the iteration variable.
     EvalContext context;

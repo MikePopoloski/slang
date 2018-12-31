@@ -105,7 +105,7 @@ endmodule
     CHECK(gen_b.find<ParameterSymbol>("foo").getValue().integer() == 4);
     CHECK(gen_b.find<ParameterSymbol>("bar").getValue().integer() == 12);
 
-    auto diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == DiagCode::ImportNameCollision);
     REQUIRE(diags[0].notes.size() == 3);
@@ -228,7 +228,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == DiagCode::UndeclaredIdentifier);
     CHECK(diags[1].code == DiagCode::UndeclaredIdentifier);
@@ -280,7 +280,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == DiagCode::AmbiguousWildcardImport);
     CHECK(diags[1].code == DiagCode::RedefinitionDifferentSymbolKind);
@@ -334,7 +334,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == DiagCode::HierarchicalNotAllowedInConstant);
     CHECK(diags[1].code == DiagCode::HierarchicalNotAllowedInConstant);
@@ -359,7 +359,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
     CHECK((it++)->code == DiagCode::UsedBeforeDeclared);
     CHECK(it == diags.end());
@@ -460,7 +460,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    Diagnostics diags = compilation.getAllDiagnostics();
+    auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
     CHECK((it++)->code == DiagCode::ScopeIndexOutOfRange);
     CHECK((it++)->code == DiagCode::InvalidScopeIndexExpression);
@@ -493,4 +493,34 @@ endmodule
     REQUIRE(baz);
     CHECK(baz->kind == SymbolKind::Parameter);
     CHECK(baz->as<ParameterSymbol>().getValue().integer() == 84);
+}
+
+TEST_CASE("Malformed name syntax") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    always_comb $unit;
+    always_comb $root;
+    //always_comb local;
+    //always_comb this;
+    //always_comb super;
+    always_comb unique;
+    always_comb and;
+    always_comb or;
+    always_comb xor;
+    always_comb new;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // TODO:
+    /*auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::ScopeIndexOutOfRange);
+    CHECK((it++)->code == DiagCode::InvalidScopeIndexExpression);
+    CHECK((it++)->code == DiagCode::ScopeNotIndexable);
+    CHECK(it == diags.end());*/
 }
