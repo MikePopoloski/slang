@@ -209,6 +209,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::HierarchicalNotAllowedInConstant] = { "hierarchical names are not allowed in constant expressions", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownMember] = { "no member named '{}' in {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownPackageMember] = { "no member named '{}' in package '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UnknownUnitMember] = { "no member named '{}' in compilation unit", DiagnosticSeverity::Error };
     descriptors[DiagCode::RecursiveDefinition] = { "'{}' recursively depends on its own definition", DiagnosticSeverity::Error };
     descriptors[DiagCode::ImplicitNamedPortNotFound] = { "could not find connection for implicit named port '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::ImplicitNamedPortTypeMismatch] = { "implicit named port '{}' of type {} connects to value of inequivalent type {}", DiagnosticSeverity::Error };

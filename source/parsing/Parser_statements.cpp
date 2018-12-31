@@ -35,7 +35,8 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
                     addDiag(DiagCode::ExpectedIfOrCase, peek(1).location())
                         << getTokenKindText(peek().kind);
                     skipToken(std::nullopt);
-                    return factory.emptyStatement(label, attributes, Token());
+                    return factory.emptyStatement(
+                        label, attributes, missingToken(TokenKind::Semicolon, peek().location()));
                 }
             }
             break;
@@ -127,7 +128,8 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
     }
 
     addDiag(DiagCode::ExpectedStatement, peek().location());
-    return factory.emptyStatement(label, attributes, Token());
+    return factory.emptyStatement(label, attributes,
+                                  missingToken(TokenKind::Semicolon, peek().location()));
 }
 
 ElseClauseSyntax* Parser::parseElseClause() {

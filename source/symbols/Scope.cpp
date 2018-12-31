@@ -862,6 +862,7 @@ void lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
                 return;
         }
 
+        SymbolKind previousKind = symbol->kind;
         string_view packageName = symbol->kind == SymbolKind::Package ? symbol->name : "";
         const Scope& current = symbol->as<Scope>();
 
@@ -876,6 +877,8 @@ void lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
             DiagCode code = DiagCode::CouldNotResolveHierarchicalPath;
             if (!packageName.empty())
                 code = DiagCode::UnknownPackageMember;
+            else if (previousKind == SymbolKind::CompilationUnit)
+                code = DiagCode::UnknownUnitMember;
 
             auto& diag = result.addDiag(context.scope, code, it->dotLocation);
             diag << nameToken.valueText();

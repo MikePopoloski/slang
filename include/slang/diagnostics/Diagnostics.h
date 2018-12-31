@@ -210,6 +210,7 @@ enum class DiagCode : uint8_t {
     HierarchicalNotAllowedInConstant,
     UnknownMember,
     UnknownPackageMember,
+    UnknownUnitMember,
     RecursiveDefinition,
     ImplicitNamedPortNotFound,
     ImplicitNamedPortTypeMismatch,

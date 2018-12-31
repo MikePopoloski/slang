@@ -34,6 +34,8 @@ protected:
     Token expect(TokenKind kind);
     void skipToken(std::optional<DiagCode> diagCode);
 
+    Token missingToken(TokenKind kind, SourceLocation location);
+
     Token getLastConsumed() const;
 
     /// Helper class that maintains a sliding window of tokens, with lookahead.
@@ -89,8 +91,7 @@ protected:
                                                        TParserFunc&& parseItem) {
         Token start = expect(startKind);
         if (start.isMissing())
-            return std::make_tuple(start, Token::createMissing(alloc, endKind, start.location()),
-                                   nullptr);
+            return std::make_tuple(start, missingToken(endKind, start.location()), nullptr);
 
         TResult result = parseItem();
         Token end = expect(endKind);
@@ -105,7 +106,7 @@ protected:
                             DiagCode code, TParserFunc&& parseItem) {
         openToken = expect(openKind);
         if (openToken.isMissing()) {
-            closeToken = Token::createMissing(alloc, closeKind, openToken.location());
+            closeToken = missingToken(closeKind, openToken.location());
             list = span<TokenOrSyntax>();
             return;
         }
@@ -143,7 +144,7 @@ protected:
                 addDiag(code, location);
             }
 
-            closeToken = Token::createMissing(alloc, closeKind, current.location());
+            closeToken = missingToken(closeKind, current.location());
             return;
         }
 

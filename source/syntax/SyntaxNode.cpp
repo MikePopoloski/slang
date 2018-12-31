@@ -56,7 +56,7 @@ Token SyntaxNode::getFirstToken() const {
 
 Token SyntaxNode::getLastToken() const {
     uint32_t childCount = getChildCount();
-    for (int i = int(childCount - 1); i >= 0; i--) {
+    for (int i = int(childCount) - 1; i >= 0; i--) {
         auto child = getChild(uint32_t(i));
         if (child.isToken()) {
             if (child.token())

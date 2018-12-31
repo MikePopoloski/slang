@@ -303,8 +303,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
     if (!isPossibleVectorDigit(first.kind)) {
         addDiag(DiagCode::ExpectedVectorDigits, first.location());
         return factory.integerVectorExpression(
-            sizeToken, baseToken,
-            Token::createMissing(alloc, TokenKind::IntegerLiteral, first.location()));
+            sizeToken, baseToken, missingToken(TokenKind::IntegerLiteral, first.location()));
     }
 
     Token next = first;

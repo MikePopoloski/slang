@@ -89,6 +89,10 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
         addDiag(*diagCode, token.location()) << token.range();
 }
 
+Token ParserBase::missingToken(TokenKind kind, SourceLocation location) {
+    return Token::createMissing(alloc, kind, location);
+}
+
 Token ParserBase::getLastConsumed() const {
     return window.lastConsumed;
 }

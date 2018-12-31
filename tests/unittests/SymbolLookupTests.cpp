@@ -496,6 +496,7 @@ endmodule
 }
 
 TEST_CASE("Malformed name syntax") {
+    // TODO: uncomment cases below as they become supported
     auto tree = SyntaxTree::fromText(R"(
 module m;
 
@@ -505,22 +506,62 @@ module m;
     //always_comb this;
     //always_comb super;
     always_comb unique;
-    always_comb and;
-    always_comb or;
+    //always_comb and;
+    //always_comb or;
     always_comb xor;
     always_comb new;
+
+    always_comb asdf.$root.$unit;
+    always_comb xor.xor;
+
+    struct { logic a; logic b; } blah;
+    always_comb blah.$unit;
 
 endmodule
 )");
 
+    // This test just checks that nothing crashes.
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Malformed name syntax 2") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    always_comb $unit.foo;
+    always_comb $root::bar;
+    always_comb foo.asdf::blah;
+
+endmodule
+)",
+                                     "source");
+
+    // This test just checks that nothing crashes.
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    // TODO:
-    /*auto& diags = compilation.getAllDiagnostics();
-    auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::ScopeIndexOutOfRange);
-    CHECK((it++)->code == DiagCode::InvalidScopeIndexExpression);
-    CHECK((it++)->code == DiagCode::ScopeNotIndexable);
-    CHECK(it == diags.end());*/
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:4:22: error: invalid access token; '.' should be '::'
+    always_comb $unit.foo;
+                     ^
+source:4:22: error: no member named 'foo' in compilation unit
+    always_comb $unit.foo;
+                     ^~~~
+source:5:22: error: invalid access token; '::' should be '.'
+    always_comb $root::bar;
+                     ^
+source:5:22: error: could not resolve hierarchical path name 'bar'
+    always_comb $root::bar;
+                     ^ ~~~
+source:6:17: error: use of undeclared identifier 'foo'
+    always_comb foo.asdf::blah;
+                ^~~
+source:6:25: error: invalid access token; '::' should be '.'
+    always_comb foo.asdf::blah;
+                        ^
+)");
 }
