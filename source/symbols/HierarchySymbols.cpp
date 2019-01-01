@@ -298,7 +298,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 InstanceSymbol::InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name,
                                SourceLocation loc, const DefinitionSymbol& definition) :
     Symbol(kind, name, loc),
-    Scope(compilation, this), portMap(compilation.allocSymbolMap()), definition(definition) {
+    Scope(compilation, this), definition(definition), portMap(compilation.allocSymbolMap()) {
 }
 
 bool InstanceSymbol::isKind(SymbolKind kind) {

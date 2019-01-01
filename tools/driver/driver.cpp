@@ -53,7 +53,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
     for (const SourceBuffer& buffer : buffers)
         compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
 
-    Diagnostics diagnostics = compilation.getAllDiagnostics();
+    auto& diagnostics = compilation.getAllDiagnostics();
     DiagnosticWriter writer(sourceManager);
     printf("%s\n", writer.report(diagnostics).c_str());
 
