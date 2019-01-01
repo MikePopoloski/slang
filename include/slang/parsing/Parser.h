@@ -17,6 +17,27 @@ namespace slang {
 class BumpAllocator;
 class Preprocessor;
 
+namespace detail {
+
+/// Various options for parsing expressions.
+enum class ExpressionOptions {
+    None = 0,
+
+    // Allow pattern matching expressions; these are not allowed recursively so
+    // they're turned off after finding the first one
+    AllowPatternMatch = 1,
+
+    // In a procedural assignment context, <= is a non-blocking assignment, not the less than or
+    // equal to operator.
+    ProceduralAssignmentContext = 2,
+
+    // In an event expression context, the "or" operator has special meaning
+    EventExpressionContext = 4
+};
+BITMASK_DEFINE_MAX_ELEMENT(ExpressionOptions, EventExpressionContext);
+
+}
+
 /// Implements a full syntax parser for SystemVerilog.
 class Parser : ParserBase {
 public:
@@ -220,10 +241,10 @@ private:
     class DepthGuard {
     public:
         DepthGuard(Parser& _parser) : parser(_parser) {
-            ++parser.depth;
+            ++parser.recursionDepth;
             parser.throwIfTooDeep();
         }
-        ~DepthGuard() { --parser.depth; }
+        ~DepthGuard() { --parser.recursionDepth; }
 
     private:
         Parser& parser;
@@ -231,27 +252,10 @@ private:
     DepthGuard setDepthGuard() { return DepthGuard(*this); }
     void throwIfTooDeep();
 
-    /// Various options for parsing expressions.
-    // TODO: convert to bitmask
-    struct ExpressionOptions {
-        enum Enum {
-            None = 0,
+    using ExpressionOptions = detail::ExpressionOptions;
 
-            // Allow pattern matching expressions; these are not allowed recursively so
-            // they're turned off after finding the first one
-            AllowPatternMatch = 1,
-
-            // In a procedural assignment context, <= is a non-blocking assignment, not less than or
-            // equals
-            ProceduralAssignmentContext = 2,
-
-            // In an event expression context, the "or" operator has special meaning
-            EventExpressionContext = 4
-        };
-    };
-
-    ExpressionSyntax& parseSubExpression(ExpressionOptions::Enum options, int precedence);
-    ExpressionSyntax& parsePrefixExpression(ExpressionOptions::Enum options, SyntaxKind opKind);
+    ExpressionSyntax& parseSubExpression(bitmask<ExpressionOptions> options, int precedence);
+    ExpressionSyntax& parsePrefixExpression(bitmask<ExpressionOptions> options, SyntaxKind opKind);
 
     template<bool (*IsEnd)(TokenKind)>
     span<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token& end);
@@ -267,7 +271,7 @@ private:
 
     // Scratch space for building up integer vector literals.
     VectorBuilder vectorBuilder;
-    size_t depth = 0;
+    size_t recursionDepth = 0;
     Token eofToken;
 };
 

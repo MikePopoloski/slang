@@ -26,7 +26,7 @@ ExpressionSyntax& Parser::parseMinTypMaxExpression() {
     return factory.minTypMaxExpression(first, colon1, typ, colon2, max);
 }
 
-ExpressionSyntax& Parser::parseSubExpression(ExpressionOptions::Enum options, int precedence) {
+ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options, int precedence) {
     auto dg = setDepthGuard();
 
     auto current = peek();
@@ -72,8 +72,7 @@ ExpressionSyntax& Parser::parseSubExpression(ExpressionOptions::Enum options, in
         if (opKind == SyntaxKind::LessThanEqualExpression &&
             (options & ExpressionOptions::ProceduralAssignmentContext)) {
 
-            options = (ExpressionOptions::Enum)(options &
-                                                ~ExpressionOptions::ProceduralAssignmentContext);
+            options &= ~ExpressionOptions::ProceduralAssignmentContext;
             opKind = SyntaxKind::NonblockingAssignmentExpression;
         }
 
@@ -121,7 +120,7 @@ ExpressionSyntax& Parser::parseSubExpression(ExpressionOptions::Enum options, in
     return *leftOperand;
 }
 
-ExpressionSyntax& Parser::parsePrefixExpression(ExpressionOptions::Enum options,
+ExpressionSyntax& Parser::parsePrefixExpression(bitmask<ExpressionOptions> options,
                                                 SyntaxKind opKind) {
     switch (opKind) {
         case SyntaxKind::UnarySequenceDelayExpression:
@@ -802,10 +801,8 @@ EventExpressionSyntax& Parser::parseEventExpression() {
             edge = consume();
         }
 
-        auto& expr =
-            parseSubExpression((ExpressionOptions::Enum)(ExpressionOptions::AllowPatternMatch |
-                                                         ExpressionOptions::EventExpressionContext),
-                               0);
+        auto& expr = parseSubExpression(
+            ExpressionOptions::AllowPatternMatch | ExpressionOptions::EventExpressionContext, 0);
         left = &factory.signalEventExpression(edge, expr);
     }
 
