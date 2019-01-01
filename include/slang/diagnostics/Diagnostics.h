@@ -129,6 +129,7 @@ enum class DiagCode : uint8_t {
     AttributesOnClassParam,
     AttributesOnGenerateRegion,
     AttributesOnTimeDecl,
+    ParseTreeTooDeep,
 
     // declarations
     NotePreviousDefinition,

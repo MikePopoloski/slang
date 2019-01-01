@@ -36,14 +36,18 @@ enum class ExpressionOptions {
 };
 BITMASK_DEFINE_MAX_ELEMENT(ExpressionOptions, EventExpressionContext);
 
-}
+} // namespace detail
+
+/// Contains various options that can control parsing behavior.
+struct ParserOptions {
+    /// The maximum depth of nested language constructs (statements, exceptions) before
+    /// we give up for fear of stack overflow.
+    uint32_t maxRecursionDepth = 1024;
+};
 
 /// Implements a full syntax parser for SystemVerilog.
 class Parser : ParserBase {
 public:
-    // TODO: This should be configurable through the Options system
-    static constexpr size_t MaxDepth = 100;
-
     explicit Parser(Preprocessor& preprocessor, const Bag& options = {});
 
     /// Parse a whole compilation unit.
@@ -241,8 +245,8 @@ private:
     class DepthGuard {
     public:
         DepthGuard(Parser& _parser) : parser(_parser) {
-            ++parser.recursionDepth;
-            parser.throwIfTooDeep();
+            if (++parser.recursionDepth > parser.parseOptions.maxRecursionDepth)
+                parser.handleTooDeep();
         }
         ~DepthGuard() { --parser.recursionDepth; }
 
@@ -250,7 +254,11 @@ private:
         Parser& parser;
     };
     DepthGuard setDepthGuard() { return DepthGuard(*this); }
-    void throwIfTooDeep();
+    void handleTooDeep();
+
+    class RecursionException : public std::runtime_error {
+        using std::runtime_error::runtime_error;
+    };
 
     using ExpressionOptions = detail::ExpressionOptions;
 
@@ -268,6 +276,7 @@ private:
     bool scanTypePart(uint32_t& index, TokenKind start, TokenKind end);
 
     SyntaxFactory factory;
+    ParserOptions parseOptions;
 
     // Scratch space for building up integer vector literals.
     VectorBuilder vectorBuilder;

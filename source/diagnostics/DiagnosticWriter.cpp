@@ -127,6 +127,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::AttributesOnClassParam] = { "attributes are not allowed on a class parameter", DiagnosticSeverity::Error };
     descriptors[DiagCode::AttributesOnGenerateRegion] = { "attributes are not allowed on a generate region", DiagnosticSeverity::Error };
     descriptors[DiagCode::AttributesOnTimeDecl] = { "attributes are not allowed on a time units declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ParseTreeTooDeep] = { "language constructs are too deeply nested", DiagnosticSeverity::Error };
 
     // declarations
     descriptors[DiagCode::NotePreviousDefinition] = { "previous definition here", DiagnosticSeverity::Note };

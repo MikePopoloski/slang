@@ -10,14 +10,20 @@
 
 namespace slang {
 
-Parser::Parser(Preprocessor& preprocessor, const Bag&) :
-    ParserBase::ParserBase(preprocessor), factory(alloc), vectorBuilder(getDiagnostics()) {
+Parser::Parser(Preprocessor& preprocessor, const Bag& options) :
+    ParserBase::ParserBase(preprocessor), factory(alloc),
+    parseOptions(options.getOrDefault<ParserOptions>()), vectorBuilder(getDiagnostics()) {
 }
 
 CompilationUnitSyntax& Parser::parseCompilationUnit() {
-    auto members = parseMemberList<MemberSyntax>(TokenKind::EndOfFile, eofToken,
-                                                 [this]() { return parseMember(); });
-    return factory.compilationUnit(members, eofToken);
+    try {
+        auto members = parseMemberList<MemberSyntax>(TokenKind::EndOfFile, eofToken,
+                                                     [this]() { return parseMember(); });
+        return factory.compilationUnit(members, eofToken);
+    }
+    catch (RecursionException) {
+        return factory.compilationUnit(nullptr, eofToken);
+    }
 }
 
 SyntaxNode& Parser::parseGuess() {
@@ -2393,9 +2399,9 @@ void Parser::errorIfAttributes(span<AttributeInstanceSyntax*> attributes, DiagCo
         addDiag(code, peek().location());
 }
 
-void Parser::throwIfTooDeep() {
-    if (depth > MaxDepth)
-        throw std::runtime_error("Language constructs nested too deep");
+void Parser::handleTooDeep() {
+    addDiag(DiagCode::ParseTreeTooDeep, peek().location());
+    throw RecursionException("");
 }
 
 } // namespace slang
