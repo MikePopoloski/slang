@@ -10,6 +10,8 @@ TEST_CASE("Simple eval") {
     session.eval("int i = 4;");
     value = session.eval("i + 9");
     CHECK(value.integer() == 13);
+
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Eval function calls") {
@@ -32,6 +34,7 @@ endfunction
 
     value = session.eval("bar()");
     CHECK(value.integer() == 2);
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Nested functions") {
@@ -51,6 +54,7 @@ endfunction
 
     auto value = session.eval("num_words_in_address_space(8, 64, 20)");
     CHECK(value.integer() == 131072);
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Module param") {
@@ -59,6 +63,7 @@ TEST_CASE("Module param") {
     session.eval("A #(.P(2)) a0();");
     auto value = session.eval("a0.LP");
     CHECK(value.integer() == 5);
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Interface param") {
@@ -68,6 +73,7 @@ TEST_CASE("Interface param") {
     session.eval("IFACE1 #(6) i0();");
     auto value = session.eval("i0.W");
     CHECK(value.integer() == 6);
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Interface port param eval") {
@@ -85,6 +91,7 @@ endinterface
 
     auto value = session.eval("m0.LP");
     CHECK(value.integer() == 6);
+    NO_SESSION_ERRORS;
 }
 
 // TODO:
@@ -115,6 +122,7 @@ endfunction
 
     auto elseValue = session.eval("foo(2)");
     CHECK(elseValue.integer() == 5);
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Eval for loop") {
@@ -139,6 +147,7 @@ endfunction
 
     auto value3 = session.eval("foo(3)");
     CHECK(value3.integer() == 8);
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Integer operators") {
@@ -163,7 +172,6 @@ TEST_CASE("Integer operators") {
     EVAL("43'b10x", "43'b10x"_si);
     EVAL("22'b101x", "22'b101x"_si);
     EVAL("72'hxxffffffffffffffff", "72'hxxffffffffffffffff"_si);
-    EVAL("2'b101", "2'b01"_si);
 
     // Literal unknown extension
     EVAL("5'bx01", "5'bxxx01"_si);
@@ -203,6 +211,8 @@ TEST_CASE("Integer operators") {
     EVAL("4'b1001[4 : 1]", "4'bx100"_si);
     EVAL("4'b1001[4 : -1]", "6'bx1001x"_si);
     EVAL("4'b1001[105 : 101]", "5'bxxxxx"_si);
+
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Assignments") {
@@ -229,6 +239,8 @@ TEST_CASE("Assignments") {
     EVAL("bar[2][3]", 1);
     EVAL("bar[7:6] = 6'b110011", 51);
     EVAL("bar", 208901);
+
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("bit select weird indices") {
@@ -246,7 +258,7 @@ TEST_CASE("bit select weird indices") {
     value = session.eval("up_vect[14 +: 3]").integer();
     CHECK(value == "3'b011"_si);
 
-    session.eval("logic [20 : 5] down_vect = 5'd25");
+    session.eval("logic [20 : 5] down_vect = 5'd25;");
 
     value = session.eval("down_vect[8:5]").integer();
     CHECK(value == "4'd9"_si);
@@ -256,12 +268,14 @@ TEST_CASE("bit select weird indices") {
 
     value = session.eval("down_vect[8 -: 4]").integer();
     CHECK(value == 9);
+
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("dimension based system functions") {
     ScriptSession session;
     session.eval("logic [0 : 15] up_vect = 5'b10111;");
-    session.eval("logic [15 : 0] down_vect = 5'd25");
+    session.eval("logic [15 : 0] down_vect = 5'd25;");
 
     EVAL("$left(up_vect)", 0);
     EVAL("$right(up_vect)", 15);
@@ -282,6 +296,8 @@ TEST_CASE("dimension based system functions") {
     EVAL("$increment(up_vect)", -1);
     EVAL("$increment(down_vect)", 1);
 #undef EVAL
+
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Unary inc-dec operators") {
@@ -300,6 +316,8 @@ TEST_CASE("Unary inc-dec operators") {
     for (int i = 0; i < 3; i++)
         session.eval("--a");
     CHECK(session.eval("a").integer() == 122);
+
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Constant eval errors") {
@@ -310,7 +328,7 @@ TEST_CASE("Constant eval errors") {
 
     CHECK(!session.eval("localparam int p = bar(1);"));
 
-    std::string msg = "\n" + session.reportDiagnostics();
+    std::string msg = "\n" + report(session.getDiagnostics());
     CHECK(msg == R"(
 source:1:20: error: expression is not constant
 localparam int p = bar(1);

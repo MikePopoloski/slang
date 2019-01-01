@@ -44,6 +44,14 @@ using namespace slang;
         }                                              \
     } while (0)
 
+#define NO_SESSION_ERRORS                      \
+    do {                                       \
+        auto diags = session.getDiagnostics(); \
+        if (!diags.empty()) {                  \
+            FAIL_CHECK(report(diags));         \
+        }                                      \
+    } while (0)
+
 inline std::string report(const Diagnostics& diags) {
     if (diags.empty())
         return "";
