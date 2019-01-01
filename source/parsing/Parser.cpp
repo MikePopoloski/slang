@@ -21,7 +21,7 @@ CompilationUnitSyntax& Parser::parseCompilationUnit() {
                                                      [this]() { return parseMember(); });
         return factory.compilationUnit(members, eofToken);
     }
-    catch (RecursionException) {
+    catch (const RecursionException&) {
         return factory.compilationUnit(nullptr, eofToken);
     }
 }
