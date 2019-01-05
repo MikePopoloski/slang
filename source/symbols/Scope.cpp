@@ -74,6 +74,19 @@ void LookupResult::clear() {
     diagnostics.clear();
 }
 
+void LookupResult::copyFrom(const LookupResult& other) {
+    found = other.found;
+    systemSubroutine = other.systemSubroutine;
+    wasImported = other.wasImported;
+    isHierarchical = other.isHierarchical;
+
+    selectors.clear();
+    selectors.appendRange(other.selectors);
+
+    diagnostics.clear();
+    diagnostics.appendRange(other.diagnostics);
+}
+
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
     compilation(compilation_), thisSym(thisSym_), nameMap(compilation.allocSymbolMap()) {
 }
@@ -307,7 +320,6 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
     }
 
     // Perform the lookup.
-    ensureElaborated();
     lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);
     if (selectors)
         result.selectors.appendRange(*selectors);
@@ -319,7 +331,6 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
 const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
                                            SourceRange sourceRange,
                                            bitmask<LookupFlags> flags) const {
-    ensureElaborated();
     if (name.empty())
         return nullptr;
 
@@ -595,6 +606,8 @@ void Scope::elaborate() const {
 void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
                                   SourceRange sourceRange, bitmask<LookupFlags> flags,
                                   LookupResult& result) const {
+    ensureElaborated();
+
     // Try a simple name lookup to see if we find anything.
     const Symbol* symbol = nullptr;
     if (auto it = nameMap->find(name); it != nameMap->end()) {
@@ -793,7 +806,7 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
     return symbol;
 }
 
-void lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
+bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
                     const SyntaxList<ElementSelectSyntax>* selectors, const BindContext& context,
                     LookupResult& result, bitmask<LookupFlags> flags) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
@@ -819,7 +832,7 @@ void lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
             }
 
             result.found = symbol;
-            return;
+            return true;
         }
 
         // This is a hierarchical lookup unless it's the first component in the path and the
@@ -835,7 +848,7 @@ void lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
             // TODO: modports
             symbol = symbol->as<InterfacePortSymbol>().connection;
             if (!symbol)
-                return;
+                return false;
         }
 
         if (!symbol->isScope() || symbol->isType()) {
@@ -846,20 +859,20 @@ void lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
             diag << it->name->sourceRange();
 
             diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
-            return;
+            return true;
         }
 
         if (result.isHierarchical && (flags & LookupFlags::Constant) != 0) {
             auto& diag = result.addDiag(context.scope, DiagCode::HierarchicalNotAllowedInConstant,
                                         it->dotLocation);
             diag << nameToken.range();
-            return;
+            return false;
         }
 
         if (selectors) {
             symbol = handleLookupSelectors(symbol, *selectors, context, result);
             if (!symbol)
-                return;
+                return true;
         }
 
         SymbolKind previousKind = symbol->kind;
@@ -868,11 +881,10 @@ void lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
 
         std::tie(nameToken, selectors) = decomposeName(*it->name);
         if (nameToken.valueText().empty())
-            return;
+            return false;
 
         symbol = current.find(nameToken.valueText());
         if (!symbol) {
-            // TODO: do this for compilation unit as well
             // Give a slightly nicer error if this is the first component in a package lookup.
             DiagCode code = DiagCode::CouldNotResolveHierarchicalPath;
             if (!packageName.empty())
@@ -887,13 +899,15 @@ void lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
             if (!packageName.empty())
                 diag << packageName;
 
-            return;
+            return true;
         }
     }
 
     result.found = symbol;
     if (selectors)
         result.selectors.appendRange(*selectors);
+
+    return true;
 }
 
 const Symbol* getCompilationUnit(const Symbol& symbol) {
@@ -910,12 +924,30 @@ const Symbol* getCompilationUnit(const Symbol& symbol) {
     }
 }
 
+const Scope* getInstantiationScope(Compilation& compilation, const Symbol& symbol) {
+    const Symbol* current = &symbol;
+    while (true) {
+        auto scope = current->getScope();
+        if (!scope)
+            return &compilation.getRoot();
+
+        const Symbol& next = scope->asSymbol();
+        if (InstanceSymbol::isKind(current->kind)) {
+            // If we hit the compilation unit, we actually just want to look in the
+            // root scope (since all instances are accessible there).
+            if (next.kind == SymbolKind::CompilationUnit)
+                return &compilation.getRoot();
+            return scope;
+        }
+
+        current = &next;
+    }
+}
+
 } // namespace
 
 void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
                             bitmask<LookupFlags> flags, LookupResult& result) const {
-    ensureElaborated();
-
     // Split the name into easier to manage chunks. The parser will always produce a
     // left-recursive name tree, so that's all we'll bother to handle.
     // TODO: clean up dot vs colon handling
@@ -936,33 +968,37 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     }
 
     auto [nameToken, selectors] = decomposeName(*scoped->left);
-    if (nameToken.valueText().empty())
+    auto name = nameToken.valueText();
+    if (name.empty())
         return;
+
+    auto downward = [&]() {
+        return lookupDownward(nameParts, nameToken, selectors, BindContext(*this, location), result,
+                              flags);
+    };
+
+    bool inConstantEval = (flags & LookupFlags::Constant) != 0;
 
     switch (scoped->left->kind) {
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
-            // Start by trying to find the first name segment using normal unqualified lookup.
-            lookupUnqualifiedImpl(nameToken.valueText(), location, nameToken.range(), flags,
-                                  result);
-            if (result.hasError())
-                return;
             break;
         case SyntaxKind::UnitScope:
             result.found = getCompilationUnit(asSymbol());
-            ASSERT(result.found);
-            break;
+            downward();
+            return;
         case SyntaxKind::RootScope:
             // Be careful to avoid calling getRoot() if we're in a constant context (there's a
             // chance we could already be in the middle of calling getRoot in that case).
-            if (flags & LookupFlags::Constant) {
+            if (inConstantEval) {
                 result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant,
                                nameToken.range());
                 return;
             }
 
             result.found = &compilation.getRoot();
-            break;
+            downward();
+            return;
         case SyntaxKind::LocalScope: // TODO: handle these
         case SyntaxKind::ThisHandle:
         case SyntaxKind::SuperHandle:
@@ -970,25 +1006,27 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             THROW_UNREACHABLE;
     }
 
-    BindContext context(*this, location);
+    // Start by trying to find the first name segment using normal unqualified lookup
+    lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);
+    if (result.hasError())
+        return;
 
     // [23.7.1] If we are starting with a colon separator, always do a downwards name resolution.
-    // If the prefix name can be resolved normally, we have a class scope, otherwise it's a package
-    // lookup.
     if (colonParts) {
+        // If the prefix name can be resolved normally, we have a class scope, otherwise it's a
+        // package lookup.
         if (!result.found) {
-            result.found = compilation.getPackage(nameToken.valueText());
+            result.found = compilation.getPackage(name);
 
             if (!result.found) {
-                result.addDiag(*this, DiagCode::UnknownClassOrPackage, nameToken.range())
-                    << nameToken.valueText();
+                result.addDiag(*this, DiagCode::UnknownClassOrPackage, nameToken.range()) << name;
                 return;
             }
         }
 
         // We can't do upwards name resolution if colon access is involved, so always return after
         // one downward lookup.
-        lookupDownward(nameParts, nameToken, selectors, context, result, flags);
+        downward();
         return;
     }
 
@@ -1001,13 +1039,62 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     // 4. The name is not found; it's considered a hierarchical reference and participates in
     //    upwards name resolution.
 
-    if (!result.found) {
-        // TODO: upward name resolution
-        reportUndeclared(nameToken.valueText(), nameToken.range(), flags, result);
+    LookupResult originalResult;
+    if (result.found) {
+        // Perform the downward lookup.
+        if (!downward())
+            return;
+
+        // If we found a symbol, we're done with lookup. In case (1) above we'll always have a
+        // found symbol here. Otherwise, if we're in case (2) we need to do further upwards name
+        // lookup. If we're in case (3) we've already issued an error and just need to give up.
+        if (result.found || result.wasImported)
+            return;
+
+        if (inConstantEval) {
+            result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, nameToken.range());
+            return;
+        }
+
+        originalResult.copyFrom(result);
+    }
+    else if (inConstantEval) {
+        // We can't perform upward lookups during constant evaluation so just report an unknown
+        // identifier.
+        reportUndeclared(name, nameToken.range(), flags, result);
         return;
     }
 
-    lookupDownward(nameParts, nameToken, selectors, context, result, flags);
+    // If we reach this point we're in case (2) or (4) above. Go up through the instantiation
+    // hierarchy and see if we can find a match there.
+    auto scope = this;
+    while (scope->asSymbol().kind != SymbolKind::Root) {
+        scope = getInstantiationScope(compilation, scope->asSymbol());
+
+        result.clear();
+        scope->lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);
+        if (result.hasError())
+            return;
+
+        // Finding a value symbol or interface port during upward lookup should just get ignored.
+        if (!result.found)
+            continue;
+
+        if (result.found->kind != SymbolKind::InterfacePort && !result.found->isValue()) {
+            if (!downward())
+                return;
+
+            if (result.found)
+                return;
+        }
+    }
+
+    // We couldn't find anything. originalResult has any diagnostics issued by the first downward
+    // lookup (if any), so it's fine to just return it as is. If we never found any symbol
+    // originally, issue an appropriate error for that.
+    result.copyFrom(originalResult);
+    if (!result.found && !result.hasError())
+        reportUndeclared(name, nameToken.range(), flags, result);
 }
 
 void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<LookupFlags> flags,

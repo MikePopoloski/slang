@@ -277,7 +277,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                 DeclaredTypeFlags::InferImplicit);
             overrides.append(&expr);
         }
-        else if (!param->getInitializer() && !param->isLocalParam() && param->isPortParam()) {
+        else if (!param->isLocalParam() && param->isPortParam() && !param->getInitializer()) {
             auto& diag =
                 scope.addDiag(DiagCode::ParamHasNoValue, syntax.getFirstToken().location());
             diag << definition->name;

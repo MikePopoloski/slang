@@ -106,6 +106,7 @@ struct LookupResult {
 
     bool hasError() const;
     void clear();
+    void copyFrom(const LookupResult& other);
 
 private:
     Diagnostics diagnostics;
