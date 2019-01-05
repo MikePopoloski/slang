@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/Compilation.h"
 
+#include <nlohmann/json.hpp>
+
 #include "BuiltInSubroutines.h"
 
 #include "slang/symbols/ASTVisitor.h"
@@ -223,6 +225,7 @@ const RootSymbol& Compilation::getRoot() {
         root->addMember(instance);
         topList.append(&instance);
 
+        // TODO: do we need this?
         instance.visit(elaborationVisitor);
     }
 

@@ -7,6 +7,7 @@
 #include "slang/binding/ConstantValue.h"
 
 #include <nlohmann/json.hpp>
+#include <fmt/format.h>
 
 namespace slang {
 
@@ -62,8 +63,12 @@ bool ConstantRange::containsPoint(int32_t index) const {
     return index >= lower() && index <= upper();
 }
 
+std::string ConstantRange::toString() const {
+    return fmt::format("[{}:{}]", left, right);
+}
+
 std::ostream& operator<<(std::ostream& os, const ConstantRange& cr) {
-    return os << "[" << cr.left << ":" << cr.right << "]";
+    return os << cr.toString();
 }
 
 ConstantValue LValue::load() const {

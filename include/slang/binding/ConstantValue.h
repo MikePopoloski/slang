@@ -99,6 +99,8 @@ struct ConstantRange {
     /// Determines whether the given point is within the range.
     bool containsPoint(int32_t index) const;
 
+    std::string toString() const;
+
     bool operator==(const ConstantRange& rhs) const {
         return left == rhs.left && right == rhs.right;
     }

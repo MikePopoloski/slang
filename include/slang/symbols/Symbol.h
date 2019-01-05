@@ -16,58 +16,60 @@ namespace slang {
 class Scope;
 class Type;
 
-enum class SymbolKind {
-    Unknown,
-    Root,
-    CompilationUnit,
-    DeferredMember,
-    TransparentMember,
-    PredefinedIntegerType,
-    ScalarType,
-    FloatingType,
-    EnumType,
-    EnumValue,
-    PackedArrayType,
-    UnpackedArrayType,
-    PackedStructType,
-    UnpackedStructType,
-    PackedUnionType,
-    UnpackedUnionType,
-    ClassType,
-    VoidType,
-    NullType,
-    CHandleType,
-    StringType,
-    EventType,
-    TypeAlias,
-    ErrorType,
-    ForwardingTypedef,
-    NetType,
-    Definition,
-    Parameter,
-    Port,
-    InterfacePort,
-    Modport,
-    ModuleInstance,
-    InterfaceInstance,
-    InstanceArray,
-    Package,
-    ExplicitImport,
-    WildcardImport,
-    Program,
-    Attribute,
-    Genvar,
-    GenerateBlock,
-    GenerateBlockArray,
-    ProceduralBlock,
-    SequentialBlock,
-    Net,
-    Variable,
-    FormalArgument,
-    Field,
-    Subroutine,
-    ContinuousAssign
-};
+#define SYMBOLKIND(x) \
+    x(Unknown) \
+    x(Root) \
+    x(CompilationUnit) \
+    x(DeferredMember) \
+    x(TransparentMember) \
+    x(PredefinedIntegerType) \
+    x(ScalarType) \
+    x(FloatingType) \
+    x(EnumType) \
+    x(EnumValue) \
+    x(PackedArrayType) \
+    x(UnpackedArrayType) \
+    x(PackedStructType) \
+    x(UnpackedStructType) \
+    x(PackedUnionType) \
+    x(UnpackedUnionType) \
+    x(ClassType) \
+    x(VoidType) \
+    x(NullType) \
+    x(CHandleType) \
+    x(StringType) \
+    x(EventType) \
+    x(TypeAlias) \
+    x(ErrorType) \
+    x(ForwardingTypedef) \
+    x(NetType) \
+    x(Definition) \
+    x(Parameter) \
+    x(Port) \
+    x(InterfacePort) \
+    x(Modport) \
+    x(ModuleInstance) \
+    x(InterfaceInstance) \
+    x(InstanceArray) \
+    x(Package) \
+    x(ExplicitImport) \
+    x(WildcardImport) \
+    x(Program) \
+    x(Attribute) \
+    x(Genvar) \
+    x(GenerateBlock) \
+    x(GenerateBlockArray) \
+    x(ProceduralBlock) \
+    x(SequentialBlock) \
+    x(Net) \
+    x(Variable) \
+    x(FormalArgument) \
+    x(Field) \
+    x(Subroutine) \
+    x(ContinuousAssign)
+
+ENUM(SymbolKind, SYMBOLKIND)
+#undef SYMBOLKIND
 
 /// Base class for all symbols (logical code constructs) such as modules, types,
 /// functions, variables, etc.
@@ -155,6 +157,8 @@ protected:
         setParent(scope);
         indexInScope = index;
     }
+
+    static json jsonLink(const Symbol& target);
 
 private:
     friend class Scope;

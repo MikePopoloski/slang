@@ -592,8 +592,8 @@ void EnumValueSymbol::setValue(ConstantValue newValue) {
 }
 
 void EnumValueSymbol::toJson(json& j) const {
-    j["type"] = getType();
-    j["value"] = getValue();
+    if (value)
+        j["value"] = *value;
 }
 
 PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
@@ -653,6 +653,11 @@ bool FieldSymbol::isPacked() const {
     ASSERT(scope);
     return scope->asSymbol().kind == SymbolKind::PackedStructType ||
            scope->asSymbol().kind == SymbolKind::UnpackedStructType;
+}
+
+void FieldSymbol::toJson(json& j) const {
+    VariableSymbol::toJson(j);
+    j["offset"] = offset;
 }
 
 PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
@@ -722,7 +727,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
 
     const Type* result = structType;
     BindContext context(scope, location);
-    
+
     ptrdiff_t count = syntax.dimensions.size();
     for (ptrdiff_t i = 0; i < count; i++) {
         auto& dimSyntax = *syntax.dimensions[count - i - 1];
@@ -828,7 +833,9 @@ void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl
 }
 
 void ForwardingTypedefSymbol::toJson(json& j) const {
-    j["category"] = category; // TODO: tostring
+    j["category"] = toString(category);
+    if (next)
+        j["next"] = *next;
 }
 
 const TypeAliasType& TypeAliasType::fromSyntax(Compilation& compilation,
@@ -895,6 +902,12 @@ void TypeAliasType::checkForwardDecls() const {
 
 ConstantValue TypeAliasType::getDefaultValueImpl() const {
     return targetType.getType().getDefaultValue();
+}
+
+void TypeAliasType::toJson(json& j) const {
+    j["target"] = targetType.getType();
+    if (firstForward)
+        j["forward"] = *firstForward;
 }
 
 NetType::NetType(NetKind netKind) :

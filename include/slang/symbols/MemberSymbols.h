@@ -179,7 +179,7 @@ class NetSymbol : public ValueSymbol {
 public:
     NetSymbol(string_view name, SourceLocation loc) : ValueSymbol(SymbolKind::Net, name, loc) {}
 
-    void toJson(json& j) const;
+    void toJson(json&) const {}
 
     static void fromSyntax(Compilation& compilation, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results);

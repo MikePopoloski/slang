@@ -85,6 +85,10 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
     return *result;
 }
 
+void DefinitionSymbol::toJson(json& j) const {
+    j["definitionKind"] = toString(definitionKind);
+}
+
 namespace {
 
 Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definition,
@@ -301,6 +305,10 @@ InstanceSymbol::InstanceSymbol(SymbolKind kind, Compilation& compilation, string
     Scope(compilation, this), definition(definition), portMap(compilation.allocSymbolMap()) {
 }
 
+void InstanceSymbol::toJson(json& j) const {
+    j["definition"] = jsonLink(definition);
+}
+
 bool InstanceSymbol::isKind(SymbolKind kind) {
     switch (kind) {
         case SymbolKind::ModuleInstance:
@@ -397,6 +405,10 @@ InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
     return *instance;
 }
 
+void InstanceArraySymbol::toJson(json& j) const {
+    j["range"] = range.toString();
+}
+
 SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilation,
                                                          const BlockStatementSyntax& syntax) {
     auto result = compilation.emplace<SequentialBlockSymbol>(compilation, syntax.begin.location());
@@ -416,8 +428,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Compilation& compilatio
 }
 
 void ProceduralBlockSymbol::toJson(json& j) const {
-    // TODO: stringify
-    j["procedureKind"] = procedureKind;
+    j["procedureKind"] = toString(procedureKind);
 }
 
 static string_view getGenerateBlockName(const SyntaxNode& node) {
@@ -481,6 +492,11 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateS
     createBlock(*syntax.block, selector.has_value() && selector.value());
     if (syntax.elseClause)
         createBlock(*syntax.elseClause->clause, selector.has_value() && !selector.value());
+}
+
+void GenerateBlockSymbol::toJson(json& j) const {
+    j["constructIndex"] = constructIndex;
+    j["isInstantiated"] = isInstantiated;
 }
 
 GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
@@ -553,6 +569,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         createBlock(SVInt(32, 0, true), false);
 
     return *result;
+}
+
+void GenerateBlockArraySymbol::toJson(json& j) const {
+    j["constructIndex"] = constructIndex;
 }
 
 } // namespace slang

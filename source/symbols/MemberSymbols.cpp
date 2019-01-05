@@ -56,7 +56,11 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
 }
 
 void ExplicitImportSymbol::toJson(json& j) const {
-    j["package"] = std::string(packageName);
+    if (auto pkg = package())
+        j["package"] = jsonLink(*pkg);
+
+    if (auto sym = importedSymbol())
+        j["import"] = jsonLink(*sym);
 }
 
 const PackageSymbol* WildcardImportSymbol::getPackage() const {
@@ -82,7 +86,8 @@ const PackageSymbol* WildcardImportSymbol::getPackage() const {
 }
 
 void WildcardImportSymbol::toJson(json& j) const {
-    j["package"] = std::string(packageName);
+    if (auto pkg = getPackage())
+        j["package"] = jsonLink(*pkg);
 }
 
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort) :
@@ -149,7 +154,6 @@ void ParameterSymbol::setValue(ConstantValue value) {
 }
 
 void ParameterSymbol::toJson(json& j) const {
-    j["type"] = getType();
     j["value"] = getValue();
     j["isLocal"] = isLocalParam();
     j["isPort"] = isPortParam();
@@ -992,12 +996,23 @@ void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> po
     builder.finalize();
 }
 
-void PortSymbol::toJson(json&) const {
-    // TODO: implement this
+void PortSymbol::toJson(json& j) const {
+    j["portKind"] = toString(portKind);
+    j["direction"] = toString(direction);
+
+    if (internalSymbol)
+        j["internalSymbol"] = jsonLink(*internalSymbol);
+
+    // TODO: expressions
 }
 
-void InterfacePortSymbol::toJson(json&) const {
-    // TODO: implement this
+void InterfacePortSymbol::toJson(json& j) const {
+    if (interfaceDef)
+        j["interfaceDef"] = jsonLink(*interfaceDef);
+    if (modport)
+        j["modport"] = jsonLink(*modport);
+    if (connection)
+        j["connection"] = jsonLink(*connection);
 }
 
 void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax& syntax,
@@ -1011,11 +1026,6 @@ void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax&
         net->setSyntax(*declarator);
         results.append(net);
     }
-}
-
-void NetSymbol::toJson(json&) const {
-    // TODO:
-    // j["dataType"] = *dataType;
 }
 
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
@@ -1041,18 +1051,13 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
 }
 
 void VariableSymbol::toJson(json& j) const {
-    j["type"] = getType();
-    j["lifetime"] = lifetime; // TODO: tostring
+    j["lifetime"] = toString(lifetime);
     j["isConst"] = isConst;
-
-    // TODO:
-    // if (initializer)
-    //    j["initializer"] =
 }
 
 void FormalArgumentSymbol::toJson(json& j) const {
     VariableSymbol::toJson(j);
-    j["direction"] = direction; // TODO: tostring
+    j["direction"] = toString(direction);
 }
 
 SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
@@ -1144,7 +1149,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
 void SubroutineSymbol::toJson(json& j) const {
     j["returnType"] = getReturnType();
-    j["defaultLifetime"] = defaultLifetime; // TODO: tostring
+    j["defaultLifetime"] = toString(defaultLifetime);
     j["isTask"] = isTask;
 }
 

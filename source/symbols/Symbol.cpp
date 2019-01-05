@@ -36,23 +36,30 @@ struct AsScopeVisitor {
 struct ToJsonVisitor {
     template<typename T>
     void visit(const T& symbol, json& j) {
-        if constexpr (std::is_base_of_v<Type, T>) {
+        if constexpr (std::is_base_of_v<Type, T> && !std::is_same_v<TypeAliasType, T>) {
             j = symbol.toString();
         }
         else {
             j["name"] = std::string(symbol.name);
-            j["kind"] = symbol.kind;
-            if constexpr (!std::is_same_v<Symbol, T>) {
-                symbol.toJson(j);
+            j["kind"] = toString(symbol.kind);
+            j["addr"] = uintptr_t(&symbol);
+
+            if constexpr (std::is_base_of_v<ValueSymbol, T>) {
+                j["type"] = symbol.getType();
+
+                auto& value = symbol.getConstantValue();
+                if (value)
+                    j["value"] = value;
             }
 
             if constexpr (std::is_base_of_v<Scope, T>) {
                 j["members"] = json::array();
-                for (const auto& member : symbol.members()) {
+                for (const auto& member : symbol.members())
                     j["members"].push_back(member);
-                    // TODO: ?
-                    // member.visit(*this, j);
-                }
+            }
+
+            if constexpr (!std::is_same_v<Symbol, T>) {
+                symbol.toJson(j);
             }
         }
     }
@@ -101,6 +108,11 @@ const DeclaredType* Symbol::getDeclaredType() const {
 const Scope* Symbol::scopeOrNull() const {
     AsScopeVisitor visitor;
     return visit(visitor);
+}
+
+json Symbol::jsonLink(const Symbol& target) {
+    return std::to_string(uintptr_t(&target)) + " " +
+           (target.isType() ? target.as<Type>().toString() : std::string(target.name));
 }
 
 ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,

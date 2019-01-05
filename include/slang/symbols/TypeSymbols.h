@@ -345,6 +345,8 @@ public:
     /// Indicates whether the field is part of a packed structure or union.
     bool isPacked() const;
 
+    void toJson(json& j) const;
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Field; }
 };
 
@@ -430,7 +432,11 @@ public:
 /// forms a linked list, headed by the actual type definition.
 class ForwardingTypedefSymbol : public Symbol {
 public:
-    enum Category { None, Enum, Struct, Union, Class, InterfaceClass } category;
+#define CATEGORY(x) x(None) x(Enum) x(Struct) x(Union) x(Class) x(InterfaceClass)
+    ENUM_MEMBER(Category, CATEGORY);
+#undef CATEGORY
+
+    Category category;
 
     ForwardingTypedefSymbol(string_view name, SourceLocation loc, Category category) :
         Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}
@@ -472,6 +478,8 @@ public:
     void checkForwardDecls() const;
 
     ConstantValue getDefaultValueImpl() const;
+
+    void toJson(json& j) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeAlias; }
 

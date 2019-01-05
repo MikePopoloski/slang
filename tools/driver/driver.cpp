@@ -81,8 +81,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
     fmt::print("{}", writer.report(diagnostics));
 
     if (!astJsonFile.empty()) {
-        json output;
-        to_json(output, compilation.getRoot());
+        json output = compilation.getRoot();
         writeToFile(astJsonFile, output.dump(2));
     }
 

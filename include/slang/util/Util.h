@@ -67,6 +67,23 @@ using namespace std::literals;
     throw std::logic_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " + \
                            "Default case should be unreachable!")
 
+#define __ENUM_ELEMENT(x) x,
+#define __ENUM_STRING(x) #x,
+#define ENUM(name, elements)                                          \
+    enum class name { elements(__ENUM_ELEMENT) };                     \
+    inline string_view toString(name e) {                             \
+        static const char* strings[] = { elements(__ENUM_STRING) };   \
+        return strings[static_cast<std::underlying_type_t<name>>(e)]; \
+    }                                                                 \
+    inline std::ostream& operator<<(std::ostream& os, name e) { return os << toString(e); }
+
+#define ENUM_MEMBER(name, elements)                                   \
+    enum name { elements(__ENUM_ELEMENT) };                           \
+    friend string_view toString(name e) {                             \
+        static const char* strings[] = { elements(__ENUM_STRING) };   \
+        return strings[static_cast<std::underlying_type_t<name>>(e)]; \
+    }
+
 #include <gsl/gsl>
 
 using gsl::finally;

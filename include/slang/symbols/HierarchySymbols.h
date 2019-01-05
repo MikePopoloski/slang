@@ -56,7 +56,7 @@ public:
         return *portMap;
     }
 
-    void toJson(json&) const {}
+    void toJson(json& j) const;
 
     static DefinitionSymbol& fromSyntax(Compilation& compilation,
                                         const ModuleDeclarationSyntax& syntax);
@@ -75,6 +75,8 @@ public:
         ensureElaborated();
         return *portMap;
     }
+
+    void toJson(json& j) const;
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            LookupLocation location, const Scope& scope,
@@ -99,8 +101,6 @@ public:
                          const DefinitionSymbol& definition) :
         InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, loc, definition) {}
 
-    void toJson(json&) const {}
-
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name,
                                              SourceLocation loc,
                                              const DefinitionSymbol& definition);
@@ -118,8 +118,6 @@ public:
     InterfaceInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                             const DefinitionSymbol& definition) :
         InstanceSymbol(SymbolKind::InterfaceInstance, compilation, name, loc, definition) {}
-
-    void toJson(json&) const {}
 
     static InterfaceInstanceSymbol& instantiate(Compilation& compilation,
                                                 const HierarchicalInstanceSyntax& syntax,
@@ -139,7 +137,7 @@ public:
         Symbol(SymbolKind::InstanceArray, name, loc),
         Scope(compilation, this), elements(elements), range(range) {}
 
-    void toJson(json&) const {}
+    void toJson(json& j) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }
 };
@@ -188,7 +186,7 @@ public:
         Symbol(SymbolKind::GenerateBlock, name, loc),
         Scope(compilation, this), constructIndex(constructIndex), isInstantiated(isInstantiated) {}
 
-    void toJson(json&) const {}
+    void toJson(json& j) const;
 
     static void fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                            LookupLocation location, const Scope& parent, uint32_t constructIndex,
@@ -207,7 +205,7 @@ public:
         Symbol(SymbolKind::GenerateBlockArray, name, loc),
         Scope(compilation, this), constructIndex(constructIndex) {}
 
-    void toJson(json&) const {}
+    void toJson(json& j) const;
 
     /// Creates a generate block array from the given loop-generate syntax node.
     static GenerateBlockArraySymbol& fromSyntax(Compilation& compilation,
