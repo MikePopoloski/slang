@@ -16,77 +16,84 @@ namespace slang {
 
 struct ExpressionSyntax;
 
-enum class ExpressionKind {
-    Invalid,
-    IntegerLiteral,
-    RealLiteral,
-    UnbasedUnsizedIntegerLiteral,
-    NullLiteral,
-    StringLiteral,
-    NamedValue,
-    UnaryOp,
-    BinaryOp,
-    ConditionalOp,
-    Assignment,
-    Concatenation,
-    Replication,
-    ElementSelect,
-    RangeSelect,
-    MemberAccess,
-    Call,
-    Conversion,
-    DataType
-};
+// clang-format off
+#define EXPRESSION(x) \
+    x(Invalid) \
+    x(IntegerLiteral) \
+    x(RealLiteral) \
+    x(UnbasedUnsizedIntegerLiteral) \
+    x(NullLiteral) \
+    x(StringLiteral) \
+    x(NamedValue) \
+    x(UnaryOp) \
+    x(BinaryOp) \
+    x(ConditionalOp) \
+    x(Assignment) \
+    x(Concatenation) \
+    x(Replication) \
+    x(ElementSelect) \
+    x(RangeSelect) \
+    x(MemberAccess) \
+    x(Call) \
+    x(Conversion) \
+    x(DataType)
+ENUM(ExpressionKind, EXPRESSION);
+#undef EXPRESION
 
-enum class UnaryOperator {
-    Plus,
-    Minus,
-    BitwiseNot,
-    BitwiseAnd,
-    BitwiseOr,
-    BitwiseXor,
-    BitwiseNand,
-    BitwiseNor,
-    BitwiseXnor,
-    LogicalNot,
-    Preincrement,
-    Predecrement,
-    Postincrement,
-    Postdecrement
-};
+#define OP(x) \
+    x(Plus) \
+    x(Minus) \
+    x(BitwiseNot) \
+    x(BitwiseAnd) \
+    x(BitwiseOr) \
+    x(BitwiseXor) \
+    x(BitwiseNand) \
+    x(BitwiseNor) \
+    x(BitwiseXnor) \
+    x(LogicalNot) \
+    x(Preincrement) \
+    x(Predecrement) \
+    x(Postincrement) \
+    x(Postdecrement)
+ENUM(UnaryOperator, OP);
+#undef OP
 
-enum class BinaryOperator {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Mod,
-    BinaryAnd,
-    BinaryOr,
-    BinaryXor,
-    BinaryXnor,
-    Equality,
-    Inequality,
-    CaseEquality,
-    CaseInequality,
-    GreaterThanEqual,
-    GreaterThan,
-    LessThanEqual,
-    LessThan,
-    WildcardEquality,
-    WildcardInequality,
-    LogicalAnd,
-    LogicalOr,
-    LogicalImplication,
-    LogicalEquivalence,
-    LogicalShiftLeft,
-    LogicalShiftRight,
-    ArithmeticShiftLeft,
-    ArithmeticShiftRight,
-    Power
-};
+#define OP(x) \
+    x(Add) \
+    x(Subtract) \
+    x(Multiply) \
+    x(Divide) \
+    x(Mod) \
+    x(BinaryAnd) \
+    x(BinaryOr) \
+    x(BinaryXor) \
+    x(BinaryXnor) \
+    x(Equality) \
+    x(Inequality) \
+    x(CaseEquality) \
+    x(CaseInequality) \
+    x(GreaterThanEqual) \
+    x(GreaterThan) \
+    x(LessThanEqual) \
+    x(LessThan) \
+    x(WildcardEquality) \
+    x(WildcardInequality) \
+    x(LogicalAnd) \
+    x(LogicalOr) \
+    x(LogicalImplication) \
+    x(LogicalEquivalence) \
+    x(LogicalShiftLeft) \
+    x(LogicalShiftRight) \
+    x(ArithmeticShiftLeft) \
+    x(ArithmeticShiftRight) \
+    x(Power)
+ENUM(BinaryOperator, OP);
+#undef OP
 
-enum class RangeSelectionKind { Simple, IndexedUp, IndexedDown };
+#define RANGE(x) x(Simple) x(IndexedUp) x(IndexedDown)
+ENUM(RangeSelectionKind, RANGE);
+#undef RANGE
+// clang-format on
 
 UnaryOperator getUnaryOperator(SyntaxKind kind);
 BinaryOperator getBinaryOperator(SyntaxKind kind);
@@ -161,6 +168,9 @@ public:
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
+    /// Serialization of arbitrary expressions to JSON.
+    friend void to_json(json& j, const Expression& expr);
+
 protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
@@ -205,6 +215,8 @@ public:
     InvalidExpression(const Expression* child, const Type& type) :
         Expression(ExpressionKind::Invalid, type, SourceRange()), child(child) {}
 
+    void toJson(json& j) const;
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Invalid; }
 
     static const InvalidExpression Instance;
@@ -219,6 +231,8 @@ public:
     SVInt getValue() const { return valueStorage; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+
+    void toJson(json&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& fromSyntax(Compilation& compilation,
@@ -240,6 +254,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
+    void toJson(json&) const {}
+
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RealLiteral; }
@@ -259,6 +275,8 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(Compilation& compilation, const Type& newType);
 
+    void toJson(json&) const {}
+
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) {
@@ -277,6 +295,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
+    void toJson(json&) const {}
+
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NullLiteral; }
@@ -291,6 +311,8 @@ public:
     string_view getValue() const { return value; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+
+    void toJson(json& j) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 
@@ -312,6 +334,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+
+    void toJson(json& j) const;
 
     static Expression& fromSymbol(const Scope& scope, const Symbol& symbol, bool isHierarchical,
                                   SourceRange sourceRange);
@@ -337,6 +361,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(Compilation& compilation, const Type& newType);
+
+    void toJson(json& j) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const PrefixUnaryExpressionSyntax& syntax,
@@ -371,6 +397,8 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(Compilation& compilation, const Type& newType);
 
+    void toJson(json& j) const;
+
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
@@ -400,6 +428,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(Compilation& compilation, const Type& newType);
+
+    void toJson(json& j) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const ConditionalExpressionSyntax& syntax,
@@ -433,6 +463,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
+    void toJson(json& j) const;
+
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
@@ -459,6 +491,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+
+    void toJson(json& j) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
                                   const ExpressionSyntax& syntax, SourceRange fullRange,
@@ -496,6 +530,8 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
+    void toJson(json& j) const;
+
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
                                   const RangeSelectSyntax& syntax, SourceRange fullRange,
                                   const BindContext& context);
@@ -527,6 +563,8 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
 
+    void toJson(json& j) const;
+
     static Expression& fromSelector(Compilation& compilation, Expression& expr,
                                     const LookupResult::MemberSelector& selector,
                                     const BindContext& context);
@@ -549,6 +587,8 @@ public:
     span<const Expression*> operands() { return operands_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+
+    void toJson(json& j) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const ConcatenationExpressionSyntax& syntax,
@@ -575,6 +615,8 @@ public:
     Expression& concat() { return *concat_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+
+    void toJson(json& j) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const MultipleConcatenationExpressionSyntax& syntax,
@@ -605,6 +647,8 @@ public:
     bool isSystemCall() const { return subroutine.index() == 1; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+
+    void toJson(json& j) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const InvocationExpressionSyntax& syntax,
@@ -643,6 +687,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
+    void toJson(json& j) const;
+
     static Expression& fromSyntax(Compilation& compilation, const CastExpressionSyntax& syntax,
                                   const BindContext& context);
 
@@ -661,6 +707,8 @@ public:
         Expression(ExpressionKind::DataType, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
+
+    void toJson(json&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                   const BindContext& context);

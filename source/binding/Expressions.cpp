@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/Expressions.h"
 
+#include <nlohmann/json.hpp>
+
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypeSymbols.h"
@@ -79,6 +81,23 @@ const Type* singleBitType(Compilation& compilation, const Type* lt, const Type* 
         return &compilation.getLogicType();
     return &compilation.getBitType();
 }
+
+struct ToJsonVisitor {
+    template<typename T>
+    void visit(const T& expr, json& j) {
+        j["kind"] = toString(expr.kind);
+        j["type"] = *expr.type;
+
+        if (expr.constant)
+            j["constant"] = *expr.constant;
+
+        if constexpr (!std::is_same_v<Expression, T>) {
+            expr.toJson(j);
+        }
+    }
+
+    void visitInvalid(const Expression& expr, json& j) { visit(expr.as<InvalidExpression>(), j); }
+};
 
 } // namespace
 
@@ -183,6 +202,11 @@ bool Expression::isLValue() const {
         default:
             return false;
     }
+}
+
+void to_json(json& j, const Expression& expr) {
+    ToJsonVisitor visitor;
+    expr.visit(visitor, j);
 }
 
 Expression& Expression::create(Compilation& compilation, const ExpressionSyntax& syntax,
@@ -532,6 +556,11 @@ Expression& Expression::badExpr(Compilation& compilation, const Expression* expr
     return *compilation.emplace<InvalidExpression>(expr, compilation.getErrorType());
 }
 
+void InvalidExpression::toJson(json& j) const {
+    if (child)
+        j["child"] = *child;
+}
+
 IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
                                SourceRange sourceRange) :
     Expression(ExpressionKind::IntegerLiteral, type, sourceRange),
@@ -618,6 +647,10 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
     return *compilation.emplace<StringLiteral>(type, value, syntax.sourceRange());
 }
 
+void StringLiteral::toJson(json& j) const {
+    j["literal"] = value;
+}
+
 Expression& NamedValueExpression::fromSymbol(const Scope& scope, const Symbol& symbol,
                                              bool isHierarchical, SourceRange sourceRange) {
     Compilation& compilation = scope.getCompilation();
@@ -628,6 +661,11 @@ Expression& NamedValueExpression::fromSymbol(const Scope& scope, const Symbol& s
 
     return *compilation.emplace<NamedValueExpression>(symbol.as<ValueSymbol>(), isHierarchical,
                                                       sourceRange);
+}
+
+void NamedValueExpression::toJson(json& j) const {
+    j["symbol"] = Symbol::jsonLink(symbol);
+    j["isHierarchical"] = isHierarchical;
 }
 
 Expression& UnaryExpression::fromSyntax(Compilation& compilation,
@@ -743,6 +781,11 @@ bool UnaryExpression::propagateType(Compilation& compilation, const Type& newTyp
             return false;
     }
     THROW_UNREACHABLE;
+}
+
+void UnaryExpression::toJson(json& j) const {
+    j["op"] = toString(op);
+    j["operand"] = operand();
 }
 
 Expression& BinaryExpression::fromSyntax(Compilation& compilation,
@@ -950,6 +993,12 @@ bool BinaryExpression::propagateType(Compilation& compilation, const Type& newTy
     THROW_UNREACHABLE;
 }
 
+void BinaryExpression::toJson(json& j) const {
+    j["op"] = toString(op);
+    j["left"] = left();
+    j["right"] = right();
+}
+
 Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
                                               const ConditionalExpressionSyntax& syntax,
                                               const BindContext& context) {
@@ -973,6 +1022,12 @@ bool ConditionalExpression::propagateType(Compilation& compilation, const Type& 
     contextDetermined(compilation, left_, newType);
     contextDetermined(compilation, right_, newType);
     return true;
+}
+
+void ConditionalExpression::toJson(json& j) const {
+    j["pred"] = pred();
+    j["left"] = left();
+    j["right"] = right();
 }
 
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
@@ -1002,6 +1057,14 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
 
     return *result;
+}
+
+void AssignmentExpression::toJson(json& j) const {
+    j["left"] = left();
+    j["right"] = right();
+
+    if (op)
+        j["op"] = toString(*op);
 }
 
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
@@ -1039,6 +1102,11 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     }
 
     return *result;
+}
+
+void ElementSelectExpression::toJson(json& j) const {
+    j["value"] = value();
+    j["selector"] = selector();
 }
 
 Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
@@ -1093,6 +1161,13 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     return *result;
 }
 
+void RangeSelectExpression::toJson(json& j) const {
+    j["selectionKind"] = toString(selectionKind);
+    j["value"] = value();
+    j["left"] = left();
+    j["right"] = right();
+}
+
 Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expression& expr,
                                                  const LookupResult::MemberSelector& selector,
                                                  const BindContext& context) {
@@ -1110,6 +1185,11 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
     SourceRange range{ expr.sourceRange.start(), selector.nameRange.end() };
     const auto& field = member->as<FieldSymbol>();
     return *compilation.emplace<MemberAccessExpression>(field.getType(), expr, field, range);
+}
+
+void MemberAccessExpression::toJson(json& j) const {
+    j["field"] = Symbol::jsonLink(field);
+    j["value"] = value();
 }
 
 Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
@@ -1169,6 +1249,11 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
         compilation.getType(totalWidth, flags), buffer.copy(compilation), syntax.sourceRange());
 }
 
+void ConcatenationExpression::toJson(json& j) const {
+    for (auto op : operands())
+        j["operands"].push_back(*op);
+}
+
 Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
                                               const MultipleConcatenationExpressionSyntax& syntax,
                                               const BindContext& context) {
@@ -1211,6 +1296,11 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     result->type = &compilation.getType(
         *width, right.type->isFourState() ? IntegralFlags::FourState : IntegralFlags::TwoState);
     return *result;
+}
+
+void ReplicationExpression::toJson(json& j) const {
+    j["count"] = count();
+    j["concat"] = concat();
 }
 
 Expression& CallExpression::fromSyntax(Compilation& compilation,
@@ -1325,6 +1415,20 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
     return *expr;
 }
 
+void CallExpression::toJson(json& j) const {
+    if (subroutine.index() == 1) {
+        const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
+        j["subroutine"] = systemSubroutine.name;
+    }
+    else {
+        const SubroutineSymbol& symbol = *std::get<0>(subroutine);
+        j["subroutine"] = Symbol::jsonLink(symbol);
+
+        for (auto arg : arguments())
+            j["arguments"].push_back(*arg);
+    }
+}
+
 Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const CastExpressionSyntax& syntax,
                                              const BindContext& context) {
@@ -1362,6 +1466,10 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 
     // TODO: make sure cast compatible
     return *result;
+}
+
+void ConversionExpression::toJson(json& j) const {
+    j["operand"] = operand();
 }
 
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,

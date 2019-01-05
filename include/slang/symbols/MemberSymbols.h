@@ -285,7 +285,7 @@ public:
 
     const Expression& getAssignment() const;
 
-    void toJson(json&) const {} // TODO
+    void toJson(json& j) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }
 

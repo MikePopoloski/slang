@@ -1003,7 +1003,14 @@ void PortSymbol::toJson(json& j) const {
     if (internalSymbol)
         j["internalSymbol"] = jsonLink(*internalSymbol);
 
-    // TODO: expressions
+    if (defaultValue)
+        j["default"] = *defaultValue;
+
+    if (internalConnection)
+        j["internalConnection"] = *internalConnection;
+
+    if (externalConnection)
+        j["externalConnection"] = *externalConnection;
 }
 
 void InterfacePortSymbol::toJson(json& j) const {
@@ -1190,6 +1197,10 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     assign = &Expression::bind(syntax->as<ExpressionSyntax>(),
                                BindContext(*scope, LookupLocation::before(*this)));
     return *assign;
+}
+
+void ContinuousAssignSymbol::toJson(json& j) const {
+    j["assignment"] = getAssignment();
 }
 
 } // namespace slang

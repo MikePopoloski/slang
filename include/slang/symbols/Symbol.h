@@ -16,6 +16,7 @@ namespace slang {
 class Scope;
 class Type;
 
+// clang-format off
 #define SYMBOLKIND(x) \
     x(Unknown) \
     x(Root) \
@@ -67,6 +68,7 @@ class Type;
     x(Field) \
     x(Subroutine) \
     x(ContinuousAssign)
+// clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)
 #undef SYMBOLKIND
@@ -146,6 +148,8 @@ public:
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
+    static std::string jsonLink(const Symbol& target);
+
 protected:
     Symbol(SymbolKind kind, string_view name, SourceLocation location) :
         kind(kind), name(name), location(location) {}
@@ -157,8 +161,6 @@ protected:
         setParent(scope);
         indexInScope = index;
     }
-
-    static json jsonLink(const Symbol& target);
 
 private:
     friend class Scope;

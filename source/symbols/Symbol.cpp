@@ -50,10 +50,12 @@ struct ToJsonVisitor {
                 auto& value = symbol.getConstantValue();
                 if (value)
                     j["value"] = value;
+
+                if (auto init = symbol.getInitializer())
+                    j["initializer"] = *init;
             }
 
             if constexpr (std::is_base_of_v<Scope, T>) {
-                j["members"] = json::array();
                 for (const auto& member : symbol.members())
                     j["members"].push_back(member);
             }
@@ -110,7 +112,7 @@ const Scope* Symbol::scopeOrNull() const {
     return visit(visitor);
 }
 
-json Symbol::jsonLink(const Symbol& target) {
+std::string Symbol::jsonLink(const Symbol& target) {
     return std::to_string(uintptr_t(&target)) + " " +
            (target.isType() ? target.as<Type>().toString() : std::string(target.name));
 }
