@@ -1026,7 +1026,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     if (name.empty())
         return;
 
-    auto downward = [&]() {
+    auto downward = [&, nameToken = nameToken, selectors = selectors]() {
         return lookupDownward(nameParts, nameToken, selectors, BindContext(*this, location), result,
                               flags);
     };
