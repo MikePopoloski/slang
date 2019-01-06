@@ -676,3 +676,66 @@ endmodule
     compilation.addSyntaxTree(file2);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Hierarchical names in constant functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module M;
+    localparam int asdf = 10;
+
+    function int foo1;
+        return M.asdf;
+    endfunction
+
+    function int foo2;
+        return $root.M.asdf;
+    endfunction
+
+    localparam int bar = foo1;
+    localparam int baz = foo2;
+
+    if (bar == 10) begin
+        localparam int i = 99;
+    end
+
+    if (baz == 10) begin
+        localparam int j = 99;
+    end
+
+    int legit;
+    always_comb legit = foo2;
+
+endmodule
+)", "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:6:16: error: use of undeclared identifier 'M'
+        return M.asdf;
+               ^
+source:10:16: error: hierarchical names are not allowed in constant expressions
+        return $root.M.asdf;
+               ^~~~~
+source:13:26: error: expression is not constant
+    localparam int bar = foo1;
+                         ^~~~
+source:6:16: note: reference to 'asdf' by hierarchical name is not allowed in a constant expression
+        return M.asdf;
+               ^~~~~~
+source:13:26: note: in call to 'foo1()'
+    localparam int bar = foo1;
+                         ^
+source:14:26: error: expression is not constant
+    localparam int baz = foo2;
+                         ^~~~
+source:10:16: note: reference to 'asdf' by hierarchical name is not allowed in a constant expression
+        return $root.M.asdf;
+               ^~~~~~~~~~~~
+source:14:26: note: in call to 'foo2()'
+    localparam int baz = foo2;
+                         ^
+)");
+}

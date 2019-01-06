@@ -697,3 +697,36 @@ endmodule
     auto& j = top->find<ModuleInstanceSymbol>("m").find<ParameterSymbol>("j");
     CHECK(j.getValue().integer() == 17);
 }
+
+TEST_CASE("Generate dependent on iface port param") {
+    auto tree = SyntaxTree::fromText(R"(
+
+interface I #(parameter int i) ();
+endinterface
+
+module N;
+endmodule
+
+module M(I iface, logic [iface.i - 1 : 0] foo);
+    localparam int j = $bits(foo);
+    if (j == 17) begin : asdf
+        N n();
+    end
+        
+endmodule
+
+module test;
+
+    I #(17) i();
+    M m(i);
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& asdf = compilation.getRoot().lookupName<GenerateBlockSymbol>("test.m.asdf");
+    CHECK(asdf.isInstantiated);
+}

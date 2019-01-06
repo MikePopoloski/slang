@@ -164,6 +164,8 @@ private:
     void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
     span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
 
+    bool isFinalizing() const { return finalizing; }
+
     Diagnostics diags;
     std::unique_ptr<RootSymbol> root;
     const SourceManager* sourceManager = nullptr;

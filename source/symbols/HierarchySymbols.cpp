@@ -339,6 +339,8 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
         overrideIt++;
     }
 
+    // It's important that the port syntax is added before any members, so that port
+    // connections are elaborated before anything tries to depend on any interface port params.
     auto& declSyntax =
         definition.getSyntax()->as<ModuleDeclarationSyntax>(); // TODO: getSyntax dependency
     if (declSyntax.header->ports)

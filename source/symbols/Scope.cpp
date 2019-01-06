@@ -1031,7 +1031,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
                               flags);
     };
 
-    bool inConstantEval = (flags & LookupFlags::Constant) != 0;
+    bool inConstantEval = (flags & LookupFlags::Constant) != 0 || compilation.isFinalizing();
 
     switch (scoped->left->kind) {
         case SyntaxKind::IdentifierName:
