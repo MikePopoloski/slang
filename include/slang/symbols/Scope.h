@@ -158,6 +158,18 @@ public:
     const Symbol* lookupName(string_view name, LookupLocation location = LookupLocation::max,
                              bitmask<LookupFlags> flags = LookupFlags::None) const;
 
+    /// Performs a full fledged name lookup starting in the current scope, following all
+    /// SystemVerilog rules for qualified or unqualified name resolution. The name to look up
+    /// is parsed from the given input string. This method expects that the symbol will be found and
+    /// be of the given type `T`.
+    template<typename T>
+    const T& lookupName(string_view name, LookupLocation location = LookupLocation::max,
+                        bitmask<LookupFlags> flags = LookupFlags::None) const {
+        const Symbol* sym = lookupName(name, location, flags);
+        ASSERT(sym);
+        return sym->as<T>();
+    }
+
     /// Performs an unqualified lookup in this scope, then recursively up the parent
     /// chain until we reach root or the symbol is found.
     const Symbol* lookupUnqualifiedName(string_view name, LookupLocation location,

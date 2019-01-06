@@ -495,6 +495,51 @@ endmodule
     CHECK(baz->as<ParameterSymbol>().getValue().integer() == 84);
 }
 
+TEST_CASE("Unit scope disambiguation") {
+    auto tree = SyntaxTree::fromText(R"(
+parameter int foo = 42;
+
+module m;
+    localparam int foo = 19;
+
+    localparam int bar = foo;
+    localparam int baz = $unit::foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& bar = compilation.getRoot().lookupName<ParameterSymbol>("m.bar");
+    CHECK(bar.getValue().integer() == 19);
+
+    auto& baz = compilation.getRoot().lookupName<ParameterSymbol>("m.baz");
+    CHECK(baz.getValue().integer() == 42);
+}
+
+TEST_CASE("Root scope disambiguation") {
+    auto tree = SyntaxTree::fromText(R"(
+module n;
+    int f = 99;
+    if (1) begin: n
+        int f = 42;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& block = compilation.getRoot().lookupName<GenerateBlockSymbol>("n.n");
+    auto& f1 = block.lookupName<VariableSymbol>("n.f");
+    CHECK(f1.getConstantValue().integer() == 42);
+
+    auto& f2 = block.lookupName<VariableSymbol>("$root.n.f");
+    CHECK(f2.getConstantValue().integer() == 99);
+}
+
 TEST_CASE("Malformed name syntax") {
     // TODO: uncomment cases below as they become supported
     auto tree = SyntaxTree::fromText(R"(
