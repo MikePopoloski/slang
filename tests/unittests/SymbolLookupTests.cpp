@@ -538,7 +538,6 @@ endmodule
 )",
                                      "source");
 
-    // This test just checks that nothing crashes.
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
@@ -564,4 +563,71 @@ source:6:25: error: invalid access token; '::' should be '.'
     always_comb foo.asdf::blah;
                         ^
 )");
+}
+
+TEST_CASE("Upward name lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module a;
+	integer i;
+	b a_b1();
+endmodule
+
+module b;
+	integer i;
+	c b_c1(),
+	  b_c2();
+
+	initial
+		b_c1.i = 2;
+endmodule
+
+module c;
+	integer i;
+	initial begin
+		i = 1;
+		b.i = 1;
+	end
+endmodule
+
+module d;
+	integer i;
+	b d_b1();
+	initial begin
+		a.i = 1;
+		d.i = 5;
+		a.a_b1.i = 2;
+		d.d_b1.i = 6;
+		a.a_b1.b_c1.i = 3;
+		d.d_b1.b_c1.i = 7;
+		a.a_b1.b_c2.i = 4;
+		d.d_b1.b_c2.i = 8;
+	end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Upward name unit scope") {
+    auto file1 = SyntaxTree::fromText(R"(
+module M;
+    N n();
+endmodule
+
+function static int foo; logic f = 1; return 42; endfunction
+)");
+
+    auto file2 = SyntaxTree::fromText(R"(
+module N;
+    logic f;
+    always_comb f = foo.f;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(file1);
+    compilation.addSyntaxTree(file2);
+    NO_COMPILATION_ERRORS;
 }

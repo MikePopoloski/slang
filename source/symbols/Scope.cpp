@@ -806,6 +806,8 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
     return symbol;
 }
 
+// Returns true if the lookup was ok, or if it failed in a way that allows us to continue
+// looking up in other ways. Returns false if the entire lookup has failed and should be aborted.
 bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
                     const SyntaxList<ElementSelectSyntax>* selectors, const BindContext& context,
                     LookupResult& result, bitmask<LookupFlags> flags) {
@@ -910,6 +912,78 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
     return true;
 }
 
+// Returns true if the lookup was ok, or if it failed in a way that allows us to continue
+// looking up in other ways. Returns false if the entire lookup has failed and should be aborted.
+bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlusLoc> nameParts,
+                  Token nameToken, const SyntaxList<ElementSelectSyntax>* selectors,
+                  const BindContext& context, LookupResult& result, bitmask<LookupFlags> flags) {
+
+    // Upward lookups can match either a scope name, or a module definition name (on any of the
+    // instances). Imports are not considered.
+    const Scope* scope = &context.scope;
+    while (true) {
+        const Scope* nextInstance = nullptr;
+
+        while (scope) {
+            auto symbol = scope->find(name);
+            if (!symbol || symbol->isValue() || symbol->isType() || !symbol->isScope()) {
+                // We didn't find an instance name, so now look at the definition types of each
+                // instance.
+                symbol = nullptr;
+                for (auto& instance : scope->membersOfType<InstanceSymbol>()) {
+                    if (instance.definition.name == name) {
+                        if (!symbol)
+                            symbol = &instance;
+                        else {
+                            // TODO: error
+                        }
+                    }
+                }
+            }
+
+            if (symbol) {
+                result.clear();
+                result.found = symbol;
+
+                if (!lookupDownward(nameParts, nameToken, selectors, context, result, flags))
+                    return false;
+
+                if (result.found)
+                    return true;
+            }
+
+            // Figure out which scope to look at next. If we're already at the root scope, we're
+            // done and should return. Otherwise, we want to keep going up until we hit the
+            // compilation unit, at which point we'll jump back to the instantiation scope of the
+            // last instance we hit.
+            symbol = &scope->asSymbol();
+            switch (symbol->kind) {
+                case SymbolKind::Root:
+                    return true;
+                case SymbolKind::Definition:
+                    return false;
+                case SymbolKind::CompilationUnit:
+                    scope = nullptr;
+                    break;
+                case SymbolKind::ModuleInstance:
+                case SymbolKind::InterfaceInstance:
+                case SymbolKind::Program:
+                    nextInstance = symbol->getScope();
+                    scope = symbol->as<InstanceSymbol>().definition.getScope();
+                    break;
+                default:
+                    scope = symbol->getScope();
+                    break;
+            }
+        }
+
+        if (nextInstance)
+            scope = nextInstance;
+        else
+            scope = &compilation.getRoot();
+    }
+}
+
 const Symbol* getCompilationUnit(const Symbol& symbol) {
     const Symbol* current = &symbol;
     while (true) {
@@ -921,26 +995,6 @@ const Symbol* getCompilationUnit(const Symbol& symbol) {
             return nullptr;
 
         current = &scope->asSymbol();
-    }
-}
-
-const Scope* getInstantiationScope(Compilation& compilation, const Symbol& symbol) {
-    const Symbol* current = &symbol;
-    while (true) {
-        auto scope = current->getScope();
-        if (!scope)
-            return &compilation.getRoot();
-
-        const Symbol& next = scope->asSymbol();
-        if (InstanceSymbol::isKind(current->kind)) {
-            // If we hit the compilation unit, we actually just want to look in the
-            // root scope (since all instances are accessible there).
-            if (next.kind == SymbolKind::CompilationUnit)
-                return &compilation.getRoot();
-            return scope;
-        }
-
-        current = &next;
     }
 }
 
@@ -1067,27 +1121,12 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
 
     // If we reach this point we're in case (2) or (4) above. Go up through the instantiation
     // hierarchy and see if we can find a match there.
-    auto scope = this;
-    while (scope->asSymbol().kind != SymbolKind::Root) {
-        scope = getInstantiationScope(compilation, scope->asSymbol());
-
-        result.clear();
-        scope->lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);
-        if (result.hasError())
-            return;
-
-        // Finding a value symbol or interface port during upward lookup should just get ignored.
-        if (!result.found)
-            continue;
-
-        if (result.found->kind != SymbolKind::InterfacePort && !result.found->isValue()) {
-            if (!downward())
-                return;
-
-            if (result.found)
-                return;
-        }
+    if (!lookupUpward(compilation, name, nameParts, nameToken, selectors,
+                      BindContext(*this, location), result, flags)) {
+        return;
     }
+    if (result.found)
+        return;
 
     // We couldn't find anything. originalResult has any diagnostics issued by the first downward
     // lookup (if any), so it's fine to just return it as is. If we never found any symbol
