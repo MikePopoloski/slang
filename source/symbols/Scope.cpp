@@ -762,8 +762,6 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
                                     const SyntaxList<ElementSelectSyntax>& selectors,
                                     const BindContext& context, LookupResult& result) {
     ASSERT(symbol);
-    if (selectors.empty())
-        return symbol;
 
     for (const ElementSelectSyntax* syntax : selectors) {
         if (!syntax->selector || syntax->selector->kind != SyntaxKind::BitSelect) {
@@ -784,6 +782,7 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
                                                 syntax->sourceRange());
                     diag << *index;
                     diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+                    return nullptr;
                 }
 
                 symbol = array.elements[array.range.translateIndex(*index)];
@@ -874,7 +873,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
         if (selectors) {
             symbol = handleLookupSelectors(symbol, *selectors, context, result);
             if (!symbol)
-                return true;
+                return false;
         }
 
         SymbolKind previousKind = symbol->kind;
@@ -959,8 +958,10 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
             symbol = &scope->asSymbol();
             switch (symbol->kind) {
                 case SymbolKind::Root:
+                    result.clear();
                     return true;
                 case SymbolKind::Definition:
+                    result.clear();
                     return false;
                 case SymbolKind::CompilationUnit:
                     scope = nullptr;

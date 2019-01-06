@@ -123,6 +123,11 @@ ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation locat
     declaredType(*this, flags) {
 }
 
+void ValueSymbol::setFromDeclarator(const VariableDeclaratorSyntax& decl) {
+    declaredType.setFromDeclarator(decl);
+    setSyntax(decl);
+}
+
 bool ValueSymbol::isKind(SymbolKind kind) {
     switch (kind) {
         case SymbolKind::Net:

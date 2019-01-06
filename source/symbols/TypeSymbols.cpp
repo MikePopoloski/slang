@@ -762,7 +762,6 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation,
                                                              decl->name.location(), fieldIndex);
             variable->setDeclaredType(*member->type);
             variable->setFromDeclarator(*decl);
-            variable->setSyntax(*decl);
 
             result->addMember(*variable);
             fieldIndex++;

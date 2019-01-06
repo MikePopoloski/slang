@@ -113,7 +113,6 @@ void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclar
                 compilation.addDiag(*param, DiagCode::LocalParamNoInitializer, loc);
         }
 
-        param->setSyntax(*decl);
         results.append(param);
     }
 }
@@ -1030,7 +1029,7 @@ void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax&
 
         // TODO: net types, initializers, etc
         net->setDeclaredType(*syntax.type, declarator->dimensions);
-        net->setSyntax(*declarator);
+        net->setFromDeclarator(*declarator);
         results.append(net);
     }
 }
@@ -1042,7 +1041,6 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
                                                             declarator->name.location());
         variable->setDeclaredType(*syntax.type);
         variable->setFromDeclarator(*declarator);
-        variable->setSyntax(*declarator);
         results.append(variable);
     }
 }
@@ -1053,7 +1051,6 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
                                                    syntax.declarator->name.location());
     var->setDeclaredType(*syntax.type);
     var->setFromDeclarator(*syntax.declarator);
-    var->setSyntax(*syntax.declarator);
     return *var;
 }
 
@@ -1116,7 +1113,6 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
             auto declarator = portSyntax->declarator;
             auto arg = compilation.emplace<FormalArgumentSymbol>(
                 declarator->name.valueText(), declarator->name.location(), direction);
-            arg->setSyntax(*portSyntax);
 
             // If we're given a type, use that. Otherwise, if we were given a
             // direction, default to logic. Otherwise, use the last type.

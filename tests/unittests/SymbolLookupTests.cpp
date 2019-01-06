@@ -677,6 +677,161 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Upward / downward lookup corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+package p1;
+    logic foo;
+endpackage
+
+package p2;
+    function foo; logic bar; return 1; endfunction
+    function func; logic bar; return 1; endfunction
+endpackage
+
+interface I;
+    logic foo;
+endinterface
+
+module top;
+    M m_inst();
+
+    function func; 
+        logic baz;
+        return 1;
+    endfunction
+
+    if (1) begin : alias_scope
+        logic bar;
+    end
+
+    if (1) begin : gen2
+        logic bar;
+    end
+
+    if (1) begin : gen3
+        logic bar;
+    end
+
+    I array1 [4] ();
+    I array2 [4] ();
+    I array3 [4] ();
+
+endmodule
+
+module M;
+    import p1::*;
+    import p2::*;
+
+    if (1) begin : gen1
+        logic baz;
+    end
+
+    if (1) begin : gen2
+        logic baz;
+    end
+
+    if (1) begin : array1
+    end
+
+    I array3 [2] ();
+
+    typedef struct { logic [1:0] a; } type_t;
+    typedef type_t alias_scope;
+    type_t gen3;
+
+    wire a = foo.bar;           // import collision
+    wire b = asdf.bar;          // unknown identifier
+    wire c = p1::bar;           // unknown member
+    wire d = gen1.bar;          // no member
+    wire e = func.bar;          // ok
+    wire f = func.baz;          // no upward lookup because of import
+    wire g = type_t.a;          // can't dot into a typedef
+    wire h = alias_scope.bar;   // ok, finds top.alias_scope by upward lookup
+    wire i = p3::bar;           // unknown package
+    wire j = $unit::bar;        // unknown unit member
+    wire k = gen2.bar;          // ok, finds top.gen2.bar
+    wire l = gen3.bar;          // doesn't find top.gen3.bar because of local variable
+    wire m = gen3.a[1];         // ok
+    wire n = array1[0].foo;     // no upward because indexing fails
+    wire o = array2[0].foo;     // ok
+    wire p = array3[3].foo;     // no upward because indexing fails
+    wire q = array2[].foo;      // missing expr
+
+    wire blah1 = m_inst.gen3.a[0];             // ok
+    localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
+
+endmodule
+)", "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:62:14: error: multiple imports found for identifier 'foo'
+    wire a = foo.bar;           // import collision
+             ^~~
+source:42:16: note: imported from here
+    import p1::*;
+               ^
+source:3:11: note: declared here
+    logic foo;
+          ^
+source:43:16: note: imported from here
+    import p2::*;
+               ^
+source:7:14: note: declared here
+    function foo; logic bar; return 1; endfunction
+             ^
+source:63:14: error: use of undeclared identifier 'asdf'
+    wire b = asdf.bar;          // unknown identifier
+             ^~~~
+source:64:16: error: no member named 'bar' in package 'p1'
+    wire c = p1::bar;           // unknown member
+               ^ ~~~
+source:65:18: error: could not resolve hierarchical path name 'bar'
+    wire d = gen1.bar;          // no member
+                 ^~~~
+source:67:18: error: could not resolve hierarchical path name 'baz'
+    wire f = func.baz;          // no upward lookup because of import
+                 ^~~~
+source:68:20: error: 'type_t' is not a hierarchical scope name
+    wire g = type_t.a;          // can't dot into a typedef
+             ~~~~~~^~
+source:58:39: note: declared here
+    typedef struct { logic [1:0] a; } type_t;
+                                      ^
+source:70:14: error: unknown class or package 'p3'
+    wire i = p3::bar;           // unknown package
+             ^~
+source:71:19: error: no member named 'bar' in compilation unit
+    wire j = $unit::bar;        // unknown unit member
+                  ^ ~~~
+source:73:19: error: no member named 'bar' in struct{logic[1:0] a;}type_t
+    wire l = gen3.bar;          // doesn't find top.gen3.bar because of local variable
+             ~~~~~^~~
+source:75:20: error: hierarchical scope 'array1' is not indexable
+    wire n = array1[0].foo;     // no upward because indexing fails
+                   ^~~
+source:53:12: note: declared here
+    if (1) begin : array1
+           ^
+source:77:20: error: hierarchical index 3 is out of scope's declared range
+    wire p = array3[3].foo;     // no upward because indexing fails
+                   ^~~
+source:56:7: note: declared here
+    I array3 [2] ();
+      ^
+source:78:20: error: invalid hierarchical index expression
+    wire q = array2[].foo;      // missing expr
+                   ^~
+source:81:28: error: use of undeclared identifier 'm_inst'
+    localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
+                           ^~~~~~
+)");
+}
+
 TEST_CASE("Hierarchical names in constant functions") {
     auto tree = SyntaxTree::fromText(R"(
 module M;
