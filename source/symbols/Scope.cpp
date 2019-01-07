@@ -127,7 +127,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration: {
             // Definitions exist in their own namespace and are tracked in the Compilation.
-            // TODO: make this not going into the scope's name map
             auto& def =
                 DefinitionSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
             addMember(def);
@@ -136,7 +135,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::PackageDeclaration: {
             // Packages exist in their own namespace and are tracked in the Compilation.
-            // TODO: make this not going into the scope's name map
             auto& package =
                 PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
             addMember(package);
@@ -373,7 +371,7 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
     // Add to the name map if the symbol has a name, unless it's a port or definition symbol.
     // Per the spec, ports and definitions exist in their own namespaces.
     if (!member->name.empty() && member->kind != SymbolKind::Port &&
-        member->kind != SymbolKind::Definition) {
+        member->kind != SymbolKind::Definition && member->kind != SymbolKind::Package) {
 
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second) {
@@ -992,8 +990,7 @@ const Symbol* getCompilationUnit(const Symbol& symbol) {
             return current;
 
         auto scope = getLookupParent(*current);
-        if (!scope)
-            return nullptr;
+        ASSERT(scope);
 
         current = &scope->asSymbol();
     }
@@ -1107,6 +1104,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             return;
 
         if (inConstantEval) {
+            result.clear();
             result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, nameToken.range());
             return;
         }

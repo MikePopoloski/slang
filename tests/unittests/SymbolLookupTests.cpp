@@ -349,9 +349,11 @@ module m1;
     int i;
     if (1) begin
         always_comb i = foo;
+        type_t something;
     end
 
     int foo;
+    typedef logic type_t;
 
 endmodule
 )");
@@ -361,6 +363,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::UsedBeforeDeclared);
     CHECK((it++)->code == DiagCode::UsedBeforeDeclared);
     CHECK(it == diags.end());
 }
@@ -677,6 +680,46 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Name lookup from unit scope") {
+    auto tree = SyntaxTree::fromText(R"(
+int foo = a.baz.bar;
+
+module a;
+    if (1) begin : baz
+        int bar;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Non-const name selector") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic foo;
+endinterface
+
+module M;
+    I array1 [4] ();
+
+    int i = 3;
+    wire foo = array1[i].foo;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::ExpressionNotConstant);
+    CHECK(it == diags.end());
+}
+
 TEST_CASE("Upward / downward lookup corner cases") {
     auto tree = SyntaxTree::fromText(R"(
 package p1;
@@ -695,7 +738,7 @@ endinterface
 module top;
     M m_inst();
 
-    function func; 
+    function func;
         logic baz;
         return 1;
     endfunction
@@ -706,6 +749,7 @@ module top;
 
     if (1) begin : gen2
         logic bar;
+        logic [4:0] varArray;
     end
 
     if (1) begin : gen3
@@ -739,6 +783,9 @@ module M;
     typedef type_t alias_scope;
     type_t gen3;
 
+    wire blah1 = m_inst.gen3.a[0];             // ok
+    localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
+
     wire a = foo.bar;           // import collision
     wire b = asdf.bar;          // unknown identifier
     wire c = p1::bar;           // unknown member
@@ -756,79 +803,81 @@ module M;
     wire o = array2[0].foo;     // ok
     wire p = array3[3].foo;     // no upward because indexing fails
     wire q = array2[].foo;      // missing expr
-
-    wire blah1 = m_inst.gen3.a[0];             // ok
-    localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
+    wire r = .asdf;             // only parser error
+    wire s = gen2.varArray[1];  // ok
 
 endmodule
 )", "source");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    
+
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:62:14: error: multiple imports found for identifier 'foo'
+source:64:28: error: use of undeclared identifier 'm_inst'
+    localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
+                           ^~~~~~
+source:66:14: error: multiple imports found for identifier 'foo'
     wire a = foo.bar;           // import collision
              ^~~
-source:42:16: note: imported from here
+source:43:16: note: imported from here
     import p1::*;
                ^
 source:3:11: note: declared here
     logic foo;
           ^
-source:43:16: note: imported from here
+source:44:16: note: imported from here
     import p2::*;
                ^
 source:7:14: note: declared here
     function foo; logic bar; return 1; endfunction
              ^
-source:63:14: error: use of undeclared identifier 'asdf'
+source:67:14: error: use of undeclared identifier 'asdf'
     wire b = asdf.bar;          // unknown identifier
              ^~~~
-source:64:16: error: no member named 'bar' in package 'p1'
+source:68:16: error: no member named 'bar' in package 'p1'
     wire c = p1::bar;           // unknown member
                ^ ~~~
-source:65:18: error: could not resolve hierarchical path name 'bar'
+source:69:18: error: could not resolve hierarchical path name 'bar'
     wire d = gen1.bar;          // no member
                  ^~~~
-source:67:18: error: could not resolve hierarchical path name 'baz'
+source:71:18: error: could not resolve hierarchical path name 'baz'
     wire f = func.baz;          // no upward lookup because of import
                  ^~~~
-source:68:20: error: 'type_t' is not a hierarchical scope name
+source:72:20: error: 'type_t' is not a hierarchical scope name
     wire g = type_t.a;          // can't dot into a typedef
              ~~~~~~^~
-source:58:39: note: declared here
+source:59:39: note: declared here
     typedef struct { logic [1:0] a; } type_t;
                                       ^
-source:70:14: error: unknown class or package 'p3'
+source:74:14: error: unknown class or package 'p3'
     wire i = p3::bar;           // unknown package
              ^~
-source:71:19: error: no member named 'bar' in compilation unit
+source:75:19: error: no member named 'bar' in compilation unit
     wire j = $unit::bar;        // unknown unit member
                   ^ ~~~
-source:73:19: error: no member named 'bar' in struct{logic[1:0] a;}type_t
+source:77:19: error: no member named 'bar' in struct{logic[1:0] a;}type_t
     wire l = gen3.bar;          // doesn't find top.gen3.bar because of local variable
              ~~~~~^~~
-source:75:20: error: hierarchical scope 'array1' is not indexable
+source:79:20: error: hierarchical scope 'array1' is not indexable
     wire n = array1[0].foo;     // no upward because indexing fails
                    ^~~
-source:53:12: note: declared here
+source:54:12: note: declared here
     if (1) begin : array1
            ^
-source:77:20: error: hierarchical index 3 is out of scope's declared range
+source:81:20: error: hierarchical index 3 is out of scope's declared range
     wire p = array3[3].foo;     // no upward because indexing fails
                    ^~~
-source:56:7: note: declared here
+source:57:7: note: declared here
     I array3 [2] ();
       ^
-source:78:20: error: invalid hierarchical index expression
+source:82:20: error: invalid hierarchical index expression
     wire q = array2[].foo;      // missing expr
                    ^~
-source:81:28: error: use of undeclared identifier 'm_inst'
-    localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
-                           ^~~~~~
+source:83:13: error: expected identifier
+    wire r = .asdf;             // only parser error
+            ^
 )");
 }
 
@@ -837,8 +886,11 @@ TEST_CASE("Hierarchical names in constant functions") {
 module M;
     localparam int asdf = 10;
 
+    if (1) begin : gen1
+    end
+
     function int foo1;
-        return M.asdf;
+        return gen1.bar;
     endfunction
 
     function int foo2;
@@ -868,28 +920,22 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:6:16: error: use of undeclared identifier 'M'
-        return M.asdf;
-               ^
-source:10:16: error: hierarchical names are not allowed in constant expressions
+source:9:16: error: hierarchical names are not allowed in constant expressions
+        return gen1.bar;
+               ^~~~
+source:9:20: error: could not resolve hierarchical path name 'bar'
+        return gen1.bar;
+                   ^~~~
+source:13:16: error: hierarchical names are not allowed in constant expressions
         return $root.M.asdf;
                ^~~~~
-source:13:26: error: expression is not constant
-    localparam int bar = foo1;
-                         ^~~~
-source:6:16: note: reference to 'asdf' by hierarchical name is not allowed in a constant expression
-        return M.asdf;
-               ^~~~~~
-source:13:26: note: in call to 'foo1()'
-    localparam int bar = foo1;
-                         ^
-source:14:26: error: expression is not constant
+source:17:26: error: expression is not constant
     localparam int baz = foo2;
                          ^~~~
-source:10:16: note: reference to 'asdf' by hierarchical name is not allowed in a constant expression
+source:13:16: note: reference to 'asdf' by hierarchical name is not allowed in a constant expression
         return $root.M.asdf;
                ^~~~~~~~~~~~
-source:14:26: note: in call to 'foo2()'
+source:17:26: note: in call to 'foo2()'
     localparam int baz = foo2;
                          ^
 )");
