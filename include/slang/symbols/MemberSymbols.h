@@ -86,7 +86,7 @@ class ParameterSymbol : public ValueSymbol {
 public:
     ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
-    static void fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
+    static void fromSyntax(const Scope& scope, const ParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVector<ParameterSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }

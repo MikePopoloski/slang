@@ -417,14 +417,6 @@ const Diagnostics& Compilation::getAllDiagnostics() {
     return *cachedAllDiagnostics;
 }
 
-Diagnostic& Compilation::addDiag(const Symbol& source, DiagCode code, SourceLocation location) {
-    return diags.add(source, code, location);
-}
-
-Diagnostic& Compilation::addDiag(const Symbol& source, DiagCode code, SourceRange sourceRange) {
-    return diags.add(source, code, sourceRange);
-}
-
 void Compilation::addDiagnostics(const Diagnostics& diagnostics) {
     diags.appendRange(diagnostics);
 }

@@ -149,7 +149,7 @@ struct Expression::PropagationVisitor {
         EvalContext context;
         ConstantValue value = result->eval(context);
         if (value)
-            result->constant = compilation.createConstant(std::move(value));
+            result->constant = compilation.allocConstant(std::move(value));
         return *result;
     }
 

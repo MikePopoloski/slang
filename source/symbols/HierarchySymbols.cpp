@@ -51,7 +51,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
                 lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
 
             SmallVectorSized<ParameterSymbol*, 8> params;
-            ParameterSymbol::fromSyntax(compilation, *declaration, lastLocal, true, params);
+            ParameterSymbol::fromSyntax(*result, *declaration, lastLocal, true, params);
 
             for (auto param : params) {
                 parameters.append(param);
@@ -72,7 +72,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
                 hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
 
             SmallVectorSized<ParameterSymbol*, 8> params;
-            ParameterSymbol::fromSyntax(compilation, *declaration, isLocal, false, params);
+            ParameterSymbol::fromSyntax(*result, *declaration, isLocal, false, params);
 
             for (auto param : params) {
                 parameters.append(param);

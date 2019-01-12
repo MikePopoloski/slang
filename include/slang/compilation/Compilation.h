@@ -109,10 +109,6 @@ public:
     /// Gets all of the diagnostics produced during compilation.
     const Diagnostics& getAllDiagnostics();
 
-    /// Report an error at the specified location.
-    Diagnostic& addDiag(const Symbol& source, DiagCode code, SourceLocation location);
-    Diagnostic& addDiag(const Symbol& source, DiagCode code, SourceRange sourceRange);
-
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);
 
@@ -151,10 +147,12 @@ public:
     /// that we don't bother providing dedicated accessors for them.
     const NetType& getWireNetType() const { return *wireNetType; }
 
-    ConstantValue* createConstant(ConstantValue&& value) {
+    /// Allocates space for a constant value in the pool of constants.
+    ConstantValue* allocConstant(ConstantValue&& value) {
         return constantAllocator.emplace(std::move(value));
     }
 
+    /// Allocates a symbol map.
     SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
 
 private:

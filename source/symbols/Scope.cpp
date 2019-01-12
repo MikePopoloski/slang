@@ -101,11 +101,11 @@ const Scope* Scope::getParent() const {
 }
 
 Diagnostic& Scope::addDiag(DiagCode code, SourceLocation location) const {
-    return compilation.addDiag(*thisSym, code, location);
+    return compilation.diags.add(*thisSym, code, location);
 }
 
 Diagnostic& Scope::addDiag(DiagCode code, SourceRange sourceRange) const {
-    return compilation.addDiag(*thisSym, code, sourceRange);
+    return compilation.diags.add(*thisSym, code, sourceRange);
 }
 
 void Scope::addMember(const Symbol& symbol) {
@@ -198,7 +198,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::ParameterDeclarationStatement: {
             SmallVectorSized<ParameterSymbol*, 16> params;
-            ParameterSymbol::fromSyntax(compilation,
+            ParameterSymbol::fromSyntax(*this,
                                         *syntax.as<ParameterDeclarationStatementSyntax>().parameter,
                                         true, false, params);
             for (auto param : params)

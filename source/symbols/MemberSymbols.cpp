@@ -96,21 +96,21 @@ ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLo
     isLocal(isLocal), isPort(isPort) {
 }
 
-void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
+void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationSyntax& syntax,
                                  bool isLocal, bool isPort,
                                  SmallVector<ParameterSymbol*>& results) {
     for (auto decl : syntax.declarators) {
         auto loc = decl->name.location();
-        auto param =
-            compilation.emplace<ParameterSymbol>(decl->name.valueText(), loc, isLocal, isPort);
+        auto param = scope.getCompilation().emplace<ParameterSymbol>(decl->name.valueText(), loc,
+                                                                     isLocal, isPort);
         param->setDeclaredType(*syntax.type);
         param->setFromDeclarator(*decl);
 
         if (!decl->initializer) {
             if (!isPort)
-                compilation.addDiag(*param, DiagCode::BodyParamNoInitializer, loc);
+                scope.addDiag(DiagCode::BodyParamNoInitializer, loc);
             else if (isLocal)
-                compilation.addDiag(*param, DiagCode::LocalParamNoInitializer, loc);
+                scope.addDiag(DiagCode::LocalParamNoInitializer, loc);
         }
 
         results.append(param);
@@ -149,7 +149,7 @@ const ConstantValue& ParameterSymbol::getValue() const {
 void ParameterSymbol::setValue(ConstantValue value) {
     auto scope = getScope();
     ASSERT(scope);
-    overriden = scope->getCompilation().createConstant(std::move(value));
+    overriden = scope->getCompilation().allocConstant(std::move(value));
 }
 
 void ParameterSymbol::toJson(json& j) const {

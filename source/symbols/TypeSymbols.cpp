@@ -588,7 +588,7 @@ const ConstantValue& EnumValueSymbol::getValue() const {
 void EnumValueSymbol::setValue(ConstantValue newValue) {
     auto scope = getScope();
     ASSERT(scope);
-    value = scope->getCompilation().createConstant(std::move(newValue));
+    value = scope->getCompilation().allocConstant(std::move(newValue));
 }
 
 void EnumValueSymbol::toJson(json& j) const {
