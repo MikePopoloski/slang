@@ -1,3 +1,10 @@
+add_custom_command(
+	COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/diagnostic_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
+	OUTPUT DiagCode.h DiagCode.cpp
+	DEPENDS ../scripts/diagnostic_gen.py ../scripts/diagnostics.txt
+	COMMENT "Generating diagnostics"
+)
+
 add_library(slang STATIC
 	binding/BindContext.cpp
 	binding/ConstantValue.cpp
@@ -11,6 +18,7 @@ add_library(slang STATIC
 	compilation/ScriptSession.cpp
 	compilation/SemanticModel.cpp
 
+	${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
 	diagnostics/Diagnostics.cpp
 	diagnostics/DiagnosticWriter.cpp
 
@@ -99,4 +107,5 @@ target_link_libraries(slang PUBLIC CONAN_PKG::jsonformoderncpp)
 target_link_libraries(slang PUBLIC CONAN_PKG::fmt)
 
 target_include_directories(slang PUBLIC ../include/)
+target_include_directories(slang PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(slang SYSTEM PUBLIC ../external/)

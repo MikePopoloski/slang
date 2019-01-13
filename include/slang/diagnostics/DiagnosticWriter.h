@@ -7,7 +7,6 @@
 #pragma once
 
 #include <deque>
-#include <unordered_map>
 
 #include "slang/diagnostics/Diagnostics.h"
 
@@ -23,20 +22,10 @@ class DiagnosticWriter {
 public:
     explicit DiagnosticWriter(const SourceManager& sourceManager);
 
-    /// Sets the message to use for the given diagnostic.
-    void setMessage(DiagCode code, std::string format);
-
-    /// Sets the severity to use for the given diagnostic.
-    void setSeverity(DiagCode code, DiagnosticSeverity severity);
-
-    /// Gets the current severity of the given diagnostic.
-    DiagnosticSeverity getSeverity(DiagCode code) const;
-
     /// Writes a report for the given diagnostic.
     std::string report(const Diagnostic& diagnostic);
 
     /// Writes a report for all of the diagnostics in the given collection.
-    /// Note that this modifies the collection by sorting it.
     std::string report(const Diagnostics& diagnostics);
 
 private:
@@ -50,14 +39,6 @@ private:
                     const char* severity, const std::string& msg);
 
     const SourceManager& sourceManager;
-
-    // Little structure to hold a diagnostic's format and severity.
-    struct Descriptor {
-        std::string format;
-        DiagnosticSeverity severity;
-    };
-
-    std::unordered_map<DiagCode, Descriptor> descriptors;
 };
 
 } // namespace slang
