@@ -1,8 +1,15 @@
 add_custom_command(
 	COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/diagnostic_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
-	OUTPUT DiagCode.h DiagCode.cpp
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/DiagCode.h ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
 	DEPENDS ../scripts/diagnostic_gen.py ../scripts/diagnostics.txt
 	COMMENT "Generating diagnostics"
+)
+
+add_custom_command(
+	COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/syntax_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
+	DEPENDS ../scripts/syntax_gen.py ../scripts/syntax.txt
+	COMMENT "Generating syntax"
 )
 
 add_library(slang STATIC
@@ -45,7 +52,7 @@ add_library(slang STATIC
 	symbols/TypePrinter.cpp
 	symbols/TypeSymbols.cpp
 
-	syntax/AllSyntax.cpp
+	${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
 	syntax/SyntaxFacts.cpp
 	syntax/SyntaxNode.cpp
 	syntax/SyntaxPrinter.cpp
