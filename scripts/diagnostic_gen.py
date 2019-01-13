@@ -13,7 +13,10 @@ def main():
     inf = open(os.path.join(ourdir, "diagnostics.txt"))
 
     headerdir = os.path.join(args.dir, 'slang', 'diagnostics')
-    os.makedirs(headerdir, exist_ok=True)
+    try:
+        os.makedirs(headerdir)
+    except OSError:
+        pass
 
     diags = []
 
