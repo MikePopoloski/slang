@@ -10,12 +10,13 @@
 
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/parsing/Parser.h"
-#include "slang/parsing/Preprocessor.h"
-#include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 
 namespace slang {
+
+class SourceManager;
+struct SourceBuffer;
 
 /// The SyntaxTree is the easiest way to interface with the lexer / preprocessor /
 /// parser stack. Give it some source text and it produces a parse tree.
@@ -25,44 +26,26 @@ namespace slang {
 class SyntaxTree {
 public:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               std::shared_ptr<SyntaxTree> parent = nullptr) :
-        rootNode(root),
-        sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {
-        if (parentTree)
-            eof = parentTree->eof;
-    }
+               std::shared_ptr<SyntaxTree> parent = nullptr);
 
     SyntaxTree(SyntaxTree&& other) = default;
     SyntaxTree& operator=(SyntaxTree&&) = default;
 
     /// Creates a syntax tree from a full compilation unit.
-    static std::shared_ptr<SyntaxTree> fromFile(string_view path) {
-        return fromFile(path, getDefaultSourceManager());
-    }
+    static std::shared_ptr<SyntaxTree> fromFile(string_view path);
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
-    static std::shared_ptr<SyntaxTree> fromText(string_view text, string_view name = "") {
-        return fromText(text, getDefaultSourceManager(), name);
-    }
+    static std::shared_ptr<SyntaxTree> fromText(string_view text, string_view name = "");
 
     static std::shared_ptr<SyntaxTree> fromFile(string_view path, SourceManager& sourceManager,
-                                                const Bag& options = {}) {
-        SourceBuffer buffer = sourceManager.readSource(path);
-        if (!buffer)
-            return nullptr;
-        return create(sourceManager, buffer, options, false);
-    }
+                                                const Bag& options = {});
 
     static std::shared_ptr<SyntaxTree> fromText(string_view text, SourceManager& sourceManager,
-                                                string_view name = "", const Bag& options = {}) {
-        return create(sourceManager, sourceManager.assignText(name, text), options, true);
-    }
+                                                string_view name = "", const Bag& options = {});
 
     static std::shared_ptr<SyntaxTree> fromBuffer(const SourceBuffer& buffer,
                                                   SourceManager& sourceManager,
-                                                  const Bag& options = {}) {
-        return create(sourceManager, buffer, options, false);
-    }
+                                                  const Bag& options = {});
 
     /// Gets any diagnostics generated while parsing.
     Diagnostics& diagnostics() { return diagnosticsBuffer; }
@@ -92,47 +75,27 @@ public:
     /// the lifetime of the child tree.
     const SyntaxTree* getParentTree() const { return parentTree.get(); }
 
+    /// Gets metadata that was in effect when various syntax nodes were parsed (such as various
+    /// bits of preprocessor state).
+    const Parser::MetadataMap& getMetadataMap() const { return metadataMap; }
+
     /// This is a shared default source manager for cases where the user doesn't
     /// care about managing the lifetime of loaded source. Note that all of
     /// the source loaded by this thing will live in memory for the lifetime of
     /// the process.
-    static SourceManager& getDefaultSourceManager() {
-        static SourceManager instance;
-        return instance;
-    }
+    static SourceManager& getDefaultSourceManager();
 
 private:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               Diagnostics&& diagnostics, const Bag& options, Token eof) :
-        rootNode(root),
-        sourceMan(sourceManager), alloc(std::move(alloc)),
-        diagnosticsBuffer(std::move(diagnostics)), options_(options), eof(eof) {}
+               Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap, const Bag& options,
+               Token eof);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager, SourceBuffer source,
-                                              const Bag& options, bool guess) {
-        BumpAllocator alloc;
-        Diagnostics diagnostics;
-        Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
-        preprocessor.pushSource(source);
-
-        Parser parser(preprocessor, options);
-
-        SyntaxNode* root;
-        if (!guess)
-            root = &parser.parseCompilationUnit();
-        else {
-            root = &parser.parseGuess();
-            if (!parser.isDone())
-                return create(sourceManager, source, options, false);
-        }
-
-        return std::shared_ptr<SyntaxTree>(new SyntaxTree(root, sourceManager, std::move(alloc),
-                                                          std::move(diagnostics), options,
-                                                          parser.getEOFToken()));
-    }
+                                              const Bag& options, bool guess);
 
     SyntaxNode* rootNode;
     SourceManager& sourceMan;
+    Parser::MetadataMap metadataMap;
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
     Bag options_;

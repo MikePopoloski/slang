@@ -88,9 +88,13 @@ ModuleDeclarationSyntax& Parser::parseModule(span<AttributeInstanceSyntax*> attr
     Token endmodule;
     auto members =
         parseMemberList<MemberSyntax>(endKind, endmodule, [this]() { return parseMember(); });
-    return factory.moduleDeclaration(getModuleDeclarationKind(header.moduleKeyword.kind),
-                                     attributes, header, members, endmodule,
-                                     parseNamedBlockClause());
+
+    auto& result =
+        factory.moduleDeclaration(getModuleDeclarationKind(header.moduleKeyword.kind), attributes,
+                                  header, members, endmodule, parseNamedBlockClause());
+
+    metadataMap[&result] = getPP().getDefaultNetType();
+    return result;
 }
 
 ClassDeclarationSyntax& Parser::parseClass() {

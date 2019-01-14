@@ -25,17 +25,19 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation,
 }
 
 DefinitionSymbol::DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                                   DefinitionKind definitionKind) :
+                                   DefinitionKind definitionKind, const NetType& defaultNetType) :
     Symbol(SymbolKind::Definition, name, loc),
-    Scope(compilation, this), definitionKind(definitionKind),
+    Scope(compilation, this), definitionKind(definitionKind), defaultNetType(defaultNetType),
     portMap(compilation.allocSymbolMap()) {
 }
 
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
                                                const ModuleDeclarationSyntax& syntax) {
+    auto nameToken = syntax.header->name;
     auto result = compilation.emplace<DefinitionSymbol>(
-        compilation, syntax.header->name.valueText(), syntax.header->name.location(),
-        SemanticFacts::getDefinitionKind(syntax.kind));
+        compilation, nameToken.valueText(), nameToken.location(),
+        SemanticFacts::getDefinitionKind(syntax.kind), compilation.getDefaultNetType(syntax));
+
     result->setSyntax(syntax);
 
     SmallVectorSized<const ParameterSymbol*, 8> parameters;

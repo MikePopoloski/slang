@@ -6,12 +6,13 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/Compilation.h"
 
+#include "BuiltInSubroutines.h"
 #include <nlohmann/json.hpp>
 
-#include "BuiltInSubroutines.h"
-
+#include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/text/SourceManager.h"
 
 namespace {
 
@@ -142,6 +143,10 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
             throw std::logic_error(
                 "All syntax trees added to the compilation must use the same source manager");
         }
+    }
+
+    for (auto [node, tokenKind] : tree->getMetadataMap()) {
+        defaultNetTypeMap.emplace(&node->as<ModuleDeclarationSyntax>(), &getNetType(tokenKind));
     }
 
     auto unit = emplace<CompilationUnitSymbol>(*this);
@@ -419,6 +424,13 @@ const Diagnostics& Compilation::getAllDiagnostics() {
 
 void Compilation::addDiagnostics(const Diagnostics& diagnostics) {
     diags.appendRange(diagnostics);
+}
+
+const NetType& Compilation::getDefaultNetType(const ModuleDeclarationSyntax& decl) const {
+    auto it = defaultNetTypeMap.find(&decl);
+    if (it == defaultNetTypeMap.end())
+        return getNetType(TokenKind::Unknown);
+    return *it->second;
 }
 
 const Type& Compilation::getType(SyntaxKind typeKind) const {

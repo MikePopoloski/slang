@@ -14,6 +14,7 @@
 namespace slang {
 
 class Expression;
+class NetType;
 class ParameterSymbol;
 class PortSymbol;
 
@@ -47,9 +48,10 @@ class DefinitionSymbol : public Symbol, public Scope {
 public:
     span<const ParameterSymbol* const> parameters;
     DefinitionKind definitionKind;
+    const NetType& defaultNetType;
 
     DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     DefinitionKind definitionKind);
+                     DefinitionKind definitionKind, const NetType& defaultNetType);
 
     const SymbolMap& getPortMap() const {
         ensureElaborated();

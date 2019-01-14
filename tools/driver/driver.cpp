@@ -11,8 +11,10 @@
 
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DiagnosticWriter.h"
+#include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/text/SourceManager.h"
 
 using namespace slang;
 

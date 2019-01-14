@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <flat_hash_map.hpp>
+
 #include "slang/numeric/VectorBuilder.h"
 #include "slang/parsing/ParserBase.h"
 #include "slang/parsing/Token.h"
@@ -74,6 +76,11 @@ public:
 
     /// Gets the EndOfFile token, if one has been consumed. Otherwise returns an empty token.
     Token getEOFToken();
+
+    /// Gets metadata that was in effect when various syntax nodes were parsed (such as various
+    /// bits of preprocessor state).
+    using MetadataMap = flat_hash_map<const SyntaxNode*, TokenKind>;
+    MetadataMap&& getMetadataMap() { return std::move(metadataMap); }
 
 private:
     ExpressionSyntax& parseMinTypMaxExpression();
@@ -277,9 +284,11 @@ private:
 
     SyntaxFactory factory;
     ParserOptions parseOptions;
+    MetadataMap metadataMap;
 
     // Scratch space for building up integer vector literals.
     VectorBuilder vectorBuilder;
+
     size_t recursionDepth = 0;
     Token eofToken;
 };

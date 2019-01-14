@@ -56,6 +56,7 @@ add_library(slang STATIC
 	syntax/SyntaxFacts.cpp
 	syntax/SyntaxNode.cpp
 	syntax/SyntaxPrinter.cpp
+	syntax/SyntaxTree.cpp
 	syntax/SyntaxVisitor.cpp
 
 	text/SourceManager.cpp

@@ -38,6 +38,8 @@ protected:
 
     Token getLastConsumed() const;
 
+    Preprocessor& getPP() { return window.tokenSource; }
+
     /// Helper class that maintains a sliding window of tokens, with lookahead.
     class Window {
     public:

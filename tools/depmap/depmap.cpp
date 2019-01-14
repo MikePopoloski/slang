@@ -10,6 +10,7 @@
 
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
+#include "slang/text/SourceManager.h"
 
 using namespace slang;
 

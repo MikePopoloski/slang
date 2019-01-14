@@ -112,6 +112,9 @@ public:
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);
 
+    /// Gets the default net type that was in place at the time the given declaration was parsed.
+    const NetType& getDefaultNetType(const ModuleDeclarationSyntax& decl) const;
+
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
                         bool allowNetType = false, bool forceSigned = false);
@@ -168,7 +171,7 @@ private:
     std::unique_ptr<RootSymbol> root;
     const SourceManager* sourceManager = nullptr;
     bool finalized = false;
-    bool finalizing = false;    // to prevent reentrant calls to getRoot()
+    bool finalizing = false; // to prevent reentrant calls to getRoot()
 
     optional<Diagnostics> cachedParseDiagnostics;
     optional<Diagnostics> cachedSemanticDiagnostics;
@@ -216,6 +219,9 @@ private:
 
     // Map from token kinds to the built-in net types.
     flat_hash_map<TokenKind, std::unique_ptr<NetType>> knownNetTypes;
+
+    // Map from syntax nodes to parse-time metadata about default net types.
+    flat_hash_map<const ModuleDeclarationSyntax*, const NetType*> defaultNetTypeMap;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg Two of the entries are not valid and will be nullptr (!fourstate & reg).
