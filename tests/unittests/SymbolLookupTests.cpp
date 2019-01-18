@@ -923,20 +923,8 @@ endmodule
 source:9:16: error: hierarchical names are not allowed in constant expressions
         return gen1.bar;
                ^~~~
-source:9:20: error: could not resolve hierarchical path name 'bar'
-        return gen1.bar;
-                   ^~~~
 source:13:16: error: hierarchical names are not allowed in constant expressions
         return $root.M.asdf;
                ^~~~~
-source:17:26: error: expression is not constant
-    localparam int baz = foo2;
-                         ^~~~
-source:13:16: note: reference to 'asdf' by hierarchical name is not allowed in a constant expression
-        return $root.M.asdf;
-               ^~~~~~~~~~~~
-source:17:26: note: in call to 'foo2()'
-    localparam int baz = foo2;
-                         ^
 )");
 }

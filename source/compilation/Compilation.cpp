@@ -26,7 +26,7 @@ struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
     void handle(const RootSymbol& symbol) { visitDefault(symbol); }
     void handle(const CompilationUnitSymbol& symbol) { visitDefault(symbol); }
     void handle(const DefinitionSymbol& symbol) { visitDefault(symbol); }
-    void handle(const InstanceSymbol& symbol) { visitDefault(symbol); }
+    void handle(const ModuleInstanceSymbol& symbol) { visitDefault(symbol); }
     void handle(const InstanceArraySymbol& symbol) { visitDefault(symbol); }
     void handle(const GenerateBlockSymbol& symbol) { visitDefault(symbol); }
     void handle(const GenerateBlockArraySymbol& symbol) { visitDefault(symbol); }
