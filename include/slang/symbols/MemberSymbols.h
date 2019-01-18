@@ -134,9 +134,12 @@ public:
     /// connects to the instance's internals.
     const Expression* internalConnection = nullptr;
 
-    /// If the port is connected during instantiation, this is the expression that
+    /// If the port is connected during instantiation, gets the expression that
     /// indicates how it connects to the outside world.
-    const Expression* externalConnection = nullptr;
+    const Expression* getExternalConnection() const;
+
+    void setExternalConnection(const Expression* expr);
+    void setExternalConnection(const ExpressionSyntax& syntax);
 
     PortSymbol(string_view name, SourceLocation loc) : ValueSymbol(SymbolKind::Port, name, loc) {}
 
@@ -150,6 +153,10 @@ public:
                                 const SeparatedSyntaxList<PortConnectionSyntax>& portConnections);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
+
+private:
+    mutable optional<const Expression*> externalConn;
+    const ExpressionSyntax* externalSyntax = nullptr;
 };
 
 /// Represents the public-facing side of a module / program / interface port

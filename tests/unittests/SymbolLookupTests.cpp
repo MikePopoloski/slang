@@ -928,3 +928,20 @@ source:13:16: error: hierarchical names are not allowed in constant expressions
                ^~~~~
 )");
 }
+
+TEST_CASE("Root in port connection") {
+    auto tree = SyntaxTree::fromText(R"(
+module M;
+    N n1($root.M.n1.foo);
+    N n2(M.n1.foo);
+endmodule
+
+module N(logic f);
+    logic foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
