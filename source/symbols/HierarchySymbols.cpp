@@ -13,10 +13,18 @@
 
 namespace slang {
 
+PackageSymbol::PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                             const NetType& defaultNetType) :
+    Symbol(SymbolKind::Package, name, loc),
+    Scope(compilation, this), defaultNetType(defaultNetType) {
+}
+
 PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation,
                                          const ModuleDeclarationSyntax& syntax) {
+
     auto result = compilation.emplace<PackageSymbol>(compilation, syntax.header->name.valueText(),
-                                                     syntax.header->name.location());
+                                                     syntax.header->name.location(),
+                                                     compilation.getDefaultNetType(syntax));
     for (auto member : syntax.members)
         result->addMembers(*member);
 

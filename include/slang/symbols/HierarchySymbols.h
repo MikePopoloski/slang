@@ -32,8 +32,10 @@ public:
 /// A SystemVerilog package construct.
 class PackageSymbol : public Symbol, public Scope {
 public:
-    PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::Package, name, loc), Scope(compilation, this) {}
+    const NetType& defaultNetType;
+
+    PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                  const NetType& defaultNetType);
 
     void toJson(json&) const {}
 

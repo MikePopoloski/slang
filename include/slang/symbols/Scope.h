@@ -17,6 +17,7 @@ namespace slang {
 
 class Compilation;
 class ForwardingTypedefSymbol;
+class NetType;
 class Scope;
 class StatementBodiedScope;
 class SystemSubroutine;
@@ -128,6 +129,9 @@ public:
 
     /// Gets the compilation that contains this scope.
     Compilation& getCompilation() const { return compilation; }
+
+    /// Gets the default net type for implicit nets in this scope.
+    const NetType& getDefaultNetType() const;
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;

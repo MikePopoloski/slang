@@ -712,7 +712,6 @@ module M(I iface, logic [iface.i - 1 : 0] foo);
     if (j == 17) begin : asdf
         N n();
     end
-        
 endmodule
 
 module test;

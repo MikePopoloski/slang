@@ -100,6 +100,23 @@ const Scope* Scope::getParent() const {
     return thisSym->getScope();
 }
 
+const NetType& Scope::getDefaultNetType() const {
+    const Scope* current = this;
+    while (current) {
+        switch (current->asSymbol().kind) {
+            case SymbolKind::Definition:
+                return current->asSymbol().as<DefinitionSymbol>().defaultNetType;
+            case SymbolKind::Package:
+                return current->asSymbol().as<PackageSymbol>().defaultNetType;
+            default:
+                current = current->getParent();
+                break;
+        }
+    }
+
+    return getCompilation().getNetType(TokenKind::Unknown);
+}
+
 Diagnostic& Scope::addDiag(DiagCode code, SourceLocation location) const {
     return compilation.diags.add(*thisSym, code, location);
 }
@@ -377,13 +394,13 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
         if (!pair.second) {
             // TODO: handle special generate block name conflict rules
 
-            // We have a name collision; first check if this is ok (forwarding typedefs share a name
-            // with the actual typedef) and if not give the user a helpful error message.
+            // We have a name collision; first check if this is ok (forwarding typedefs share a
+            // name with the actual typedef) and if not give the user a helpful error message.
             const Symbol* existing = pair.first->second;
             if (existing->kind == SymbolKind::TypeAlias &&
                 member->kind == SymbolKind::ForwardingTypedef) {
-                // Just add this forwarding typedef to a deferred list so we can process them once
-                // we know the kind of symbol the alias points to.
+                // Just add this forwarding typedef to a deferred list so we can process them
+                // once we know the kind of symbol the alias points to.
                 existing->as<TypeAliasType>().addForwardDecl(member->as<ForwardingTypedefSymbol>());
             }
             else if (existing->kind == SymbolKind::ForwardingTypedef &&
@@ -394,8 +411,8 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
             }
             else if (existing->kind == SymbolKind::ForwardingTypedef &&
                      member->kind == SymbolKind::TypeAlias) {
-                // We found the actual type for a previous forwarding declaration. Replace it in the
-                // name map.
+                // We found the actual type for a previous forwarding declaration. Replace it in
+                // the name map.
                 member->as<TypeAliasType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
                 pair.first->second = member;
             }
@@ -527,8 +544,8 @@ void Scope::elaborate() const {
         }
 
         // Now that all instances have been inserted, go back through and elaborate generate
-        // blocks. The spec requires that we give each generate construct an index, starting from
-        // one. This index is used to generate external names for unnamed generate blocks.
+        // blocks. The spec requires that we give each generate construct an index, starting
+        // from one. This index is used to generate external names for unnamed generate blocks.
         uint32_t constructIndex = 1;
         for (auto symbol : deferred) {
             auto& member = symbol->as<DeferredMemberSymbol>();
@@ -709,8 +726,8 @@ void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
         return;
     }
 
-    // Continue up the scope chain via our parent. If we hit an instance, we need to instead search
-    // within the context of the definition's parent scope.
+    // Continue up the scope chain via our parent. If we hit an instance, we need to instead
+    // search within the context of the definition's parent scope.
     auto nextScope = getLookupParent(asSymbol());
     if (!nextScope)
         return;
@@ -804,7 +821,8 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
 }
 
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
-// looking up in other ways. Returns false if the entire lookup has failed and should be aborted.
+// looking up in other ways. Returns false if the entire lookup has failed and should be
+// aborted.
 bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
                     const SyntaxList<ElementSelectSyntax>* selectors, const BindContext& context,
                     LookupResult& result, bitmask<LookupFlags> flags) {
@@ -910,7 +928,8 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
 }
 
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
-// looking up in other ways. Returns false if the entire lookup has failed and should be aborted.
+// looking up in other ways. Returns false if the entire lookup has failed and should be
+// aborted.
 bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlusLoc> nameParts,
                   Token nameToken, const SyntaxList<ElementSelectSyntax>* selectors,
                   const BindContext& context, LookupResult& result, bitmask<LookupFlags> flags) {
@@ -951,8 +970,8 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
 
             // Figure out which scope to look at next. If we're already at the root scope, we're
             // done and should return. Otherwise, we want to keep going up until we hit the
-            // compilation unit, at which point we'll jump back to the instantiation scope of the
-            // last instance we hit.
+            // compilation unit, at which point we'll jump back to the instantiation scope of
+            // the last instance we hit.
             symbol = &scope->asSymbol();
             switch (symbol->kind) {
                 case SymbolKind::Root:
@@ -1063,7 +1082,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     if (result.hasError())
         return;
 
-    // [23.7.1] If we are starting with a colon separator, always do a downwards name resolution.
+    // [23.7.1] If we are starting with a colon separator, always do a downwards name
+    // resolution.
     if (colonParts) {
         // If the prefix name can be resolved normally, we have a class scope, otherwise it's a
         // package lookup.
@@ -1076,8 +1096,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             }
         }
 
-        // We can't do upwards name resolution if colon access is involved, so always return after
-        // one downward lookup.
+        // We can't do upwards name resolution if colon access is involved, so always return
+        // after one downward lookup.
         downward();
         return;
     }
@@ -1127,9 +1147,9 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     if (result.found)
         return;
 
-    // We couldn't find anything. originalResult has any diagnostics issued by the first downward
-    // lookup (if any), so it's fine to just return it as is. If we never found any symbol
-    // originally, issue an appropriate error for that.
+    // We couldn't find anything. originalResult has any diagnostics issued by the first
+    // downward lookup (if any), so it's fine to just return it as is. If we never found any
+    // symbol originally, issue an appropriate error for that.
     result.copyFrom(originalResult);
     if (!result.found && !result.hasError())
         reportUndeclared(name, nameToken.range(), flags, result);
