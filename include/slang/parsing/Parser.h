@@ -184,6 +184,7 @@ private:
     PackageImportDeclarationSyntax& parseImportDeclaration(
         span<AttributeInstanceSyntax*> attributes);
     PackageImportItemSyntax& parsePackageImportItem();
+    NetTypeDeclarationSyntax& parseNetTypeDecl(span<AttributeInstanceSyntax*> attributes);
     DPIImportExportSyntax& parseDPIImportExport(span<AttributeInstanceSyntax*> attributes);
     AssertionItemPortListSyntax* parseAssertionItemPortList(TokenKind declarationKind);
     PropertyDeclarationSyntax& parsePropertyDeclaration(span<AttributeInstanceSyntax*> attributes);

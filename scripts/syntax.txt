@@ -519,6 +519,17 @@ DataTypeSyntax type
 separated_list<VariableDeclaratorSyntax> declarators
 token semi
 
+WithFunctionClauseSyntax kind=WithFunctionClause
+token with
+NameSyntax name
+
+NetTypeDeclarationSyntax base=MemberSyntax kind=NetTypeDeclaration
+token keyword
+DataTypeSyntax type
+token name
+WithFunctionClauseSyntax? withFunction
+token semi
+
 PackageImportItemSyntax kind=PackageImportItem
 token package
 token doubleColon

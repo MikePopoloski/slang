@@ -580,6 +580,8 @@ enum class SyntaxKind : uint16_t {
     NetDeclaration,
     PortDeclaration,
     GenvarDeclaration,
+    WithFunctionClause,
+    NetTypeDeclaration,
 
     // types
     BitType,

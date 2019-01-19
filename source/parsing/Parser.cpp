@@ -27,13 +27,16 @@ CompilationUnitSyntax& Parser::parseCompilationUnit() {
 }
 
 SyntaxNode& Parser::parseGuess() {
-    // First try to parse as an instantiation
+    // First try to parse as some kind of declaration.
+    auto attributes = parseAttributes();
     if (isHierarchyInstantiation())
-        return parseHierarchyInstantiation(parseAttributes());
-
-    // try to parse as a variable declaration.
+        return parseHierarchyInstantiation(attributes);
+    if (isNetDeclaration())
+        return parseNetDeclaration(attributes);
     if (isVariableDeclaration())
-        return parseVariableDeclaration(parseAttributes());
+        return parseVariableDeclaration(attributes);
+
+    ASSERT(attributes.empty());
 
     // Now try to parse as a statement. This will also handle plain expressions,
     // though we might get an error about a missing semicolon that we should suppress.
@@ -1793,11 +1796,12 @@ MemberSyntax& Parser::parseVariableDeclaration(span<AttributeInstanceSyntax*> at
         }
         case TokenKind::ImportKeyword:
             return parseImportDeclaration(attributes);
+        case TokenKind::NetTypeKeyword:
+            return parseNetTypeDecl(attributes);
         default:
             break;
     }
 
-    // TODO: other kinds of declarations besides data
     bool hasVar = false;
     SmallVectorSized<Token, 4> modifiers;
     auto kind = peek().kind;
@@ -1917,6 +1921,21 @@ PackageImportItemSyntax& Parser::parsePackageImportItem() {
         item = expect(TokenKind::Identifier);
 
     return factory.packageImportItem(package, doubleColon, item);
+}
+
+NetTypeDeclarationSyntax& Parser::parseNetTypeDecl(span<AttributeInstanceSyntax*> attributes) {
+    auto keyword = consume();
+    auto& type = parseDataType(false);
+    auto name = expect(TokenKind::Identifier);
+
+    WithFunctionClauseSyntax* withFunction = nullptr;
+    if (peek(TokenKind::WithKeyword)) {
+        auto with = consume();
+        withFunction = &factory.withFunctionClause(with, parseName());
+    }
+
+    return factory.netTypeDeclaration(attributes, keyword, type, name, withFunction,
+                                      expect(TokenKind::Semicolon));
 }
 
 DPIImportExportSyntax& Parser::parseDPIImportExport(span<AttributeInstanceSyntax*> attributes) {
@@ -2288,7 +2307,6 @@ bool Parser::isVariableDeclaration() {
         case TokenKind::NetTypeKeyword:
         case TokenKind::LocalParamKeyword:
         case TokenKind::ParameterKeyword:
-        case TokenKind::BindKeyword:
         case TokenKind::LetKeyword:
         case TokenKind::ImportKeyword:
             return true;
