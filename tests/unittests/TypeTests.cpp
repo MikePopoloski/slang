@@ -233,7 +233,7 @@ endmodule
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
 
-    const auto& fType = instance.find<VariableSymbol>("f").getType();
+    const auto& fType = instance.find<NetSymbol>("f").getType();
     CHECK(fType.isPackedArray());
     CHECK(fType.as<PackedArrayType>().range == ConstantRange{ 0, 3 });
 
@@ -250,14 +250,14 @@ endmodule
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
 
-    const auto& fType = instance.find<VariableSymbol>("f").getType();
+    const auto& fType = instance.find<NetSymbol>("f").getType();
     CHECK(fType.isUnpackedArray());
     CHECK(fType.as<UnpackedArrayType>().range == ConstantRange{ 0, 2 });
 
-    const auto& gType = instance.find<VariableSymbol>("g").getType();
+    const auto& gType = instance.find<NetSymbol>("g").getType();
     CHECK(!gType.isUnpackedArray());
 
-    const auto& hType = instance.find<VariableSymbol>("h").getType();
+    const auto& hType = instance.find<NetSymbol>("h").getType();
     CHECK(hType.isUnpackedArray());
     CHECK(hType.as<UnpackedArrayType>().range == ConstantRange{ 0, 1 });
 
