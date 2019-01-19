@@ -222,7 +222,8 @@ public:
             }
             case PortKind::Net: {
                 // TODO: net type
-                auto net = compilation.emplace<NetSymbol>(port->name, port->location);
+                auto net = compilation.emplace<NetSymbol>(
+                    port->name, port->location, compilation.getNetType(TokenKind::Unknown));
                 symbol = net;
                 break;
             }
@@ -587,7 +588,8 @@ void NonAnsiPortListBuilder::handleIODecl(const PortHeaderSyntax& header, PortIn
                 info.kind = PortKind::Net;
 
                 // TODO: net type
-                auto net = compilation.emplace<NetSymbol>(name, declLoc);
+                auto net = compilation.emplace<NetSymbol>(
+                    name, declLoc, compilation.getNetType(TokenKind::Unknown));
                 net->setSyntax(decl);
                 net->setDeclaredType(*varHeader.dataType, decl.dimensions);
                 info.internalSymbol = net;
@@ -610,7 +612,8 @@ void NonAnsiPortListBuilder::handleIODecl(const PortHeaderSyntax& header, PortIn
 
             // Create a new symbol to represent this port internally to the instance.
             // TODO: net type
-            auto net = compilation.emplace<NetSymbol>(name, declLoc);
+            auto net = compilation.emplace<NetSymbol>(name, declLoc,
+                                                      compilation.getNetType(TokenKind::Unknown));
             net->setSyntax(decl);
             net->setDeclaredType(*netHeader.dataType, decl.dimensions);
             info.internalSymbol = net;
@@ -1049,11 +1052,14 @@ void InterfacePortSymbol::toJson(json& j) const {
 
 void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results) {
+
+    // TODO: other net features
+    const NetType& netType = compilation.getNetType(syntax.netType.kind);
+
     for (auto declarator : syntax.declarators) {
         auto net = compilation.emplace<NetSymbol>(declarator->name.valueText(),
-                                                  declarator->name.location());
+                                                  declarator->name.location(), netType);
 
-        // TODO: net types, initializers, etc
         net->setDeclaredType(*syntax.type, declarator->dimensions);
         net->setFromDeclarator(*declarator);
         results.append(net);

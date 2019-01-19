@@ -184,7 +184,10 @@ public:
 /// Represents a net declaration.
 class NetSymbol : public ValueSymbol {
 public:
-    NetSymbol(string_view name, SourceLocation loc) : ValueSymbol(SymbolKind::Net, name, loc) {}
+    const NetType& netType;
+
+    NetSymbol(string_view name, SourceLocation loc, const NetType& netType) :
+        ValueSymbol(SymbolKind::Net, name, loc), netType(netType) {}
 
     void toJson(json&) const {}
 
