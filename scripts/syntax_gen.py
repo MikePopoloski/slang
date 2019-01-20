@@ -283,6 +283,30 @@ namespace slang {
         if v.final:
             print("Type '{}' has no kinds assigned to it.".format(k))
 
+    outf = open(os.path.join(headerdir, "SyntaxKind.h"), 'w')
+    outf.write('''//------------------------------------------------------------------------------
+// SyntaxKind.h
+// Generated SyntaxKind enum.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
+#pragma once
+
+namespace slang {
+
+enum class SyntaxKind {
+    Unknown,
+    SyntaxList,
+    TokenList,
+    SeparatedList,
+''')
+
+    for k,v in sorted(kindmap.items()):
+        outf.write('    {},\n'.format(k))
+
+    outf.write('};\n\n')
+    outf.write('}\n')
+
 def generate(outf, name, tags, members, alltypes, kindmap):
     tagdict = {}
     if tags:

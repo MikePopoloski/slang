@@ -15,7 +15,7 @@
 
 namespace slang {
 
-enum class SyntaxKind : uint16_t;
+enum class SyntaxKind;
 enum class TokenKind : uint16_t;
 
 class Diagnostics;
