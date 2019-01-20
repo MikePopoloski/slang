@@ -34,7 +34,7 @@ private:
     friend class Scope;
 
     void bindBody();
-    void bindVariableDecl(const DataDeclarationSyntax& syntax,
+    void bindVariableDecl(const DataDeclarationSyntax& syntax, const BindContext& context,
                           SmallVector<const Statement*>& statements);
 
     Statement& bindStatementList(const SyntaxList<SyntaxNode>& items);

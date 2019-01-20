@@ -172,7 +172,6 @@ error ReturnNotInSubroutine "return statement is only valid inside task and func
 
 // types
 error InvalidEnumBase ""
-error NetTypeNotAllowed "{} is a net type, not a data type"
 
 // lookups
 error AmbiguousWildcardImport "multiple imports found for identifier '{}'"

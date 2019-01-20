@@ -61,7 +61,7 @@ Statement& StatementBodiedScope::bindStatementList(const SyntaxList<SyntaxNode>&
 
         switch (item->kind) {
             case SyntaxKind::DataDeclaration:
-                bindVariableDecl(item->as<DataDeclarationSyntax>(), buffer);
+                bindVariableDecl(item->as<DataDeclarationSyntax>(), context, buffer);
                 break;
             case SyntaxKind::TypedefDeclaration:
             case SyntaxKind::ForwardTypedefDeclaration:
@@ -81,13 +81,16 @@ Statement& StatementBodiedScope::bindStatementList(const SyntaxList<SyntaxNode>&
 }
 
 void StatementBodiedScope::bindVariableDecl(const DataDeclarationSyntax& syntax,
+                                            const BindContext& context,
                                             SmallVector<const Statement*>& statements) {
-    SmallVectorSized<const VariableSymbol*, 4> variables;
-    VariableSymbol::fromSyntax(getCompilation(), syntax, variables);
+    // TODO: check for non-variables
+    SmallVectorSized<const ValueSymbol*, 4> variables;
+    VariableSymbol::fromSyntax(getCompilation(), syntax, context.scope, variables);
 
     for (auto variable : variables) {
         addMember(*variable);
-        statements.append(getCompilation().emplace<VariableDeclStatement>(*variable));
+        statements.append(
+            getCompilation().emplace<VariableDeclStatement>(variable->as<VariableSymbol>()));
     }
 }
 

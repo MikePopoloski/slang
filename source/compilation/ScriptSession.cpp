@@ -27,8 +27,9 @@ ConstantValue ScriptSession::eval(string_view text) {
             scope.addMembers(node);
             return nullptr;
         case SyntaxKind::DataDeclaration: {
-            SmallVectorSized<const VariableSymbol*, 2> symbols;
-            VariableSymbol::fromSyntax(compilation, node.as<DataDeclarationSyntax>(), symbols);
+            SmallVectorSized<const ValueSymbol*, 2> symbols;
+            VariableSymbol::fromSyntax(compilation, node.as<DataDeclarationSyntax>(), scope,
+                                       symbols);
 
             for (auto symbol : symbols) {
                 scope.addMember(*symbol);

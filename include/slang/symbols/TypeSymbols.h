@@ -134,9 +134,6 @@ public:
     /// Indicates whether this is the error type.
     bool isError() const { return getCanonicalType().kind == SymbolKind::ErrorType; }
 
-    /// Indicates whether this is actually a net type instead of a data type.
-    bool isNetType() const { return kind == SymbolKind::NetType; }
-
     /// Determines whether the given type "matches" this one. For most intents
     /// and purposes, matching types are completely identical.
     bool isMatching(const Type& rhs) const;
@@ -504,14 +501,9 @@ public:
 ///
 /// There is a parallel type system for nets that exists independently from the data type
 /// system. Most nets will be one of the built in types, but user defined net types can
-/// exist too (TODO: though they are currently unimplemented here).
+/// exist too.
 ///
-/// We actually inherit from Type here because in the face of net type aliases the parser
-/// doesn't know whether something is a data declaration or a net declaration; once we start
-/// doing name lookups we'll find the nettype alias and know it's actually a net, but until
-/// that happens we'll be dealing with a data declaration syntax node.
-///
-class NetType : public Type {
+class NetType : public Symbol {
 public:
     enum NetKind {
         Unknown,
@@ -527,13 +519,43 @@ public:
         Supply0,
         Supply1,
         UWire,
-        UserDefined,
-        Alias
+        UserDefined
     } netKind;
 
-    explicit NetType(NetKind netKind);
+    NetType(NetKind netKind, string_view name, const Type& dataType);
+    NetType(string_view name, SourceLocation location);
+
+    /// If this net type is an alias, gets the target of the alias. Otherwise returns nullptr.
+    const NetType* getAliasTarget() const;
+
+    /// Gets the canonical net type for this net type, which involves unwrapping any aliases.
+    const NetType& getCanonical() const;
+
+    /// Gets the data type for nets of this particular net type.
+    const Type& getDataType() const;
+
+    /// Gets the custom resolution function for this net type, if it has one.
+    const SubroutineSymbol* getResolutionFunction() const;
+
+    bool isError() const { return netKind == Unknown; }
+    bool isBuiltIn() const { return netKind != UserDefined; }
+
+    void toJson(json& j) const;
+
+    static NetType& fromSyntax(Compilation& compilation, const NetTypeDeclarationSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::NetType; }
+
+private:
+    friend class Symbol;
+
+    void resolve() const;
+
+    mutable DeclaredType declaredType;
+
+    mutable const NetType* alias = nullptr;
+    mutable const SubroutineSymbol* resolver = nullptr;
+    mutable bool isResolved = false;
 };
 
 } // namespace slang

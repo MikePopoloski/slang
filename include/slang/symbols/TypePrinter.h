@@ -33,7 +33,6 @@ public:
     void handle(const EventType& type);
     void handle(const TypeAliasType& type);
     void handle(const ErrorType& type);
-    void handle(const NetType& type);
 
     // Catch-all method that should never be called.
     void handle(const Type&) { THROW_UNREACHABLE; }

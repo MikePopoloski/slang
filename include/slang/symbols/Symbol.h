@@ -190,6 +190,7 @@ public:
 
     /// Gets access to the symbol's declared type.
     not_null<const DeclaredType*> getDeclaredType() const { return &declaredType; }
+    not_null<DeclaredType*> getDeclaredType() { return &declaredType; }
 
     /// Sets the symbol's declared type.
     void setDeclaredType(const DataTypeSyntax& newType) { declaredType.setTypeSyntax(newType); }

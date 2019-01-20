@@ -173,6 +173,15 @@ void copyTypeFrom(ValueSymbol& dest, const DeclaredType& source) {
         dest.setType(source.getType());
 }
 
+string_view getSimpleName(const DataTypeSyntax& syntax) {
+    if (syntax.kind == SyntaxKind::NamedType) {
+        auto& namedType = syntax.as<NamedTypeSyntax>();
+        if (namedType.name->kind == SyntaxKind::IdentifierName)
+            return namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
+    }
+    return "";
+}
+
 // Helper class to build up lists of port symbols.
 class AnsiPortListBuilder {
 public:
@@ -329,17 +338,15 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
             // It's possible that this is actually an interface port if the data type is just an
             // identifier. The only way to know is to do a lookup and see what comes back.
             const DefinitionSymbol* definition = nullptr;
-            if (header.dataType->kind == SyntaxKind::NamedType) {
-                auto& namedType = header.dataType->as<NamedTypeSyntax>();
-                if (namedType.name->kind == SyntaxKind::IdentifierName) {
-                    Token id = namedType.name->as<IdentifierNameSyntax>().identifier;
-                    auto found = scope.lookupUnqualifiedName(id.valueText(), LookupLocation::max,
-                                                             id.range(), LookupFlags::Type);
+            string_view simpleName = getSimpleName(*header.dataType);
+            if (!simpleName.empty()) {
+                auto found =
+                    scope.lookupUnqualifiedName(simpleName, LookupLocation::max,
+                                                header.dataType->sourceRange(), LookupFlags::Type);
 
-                    // If we didn't find a valid type, try to find a definition.
-                    if (!found || !found->isType())
-                        definition = comp.getDefinition(id.valueText(), scope);
-                }
+                // If we didn't find a valid type, try to find a definition.
+                if (!found || !found->isType())
+                    definition = comp.getDefinition(simpleName, scope);
             }
 
             if (definition) {
@@ -1067,7 +1074,34 @@ void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax&
 }
 
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
-                                SmallVector<const VariableSymbol*>& results) {
+                                const Scope& scope, SmallVector<const ValueSymbol*>& results) {
+    // TODO: check modifiers
+
+    // This might actually be a net declaration with a user defined net type. That can only
+    // be true if the data type syntax is a simple identifier, so if we see that it is,
+    // perform a lookup (without forcing the scope to elaborate) and see what comes back.
+    string_view simpleName = getSimpleName(*syntax.type);
+    if (!simpleName.empty()) {
+        auto result = scope.lookupUnqualifiedName(
+            simpleName, LookupLocation::max, syntax.type->sourceRange(), LookupFlags::None, true);
+
+        if (result && result->kind == SymbolKind::NetType) {
+            const NetType& netType = result->as<NetType>();
+            netType.getAliasTarget(); // force resolution of target
+            
+            auto& declaredType = *netType.getDeclaredType();
+            for (auto declarator : syntax.declarators) {
+                auto net = compilation.emplace<NetSymbol>(declarator->name.valueText(),
+                                                          declarator->name.location(), netType);
+
+                net->getDeclaredType()->copyTypeFrom(declaredType);
+                net->setFromDeclarator(*declarator);
+                results.append(net);
+            }
+            return;
+        }
+    }
+
     for (auto declarator : syntax.declarators) {
         auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(),
                                                             declarator->name.location());

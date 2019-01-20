@@ -84,20 +84,28 @@ Compilation::Compilation() :
     knownTypes[SyntaxKind::EventType] = &eventType;
     knownTypes[SyntaxKind::Unknown] = &errorType;
 
-    knownNetTypes[TokenKind::WireKeyword] = std::make_unique<NetType>(NetType::Wire);
-    knownNetTypes[TokenKind::WAndKeyword] = std::make_unique<NetType>(NetType::WAnd);
-    knownNetTypes[TokenKind::WOrKeyword] = std::make_unique<NetType>(NetType::WOr);
-    knownNetTypes[TokenKind::TriKeyword] = std::make_unique<NetType>(NetType::Tri);
-    knownNetTypes[TokenKind::TriAndKeyword] = std::make_unique<NetType>(NetType::TriAnd);
-    knownNetTypes[TokenKind::TriOrKeyword] = std::make_unique<NetType>(NetType::TriOr);
-    knownNetTypes[TokenKind::Tri0Keyword] = std::make_unique<NetType>(NetType::Tri0);
-    knownNetTypes[TokenKind::Tri1Keyword] = std::make_unique<NetType>(NetType::Tri1);
-    knownNetTypes[TokenKind::TriRegKeyword] = std::make_unique<NetType>(NetType::TriReg);
-    knownNetTypes[TokenKind::Supply0Keyword] = std::make_unique<NetType>(NetType::Supply0);
-    knownNetTypes[TokenKind::Supply1Keyword] = std::make_unique<NetType>(NetType::Supply1);
-    knownNetTypes[TokenKind::UWireKeyword] = std::make_unique<NetType>(NetType::UWire);
-    knownNetTypes[TokenKind::Unknown] = std::make_unique<NetType>(NetType::Unknown);
+#define MAKE_NETTYPE(type)                                               \
+    knownNetTypes[TokenKind::type##Keyword] = std::make_unique<NetType>( \
+        NetType::type, getTokenKindText(TokenKind::type##Keyword), logicType)
+
+    MAKE_NETTYPE(Wire);
+    MAKE_NETTYPE(WAnd);
+    MAKE_NETTYPE(WOr);
+    MAKE_NETTYPE(Tri);
+    MAKE_NETTYPE(TriAnd);
+    MAKE_NETTYPE(TriOr);
+    MAKE_NETTYPE(Tri0);
+    MAKE_NETTYPE(Tri1);
+    MAKE_NETTYPE(TriReg);
+    MAKE_NETTYPE(Supply0);
+    MAKE_NETTYPE(Supply1);
+    MAKE_NETTYPE(UWire);
+
+    knownNetTypes[TokenKind::Unknown] =
+        std::make_unique<NetType>(NetType::Unknown, "<error>", logicType);
     wireNetType = knownNetTypes[TokenKind::WireKeyword].get();
+
+#undef MAKE_NETTYPE
 
     // Scalar types are indexed by bit flags.
     auto registerScalar = [this](auto& type) {
@@ -439,13 +447,8 @@ const Type& Compilation::getType(SyntaxKind typeKind) const {
 }
 
 const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation location,
-                                 const Scope& parent, bool allowNetType, bool forceSigned) {
-    const Type& result = Type::fromSyntax(*this, node, location, parent, forceSigned);
-    if (!allowNetType && result.isNetType()) {
-        parent.addDiag(DiagCode::NetTypeNotAllowed, node.sourceRange()) << result.name;
-        return errorType;
-    }
-    return result;
+                                 const Scope& parent, bool forceSigned) {
+    return Type::fromSyntax(*this, node, location, parent, forceSigned);
 }
 
 const Type& Compilation::getType(const Type& elementType,

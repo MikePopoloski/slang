@@ -158,28 +158,6 @@ void TypePrinter::handle(const ErrorType&) {
     buffer.append("<error>");
 }
 
-void TypePrinter::handle(const NetType& type) {
-    // clang-format off
-    switch (type.netKind) {
-        case NetType::Unknown: buffer.append("<error-nettype>"); break;
-        case NetType::Wire: buffer.append("wire"); break;
-        case NetType::WAnd: buffer.append("wand"); break;
-        case NetType::WOr: buffer.append("wor"); break;
-        case NetType::Tri: buffer.append("tri"); break;
-        case NetType::TriAnd: buffer.append("triand"); break;
-        case NetType::TriOr: buffer.append("trior"); break;
-        case NetType::Tri0: buffer.append("tri0"); break;
-        case NetType::Tri1: buffer.append("tri1"); break;
-        case NetType::TriReg: buffer.append("trireg"); break;
-        case NetType::Supply0: buffer.append("supply0"); break;
-        case NetType::Supply1: buffer.append("supply1"); break;
-        case NetType::UWire: buffer.append("uwire"); break;
-        case NetType::UserDefined: break; // TODO:
-        case NetType::Alias: break;       // TODO:
-    }
-    // clang-format on
-}
-
 void TypePrinter::appendStructMembers(const Scope& scope) {
     buffer.append("{");
     for (auto& member : scope.members()) {

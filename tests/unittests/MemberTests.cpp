@@ -30,6 +30,45 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("User defined nettypes") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    nettype logic[3:0] foo;
+endpackage
+
+module m;
+    import p::*;
+
+    typedef logic[10:0] stuff;
+
+    nettype foo bar;
+    nettype stuff baz;
+
+    // test that enum members get hoisted here
+    nettype enum { SDF = 42 } blah;
+
+    foo a = 1;
+    bar b = 2;
+    baz c = 3;
+    blah d = SDF;
+    bar e[5];
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    CHECK(root.lookupName<NetSymbol>("m.a").getType().toString() == "logic[3:0]");
+    CHECK(root.lookupName<NetSymbol>("m.b").netType.name == "bar");
+    CHECK(root.lookupName<NetSymbol>("m.b").netType.getAliasTarget()->name == "foo");
+    CHECK(root.lookupName<NetSymbol>("m.b").getType().toString() == "logic[3:0]");
+    CHECK(root.lookupName<NetSymbol>("m.c").getType().toString() == "logic[10:0]");
+    CHECK(root.lookupName<NetSymbol>("m.e").getType().toString() == "logic[3:0]$[0:4]");
+}
+
 TEST_CASE("JSON dump") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;

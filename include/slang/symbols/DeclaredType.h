@@ -83,6 +83,8 @@ public:
         flags |= DeclaredTypeFlags::ForceSigned;
     }
 
+    void copyTypeFrom(const DeclaredType& source);
+
     static std::tuple<const Type*, const Expression*> resolveType(
         const DataTypeSyntax& typeSyntax, const SyntaxList<VariableDimensionSyntax>* dimensions,
         const ExpressionSyntax* initializerSyntax, const BindContext& context,

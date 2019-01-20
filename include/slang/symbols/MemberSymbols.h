@@ -209,9 +209,11 @@ public:
 
     void toJson(json& j) const;
 
-    /// Constructs all variable symbols specified by the given syntax node.
+    /// Constructs all variable symbols specified by the given syntax node. Note that
+    /// this might actually construct net symbols if the data type syntax refers to
+    /// a user defined net type or alias.
     static void fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
-                           SmallVector<const VariableSymbol*>& results);
+                           const Scope& scope, SmallVector<const ValueSymbol*>& results);
 
     static VariableSymbol& fromSyntax(Compilation& compilation,
                                       const ForVariableDeclarationSyntax& syntax);

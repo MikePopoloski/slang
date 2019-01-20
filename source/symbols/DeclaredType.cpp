@@ -18,6 +18,17 @@ DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flag
     ASSERT(parent.getDeclaredType() == this);
 }
 
+void DeclaredType::copyTypeFrom(const DeclaredType& source) {
+    if (auto ts = source.getTypeSyntax()) {
+        setTypeSyntax(*ts);
+        if (auto dims = source.getDimensionSyntax())
+            setDimensionSyntax(*dims);
+    }
+
+    if (source.isTypeResolved())
+        setType(source.getType());
+}
+
 std::tuple<const Type*, const Expression*> DeclaredType::resolveType(
     const DataTypeSyntax& typeSyntax, const SyntaxList<VariableDimensionSyntax>* dimensions,
     const ExpressionSyntax* initializerSyntax, const BindContext& context,
@@ -41,7 +52,7 @@ std::tuple<const Type*, const Expression*> DeclaredType::resolveType(
         }
     }
     else {
-        type = &comp.getType(typeSyntax, context.lookupLocation, scope, false,
+        type = &comp.getType(typeSyntax, context.lookupLocation, scope,
                              (flags & DeclaredTypeFlags::ForceSigned) != 0);
         if (dimensions)
             type = &comp.getType(*type, *dimensions, context.lookupLocation, scope);
