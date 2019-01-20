@@ -99,10 +99,10 @@ namespace slang {
         elif line.startswith('forward '):
             outf.write('struct {};\n'.format(line[8:]))
         elif line.startswith('kindmap<'):
-            currkind = line[8:line.index('>')]
+            currkind = line[8:line.index('>')] + 'Syntax'
         else:
             p = line.split(' ')
-            currtype_name = p[0]
+            currtype_name = p[0] + 'Syntax'
             tags = p[1:] if len(p) > 1 else None
             currtype = []
 
@@ -290,7 +290,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
             p = t.split('=')
             tagdict[p[0]] = p[1]
 
-    base = tagdict['base'] if 'base' in tagdict else 'SyntaxNode'
+    base = tagdict['base'] + 'Syntax' if 'base' in tagdict else 'SyntaxNode'
     outf.write('struct {} : public {} {{\n'.format(name, base))
 
     pointerMembers = set()
@@ -317,16 +317,27 @@ def generate(outf, name, tags, members, alltypes, kindmap):
             m[0] = typename = 'TokenList'
             pointerMembers.add(m[1])
         elif m[0].startswith('list<'):
-            m[0] = typename = 'SyntaxList<' + m[0][5:]
+            last = m[0][5:m[0].index('>')]
+            if not last.endswith('SyntaxNode'):
+                last += 'Syntax'
+
+            m[0] = typename = 'SyntaxList<' + last + '>'
             pointerMembers.add(m[1])
         elif m[0].startswith('separated_list<'):
-            m[0] = typename = 'SeparatedSyntaxList<' + m[0][15:]
+            last = m[0][15:m[0].index('>')]
+            if not last.endswith('SyntaxNode'):
+                last += 'Syntax'
+
+            m[0] = typename = 'SeparatedSyntaxList<' + last + '>'
             pointerMembers.add(m[1])
         else:
             optional = False
             if m[0].endswith('?'):
                 optional = True
                 m[0] = m[0][:-1]
+
+            if m[0] != 'SyntaxNode':
+                m[0] += 'Syntax'
 
             if m[0] not in alltypes:
                 raise Exception("Unknown type '{}'".format(m[0]))

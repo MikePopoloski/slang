@@ -192,7 +192,7 @@ public:
         return token ? SemanticFacts::getPortDirection(token.kind) : lastDirection;
     }
 
-    void addInherited(const VariableDeclaratorSyntax& decl) {
+    void addInherited(const DeclaratorSyntax& decl) {
         if (lastInterface) {
             // TODO: inherit modport
             add(decl, lastInterface, nullptr);
@@ -203,7 +203,7 @@ public:
         add(decl, lastKind, lastDirection, *lastType);
     }
 
-    void add(const VariableDeclaratorSyntax& decl, PortKind portKind, PortDirection direction,
+    void add(const DeclaratorSyntax& decl, PortKind portKind, PortDirection direction,
              const DataTypeSyntax& type) {
 
         auto port = compilation.emplace<PortSymbol>(decl.name.valueText(), decl.name.location());
@@ -276,7 +276,7 @@ public:
         }
     }
 
-    void add(const VariableDeclaratorSyntax& decl, const DefinitionSymbol* iface,
+    void add(const DeclaratorSyntax& decl, const DefinitionSymbol* iface,
              const ModportSymbol* modport) {
         // TODO: dimensions
         auto port =
@@ -463,13 +463,13 @@ struct NonAnsiPortListBuilder {
     SmallVector<Symbol*>& ports;
 
     struct PortInfo {
-        const VariableDeclaratorSyntax* syntax = nullptr;
+        const DeclaratorSyntax* syntax = nullptr;
         const Symbol* internalSymbol = nullptr;
         PortDirection direction;
         PortKind kind;
         bool used = false;
 
-        PortInfo(const VariableDeclaratorSyntax* syntax) : syntax(syntax) {}
+        PortInfo(const DeclaratorSyntax* syntax) : syntax(syntax) {}
     };
     SmallMap<string_view, PortInfo, 8> portInfos;
 

@@ -294,7 +294,7 @@ MemberSyntax& Parser::parseAnsiPort() {
     }
 
     auto& header = parsePortHeader(direction);
-    auto& declarator = parseVariableDeclarator(/* isFirst */ true);
+    auto& declarator = parseDeclarator(/* isFirst */ true);
     return factory.implicitAnsiPort(attributes, header, declarator);
 }
 
@@ -306,7 +306,7 @@ PortDeclarationSyntax& Parser::parsePortDeclaration(span<AttributeInstanceSyntax
     auto& header = parsePortHeader(direction);
 
     Token semi;
-    auto declarators = parseVariableDeclarators(semi);
+    auto declarators = parseDeclarators(semi);
     return factory.portDeclaration(attributes, header, declarators, semi);
 }
 
@@ -700,7 +700,7 @@ FunctionPortSyntax& Parser::parseFunctionPort() {
         dataType = &parseDataType(/* allowImplicit */ false);
 
     return factory.functionPort(attributes, constKeyword, direction, varKeyword, dataType,
-                                parseVariableDeclarator(/* isFirst */ true));
+                                parseDeclarator(/* isFirst */ true));
 }
 
 FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
@@ -1612,7 +1612,7 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
             auto& type = parseDataType(/* allowImplicit */ false);
 
             Token semi;
-            auto declarators = parseVariableDeclarators(semi);
+            auto declarators = parseDeclarators(semi);
 
             buffer.append(
                 &factory.structUnionMember(attributes, randomQualifier, type, declarators, semi));
@@ -1639,7 +1639,7 @@ EnumTypeSyntax& Parser::parseEnum() {
     if (openBrace.isMissing())
         closeBrace = missingToken(TokenKind::CloseBrace, openBrace.location());
     else
-        declarators = parseVariableDeclarators<isCloseBrace>(TokenKind::CloseBrace, closeBrace);
+        declarators = parseDeclarators<isCloseBrace>(TokenKind::CloseBrace, closeBrace);
 
     return factory.enumType(keyword, baseType, openBrace, declarators, closeBrace,
                             parseDimensionList());
@@ -1728,7 +1728,7 @@ MemberSyntax& Parser::parseNetDeclaration(span<AttributeInstanceSyntax*> attribu
     // TODO: delay control
 
     Token semi;
-    auto declarators = parseVariableDeclarators(semi);
+    auto declarators = parseDeclarators(semi);
 
     return factory.netDeclaration(attributes, netType, strength, expansionHint, type, declarators,
                                   semi);
@@ -1782,7 +1782,7 @@ MemberSyntax& Parser::parseVariableDeclaration(span<AttributeInstanceSyntax*> at
             auto keyword = consume();
             auto& type = parseDataType(/* allowImplicit */ true);
             auto& parameter =
-                factory.parameterDeclaration(keyword, type, parseVariableDeclarators(semi));
+                factory.parameterDeclaration(keyword, type, parseDeclarators(semi));
             return factory.parameterDeclarationStatement(attributes, parameter, semi);
         }
         case TokenKind::LetKeyword: {
@@ -1816,12 +1816,12 @@ MemberSyntax& Parser::parseVariableDeclaration(span<AttributeInstanceSyntax*> at
     auto& dataType = parseDataType(/* allowImplicit */ hasVar);
 
     Token semi;
-    auto declarators = parseVariableDeclarators(semi);
+    auto declarators = parseDeclarators(semi);
 
     return factory.dataDeclaration(attributes, modifiers.copy(alloc), dataType, declarators, semi);
 }
 
-VariableDeclaratorSyntax& Parser::parseVariableDeclarator(bool isFirst) {
+DeclaratorSyntax& Parser::parseDeclarator(bool isFirst) {
     auto name = expect(TokenKind::Identifier);
 
     // Give a better error message for cases like:
@@ -1838,27 +1838,27 @@ VariableDeclaratorSyntax& Parser::parseVariableDeclarator(bool isFirst) {
         initializer = &factory.equalsValueClause(equals, parseMinTypMaxExpression());
     }
 
-    return factory.variableDeclarator(name, dimensions, initializer);
+    return factory.declarator(name, dimensions, initializer);
 }
 
-span<TokenOrSyntax> Parser::parseOneVariableDeclarator() {
+span<TokenOrSyntax> Parser::parseOneDeclarator() {
     SmallVectorSized<TokenOrSyntax, 2> buffer;
-    buffer.append(&parseVariableDeclarator(/* isFirst */ true));
+    buffer.append(&parseDeclarator(/* isFirst */ true));
     return buffer.copy(alloc);
 }
 
 template<bool (*IsEnd)(TokenKind)>
-span<TokenOrSyntax> Parser::parseVariableDeclarators(TokenKind endKind, Token& end) {
+span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end) {
     SmallVectorSized<TokenOrSyntax, 4> buffer;
     parseSeparatedList<isIdentifierOrComma, IsEnd>(
-        buffer, endKind, TokenKind::Comma, end, DiagCode::ExpectedVariableDeclarator,
-        [this](bool first) { return &parseVariableDeclarator(first); });
+        buffer, endKind, TokenKind::Comma, end, DiagCode::ExpectedDeclarator,
+        [this](bool first) { return &parseDeclarator(first); });
 
     return buffer.copy(alloc);
 }
 
-span<TokenOrSyntax> Parser::parseVariableDeclarators(Token& semi) {
-    return parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
+span<TokenOrSyntax> Parser::parseDeclarators(Token& semi) {
+    return parseDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
 }
 
 span<AttributeInstanceSyntax*> Parser::parseAttributes() {
@@ -2013,7 +2013,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
                     break;
             }
             ASSERT(type);
-            auto& declarator = parseVariableDeclarator(true);
+            auto& declarator = parseDeclarator(true);
             return &factory.assertionItemPort(attributes, local, direction, *type, declarator);
         });
 
@@ -2067,12 +2067,12 @@ ParameterDeclarationSyntax& Parser::parseParameterPort() {
     if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
         auto keyword = consume();
         auto& type = parseDataType(/* allowImplicit */ true);
-        return factory.parameterDeclaration(keyword, type, parseOneVariableDeclarator());
+        return factory.parameterDeclaration(keyword, type, parseOneDeclarator());
     }
 
     // this is a normal parameter without the actual parameter keyword (stupid implicit nonsense)
     auto& type = parseDataType(/* allowImplicit */ true);
-    return factory.parameterDeclaration(Token(), type, parseOneVariableDeclarator());
+    return factory.parameterDeclaration(Token(), type, parseOneDeclarator());
 }
 
 ClockingSkewSyntax* Parser::parseClockingSkew() {

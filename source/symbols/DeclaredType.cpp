@@ -129,7 +129,7 @@ const Expression* DeclaredType::getInitializer() const {
     return initializer;
 }
 
-void DeclaredType::setFromDeclarator(const VariableDeclaratorSyntax& decl) {
+void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
     if (!decl.dimensions.empty())
         setDimensionSyntax(decl.dimensions);
     if (decl.initializer)

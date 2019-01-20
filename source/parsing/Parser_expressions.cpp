@@ -395,10 +395,10 @@ StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token o
 StreamExpressionSyntax& Parser::parseStreamExpression() {
     auto& expr = parseExpression();
 
-    StreamExpressionWithRange* withRange = nullptr;
+    StreamExpressionWithRangeSyntax* withRange = nullptr;
     if (peek(TokenKind::WithKeyword)) {
         auto with = consume();
-        withRange = &allocate<StreamExpressionWithRange>(with, parseElementSelect());
+        withRange = &factory.streamExpressionWithRange(with, parseElementSelect());
     }
 
     return factory.streamExpression(expr, withRange);

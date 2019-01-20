@@ -288,7 +288,7 @@ SyntaxNode& Parser::parseForInitializer() {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto& type = parseDataType(/* allowImplicit */ false);
         return factory.forVariableDeclaration(varKeyword, type,
-                                              parseVariableDeclarator(/* isFirst */ true));
+                                              parseDeclarator(/* isFirst */ true));
     }
     return parseExpression();
 }

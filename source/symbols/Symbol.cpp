@@ -125,7 +125,7 @@ ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation locat
     declaredType(*this, flags) {
 }
 
-void ValueSymbol::setFromDeclarator(const VariableDeclaratorSyntax& decl) {
+void ValueSymbol::setFromDeclarator(const DeclaratorSyntax& decl) {
     declaredType.setFromDeclarator(decl);
     setSyntax(decl);
 }

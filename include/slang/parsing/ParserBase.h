@@ -79,11 +79,6 @@ protected:
 
     enum class SkipAction { Continue, Abort };
 
-    template<typename T, typename... Args>
-    T& allocate(Args&&... args) {
-        return *alloc.emplace<T>(std::forward<Args>(args)...);
-    }
-
     /// Generalized helper method for parsing a group of things that are bookended by
     /// known token kinds. The point of wrapping it in a function is that if the starting
     /// token is missing, we don't even bother trying to parse the rest of the group.

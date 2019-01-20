@@ -18,7 +18,7 @@ class Symbol;
 class Type;
 struct DataTypeSyntax;
 struct ExpressionSyntax;
-struct VariableDeclaratorSyntax;
+struct DeclaratorSyntax;
 struct VariableDimensionSyntax;
 
 enum class DeclaredTypeFlags : uint8_t {
@@ -70,7 +70,7 @@ public:
     const ExpressionSyntax* getInitializerSyntax() const { return initializerSyntax; }
     SourceLocation getInitializerLocation() const { return initializerLocation; }
 
-    void setFromDeclarator(const VariableDeclaratorSyntax& decl);
+    void setFromDeclarator(const DeclaratorSyntax& decl);
 
     const ConstantValue& getConstantValue() const;
 

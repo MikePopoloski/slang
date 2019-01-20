@@ -212,7 +212,7 @@ public:
     }
 
     /// Initializes the value's dimension and initializer syntax from the given declarator.
-    void setFromDeclarator(const VariableDeclaratorSyntax& decl);
+    void setFromDeclarator(const DeclaratorSyntax& decl);
 
     /// Gets the value of the symbol if it is a compile time constant.
     const ConstantValue& getConstantValue() const { return declaredType.getConstantValue(); }

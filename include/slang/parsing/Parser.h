@@ -16,7 +16,6 @@
 
 namespace slang {
 
-class BumpAllocator;
 class Preprocessor;
 
 namespace detail {
@@ -214,8 +213,8 @@ private:
                                                   Token virtualOrInterface);
     MemberSyntax* parseClassMember();
     ContinuousAssignSyntax& parseContinuousAssign(span<AttributeInstanceSyntax*> attributes);
-    VariableDeclaratorSyntax& parseVariableDeclarator(bool isFirst);
-    span<TokenOrSyntax> parseOneVariableDeclarator();
+    DeclaratorSyntax& parseDeclarator(bool isFirst);
+    span<TokenOrSyntax> parseOneDeclarator();
     MemberSyntax* parseCoverageMember();
     BlockEventExpressionSyntax& parseBlockEventExpression();
     WithClauseSyntax* parseWithClause();
@@ -274,8 +273,8 @@ private:
     ExpressionSyntax& parsePrefixExpression(bitmask<ExpressionOptions> options, SyntaxKind opKind);
 
     template<bool (*IsEnd)(TokenKind)>
-    span<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token& end);
-    span<TokenOrSyntax> parseVariableDeclarators(Token& semi);
+    span<TokenOrSyntax> parseDeclarators(TokenKind endKind, Token& end);
+    span<TokenOrSyntax> parseDeclarators(Token& semi);
 
     template<typename TMember, typename TParseFunc>
     span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);

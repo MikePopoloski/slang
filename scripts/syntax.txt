@@ -1,149 +1,149 @@
-ExpressionSyntax final=false
+Expression final=false
 empty
 
-DataTypeSyntax base=ExpressionSyntax final=false
+DataType base=Expression final=false
 empty
 
 // ----- ATTRIBUTES -----
 
-EqualsValueClauseSyntax kind=EqualsValueClause
+EqualsValueClause kind=EqualsValueClause
 token equals
-ExpressionSyntax expr
+Expression expr
 
-AttributeSpecSyntax kind=AttributeSpec
+AttributeSpec kind=AttributeSpec
 token name
-EqualsValueClauseSyntax? value
+EqualsValueClause? value
 
-AttributeInstanceSyntax kind=AttributeInstance
+AttributeInstance kind=AttributeInstance
 token openParen
-separated_list<AttributeSpecSyntax> specs
+separated_list<AttributeSpec> specs
 token closeParen
 
-NamedLabelSyntax kind=NamedLabel
+NamedLabel kind=NamedLabel
 token name
 token colon
 
-StatementSyntax final=false
-NamedLabelSyntax? label
-list<AttributeInstanceSyntax> attributes
+Statement final=false
+NamedLabel? label
+list<AttributeInstance> attributes
 
-MemberSyntax final=false
-list<AttributeInstanceSyntax> attributes
+Member final=false
+list<AttributeInstance> attributes
 
 // ----- ARGUMENTS -----
 
-ArgumentSyntax final=false
+Argument final=false
 empty
 
-EmptyArgumentSyntax base=ArgumentSyntax kind=EmptyArgument
+EmptyArgument base=Argument kind=EmptyArgument
 empty
 
-OrderedArgumentSyntax base=ArgumentSyntax kind=OrderedArgument
-ExpressionSyntax expr
+OrderedArgument base=Argument kind=OrderedArgument
+Expression expr
 
-NamedArgumentSyntax base=ArgumentSyntax kind=NamedArgument
+NamedArgument base=Argument kind=NamedArgument
 token dot
 token name
 token openParen
-ExpressionSyntax? expr
+Expression? expr
 token closeParen
 
-ArgumentListSyntax kind=ArgumentList
+ArgumentList kind=ArgumentList
 token openParen
-separated_list<ArgumentSyntax> parameters
+separated_list<Argument> parameters
 token closeParen
 
-ParameterValueAssignmentSyntax kind=ParameterValueAssignment
+ParameterValueAssignment kind=ParameterValueAssignment
 token hash
-ArgumentListSyntax assignments
+ArgumentList assignments
 
 // ----- PATTERNS -----
 
-PatternSyntax final=false
+Pattern final=false
 empty
 
-VariablePatternSyntax base=PatternSyntax kind=VariablePattern
+VariablePattern base=Pattern kind=VariablePattern
 token dot
 token variableName
 
-WildcardPatternSyntax base=PatternSyntax kind=WildcardPattern
+WildcardPattern base=Pattern kind=WildcardPattern
 token dotStar
 
-ExpressionPatternSyntax base=PatternSyntax kind=ExpressionPattern
-ExpressionSyntax expr
+ExpressionPattern base=Pattern kind=ExpressionPattern
+Expression expr
 
-TaggedPatternSyntax base=PatternSyntax kind=TaggedPattern
+TaggedPattern base=Pattern kind=TaggedPattern
 token tagged
 token memberName
-PatternSyntax? pattern
+Pattern? pattern
 
-StructurePatternMemberSyntax final=false
+StructurePatternMember final=false
 empty
 
-OrderedStructurePatternMemberSyntax base=StructurePatternMemberSyntax kind=OrderedStructurePatternMember
-PatternSyntax pattern
+OrderedStructurePatternMember base=StructurePatternMember kind=OrderedStructurePatternMember
+Pattern pattern
 
-NamedStructurePatternMemberSyntax base=StructurePatternMemberSyntax kind=NamedStructurePatternMember
+NamedStructurePatternMember base=StructurePatternMember kind=NamedStructurePatternMember
 token name
 token colon
-PatternSyntax pattern
+Pattern pattern
 
-StructurePatternSyntax base=PatternSyntax kind=StructurePattern
+StructurePattern base=Pattern kind=StructurePattern
 token openBrace
-separated_list<StructurePatternMemberSyntax> members
+separated_list<StructurePatternMember> members
 token closeBrace
 
-MatchesClauseSyntax kind=MatchesClause
+MatchesClause kind=MatchesClause
 token matchesKeyword
-PatternSyntax pattern
+Pattern pattern
 
-ConditionalPatternSyntax kind=ConditionalPattern
-ExpressionSyntax expr
-MatchesClauseSyntax? matchesClause
+ConditionalPattern kind=ConditionalPattern
+Expression expr
+MatchesClause? matchesClause
 
-ConditionalPredicateSyntax kind=ConditionalPredicate
-separated_list<ConditionalPatternSyntax> conditions
+ConditionalPredicate kind=ConditionalPredicate
+separated_list<ConditionalPattern> conditions
 
-AssignmentPatternSyntax final=false
+AssignmentPattern final=false
 empty
 
-SimpleAssignmentPatternSyntax base=AssignmentPatternSyntax kind=SimpleAssignmentPattern
+SimpleAssignmentPattern base=AssignmentPattern kind=SimpleAssignmentPattern
 token openBrace
-separated_list<ExpressionSyntax> items
+separated_list<Expression> items
 token closeBrace
 
-AssignmentPatternItemSyntax kind=AssignmentPatternItem
-ExpressionSyntax key
+AssignmentPatternItem kind=AssignmentPatternItem
+Expression key
 token colon
-ExpressionSyntax expr
+Expression expr
 
-StructuredAssignmentPatternSyntax base=AssignmentPatternSyntax kind=StructuredAssignmentPattern
+StructuredAssignmentPattern base=AssignmentPattern kind=StructuredAssignmentPattern
 token openBrace
-separated_list<AssignmentPatternItemSyntax> items
+separated_list<AssignmentPatternItem> items
 token closeBrace
 
-ReplicatedAssignmentPatternSyntax base=AssignmentPatternSyntax kind=ReplicatedAssignmentPattern
+ReplicatedAssignmentPattern base=AssignmentPattern kind=ReplicatedAssignmentPattern
 token openBrace
-ExpressionSyntax countExpr
+Expression countExpr
 token innerOpenBrace
-separated_list<ExpressionSyntax> items
+separated_list<Expression> items
 token innerCloseBrace
 token closeBrace
 
 // ----- EXPRESSIONS -----
 
-BadExpressionSyntax base=ExpressionSyntax kind=BadExpression
-ExpressionSyntax expr
+BadExpression base=Expression kind=BadExpression
+Expression expr
 
-PrimaryExpressionSyntax base=ExpressionSyntax final=false
+PrimaryExpression base=Expression final=false
 empty
 
-PrefixUnaryExpressionSyntax base=ExpressionSyntax
+PrefixUnaryExpression base=Expression
 token operatorToken
-list<AttributeInstanceSyntax> attributes
-ExpressionSyntax operand
+list<AttributeInstance> attributes
+Expression operand
 
-kindmap<PrefixUnaryExpressionSyntax>
+kindmap<PrefixUnaryExpression>
 UnaryPlusExpression UnaryMinusExpression UnaryBitwiseAndExpression
 UnaryBitwiseNandExpression UnaryBitwiseOrExpression UnaryBitwiseNorExpression
 UnaryBitwiseXorExpression UnaryBitwiseXnorExpression UnaryPreincrementExpression
@@ -154,21 +154,21 @@ SyncRejectOnPropertyExpression NextTimePropertyExpression SNextTimePropertyExpre
 AlwaysPropertyExpression SAlwaysPropertyExpression EventuallyPropertyExpression
 SEventuallyPropertyExpression
 
-PostfixUnaryExpressionSyntax base=ExpressionSyntax
-ExpressionSyntax operand
-list<AttributeInstanceSyntax> attributes
+PostfixUnaryExpression base=Expression
+Expression operand
+list<AttributeInstance> attributes
 token operatorToken
 
-kindmap<PostfixUnaryExpressionSyntax>
+kindmap<PostfixUnaryExpression>
 PostincrementExpression PostdecrementExpression
 
-BinaryExpressionSyntax base=ExpressionSyntax
-ExpressionSyntax left
+BinaryExpression base=Expression
+Expression left
 token operatorToken
-list<AttributeInstanceSyntax> attributes
-ExpressionSyntax right
+list<AttributeInstance> attributes
+Expression right
 
-kindmap<BinaryExpressionSyntax>
+kindmap<BinaryExpression>
 AddExpression SubtractExpression MultiplyExpression DivideExpression PowerExpression
 ModExpression EqualityExpression InequalityExpression CaseEqualityExpression
 CaseInequalityExpression WildcardEqualityExpression WildcardInequalityExpression
@@ -190,252 +190,252 @@ LogicalLeftShiftAssignmentExpression LogicalRightShiftAssignmentExpression
 ArithmeticLeftShiftAssignmentExpression ArithmeticRightShiftAssignmentExpression
 NonblockingAssignmentExpression
 
-MinTypMaxExpressionSyntax base=ExpressionSyntax kind=MinTypMaxExpression
-ExpressionSyntax min
+MinTypMaxExpression base=Expression kind=MinTypMaxExpression
+Expression min
 token colon1
-ExpressionSyntax typ
+Expression typ
 token colon2
-ExpressionSyntax max
+Expression max
 
-TaggedUnionExpressionSyntax base=ExpressionSyntax kind=TaggedUnionExpression
+TaggedUnionExpression base=Expression kind=TaggedUnionExpression
 token tagged
 token member
-ExpressionSyntax? expr
+Expression? expr
 
-OpenRangeListSyntax kind=OpenRangeList
+OpenRangeList kind=OpenRangeList
 token openBrace
-separated_list<ExpressionSyntax> valueRanges
+separated_list<Expression> valueRanges
 token closeBrace
 
-InsideExpressionSyntax base=ExpressionSyntax kind=InsideExpression
-ExpressionSyntax expr
+InsideExpression base=Expression kind=InsideExpression
+Expression expr
 token inside
-OpenRangeListSyntax ranges
+OpenRangeList ranges
 
-ConditionalExpressionSyntax base=ExpressionSyntax kind=ConditionalExpression
-ConditionalPredicateSyntax predicate
+ConditionalExpression base=Expression kind=ConditionalExpression
+ConditionalPredicate predicate
 token question
-list<AttributeInstanceSyntax> attributes
-ExpressionSyntax left
+list<AttributeInstance> attributes
+Expression left
 token colon
-ExpressionSyntax right
+Expression right
 
-AssignmentPatternExpressionSyntax base=PrimaryExpressionSyntax kind=AssignmentPatternExpression
-DataTypeSyntax? type
-AssignmentPatternSyntax pattern
+AssignmentPatternExpression base=PrimaryExpression kind=AssignmentPatternExpression
+DataType? type
+AssignmentPattern pattern
 
 // ----- SELECTORS -----
 
-SelectorSyntax final=false
+Selector final=false
 empty
 
-BitSelectSyntax base=SelectorSyntax kind=BitSelect
-ExpressionSyntax expr
+BitSelect base=Selector kind=BitSelect
+Expression expr
 
-RangeSelectSyntax base=SelectorSyntax
-ExpressionSyntax left
+RangeSelect base=Selector
+Expression left
 token range
-ExpressionSyntax right
+Expression right
 
-kindmap<RangeSelectSyntax>
+kindmap<RangeSelect>
 SimpleRangeSelect AscendingRangeSelect DescendingRangeSelect
 
-ElementSelectSyntax base=ExpressionSyntax kind=ElementSelect
+ElementSelect base=Expression kind=ElementSelect
 token openBracket
-SelectorSyntax? selector
+Selector? selector
 token closeBracket
 
 // ----- NAMES -----
 
-NameSyntax base=ExpressionSyntax final=false
+Name base=Expression final=false
 empty
 
-IdentifierNameSyntax base=NameSyntax kind=IdentifierName
+IdentifierName base=Name kind=IdentifierName
 token identifier
 
-IdentifierSelectNameSyntax base=NameSyntax kind=IdentifierSelectName
+IdentifierSelectName base=Name kind=IdentifierSelectName
 token identifier
-list<ElementSelectSyntax> selectors
+list<ElementSelect> selectors
 
-EmptyIdentifierNameSyntax base=NameSyntax kind=EmptyIdentifierName
+EmptyIdentifierName base=Name kind=EmptyIdentifierName
 empty
 
-KeywordNameSyntax base=NameSyntax
+KeywordName base=Name
 token keyword
 
-kindmap<KeywordNameSyntax>
+kindmap<KeywordName>
 LocalScope UnitScope RootScope ThisHandle SuperHandle ArrayUniqueMethod
 ArrayAndMethod ArrayOrMethod ArrayXorMethod ConstructorName SystemName
 
-ClassNameSyntax base=NameSyntax kind=ClassName
+ClassName base=Name kind=ClassName
 token identifier
-ParameterValueAssignmentSyntax parameters
+ParameterValueAssignment parameters
 
-ScopedNameSyntax base=NameSyntax kind=ScopedName
-NameSyntax left
+ScopedName base=Name kind=ScopedName
+Name left
 token separator
-NameSyntax right
+Name right
 
-ClassScopeSyntax base=NameSyntax kind=ClassScope
-NameSyntax left
+ClassScope base=Name kind=ClassScope
+Name left
 token separator
 
 // ----- PRIMARY EXPRESSIONS -----
 
-LiteralExpressionSyntax base=PrimaryExpressionSyntax
+LiteralExpression base=PrimaryExpression
 token literal
 
-kindmap<LiteralExpressionSyntax>
+kindmap<LiteralExpression>
 NullLiteralExpression StringLiteralExpression IntegerLiteralExpression
 UnbasedUnsizedLiteralExpression RealLiteralExpression
 TimeLiteralExpression WildcardLiteralExpression OneStepLiteralExpression
 DefaultPatternKeyExpression
 
-IntegerVectorExpressionSyntax base=PrimaryExpressionSyntax kind=IntegerVectorExpression
+IntegerVectorExpression base=PrimaryExpression kind=IntegerVectorExpression
 token size
 token base
 token value
 
-EmptyQueueExpressionSyntax base=PrimaryExpressionSyntax kind=EmptyQueueExpression
+EmptyQueueExpression base=PrimaryExpression kind=EmptyQueueExpression
 token openBrace
 token closeBrace
 
-ConcatenationExpressionSyntax base=PrimaryExpressionSyntax kind=ConcatenationExpression
+ConcatenationExpression base=PrimaryExpression kind=ConcatenationExpression
 token openBrace
-separated_list<ExpressionSyntax> expressions
+separated_list<Expression> expressions
 token closeBrace
 
-MultipleConcatenationExpressionSyntax base=PrimaryExpressionSyntax kind=MultipleConcatenationExpression
+MultipleConcatenationExpression base=PrimaryExpression kind=MultipleConcatenationExpression
 token openBrace
-ExpressionSyntax expression
-ConcatenationExpressionSyntax concatenation
+Expression expression
+ConcatenationExpression concatenation
 token closeBrace
 
 StreamExpressionWithRange kind=StreamExpressionWithRange
 token withKeyword
-ElementSelectSyntax range
+ElementSelect range
 
-StreamExpressionSyntax kind=StreamExpression
-ExpressionSyntax expression
+StreamExpression kind=StreamExpression
+Expression expression
 StreamExpressionWithRange? withRange
 
-StreamingConcatenationExpressionSyntax base=PrimaryExpressionSyntax kind=StreamingConcatenationExpression
+StreamingConcatenationExpression base=PrimaryExpression kind=StreamingConcatenationExpression
 token openBrace
 token operatorToken
-ExpressionSyntax? sliceSize
+Expression? sliceSize
 token innerOpenBrace
-separated_list<StreamExpressionSyntax> expressions
+separated_list<StreamExpression> expressions
 token innerCloseBrace
 token closeBrace
 
-ParenthesizedExpressionSyntax base=PrimaryExpressionSyntax kind=ParenthesizedExpression
+ParenthesizedExpression base=PrimaryExpression kind=ParenthesizedExpression
 token openParen
-ExpressionSyntax expression
+Expression expression
 token closeParen
 
-NewClassExpressionSyntax base=ExpressionSyntax kind=NewClassExpression
-ClassScopeSyntax? classScope
+NewClassExpression base=Expression kind=NewClassExpression
+ClassScope? classScope
 token newKeyword
-ArgumentListSyntax? arguments
+ArgumentList? arguments
 
-NewArrayExpressionSyntax base=ExpressionSyntax kind=NewArrayExpression
+NewArrayExpression base=Expression kind=NewArrayExpression
 token newKeyword
 token openBracket
-ExpressionSyntax sizeExpr
+Expression sizeExpr
 token closeBracket
-ParenthesizedExpressionSyntax? initializer
+ParenthesizedExpression? initializer
 
-NewExpressionSyntax base=ExpressionSyntax kind=NewExpression
+NewExpression base=Expression kind=NewExpression
 token newKeyword
-ExpressionSyntax expr
+Expression expr
 
 // ----- POSTFIX EXPRESSIONS -----
 
-ElementSelectExpressionSyntax base=ExpressionSyntax kind=ElementSelectExpression
-ExpressionSyntax left
-ElementSelectSyntax select
+ElementSelectExpression base=Expression kind=ElementSelectExpression
+Expression left
+ElementSelect select
 
-MemberAccessExpressionSyntax base=ExpressionSyntax kind=MemberAccessExpression
-ExpressionSyntax left
+MemberAccessExpression base=Expression kind=MemberAccessExpression
+Expression left
 token dot
 token name
 
-InvocationExpressionSyntax base=ExpressionSyntax kind=InvocationExpression
-ExpressionSyntax left
-list<AttributeInstanceSyntax> attributes
-ArgumentListSyntax? arguments
+InvocationExpression base=Expression kind=InvocationExpression
+Expression left
+list<AttributeInstance> attributes
+ArgumentList? arguments
 
-CastExpressionSyntax base=ExpressionSyntax kind=CastExpression
-ExpressionSyntax left
+CastExpression base=Expression kind=CastExpression
+Expression left
 token apostrophe
-ParenthesizedExpressionSyntax right
+ParenthesizedExpression right
 
-SignedCastExpressionSyntax base=ExpressionSyntax kind=SignedCastExpression
+SignedCastExpression base=Expression kind=SignedCastExpression
 token signing
 token apostrophe
-ParenthesizedExpressionSyntax inner
+ParenthesizedExpression inner
 
 // ----- TIMING CONTROL -----
 
-TimingControlSyntax final=false
+TimingControl final=false
 empty
 
-DelaySyntax base=TimingControlSyntax
+Delay base=TimingControl
 token hash
-ExpressionSyntax delayValue
+Expression delayValue
 
-kindmap<DelaySyntax>
+kindmap<Delay>
 DelayControl CycleDelay
 
-EventControlSyntax base=TimingControlSyntax kind=EventControl
+EventControl base=TimingControl kind=EventControl
 token at
-NameSyntax eventName
+Name eventName
 
-EventExpressionSyntax final=false
+EventExpression final=false
 empty
 
-SignalEventExpressionSyntax base=EventExpressionSyntax kind=SignalEventExpression
+SignalEventExpression base=EventExpression kind=SignalEventExpression
 token edge
-ExpressionSyntax expr
+Expression expr
 
-BinaryEventExpressionSyntax base=EventExpressionSyntax kind=BinaryEventExpression
-EventExpressionSyntax left
+BinaryEventExpression base=EventExpression kind=BinaryEventExpression
+EventExpression left
 token operatorToken
-EventExpressionSyntax right
+EventExpression right
 
-ParenthesizedEventExpressionSyntax base=EventExpressionSyntax kind=ParenthesizedEventExpression
+ParenthesizedEventExpression base=EventExpression kind=ParenthesizedEventExpression
 token openParen
-EventExpressionSyntax expr
+EventExpression expr
 token closeParen
 
-ImplicitEventControlSyntax base=TimingControlSyntax kind=ImplicitEventControl
+ImplicitEventControl base=TimingControl kind=ImplicitEventControl
 token atStar
 
-ParenImplicitEventControlSyntax base=TimingControlSyntax kind=ParenImplicitEventControl
+ParenImplicitEventControl base=TimingControl kind=ParenImplicitEventControl
 token at
 token openParenStarCloseParen
 
-EventControlWithExpressionSyntax base=TimingControlSyntax kind=EventControlWithExpression
+EventControlWithExpression base=TimingControl kind=EventControlWithExpression
 token at
-EventExpressionSyntax expr
+EventExpression expr
 
-RepeatedEventControlSyntax base=TimingControlSyntax kind=RepeatedEventControl
+RepeatedEventControl base=TimingControl kind=RepeatedEventControl
 token repeat
 token openParen
-ExpressionSyntax expr
+Expression expr
 token closeParen
-TimingControlSyntax? eventControl
+TimingControl? eventControl
 
-TimingControlExpressionSyntax base=ExpressionSyntax kind=TimingControlExpression
-TimingControlSyntax timing
-ExpressionSyntax expr
+TimingControlExpression base=Expression kind=TimingControlExpression
+TimingControl timing
+Expression expr
 
-TimingControlExpressionConcatenationSyntax base=ExpressionSyntax kind=TimingControlExpressionConcatenation
-ExpressionSyntax left
-TimingControlSyntax timing
-ExpressionSyntax right
+TimingControlExpressionConcatenation base=Expression kind=TimingControlExpressionConcatenation
+Expression left
+TimingControl timing
+Expression right
 
-ShortcutCycleDelayRangeSyntax base=TimingControlSyntax kind=ShortcutCycleDelayRange
+ShortcutCycleDelayRange base=TimingControl kind=ShortcutCycleDelayRange
 token doubleHash
 token openBracket
 token op
@@ -443,1126 +443,1126 @@ token closeBracket
 
 // ----- DECLARATIONS -----
 
-DimensionSpecifierSyntax final=false
+DimensionSpecifier final=false
 empty
 
-RangeDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=RangeDimensionSpecifier
-SelectorSyntax selector
+RangeDimensionSpecifier base=DimensionSpecifier kind=RangeDimensionSpecifier
+Selector selector
 
-WildcardDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=WildcardDimensionSpecifier
+WildcardDimensionSpecifier base=DimensionSpecifier kind=WildcardDimensionSpecifier
 token star
 
-ColonExpressionClauseSyntax kind=ColonExpressionClause
+ColonExpressionClause kind=ColonExpressionClause
 token colon
-ExpressionSyntax expr
+Expression expr
 
-QueueDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=QueueDimensionSpecifier
+QueueDimensionSpecifier base=DimensionSpecifier kind=QueueDimensionSpecifier
 token dollar
-ColonExpressionClauseSyntax? maxSizeClause
+ColonExpressionClause? maxSizeClause
 
-VariableDimensionSyntax kind=VariableDimension
+VariableDimension kind=VariableDimension
 token openBracket
-DimensionSpecifierSyntax? specifier
+DimensionSpecifier? specifier
 token closeBracket
 
-VariableDeclaratorSyntax kind=VariableDeclarator
+Declarator kind=Declarator
 token name
-list<VariableDimensionSyntax> dimensions
-EqualsValueClauseSyntax? initializer
+list<VariableDimension> dimensions
+EqualsValueClause? initializer
 
-DataDeclarationSyntax base=MemberSyntax kind=DataDeclaration
+DataDeclaration base=Member kind=DataDeclaration
 tokenlist modifiers
-DataTypeSyntax type
-separated_list<VariableDeclaratorSyntax> declarators
+DataType type
+separated_list<Declarator> declarators
 token semi
 
-TypedefDeclarationSyntax base=MemberSyntax kind=TypedefDeclaration
+TypedefDeclaration base=Member kind=TypedefDeclaration
 token typedefKeyword
-DataTypeSyntax type
+DataType type
 token name
-list<VariableDimensionSyntax> dimensions
+list<VariableDimension> dimensions
 token semi
 
-ForwardTypedefDeclarationSyntax base=MemberSyntax kind=ForwardTypedefDeclaration
+ForwardTypedefDeclaration base=Member kind=ForwardTypedefDeclaration
 token typedefKeyword
 token keyword
 token name
 token semi
 
-ForwardInterfaceClassTypedefDeclarationSyntax base=MemberSyntax kind=ForwardInterfaceClassTypedefDeclaration
+ForwardInterfaceClassTypedefDeclaration base=Member kind=ForwardInterfaceClassTypedefDeclaration
 token typedefKeyword
 token interfaceKeyword
 token classKeyword
 token name
 token semi
 
-NetStrengthSyntax final=false
+NetStrength final=false
 empty
 
-ChargeStrengthSyntax base=NetStrengthSyntax kind=ChargeStrength
+ChargeStrength base=NetStrength kind=ChargeStrength
 token openParen
 token strength
 token closeParen
 
-DriveStrengthSyntax base=NetStrengthSyntax kind=DriveStrength
+DriveStrength base=NetStrength kind=DriveStrength
 token openParen
 token strength0
 token comma
 token strength1
 token closeParen
 
-NetDeclarationSyntax base=MemberSyntax kind=NetDeclaration
+NetDeclaration base=Member kind=NetDeclaration
 token netType
-NetStrengthSyntax? strength
+NetStrength? strength
 token expansionHint
-DataTypeSyntax type
-separated_list<VariableDeclaratorSyntax> declarators
+DataType type
+separated_list<Declarator> declarators
 token semi
 
-WithFunctionClauseSyntax kind=WithFunctionClause
+WithFunctionClause kind=WithFunctionClause
 token with
-NameSyntax name
+Name name
 
-NetTypeDeclarationSyntax base=MemberSyntax kind=NetTypeDeclaration
+NetTypeDeclaration base=Member kind=NetTypeDeclaration
 token keyword
-DataTypeSyntax type
+DataType type
 token name
-WithFunctionClauseSyntax? withFunction
+WithFunctionClause? withFunction
 token semi
 
-PackageImportItemSyntax kind=PackageImportItem
+PackageImportItem kind=PackageImportItem
 token package
 token doubleColon
 token item
 
-PackageImportDeclarationSyntax base=MemberSyntax kind=PackageImportDeclaration
+PackageImportDeclaration base=Member kind=PackageImportDeclaration
 token keyword
-separated_list<PackageImportItemSyntax> items
+separated_list<PackageImportItem> items
 token semi
 
-ParameterDeclarationSyntax kind=ParameterDeclaration
+ParameterDeclaration kind=ParameterDeclaration
 token keyword
-DataTypeSyntax type
-separated_list<VariableDeclaratorSyntax> declarators
+DataType type
+separated_list<Declarator> declarators
 
-ParameterDeclarationStatementSyntax base=MemberSyntax kind=ParameterDeclarationStatement
-ParameterDeclarationSyntax parameter
+ParameterDeclarationStatement base=Member kind=ParameterDeclarationStatement
+ParameterDeclaration parameter
 token semi
 
-PortHeaderSyntax final=false
+PortHeader final=false
 empty
 
-PortDeclarationSyntax base=MemberSyntax kind=PortDeclaration
-PortHeaderSyntax header
-separated_list<VariableDeclaratorSyntax> declarators
+PortDeclaration base=Member kind=PortDeclaration
+PortHeader header
+separated_list<Declarator> declarators
 token semi
 
-GenvarDeclarationSyntax base=MemberSyntax kind=GenvarDeclaration
+GenvarDeclaration base=Member kind=GenvarDeclaration
 token keyword
-separated_list<IdentifierNameSyntax> identifiers
+separated_list<IdentifierName> identifiers
 token semi
 
 // ----- TYPES -----
 
-IntegerTypeSyntax base=DataTypeSyntax
+IntegerType base=DataType
 token keyword
 token signing
-list<VariableDimensionSyntax> dimensions
+list<VariableDimension> dimensions
 
-kindmap<IntegerTypeSyntax>
+kindmap<IntegerType>
 BitType LogicType RegType ByteType ShortIntType IntType LongIntType
 IntegerType TimeType
 
-KeywordTypeSyntax base=DataTypeSyntax
+KeywordType base=DataType
 token keyword
 
-kindmap<KeywordTypeSyntax>
+kindmap<KeywordType>
 ShortRealType RealType RealTimeType StringType CHandleType EventType
 VoidType TypeType Untyped PropertyType SequenceType
 
-NamedTypeSyntax base=DataTypeSyntax kind=NamedType
-NameSyntax name
+NamedType base=DataType kind=NamedType
+Name name
 
-StructUnionMemberSyntax kind=StructUnionMember
-list<AttributeInstanceSyntax> attributes
+StructUnionMember kind=StructUnionMember
+list<AttributeInstance> attributes
 token randomQualifier
-DataTypeSyntax type
-separated_list<VariableDeclaratorSyntax> declarators
+DataType type
+separated_list<Declarator> declarators
 token semi
 
-StructUnionTypeSyntax base=DataTypeSyntax
+StructUnionType base=DataType
 token keyword
 token tagged
 token packed
 token signing
 token openBrace
-list<StructUnionMemberSyntax> members
+list<StructUnionMember> members
 token closeBrace
-list<VariableDimensionSyntax> dimensions
+list<VariableDimension> dimensions
 
-kindmap<StructUnionTypeSyntax>
+kindmap<StructUnionType>
 StructType UnionType
 
-EnumTypeSyntax base=DataTypeSyntax kind=EnumType
+EnumType base=DataType kind=EnumType
 token keyword
-DataTypeSyntax? baseType
+DataType? baseType
 token openBrace
-separated_list<VariableDeclaratorSyntax> members
+separated_list<Declarator> members
 token closeBrace
-list<VariableDimensionSyntax> dimensions
+list<VariableDimension> dimensions
 
-TypeReferenceSyntax base=DataTypeSyntax kind=TypeReference
+TypeReference base=DataType kind=TypeReference
 token typeKeyword
 token openParen
-ExpressionSyntax expr
+Expression expr
 token closeParen
 
-DotMemberClauseSyntax kind=DotMemberClause
+DotMemberClause kind=DotMemberClause
 token dot
 token member
 
-VirtualInterfaceTypeSyntax base=DataTypeSyntax kind=VirtualInterfaceType
+VirtualInterfaceType base=DataType kind=VirtualInterfaceType
 token virtualKeyword
 token interfaceKeyword
 token name
-ParameterValueAssignmentSyntax? parameters
-DotMemberClauseSyntax? modport
+ParameterValueAssignment? parameters
+DotMemberClause? modport
 
-ImplicitTypeSyntax base=DataTypeSyntax kind=ImplicitType
+ImplicitType base=DataType kind=ImplicitType
 token signing
-list<VariableDimensionSyntax> dimensions
+list<VariableDimension> dimensions
 
-VarDataTypeSyntax base=DataTypeSyntax kind=VarDataType
+VarDataType base=DataType kind=VarDataType
 token var
-DataTypeSyntax type
+DataType type
 
 // ----- ASSERTIONS -----
 
-DeferredAssertionSyntax kind=DeferredAssertion
+DeferredAssertion kind=DeferredAssertion
 token hash
 token zero
 token finalKeyword
 
-ElseClauseSyntax kind=ElseClause
+ElseClause kind=ElseClause
 token elseKeyword
 SyntaxNode clause
 
-ActionBlockSyntax kind=ActionBlock
-StatementSyntax? statement
-ElseClauseSyntax? elseClause
+ActionBlock kind=ActionBlock
+Statement? statement
+ElseClause? elseClause
 
-ImmediateAssertionStatementSyntax base=StatementSyntax
+ImmediateAssertionStatement base=Statement
 token keyword
-DeferredAssertionSyntax? delay
-ParenthesizedExpressionSyntax expr
-ActionBlockSyntax action
+DeferredAssertion? delay
+ParenthesizedExpression expr
+ActionBlock action
 
-kindmap<ImmediateAssertionStatementSyntax>
+kindmap<ImmediateAssertionStatement>
 ImmediateAssertStatement ImmediateAssumeStatement ImmediateCoverStatement
 
-DisableIffSyntax kind=DisableIff
+DisableIff kind=DisableIff
 token disable
 token iff
 token openParen
-ExpressionSyntax expr
+Expression expr
 token closeParen
 
-PropertySpecSyntax kind=PropertySpec
-TimingControlSyntax? clocking
-DisableIffSyntax? disable
-ExpressionSyntax expr
+PropertySpec kind=PropertySpec
+TimingControl? clocking
+DisableIff? disable
+Expression expr
 
-ConcurrentAssertionStatementSyntax base=StatementSyntax
+ConcurrentAssertionStatement base=Statement
 token keyword
 token propertyOrSequence
 token openParen
-PropertySpecSyntax propertySpec
+PropertySpec propertySpec
 token closeParen
-ActionBlockSyntax action
+ActionBlock action
 
-kindmap<ConcurrentAssertionStatementSyntax>
+kindmap<ConcurrentAssertionStatement>
 AssertPropertyStatement AssumePropertyStatement CoverSequenceStatement
 CoverPropertyStatement RestrictPropertyStatement ExpectPropertyStatement
 
-ConcurrentAssertionMemberSyntax base=MemberSyntax kind=ConcurrentAssertionMember
-ConcurrentAssertionStatementSyntax statement
+ConcurrentAssertionMember base=Member kind=ConcurrentAssertionMember
+ConcurrentAssertionStatement statement
 
-ImmediateAssertionMemberSyntax base=MemberSyntax kind=ImmediateAssertionMember
-ImmediateAssertionStatementSyntax statement
+ImmediateAssertionMember base=Member kind=ImmediateAssertionMember
+ImmediateAssertionStatement statement
 
 // ----- STATEMENTS -----
 
-EmptyStatementSyntax base=StatementSyntax kind=EmptyStatement
+EmptyStatement base=Statement kind=EmptyStatement
 token semicolon
 
-ConditionalStatementSyntax base=StatementSyntax kind=ConditionalStatement
+ConditionalStatement base=Statement kind=ConditionalStatement
 token uniqueOrPriority
 token ifKeyword
 token openParen
-ConditionalPredicateSyntax predicate
+ConditionalPredicate predicate
 token closeParen
-StatementSyntax statement
-ElseClauseSyntax? elseClause
+Statement statement
+ElseClause? elseClause
 
-CaseItemSyntax final=false
+CaseItem final=false
 empty
 
-DefaultCaseItemSyntax base=CaseItemSyntax kind=DefaultCaseItem
+DefaultCaseItem base=CaseItem kind=DefaultCaseItem
 token defaultKeyword
 token colon
 SyntaxNode clause
 
-PatternCaseItemSyntax base=CaseItemSyntax kind=PatternCaseItem
-PatternSyntax pattern
+PatternCaseItem base=CaseItem kind=PatternCaseItem
+Pattern pattern
 token tripleAnd
-ExpressionSyntax? expr
+Expression? expr
 token colon
-StatementSyntax statement
+Statement statement
 
-StandardCaseItemSyntax base=CaseItemSyntax kind=StandardCaseItem
-separated_list<ExpressionSyntax> expressions
+StandardCaseItem base=CaseItem kind=StandardCaseItem
+separated_list<Expression> expressions
 token colon
 SyntaxNode clause
 
-CaseStatementSyntax base=StatementSyntax kind=CaseStatement
+CaseStatement base=Statement kind=CaseStatement
 token uniqueOrPriority
 token caseKeyword
 token openParen
-ExpressionSyntax expr
+Expression expr
 token closeParen
 token matchesOrInside
-list<CaseItemSyntax> items
+list<CaseItem> items
 token endcase
 
-ForeverStatementSyntax base=StatementSyntax kind=ForeverStatement
+ForeverStatement base=Statement kind=ForeverStatement
 token foreverKeyword
-StatementSyntax statement
+Statement statement
 
-LoopStatementSyntax base=StatementSyntax kind=LoopStatement
+LoopStatement base=Statement kind=LoopStatement
 token repeatOrWhile
 token openParen
-ExpressionSyntax expr
+Expression expr
 token closeParen
-StatementSyntax statement
+Statement statement
 
-DoWhileStatementSyntax base=StatementSyntax kind=DoWhileStatement
+DoWhileStatement base=Statement kind=DoWhileStatement
 token doKeyword
-StatementSyntax statement
+Statement statement
 token whileKeyword
 token openParen
-ExpressionSyntax expr
+Expression expr
 token closeParen
 token semi
 
-ForVariableDeclarationSyntax kind=ForVariableDeclaration
+ForVariableDeclaration kind=ForVariableDeclaration
 token varKeyword
-DataTypeSyntax type
-VariableDeclaratorSyntax declarator
+DataType type
+Declarator declarator
 
-ForLoopStatementSyntax base=StatementSyntax kind=ForLoopStatement
+ForLoopStatement base=Statement kind=ForLoopStatement
 token forKeyword
 token openParen
 separated_list<SyntaxNode> initializers
 token semi1
-ExpressionSyntax stopExpr
+Expression stopExpr
 token semi2
-separated_list<ExpressionSyntax> steps
+separated_list<Expression> steps
 token closeParen
-StatementSyntax statement
+Statement statement
 
-ForeachLoopListSyntax kind=ForeachLoopList
+ForeachLoopList kind=ForeachLoopList
 token openParen
-NameSyntax arrayName
+Name arrayName
 token openBracket
-separated_list<NameSyntax> loopVariables
+separated_list<Name> loopVariables
 token closeBracket
 token closeParen
 
-ForeachLoopStatementSyntax base=StatementSyntax kind=ForeachLoopStatement
+ForeachLoopStatement base=Statement kind=ForeachLoopStatement
 token keyword
-ForeachLoopListSyntax loopList
-StatementSyntax statement
+ForeachLoopList loopList
+Statement statement
 
-ReturnStatementSyntax base=StatementSyntax kind=ReturnStatement
+ReturnStatement base=Statement kind=ReturnStatement
 token returnKeyword
-ExpressionSyntax? returnValue
+Expression? returnValue
 token semi
 
-JumpStatementSyntax base=StatementSyntax kind=JumpStatement
+JumpStatement base=Statement kind=JumpStatement
 token breakOrContinue
 token semi
 
-TimingControlStatementSyntax base=StatementSyntax kind=TimingControlStatement
-TimingControlSyntax timingControl
-StatementSyntax statement
+TimingControlStatement base=Statement kind=TimingControlStatement
+TimingControl timingControl
+Statement statement
 
-ExpressionStatementSyntax base=StatementSyntax kind=ExpressionStatement
-ExpressionSyntax expr
+ExpressionStatement base=Statement kind=ExpressionStatement
+Expression expr
 token semi
 
-ProceduralAssignStatementSyntax base=StatementSyntax
+ProceduralAssignStatement base=Statement
 token keyword
-ExpressionSyntax lvalue
+Expression lvalue
 token equals
-ExpressionSyntax value
+Expression value
 token semi
 
-kindmap<ProceduralAssignStatementSyntax>
+kindmap<ProceduralAssignStatement>
 ProceduralAssignStatement ProceduralForceStatement
 
-ProceduralDeassignStatementSyntax base=StatementSyntax
+ProceduralDeassignStatement base=Statement
 token keyword
-ExpressionSyntax variable
+Expression variable
 token semi
 
-kindmap<ProceduralDeassignStatementSyntax>
+kindmap<ProceduralDeassignStatement>
 ProceduralDeassignStatement ProceduralReleaseStatement
 
-DisableStatementSyntax base=StatementSyntax kind=DisableStatement
+DisableStatement base=Statement kind=DisableStatement
 token disable
-NameSyntax name
+Name name
 token semi
 
-DisableForkStatementSyntax base=StatementSyntax kind=DisableForkStatement
+DisableForkStatement base=Statement kind=DisableForkStatement
 token disable
 token fork
 token semi
 
-NamedBlockClauseSyntax kind=NamedBlockClause
+NamedBlockClause kind=NamedBlockClause
 token colon
 token name
 
-BlockStatementSyntax base=StatementSyntax
+BlockStatement base=Statement
 token begin
-NamedBlockClauseSyntax? blockName
+NamedBlockClause? blockName
 list<SyntaxNode> items
 token end
-NamedBlockClauseSyntax? endBlockName
+NamedBlockClause? endBlockName
 
-kindmap<BlockStatementSyntax>
+kindmap<BlockStatement>
 SequentialBlockStatement ParallelBlockStatement
 
-WaitStatementSyntax base=StatementSyntax kind=WaitStatement
+WaitStatement base=Statement kind=WaitStatement
 token wait
 token openParen
-ExpressionSyntax expr
+Expression expr
 token closeParen
-StatementSyntax statement
+Statement statement
 
-WaitForkStatementSyntax base=StatementSyntax kind=WaitForkStatement
+WaitForkStatement base=Statement kind=WaitForkStatement
 token wait
 token fork
 token semi
 
-WaitOrderStatementSyntax base=StatementSyntax kind=WaitOrderStatement
+WaitOrderStatement base=Statement kind=WaitOrderStatement
 token wait_order
 token openParen
-separated_list<NameSyntax> names
+separated_list<Name> names
 token closeParen
-ActionBlockSyntax action
+ActionBlock action
 
-RandCaseItemSyntax kind=RandCaseItem
-ExpressionSyntax expr
+RandCaseItem kind=RandCaseItem
+Expression expr
 token colon
-StatementSyntax statement
+Statement statement
 
-RandCaseStatementSyntax base=StatementSyntax kind=RandCaseStatement
+RandCaseStatement base=Statement kind=RandCaseStatement
 token randCase
-list<RandCaseItemSyntax> items
+list<RandCaseItem> items
 token endCase
 
-EventTriggerStatementSyntax base=StatementSyntax
+EventTriggerStatement base=Statement
 token trigger
-TimingControlSyntax? timing
-NameSyntax name
+TimingControl? timing
+Name name
 
-kindmap<EventTriggerStatementSyntax>
+kindmap<EventTriggerStatement>
 BlockingEventTriggerStatement NonblockingEventTriggerStatement
 
 // ----- MODULES -----
 
-PortListSyntax final=false
+PortList final=false
 empty
 
-NonAnsiPortSyntax final=false
+NonAnsiPort final=false
 empty
 
-PortExpressionSyntax final=false
+PortExpression final=false
 empty
 
-PortReferenceSyntax base=PortExpressionSyntax kind=PortReference
+PortReference base=PortExpression kind=PortReference
 token name
-ElementSelectSyntax? select
+ElementSelect? select
 
-PortConcatenationSyntax base=PortExpressionSyntax kind=PortConcatenation
+PortConcatenation base=PortExpression kind=PortConcatenation
 token openBrace
-separated_list<PortReferenceSyntax> references
+separated_list<PortReference> references
 token closeBrace
 
-ImplicitNonAnsiPortSyntax base=NonAnsiPortSyntax kind=ImplicitNonAnsiPort
-PortExpressionSyntax? expr
+ImplicitNonAnsiPort base=NonAnsiPort kind=ImplicitNonAnsiPort
+PortExpression? expr
 
-ExplicitNonAnsiPortSyntax base=NonAnsiPortSyntax kind=ExplicitNonAnsiPort
+ExplicitNonAnsiPort base=NonAnsiPort kind=ExplicitNonAnsiPort
 token dot
 token name
 token openParen
-PortExpressionSyntax? expr
+PortExpression? expr
 token closeParen
 
-NonAnsiPortListSyntax base=PortListSyntax kind=NonAnsiPortList
+NonAnsiPortList base=PortList kind=NonAnsiPortList
 token openParen
-separated_list<NonAnsiPortSyntax> ports
+separated_list<NonAnsiPort> ports
 token closeParen
 
-InterfacePortHeaderSyntax base=PortHeaderSyntax kind=InterfacePortHeader
+InterfacePortHeader base=PortHeader kind=InterfacePortHeader
 token nameOrKeyword
-DotMemberClauseSyntax? modport
+DotMemberClause? modport
 
-VariablePortHeaderSyntax base=PortHeaderSyntax kind=VariablePortHeader
+VariablePortHeader base=PortHeader kind=VariablePortHeader
 token direction
 token varKeyword
-DataTypeSyntax dataType
+DataType dataType
 
-InterconnectPortHeaderSyntax base=PortHeaderSyntax kind=InterconnectPortHeader
+InterconnectPortHeader base=PortHeader kind=InterconnectPortHeader
 token direction
 token interconnect
-DataTypeSyntax? type
+DataType? type
 
-NetPortHeaderSyntax base=PortHeaderSyntax kind=NetPortHeader
+NetPortHeader base=PortHeader kind=NetPortHeader
 token direction
 token netType
-DataTypeSyntax dataType
+DataType dataType
 
-ImplicitAnsiPortSyntax base=MemberSyntax kind=ImplicitAnsiPort
-PortHeaderSyntax header
-VariableDeclaratorSyntax declarator
+ImplicitAnsiPort base=Member kind=ImplicitAnsiPort
+PortHeader header
+Declarator declarator
 
-ExplicitAnsiPortSyntax base=MemberSyntax kind=ExplicitAnsiPort
+ExplicitAnsiPort base=Member kind=ExplicitAnsiPort
 token direction
 token dot
 token name
 token openParen
-ExpressionSyntax? expr
+Expression? expr
 token closeParen
 
-AnsiPortListSyntax base=PortListSyntax kind=AnsiPortList
+AnsiPortList base=PortList kind=AnsiPortList
 token openParen
-separated_list<MemberSyntax> ports
+separated_list<Member> ports
 token closeParen
 
-WildcardPortListSyntax base=PortListSyntax kind=WildcardPortList
+WildcardPortList base=PortList kind=WildcardPortList
 token openParen
 token dotStar
 token closeParen
 
-ParameterPortListSyntax kind=ParameterPortList
+ParameterPortList kind=ParameterPortList
 token hash
 token openParen
-separated_list<ParameterDeclarationSyntax> declarations
+separated_list<ParameterDeclaration> declarations
 token closeParen
 
-ModuleHeaderSyntax
+ModuleHeader
 token moduleKeyword
 token lifetime
 token name
-list<PackageImportDeclarationSyntax> imports
-ParameterPortListSyntax? parameters
-PortListSyntax? ports
+list<PackageImportDeclaration> imports
+ParameterPortList? parameters
+PortList? ports
 token semi
 
-kindmap<ModuleHeaderSyntax>
+kindmap<ModuleHeader>
 ModuleHeader ProgramHeader InterfaceHeader PackageHeader
 
-ModuleDeclarationSyntax base=MemberSyntax
-ModuleHeaderSyntax header
-list<MemberSyntax> members
+ModuleDeclaration base=Member
+ModuleHeader header
+list<Member> members
 token endmodule
-NamedBlockClauseSyntax? blockName
+NamedBlockClause? blockName
 
-kindmap<ModuleDeclarationSyntax>
+kindmap<ModuleDeclaration>
 ModuleDeclaration InterfaceDeclaration ProgramDeclaration PackageDeclaration
 
-ExternModuleSyntax kind=ExternModule
+ExternModule kind=ExternModule
 token externKeyword
-ModuleHeaderSyntax header
+ModuleHeader header
 
 // ----- MEMBERS -----
 
-EmptyMemberSyntax base=MemberSyntax kind=EmptyMember
+EmptyMember base=Member kind=EmptyMember
 tokenlist qualifiers
 token semi
 
-ProceduralBlockSyntax base=MemberSyntax
+ProceduralBlock base=Member
 token keyword
-StatementSyntax statement
+Statement statement
 
-kindmap<ProceduralBlockSyntax>
+kindmap<ProceduralBlock>
 InitialBlock FinalBlock AlwaysBlock AlwaysCombBlock AlwaysFFBlock AlwaysLatchBlock
 
-GenerateRegionSyntax base=MemberSyntax kind=GenerateRegion
+GenerateRegion base=Member kind=GenerateRegion
 token keyword
-list<MemberSyntax> members
+list<Member> members
 token endgenerate
 
-LoopGenerateSyntax base=MemberSyntax kind=LoopGenerate
+LoopGenerate base=Member kind=LoopGenerate
 token keyword
 token openParen
 token genvar
 token identifier
 token equals
-ExpressionSyntax initialExpr
+Expression initialExpr
 token semi1
-ExpressionSyntax stopExpr
+Expression stopExpr
 token semi2
-ExpressionSyntax iterationExpr
+Expression iterationExpr
 token closeParen
-MemberSyntax block
+Member block
 
-IfGenerateSyntax base=MemberSyntax kind=IfGenerate
+IfGenerate base=Member kind=IfGenerate
 token keyword
 token openParen
-ExpressionSyntax condition
+Expression condition
 token closeParen
-MemberSyntax block
-ElseClauseSyntax? elseClause
+Member block
+ElseClause? elseClause
 
-CaseGenerateSyntax base=MemberSyntax kind=CaseGenerate
+CaseGenerate base=Member kind=CaseGenerate
 token keyword
 token openParen
-ExpressionSyntax condition
+Expression condition
 token closeParen
-list<CaseItemSyntax> items
+list<CaseItem> items
 token endCase
 
-GenerateBlockSyntax base=MemberSyntax kind=GenerateBlock
-NamedLabelSyntax? label
+GenerateBlock base=Member kind=GenerateBlock
+NamedLabel? label
 token begin
-NamedBlockClauseSyntax? beginName
-list<MemberSyntax> members
+NamedBlockClause? beginName
+list<Member> members
 token end
-NamedBlockClauseSyntax? endName
+NamedBlockClause? endName
 
-DividerClauseSyntax kind=DividerClause
+DividerClause kind=DividerClause
 token divide
 token value
 
-TimeUnitsDeclarationSyntax base=MemberSyntax kind=TimeUnitsDeclaration
+TimeUnitsDeclaration base=Member kind=TimeUnitsDeclaration
 token keyword
 token time
-DividerClauseSyntax? divider
+DividerClause? divider
 token semi
 
-PortConnectionSyntax final=false
-list<AttributeInstanceSyntax> attributes
+PortConnection final=false
+list<AttributeInstance> attributes
 
-OrderedPortConnectionSyntax base=PortConnectionSyntax kind=OrderedPortConnection
-ExpressionSyntax? expr
+OrderedPortConnection base=PortConnection kind=OrderedPortConnection
+Expression? expr
 
-NamedPortConnectionSyntax base=PortConnectionSyntax kind=NamedPortConnection
+NamedPortConnection base=PortConnection kind=NamedPortConnection
 token dot
 token name
 token openParen
-ExpressionSyntax? expr
+Expression? expr
 token closeParen
 
-WildcardPortConnectionSyntax base=PortConnectionSyntax kind=WildcardPortConnection
+WildcardPortConnection base=PortConnection kind=WildcardPortConnection
 token dotStar
 
-HierarchicalInstanceSyntax kind=HierarchicalInstance
+HierarchicalInstance kind=HierarchicalInstance
 token name
-list<VariableDimensionSyntax> dimensions
+list<VariableDimension> dimensions
 token openParen
-separated_list<PortConnectionSyntax> connections
+separated_list<PortConnection> connections
 token closeParen
 
-HierarchyInstantiationSyntax base=MemberSyntax kind=HierarchyInstantiation
+HierarchyInstantiation base=Member kind=HierarchyInstantiation
 token type
-ParameterValueAssignmentSyntax? parameters
-separated_list<HierarchicalInstanceSyntax> instances
+ParameterValueAssignment? parameters
+separated_list<HierarchicalInstance> instances
 token semi
 
-FunctionPortSyntax kind=FunctionPort
-list<AttributeInstanceSyntax> attributes
+FunctionPort kind=FunctionPort
+list<AttributeInstance> attributes
 token constKeyword
 token direction
 token varKeyword
-DataTypeSyntax? dataType
-VariableDeclaratorSyntax declarator
+DataType? dataType
+Declarator declarator
 
-FunctionPortListSyntax kind=FunctionPortList
+FunctionPortList kind=FunctionPortList
 token openParen
-separated_list<FunctionPortSyntax> ports
+separated_list<FunctionPort> ports
 token closeParen
 
-FunctionPrototypeSyntax kind=FunctionPrototype
+FunctionPrototype kind=FunctionPrototype
 token keyword
 token lifetime
-DataTypeSyntax? returnType
-NameSyntax name
-FunctionPortListSyntax? portList
+DataType? returnType
+Name name
+FunctionPortList? portList
 
-FunctionDeclarationSyntax base=MemberSyntax
-FunctionPrototypeSyntax prototype
+FunctionDeclaration base=Member
+FunctionPrototype prototype
 token semi
 list<SyntaxNode> items
 token end
-NamedBlockClauseSyntax? endBlockName
+NamedBlockClause? endBlockName
 
-kindmap<FunctionDeclarationSyntax>
+kindmap<FunctionDeclaration>
 FunctionDeclaration TaskDeclaration
 
-AssertionItemPortSyntax kind=AssertionItemPort
-list<AttributeInstanceSyntax> attributes
+AssertionItemPort kind=AssertionItemPort
+list<AttributeInstance> attributes
 token local
 token direction
-DataTypeSyntax type
-VariableDeclaratorSyntax declarator
+DataType type
+Declarator declarator
 
-AssertionItemPortListSyntax kind=AssertionItemPortList
+AssertionItemPortList kind=AssertionItemPortList
 token openParen
-separated_list<AssertionItemPortSyntax> ports
+separated_list<AssertionItemPort> ports
 token closeParen
 
-LetDeclarationSyntax kind=LetDeclaration base=MemberSyntax
+LetDeclaration kind=LetDeclaration base=Member
 token let
 token identifier
-AssertionItemPortListSyntax? portList
-EqualsValueClauseSyntax initializer
+AssertionItemPortList? portList
+EqualsValueClause initializer
 token semi
 
-PropertyDeclarationSyntax kind=PropertyDeclaration base=MemberSyntax
+PropertyDeclaration kind=PropertyDeclaration base=Member
 token keyword
 token name
-AssertionItemPortListSyntax? portList
+AssertionItemPortList? portList
 token semi
-list<MemberSyntax> assertionVariables
-PropertySpecSyntax propertySpec
+list<Member> assertionVariables
+PropertySpec propertySpec
 token optionalSemi
 token end
-NamedBlockClauseSyntax? endBlockName
+NamedBlockClause? endBlockName
 
-SequenceDeclarationSyntax kind=SequenceDeclaration base=MemberSyntax
+SequenceDeclaration kind=SequenceDeclaration base=Member
 token keyword
 token name
-AssertionItemPortListSyntax? portList
+AssertionItemPortList? portList
 token semi
-list<MemberSyntax> assertionVariables
-ExpressionSyntax seqExpr
+list<Member> assertionVariables
+Expression seqExpr
 token optionalSemi
 token end
-NamedBlockClauseSyntax? endBlockName
+NamedBlockClause? endBlockName
 
-ExtendsClauseSyntax kind=ExtendsClause
+ExtendsClause kind=ExtendsClause
 token keyword
-NameSyntax baseName
-ArgumentListSyntax? arguments
+Name baseName
+ArgumentList? arguments
 
-ImplementsClauseSyntax kind=ImplementsClause
+ImplementsClause kind=ImplementsClause
 token keyword
-separated_list<NameSyntax> interfaces
+separated_list<Name> interfaces
 
-ClassDeclarationSyntax base=MemberSyntax kind=ClassDeclaration
+ClassDeclaration base=Member kind=ClassDeclaration
 token virtualOrInterface
 token classKeyword
 token lifetime
 token name
-ParameterPortListSyntax? parameters
-ExtendsClauseSyntax? extendsClause
-ImplementsClauseSyntax? implementsClause
+ParameterPortList? parameters
+ExtendsClause? extendsClause
+ImplementsClause? implementsClause
 token semi
-list<MemberSyntax> items
+list<Member> items
 token endClass
-NamedBlockClauseSyntax? endBlockName
+NamedBlockClause? endBlockName
 
-ClassPropertyDeclarationSyntax base=MemberSyntax kind=ClassPropertyDeclaration
+ClassPropertyDeclaration base=Member kind=ClassPropertyDeclaration
 tokenlist qualifiers
-MemberSyntax declaration
+Member declaration
 
-ClassMethodDeclarationSyntax base=MemberSyntax kind=ClassMethodDeclaration
+ClassMethodDeclaration base=Member kind=ClassMethodDeclaration
 tokenlist qualifiers
-FunctionDeclarationSyntax declaration
+FunctionDeclaration declaration
 
-ClassMethodPrototypeSyntax base=MemberSyntax kind=ClassMethodPrototype
+ClassMethodPrototype base=Member kind=ClassMethodPrototype
 tokenlist qualifiers
-FunctionPrototypeSyntax prototype
+FunctionPrototype prototype
 token semi
 
-ContinuousAssignSyntax base=MemberSyntax kind=ContinuousAssign
+ContinuousAssign base=Member kind=ContinuousAssign
 token assign
-separated_list<ExpressionSyntax> assignments
+separated_list<Expression> assignments
 token semi
 
-DefParamAssignmentSyntax kind=DefParamAssignment
-NameSyntax name
-EqualsValueClauseSyntax? setter
+DefParamAssignment kind=DefParamAssignment
+Name name
+EqualsValueClause? setter
 
-DefParamSyntax base=MemberSyntax kind=DefParam
+DefParam base=Member kind=DefParam
 token defparam
-separated_list<DefParamAssignmentSyntax> assignments
+separated_list<DefParamAssignment> assignments
 token semi
 
-ModportClockingPortSyntax base=MemberSyntax kind=ModportClockingPort
+ModportClockingPort base=Member kind=ModportClockingPort
 token clocking
 token name
 
-ModportPortSyntax final=false
+ModportPort final=false
 empty
 
-ModportNamedPortSyntax base=ModportPortSyntax kind=ModportNamedPort
+ModportNamedPort base=ModportPort kind=ModportNamedPort
 token name
 
-ModportExplicitPortSyntax base=ModportPortSyntax kind=ModportExplicitPort
+ModportExplicitPort base=ModportPort kind=ModportExplicitPort
 token dot
 token name
 token openParen
-ExpressionSyntax? expr
+Expression? expr
 token closeParen
 
-ModportSimplePortListSyntax base=MemberSyntax kind=ModportSimplePortList
+ModportSimplePortList base=Member kind=ModportSimplePortList
 token direction
-separated_list<ModportPortSyntax> ports
+separated_list<ModportPort> ports
 
-ModportSubroutinePortSyntax base=ModportPortSyntax kind=ModportSubroutinePort
-FunctionPrototypeSyntax prototype
+ModportSubroutinePort base=ModportPort kind=ModportSubroutinePort
+FunctionPrototype prototype
 
-ModportSubroutinePortListSyntax base=MemberSyntax kind=ModportSubroutinePortList
+ModportSubroutinePortList base=Member kind=ModportSubroutinePortList
 token importExport
-separated_list<ModportPortSyntax> ports
+separated_list<ModportPort> ports
 
-ModportItemSyntax kind=ModportItem
+ModportItem kind=ModportItem
 token name
-AnsiPortListSyntax ports
+AnsiPortList ports
 
-ModportDeclarationSyntax base=MemberSyntax kind=ModportDeclaration
+ModportDeclaration base=Member kind=ModportDeclaration
 token keyword
-separated_list<ModportItemSyntax> items
+separated_list<ModportItem> items
 token semi
 
-ClockingSkewSyntax kind=ClockingSkew
+ClockingSkew kind=ClockingSkew
 token edge
 token hash
-ExpressionSyntax? value
+Expression? value
 
-ClockingDirectionSyntax kind=ClockingDirection
+ClockingDirection kind=ClockingDirection
 token input
-ClockingSkewSyntax? inputSkew
+ClockingSkew? inputSkew
 token output
-ClockingSkewSyntax? ouputSkew
+ClockingSkew? ouputSkew
 token inout
 
-ClockingItemSyntax kind=ClockingItem
+ClockingItem kind=ClockingItem
 token defaultKeyword
-ClockingDirectionSyntax? direction
-separated_list<AttributeSpecSyntax> assignments
+ClockingDirection? direction
+separated_list<AttributeSpec> assignments
 token semi
-MemberSyntax? declaration
+Member? declaration
 
-ClockingDeclarationSyntax base=MemberSyntax kind=ClockingDeclaration
+ClockingDeclaration base=Member kind=ClockingDeclaration
 token globalOrDefault
 token clocking
 token blockName
 token at
-ParenthesizedEventExpressionSyntax? event
+ParenthesizedEventExpression? event
 token eventIdentifier
 token semi
-list<ClockingItemSyntax> items
+list<ClockingItem> items
 token endClocking
-NamedBlockClauseSyntax? endBlockName
+NamedBlockClause? endBlockName
 
-DPIImportExportSyntax base=MemberSyntax kind=DPIImportExport
+DPIImportExport base=Member kind=DPIImportExport
 token keyword
 token stringLiteral
 token property
 token name
 token equals
-FunctionPrototypeSyntax method
+FunctionPrototype method
 token semi
 
 // ----- CONSTRAINTS -----
 
-ConstraintItemSyntax final=false
+ConstraintItem final=false
 empty
 
-DistWeightSyntax kind=DistWeight
+DistWeight kind=DistWeight
 token op
-ExpressionSyntax expr
+Expression expr
 
-DistItemSyntax kind=DistItem
-ExpressionSyntax range
-DistWeightSyntax? weight
+DistItem kind=DistItem
+Expression range
+DistWeight? weight
 
-DistConstraintListSyntax kind=DistConstraintList
+DistConstraintList kind=DistConstraintList
 token dist
 token openBrace
-separated_list<DistItemSyntax> items
+separated_list<DistItem> items
 token closeBrace
 
-ExpressionOrDistSyntax base=ExpressionSyntax kind=ExpressionOrDist
-ExpressionSyntax expr
-DistConstraintListSyntax distribution
+ExpressionOrDist base=Expression kind=ExpressionOrDist
+Expression expr
+DistConstraintList distribution
 
-ExpressionConstraintSyntax base=ConstraintItemSyntax kind=ExpressionConstraint
+ExpressionConstraint base=ConstraintItem kind=ExpressionConstraint
 token soft
-ExpressionSyntax expr
+Expression expr
 token semi
 
-UniquenessConstraintSyntax base=ConstraintItemSyntax kind=UniquenessConstraint
+UniquenessConstraint base=ConstraintItem kind=UniquenessConstraint
 token unique
-OpenRangeListSyntax ranges
+OpenRangeList ranges
 token semi
 
-ImplicationConstraintSyntax base=ConstraintItemSyntax kind=ImplicationConstraint
-ExpressionSyntax left
+ImplicationConstraint base=ConstraintItem kind=ImplicationConstraint
+Expression left
 token arrow
-ConstraintItemSyntax constraints
+ConstraintItem constraints
 
-ElseConstraintClauseSyntax kind=ElseConstraintClause
+ElseConstraintClause kind=ElseConstraintClause
 token elseKeyword
-ConstraintItemSyntax constraints
+ConstraintItem constraints
 
-ConditionalConstraintSyntax base=ConstraintItemSyntax kind=ConditionalConstraint
+ConditionalConstraint base=ConstraintItem kind=ConditionalConstraint
 token ifKeyword
 token openParen
-ExpressionSyntax condition
+Expression condition
 token closeParen
-ConstraintItemSyntax constraints
-ElseConstraintClauseSyntax? elseClause
+ConstraintItem constraints
+ElseConstraintClause? elseClause
 
-LoopConstraintSyntax base=ConstraintItemSyntax kind=LoopConstraint
+LoopConstraint base=ConstraintItem kind=LoopConstraint
 token foreachKeyword
-ForeachLoopListSyntax loopList
-ConstraintItemSyntax constraints
+ForeachLoopList loopList
+ConstraintItem constraints
 
-DisableConstraintSyntax base=ConstraintItemSyntax kind=DisableConstraint
+DisableConstraint base=ConstraintItem kind=DisableConstraint
 token disable
 token soft
-NameSyntax name
+Name name
 token semi
 
-SolveBeforeConstraintSyntax base=ConstraintItemSyntax kind=SolveBeforeConstraint
+SolveBeforeConstraint base=ConstraintItem kind=SolveBeforeConstraint
 token solve
-separated_list<ExpressionSyntax> beforeExpr
+separated_list<Expression> beforeExpr
 token before
-separated_list<ExpressionSyntax> afterExpr
+separated_list<Expression> afterExpr
 token semi
 
-ConstraintBlockSyntax base=ConstraintItemSyntax kind=ConstraintBlock
+ConstraintBlock base=ConstraintItem kind=ConstraintBlock
 token openBrace
-list<ConstraintItemSyntax> items
+list<ConstraintItem> items
 token closeBrace
 
-ConstraintPrototypeSyntax base=MemberSyntax kind=ConstraintPrototype
+ConstraintPrototype base=Member kind=ConstraintPrototype
 tokenlist qualifiers
 token keyword
 token name
 token semi
 
-ConstraintDeclarationSyntax base=MemberSyntax kind=ConstraintDeclaration
+ConstraintDeclaration base=Member kind=ConstraintDeclaration
 tokenlist qualifiers
 token keyword
 token name
-ConstraintBlockSyntax block
+ConstraintBlock block
 
-WithClauseSyntax base=ExpressionSyntax kind=WithClause
+WithClause base=Expression kind=WithClause
 token with
 token openParen
-ExpressionSyntax expr
+Expression expr
 token closeParen
 
-IdentifierListSyntax kind=IdentifierList
+IdentifierList kind=IdentifierList
 token openParen
-separated_list<IdentifierNameSyntax> identifiers
+separated_list<IdentifierName> identifiers
 token closeParen
 
-RandomizeMethodWithClauseSyntax base=ExpressionSyntax kind=RandomizeMethodWithClause
+RandomizeMethodWithClause base=Expression kind=RandomizeMethodWithClause
 token with
-IdentifierListSyntax? names
-ConstraintBlockSyntax constraints
+IdentifierList? names
+ConstraintBlock constraints
 
 // ----- COVER GROUPS -----
 
-WithFunctionSampleSyntax kind=WithFunctionSample
+WithFunctionSample kind=WithFunctionSample
 token with
 token function
 token sample
-AnsiPortListSyntax portList
+AnsiPortList portList
 
-BlockEventExpressionSyntax final=false
+BlockEventExpression final=false
 empty
 
-BinaryBlockEventExpressionSyntax base=BlockEventExpressionSyntax kind=BinaryBlockEventExpression
-BlockEventExpressionSyntax left
+BinaryBlockEventExpression base=BlockEventExpression kind=BinaryBlockEventExpression
+BlockEventExpression left
 token orKeyword
-BlockEventExpressionSyntax right
+BlockEventExpression right
 
-PrimaryBlockEventExpressionSyntax base=BlockEventExpressionSyntax kind=PrimaryBlockEventExpression
+PrimaryBlockEventExpression base=BlockEventExpression kind=PrimaryBlockEventExpression
 token keyword
-NameSyntax name
+Name name
 
-BlockCoverageEventSyntax kind=BlockCoverageEvent
+BlockCoverageEvent kind=BlockCoverageEvent
 token atat
 token openParen
-BlockEventExpressionSyntax expr
+BlockEventExpression expr
 token closeParen
 
-CovergroupDeclarationSyntax base=MemberSyntax kind=CovergroupDeclaration
+CovergroupDeclaration base=Member kind=CovergroupDeclaration
 token covergroup
 token name
-AnsiPortListSyntax? portList
+AnsiPortList? portList
 SyntaxNode? event
 token semi
-list<MemberSyntax> members
+list<Member> members
 token endgroup
-NamedBlockClauseSyntax? endBlockName
+NamedBlockClause? endBlockName
 
-CoverageOptionSyntax base=MemberSyntax kind=CoverageOption
+CoverageOption base=Member kind=CoverageOption
 token option
 token dot
 token name
 token equals
-ExpressionSyntax expr
+Expression expr
 token semi
 
-CoverpointSyntax base=MemberSyntax kind=Coverpoint
-DataTypeSyntax? type
-NamedLabelSyntax? label
+Coverpoint base=Member kind=Coverpoint
+DataType? type
+NamedLabel? label
 token coverpoint
-ExpressionSyntax expr
+Expression expr
 token openBrace
-list<MemberSyntax> members
+list<Member> members
 token closeBrace
 token emptySemi
 
-CoverageBinInitializerSyntax final=false
+CoverageBinInitializer final=false
 empty
 
-DefaultCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=DefaultCoverageBinInitializer
+DefaultCoverageBinInitializer base=CoverageBinInitializer kind=DefaultCoverageBinInitializer
 token defaultKeyword
 token sequenceKeyword
 
-ExpressionCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=ExpressionCoverageBinInitializer
-ExpressionSyntax expr
-WithClauseSyntax? withClause
+ExpressionCoverageBinInitializer base=CoverageBinInitializer kind=ExpressionCoverageBinInitializer
+Expression expr
+WithClause? withClause
 
-RangeCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=RangeCoverageBinInitializer
-OpenRangeListSyntax ranges
-WithClauseSyntax? withClause
+RangeCoverageBinInitializer base=CoverageBinInitializer kind=RangeCoverageBinInitializer
+OpenRangeList ranges
+WithClause? withClause
 
-TransRepeatRangeSyntax kind=TransRepeatRange
+TransRepeatRange kind=TransRepeatRange
 token openBracket
 token specifier
-SelectorSyntax? selector
+Selector? selector
 token closeBracket
 
-TransRangeSyntax kind=TransRange
-separated_list<ExpressionSyntax> items
-TransRepeatRangeSyntax? repeat
+TransRange kind=TransRange
+separated_list<Expression> items
+TransRepeatRange? repeat
 
-TransSetSyntax kind=TransSet
+TransSet kind=TransSet
 token openParen
-separated_list<TransRangeSyntax> ranges
+separated_list<TransRange> ranges
 token closeParen
 
-TransListCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=TransListCoverageBinInitializer
-separated_list<TransSetSyntax> sets
-WithClauseSyntax? withClause
+TransListCoverageBinInitializer base=CoverageBinInitializer kind=TransListCoverageBinInitializer
+separated_list<TransSet> sets
+WithClause? withClause
 
-IffClauseSyntax kind=IffClause
+IffClause kind=IffClause
 token iff
 token openParen
-ExpressionSyntax expr
+Expression expr
 token closeParen
 
-CoverageBinsSyntax base=MemberSyntax kind=CoverageBins
+CoverageBins base=Member kind=CoverageBins
 token wildcard
 token keyword
 token name
-ElementSelectSyntax? selector
+ElementSelect? selector
 token equals
-CoverageBinInitializerSyntax initializer
-IffClauseSyntax? iff
+CoverageBinInitializer initializer
+IffClause? iff
 token semi
 
 // ----- TOP LEVEL -----
 
-CompilationUnitSyntax kind=CompilationUnit
-list<MemberSyntax> members
+CompilationUnit kind=CompilationUnit
+list<Member> members
 token endOfFile
 
 // ----- DIRECTIVES -----
 
-DirectiveSyntax final=false
+Directive final=false
 token directive
 
-SimpleDirectiveSyntax base=DirectiveSyntax
+SimpleDirective base=Directive
 
-kindmap<SimpleDirectiveSyntax>
+kindmap<SimpleDirective>
 CellDefineDirective PragmaDirective UnconnectedDriveDirective
 NoUnconnectedDriveDirective EndCellDefineDirective EndKeywordsDirective
 ResetAllDirective UndefineAllDirective
 
-IncludeDirectiveSyntax base=DirectiveSyntax kind=IncludeDirective
+IncludeDirective base=Directive kind=IncludeDirective
 token fileName
 
-ConditionalBranchDirectiveSyntax base=DirectiveSyntax
+ConditionalBranchDirective base=Directive
 token name
 tokenlist disabledTokens
 
-kindmap<ConditionalBranchDirectiveSyntax>
+kindmap<ConditionalBranchDirective>
 ElsIfDirective IfDefDirective IfNDefDirective
 
-UnconditionalBranchDirectiveSyntax base=DirectiveSyntax
+UnconditionalBranchDirective base=Directive
 tokenlist disabledTokens
 
-kindmap<UnconditionalBranchDirectiveSyntax>
+kindmap<UnconditionalBranchDirective>
 EndIfDirective ElseDirective
 
-MacroArgumentDefaultSyntax kind=MacroArgumentDefault
+MacroArgumentDefault kind=MacroArgumentDefault
 token equals
 tokenlist tokens
 
-MacroFormalArgumentSyntax kind=MacroFormalArgument
+MacroFormalArgument kind=MacroFormalArgument
 token name
-MacroArgumentDefaultSyntax? defaultValue
+MacroArgumentDefault? defaultValue
 
-MacroFormalArgumentListSyntax kind=MacroFormalArgumentList
+MacroFormalArgumentList kind=MacroFormalArgumentList
 token openParen
-separated_list<MacroFormalArgumentSyntax> args
+separated_list<MacroFormalArgument> args
 token closeParen
 
-DefineDirectiveSyntax base=DirectiveSyntax kind=DefineDirective
+DefineDirective base=Directive kind=DefineDirective
 token name
-MacroFormalArgumentListSyntax? formalArguments
+MacroFormalArgumentList? formalArguments
 tokenlist body
 
-MacroActualArgumentSyntax kind=MacroActualArgument
+MacroActualArgument kind=MacroActualArgument
 tokenlist tokens
 
-MacroActualArgumentListSyntax kind=MacroActualArgumentList
+MacroActualArgumentList kind=MacroActualArgumentList
 token openParen
-separated_list<MacroActualArgumentSyntax> args
+separated_list<MacroActualArgument> args
 token closeParen
 
-MacroUsageSyntax base=DirectiveSyntax kind=MacroUsage
-MacroActualArgumentListSyntax? args
+MacroUsage base=Directive kind=MacroUsage
+MacroActualArgumentList? args
 
-TimescaleDirectiveSyntax base=DirectiveSyntax kind=TimescaleDirective
+TimescaleDirective base=Directive kind=TimescaleDirective
 token timeUnit
 token timeUnitUnit
 token slash
 token timePrecision
 token timePrecisionUnit
 
-DefaultNetTypeDirectiveSyntax base=DirectiveSyntax kind=DefaultNetTypeDirective
+DefaultNetTypeDirective base=Directive kind=DefaultNetTypeDirective
 token netType
 
-LineDirectiveSyntax base=DirectiveSyntax kind=LineDirective
+LineDirective base=Directive kind=LineDirective
 token lineNumber
 token fileName
 token level
 
-UndefDirectiveSyntax base=DirectiveSyntax kind=UndefDirective
+UndefDirective base=Directive kind=UndefDirective
 token name
 
-BeginKeywordsDirectiveSyntax base=DirectiveSyntax kind=BeginKeywordsDirective
+BeginKeywordsDirective base=Directive kind=BeginKeywordsDirective
 token versionSpecifier

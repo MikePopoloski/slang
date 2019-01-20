@@ -566,7 +566,7 @@ enum class SyntaxKind : uint16_t {
     QueueDimensionSpecifier,
     VariableDimension,
     EqualsValueClause,
-    VariableDeclarator,
+    Declarator,
     DataDeclaration,
     TypedefDeclaration,
     ForwardTypedefDeclaration,
