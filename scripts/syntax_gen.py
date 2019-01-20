@@ -236,6 +236,26 @@ namespace slang {
         cppf.write('    return *alloc.emplace<{}>({});\n'.format(k, argNames))
         cppf.write('}\n\n')
 
+    cppf.write('''
+std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
+    os << toString(kind);
+    return os;
+}
+
+string_view toString(SyntaxKind kind) {
+    switch (kind) {
+''')
+
+    for k,v in sorted(kindmap.items()):
+        cppf.write('        case SyntaxKind::{}: return "{}";\n'.format(k, k))
+
+    cppf.write('''        default: return "";
+    }
+}
+
+}
+''')
+
     outf.write('\n')
     outf.write('private:\n')
     outf.write('    BumpAllocator& alloc;\n')
@@ -274,7 +294,6 @@ namespace slang {
     outf.write('}\n\n')
 
     outf.write('}\n')
-    cppf.write('}\n')
 
     # Do some checking to make sure all types have at least one kind assigned,
     # or has set final=false.  We already removed types from alltypes in the
@@ -304,8 +323,14 @@ enum class SyntaxKind {
     for k,v in sorted(kindmap.items()):
         outf.write('    {},\n'.format(k))
 
-    outf.write('};\n\n')
-    outf.write('}\n')
+    outf.write('''};
+
+std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
+string_view toString(SyntaxKind kind);
+
+}
+''')
+
 
 def generate(outf, name, tags, members, alltypes, kindmap):
     tagdict = {}
