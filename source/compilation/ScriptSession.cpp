@@ -43,7 +43,7 @@ ConstantValue ScriptSession::eval(string_view text) {
             return nullptr;
         }
         default:
-            if (isExpression(node.kind))
+            if (ExpressionSyntax::isKind(node.kind))
                 return evalExpression(node.as<ExpressionSyntax>());
             else
                 // If this throws, ScriptSession doesn't currently support whatever construct

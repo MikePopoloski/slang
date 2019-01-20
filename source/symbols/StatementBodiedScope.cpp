@@ -70,7 +70,7 @@ Statement& StatementBodiedScope::bindStatementList(const SyntaxList<SyntaxNode>&
                 addMembers(*item);
                 break;
             default:
-                if (isStatement(item->kind))
+                if (StatementSyntax::isKind(item->kind))
                     buffer.append(&bindStatement(item->as<StatementSyntax>(), context));
                 else
                     THROW_UNREACHABLE;
@@ -160,10 +160,8 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
         }
     }
     else {
-        for (auto initializer : syntax.initializers) {
-            ASSERT(isStatement(initializer->kind));
+        for (auto initializer : syntax.initializers)
             initializers.append(&bindStatement(initializer->as<StatementSyntax>(), *forContext));
-        }
     }
 
     SmallVectorSized<const Expression*, 2> steps;
