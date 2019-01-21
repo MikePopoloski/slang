@@ -1,8 +1,8 @@
 [requires]
-catch2/2.4.2@bincrafters/stable
-jsonformoderncpp/3.4.0@vthiery/stable
-CLI11/1.6.1@cliutils/stable
-fmt/5.2.1@bincrafters/stable
+Catch2/2.5.0@catchorg/stable
+jsonformoderncpp/3.5.0@vthiery/stable
+CLI11/1.6.2@cliutils/stable
+fmt/5.3.0@bincrafters/stable
 
 [generators]
 cmake

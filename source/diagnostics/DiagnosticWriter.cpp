@@ -186,8 +186,8 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         for (auto& arg : diagnostic.args)
             args.push_back(fmt::internal::make_arg<ctx>(arg));
 
-        message = fmt::vformat(std::string(format),
-                               fmt::basic_format_args<ctx>(args.data(), (unsigned)args.size()));
+        message =
+            fmt::vformat(format, fmt::basic_format_args<ctx>(args.data(), (unsigned)args.size()));
     }
 
     SmallVectorSized<SourceRange, 8> mappedRanges;
