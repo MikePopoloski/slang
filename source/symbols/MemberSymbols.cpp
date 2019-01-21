@@ -453,7 +453,7 @@ struct NonAnsiPortListBuilder {
 
         auto it = portInfos.find(name);
         if (it == portInfos.end()) {
-            scope.addDiag(DiagCode::MissingPortIODeclaration, loc);
+            scope.addDiag(DiagCode::MissingPortIODeclaration, loc) << name;
             return nullptr;
         }
 
