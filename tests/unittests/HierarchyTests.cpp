@@ -391,46 +391,51 @@ module mh22(ref wire x); endmodule
     compilation.addSyntaxTree(tree);
     auto& diags = compilation.getAllDiagnostics();
 
-#define checkPort(moduleName, name, dir, kind, type)               \
+#define checkPort(moduleName, name, dir, nt, type)                 \
     {                                                              \
         auto def = compilation.getDefinition(moduleName);          \
         REQUIRE(def);                                              \
         auto& port = def->getPortMap().at(name)->as<PortSymbol>(); \
         CHECK(port.direction == (dir));                            \
-        CHECK(port.portKind == (kind));                            \
         CHECK(port.getType().toString() == (type));                \
+        if (nt) {                                                  \
+            auto& net = port.internalSymbol->as<NetSymbol>();      \
+            CHECK(&net.netType == (nt));                           \
+        }                                                          \
     };
 
-    checkPort("mh0", "x", PortDirection::InOut, PortKind::Net, "logic");
-    checkPort("mh1", "x", PortDirection::InOut, PortKind::Net, "integer");
-    checkPort("mh2", "x", PortDirection::InOut, PortKind::Net, "integer");
-    checkPort("mh3", "x", PortDirection::InOut, PortKind::Net, "logic[5:0]");
-    checkPort("mh4", "x", PortDirection::InOut, PortKind::Variable, "logic");
-    checkPort("mh5", "x", PortDirection::In, PortKind::Net, "logic");
-    checkPort("mh6", "x", PortDirection::In, PortKind::Variable, "logic");
-    checkPort("mh7", "x", PortDirection::In, PortKind::Variable, "integer");
-    checkPort("mh8", "x", PortDirection::Out, PortKind::Net, "logic");
-    checkPort("mh9", "x", PortDirection::Out, PortKind::Variable, "logic");
-    checkPort("mh10", "x", PortDirection::Out, PortKind::Net, "logic signed[5:0]");
-    checkPort("mh11", "x", PortDirection::Out, PortKind::Variable, "integer");
-    checkPort("mh12", "x", PortDirection::Ref, PortKind::Variable, "logic[5:0]");
-    checkPort("mh13", "x", PortDirection::Ref, PortKind::Variable, "logic$[5:0]");
-    checkPort("mh14", "x", PortDirection::InOut, PortKind::Net, "logic");
-    checkPort("mh14", "y", PortDirection::InOut, PortKind::Net, "logic$[7:0]");
-    checkPort("mh15", "x", PortDirection::InOut, PortKind::Net, "integer");
-    checkPort("mh15", "y", PortDirection::InOut, PortKind::Net, "logic signed[5:0]");
-    checkPort("mh16", "x", PortDirection::InOut, PortKind::Net, "logic[5:0]");
-    checkPort("mh16", "y", PortDirection::InOut, PortKind::Net, "logic");
-    checkPort("mh17", "x", PortDirection::In, PortKind::Variable, "integer");
-    checkPort("mh17", "y", PortDirection::In, PortKind::Net, "logic");
-    checkPort("mh18", "x", PortDirection::Out, PortKind::Variable, "logic");
-    checkPort("mh18", "y", PortDirection::In, PortKind::Net, "logic");
-    checkPort("mh19", "x", PortDirection::Out, PortKind::Net, "logic signed[5:0]");
-    checkPort("mh19", "y", PortDirection::Out, PortKind::Variable, "integer");
-    checkPort("mh20", "x", PortDirection::Ref, PortKind::Variable, "logic[5:0]");
-    checkPort("mh20", "y", PortDirection::Ref, PortKind::Variable, "logic[5:0]");
-    checkPort("mh21", "x", PortDirection::Ref, PortKind::Variable, "logic$[5:0]");
-    checkPort("mh21", "y", PortDirection::Ref, PortKind::Variable, "logic");
+    auto wire = &compilation.getWireNetType();
+
+    checkPort("mh0", "x", PortDirection::InOut, wire, "logic");
+    checkPort("mh1", "x", PortDirection::InOut, wire, "integer");
+    checkPort("mh2", "x", PortDirection::InOut, wire, "integer");
+    checkPort("mh3", "x", PortDirection::InOut, wire, "logic[5:0]");
+    checkPort("mh4", "x", PortDirection::InOut, nullptr, "logic");
+    checkPort("mh5", "x", PortDirection::In, wire, "logic");
+    checkPort("mh6", "x", PortDirection::In, nullptr, "logic");
+    checkPort("mh7", "x", PortDirection::In, nullptr, "integer");
+    checkPort("mh8", "x", PortDirection::Out, wire, "logic");
+    checkPort("mh9", "x", PortDirection::Out, nullptr, "logic");
+    checkPort("mh10", "x", PortDirection::Out, wire, "logic signed[5:0]");
+    checkPort("mh11", "x", PortDirection::Out, nullptr, "integer");
+    checkPort("mh12", "x", PortDirection::Ref, nullptr, "logic[5:0]");
+    checkPort("mh13", "x", PortDirection::Ref, nullptr, "logic$[5:0]");
+    checkPort("mh14", "x", PortDirection::InOut, wire, "logic");
+    checkPort("mh14", "y", PortDirection::InOut, wire, "logic$[7:0]");
+    checkPort("mh15", "x", PortDirection::InOut, wire, "integer");
+    checkPort("mh15", "y", PortDirection::InOut, wire, "logic signed[5:0]");
+    checkPort("mh16", "x", PortDirection::InOut, wire, "logic[5:0]");
+    checkPort("mh16", "y", PortDirection::InOut, wire, "logic");
+    checkPort("mh17", "x", PortDirection::In, nullptr, "integer");
+    checkPort("mh17", "y", PortDirection::In, wire, "logic");
+    checkPort("mh18", "x", PortDirection::Out, nullptr, "logic");
+    checkPort("mh18", "y", PortDirection::In, wire, "logic");
+    checkPort("mh19", "x", PortDirection::Out, wire, "logic signed[5:0]");
+    checkPort("mh19", "y", PortDirection::Out, nullptr, "integer");
+    checkPort("mh20", "x", PortDirection::Ref, nullptr, "logic[5:0]");
+    checkPort("mh20", "y", PortDirection::Ref, nullptr, "logic[5:0]");
+    checkPort("mh21", "x", PortDirection::Ref, nullptr, "logic$[5:0]");
+    checkPort("mh21", "y", PortDirection::Ref, nullptr, "logic");
 
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == DiagCode::InOutPortCannotBeVariable);
@@ -480,13 +485,15 @@ module m6(I.bar bar); endmodule
         }                                                                       \
     };
 
+    auto wire = &compilation.getWireNetType();
+
     checkIfacePort("m0", "a", "I", nullptr);
     checkIfacePort("m0", "b", "I", nullptr);
-    checkPort("m0", "c", PortDirection::In, PortKind::Net, "logic");
-    checkPort("m1", "j", PortDirection::InOut, PortKind::Net, "struct{logic f;}J");
+    checkPort("m0", "c", PortDirection::In, wire, "logic");
+    checkPort("m1", "j", PortDirection::InOut, wire, "struct{logic f;}J");
     checkIfacePort("m3", "k", "K", nullptr);
-    checkPort("m3", "w", PortDirection::InOut, PortKind::Net, "logic");
-    checkPort("m4", "v", PortDirection::Out, PortKind::Variable, "logic");
+    checkPort("m3", "w", PortDirection::InOut, wire, "logic");
+    checkPort("m4", "v", PortDirection::Out, nullptr, "logic");
     checkIfacePort("m5", "a1", "J", nullptr);
     checkIfacePort("m5", "a2", "K", nullptr);
     checkIfacePort("m6", "bar", "I", "bar");
@@ -545,27 +552,29 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    checkPort("test", "a", PortDirection::InOut, PortKind::Net, "logic");
-    checkPort("test", "b", PortDirection::Ref, PortKind::Net, "logic");
-    checkPort("test", "c", PortDirection::Ref, PortKind::Variable, "logic");
-    checkPort("test", "d", PortDirection::InOut, PortKind::Variable, "logic");
-    checkPort("test", "e", PortDirection::In, PortKind::Net, "logic");
-    checkPort("test", "f", PortDirection::Ref, PortKind::Net, "logic");
+    auto wire = &compilation.getWireNetType();
 
-    checkPort("test", "g", PortDirection::In, PortKind::Variable, "logic");
-    checkPort("test", "h", PortDirection::In, PortKind::Variable, "struct{logic f;}");
-    checkPort("test", "i", PortDirection::Out, PortKind::Net, "logic[2:0]");
-    checkPort("test", "j", PortDirection::Out, PortKind::Net, "logic");
-    checkPort("test", "k", PortDirection::In, PortKind::Variable, "struct{logic f;}");
-    checkPort("test", "l", PortDirection::In, PortKind::Variable, "logic[1:0]$[0:1]");
-    checkPort("test", "m", PortDirection::In, PortKind::Variable, "logic[2:0]");
-    checkPort("test", "n", PortDirection::In, PortKind::Variable, "logic$[0:2]");
-    checkPort("test", "o", PortDirection::In, PortKind::Variable, "logic[2:0]$[0:2]");
-    checkPort("test", "p", PortDirection::In, PortKind::Variable,
+    checkPort("test", "a", PortDirection::InOut, wire, "logic");
+    checkPort("test", "b", PortDirection::Ref, wire, "logic");
+    checkPort("test", "c", PortDirection::Ref, nullptr, "logic");
+    checkPort("test", "d", PortDirection::InOut, nullptr, "logic");
+    checkPort("test", "e", PortDirection::In, wire, "logic");
+    checkPort("test", "f", PortDirection::Ref, wire, "logic");
+
+    checkPort("test", "g", PortDirection::In, nullptr, "logic");
+    checkPort("test", "h", PortDirection::In, nullptr, "struct{logic f;}");
+    checkPort("test", "i", PortDirection::Out, wire, "logic[2:0]");
+    checkPort("test", "j", PortDirection::Out, wire, "logic");
+    checkPort("test", "k", PortDirection::In, nullptr, "struct{logic f;}");
+    checkPort("test", "l", PortDirection::In, nullptr, "logic[1:0]$[0:1]");
+    checkPort("test", "m", PortDirection::In, nullptr, "logic[2:0]");
+    checkPort("test", "n", PortDirection::In, nullptr, "logic$[0:2]");
+    checkPort("test", "o", PortDirection::In, nullptr, "logic[2:0]$[0:2]");
+    checkPort("test", "p", PortDirection::In, nullptr,
               "logic[2:0][3:1]$[1:2][2:0][0:4]");
-    checkPort("test", "q", PortDirection::In, PortKind::Variable,
+    checkPort("test", "q", PortDirection::In, nullptr,
               "logic signed[2:0][3:1]$[1:2][2:0][0:4]");
-    checkPort("test", "r", PortDirection::In, PortKind::Variable,
+    checkPort("test", "r", PortDirection::In, nullptr,
               "logic signed[2:0][3:2]$[1:2][2:0][0:4]");
 
     auto& diags = compilation.getAllDiagnostics();
@@ -604,14 +613,16 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    checkPort("test", "a", PortDirection::In, PortKind::Net, "logic[7:0]");
-    checkPort("test", "b", PortDirection::In, PortKind::Net, "logic signed[7:0]");
-    checkPort("test", "c", PortDirection::In, PortKind::Net, "logic signed[7:0]");
-    checkPort("test", "d", PortDirection::In, PortKind::Net, "logic signed[7:0]");
-    checkPort("test", "e", PortDirection::Out, PortKind::Net, "logic[7:0]");
-    checkPort("test", "f", PortDirection::Out, PortKind::Variable, "logic signed[7:0]");
-    checkPort("test", "g", PortDirection::Out, PortKind::Variable, "logic signed[7:0]");
-    checkPort("test", "h", PortDirection::Out, PortKind::Net, "logic signed[7:0]");
+    auto wire = &compilation.getWireNetType();
+
+    checkPort("test", "a", PortDirection::In, wire, "logic[7:0]");
+    checkPort("test", "b", PortDirection::In, wire, "logic signed[7:0]");
+    checkPort("test", "c", PortDirection::In, wire, "logic signed[7:0]");
+    checkPort("test", "d", PortDirection::In, wire, "logic signed[7:0]");
+    checkPort("test", "e", PortDirection::Out, wire, "logic[7:0]");
+    checkPort("test", "f", PortDirection::Out, nullptr, "logic signed[7:0]");
+    checkPort("test", "g", PortDirection::Out, nullptr, "logic signed[7:0]");
+    checkPort("test", "h", PortDirection::Out, wire, "logic signed[7:0]");
 
     NO_COMPILATION_ERRORS;
 }

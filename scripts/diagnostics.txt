@@ -214,3 +214,4 @@ warning literal-overflow VectorLiteralOverflow "vector literal too large for the
 warning ignored-macro-paste IgnoredMacroPaste "paste token is pointless because it is adjacent to whitespace"
 warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
+warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed because `default_nettype is set to 'none'"

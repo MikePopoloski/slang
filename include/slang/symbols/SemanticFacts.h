@@ -28,11 +28,6 @@ ENUM(FormalArgumentDirection, FORMAL);
 ENUM(ProceduralBlockKind, BLOCK);
 #undef BLOCK
 
-#define PORT(x) x(Net) x(Variable) x(Explicit) x(Interconnect)
-/// Specifies possible port kinds.
-ENUM(PortKind, PORT);
-#undef PORT
-
 #define PORT(x) x(NotApplicable) x(In) x(Out) x(InOut) x(Ref)
 /// Specifies the behavior of connections to a particular port.
 ENUM(PortDirection, PORT);

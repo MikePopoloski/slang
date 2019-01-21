@@ -109,7 +109,10 @@ const NetType& Scope::getDefaultNetType() const {
             case SymbolKind::Package:
                 return current->asSymbol().as<PackageSymbol>().defaultNetType;
             default:
-                current = current->getParent();
+                if (InstanceSymbol::isKind(current->asSymbol().kind))
+                    current = &current->asSymbol().as<InstanceSymbol>().definition;
+                else
+                    current = current->getParent();
                 break;
         }
     }

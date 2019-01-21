@@ -114,9 +114,6 @@ private:
 /// it can however connect directly to a symbol that is.
 class PortSymbol : public ValueSymbol {
 public:
-    /// The kind of port.
-    PortKind portKind = PortKind::Net;
-
     /// The direction of data flowing across the port. Some port kinds
     /// don't have meaningful semantics for direction; in those cases, this
     /// is set to NotApplicable.

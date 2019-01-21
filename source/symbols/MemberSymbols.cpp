@@ -161,18 +161,6 @@ void ParameterSymbol::toJson(json& j) const {
 
 namespace {
 
-void copyTypeFrom(ValueSymbol& dest, const DeclaredType& source) {
-    if (auto typeSyntax = source.getTypeSyntax()) {
-        if (auto dims = source.getDimensionSyntax())
-            dest.setDeclaredType(*typeSyntax, *dims);
-        else
-            dest.setDeclaredType(*typeSyntax);
-    }
-
-    if (source.isTypeResolved())
-        dest.setType(source.getType());
-}
-
 string_view getSimpleName(const DataTypeSyntax& syntax) {
     if (syntax.kind == SyntaxKind::NamedType) {
         auto& namedType = syntax.as<NamedTypeSyntax>();
@@ -180,6 +168,15 @@ string_view getSimpleName(const DataTypeSyntax& syntax) {
             return namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
     }
     return "";
+}
+
+const NetType& getDefaultNetType(const Scope& scope, SourceLocation location) {
+    auto& netType = scope.getDefaultNetType();
+    if (!netType.isError())
+        return netType;
+
+    scope.addDiag(DiagCode::ImplicitNetPortNoDefault, location);
+    return scope.getCompilation().getWireNetType();
 }
 
 // Helper class to build up lists of port symbols.
@@ -199,81 +196,48 @@ public:
             return;
         }
 
-        // TODO: default nettype?
-        add(decl, lastKind, lastDirection, *lastType);
+        add(decl, lastDirection, *lastType, lastNetType);
     }
 
-    void add(const DeclaratorSyntax& decl, PortKind portKind, PortDirection direction,
-             const DataTypeSyntax& type) {
+    void add(const DeclaratorSyntax& decl, PortDirection direction, const DataTypeSyntax& type,
+             const NetType* netType) {
 
         auto port = compilation.emplace<PortSymbol>(decl.name.valueText(), decl.name.location());
         ports.append(port);
 
-        port->portKind = portKind;
         port->direction = direction;
         port->setSyntax(decl);
         port->setDeclaredType(type, decl.dimensions);
 
-        if (port->direction == PortDirection::InOut && port->portKind == PortKind::Variable)
+        if (port->direction == PortDirection::InOut && !netType)
             scope.addDiag(DiagCode::InOutPortCannotBeVariable, port->location) << port->name;
-        else if (port->direction == PortDirection::Ref && port->portKind != PortKind::Variable)
+        else if (port->direction == PortDirection::Ref && netType)
             scope.addDiag(DiagCode::RefPortMustBeVariable, port->location) << port->name;
 
         // Create a new symbol to represent this port internally to the instance.
         // TODO: interconnect ports don't have a datatype
         ValueSymbol* symbol;
-        switch (portKind) {
-            case PortKind::Variable: {
-                // TODO: variable lifetime
-                auto variable = compilation.emplace<VariableSymbol>(port->name, port->location);
-                symbol = variable;
-                break;
-            }
-            case PortKind::Net: {
-                // TODO: net type
-                auto net = compilation.emplace<NetSymbol>(
-                    port->name, port->location, compilation.getNetType(TokenKind::Unknown));
-                symbol = net;
-                break;
-            }
-            default:
-                symbol = nullptr;
-                break;
+        if (netType) {
+            symbol = compilation.emplace<NetSymbol>(port->name, port->location, *netType);
+        }
+        else {
+            // TODO: variable lifetime
+            auto variable = compilation.emplace<VariableSymbol>(port->name, port->location);
+            symbol = variable;
         }
 
-        if (symbol) {
-            // Initializers here are evaluated in the context of the port list and
-            // must always be a constant value.
-            // TODO: handle initializers
-            symbol->setSyntax(decl);
-            copyTypeFrom(*symbol, *port->getDeclaredType());
-            port->internalSymbol = symbol;
-        }
+        // Initializers here are evaluated in the context of the port list and
+        // must always be a constant value.
+        // TODO: handle initializers
+        symbol->setSyntax(decl);
+        symbol->getDeclaredType()->copyTypeFrom(*port->getDeclaredType());
+        port->internalSymbol = symbol;
 
         // Remember the properties of this port in case the next port wants to inherit from it.
-        lastKind = portKind;
         lastDirection = direction;
         lastType = port->getDeclaredType()->getTypeSyntax();
+        lastNetType = netType;
         lastInterface = nullptr;
-
-        if (lastDirection == PortDirection::NotApplicable)
-            lastDirection = PortDirection::InOut;
-
-        if (lastKind == PortKind::Explicit) {
-            switch (lastDirection) {
-                case PortDirection::In:
-                case PortDirection::InOut:
-                case PortDirection::Out:
-                    // TODO: default nettype
-                    lastKind = PortKind::Net;
-                    break;
-                case PortDirection::Ref:
-                    lastKind = PortKind::Variable;
-                    break;
-                case PortDirection::NotApplicable:
-                    THROW_UNREACHABLE;
-            }
-        }
     }
 
     void add(const DeclaratorSyntax& decl, const DefinitionSymbol* iface,
@@ -287,9 +251,9 @@ public:
         port->modport = modport;
         port->setSyntax(decl);
 
-        lastKind = PortKind::Net;
         lastDirection = PortDirection::InOut;
         lastType = &UnsetType;
+        lastNetType = nullptr;
         lastInterface = iface;
     }
 
@@ -298,9 +262,9 @@ private:
     const Scope& scope;
     SmallVector<Symbol*>& ports;
 
-    PortKind lastKind = PortKind::Net;
     PortDirection lastDirection = PortDirection::InOut;
     const DataTypeSyntax* lastType = &UnsetType;
+    const NetType* lastNetType = nullptr;
     const DefinitionSymbol* lastInterface = nullptr;
 
     static const ImplicitTypeSyntax UnsetType;
@@ -378,38 +342,23 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
             // - For output, if we have a data type it's a var, otherwise net
             // - For ref it's always a var
             PortDirection direction = builder.getDirection(header.direction);
-            PortKind portKind;
-            if (header.varKeyword)
-                portKind = PortKind::Variable;
-            else {
-                switch (direction) {
-                    case PortDirection::In:
-                    case PortDirection::InOut:
-                        // TODO: default nettype
-                        portKind = PortKind::Net;
-                        break;
-                    case PortDirection::Out:
-                        if (header.dataType->kind == SyntaxKind::ImplicitType)
-                            portKind = PortKind::Net;
-                        else
-                            portKind = PortKind::Variable;
-                        break;
-                    case PortDirection::Ref:
-                        portKind = PortKind::Variable;
-                        break;
-                    default:
-                        THROW_UNREACHABLE;
-                }
+            const NetType* netType = nullptr;
+            if (!header.varKeyword &&
+                (direction == PortDirection::In || direction == PortDirection::InOut ||
+                 (direction == PortDirection::Out &&
+                  header.dataType->kind == SyntaxKind::ImplicitType))) {
+
+                netType = &getDefaultNetType(scope, decl.name.location());
             }
 
-            // TODO: handle user defined nettypes here
-            builder.add(decl, portKind, direction, *header.dataType);
+            // TODO: user-defined nettypes
+            builder.add(decl, direction, *header.dataType, netType);
             return;
         }
         case SyntaxKind::NetPortHeader: {
             auto& header = syntax.header->as<NetPortHeaderSyntax>();
-            builder.add(decl, PortKind::Net, builder.getDirection(header.direction),
-                        *header.dataType);
+            builder.add(decl, builder.getDirection(header.direction), *header.dataType,
+                        &comp.getNetType(header.netType.kind));
             return;
         }
         case SyntaxKind::InterfacePortHeader: {
@@ -466,7 +415,6 @@ struct NonAnsiPortListBuilder {
         const DeclaratorSyntax* syntax = nullptr;
         const Symbol* internalSymbol = nullptr;
         PortDirection direction;
-        PortKind kind;
         bool used = false;
 
         PortInfo(const DeclaratorSyntax* syntax) : syntax(syntax) {}
@@ -479,8 +427,6 @@ struct NonAnsiPortListBuilder {
         ports(ports) {
 
         // All port declarations in the scope have been collected; index them for easy lookup.
-        // The additional boolean is for tracking whether the declaration has been used by the
-        // time we're done creating ports.
         for (auto port : portDeclarations) {
             for (auto decl : port->declarators) {
                 if (auto name = decl->name; !name.isMissing()) {
@@ -569,8 +515,6 @@ void NonAnsiPortListBuilder::handleIODecl(const PortHeaderSyntax& header, PortIn
             // definition. Otherwise we need to see if there's an existing symbol to match with.
             if (varHeader.varKeyword || varHeader.dataType->kind != SyntaxKind::ImplicitType) {
                 // TODO: check for user defined net type?
-                info.kind = PortKind::Variable;
-
                 // TODO: variable lifetime
                 auto variable = compilation.emplace<VariableSymbol>(name, declLoc);
                 variable->setSyntax(decl);
@@ -582,45 +526,39 @@ void NonAnsiPortListBuilder::handleIODecl(const PortHeaderSyntax& header, PortIn
                      (symbol->kind == SymbolKind::Variable || symbol->kind == SymbolKind::Net)) {
 
                 // Port kind and type come from the matching symbol
-                info.kind =
-                    symbol->kind == SymbolKind::Variable ? PortKind::Variable : PortKind::Net;
                 info.internalSymbol = symbol;
-
                 mergePortTypes(symbol->as<ValueSymbol>(),
                                varHeader.dataType->as<ImplicitTypeSyntax>(), declLoc, scope,
                                decl.dimensions);
             }
             else {
                 // No symbol and no data type defaults to a basic net.
-                info.kind = PortKind::Net;
-
-                // TODO: net type
-                auto net = compilation.emplace<NetSymbol>(
-                    name, declLoc, compilation.getNetType(TokenKind::Unknown));
+                auto net = compilation.emplace<NetSymbol>(name, declLoc,
+                                                          getDefaultNetType(scope, declLoc));
                 net->setSyntax(decl);
                 net->setDeclaredType(*varHeader.dataType, decl.dimensions);
                 info.internalSymbol = net;
             }
 
-            if (info.direction == PortDirection::InOut && info.kind == PortKind::Variable)
+            if (info.direction == PortDirection::InOut &&
+                info.internalSymbol->kind != SymbolKind::Net) {
                 scope.addDiag(DiagCode::InOutPortCannotBeVariable, declLoc) << name;
-            else if (info.direction == PortDirection::Ref && info.kind != PortKind::Variable)
+            }
+            else if (info.direction == PortDirection::Ref &&
+                     info.internalSymbol->kind == SymbolKind::Net) {
                 scope.addDiag(DiagCode::RefPortMustBeVariable, declLoc) << name;
-
+            }
             break;
         }
         case SyntaxKind::NetPortHeader: {
             auto& netHeader = header.as<NetPortHeaderSyntax>();
-            info.kind = PortKind::Net;
             info.direction = SemanticFacts::getPortDirection(netHeader.direction.kind);
-
             if (info.direction == PortDirection::Ref)
                 scope.addDiag(DiagCode::RefPortMustBeVariable, declLoc) << name;
 
             // Create a new symbol to represent this port internally to the instance.
-            // TODO: net type
-            auto net = compilation.emplace<NetSymbol>(name, declLoc,
-                                                      compilation.getNetType(TokenKind::Unknown));
+            auto net = compilation.emplace<NetSymbol>(
+                name, declLoc, compilation.getNetType(netHeader.netType.kind));
             net->setSyntax(decl);
             net->setDeclaredType(*netHeader.dataType, decl.dimensions);
             info.internalSymbol = net;
@@ -635,6 +573,7 @@ void NonAnsiPortListBuilder::handleIODecl(const PortHeaderSyntax& header, PortIn
 void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax,
                                NonAnsiPortListBuilder& builder, const Scope& scope) {
 
+    // TODO: location for empty ports?
     auto& comp = builder.compilation;
     auto& port = *comp.emplace<PortSymbol>("", SourceLocation());
     port.setSyntax(syntax);
@@ -656,12 +595,10 @@ void handleImplicitNonAnsiPort(const ImplicitNonAnsiPortSyntax& syntax,
 
             // TODO: explicit connection expression
 
-            port.direction = info->direction;
-            port.portKind = info->kind;
-            port.internalSymbol = info->internalSymbol;
-
             ASSERT(info->internalSymbol);
-            copyTypeFrom(port, *info->internalSymbol->getDeclaredType());
+            port.direction = info->direction;
+            port.internalSymbol = info->internalSymbol;
+            port.getDeclaredType()->copyTypeFrom(*info->internalSymbol->getDeclaredType());
             break;
         }
         default:
@@ -1032,7 +969,6 @@ void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> po
 }
 
 void PortSymbol::toJson(json& j) const {
-    j["portKind"] = toString(portKind);
     j["direction"] = toString(direction);
 
     if (internalSymbol)
@@ -1088,7 +1024,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
         if (result && result->kind == SymbolKind::NetType) {
             const NetType& netType = result->as<NetType>();
             netType.getAliasTarget(); // force resolution of target
-            
+
             auto& declaredType = *netType.getDeclaredType();
             for (auto declarator : syntax.declarators) {
                 auto net = compilation.emplace<NetSymbol>(declarator->name.valueText(),
