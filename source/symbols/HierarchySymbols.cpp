@@ -39,6 +39,29 @@ DefinitionSymbol::DefinitionSymbol(Compilation& compilation, string_view name, S
     portMap(compilation.allocSymbolMap()) {
 }
 
+const ModportSymbol* DefinitionSymbol::getModportOrError(string_view modport, const Scope& scope,
+                                                         SourceRange range) const {
+    if (modport.empty())
+        return nullptr;
+
+    auto symbol = find(modport);
+    if (!symbol) {
+        auto& diag = scope.addDiag(DiagCode::UnknownMember, range);
+        diag << modport;
+        diag << this->name;
+        return nullptr;
+    }
+
+    if (symbol->kind != SymbolKind::Modport) {
+        auto& diag = scope.addDiag(DiagCode::NotAModport, range);
+        diag << modport;
+        diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+        return nullptr;
+    }
+
+    return &symbol->as<ModportSymbol>();
+}
+
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
                                                const ModuleDeclarationSyntax& syntax) {
     auto nameToken = syntax.header->name;
@@ -166,7 +189,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 
     auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
     if (!definition) {
-        // TODO: error
+        scope.addDiag(DiagCode::UnknownModule, syntax.type.range()) << syntax.type.valueText();
         return;
     }
 

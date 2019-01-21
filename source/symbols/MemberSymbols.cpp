@@ -215,7 +215,6 @@ public:
             scope.addDiag(DiagCode::RefPortMustBeVariable, port->location) << port->name;
 
         // Create a new symbol to represent this port internally to the instance.
-        // TODO: interconnect ports don't have a datatype
         ValueSymbol* symbol;
         if (netType) {
             symbol = compilation.emplace<NetSymbol>(port->name, port->location, *netType);
@@ -235,7 +234,7 @@ public:
 
         // Remember the properties of this port in case the next port wants to inherit from it.
         lastDirection = direction;
-        lastType = port->getDeclaredType()->getTypeSyntax();
+        lastType = &type;
         lastNetType = netType;
         lastInterface = nullptr;
     }
@@ -364,38 +363,23 @@ void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, AnsiPortListBu
         case SyntaxKind::InterfacePortHeader: {
             // TODO: handle generic interface header
             auto& header = syntax.header->as<InterfacePortHeaderSyntax>();
-            auto definition = comp.getDefinition(header.nameOrKeyword.valueText(), scope);
+            auto token = header.nameOrKeyword;
+            auto definition = comp.getDefinition(token.valueText(), scope);
             const ModportSymbol* modport = nullptr;
 
             if (!definition) {
-                // TODO: report error if unable to find definition
+                scope.addDiag(DiagCode::UnknownInterface, token.range()) << token.valueText();
             }
             else if (definition->definitionKind != DefinitionKind::Interface) {
-                // TODO: report error here
-                /*auto& diag = scope.addDiag(DiagCode::PortTypeNotInterfaceOrData,
-                                            header.dataType->sourceRange());
+                auto& diag = scope.addDiag(DiagCode::PortTypeNotInterfaceOrData,
+                                           header.nameOrKeyword.range());
                 diag << definition->name;
-                diag.addNote(DiagCode::NoteDeclarationHere, definition->location);*/
+                diag.addNote(DiagCode::NoteDeclarationHere, definition->location);
                 definition = nullptr;
             }
-            else if (header.modport && !header.modport->member.valueText().empty()) {
-                // TODO: error if unfound or not actually a modport
-                // TODO: handle arrays
+            else if (header.modport) {
                 auto member = header.modport->member;
-                auto symbol = definition->find(member.valueText());
-                if (!symbol) {
-                    auto& diag = scope.addDiag(DiagCode::UnknownMember, member.range());
-                    diag << member.valueText();
-                    diag << definition->name;
-                }
-                else if (symbol->kind != SymbolKind::Modport) {
-                    auto& diag = scope.addDiag(DiagCode::NotAModport, member.range());
-                    diag << member.valueText();
-                    diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
-                }
-                else {
-                    modport = &symbol->as<ModportSymbol>();
-                }
+                modport = definition->getModportOrError(member.valueText(), scope, member.range());
             }
 
             builder.add(decl, definition, modport);

@@ -14,6 +14,7 @@
 namespace slang {
 
 class Expression;
+class ModportSymbol;
 class NetType;
 class ParameterSymbol;
 class PortSymbol;
@@ -59,6 +60,10 @@ public:
         ensureElaborated();
         return *portMap;
     }
+
+    /// Looks for a modport in this definition and issues a diagnostic if not found.
+    const ModportSymbol* getModportOrError(string_view modport, const Scope& scope,
+                                           SourceRange range) const;
 
     void toJson(json& j) const;
 
