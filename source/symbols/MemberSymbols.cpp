@@ -241,7 +241,6 @@ public:
 
     void add(const DeclaratorSyntax& decl, const DefinitionSymbol* iface,
              const ModportSymbol* modport) {
-        // TODO: dimensions
         auto port =
             compilation.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
         ports.append(port);
@@ -701,7 +700,7 @@ struct PortConnectionBuilder {
         implicitNamedPort(port, conn.name.range(), false);
     }
 
-    const InterfaceInstanceSymbol* getConnection(const InterfacePortSymbol& port) {
+    void setConnection(InterfacePortSymbol& port) {
         ASSERT(!port.name.empty());
 
         auto reportUnconnected = [&]() {
@@ -718,19 +717,20 @@ struct PortConnectionBuilder {
             orderedIndex++;
             if (!expr) {
                 reportUnconnected();
-                return nullptr;
+                return;
             }
 
-            return lookupInterface(port, *expr);
+            setInterfaceExpr(port, *expr);
+            return;
         }
 
         auto it = namedConns.find(port.name);
         if (it == namedConns.end()) {
             if (hasWildcard)
-                return lookupImplicitInterface(port, wildcardRange);
-
-            reportUnconnected();
-            return nullptr;
+                setImplicitInterface(port, wildcardRange);
+            else
+                reportUnconnected();
+            return;
         }
 
         // We have a named connection; there are two possibilities here:
@@ -741,15 +741,14 @@ struct PortConnectionBuilder {
 
         if (conn.openParen) {
             // For explicit named port connections, having an empty expression means no connection.
-            if (!conn.expr) {
+            if (!conn.expr)
                 reportUnconnected();
-                return nullptr;
-            }
-
-            return lookupInterface(port, *conn.expr);
+            else
+                setInterfaceExpr(port, *conn.expr);
+            return;
         }
 
-        return lookupImplicitInterface(port, conn.name.range());
+        setImplicitInterface(port, conn.name.range());
     }
 
     void finalize() {
@@ -812,12 +811,11 @@ private:
             &Expression::convertAssignment(scope, port.getType(), *expr, range.start()));
     }
 
-    const InterfaceInstanceSymbol* lookupInterface(const InterfacePortSymbol& port,
-                                                   const ExpressionSyntax& syntax) {
+    void setInterfaceExpr(InterfacePortSymbol& port, const ExpressionSyntax& syntax) {
         if (!NameSyntax::isKind(syntax.kind)) {
             scope.addDiag(DiagCode::InterfacePortInvalidExpression, syntax.sourceRange())
                 << port.name;
-            return nullptr;
+            return;
         }
 
         LookupResult result;
@@ -830,32 +828,39 @@ private:
 
         const Symbol* symbol = result.found;
         if (!symbol)
-            return nullptr;
+            return;
 
-        return checkInterfaceLookup(port, symbol, syntax.sourceRange());
+        setInterface(port, symbol, syntax.sourceRange());
     }
 
-    const InterfaceInstanceSymbol* lookupImplicitInterface(const InterfacePortSymbol& port,
-                                                           SourceRange range) {
-
+    void setImplicitInterface(InterfacePortSymbol& port, SourceRange range) {
         auto symbol = scope.lookupUnqualifiedName(port.name, lookupLocation, range);
         if (!symbol) {
             scope.addDiag(DiagCode::ImplicitNamedPortNotFound, range) << port.name;
-            return nullptr;
+            return;
         }
 
-        return checkInterfaceLookup(port, symbol, range);
+        setInterface(port, symbol, range);
     }
 
-    const InterfaceInstanceSymbol* checkInterfaceLookup(const InterfacePortSymbol&,
-                                                        const Symbol* symbol, SourceRange range) {
-        // TODO: handle interface/modport ports as well
-        if (symbol->kind != SymbolKind::InterfaceInstance) {
-            scope.addDiag(DiagCode::NotAnInterface, range) << symbol->name;
-            return nullptr;
+    void setInterface(InterfacePortSymbol& port, const Symbol* symbol, SourceRange range) {
+        // TODO: check dimensions
+        const Symbol* original = symbol;
+        while (symbol->kind == SymbolKind::InstanceArray) {
+            auto& array = symbol->as<InstanceArraySymbol>();
+            if (array.elements.empty())
+                return;
+
+            symbol = array.elements[0];
         }
 
-        return &symbol->as<InterfaceInstanceSymbol>();
+        // TODO: handle interface/modport ports as well
+        if (symbol->kind != SymbolKind::InterfaceInstance) {
+            scope.addDiag(DiagCode::NotAnInterface, range) << original->name;
+            return;
+        }
+
+        port.connection = &symbol->as<InterfaceInstanceSymbol>();
     }
 
     const Scope& scope;
@@ -939,14 +944,10 @@ void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> po
 
     PortConnectionBuilder builder(childScope, *instanceScope, portConnections);
     for (auto portBase : ports) {
-        if (portBase->kind == SymbolKind::Port) {
-            PortSymbol& port = portBase->as<PortSymbol>();
-            builder.setConnection(port);
-        }
-        else {
-            InterfacePortSymbol& port = portBase->as<InterfacePortSymbol>();
-            port.connection = builder.getConnection(port);
-        }
+        if (portBase->kind == SymbolKind::Port)
+            builder.setConnection(portBase->as<PortSymbol>());
+        else
+            builder.setConnection(portBase->as<InterfacePortSymbol>());
     }
 
     builder.finalize();
@@ -966,6 +967,33 @@ void PortSymbol::toJson(json& j) const {
 
     if (auto ext = getExternalConnection())
         j["externalConnection"] = *ext;
+}
+
+span<const ConstantRange> InterfacePortSymbol::getRange() const {
+    if (range)
+        return *range;
+
+    auto syntax = getSyntax();
+    ASSERT(syntax);
+
+    auto scope = getScope();
+    ASSERT(scope);
+
+    BindContext context(*scope, LookupLocation::before(*this));
+
+    SmallVectorSized<ConstantRange, 4> buffer;
+    for (auto dimSyntax : syntax->as<DeclaratorSyntax>().dimensions) {
+        EvaluatedDimension dim = context.evalDimension(*dimSyntax, true);
+        if (!dim.isRange()) {
+            buffer.clear();
+            break;
+        }
+
+        buffer.append(dim.range);
+    }
+
+    range = buffer.copy(scope->getCompilation());
+    return *range;
 }
 
 void InterfacePortSymbol::toJson(json& j) const {

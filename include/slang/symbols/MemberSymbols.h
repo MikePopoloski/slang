@@ -168,7 +168,10 @@ public:
 
     /// If the port is connected during instantiation, this is the external instance to which it
     /// connects.
-    const InterfaceInstanceSymbol* connection = nullptr;
+    const Symbol* connection = nullptr;
+
+    /// Gets the set of dimensions for specifying interface arrays, if applicable.
+    span<const ConstantRange> getRange() const;
 
     InterfacePortSymbol(string_view name, SourceLocation loc) :
         Symbol(SymbolKind::InterfacePort, name, loc) {}
@@ -176,6 +179,9 @@ public:
     void toJson(json& j) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfacePort; }
+
+private:
+    mutable optional<span<const ConstantRange>> range;
 };
 
 /// Represents a net declaration.
