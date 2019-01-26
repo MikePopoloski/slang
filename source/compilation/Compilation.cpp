@@ -56,13 +56,14 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
 namespace slang {
 
 Compilation::Compilation() :
-    bitType(ScalarType::Bit), logicType(ScalarType::Logic), regType(ScalarType::Reg),
-    signedBitType(ScalarType::Bit, true), signedLogicType(ScalarType::Logic, true),
-    signedRegType(ScalarType::Reg, true), shortIntType(PredefinedIntegerType::ShortInt),
-    intType(PredefinedIntegerType::Int), longIntType(PredefinedIntegerType::LongInt),
-    byteType(PredefinedIntegerType::Byte), integerType(PredefinedIntegerType::Integer),
-    timeType(PredefinedIntegerType::Time), realType(FloatingType::Real),
-    realTimeType(FloatingType::RealTime), shortRealType(FloatingType::ShortReal) {
+    bitType(ScalarType::Bit), logicType(ScalarType::Logic),
+    regType(ScalarType::Reg), signedBitType(ScalarType::Bit, true),
+    signedLogicType(ScalarType::Logic, true), signedRegType(ScalarType::Reg, true),
+    shortIntType(PredefinedIntegerType::ShortInt), intType(PredefinedIntegerType::Int),
+    longIntType(PredefinedIntegerType::LongInt), byteType(PredefinedIntegerType::Byte),
+    integerType(PredefinedIntegerType::Integer), timeType(PredefinedIntegerType::Time),
+    realType(FloatingType::Real), realTimeType(FloatingType::RealTime),
+    shortRealType(FloatingType::ShortReal) {
 
     // Register built-in types for lookup by syntax kind.
     knownTypes[SyntaxKind::ShortIntType] = &shortIntType;
@@ -138,6 +139,8 @@ Compilation::Compilation() :
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
     REGISTER(SymbolKind::EnumType, EnumNum, );
 #undef REGISTER
+
+    emptyUnit = &createScriptScope();
 }
 
 void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
@@ -326,6 +329,40 @@ const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind, string
     if (it == methodMap.end())
         return nullptr;
     return it->second.get();
+}
+
+void Compilation::addAttributes(const Symbol& symbol,
+                                span<const AttributeInstanceSyntax* const> syntax) {
+    BindContext context(*emptyUnit, LookupLocation::max, BindFlags::Constant);
+
+    auto& attrs = symbolAttributes[&symbol];
+    for (auto inst : syntax) {
+        for (auto spec : inst->specs) {
+            // TODO: warn about duplicates
+            auto name = spec->name.valueText();
+            if (name.empty())
+                continue;
+
+            ConstantValue value;
+            if (!spec->value)
+                value = SVInt(1, 1, false);
+            else {
+                auto constant = Expression::bind(*spec->value->expr, context).constant;
+                value = constant ? *constant : nullptr;
+            }
+
+            attrs.push_back(emplace<AttributeSymbol>(name, spec->name.location(),
+                                                     *allocConstant(std::move(value))));
+        }
+    }
+}
+
+span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symbol) const {
+    auto it = symbolAttributes.find(&symbol);
+    if (it == symbolAttributes.end())
+        return {};
+
+    return it->second;
 }
 
 const NameSyntax& Compilation::parseName(string_view name) {

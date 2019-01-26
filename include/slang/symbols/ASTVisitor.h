@@ -61,6 +61,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         case SymbolKind::TypeAlias: return visitor.visit(*static_cast<const TypeAliasType*>(this), std::forward<Args>(args)...);
         SYMBOL(Root);
         SYMBOL(CompilationUnit);
+        SYMBOL(Attribute);
         SYMBOL(TransparentMember);
         SYMBOL(EnumValue);
         SYMBOL(ForwardingTypedef);
@@ -105,7 +106,6 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         case SymbolKind::UnpackedUnionType: THROW_UNREACHABLE;
         case SymbolKind::ClassType: THROW_UNREACHABLE;
         case SymbolKind::Program: THROW_UNREACHABLE;
-        case SymbolKind::Attribute: THROW_UNREACHABLE;
         case SymbolKind::Genvar: THROW_UNREACHABLE;
     }
 #undef TYPE

@@ -83,6 +83,12 @@ public:
     /// method registered.
     const SystemSubroutine* getSystemMethod(SymbolKind typeKind, string_view name) const;
 
+    /// Sets the attributes associated with the given symbol.
+    void addAttributes(const Symbol& symbol, span<const AttributeInstanceSyntax* const> syntax);
+
+    /// Gets the attributes associated with the given symbol.
+    span<const AttributeSymbol* const> getAttributes(const Symbol& symbol) const;
+
     /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
     /// This is mostly for testing and API purposes; normal compilation never does this.
     const NameSyntax& parseName(string_view name);
@@ -169,6 +175,7 @@ private:
 
     Diagnostics diags;
     std::unique_ptr<RootSymbol> root;
+    CompilationUnitSymbol* emptyUnit = nullptr;
     const SourceManager* sourceManager = nullptr;
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()
@@ -222,6 +229,9 @@ private:
 
     // Map from syntax nodes to parse-time metadata about default net types.
     flat_hash_map<const ModuleDeclarationSyntax*, const NetType*> defaultNetTypeMap;
+
+    // Map from symbols to their associated attributes.
+    flat_hash_map<const Symbol*, std::vector<const AttributeSymbol*>> symbolAttributes;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg Two of the entries are not valid and will be nullptr (!fourstate & reg).

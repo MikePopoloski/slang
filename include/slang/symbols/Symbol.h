@@ -227,6 +227,18 @@ private:
     DeclaredType declaredType;
 };
 
+class AttributeSymbol : public Symbol {
+public:
+    const ConstantValue& value;
+
+    AttributeSymbol(string_view name, SourceLocation location, const ConstantValue& value) :
+        Symbol(SymbolKind::Attribute, name, location), value(value) {}
+
+    void toJson(json& j) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Attribute; }
+};
+
 /// Serialization of arbitrary symbols to JSON.
 void to_json(json& j, const Symbol& symbol);
 

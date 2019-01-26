@@ -119,6 +119,10 @@ std::string Symbol::jsonLink(const Symbol& target) {
            (target.isType() ? target.as<Type>().toString() : std::string(target.name));
 }
 
+void AttributeSymbol::toJson(json& j) const {
+    j["value"] = value;
+}
+
 ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
                          bitmask<DeclaredTypeFlags> flags) :
     Symbol(kind, name, location),
