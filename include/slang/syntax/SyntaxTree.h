@@ -87,7 +87,7 @@ public:
 
 private:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap, const Bag& options,
+               Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap, Bag options,
                Token eof);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager, SourceBuffer source,

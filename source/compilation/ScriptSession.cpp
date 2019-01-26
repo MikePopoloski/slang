@@ -59,7 +59,7 @@ ConstantValue ScriptSession::evalExpression(const ExpressionSyntax& expr) {
 
 Diagnostics ScriptSession::getDiagnostics() {
     Diagnostics result;
-    for (auto tree : syntaxTrees)
+    for (auto& tree : syntaxTrees)
         result.appendRange(tree->diagnostics());
 
     result.appendRange(compilation.getAllDiagnostics());

@@ -208,7 +208,7 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         if (name.empty())
             name = "expanded from here";
         else
-            name = "expanded from macro '" + name + "'";
+            name = fmt::format("expanded from macro '{}'", name);
 
         SmallVectorSized<SourceRange, 8> macroRanges;
         mapDiagnosticRanges(sourceManager, location, diagnostic.ranges, macroRanges);

@@ -54,10 +54,10 @@ SourceManager& SyntaxTree::getDefaultSourceManager() {
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
                        Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap,
-                       const Bag& options, Token eof) :
+                       Bag options, Token eof) :
     rootNode(root),
     sourceMan(sourceManager), metadataMap(std::move(metadataMap)), alloc(std::move(alloc)),
-    diagnosticsBuffer(std::move(diagnostics)), options_(options), eof(eof) {
+    diagnosticsBuffer(std::move(diagnostics)), options_(std::move(options)), eof(eof) {
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager, SourceBuffer source,
