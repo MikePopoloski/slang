@@ -84,7 +84,7 @@ module Top;
     wire foo;
     assign foo = 1;
 
-    I array [3] ();
+    (* foo, bar = 1 *) I array [3] ();
 
     always_comb begin
     end
@@ -119,4 +119,23 @@ endmodule
     // This basic test just makes sure that JSON dumping doesn't crash.
     json output = compilation.getRoot();
     output.dump();
+}
+
+TEST_CASE("Simple attributes") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    (* foo, bar = 1 *) (* baz = 1 + 2 * 3 *) wire foo, bar;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto attrs = compilation.getAttributes(root.lookupName<NetSymbol>("m.bar"));
+    REQUIRE(attrs.size() == 3);
+    CHECK(attrs[0]->value.integer() == SVInt(1));
+    CHECK(attrs[1]->value.integer() == SVInt(1));
+    CHECK(attrs[2]->value.integer() == SVInt(7));
 }

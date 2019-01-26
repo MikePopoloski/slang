@@ -29,6 +29,7 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation,
         result->addMembers(*member);
 
     result->setSyntax(syntax);
+    compilation.addAttributes(*result, syntax.attributes);
     return *result;
 }
 
@@ -70,6 +71,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
         SemanticFacts::getDefinitionKind(syntax.kind), compilation.getDefaultNetType(syntax));
 
     result->setSyntax(syntax);
+    compilation.addAttributes(*result, syntax.attributes);
 
     SmallVectorSized<const ParameterSymbol*, 8> parameters;
     bool hasPortParams = syntax.header->parameters;
@@ -126,7 +128,8 @@ namespace {
 
 Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definition,
                        const HierarchicalInstanceSyntax& syntax,
-                       span<const Expression* const> overrides) {
+                       span<const Expression* const> overrides,
+                       span<const AttributeInstanceSyntax* const> attributes) {
     Symbol* inst;
     switch (definition.definitionKind) {
         case DefinitionKind::Module:
@@ -141,6 +144,7 @@ Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definit
     }
 
     inst->setSyntax(syntax);
+    compilation.addAttributes(*inst, attributes);
     return inst;
 };
 
@@ -149,9 +153,10 @@ using DimIterator = span<VariableDimensionSyntax*>::iterator;
 Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& definition,
                              const HierarchicalInstanceSyntax& instanceSyntax,
                              span<const Expression* const> overrides, const BindContext& context,
-                             DimIterator it, DimIterator end) {
+                             DimIterator it, DimIterator end,
+                             span<const AttributeInstanceSyntax* const> attributes) {
     if (it == end)
-        return createInstance(compilation, definition, instanceSyntax, overrides);
+        return createInstance(compilation, definition, instanceSyntax, overrides, attributes);
 
     EvaluatedDimension dim = context.evalDimension(**it, true);
     if (!dim.isRange())
@@ -163,7 +168,7 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
     SmallVectorSized<const Symbol*, 8> elements;
     for (bitwidth_t i = 0; i < range.width(); i++) {
         auto symbol = recurseInstanceArray(compilation, definition, instanceSyntax, overrides,
-                                           context, it, end);
+                                           context, it, end, attributes);
         if (!symbol)
             return nullptr;
 
@@ -326,7 +331,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     for (auto instanceSyntax : syntax.instances) {
         auto symbol = recurseInstanceArray(compilation, *definition, *instanceSyntax, overrides,
                                            context, instanceSyntax->dimensions.begin(),
-                                           instanceSyntax->dimensions.end());
+                                           instanceSyntax->dimensions.end(), syntax.attributes);
         if (symbol)
             results.append(symbol);
     }
@@ -459,6 +464,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Compilation& compilatio
         compilation.emplace<ProceduralBlockSymbol>(compilation, syntax.keyword.location(), kind);
     result->setBody(*syntax.statement);
     result->setSyntax(syntax);
+    compilation.addAttributes(*result, syntax.attributes);
     return *result;
 }
 
@@ -496,7 +502,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateS
             selector = (bool)(logic_t)cond.constant->integer();
     }
 
-    auto createBlock = [&](const SyntaxNode& syntax, bool isInstantiated) {
+    auto createBlock = [&](const SyntaxNode& syntax, bool isInstantiated, auto attributes) {
         // [27.5] If a generate block in a conditional generate construct consists of only one item
         // that is itself a conditional generate construct and if that item is not surrounded by
         // begin-end keywords, then this generate block is not treated as a separate scope. The
@@ -521,12 +527,15 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateS
 
         block->addMembers(syntax);
         block->setSyntax(syntax);
+        compilation.addAttributes(*block, attributes);
         results.append(block);
     };
 
-    createBlock(*syntax.block, selector.has_value() && selector.value());
-    if (syntax.elseClause)
-        createBlock(*syntax.elseClause->clause, selector.has_value() && !selector.value());
+    createBlock(*syntax.block, selector.has_value() && selector.value(), syntax.attributes);
+    if (syntax.elseClause) {
+        createBlock(*syntax.elseClause->clause, selector.has_value() && !selector.value(),
+                    syntax.attributes);
+    }
 }
 
 void GenerateBlockSymbol::toJson(json& j) const {
@@ -546,7 +555,9 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     SourceLocation loc = syntax.block->getFirstToken().location();
     auto result =
         compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc, constructIndex);
+
     result->setSyntax(syntax);
+    compilation.addAttributes(*result, syntax.attributes);
 
     // TODO: verify that localparam type should be int
 

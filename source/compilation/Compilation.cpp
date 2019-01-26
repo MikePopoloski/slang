@@ -56,14 +56,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
 namespace slang {
 
 Compilation::Compilation() :
-    bitType(ScalarType::Bit), logicType(ScalarType::Logic),
-    regType(ScalarType::Reg), signedBitType(ScalarType::Bit, true),
-    signedLogicType(ScalarType::Logic, true), signedRegType(ScalarType::Reg, true),
-    shortIntType(PredefinedIntegerType::ShortInt), intType(PredefinedIntegerType::Int),
-    longIntType(PredefinedIntegerType::LongInt), byteType(PredefinedIntegerType::Byte),
-    integerType(PredefinedIntegerType::Integer), timeType(PredefinedIntegerType::Time),
-    realType(FloatingType::Real), realTimeType(FloatingType::RealTime),
-    shortRealType(FloatingType::ShortReal) {
+    bitType(ScalarType::Bit), logicType(ScalarType::Logic), regType(ScalarType::Reg),
+    signedBitType(ScalarType::Bit, true), signedLogicType(ScalarType::Logic, true),
+    signedRegType(ScalarType::Reg, true), shortIntType(PredefinedIntegerType::ShortInt),
+    intType(PredefinedIntegerType::Int), longIntType(PredefinedIntegerType::LongInt),
+    byteType(PredefinedIntegerType::Byte), integerType(PredefinedIntegerType::Integer),
+    timeType(PredefinedIntegerType::Time), realType(FloatingType::Real),
+    realTimeType(FloatingType::RealTime), shortRealType(FloatingType::ShortReal) {
 
     // Register built-in types for lookup by syntax kind.
     knownTypes[SyntaxKind::ShortIntType] = &shortIntType;
@@ -333,6 +332,9 @@ const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind, string
 
 void Compilation::addAttributes(const Symbol& symbol,
                                 span<const AttributeInstanceSyntax* const> syntax) {
+    if (syntax.empty())
+        return;
+
     BindContext context(*emptyUnit, LookupLocation::max, BindFlags::Constant);
 
     auto& attrs = symbolAttributes[&symbol];
@@ -351,8 +353,10 @@ void Compilation::addAttributes(const Symbol& symbol,
                 value = constant ? *constant : nullptr;
             }
 
-            attrs.push_back(emplace<AttributeSymbol>(name, spec->name.location(),
-                                                     *allocConstant(std::move(value))));
+            auto attr = emplace<AttributeSymbol>(name, spec->name.location(),
+                                                 *allocConstant(std::move(value)));
+            attr->setSyntax(*spec);
+            attrs.push_back(attr);
         }
     }
 }

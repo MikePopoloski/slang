@@ -118,6 +118,15 @@ void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationS
     }
 }
 
+void ParameterSymbol::fromSyntax(const Scope& scope,
+                                 const ParameterDeclarationStatementSyntax& syntax,
+                                 SmallVector<ParameterSymbol*>& results) {
+    auto& compilation = scope.getCompilation();
+    fromSyntax(scope, *syntax.parameter, true, false, results);
+    for (auto symbol : results)
+        compilation.addAttributes(*symbol, syntax.attributes);
+}
+
 ParameterSymbol& ParameterSymbol::createOverride(Compilation& compilation,
                                                  const Expression* newInitializer) const {
     auto result = compilation.emplace<ParameterSymbol>(name, location, isLocal, isPort);
@@ -301,6 +310,7 @@ void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax&
         net->setDeclaredType(*syntax.type, declarator->dimensions);
         net->setFromDeclarator(*declarator);
         results.append(net);
+        compilation.addAttributes(*net, syntax.attributes);
     }
 }
 
@@ -328,6 +338,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
                 net->getDeclaredType()->copyTypeFrom(declaredType);
                 net->setFromDeclarator(*declarator);
                 results.append(net);
+                compilation.addAttributes(*net, syntax.attributes);
             }
             return;
         }
@@ -367,12 +378,15 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     // TODO: non simple names?
     auto proto = syntax.prototype;
     Token nameToken = proto->name->getFirstToken();
+    auto lifetime =
+        SemanticFacts::getVariableLifetime(proto->lifetime).value_or(VariableLifetime::Automatic);
 
     auto result = compilation.emplace<SubroutineSymbol>(
-        compilation, nameToken.valueText(), nameToken.location(),
-        SemanticFacts::getVariableLifetime(proto->lifetime).value_or(VariableLifetime::Automatic),
+        compilation, nameToken.valueText(), nameToken.location(), lifetime,
         syntax.kind == SyntaxKind::TaskDeclaration, parent);
+
     result->setSyntax(syntax);
+    compilation.addAttributes(*result, syntax.attributes);
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
     if (proto->portList) {
@@ -457,13 +471,17 @@ ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceL
     Symbol(SymbolKind::Modport, name, loc), Scope(compilation, this) {
 }
 
-ModportSymbol& ModportSymbol::fromSyntax(Compilation& compilation, const ModportItemSyntax& syntax,
-                                         const Scope&) {
-    auto& result = *compilation.emplace<ModportSymbol>(compilation, syntax.name.valueText(),
-                                                       syntax.name.location());
-
-    // TODO: handle port list
-    return result;
+void ModportSymbol::fromSyntax(Compilation& compilation, const ModportDeclarationSyntax& syntax,
+                               SmallVector<const ModportSymbol*>& results) {
+    for (auto item : syntax.items) {
+        // TODO: handle port list
+        auto name = item->name;
+        auto symbol =
+            compilation.emplace<ModportSymbol>(compilation, name.valueText(), name.location());
+        symbol->setSyntax(*item);
+        compilation.addAttributes(*symbol, syntax.attributes);
+        results.append(symbol);
+    }
 }
 
 ContinuousAssignSymbol::ContinuousAssignSymbol(const ExpressionSyntax& syntax) :
@@ -474,6 +492,16 @@ ContinuousAssignSymbol::ContinuousAssignSymbol(const ExpressionSyntax& syntax) :
 
 ContinuousAssignSymbol::ContinuousAssignSymbol(SourceLocation loc, const Expression& assignment) :
     Symbol(SymbolKind::ContinuousAssign, "", loc), assign(&assignment) {
+}
+
+void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
+                                        const ContinuousAssignSyntax& syntax,
+                                        SmallVector<const ContinuousAssignSymbol*>& results) {
+    for (auto expr : syntax.assignments) {
+        auto symbol = compilation.emplace<ContinuousAssignSymbol>(*expr);
+        compilation.addAttributes(*symbol, syntax.attributes);
+        results.append(symbol);
+    }
 }
 
 const Expression& ContinuousAssignSymbol::getAssignment() const {

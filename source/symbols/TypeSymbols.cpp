@@ -696,6 +696,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
                                                              decl->name.location(), bitWidth);
             variable->setType(type);
             variable->setSyntax(*decl);
+            compilation.addAttributes(*variable, member->attributes);
             members.append(variable);
 
             // Unpacked arrays are disallowed in packed structs.
@@ -761,6 +762,7 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation,
                                                              decl->name.location(), fieldIndex);
             variable->setDeclaredType(*member->type);
             variable->setFromDeclarator(*decl);
+            compilation.addAttributes(*variable, member->attributes);
 
             result->addMember(*variable);
             fieldIndex++;
@@ -791,6 +793,7 @@ ConstantValue EventType::getDefaultValueImpl() const {
 
 const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     Compilation& compilation, const ForwardTypedefDeclarationSyntax& syntax) {
+
     Category category;
     switch (syntax.keyword.kind) {
         case TokenKind::EnumKeyword:
@@ -812,14 +815,17 @@ const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     auto result = compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
                                                                syntax.name.location(), category);
     result->setSyntax(syntax);
+    compilation.addAttributes(*result, syntax.attributes);
     return *result;
 }
 
 const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     Compilation& compilation, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
+
     auto result = compilation.emplace<ForwardingTypedefSymbol>(
         syntax.name.valueText(), syntax.name.location(), Category::InterfaceClass);
     result->setSyntax(syntax);
+    compilation.addAttributes(*result, syntax.attributes);
     return *result;
 }
 
@@ -843,6 +849,7 @@ const TypeAliasType& TypeAliasType::fromSyntax(Compilation& compilation,
         compilation.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
     result->targetType.setTypeSyntax(*syntax.type);
     result->setSyntax(syntax);
+    compilation.addAttributes(*result, syntax.attributes);
     return *result;
 }
 
@@ -952,6 +959,7 @@ void NetType::toJson(json& j) const {
 NetType& NetType::fromSyntax(Compilation& compilation, const NetTypeDeclarationSyntax& syntax) {
     auto result = compilation.emplace<NetType>(syntax.name.valueText(), syntax.name.location());
     result->setSyntax(syntax);
+    compilation.addAttributes(*result, syntax.attributes);
 
     // If this is an enum, make sure the declared type is set up before we get added to
     // any scope, so that the enum members get picked up correctly.

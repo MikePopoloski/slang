@@ -88,6 +88,8 @@ public:
 
     static void fromSyntax(const Scope& scope, const ParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVector<ParameterSymbol*>& results);
+    static void fromSyntax(const Scope& scope, const ParameterDeclarationStatementSyntax& syntax,
+                           SmallVector<ParameterSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
@@ -286,8 +288,8 @@ public:
 
     void toJson(json&) const {}
 
-    static ModportSymbol& fromSyntax(Compilation& compilation, const ModportItemSyntax& syntax,
-                                     const Scope& parent);
+    static void fromSyntax(Compilation& compilation, const ModportDeclarationSyntax& syntax,
+                           SmallVector<const ModportSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
 };
@@ -301,6 +303,9 @@ public:
     const Expression& getAssignment() const;
 
     void toJson(json& j) const;
+
+    static void fromSyntax(Compilation& compilation, const ContinuousAssignSyntax& syntax,
+                           SmallVector<const ContinuousAssignSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }
 

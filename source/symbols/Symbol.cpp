@@ -44,6 +44,12 @@ struct ToJsonVisitor {
             j["kind"] = toString(symbol.kind);
             j["addr"] = uintptr_t(&symbol);
 
+            auto scope = symbol.getScope();
+            if (scope) {
+                for (auto attr : scope->getCompilation().getAttributes(symbol))
+                    j["attributes"].push_back(*attr);
+            }
+
             if constexpr (std::is_base_of_v<ValueSymbol, T>) {
                 j["type"] = symbol.getType();
 

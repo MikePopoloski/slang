@@ -161,8 +161,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             compilation.addPackage(package);
             break;
         }
-        case SyntaxKind::PackageImportDeclaration:
-            for (auto item : syntax.as<PackageImportDeclarationSyntax>().items) {
+        case SyntaxKind::PackageImportDeclaration: {
+            auto& importDecl = syntax.as<PackageImportDeclarationSyntax>();
+            for (auto item : importDecl.items) {
                 if (item->item.kind == TokenKind::Star) {
                     auto import = compilation.emplace<WildcardImportSymbol>(
                         item->package.valueText(), item->item.location());
@@ -170,6 +171,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                     import->setSyntax(*item);
                     addMember(*import);
                     compilation.trackImport(importDataIndex, *import);
+                    compilation.addAttributes(*import, importDecl.attributes);
                 }
                 else {
                     auto import = compilation.emplace<ExplicitImportSymbol>(
@@ -177,9 +179,11 @@ void Scope::addMembers(const SyntaxNode& syntax) {
 
                     import->setSyntax(*item);
                     addMember(*import);
+                    compilation.addAttributes(*import, importDecl.attributes);
                 }
             }
             break;
+        }
         case SyntaxKind::HierarchyInstantiation:
         case SyntaxKind::AnsiPortList:
         case SyntaxKind::NonAnsiPortList:
@@ -193,10 +197,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::PortDeclaration:
             getOrAddDeferredData().addPortDeclaration(syntax.as<PortDeclarationSyntax>());
             break;
-        case SyntaxKind::ModportDeclaration:
-            for (auto item : syntax.as<ModportDeclarationSyntax>().items)
-                addMember(ModportSymbol::fromSyntax(compilation, *item, *this));
+        case SyntaxKind::ModportDeclaration: {
+            SmallVectorSized<const ModportSymbol*, 16> results;
+            ModportSymbol::fromSyntax(compilation, syntax.as<ModportDeclarationSyntax>(), results);
+            for (auto symbol : results)
+                addMember(*symbol);
             break;
+        }
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
             addMember(SubroutineSymbol::fromSyntax(compilation,
@@ -228,9 +235,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::ParameterDeclarationStatement: {
             SmallVectorSized<ParameterSymbol*, 16> params;
-            ParameterSymbol::fromSyntax(*this,
-                                        *syntax.as<ParameterDeclarationStatementSyntax>().parameter,
-                                        true, false, params);
+            ParameterSymbol::fromSyntax(*this, syntax.as<ParameterDeclarationStatementSyntax>(),
+                                        params);
             for (auto param : params)
                 addMember(*param);
             break;
@@ -272,10 +278,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             for (auto member : syntax.as<GenerateRegionSyntax>().members)
                 addMembers(*member);
             break;
-        case SyntaxKind::ContinuousAssign:
-            for (auto expr : syntax.as<ContinuousAssignSyntax>().assignments)
-                addMember(*compilation.emplace<ContinuousAssignSymbol>(*expr));
+        case SyntaxKind::ContinuousAssign: {
+            SmallVectorSized<const ContinuousAssignSymbol*, 16> results;
+            ContinuousAssignSymbol::fromSyntax(compilation, syntax.as<ContinuousAssignSyntax>(),
+                                               results);
+            for (auto symbol : results)
+                addMember(*symbol);
             break;
+        }
         case SyntaxKind::NetTypeDeclaration:
             addMember(NetType::fromSyntax(compilation, syntax.as<NetTypeDeclarationSyntax>()));
             break;
