@@ -203,10 +203,20 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                                                    syntax.as<FunctionDeclarationSyntax>(), *this));
             break;
         case SyntaxKind::DataDeclaration: {
-            SmallVectorSized<const ValueSymbol*, 4> symbols;
-            VariableSymbol::fromSyntax(compilation, syntax.as<DataDeclarationSyntax>(), *this, symbols);
-            for (auto symbol : symbols)
-                addMember(*symbol);
+            // If this is a simple identifier type, we have no choice but to defer symbol creation
+            // because it could turn out to be a net or a variable.
+            auto& dataDecl = syntax.as<DataDeclarationSyntax>();
+            if (!getSimpleTypeName(*dataDecl.type).empty()) {
+                auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
+                addMember(*sym);
+                getOrAddDeferredData().addMember(sym);
+            }
+            else {
+                SmallVectorSized<const ValueSymbol*, 4> symbols;
+                VariableSymbol::fromSyntax(compilation, dataDecl, *this, symbols);
+                for (auto symbol : symbols)
+                    addMember(*symbol);
+            }
             break;
         }
         case SyntaxKind::NetDeclaration: {
@@ -341,7 +351,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
     }
 
     // Perform the lookup.
-    lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result, false);
+    lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);
     if (selectors)
         result.selectors.appendRange(*selectors);
 
@@ -350,13 +360,13 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
 }
 
 const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
-                                           SourceRange sourceRange, bitmask<LookupFlags> flags,
-                                           bool doNotElaborate) const {
+                                           SourceRange sourceRange,
+                                           bitmask<LookupFlags> flags) const {
     if (name.empty())
         return nullptr;
 
     LookupResult result;
-    lookupUnqualifiedImpl(name, location, sourceRange, flags, result, doNotElaborate);
+    lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
     if (result.hasError())
         getCompilation().addDiagnostics(result.getDiagnostics());
 
@@ -544,6 +554,18 @@ void Scope::elaborate() const {
 
                     break;
                 }
+                case SyntaxKind::DataDeclaration: {
+                    SmallVectorSized<const ValueSymbol*, 4> symbols;
+                    VariableSymbol::fromSyntax(compilation, member.node.as<DataDeclarationSyntax>(),
+                                               *this, symbols);
+
+                    const Symbol* last = symbol;
+                    for (auto var : symbols) {
+                        insertMember(var, last);
+                        last = var;
+                    }
+                    break;
+                }
                 default:
                     break;
             }
@@ -626,9 +648,8 @@ void Scope::elaborate() const {
 
 void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
                                   SourceRange sourceRange, bitmask<LookupFlags> flags,
-                                  LookupResult& result, bool doNotElaborate) const {
-    if (!doNotElaborate)
-        ensureElaborated();
+                                  LookupResult& result) const {
+    ensureElaborated();
 
     // Try a simple name lookup to see if we find anything.
     const Symbol* symbol = nullptr;
@@ -740,8 +761,7 @@ void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
         return;
 
     location = LookupLocation::after(asSymbol());
-    return nextScope->lookupUnqualifiedImpl(name, location, sourceRange, flags, result,
-                                            doNotElaborate);
+    return nextScope->lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
 }
 
 namespace {
@@ -1086,7 +1106,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     }
 
     // Start by trying to find the first name segment using normal unqualified lookup
-    lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result, false);
+    lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);
     if (result.hasError())
         return;
 

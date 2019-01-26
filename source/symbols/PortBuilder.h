@@ -15,15 +15,6 @@ namespace slang {
 
 namespace {
 
-string_view getSimpleName(const DataTypeSyntax& syntax) {
-    if (syntax.kind == SyntaxKind::NamedType) {
-        auto& namedType = syntax.as<NamedTypeSyntax>();
-        if (namedType.name->kind == SyntaxKind::IdentifierName)
-            return namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
-    }
-    return "";
-}
-
 const NetType& getDefaultNetType(const Scope& scope, SourceLocation location) {
     auto& netType = scope.getDefaultNetType();
     if (!netType.isError())
@@ -64,7 +55,7 @@ public:
                 // It's possible that this is actually an interface port if the data type is just an
                 // identifier. The only way to know is to do a lookup and see what comes back.
                 const DefinitionSymbol* definition = nullptr;
-                string_view simpleName = getSimpleName(*header.dataType);
+                string_view simpleName = getSimpleTypeName(*header.dataType);
                 if (!simpleName.empty()) {
                     auto found = scope.lookupUnqualifiedName(simpleName, LookupLocation::max,
                                                              header.dataType->sourceRange(),

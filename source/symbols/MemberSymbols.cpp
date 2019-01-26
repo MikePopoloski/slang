@@ -310,11 +310,11 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
 
     // This might actually be a net declaration with a user defined net type. That can only
     // be true if the data type syntax is a simple identifier, so if we see that it is,
-    // perform a lookup (without forcing the scope to elaborate) and see what comes back.
-    string_view simpleName = getSimpleName(*syntax.type);
+    // perform a lookup and see what comes back.
+    string_view simpleName = getSimpleTypeName(*syntax.type);
     if (!simpleName.empty()) {
-        auto result = scope.lookupUnqualifiedName(
-            simpleName, LookupLocation::max, syntax.type->sourceRange(), LookupFlags::None, true);
+        auto result = scope.lookupUnqualifiedName(simpleName, LookupLocation::max,
+                                                  syntax.type->sourceRange());
 
         if (result && result->kind == SymbolKind::NetType) {
             const NetType& netType = result->as<NetType>();

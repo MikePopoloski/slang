@@ -6,8 +6,18 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxNode.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang {
+
+string_view getSimpleTypeName(const DataTypeSyntax& syntax) {
+    if (syntax.kind == SyntaxKind::NamedType) {
+        auto& namedType = syntax.as<NamedTypeSyntax>();
+        if (namedType.name->kind == SyntaxKind::IdentifierName)
+            return namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
+    }
+    return "";
+}
 
 // clang-format off
 SyntaxKind getUnaryPrefixExpression(TokenKind kind) {

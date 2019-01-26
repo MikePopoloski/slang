@@ -952,6 +952,12 @@ void NetType::toJson(json& j) const {
 NetType& NetType::fromSyntax(Compilation& compilation, const NetTypeDeclarationSyntax& syntax) {
     auto result = compilation.emplace<NetType>(syntax.name.valueText(), syntax.name.location());
     result->setSyntax(syntax);
+
+    // If this is an enum, make sure the declared type is set up before we get added to
+    // any scope, so that the enum members get picked up correctly.
+    if (syntax.type->kind == SyntaxKind::EnumType)
+        result->declaredType.setTypeSyntax(*syntax.type);
+
     return *result;
 }
 
@@ -969,6 +975,10 @@ void NetType::resolve() const {
     if (declSyntax.withFunction) {
         // TODO: lookup and validate the function here
     }
+
+    // If this is an enum, we already set the type earlier.
+    if (declSyntax.type->kind == SyntaxKind::EnumType)
+        return;
 
     // Our type syntax is either a link to another net type we are aliasing, or an actual
     // data type that we are using as the basis for a custom net type.

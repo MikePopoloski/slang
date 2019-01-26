@@ -1,5 +1,4 @@
 #include "Test.h"
-
 #include <nlohmann/json.hpp>
 
 TEST_CASE("Nets") {
@@ -31,11 +30,7 @@ endmodule
 }
 
 TEST_CASE("User defined nettypes") {
-    auto tree = SyntaxTree::fromText(R"(
-package p;
-    nettype logic[3:0] foo;
-endpackage
-
+    auto tree1 = SyntaxTree::fromText(R"(
 module m;
     import p::*;
 
@@ -55,9 +50,15 @@ module m;
 
 endmodule
 )");
+    auto tree2 = SyntaxTree::fromText(R"(
+package p;
+    nettype logic [3:0] foo;
+endpackage
+)");
 
     Compilation compilation;
-    compilation.addSyntaxTree(tree);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
     NO_COMPILATION_ERRORS;
 
     auto& root = compilation.getRoot();

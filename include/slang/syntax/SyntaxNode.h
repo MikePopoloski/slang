@@ -19,8 +19,11 @@
 namespace slang {
 
 class SyntaxNode;
+struct DataTypeSyntax;
 
 enum class TokenKind : uint16_t;
+
+string_view getSimpleTypeName(const DataTypeSyntax& syntax);
 
 SyntaxKind getUnaryPrefixExpression(TokenKind kind);
 SyntaxKind getUnaryPostfixExpression(TokenKind kind);
