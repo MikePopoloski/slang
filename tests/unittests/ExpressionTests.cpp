@@ -194,6 +194,7 @@ TEST_CASE("Expression types") {
     declare("shortreal sr;");
     declare("struct packed { logic a; bit b; } sp;");
     declare("struct { logic a; bit b; } su;");
+    declare("struct { bit a; bit b; } su2;");
     declare("reg reg1, reg2;");
 
     // Literals / misc
@@ -214,6 +215,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("sl * 16'sd5") == "logic signed[15:0]"); // both signed, result is signed
     CHECK(typeof("b1 * i") == "bit[31:0]");               // 2 state result
     CHECK(typeof("b1 / i") == "logic[31:0]");             // divide always produces 4 state
+    CHECK(typeof("b1 % i") == "logic[31:0]");             // mod always produces 4 state
     CHECK(typeof("b1 ** (9234'd234)") == "logic[8:0]");   // self determined from lhs
     CHECK(typeof("r + sr") == "real");
     CHECK(typeof("sr + sr") == "shortreal");
@@ -232,6 +234,17 @@ TEST_CASE("Expression types") {
     CHECK(typeof("r ==? b1") == "bit");
     CHECK(typeof("b1 ==? r") == "bit");
     CHECK(typeof("l ==? r") == "logic");
+    CHECK(typeof("su == su") == "logic");
+    CHECK(typeof("su2 == su2") == "bit");
+
+    // Unpacked arrays
+    declare("logic [7:0] arr1 [2];");
+    declare("bit [7:0] arr2 [3];");
+    declare("bit [7:0] arr3 [3];");
+    CHECK(typeof("arr1 == arr2") == "<error>");
+    CHECK(typeof("arr2 == arr3") == "bit");
+    // TODO: enable this
+    //CHECK(typeof("arr1 == arr3[2:0]") == "logic");
 
     // Member access
     declare("struct packed { logic [13:0] a; bit b; } foo;");
@@ -247,9 +260,10 @@ TEST_CASE("Expression types") {
     CHECK(typeof("5'(sp)") == "logic[4:0]");
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == DiagCode::BadUnaryExpression);
     CHECK(diags[1].code == DiagCode::BadBinaryExpression);
+    CHECK(diags[2].code == DiagCode::BadBinaryExpression);
 }
 
 TEST_CASE("Expression - bad name references") {

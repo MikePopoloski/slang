@@ -194,6 +194,7 @@ bool Expression::bad() const {
 
 bool Expression::isLValue() const {
     switch (kind) {
+        // TODO: concatenations
         case ExpressionKind::NamedValue:
         case ExpressionKind::ElementSelect:
         case ExpressionKind::RangeSelect:
@@ -461,11 +462,15 @@ Expression& Expression::bindSelectExpression(Compilation& compilation,
 Expression& Expression::bindSelector(Compilation& compilation, Expression& value,
                                      const ElementSelectSyntax& syntax,
                                      const BindContext& context) {
+    const SelectorSyntax* selector = syntax.selector;
+    if (!selector) {
+        context.addDiag(DiagCode::ExpectedExpression, syntax.sourceRange());
+        return badExpr(compilation, nullptr);
+    }
+
     // The full source range of the expression includes the value and the selector syntax.
     SourceRange fullRange = { value.sourceRange.start(), syntax.sourceRange().end() };
 
-    // TODO: null selector?
-    const SelectorSyntax* selector = syntax.selector;
     switch (selector->kind) {
         case SyntaxKind::BitSelect:
             return ElementSelectExpression::fromSyntax(
@@ -639,7 +644,6 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
 
     // The standard does not say what the type width should be when the literal is empty
     // (since you can't have a zero-width integer) so let's pretend there's a null byte there.
-    // TODO: overflow of literal
     string_view value = syntax.literal.valueText();
     bitwidth_t width = value.empty() ? 8 : bitwidth_t(value.size()) * 8;
     const auto& type = compilation.getType(width, IntegralFlags::Unsigned);
@@ -716,6 +720,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         case SyntaxKind::UnaryPredecrementExpression:
             // Supported for both integral and real types. Result is same as input type.
             // The operand must also be an assignable lvalue.
+            // TODO: detect and warn for multiple reads and writes of a single variable in an
+            // expression
             good = type->isNumeric();
             result->type = type;
             if (!context.requireLValue(operand, syntax.operatorToken.location()))
@@ -913,9 +919,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
             }
             else {
                 if (lt->isAggregate() && lt->isEquivalent(*rt)) {
-                    // TODO: drill into the aggregate and figure out if it's all 2-state
                     good = true;
-                    result->type = &compilation.getLogicType();
+                    result->type = singleBitType(compilation, lt, rt);
                 }
                 else if ((lt->isClass() && lt->isAssignmentCompatible(*rt)) ||
                          (rt->isClass() && rt->isAssignmentCompatible(*lt))) {
@@ -1040,6 +1045,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                   ? std::nullopt
                   : std::make_optional(getBinaryOperator(syntax.kind));
 
+    // TODO: verify that assignment is allowed in this expression context
     auto result =
         compilation.emplace<AssignmentExpression>(op, *lhs.type, lhs, rhs, syntax.sourceRange());
     if (lhs.bad() || rhs.bad())

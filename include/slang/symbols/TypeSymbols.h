@@ -61,8 +61,9 @@ public:
     /// this always returns false.
     bool isSigned() const;
 
-    /// Indicates whether the type can represent unknown and high impedance numeric values. For
-    /// non-numeric types, this always returns false.
+    /// Indicates whether the type can represent unknown and high impedance numeric values.
+    /// For aggregate types, this drills down into submembers to determine whether they are
+    /// all two state or if some are four state. For all other types, this always returns false.
     bool isFourState() const;
 
     /// Indicates whether this is an aggregate type, which includes all unpacked structs, unions,

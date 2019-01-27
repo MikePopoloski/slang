@@ -486,15 +486,18 @@ void Scope::elaborate() const {
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
     deferredMemberIndex = DeferredMemberIndex::Invalid;
 
+    SmallSet<const SyntaxNode*, 8> enumDecls;
     for (const auto& pair : deferredData.getTransparentTypes()) {
         const Symbol* insertAt = pair.first;
         const Type& type = pair.second->getDeclaredType()->getType();
 
         if (type.kind == SymbolKind::EnumType) {
-            for (const auto& value : type.as<EnumType>().values()) {
-                auto wrapped = compilation.emplace<TransparentMemberSymbol>(value);
-                insertMember(wrapped, insertAt);
-                insertAt = wrapped;
+            if (!type.getSyntax() || enumDecls.insert(type.getSyntax()).second) {
+                for (const auto& value : type.as<EnumType>().values()) {
+                    auto wrapped = compilation.emplace<TransparentMemberSymbol>(value);
+                    insertMember(wrapped, insertAt);
+                    insertAt = wrapped;
+                }
             }
         }
     }

@@ -68,6 +68,20 @@ struct GetDefaultVisitor {
     }
 };
 
+const Type& getPredefinedType(Compilation& compilation, SyntaxKind kind, bool isSigned) {
+    auto& predef = compilation.getType(kind).as<IntegralType>();
+    if (isSigned == predef.isSigned)
+        return predef;
+
+    auto flags = predef.getIntegralFlags();
+    if (isSigned)
+        flags |= IntegralFlags::Signed;
+    else
+        flags &= ~IntegralFlags::Signed;
+
+    return compilation.getType(predef.bitWidth, flags);
+}
+
 } // namespace
 
 namespace slang {
@@ -101,7 +115,22 @@ bool Type::isSigned() const {
 
 bool Type::isFourState() const {
     const Type& ct = getCanonicalType();
-    return ct.isIntegral() && ct.as<IntegralType>().isFourState;
+    if (ct.isIntegral())
+        return ct.as<IntegralType>().isFourState;
+
+    if (ct.kind == SymbolKind::UnpackedArrayType)
+        return ct.as<UnpackedArrayType>().elementType.isFourState();
+
+    // TODO: also handle unions
+    if (ct.kind == SymbolKind::UnpackedStructType) {
+        auto& us = ct.as<UnpackedStructType>();
+        for (auto& field : us.membersOfType<FieldSymbol>()) {
+            if (field.getType().isFourState())
+                return true;
+        }
+    }
+
+    return false;
 }
 
 bool Type::isIntegral() const {
@@ -152,21 +181,44 @@ bool Type::isMatching(const Type& rhs) const {
     // and also handles simple bit vector types that share the same range, signedness,
     // and four-stateness because we uniquify them in the compilation cache.
     // This handles checks [6.22.1] (a), (b), (c), (d), (g), and (h).
-    if (l == r)
+    if (l == r || (l->getSyntax() && l->getSyntax() == r->getSyntax()))
         return true;
 
+    // Special casing for type synonyms: logic/reg
+    if (l->isScalar() && r->isScalar()) {
+        auto ls = l->as<ScalarType>().scalarKind;
+        auto rs = r->as<ScalarType>().scalarKind;
+        return (ls == ScalarType::Logic || ls == ScalarType::Reg) &&
+               (rs == ScalarType::Logic || rs == ScalarType::Reg);
+    }
+
+    // Special casing for type synonyms: real/realtime
+    if (l->isFloating() && r->isFloating()) {
+        auto lf = l->as<FloatingType>().floatKind;
+        auto rf = r->as<FloatingType>().floatKind;
+        return (lf == FloatingType::Real || lf == FloatingType::RealTime) &&
+               (rf == FloatingType::Real || rf == FloatingType::RealTime);
+    }
+
     // Handle check (e) and (f): matching predefined integers and matching vector types
-    if (l->isSimpleBitVector() && r->isSimpleBitVector()) {
-        const auto& li = l->as<IntegralType>();
-        const auto& ri = r->as<IntegralType>();
-        return li.isSigned == ri.isSigned && li.isFourState && ri.isFourState &&
+    if (l->isSimpleBitVector() && r->isSimpleBitVector() &&
+        l->isPredefinedInteger() != r->isPredefinedInteger()) {
+        auto& li = l->as<IntegralType>();
+        auto& ri = r->as<IntegralType>();
+        return li.isSigned == ri.isSigned && li.isFourState == ri.isFourState &&
                li.getBitVectorRange() == ri.getBitVectorRange();
     }
 
-    // Handle check (f): matching packed array types
+    // Handle check (f): matching array types
     if (l->kind == SymbolKind::PackedArrayType && r->kind == SymbolKind::PackedArrayType) {
-        return l->as<PackedArrayType>().elementType.isMatching(
-            r->as<PackedArrayType>().elementType);
+        auto& la = l->as<PackedArrayType>();
+        auto& ra = r->as<PackedArrayType>();
+        return la.range == ra.range && la.elementType.isMatching(ra.elementType);
+    }
+    if (l->kind == SymbolKind::UnpackedArrayType && r->kind == SymbolKind::UnpackedArrayType) {
+        auto& la = l->as<UnpackedArrayType>();
+        auto& ra = r->as<UnpackedArrayType>();
+        return la.range == ra.range && la.elementType.isMatching(ra.elementType);
     }
 
     return false;
@@ -184,6 +236,12 @@ bool Type::isEquivalent(const Type& rhs) const {
         const auto& ri = r->as<IntegralType>();
         return li.isSigned == ri.isSigned && li.isFourState == ri.isFourState &&
                li.bitWidth == ri.bitWidth;
+    }
+
+    if (l->kind == SymbolKind::UnpackedArrayType && r->kind == SymbolKind::UnpackedArrayType) {
+        auto& la = l->as<UnpackedArrayType>();
+        auto& ra = r->as<UnpackedArrayType>();
+        return la.range.width() == ra.range.width() && la.elementType.isEquivalent(ra.elementType);
     }
 
     return false;
@@ -258,16 +316,19 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::LongIntType:
         case SyntaxKind::IntegerType:
         case SyntaxKind::TimeType: {
-            // TODO: signing
-            // TODO: report this error in the parser?
-            // auto& its = syntax->as<IntegerTypeSyntax>();
-            // if (its.dimensions.count() > 0) {
-            //    // Error but don't fail out; just remove the dims and keep trucking
-            //    auto& diag = addDiag(DiagCode::PackedDimsOnPredefinedType,
-            //    its.dimensions[0]->openBracket.location()); diag <<
-            //    getTokenKindText(its.keyword.kind);
-            //}
-            return compilation.getType(node.kind);
+            auto& its = node.as<IntegerTypeSyntax>();
+            if (!its.dimensions.empty()) {
+                // Error but don't fail out; just remove the dims and keep trucking
+                auto& diag = parent.addDiag(DiagCode::PackedDimsOnPredefinedType,
+                                            its.dimensions[0]->openBracket.location());
+                diag << getTokenKindText(its.keyword.kind);
+            }
+
+            if (!its.signing)
+                return compilation.getType(node.kind);
+
+            return getPredefinedType(compilation, node.kind,
+                                     its.signing.kind == TokenKind::SignedKeyword);
         }
         case SyntaxKind::RealType:
         case SyntaxKind::RealTimeType:
@@ -428,6 +489,9 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
         dims.emplace(*dim, dimSyntax);
     }
 
+    if (dims.empty())
+        return getPredefinedType(compilation, integerKind, isSigned);
+
     bitmask<IntegralFlags> flags;
     if (integerKind == SyntaxKind::RegType)
         flags |= IntegralFlags::Reg;
@@ -436,17 +500,10 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     if (integerKind != SyntaxKind::BitType)
         flags |= IntegralFlags::FourState;
 
-    // TODO: review this whole mess
-
-    if (dims.empty()) {
-        // TODO: signing
-        return compilation.getType(integerKind);
-    }
-    else if (dims.size() == 1 && dims[0].first.right == 0) {
+    if (dims.size() == 1 && dims[0].first.right == 0) {
         // if we have the common case of only one dimension and lsb == 0
         // then we can use the shared representation
-        int width = dims[0].first.left + 1;
-        return compilation.getType(bitwidth_t(width), flags);
+        return compilation.getType(dims[0].first.width(), flags);
     }
 
     const Type* result = &compilation.getScalarType(flags);

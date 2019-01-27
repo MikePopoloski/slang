@@ -308,3 +308,160 @@ source:7:27: error: packed members must be of integral type (type is logic$[0:2]
                           ^~~~
 )");
 }
+
+TEST_CASE("Type matching") {
+    std::vector<std::shared_ptr<SyntaxTree>> savedTrees;
+
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
+
+    auto declare = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        savedTrees.push_back(tree);
+        scope.addMembers(tree->root());
+    };
+
+    auto typeof = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        BindContext context(scope, LookupLocation::max);
+        return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
+    };
+
+    // [6.22.1] - Matching types
+    auto matching = [&](const std::string& lhs, const std::string& rhs) {
+        // All matching types are also equivalent; check that here.
+        auto lt = typeof(lhs);
+        auto rt = typeof(rhs);
+        bool result = lt->isMatching(*rt);
+        if (result) {
+            CHECK(result == lt->isEquivalent(*rt));
+        }
+        return result;
+    };
+
+    declare("typedef bit bit_t;");
+    declare("typedef struct { logic l; } type1_t;");
+    declare("typedef type1_t type2_t;");
+    declare("typedef struct { logic l; } type3_t;");
+
+    // a) Built-in types match themselves.
+    declare("bit a;");
+    declare("bit b;");
+    declare("logic c;");
+    declare("reg d;");
+    declare("real e;");
+    declare("realtime f;");
+    CHECK(matching("a", "b"));
+    CHECK(matching("a", "a"));
+    CHECK(matching("b", "a"));
+    CHECK(!matching("b", "c"));
+    CHECK(matching("c", "d"));
+    CHECK(matching("e", "f"));
+
+    // b) Typedefs match their unwrapped types.
+    declare("bit_t bt;");
+    declare("type1_t t1;");
+    declare("type2_t t2;");
+    CHECK(matching("bt", "a"));
+    CHECK(matching("t1", "t2"));
+
+    // c) Anonymous enums / structs match themselves and none others.
+    declare("struct packed {int A; int B;} AB1, AB2;");
+    declare("struct packed {int A; int B;} AB3;");
+    CHECK(matching("AB1", "AB2"));
+    CHECK(!matching("AB1", "AB3"));
+
+    // d) Typedefs for enums / structs match themselves and none others.
+    declare("type1_t u1;");
+    declare("type3_t u3;");
+    CHECK(!matching("u1", "u3"));
+
+    // e) Simple bit vector matches built-in types
+    declare("bit signed [7:0] BYTE;");
+    declare("bit signed [0:7] NOTBYTE;");
+    declare("byte realByte;");
+    CHECK(matching("BYTE", "realByte"));
+    CHECK(!matching("NOTBYTE", "realByte"));
+
+    // f) Matching array types
+    declare("byte memBytes[256];");
+    declare("bit signed [7:0] myMemBytes[256];");
+    declare("logic [1:0][3:0] nibbles;");
+    declare("logic [7:0] myNibbles;");
+    declare("logic [3:0] fooArray;");
+    declare("logic [0:3] reverseFoo;");
+    CHECK(matching("memBytes", "myMemBytes"));
+    CHECK(!matching("nibbles", "myNibbles"));
+    CHECK(!matching("fooArray", "reverseFoo"));
+
+    // g) Adding default signedness keyword doesn't change anything
+    declare("byte signed stillRealByte;");
+    declare("byte unsigned notRealByte;");
+    CHECK(matching("realByte", "stillRealByte"));
+    CHECK(!matching("realByte", "notRealByte"));
+
+    // h) Types imported from packages still match.
+    declare("package p; typedef logic[3:0] some_type; some_type st; endpackage");
+    declare("import p::some_type;");
+    declare("some_type st2;");
+    CHECK(matching("p::st", "st2"));
+
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Type equivalence") {
+    std::vector<std::shared_ptr<SyntaxTree>> savedTrees;
+
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
+
+    auto declare = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        savedTrees.push_back(tree);
+        scope.addMembers(tree->root());
+    };
+
+    auto typeof = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        BindContext context(scope, LookupLocation::max);
+        return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
+    };
+
+    // [6.22.2] - Equivalent types
+    auto equiv = [&](const std::string& lhs, const std::string& rhs) {
+        return typeof(lhs)->isEquivalent(*typeof(rhs));
+    };
+
+    // b) Anonymous enum / unpacked struct is equivalent only in same decl.
+    declare("struct {int A; int B;} AB1, AB2;");
+    declare("struct {int A; int B;} AB3;");
+    declare("enum {eA, eB} e1, e2;");
+    declare("enum {eC, eD} e3;");
+    CHECK(equiv("AB1", "AB2"));
+    CHECK(!equiv("AB1", "AB3"));
+    CHECK(equiv("e1", "e2"));
+    CHECK(!equiv("e2", "e3"));
+
+    // c) All integral types are equivalent if they have the same signedness, four state, and bit
+    // width.
+    declare("bit signed [7:0] BYTE;");
+    declare("struct packed signed {bit[3:0]a,b;} uint8;");
+    declare("struct packed signed {logic[3:0]a,b;} uint8_4st;");
+    CHECK(equiv("BYTE", "uint8"));
+    CHECK(!equiv("BYTE", "uint8_4st"));
+
+    // d) Unpacked arrays are equivalent if they have the same element type and size.
+    declare("bit [9:0] A[0:5];");
+    declare("bit [1:10] B[6];");
+    declare("typedef bit [10:1] uint10;");
+    declare("uint10 C[6:1];");
+    declare("bit [10:0] D[0:5];");
+    declare("bit [9:0] E[0:6];");
+    CHECK(equiv("A", "B"));
+    CHECK(equiv("B", "C"));
+    CHECK(equiv("C", "A"));
+    CHECK(!equiv("D", "A"));
+    CHECK(!equiv("E", "A"));
+
+    NO_COMPILATION_ERRORS;
+}
