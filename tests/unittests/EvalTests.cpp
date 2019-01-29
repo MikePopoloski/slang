@@ -212,8 +212,9 @@ TEST_CASE("Integer operators") {
     EVAL("5'd25[3 -: 4]", 9);
 
     // Weird / out of range part selects
-    EVAL("4'b1001[(1 / 0)]", "1'bx"_si);
-    EVAL("4'b1001[(1/ 0) +: 2]", "2'bxx"_si);
+    session.eval("int xs = 1 / 0;");
+    EVAL("4'b1001[xs]", "1'bx"_si);
+    EVAL("4'b1001[xs +: 2]", "2'bxx"_si);
     EVAL("4'b1001[3 : -1]", "5'b1001x"_si);
     EVAL("4'b1001[4 : 1]", "4'bx100"_si);
     EVAL("4'b1001[4 : -1]", "6'bx1001x"_si);

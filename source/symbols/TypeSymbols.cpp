@@ -158,6 +158,18 @@ bool Type::isSimpleBitVector() const {
            ct.as<PackedArrayType>().elementType.isScalar();
 }
 
+bool Type::isBooleanConvertible() const {
+    switch (getCanonicalType().kind) {
+        case SymbolKind::NullType:
+        case SymbolKind::CHandleType:
+        case SymbolKind::StringType:
+        case SymbolKind::EventType:
+            return true;
+        default:
+            return isNumeric();
+    }
+}
+
 bool Type::isStructUnion() const {
     const Type& ct = getCanonicalType();
     switch (ct.kind) {
@@ -294,6 +306,17 @@ bitmask<IntegralFlags> Type::getIntegralFlags() const {
 ConstantValue Type::getDefaultValue() const {
     GetDefaultVisitor visitor;
     return visit(visitor);
+}
+
+ConstantRange Type::getArrayRange() const {
+    const Type& t = getCanonicalType();
+    if (t.isIntegral())
+        return t.as<IntegralType>().getBitVectorRange();
+
+    if (t.isUnpackedArray())
+        return t.as<UnpackedArrayType>().range;
+
+    return {};
 }
 
 std::string Type::toString() const {

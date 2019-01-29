@@ -157,10 +157,12 @@ error InterfacePortInvalidExpression "invalid expression for interface port '{}'
 // expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
 error BadBinaryExpression "invalid operands to binary expression ({} and {})"
+error BadConditionalExpression "invalid operands to conditional expression ({} and {})"
 error BadIndexExpression "value of type {} cannot be indexed"
 error BadConcatExpression "invalid operand type {} in concatenation"
 error CannotIndexScalar "scalar type cannot be indexed"
 error IndexMustBeIntegral "index expression must be integral"
+error IndexValueInvalid "cannot refer to element {} of array of type {}"
 error BadAssignment "value of type {} cannot be assigned to type {}"
 error NoImplicitConversion "no implicit conversion from {} to {}; explicit conversion exists, are you missing a cast?"
 error TooManyArguments "too many arguments to subroutine call; expected {} but {} were provided"
@@ -168,6 +170,7 @@ error ExpressionNotAssignable "expression is not assignable"
 error ReplicationZeroOutsideConcat "replication constant can only be zero inside of a concatenation"
 error InvalidMemberAccess "invalid member access for type {}"
 error ExpressionNotCallable "expression is not callable"
+error NotBooleanConvertible "value of type {} is not convertible to a boolean predicate"
 
 // statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

@@ -63,8 +63,8 @@ private:
 /// SystemVerilog places tighter bounds on possible ranges anyway so it shouldn't be an issue.
 ///
 struct ConstantRange {
-    int32_t left;
-    int32_t right;
+    int32_t left = 0;
+    int32_t right = 0;
 
     /// Gets the width of the range, regardless of the order in which
     /// the bounds are specified.

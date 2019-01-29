@@ -90,6 +90,10 @@ public:
     /// types as well as scalar and vector types.
     bool isSimpleBitVector() const;
 
+    /// Indicates whether this type is convertible to a boolean predicate for use in
+    /// a conditional expression.
+    bool isBooleanConvertible() const;
+
     /// Indicates whether this is any form of structure or union type.
     bool isStructUnion() const;
 
@@ -162,6 +166,10 @@ public:
     /// Gets the default value for the type. An uninitialized variable of this
     /// type will have the given default value.
     ConstantValue getDefaultValue() const;
+
+    /// Returns the bounds of the array, if this is an array type.
+    /// Otherwise returns an empty range.
+    ConstantRange getArrayRange() const;
 
     std::string toString() const;
 

@@ -1014,11 +1014,61 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
     Expression& left = create(compilation, *syntax.left, context);
     Expression& right = create(compilation, *syntax.right, context);
 
-    // TODO: handle non-integral and non-real types properly
-    // force four-state return type for ambiguous condition case
-    const Type* type = binaryOperatorType(compilation, left.type, right.type, true);
-    return *compilation.emplace<ConditionalExpression>(*type, pred, left, right,
-                                                       syntax.sourceRange());
+    // Force four-state return type for ambiguous condition case.
+    const Type* resultType =
+        binaryOperatorType(compilation, left.type, right.type, pred.type->isFourState());
+    auto result = compilation.emplace<ConditionalExpression>(*resultType, pred, left, right,
+                                                             syntax.sourceRange());
+    if (pred.bad() || left.bad() || right.bad())
+        return badExpr(compilation, result);
+
+    if (!pred.type->isBooleanConvertible()) {
+        context.addDiag(DiagCode::NotBooleanConvertible, pred.sourceRange) << *pred.type;
+        return badExpr(compilation, result);
+    }
+
+    // If both sides of the expression are numeric, we've already determined the correct
+    // result type. Otherwise, follow the rules in [11.14.11].
+    bool good = true;
+    const Type& lt = *left.type;
+    const Type& rt = *right.type;
+    if (!lt.isNumeric() || !rt.isNumeric()) {
+        if (lt.isNull() && rt.isNull()) {
+            result->type = &compilation.getNullType();
+        }
+        else if (lt.isClass() || rt.isClass()) {
+            if (lt.isNull())
+                result->type = &rt;
+            else if (rt.isNull())
+                result->type = &lt;
+            else if (rt.isAssignmentCompatible(lt))
+                result->type = &rt;
+            else if (lt.isAssignmentCompatible(rt))
+                result->type = &lt;
+            // TODO: handle case for class types derived from common base
+            else if (lt.isEquivalent(rt))
+                result->type = &lt;
+            else
+                good = false;
+        }
+        else if (lt.isEquivalent(rt)) {
+            result->type = &lt;
+        }
+        else {
+            good = false;
+        }
+    }
+
+    if (!good) {
+        auto& diag =
+            context.addDiag(DiagCode::BadConditionalExpression, syntax.question.location());
+        diag << lt << rt;
+        diag << left.sourceRange;
+        diag << right.sourceRange;
+        return badExpr(compilation, result);
+    }
+
+    return *result;
 }
 
 bool ConditionalExpression::propagateType(Compilation& compilation, const Type& newType) {
@@ -1083,7 +1133,13 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
         return badExpr(compilation, result);
 
     const Type& valueType = value.type->getCanonicalType();
-    if (!valueType.isIntegral()) {
+    if (valueType.kind == SymbolKind::UnpackedArrayType) {
+        result->type = &valueType.as<UnpackedArrayType>().elementType;
+    }
+    else if (valueType.kind == SymbolKind::PackedArrayType) {
+        result->type = &valueType.as<PackedArrayType>().elementType;
+    }
+    else if (!valueType.isIntegral()) {
         auto& diag = context.addDiag(DiagCode::BadIndexExpression, syntax.sourceRange());
         diag << value.sourceRange;
         diag << *value.type;
@@ -1094,9 +1150,6 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
         diag << value.sourceRange;
         return badExpr(compilation, result);
     }
-    else if (valueType.kind == SymbolKind::PackedArrayType) {
-        result->type = &valueType.as<PackedArrayType>().elementType;
-    }
     else {
         result->type =
             valueType.isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
@@ -1105,6 +1158,17 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     if (!selector.type->isIntegral()) {
         context.addDiag(DiagCode::IndexMustBeIntegral, selector.sourceRange);
         return badExpr(compilation, result);
+    }
+
+    // If the selector is constant, we can do checking at compile time that it's within bounds.
+    if (selector.constant) {
+        optional<int32_t> index = selector.constant->integer().as<int32_t>();
+        if (!index || !valueType.getArrayRange().containsPoint(*index)) {
+            auto& diag = context.addDiag(DiagCode::IndexValueInvalid, selector.sourceRange);
+            diag << *selector.constant;
+            diag << *value.type;
+            return badExpr(compilation, result);
+        }
     }
 
     return *result;
