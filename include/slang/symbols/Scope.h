@@ -372,7 +372,7 @@ private:
 
     // Reports an error for an undeclared identifier.
     void reportUndeclared(string_view name, SourceRange range, bitmask<LookupFlags> flags,
-                          LookupResult& result) const;
+                          bool isHierarchical, LookupResult& result) const;
 
     // Gets the index of a new symbol inserted after the given symbol within this scope.
     Symbol::Index getInsertionIndex(const Symbol& at) const;

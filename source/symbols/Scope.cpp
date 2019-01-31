@@ -366,7 +366,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
         result.selectors.appendRange(*selectors);
 
     if (!result.found && !result.hasError())
-        reportUndeclared(name, nameToken.range(), flags, result);
+        reportUndeclared(name, nameToken.range(), flags, false, result);
 }
 
 const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
@@ -1175,7 +1175,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     else if (inConstantEval) {
         // We can't perform upward lookups during constant evaluation so just report an unknown
         // identifier.
-        reportUndeclared(name, nameToken.range(), flags, result);
+        reportUndeclared(name, nameToken.range(), flags, true, result);
         return;
     }
 
@@ -1193,11 +1193,11 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     // symbol originally, issue an appropriate error for that.
     result.copyFrom(originalResult);
     if (!result.found && !result.hasError())
-        reportUndeclared(name, nameToken.range(), flags, result);
+        reportUndeclared(name, nameToken.range(), flags, true, result);
 }
 
 void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<LookupFlags> flags,
-                             LookupResult& result) const {
+                             bool isHierarchical, LookupResult& result) const {
     // Attempt to give a more helpful error if the symbol exists in scope but is declared after
     // the lookup location. Only do this if the symbol is of the kind we were expecting to find.
     const Symbol* symbol = nullptr;
@@ -1219,7 +1219,9 @@ void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<Lookup
     }
 
     if (!usedBeforeDeclared) {
-        result.addDiag(*this, DiagCode::UndeclaredIdentifier, range) << name;
+        auto& diag = result.addDiag(*this, DiagCode::UndeclaredIdentifier, range) << name;
+        if (isHierarchical && (flags & LookupFlags::Constant))
+            diag.addNote(DiagCode::NoteHierarchicalNameInCE, range.start()) << name;
     }
     else {
         auto& diag = result.addDiag(*this, DiagCode::UsedBeforeDeclared, range);

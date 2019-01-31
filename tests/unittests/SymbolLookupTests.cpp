@@ -342,6 +342,25 @@ endmodule
     CHECK(diags[3].code == DiagCode::HierarchicalNotAllowedInConstant);
 }
 
+TEST_CASE("Hierarchical reference in CE across modules") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+    localparam int i = foo.bar;
+endmodule
+
+module foo;
+    int bar;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == DiagCode::UndeclaredIdentifier);
+}
+
 TEST_CASE("Useful error when lookup before declared in parent scope") {
     auto tree = SyntaxTree::fromText(R"(
 module m1;
@@ -818,6 +837,9 @@ endmodule
 source:64:28: error: use of undeclared identifier 'm_inst'
     localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
                            ^~~~~~
+source:64:28: note: reference to 'm_inst' by hierarchical name is not allowed in a constant expression
+    localparam int blah2 = m_inst.gen3.a[0];   // undeclared identifier because const expr
+                           ^
 source:66:14: error: multiple imports found for identifier 'foo'
     wire a = foo.bar;           // import collision
              ^~~
