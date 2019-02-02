@@ -50,6 +50,8 @@ public:
     bool requireIntegral(const ConstantValue& cv, SourceRange range) const;
     bool requireNoUnknowns(const SVInt& value, SourceRange range) const;
     bool requirePositive(const SVInt& value, SourceRange range) const;
+    bool requireGtZero(optional<int32_t> value, SourceRange range) const;
+    bool requireValidBitWidth(bitwidth_t width, SourceRange range) const;
     optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
 
     optional<int32_t> evalInteger(const ExpressionSyntax& syntax) const;
@@ -63,7 +65,6 @@ public:
     BindContext resetFlags(bitmask<BindFlags> addedFlags) const;
 
 private:
-    bool requireGtZero(optional<int32_t> value, SourceRange range) const;
     void evalRangeDimension(const SelectorSyntax& syntax, EvaluatedDimension& result) const;
 };
 

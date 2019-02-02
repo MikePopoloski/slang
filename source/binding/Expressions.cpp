@@ -82,6 +82,34 @@ const Type* singleBitType(Compilation& compilation, const Type* lt, const Type* 
     return &compilation.getBitType();
 }
 
+const Type& getIndexedType(Compilation& compilation, const BindContext& context,
+                           const Type& valueType, SourceRange exprRange, SourceRange valueRange) {
+    const Type& ct = valueType.getCanonicalType();
+    if (ct.kind == SymbolKind::UnpackedArrayType) {
+        return ct.as<UnpackedArrayType>().elementType;
+    }
+    else if (ct.kind == SymbolKind::PackedArrayType) {
+        return ct.as<PackedArrayType>().elementType;
+    }
+    else if (!ct.isIntegral()) {
+        auto& diag = context.addDiag(DiagCode::BadIndexExpression, exprRange);
+        diag << valueRange;
+        diag << valueType;
+        return compilation.getErrorType();
+    }
+    else if (ct.isScalar()) {
+        auto& diag = context.addDiag(DiagCode::CannotIndexScalar, exprRange);
+        diag << valueRange;
+        return compilation.getErrorType();
+    }
+    else if (ct.isFourState()) {
+        return compilation.getLogicType();
+    }
+    else {
+        return compilation.getBitType();
+    }
+}
+
 struct ToJsonVisitor {
     template<typename T>
     void visit(const T& expr, json& j) {
@@ -1127,33 +1155,13 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
                                                 const ExpressionSyntax& syntax,
                                                 SourceRange fullRange, const BindContext& context) {
     Expression& selector = selfDetermined(compilation, syntax, context);
-    auto result = compilation.emplace<ElementSelectExpression>(compilation.getErrorType(), value,
-                                                               selector, fullRange);
-    if (value.bad() || selector.bad())
-        return badExpr(compilation, result);
+    const Type& resultType =
+        getIndexedType(compilation, context, *value.type, syntax.sourceRange(), value.sourceRange);
 
-    const Type& valueType = value.type->getCanonicalType();
-    if (valueType.kind == SymbolKind::UnpackedArrayType) {
-        result->type = &valueType.as<UnpackedArrayType>().elementType;
-    }
-    else if (valueType.kind == SymbolKind::PackedArrayType) {
-        result->type = &valueType.as<PackedArrayType>().elementType;
-    }
-    else if (!valueType.isIntegral()) {
-        auto& diag = context.addDiag(DiagCode::BadIndexExpression, syntax.sourceRange());
-        diag << value.sourceRange;
-        diag << *value.type;
+    auto result =
+        compilation.emplace<ElementSelectExpression>(resultType, value, selector, fullRange);
+    if (value.bad() || selector.bad() || result->bad())
         return badExpr(compilation, result);
-    }
-    else if (valueType.isScalar()) {
-        auto& diag = context.addDiag(DiagCode::CannotIndexScalar, syntax.sourceRange());
-        diag << value.sourceRange;
-        return badExpr(compilation, result);
-    }
-    else {
-        result->type =
-            valueType.isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
-    }
 
     if (!selector.type->isIntegral()) {
         context.addDiag(DiagCode::IndexMustBeIntegral, selector.sourceRange);
@@ -1163,7 +1171,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     // If the selector is constant, we can do checking at compile time that it's within bounds.
     if (selector.constant) {
         optional<int32_t> index = selector.constant->integer().as<int32_t>();
-        if (!index || !valueType.getArrayRange().containsPoint(*index)) {
+        if (!index || !value.type->getArrayRange().containsPoint(*index)) {
             auto& diag = context.addDiag(DiagCode::IndexValueInvalid, selector.sourceRange);
             diag << *selector.constant;
             diag << *value.type;
@@ -1182,14 +1190,15 @@ void ElementSelectExpression::toJson(json& j) const {
 Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                               const RangeSelectSyntax& syntax,
                                               SourceRange fullRange, const BindContext& context) {
-    // TODO: require constant integer expressions
-    Expression& left = selfDetermined(compilation, *syntax.left, context);
-    Expression& right = selfDetermined(compilation, *syntax.right, context);
-
+    // Left and right are either the extents of a part-select, in which case they must
+    // both be constant, or the left hand side is the start and the right hand side is
+    // the width of an indexed part select, in which case only the rhs need be constant.
+    BindFlags lhsFlags = BindFlags::None;
     RangeSelectionKind selectionKind;
     switch (syntax.kind) {
         case SyntaxKind::SimpleRangeSelect:
             selectionKind = RangeSelectionKind::Simple;
+            lhsFlags = BindFlags::Constant;
             break;
         case SyntaxKind::AscendingRangeSelect:
             selectionKind = RangeSelectionKind::IndexedUp;
@@ -1201,33 +1210,126 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             THROW_UNREACHABLE;
     }
 
+    Expression& left = selfDetermined(compilation, *syntax.left, context, lhsFlags);
+    Expression& right = selfDetermined(compilation, *syntax.right, context, BindFlags::Constant);
+
     auto result = compilation.emplace<RangeSelectExpression>(
         selectionKind, compilation.getErrorType(), value, left, right, fullRange);
+
     if (value.bad() || left.bad() || right.bad())
         return badExpr(compilation, result);
 
-    // TODO: clean this up
+    if (!left.type->isIntegral()) {
+        context.addDiag(DiagCode::IndexMustBeIntegral, left.sourceRange);
+        return badExpr(compilation, result);
+    }
+    if (!right.type->isIntegral()) {
+        context.addDiag(DiagCode::IndexMustBeIntegral, right.sourceRange);
+        return badExpr(compilation, result);
+    }
 
-    const Type& ct = value.type->getCanonicalType();
-    const Type* elementType;
-    if (ct.kind == SymbolKind::PackedArrayType)
-        elementType = &ct.as<PackedArrayType>().elementType;
-    else if (ct.isFourState())
-        elementType = &compilation.getLogicType();
-    else
-        elementType = &compilation.getBitType();
+    const Type& elementType =
+        getIndexedType(compilation, context, *value.type, syntax.sourceRange(), value.sourceRange);
+    if (elementType.isError())
+        return badExpr(compilation, result);
+
+    // As mentioned, rhs must always be a constant integer.
+    optional<int32_t> rv = context.evalInteger(right);
+    if (!rv)
+        return badExpr(compilation, result);
+
+    ConstantRange selectionRange;
+    ConstantRange valueRange = value.type->getArrayRange();
+    SourceRange errorRange{ left.sourceRange.start(), right.sourceRange.end() };
+
+    // Helper function for validating the bounds of the selection.
+    auto validateRange = [&](auto range) {
+        if (!valueRange.containsPoint(range.left) || !valueRange.containsPoint(range.right)) {
+            auto& diag = context.addDiag(DiagCode::BadRangeExpression, errorRange);
+            diag << range.left << range.right;
+            diag << *value.type;
+            return false;
+        }
+        return true;
+    };
 
     if (selectionKind == RangeSelectionKind::Simple) {
-        ConstantRange range{ *left.eval().integer().as<int32_t>(),
-                             *right.eval().integer().as<int32_t>() };
-        result->type = compilation.emplace<PackedArrayType>(
-            *elementType, ConstantRange{ (int32_t)range.width() - 1, 0 });
+        optional<int32_t> lv = context.evalInteger(left);
+        if (!lv)
+            return badExpr(compilation, result);
+
+        selectionRange = { *lv, *rv };
+        if (selectionRange.isLittleEndian() != valueRange.isLittleEndian()) {
+            auto& diag = context.addDiag(DiagCode::SelectEndianMismatch, errorRange);
+            diag << *value.type;
+            return badExpr(compilation, result);
+        }
+
+        if (!validateRange(selectionRange))
+            return badExpr(compilation, result);
     }
     else {
-        int32_t width = *right.eval().integer().as<int32_t>();
-        result->type =
-            compilation.emplace<PackedArrayType>(*elementType, ConstantRange{ width - 1, 0 });
+        if (!context.requireGtZero(rv, right.sourceRange))
+            return badExpr(compilation, result);
+
+        if (bitwidth_t(*rv) > valueRange.width()) {
+            auto& diag = context.addDiag(DiagCode::RangeWidthTooLarge, right.sourceRange);
+            diag << *rv;
+            diag << *value.type;
+            return badExpr(compilation, result);
+        }
+
+        int32_t count = *rv - 1;
+
+        // If the lhs is a known constant, we can check that now too.
+        if (left.constant) {
+            optional<int32_t> index = left.constant->integer().as<int32_t>();
+            if (!index) {
+                auto& diag = context.addDiag(DiagCode::IndexValueInvalid, left.sourceRange);
+                diag << *left.constant;
+                diag << *value.type;
+                return badExpr(compilation, result);
+            }
+
+            // TODO: avoid overflow
+            if (selectionKind == RangeSelectionKind::IndexedUp) {
+                selectionRange.left = *index + count;
+                selectionRange.right = *index;
+            }
+            else {
+                selectionRange.left = *index;
+                selectionRange.right = *index - count;
+            }
+
+            if (!valueRange.isLittleEndian())
+                selectionRange.reverse();
+
+            if (!validateRange(selectionRange))
+                return badExpr(compilation, result);
+        }
+        else {
+            // Otherwise, the resulting range will start with the fixed lower bound of the type.
+            if (selectionKind == RangeSelectionKind::IndexedUp) {
+                selectionRange.left = valueRange.lower() + count;
+                selectionRange.right = valueRange.lower();
+            }
+            else {
+                selectionRange.left = valueRange.upper();
+                selectionRange.right = valueRange.upper() - count;
+            }
+
+            if (!valueRange.isLittleEndian())
+                selectionRange.reverse();
+        }
     }
+
+    // At this point, all expressions are good, ranges have been validated and
+    // we know the final width of the selection, so pick the result type and we're done.
+    if (value.type->isUnpackedArray())
+        result->type = compilation.emplace<UnpackedArrayType>(elementType, selectionRange);
+    else
+        result->type = compilation.emplace<PackedArrayType>(elementType, selectionRange);
+
     return *result;
 }
 

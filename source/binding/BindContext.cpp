@@ -65,11 +65,21 @@ bool BindContext::requireGtZero(optional<int32_t> value, SourceRange range) cons
     return true;
 }
 
+bool BindContext::requireValidBitWidth(bitwidth_t width, SourceRange range) const {
+    if (width > SVInt::MAX_BITS) {
+        addDiag(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
+        return false;
+    }
+    return true;
+}
+
 optional<bitwidth_t> BindContext::requireValidBitWidth(const SVInt& value,
                                                        SourceRange range) const {
     auto result = value.as<bitwidth_t>();
     if (!result)
         addDiag(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
+    else if (!requireValidBitWidth(*result, range))
+        return std::nullopt;
     return result;
 }
 

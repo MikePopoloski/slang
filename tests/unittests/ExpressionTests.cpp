@@ -238,13 +238,12 @@ TEST_CASE("Expression types") {
     CHECK(typeof("su2 == su2") == "bit");
 
     // Unpacked arrays
-    declare("logic [7:0] arr1 [2];");
-    declare("bit [7:0] arr2 [3];");
+    declare("bit [7:0] arr1 [2];");
+    declare("bit [7:0] arr2 [2:0];");
     declare("bit [7:0] arr3 [3];");
     CHECK(typeof("arr1 == arr2") == "<error>");
     CHECK(typeof("arr2 == arr3") == "bit");
-    // TODO: enable this
-    //CHECK(typeof("arr1 == arr3[2:0]") == "logic");
+    CHECK(typeof("arr1 == arr3[0:1]") == "bit");
 
     // Member access
     declare("struct packed { logic [13:0] a; bit b; } foo;");
