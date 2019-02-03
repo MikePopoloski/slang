@@ -920,21 +920,22 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
             // - both chandles or null
             // - both aggregates and equivalent
             if (bothNumeric) {
-                good = true;
-
                 // For equality and inequality, result is four state if either operand is four
                 // state. For case equality and case inequality, result is never four state. For
                 // wildcard equality / inequality, result is four state only if lhs is four
                 // state.
                 if (syntax.kind == SyntaxKind::EqualityExpression ||
                     syntax.kind == SyntaxKind::InequalityExpression) {
+                    good = true;
                     result->type = singleBitType(compilation, lt, rt);
                 }
                 else if (syntax.kind == SyntaxKind::CaseEqualityExpression ||
                          syntax.kind == SyntaxKind::CaseInequalityExpression) {
+                    good = bothIntegral;
                     result->type = &compilation.getBitType();
                 }
                 else {
+                    good = bothIntegral;
                     result->type =
                         lt->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
                 }

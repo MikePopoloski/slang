@@ -231,9 +231,9 @@ TEST_CASE("Expression types") {
     CHECK(typeof("b1 != l") == "logic");
     CHECK(typeof("b1 === b1") == "bit");
     CHECK(typeof("b1 !== l") == "bit");
-    CHECK(typeof("r ==? b1") == "bit");
-    CHECK(typeof("b1 ==? r") == "bit");
-    CHECK(typeof("l ==? r") == "logic");
+    CHECK(typeof("r == b1") == "bit");
+    CHECK(typeof("b1 == r") == "bit");
+    CHECK(typeof("l == r") == "logic");
     CHECK(typeof("su == su") == "logic");
     CHECK(typeof("su2 == su2") == "bit");
 
