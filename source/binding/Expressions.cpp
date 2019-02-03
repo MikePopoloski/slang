@@ -750,6 +750,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             // The operand must also be an assignable lvalue.
             // TODO: detect and warn for multiple reads and writes of a single variable in an
             // expression
+            // TODO: make sure modifications allowed in this expression
             good = type->isNumeric();
             result->type = type;
             if (!context.requireLValue(operand, syntax.operatorToken.location()))
@@ -878,10 +879,16 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
             selfDetermined(compilation, result->right_);
             break;
         case SyntaxKind::PowerExpression:
-            // Result is forced to 4-state because result can be X.
             good = bothNumeric;
-            result->type = forceFourState(compilation, lt);
-            selfDetermined(compilation, result->right_);
+            if (lt->isFloating() || rt->isFloating()) {
+                result->type = binaryOperatorType(compilation, lt, rt, false);
+                contextDetermined(compilation, result->right_, *result->type);
+            }
+            else {
+                // Result is forced to 4-state because result can be X.
+                result->type = forceFourState(compilation, lt);
+                selfDetermined(compilation, result->right_);
+            }
             break;
         case SyntaxKind::GreaterThanEqualExpression:
         case SyntaxKind::GreaterThanExpression:
@@ -920,10 +927,10 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
             // - both chandles or null
             // - both aggregates and equivalent
             if (bothNumeric) {
-                // For equality and inequality, result is four state if either operand is four
-                // state. For case equality and case inequality, result is never four state. For
-                // wildcard equality / inequality, result is four state only if lhs is four
-                // state.
+                // For equality and inequality, result is four state if either operand is
+                // four state. For case equality and case inequality, result is never four
+                // state. For wildcard equality / inequality, result is four state only if
+                // lhs is four state.
                 if (syntax.kind == SyntaxKind::EqualityExpression ||
                     syntax.kind == SyntaxKind::InequalityExpression) {
                     good = true;
@@ -940,8 +947,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                         lt->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
                 }
 
-                // Result type is fixed but the two operands affect each other as they would in
-                // other context-determined operators.
+                // Result type is fixed but the two operands affect each other as they would
+                // in other context-determined operators.
                 auto nt = binaryOperatorType(compilation, lt, rt, false);
                 contextDetermined(compilation, result->left_, *nt);
                 contextDetermined(compilation, result->right_, *nt);

@@ -216,6 +216,75 @@ TEST_CASE("Integer operators") {
     EVAL("4'b1001[xs]", "1'bx"_si);
     EVAL("4'b1001[xs +: 2]", "2'bxx"_si);
 
+#undef EVAL
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Real operators") {
+    ScriptSession session;
+    session.eval("real r = 3.14;");
+
+    using namespace Catch::literals;
+#define EVAL(expr, result) CHECK(session.eval(expr).real() == result)
+    EVAL("+r", 3.14_a);
+    EVAL("-r", -3.14_a);
+    EVAL("++r", 4.14_a);
+    EVAL("r++", 4.14_a);
+    EVAL("--r", 4.14_a);
+    EVAL("r--", 4.14_a);
+    EVAL("2.01 + r", 5.15_a);
+    EVAL("r - 6.14", -3.0_a);
+    EVAL("r * 2.2", 6.908_a);
+    EVAL("r / 3.14", 1.0_a);
+    EVAL("1.1 ** 2.2", 1.23328630055_a);
+    EVAL("9 ** 0.5", 3.0);
+    EVAL("9.0 ** (1/2)", 1.0);
+    EVAL("-3.0 ** 2.0", 9.0);
+#undef EVAL
+
+#define EVAL(expr, result) CHECK(session.eval(expr).integer() == result)
+    EVAL("!r", 0);
+    EVAL("r || 0", 1);
+    EVAL("r && 0", 0);
+    EVAL("r -> 0.0", 0);
+    EVAL("r <-> 1.0", 1);
+    EVAL("r > 2.9999", 1);
+    EVAL("r < 3.14", 0);
+    EVAL("r <= 3.15", 1);
+    EVAL("r >= 0", 1);
+    EVAL("3.14 == 3.14", 1);
+    EVAL("3.14 != 3.14", 0);
+
+#undef EVAL
+
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Operator short circuiting") {
+    ScriptSession session;
+    session.eval("int b = 3;");
+
+#define EVAL(expr, result) CHECK(session.eval(expr).integer() == result)
+
+    session.eval("1 || b++");
+    EVAL("b", 3);
+
+    session.eval("0 && b++");
+    EVAL("b", 3);
+
+    session.eval("0 -> b++");
+    EVAL("b", 3);
+
+    session.eval("0 || b++");
+    EVAL("b", 4);
+
+    session.eval("1 && b++");
+    EVAL("b", 5);
+
+    session.eval("1 -> b++");
+    EVAL("b", 6);
+
+#undef EVAL
     NO_SESSION_ERRORS;
 }
 
@@ -223,6 +292,7 @@ TEST_CASE("Assignments") {
     ScriptSession session;
     session.eval("struct packed { logic [2:0] a; logic b; } foo;");
 
+#define EVAL(expr, result) CHECK_THAT(session.eval(expr).integer(), exactlyEquals(result))
     EVAL("foo = 4'b1101", 13);
     EVAL("foo.a = 3'b001", 1);
     EVAL("foo.b = 1'b0", 0);

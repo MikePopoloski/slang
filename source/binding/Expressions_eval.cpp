@@ -63,61 +63,89 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
 
     if (cvl.isInteger()) {
         const SVInt& l = cvl.integer();
-        const SVInt& r = cvr.integer();
 
-        switch (op) {
-            OP(Add, l + r);
-            OP(Subtract, l - r);
-            OP(Multiply, l * r);
-            OP(Divide, l / r);
-            OP(Mod, l % r);
-            OP(BinaryAnd, l & r);
-            OP(BinaryOr, l | r);
-            OP(BinaryXor, l ^ r);
-            OP(LogicalShiftLeft, l.shl(r));
-            OP(LogicalShiftRight, l.lshr(r));
-            OP(ArithmeticShiftLeft, l.shl(r));
-            OP(ArithmeticShiftRight, l.ashr(r));
-            OP(BinaryXnor, l.xnor(r));
-            OP(Equality, SVInt(l == r));
-            OP(Inequality, SVInt(l != r));
-            OP(CaseEquality, SVInt((logic_t)exactlyEqual(l, r)));
-            OP(CaseInequality, SVInt((logic_t)!exactlyEqual(l, r)));
-            OP(WildcardEquality, SVInt(wildcardEqual(l, r)));
-            OP(WildcardInequality, SVInt(!wildcardEqual(l, r)));
-            OP(GreaterThanEqual, SVInt(l >= r));
-            OP(GreaterThan, SVInt(l > r));
-            OP(LessThanEqual, SVInt(l <= r));
-            OP(LessThan, SVInt(l < r));
-            OP(LogicalAnd, SVInt(l && r));
-            OP(LogicalOr, SVInt(l || r));
-            OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
-            OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
-            OP(Power, l.pow(r));
+        if (cvr.isInteger()) {
+            const SVInt& r = cvr.integer();
+            switch (op) {
+                OP(Add, l + r);
+                OP(Subtract, l - r);
+                OP(Multiply, l * r);
+                OP(Divide, l / r);
+                OP(Mod, l % r);
+                OP(BinaryAnd, l & r);
+                OP(BinaryOr, l | r);
+                OP(BinaryXor, l ^ r);
+                OP(LogicalShiftLeft, l.shl(r));
+                OP(LogicalShiftRight, l.lshr(r));
+                OP(ArithmeticShiftLeft, l.shl(r));
+                OP(ArithmeticShiftRight, l.ashr(r));
+                OP(BinaryXnor, l.xnor(r));
+                OP(Equality, SVInt(l == r));
+                OP(Inequality, SVInt(l != r));
+                OP(CaseEquality, SVInt((logic_t)exactlyEqual(l, r)));
+                OP(CaseInequality, SVInt((logic_t)!exactlyEqual(l, r)));
+                OP(WildcardEquality, SVInt(wildcardEqual(l, r)));
+                OP(WildcardInequality, SVInt(!wildcardEqual(l, r)));
+                OP(GreaterThanEqual, SVInt(l >= r));
+                OP(GreaterThan, SVInt(l > r));
+                OP(LessThanEqual, SVInt(l <= r));
+                OP(LessThan, SVInt(l < r));
+                OP(LogicalAnd, SVInt(l && r));
+                OP(LogicalOr, SVInt(l || r));
+                OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
+                OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
+                OP(Power, l.pow(r));
+            }
+        }
+        else if (cvr.isReal()) {
+            bool r = cvr.real();
+            switch (op) {
+                OP(LogicalAnd, SVInt(l && r));
+                OP(LogicalOr, SVInt(l || r));
+                OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
+                OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
+                default:
+                    break;
+            }
         }
     }
     else if (cvl.isReal()) {
         double l = cvl.real();
-        double r = cvr.real();
 
-        switch (op) {
-            OP(Add, l + r);
-            OP(Subtract, l - r);
-            OP(Multiply, l * r);
-            OP(Divide, l / r);
-            OP(Power, std::pow(l, r)); // TODO: handle errors for this?
-            OP(GreaterThanEqual, SVInt(l >= r));
-            OP(GreaterThan, SVInt(l > r));
-            OP(LessThanEqual, SVInt(l <= r));
-            OP(LessThan, SVInt(l < r));
-            OP(Equality, SVInt(l == r));
-            OP(Inequality, SVInt(l != r));
-            OP(LogicalAnd, SVInt(l && r));
-            OP(LogicalOr, SVInt(l || r));
-            OP(LogicalImplication, SVInt(!l || r));
-            OP(LogicalEquivalence, SVInt((!l || r) && (!r || l)));
-            default:
-                break;
+        if (cvr.isReal()) {
+            double r = cvr.real();
+            switch (op) {
+                OP(Add, l + r);
+                OP(Subtract, l - r);
+                OP(Multiply, l * r);
+                OP(Divide, l / r);
+                OP(Power, std::pow(l, r)); // TODO: handle errors for this?
+                OP(GreaterThanEqual, SVInt(l >= r));
+                OP(GreaterThan, SVInt(l > r));
+                OP(LessThanEqual, SVInt(l <= r));
+                OP(LessThan, SVInt(l < r));
+                OP(Equality, SVInt(l == r));
+                OP(Inequality, SVInt(l != r));
+                OP(LogicalAnd, SVInt(l && r));
+                OP(LogicalOr, SVInt(l || r));
+                OP(LogicalImplication, SVInt(!l || r));
+                OP(LogicalEquivalence, SVInt((!l || r) && (!r || l)));
+                default:
+                    break;
+            }
+        }
+        else if (cvr.isInteger()) {
+            bool b = l;
+            const SVInt& r = cvr.integer();
+
+            switch (op) {
+                OP(LogicalAnd, SVInt(r && b));
+                OP(LogicalOr, SVInt(r || b));
+                OP(LogicalImplication, SVInt(SVInt::logicalImplication(b, r)));
+                OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(b, r)));
+                default:
+                    break;
+            }
         }
     }
 
@@ -135,6 +163,38 @@ bool isLValueOp(UnaryOperator op) {
         default:
             return false;
     }
+}
+
+bool isShortCircuitOp(BinaryOperator op) {
+    switch (op) {
+        case BinaryOperator::LogicalAnd:
+        case BinaryOperator::LogicalOr:
+        case BinaryOperator::LogicalImplication:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isTrue(const ConstantValue& cv) {
+    if (cv.isInteger())
+        return (bool)(logic_t)cv.integer();
+    if (cv.isReal())
+        return cv.real();
+    return false;
+}
+
+bool isFalse(const ConstantValue& cv) {
+    if (cv.isInteger()) {
+        logic_t l = (logic_t)cv.integer();
+        return !l.isUnknown() && l.value == 0;
+    }
+    if (cv.isReal())
+        return !cv.real();
+    if (cv.isNullHandle())
+        return true;
+
+    return false;
 }
 
 } // namespace
@@ -385,6 +445,24 @@ ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
 
     // Handle short-circuiting operators up front, as we need to avoid
     // evaluating the rhs entirely in those cases.
+    if (isShortCircuitOp(op)) {
+        switch (op) {
+            case BinaryOperator::LogicalOr:
+                if (isTrue(cvl))
+                    return SVInt(true);
+                break;
+            case BinaryOperator::LogicalAnd:
+                if (isFalse(cvl))
+                    return SVInt(false);
+                break;
+            case BinaryOperator::LogicalImplication:
+                if (isFalse(cvl))
+                    return SVInt(true);
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
 
     ConstantValue cvr = right().eval(context);
     if (!cvr)
