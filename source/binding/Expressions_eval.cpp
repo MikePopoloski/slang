@@ -476,21 +476,24 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
     if (!cp)
         return nullptr;
 
-    SVInt cond = cp.integer();
-    logic_t pred = (logic_t)cond;
+    // When the conditional predicate is unknown, there are rules to combine both sides
+    // and return the hybrid result.
+    if (cp.isInteger() && cp.integer().hasUnknown()) {
+        ConstantValue cvl = left().eval(context);
+        ConstantValue cvr = right().eval(context);
+        if (!cvl || !cvr)
+            return nullptr;
 
-    if (pred.isUnknown()) {
-        // do strange combination operation
-        SVInt l = left().eval(context).integer();
-        SVInt r = right().eval(context).integer();
-        return SVInt::conditional(cond, l, r);
+        if (cvl.isInteger() && cvr.isInteger())
+            return SVInt::conditional(cp.integer(), cvl.integer(), cvr.integer());
+
+        return type->getDefaultValue();
     }
-    else if (pred) {
+
+    if (isTrue(cp))
         return left().eval(context);
-    }
-    else {
+    else
         return right().eval(context);
-    }
 }
 
 ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {

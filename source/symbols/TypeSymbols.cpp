@@ -867,8 +867,7 @@ ConstantValue StringType::getDefaultValueImpl() const {
 }
 
 ConstantValue EventType::getDefaultValueImpl() const {
-    // TODO: implement this
-    THROW_UNREACHABLE;
+    return ConstantValue::NullPlaceholder{};
 }
 
 const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(

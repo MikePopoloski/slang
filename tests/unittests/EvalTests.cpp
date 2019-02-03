@@ -262,7 +262,7 @@ TEST_CASE("Real operators") {
 
 TEST_CASE("Operator short circuiting") {
     ScriptSession session;
-    session.eval("int b = 3;");
+    session.eval("int a = 2, b = 3;");
 
 #define EVAL(expr, result) CHECK(session.eval(expr).integer() == result)
 
@@ -283,6 +283,16 @@ TEST_CASE("Operator short circuiting") {
 
     session.eval("1 -> b++");
     EVAL("b", 6);
+
+    session.eval("0 ? b++ : b");
+    EVAL("b", 6);
+
+    session.eval("1 ? b : b++");
+    EVAL("b", 6);
+
+    session.eval("'x ? a++ : b++");
+    EVAL("a", 3);
+    EVAL("b", 7);
 
 #undef EVAL
     NO_SESSION_ERRORS;
