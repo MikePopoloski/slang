@@ -245,6 +245,13 @@ TEST_CASE("Expression types") {
     CHECK(typeof("arr2 == arr3") == "bit");
     CHECK(typeof("arr1 == arr3[0:1]") == "bit");
 
+    // Conditional operator
+    CHECK(typeof("i ? l : pa") == "logic[15:0]");
+    CHECK(typeof("r ? b1 : i") == "bit[31:0]");
+    CHECK(typeof("i ? arr2 : arr3") == "bit[7:0]$[2:0]");
+    CHECK(typeof("i ? arr1: arr2") == "<error>");
+    CHECK(typeof("arr2 ? 1 : 0") == "<error>");
+
     // Member access
     declare("struct packed { logic [13:0] a; bit b; } foo;");
     declare("struct packed { logic [13:0] a; bit b; } [3:0] spPackedArray;");
@@ -259,10 +266,12 @@ TEST_CASE("Expression types") {
     CHECK(typeof("5'(sp)") == "logic[4:0]");
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == DiagCode::BadUnaryExpression);
     CHECK(diags[1].code == DiagCode::BadBinaryExpression);
     CHECK(diags[2].code == DiagCode::BadBinaryExpression);
+    CHECK(diags[3].code == DiagCode::BadConditionalExpression);
+    CHECK(diags[4].code == DiagCode::NotBooleanConvertible);
 }
 
 TEST_CASE("Expression - bad name references") {
