@@ -54,49 +54,87 @@ public:
 
 ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                                  const ConstantValue& cvr) {
-    // TODO: handle non-integer
-    if (!cvl.isInteger() || !cvr.isInteger())
+    if (!cvl || !cvr)
         return nullptr;
-
-    const SVInt& l = cvl.integer();
-    const SVInt& r = cvr.integer();
 
 #define OP(k, v)            \
     case BinaryOperator::k: \
         return v
 
-    switch (op) {
-        OP(Add, l + r);
-        OP(Subtract, l - r);
-        OP(Multiply, l * r);
-        OP(Divide, l / r);
-        OP(Mod, l % r);
-        OP(BinaryAnd, l & r);
-        OP(BinaryOr, l | r);
-        OP(BinaryXor, l ^ r);
-        OP(LogicalShiftLeft, l.shl(r));
-        OP(LogicalShiftRight, l.lshr(r));
-        OP(ArithmeticShiftLeft, l.shl(r));
-        OP(ArithmeticShiftRight, l.ashr(r));
-        OP(BinaryXnor, l.xnor(r));
-        OP(Equality, SVInt(l == r));
-        OP(Inequality, SVInt(l != r));
-        OP(CaseEquality, SVInt((logic_t)exactlyEqual(l, r)));
-        OP(CaseInequality, SVInt((logic_t)!exactlyEqual(l, r)));
-        OP(WildcardEquality, SVInt(wildcardEqual(l, r)));
-        OP(WildcardInequality, SVInt(!wildcardEqual(l, r)));
-        OP(GreaterThanEqual, SVInt(l >= r));
-        OP(GreaterThan, SVInt(l > r));
-        OP(LessThanEqual, SVInt(l <= r));
-        OP(LessThan, SVInt(l < r));
-        OP(LogicalAnd, SVInt(l && r));
-        OP(LogicalOr, SVInt(l || r));
-        OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
-        OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
-        OP(Power, l.pow(r));
+    if (cvl.isInteger()) {
+        const SVInt& l = cvl.integer();
+        const SVInt& r = cvr.integer();
+
+        switch (op) {
+            OP(Add, l + r);
+            OP(Subtract, l - r);
+            OP(Multiply, l * r);
+            OP(Divide, l / r);
+            OP(Mod, l % r);
+            OP(BinaryAnd, l & r);
+            OP(BinaryOr, l | r);
+            OP(BinaryXor, l ^ r);
+            OP(LogicalShiftLeft, l.shl(r));
+            OP(LogicalShiftRight, l.lshr(r));
+            OP(ArithmeticShiftLeft, l.shl(r));
+            OP(ArithmeticShiftRight, l.ashr(r));
+            OP(BinaryXnor, l.xnor(r));
+            OP(Equality, SVInt(l == r));
+            OP(Inequality, SVInt(l != r));
+            OP(CaseEquality, SVInt((logic_t)exactlyEqual(l, r)));
+            OP(CaseInequality, SVInt((logic_t)!exactlyEqual(l, r)));
+            OP(WildcardEquality, SVInt(wildcardEqual(l, r)));
+            OP(WildcardInequality, SVInt(!wildcardEqual(l, r)));
+            OP(GreaterThanEqual, SVInt(l >= r));
+            OP(GreaterThan, SVInt(l > r));
+            OP(LessThanEqual, SVInt(l <= r));
+            OP(LessThan, SVInt(l < r));
+            OP(LogicalAnd, SVInt(l && r));
+            OP(LogicalOr, SVInt(l || r));
+            OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
+            OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
+            OP(Power, l.pow(r));
+        }
     }
-    THROW_UNREACHABLE;
+    else if (cvl.isReal()) {
+        double l = cvl.real();
+        double r = cvr.real();
+
+        switch (op) {
+            OP(Add, l + r);
+            OP(Subtract, l - r);
+            OP(Multiply, l * r);
+            OP(Divide, l / r);
+            OP(Power, std::pow(l, r)); // TODO: handle errors for this?
+            OP(GreaterThanEqual, SVInt(l >= r));
+            OP(GreaterThan, SVInt(l > r));
+            OP(LessThanEqual, SVInt(l <= r));
+            OP(LessThan, SVInt(l < r));
+            OP(Equality, SVInt(l == r));
+            OP(Inequality, SVInt(l != r));
+            OP(LogicalAnd, SVInt(l && r));
+            OP(LogicalOr, SVInt(l || r));
+            OP(LogicalImplication, SVInt(!l || r));
+            OP(LogicalEquivalence, SVInt((!l || r) && (!r || l)));
+            default:
+                break;
+        }
+    }
+
 #undef OP
+    THROW_UNREACHABLE;
+}
+
+bool isLValueOp(UnaryOperator op) {
+    switch (op) {
+        case UnaryOperator::Preincrement:
+        case UnaryOperator::Predecrement:
+        case UnaryOperator::Postincrement:
+        case UnaryOperator::Postdecrement:
+            return true;
+        default:
+            return false;
+    }
 }
 
 } // namespace
@@ -258,63 +296,98 @@ bool NamedValueExpression::verifyAccess(EvalContext& context) const {
 }
 
 ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
+    // Handle operations that require an lvalue up front.
+    if (isLValueOp(op)) {
+        LValue lvalue = operand().evalLValue(context);
+        if (!lvalue)
+            return nullptr;
+
+        ConstantValue cv = lvalue.load();
+        if (!cv)
+            return nullptr;
+
+#define OP(k, val)         \
+    case UnaryOperator::k: \
+        lvalue.store(val); \
+        return v;
+
+        if (cv.isInteger()) {
+            SVInt v = std::move(cv).integer();
+            switch (op) {
+                OP(Preincrement, ++v);
+                OP(Predecrement, --v);
+                OP(Postincrement, v + 1);
+                OP(Postdecrement, v - 1);
+                default:
+                    break;
+            }
+        }
+        else if (cv.isReal()) {
+            double v = cv.real();
+            switch (op) {
+                OP(Preincrement, ++v);
+                OP(Predecrement, --v);
+                OP(Postincrement, v + 1);
+                OP(Postdecrement, v - 1);
+                default:
+                    break;
+            }
+        }
+
+#undef OP
+        THROW_UNREACHABLE;
+    }
+
     ConstantValue cv = operand().eval(context);
     if (!cv)
         return nullptr;
-
-    // TODO: handle non-integer
-    SVInt v = cv.integer();
-
-    // TODO: more robust lvalue handling
-    ConstantValue* lvalue = nullptr;
-    switch (op) {
-        case UnaryOperator::Preincrement:
-        case UnaryOperator::Predecrement:
-        case UnaryOperator::Postincrement:
-        case UnaryOperator::Postdecrement:
-            lvalue = context.findLocal(&((const NamedValueExpression&)operand()).symbol);
-            ASSERT(lvalue);
-            break;
-        default:
-            break;
-    }
 
 #define OP(k, v)           \
     case UnaryOperator::k: \
         return v;
 
-    switch (op) {
-        OP(Plus, v);
-        OP(Minus, -v);
-        OP(BitwiseNot, ~v);
-        OP(BitwiseAnd, SVInt(v.reductionAnd()));
-        OP(BitwiseOr, SVInt(v.reductionOr()));
-        OP(BitwiseXor, SVInt(v.reductionXor()));
-        OP(BitwiseNand, SVInt(!v.reductionAnd()));
-        OP(BitwiseNor, SVInt(!v.reductionOr()));
-        OP(BitwiseXnor, SVInt(!v.reductionXor()));
-        OP(LogicalNot, SVInt(!v));
-        case UnaryOperator::Preincrement:
-            *lvalue = ++v;
-            return v;
-        case UnaryOperator::Predecrement:
-            *lvalue = --v;
-            return v;
-        case UnaryOperator::Postincrement:
-            *lvalue = v + 1;
-            return v;
-        case UnaryOperator::Postdecrement:
-            *lvalue = v - 1;
-            return v;
+    if (cv.isInteger()) {
+        SVInt v = std::move(cv).integer();
+        switch (op) {
+            OP(Plus, v);
+            OP(Minus, -v);
+            OP(BitwiseNot, ~v);
+            OP(BitwiseAnd, SVInt(v.reductionAnd()));
+            OP(BitwiseOr, SVInt(v.reductionOr()));
+            OP(BitwiseXor, SVInt(v.reductionXor()));
+            OP(BitwiseNand, SVInt(!v.reductionAnd()));
+            OP(BitwiseNor, SVInt(!v.reductionOr()));
+            OP(BitwiseXnor, SVInt(!v.reductionXor()));
+            OP(LogicalNot, SVInt(!v));
+            default:
+                break;
+        }
     }
-    THROW_UNREACHABLE;
+    else if (cv.isReal()) {
+        double v = cv.real();
+        switch (op) {
+            OP(Plus, v);
+            OP(Minus, -v);
+            OP(LogicalNot, SVInt(!v));
+            default:
+                break;
+        }
+    }
+
 #undef OP
+    THROW_UNREACHABLE;
 }
 
 ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
     ConstantValue cvl = left().eval(context);
+    if (!cvl)
+        return nullptr;
+
+    // Handle short-circuiting operators up front, as we need to avoid
+    // evaluating the rhs entirely in those cases.
+
     ConstantValue cvr = right().eval(context);
-    if (!cvl || !cvr)
+    if (!cvr)
         return nullptr;
 
     return evalBinaryOperator(op, cvl, cvr);
