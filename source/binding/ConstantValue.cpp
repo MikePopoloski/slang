@@ -104,7 +104,13 @@ ConstantValue LValue::load() const {
                         if (!cv)
                             return ConstantValue();
 
-                        return cv.integer().slice(arg.range.upper(), arg.range.lower());
+                        ConstantRange range = arg.range;
+                        if (cv.isArray()) {
+                            auto elements = cv.array().subspan(range.lower(), range.width());
+                            return std::vector<ConstantValue>(elements.begin(), elements.end());
+                        }
+
+                        return cv.integer().slice(range.upper(), range.lower());
                     }
                     else if constexpr (std::is_same_v<T, Concat>)
                         THROW_UNREACHABLE; // TODO: handle this case
@@ -125,7 +131,20 @@ void LValue::store(const ConstantValue& newValue) {
             else if constexpr (std::is_same_v<T, CVRange>) {
                 ConstantValue& cv = *arg.cv;
                 ASSERT(cv);
-                cv.integer().set(arg.range.upper(), arg.range.lower(), newValue.integer());
+
+                int32_t l = arg.range.lower();
+                int32_t u = arg.range.upper();
+
+                if (cv.isArray()) {
+                    auto src = newValue.array();
+                    auto dest = cv.array();
+
+                    for (int32_t i = l; i != u; i++)
+                        dest[i] = src[i - l];
+                }
+                else {
+                    cv.integer().set(u, l, newValue.integer());
+                }
             }
             else if constexpr (std::is_same_v<T, Concat>)
                 THROW_UNREACHABLE; // TODO: handle this case
@@ -151,6 +170,24 @@ LValue LValue::selectRange(ConstantRange range) const {
                 else
                     static_assert(always_false<T>::value, "Missing case");
             },
+        value);
+}
+
+LValue LValue::selectIndex(int32_t index) const {
+    return std::visit(
+        [index](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>)->LValue {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::monostate>)
+                return nullptr;
+            else if constexpr (std::is_same_v<T, ConstantValue*>)
+                return LValue(arg->array()[index]);
+            else if constexpr (std::is_same_v<T, CVRange>)
+                return LValue(arg.cv->array()[arg.range.lower() + index]);
+            else if constexpr (std::is_same_v<T, Concat>)
+                THROW_UNREACHABLE;
+            else
+                static_assert(always_false<T>::value, "Missing case");
+        },
         value);
 }
 

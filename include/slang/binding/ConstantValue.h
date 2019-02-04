@@ -49,6 +49,7 @@ public:
 
     double real() const { return std::get<double>(value); }
 
+    span<ConstantValue> array() { return std::get<Array>(value); }
     span<ConstantValue const> array() const { return std::get<Array>(value); }
 
     std::string toString() const;
@@ -136,6 +137,7 @@ public:
     void store(const ConstantValue& value);
 
     LValue selectRange(ConstantRange range) const;
+    LValue selectIndex(int32_t index) const;
 
 private:
     LValue(ConstantValue& base, ConstantRange range) : value(CVRange{ &base, range }) {}

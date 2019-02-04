@@ -197,6 +197,19 @@ bool isFalse(const ConstantValue& cv) {
     return false;
 }
 
+bool checkArrayIndex(EvalContext& context, const Type& type, const ConstantValue& cs,
+                     SourceRange sourceRange, int32_t& result) {
+    optional<int32_t> index = cs.integer().as<int32_t>();
+    ConstantRange range = type.getArrayRange();
+    if (!index || !range.containsPoint(*index)) {
+        context.addDiag(DiagCode::NoteArrayIndexInvalid, sourceRange) << cs << type;
+        return false;
+    }
+
+    result = range.translateIndex(*index);
+    return true;
+}
+
 } // namespace
 
 namespace slang {
@@ -502,8 +515,6 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     if (!lvalue || !rvalue)
         return nullptr;
 
-    // TODO: ensure rhs is truncated to size of lhs
-
     if (!isCompound())
         lvalue.store(rvalue);
     else {
@@ -520,13 +531,17 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv || !cs)
         return nullptr;
 
-    optional<ConstantRange> range = getRange(context, cs);
-    if (!range) {
-        // If any part of an address is unknown, then the whole thing returns 'x.
-        return SVInt::createFillX(type->getBitWidth(), false);
-    }
+    int32_t index;
+    if (!checkArrayIndex(context, *value().type, cs, sourceRange, index))
+        return nullptr;
 
-    return cv.integer().slice(range->upper(), range->lower());
+    if (value().type->isUnpackedArray())
+        return cv.array()[index];
+
+    // For packed arrays, we're selecting bit ranges, not necessarily single bits.
+    int32_t width = (int32_t)type->getBitWidth();
+    index *= width;
+    return cv.integer().slice(index + width - 1, index);
 }
 
 LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
@@ -535,33 +550,17 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval || !cs)
         return nullptr;
 
-    optional<ConstantRange> range = getRange(context, cs);
-    if (!range)
+    int32_t index;
+    if (!checkArrayIndex(context, *value().type, cs, sourceRange, index))
         return nullptr;
 
-    return lval.selectRange(*range);
-}
+    if (value().type->isUnpackedArray())
+        return lval.selectIndex(index);
 
-optional<ConstantRange> ElementSelectExpression::getRange(
-    EvalContext& context, const ConstantValue& selectorValue) const {
-
-    const Type& t = value().type->getCanonicalType();
-    optional<int32_t> index = selectorValue.integer().as<int32_t>();
-    if (index) {
-        ConstantRange declRange = t.as<IntegralType>().getBitVectorRange();
-        if (declRange.containsPoint(*index)) {
-            // We're actually selecting elements, which aren't necessarily bits.
-            // TODO: handle overflow?
-            int32_t actualIndex = declRange.translateIndex(*index);
-            int32_t width = (int32_t)type->getBitWidth();
-            actualIndex *= width;
-
-            return ConstantRange{ actualIndex + width - 1, actualIndex };
-        }
-    }
-
-    context.addDiag(DiagCode::NoteArrayIndexInvalid, sourceRange) << selectorValue << t;
-    return std::nullopt;
+    // For packed arrays, we're selecting bit ranges, not necessarily single bits.
+    int32_t width = (int32_t)type->getBitWidth();
+    index *= width;
+    return lval.selectRange({ index + width - 1, index });
 }
 
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
