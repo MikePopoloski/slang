@@ -23,9 +23,9 @@ ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue
     if (!value)
         result = symbol->getType().getDefaultValue();
     else {
-        // TODO: The provided initial value must be the correct bit width when it's an integer.
-        // ASSERT(!value.isInteger() || value.integer().getBitWidth() ==
-        // symbol->getType().getBitWidth());
+        ASSERT(!value.isInteger() ||
+               value.integer().getBitWidth() == symbol->getType().getBitWidth());
+
         result = std::move(value);
     }
 
