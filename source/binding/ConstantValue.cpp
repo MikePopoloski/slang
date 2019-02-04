@@ -69,7 +69,7 @@ ConstantRange ConstantRange::subrange(ConstantRange select) const {
 
 int32_t ConstantRange::translateIndex(int32_t index) const {
     if (!isLittleEndian())
-        return (int32_t)width() - index - 1;
+        return upper() - index;
     else
         return index - lower();
 }

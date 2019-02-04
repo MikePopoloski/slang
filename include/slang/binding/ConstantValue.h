@@ -99,7 +99,7 @@ struct ConstantRange {
 
     /// Translates the given index to be relative to the range.
     /// For example, if the range is [7:2] and you pass in 3, the result will be 1.
-    /// If the range is [2:7] and you pass in 3, the result will be 2.
+    /// If the range is [2:7] and you pass in 3, the result will be 4.
     int32_t translateIndex(int32_t index) const;
 
     /// Determines whether the given point is within the range.
