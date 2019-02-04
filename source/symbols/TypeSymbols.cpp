@@ -723,8 +723,7 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
 }
 
 ConstantValue UnpackedArrayType::getDefaultValueImpl() const {
-    // TODO: implement this
-    THROW_UNREACHABLE;
+    return std::vector<ConstantValue>(range.width(), elementType.getDefaultValue());
 }
 
 bool FieldSymbol::isPacked() const {
@@ -826,8 +825,11 @@ UnpackedStructType::UnpackedStructType(Compilation& compilation) :
 }
 
 ConstantValue UnpackedStructType::getDefaultValueImpl() const {
-    // TODO: implement this
-    THROW_UNREACHABLE;
+    std::vector<ConstantValue> elements;
+    for (auto& field : membersOfType<FieldSymbol>())
+        elements.emplace_back(field.getType().getDefaultValue());
+
+    return elements;
 }
 
 const Type& UnpackedStructType::fromSyntax(Compilation& compilation,

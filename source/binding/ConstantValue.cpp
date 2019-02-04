@@ -6,8 +6,10 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/ConstantValue.h"
 
-#include <nlohmann/json.hpp>
 #include <fmt/format.h>
+#include <nlohmann/json.hpp>
+
+#include "slang/text/FormatBuffer.h"
 
 namespace slang {
 
@@ -25,6 +27,19 @@ std::string ConstantValue::toString() const {
                 return std::to_string(arg);
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 return "null"s;
+            else if constexpr (std::is_same_v<T, Array>) {
+                FormatBuffer buffer;
+                buffer.append("[");
+                for (auto& element : arg) {
+                    buffer.append(element.toString());
+                    buffer.append(",");
+                }
+
+                if (!arg.empty())
+                    buffer.pop_back();
+                buffer.append("]");
+                return buffer.str();
+            }
             else
                 static_assert(always_false<T>::value, "Missing case");
         },

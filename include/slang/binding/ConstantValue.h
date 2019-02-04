@@ -20,6 +20,7 @@ class ConstantValue {
 public:
     /// This type represents the null value (class handles, etc) in expressions.
     struct NullPlaceholder : std::monostate {};
+    using Array = std::vector<ConstantValue>;
 
     ConstantValue() = default;
     ConstantValue(nullptr_t) {}
@@ -27,6 +28,8 @@ public:
     ConstantValue(const SVInt& integer) : value(integer) {}
     ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
     ConstantValue(NullPlaceholder nul) : value(nul) {}
+    ConstantValue(const Array& elements) : value(elements) {}
+    ConstantValue(Array&& elements) : value(std::move(elements)) {}
 
     template<typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
     ConstantValue(T real) : value(double(real)) {}
@@ -37,6 +40,7 @@ public:
     bool isInteger() const { return std::holds_alternative<SVInt>(value); }
     bool isReal() const { return std::holds_alternative<double>(value); }
     bool isNullHandle() const { return std::holds_alternative<NullPlaceholder>(value); }
+    bool isArray() const { return std::holds_alternative<Array>(value); }
 
     SVInt& integer() & { return std::get<SVInt>(value); }
     const SVInt& integer() const& { return std::get<SVInt>(value); }
@@ -44,6 +48,8 @@ public:
     SVInt integer() const&& { return std::get<SVInt>(std::move(value)); }
 
     double real() const { return std::get<double>(value); }
+
+    span<ConstantValue const> array() const { return std::get<Array>(value); }
 
     std::string toString() const;
 
@@ -53,7 +59,7 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
 
 private:
-    std::variant<std::monostate, SVInt, double, NullPlaceholder> value;
+    std::variant<std::monostate, SVInt, double, NullPlaceholder, Array> value;
 };
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative
