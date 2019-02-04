@@ -98,7 +98,7 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
             }
         }
         else if (cvr.isReal()) {
-            bool r = cvr.real();
+            bool r = (bool)cvr.real();
             switch (op) {
                 OP(LogicalAnd, SVInt(l && r));
                 OP(LogicalOr, SVInt(l || r));
@@ -114,6 +114,8 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
 
         if (cvr.isReal()) {
             double r = cvr.real();
+            bool b = (bool)r;
+
             switch (op) {
                 OP(Add, l + r);
                 OP(Subtract, l - r);
@@ -126,16 +128,16 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                 OP(LessThan, SVInt(l < r));
                 OP(Equality, SVInt(l == r));
                 OP(Inequality, SVInt(l != r));
-                OP(LogicalAnd, SVInt(l && r));
-                OP(LogicalOr, SVInt(l || r));
-                OP(LogicalImplication, SVInt(!l || r));
-                OP(LogicalEquivalence, SVInt((!l || r) && (!r || l)));
+                OP(LogicalAnd, SVInt(l && b));
+                OP(LogicalOr, SVInt(l || b));
+                OP(LogicalImplication, SVInt(!l || b));
+                OP(LogicalEquivalence, SVInt((!l || b) && (!b || l)));
                 default:
                     break;
             }
         }
         else if (cvr.isInteger()) {
-            bool b = l;
+            bool b = (bool)l;
             const SVInt& r = cvr.integer();
 
             switch (op) {
@@ -180,7 +182,7 @@ bool isTrue(const ConstantValue& cv) {
     if (cv.isInteger())
         return (bool)(logic_t)cv.integer();
     if (cv.isReal())
-        return cv.real();
+        return (bool)cv.real();
     return false;
 }
 
@@ -190,7 +192,7 @@ bool isFalse(const ConstantValue& cv) {
         return !l.isUnknown() && l.value == 0;
     }
     if (cv.isReal())
-        return !cv.real();
+        return !(bool)cv.real();
     if (cv.isNullHandle())
         return true;
 
@@ -441,7 +443,7 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
         switch (op) {
             OP(Plus, v);
             OP(Minus, -v);
-            OP(LogicalNot, SVInt(!v));
+            OP(LogicalNot, SVInt(!(bool)v));
             default:
                 break;
         }
