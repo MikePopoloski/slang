@@ -114,7 +114,8 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
 
         if (cvr.isReal()) {
             double r = cvr.real();
-            bool b = (bool)r;
+            bool bl = (bool)l;
+            bool br = (bool)r;
 
             switch (op) {
                 OP(Add, l + r);
@@ -128,10 +129,10 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                 OP(LessThan, SVInt(l < r));
                 OP(Equality, SVInt(l == r));
                 OP(Inequality, SVInt(l != r));
-                OP(LogicalAnd, SVInt(l && b));
-                OP(LogicalOr, SVInt(l || b));
-                OP(LogicalImplication, SVInt(!l || b));
-                OP(LogicalEquivalence, SVInt((!l || b) && (!b || l)));
+                OP(LogicalAnd, SVInt(bl && br));
+                OP(LogicalOr, SVInt(bl || br));
+                OP(LogicalImplication, SVInt(!bl || br));
+                OP(LogicalEquivalence, SVInt((!bl || br) && (!br || bl)));
                 default:
                     break;
             }
