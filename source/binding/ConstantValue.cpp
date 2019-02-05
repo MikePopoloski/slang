@@ -46,6 +46,18 @@ std::string ConstantValue::toString() const {
         value);
 }
 
+ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower) const {
+    if (isInteger())
+        return integer().slice(upper, lower);
+
+    if (isArray()) {
+        auto elements = array().subspan(lower, upper - lower + 1);
+        return std::vector<ConstantValue>(elements.begin(), elements.end());
+    }
+
+    return nullptr;
+}
+
 void to_json(json& j, const ConstantValue& cv) {
     j = cv.toString();
 }
@@ -99,19 +111,8 @@ ConstantValue LValue::load() const {
                         return ConstantValue();
                     else if constexpr (std::is_same_v<T, ConstantValue*>)
                         return *arg;
-                    else if constexpr (std::is_same_v<T, CVRange>) {
-                        ConstantValue& cv = *arg.cv;
-                        if (!cv)
-                            return ConstantValue();
-
-                        ConstantRange range = arg.range;
-                        if (cv.isArray()) {
-                            auto elements = cv.array().subspan(range.lower(), range.width());
-                            return std::vector<ConstantValue>(elements.begin(), elements.end());
-                        }
-
-                        return cv.integer().slice(range.upper(), range.lower());
-                    }
+                    else if constexpr (std::is_same_v<T, CVRange>)
+                        return arg.cv->getSlice(arg.range.upper(), arg.range.lower());
                     else if constexpr (std::is_same_v<T, Concat>)
                         THROW_UNREACHABLE; // TODO: handle this case
                     else

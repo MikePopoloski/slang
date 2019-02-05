@@ -52,6 +52,8 @@ public:
     span<ConstantValue> array() { return std::get<Array>(value); }
     span<ConstantValue const> array() const { return std::get<Array>(value); }
 
+    ConstantValue getSlice(int32_t upper, int32_t lower) const;
+
     std::string toString() const;
 
     static const ConstantValue Invalid;

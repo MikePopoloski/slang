@@ -1287,8 +1287,6 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             return badExpr(compilation, result);
         }
 
-        int32_t count = *rv - 1;
-
         // If the lhs is a known constant, we can check that now too.
         if (left.constant) {
             optional<int32_t> index = left.constant->integer().as<int32_t>();
@@ -1299,24 +1297,15 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                 return badExpr(compilation, result);
             }
 
-            // TODO: avoid overflow
-            if (selectionKind == RangeSelectionKind::IndexedUp) {
-                selectionRange.left = *index + count;
-                selectionRange.right = *index;
-            }
-            else {
-                selectionRange.left = *index;
-                selectionRange.right = *index - count;
-            }
-
-            if (!valueRange.isLittleEndian())
-                selectionRange.reverse();
+            selectionRange =
+                getIndexedRange(selectionKind, *index, *rv, valueRange.isLittleEndian());
 
             if (!validateRange(selectionRange))
                 return badExpr(compilation, result);
         }
         else {
             // Otherwise, the resulting range will start with the fixed lower bound of the type.
+            int32_t count = *rv - 1;
             if (selectionKind == RangeSelectionKind::IndexedUp) {
                 selectionRange.left = valueRange.lower() + count;
                 selectionRange.right = valueRange.lower();
@@ -1339,6 +1328,26 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         result->type = compilation.emplace<PackedArrayType>(elementType, selectionRange);
 
     return *result;
+}
+
+ConstantRange RangeSelectExpression::getIndexedRange(RangeSelectionKind kind, int32_t l, int32_t r,
+                                                     bool littleEndian) {
+    // TODO: avoid overflow
+    ConstantRange result;
+    int32_t count = r - 1;
+    if (kind == RangeSelectionKind::IndexedUp) {
+        result.left = l + count;
+        result.right = l;
+    }
+    else {
+        result.left = l;
+        result.right = l - count;
+    }
+
+    if (!littleEndian)
+        result.reverse();
+
+    return result;
 }
 
 void RangeSelectExpression::toJson(json& j) const {

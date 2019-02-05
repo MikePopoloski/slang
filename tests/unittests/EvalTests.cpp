@@ -331,12 +331,11 @@ TEST_CASE("bit select weird indices") {
     auto value = session.eval("up_vect[12:14]").integer();
     CHECK(value == "3'b011"_si);
 
-    // TODO: these are wrong
-    /*value = session.eval("up_vect[12 +: 3]").integer();
+    value = session.eval("up_vect[12 +: 3]").integer();
     CHECK(value == "3'b011"_si);
 
     value = session.eval("up_vect[14 -: 3]").integer();
-    CHECK(value == "3'b011"_si);*/
+    CHECK(value == "3'b011"_si);
 
     session.eval("logic [20 : 5] down_vect = 5'd25;");
 

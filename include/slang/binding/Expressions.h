@@ -536,6 +536,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
 
 private:
+    static ConstantRange getIndexedRange(RangeSelectionKind kind, int32_t l, int32_t r,
+                                         bool littleEndian);
     optional<ConstantRange> getRange(EvalContext& context, const ConstantValue& cl,
                                      const ConstantValue& cr) const;
 

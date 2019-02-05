@@ -574,12 +574,10 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     optional<ConstantRange> range = getRange(context, cl, cr);
-    if (!range) {
-        // If any part of an address is unknown, then the whole thing returns 'x.
-        return SVInt::createFillX(type->getBitWidth(), false);
-    }
+    if (!range)
+        return nullptr;
 
-    return cv.integer().slice(range->upper(), range->lower());
+    return cv.getSlice(range->upper(), range->lower());
 }
 
 LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
@@ -596,47 +594,52 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
     return lval.selectRange(*range);
 }
 
-optional<ConstantRange> RangeSelectExpression::getRange(EvalContext&, const ConstantValue& cl,
+optional<ConstantRange> RangeSelectExpression::getRange(EvalContext& context,
+                                                        const ConstantValue& cl,
                                                         const ConstantValue& cr) const {
-    optional<int32_t> l = cl.integer().as<int32_t>();
-    optional<int32_t> r = cr.integer().as<int32_t>();
-    if (!l || !r)
-        return std::nullopt;
-
-    const Type& t = value().type->getCanonicalType();
-    ConstantRange declRange = t.as<IntegralType>().getBitVectorRange();
-    int32_t msb = declRange.translateIndex(*l);
-
-    // We're actually selecting elements, which aren't necessarily bits.
-    int32_t width = 1;
-    if (t.kind == SymbolKind::PackedArrayType) {
-        // TODO: handle overflow?
-        width = (int32_t)t.as<PackedArrayType>().elementType.getBitWidth();
-        msb *= width;
-    }
-
     ConstantRange result;
-    switch (selectionKind) {
-        case RangeSelectionKind::Simple: {
-            int32_t lsb = declRange.translateIndex(*r) * width;
-            result = { msb, lsb };
-            break;
+    const Type& valueType = *value().type;
+    ConstantRange valueRange = valueType.getArrayRange();
+
+    if (selectionKind == RangeSelectionKind::Simple) {
+        // If this is a simple part select, the range has already been fully validated at bind time.
+        result = type->getArrayRange();
+    }
+    else {
+        optional<int32_t> l = cl.integer().as<int32_t>();
+        if (!l) {
+            context.addDiag(DiagCode::NoteArrayIndexInvalid, sourceRange) << cl << valueType;
+            return std::nullopt;
         }
-        case RangeSelectionKind::IndexedUp: {
-            int32_t count = (*r - 1) * width;
-            result = { msb + count, msb };
-            break;
+
+        optional<int32_t> r = cr.integer().as<int32_t>();
+        result = getIndexedRange(selectionKind, *l, *r, valueRange.isLittleEndian());
+
+        if (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right)) {
+            auto& diag = context.addDiag(DiagCode::NotePartSelectInvalid, sourceRange);
+            diag << result.left << result.right;
+            diag << valueType;
+            return std::nullopt;
         }
-        case RangeSelectionKind::IndexedDown: {
-            int32_t count = (*r - 1) * width;
-            result = { msb, msb - count };
-            break;
-        }
-        default:
-            THROW_UNREACHABLE;
     }
 
+    if (!result.isLittleEndian())
+        result.reverse();
+
+    result.left = valueRange.translateIndex(result.left);
+    result.right = valueRange.translateIndex(result.right);
+
+    if (!valueType.isPackedArray())
+        return result;
+
+    // For packed arrays we're potentially selecting multi-bit elements.
+    int32_t width =
+        (int32_t)valueType.getCanonicalType().as<PackedArrayType>().elementType.getBitWidth();
+
+    result.left *= width;
+    result.right *= width;
     result.left += width - 1;
+
     return result;
 }
 
