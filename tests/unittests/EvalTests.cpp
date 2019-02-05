@@ -441,24 +441,24 @@ TEST_CASE("Unpacked array eval") {
     session.eval("arr[1:2] = arr2;");
 
     auto cv = session.eval("arr");
-    CHECK(cv.array()[7].integer() == 42);
-    CHECK(cv.array()[6].integer() == 1234);
-    CHECK(cv.array()[5].integer() == 19);
+    CHECK(cv.elements()[7].integer() == 42);
+    CHECK(cv.elements()[6].integer() == 1234);
+    CHECK(cv.elements()[5].integer() == 19);
 
     CHECK(session.eval("arr[1:2] == arr2").integer() == 1);
 
     cv = session.eval("1 ? arr[1:2] : arr2");
-    CHECK(cv.array()[1].integer() == 1234);
-    CHECK(cv.array()[0].integer() == 19);
+    CHECK(cv.elements()[1].integer() == 1234);
+    CHECK(cv.elements()[0].integer() == 19);
 
     cv = session.eval("'x ? arr[1:2] : arr2");
-    CHECK(cv.array()[1].integer() == 1234);
-    CHECK(cv.array()[0].integer() == 19);
+    CHECK(cv.elements()[1].integer() == 1234);
+    CHECK(cv.elements()[0].integer() == 19);
 
     session.eval("arr2[0] = 1;");
     cv = session.eval("'x ? arr[1:2] : arr2");
-    CHECK(cv.array()[1].integer() == 0);
-    CHECK(cv.array()[0].integer() == 19);
+    CHECK(cv.elements()[1].integer() == 0);
+    CHECK(cv.elements()[0].integer() == 19);
 
     NO_SESSION_ERRORS;
 }

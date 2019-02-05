@@ -27,7 +27,7 @@ std::string ConstantValue::toString() const {
                 return std::to_string(arg);
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 return "null"s;
-            else if constexpr (std::is_same_v<T, Array>) {
+            else if constexpr (std::is_same_v<T, Elements>) {
                 FormatBuffer buffer;
                 buffer.append("[");
                 for (auto& element : arg) {
@@ -50,9 +50,9 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower) const {
     if (isInteger())
         return integer().slice(upper, lower);
 
-    if (isArray()) {
-        auto elements = array().subspan(lower, upper - lower + 1);
-        return std::vector<ConstantValue>(elements.begin(), elements.end());
+    if (isUnpacked()) {
+        auto slice = elements().subspan(lower, upper - lower + 1);
+        return std::vector<ConstantValue>(slice.begin(), slice.end());
     }
 
     return nullptr;
@@ -136,9 +136,9 @@ void LValue::store(const ConstantValue& newValue) {
                 int32_t l = arg.range.lower();
                 int32_t u = arg.range.upper();
 
-                if (cv.isArray()) {
-                    auto src = newValue.array();
-                    auto dest = cv.array();
+                if (cv.isUnpacked()) {
+                    auto src = newValue.elements();
+                    auto dest = cv.elements();
 
                     for (int32_t i = l; i <= u; i++)
                         dest[i] = src[i - l];
@@ -181,9 +181,9 @@ LValue LValue::selectIndex(int32_t index) const {
             if constexpr (std::is_same_v<T, std::monostate>)
                 return nullptr;
             else if constexpr (std::is_same_v<T, ConstantValue*>)
-                return LValue(arg->array()[index]);
+                return LValue(arg->elements()[index]);
             else if constexpr (std::is_same_v<T, CVRange>)
-                return LValue(arg.cv->array()[arg.range.lower() + index]);
+                return LValue(arg.cv->elements()[arg.range.lower() + index]);
             else if constexpr (std::is_same_v<T, Concat>)
                 THROW_UNREACHABLE;
             else

@@ -151,9 +151,9 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
             }
         }
     }
-    else if (cvl.isArray()) {
-        span<const ConstantValue> la = cvl.array();
-        span<const ConstantValue> ra = cvr.array();
+    else if (cvl.isUnpacked()) {
+        span<const ConstantValue> la = cvl.elements();
+        span<const ConstantValue> ra = cvr.elements();
         ASSERT(la.size() == ra.size());
 
         for (ptrdiff_t i = 0; i < la.size(); i++) {
@@ -520,13 +520,13 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
         if (cvl.isInteger() && cvr.isInteger())
             return SVInt::conditional(cp.integer(), cvl.integer(), cvr.integer());
 
-        if (cvl.isArray()) {
-            span<const ConstantValue> la = cvl.array();
-            span<const ConstantValue> ra = cvr.array();
+        if (cvl.isUnpacked()) {
+            span<const ConstantValue> la = cvl.elements();
+            span<const ConstantValue> ra = cvr.elements();
             ASSERT(la.size() == ra.size());
 
             ConstantValue resultValue = type->getDefaultValue();
-            span<ConstantValue> result = resultValue.array();
+            span<ConstantValue> result = resultValue.elements();
             ASSERT(la.size() == result.size());
 
             const Type& ct = type->getCanonicalType();
@@ -588,7 +588,7 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     if (value().type->isUnpackedArray())
-        return cv.array()[index];
+        return cv.elements()[index];
 
     // For packed arrays, we're selecting bit ranges, not necessarily single bits.
     int32_t width = (int32_t)type->getBitWidth();

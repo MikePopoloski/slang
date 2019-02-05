@@ -20,7 +20,7 @@ class ConstantValue {
 public:
     /// This type represents the null value (class handles, etc) in expressions.
     struct NullPlaceholder : std::monostate {};
-    using Array = std::vector<ConstantValue>;
+    using Elements = std::vector<ConstantValue>;
 
     ConstantValue() = default;
     ConstantValue(nullptr_t) {}
@@ -28,8 +28,8 @@ public:
     ConstantValue(const SVInt& integer) : value(integer) {}
     ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
     ConstantValue(NullPlaceholder nul) : value(nul) {}
-    ConstantValue(const Array& elements) : value(elements) {}
-    ConstantValue(Array&& elements) : value(std::move(elements)) {}
+    ConstantValue(const Elements& elements) : value(elements) {}
+    ConstantValue(Elements&& elements) : value(std::move(elements)) {}
 
     template<typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
     ConstantValue(T real) : value(double(real)) {}
@@ -40,7 +40,7 @@ public:
     bool isInteger() const { return std::holds_alternative<SVInt>(value); }
     bool isReal() const { return std::holds_alternative<double>(value); }
     bool isNullHandle() const { return std::holds_alternative<NullPlaceholder>(value); }
-    bool isArray() const { return std::holds_alternative<Array>(value); }
+    bool isUnpacked() const { return std::holds_alternative<Elements>(value); }
 
     SVInt& integer() & { return std::get<SVInt>(value); }
     const SVInt& integer() const& { return std::get<SVInt>(value); }
@@ -49,8 +49,8 @@ public:
 
     double real() const { return std::get<double>(value); }
 
-    span<ConstantValue> array() { return std::get<Array>(value); }
-    span<ConstantValue const> array() const { return std::get<Array>(value); }
+    span<ConstantValue> elements() { return std::get<Elements>(value); }
+    span<ConstantValue const> elements() const { return std::get<Elements>(value); }
 
     ConstantValue getSlice(int32_t upper, int32_t lower) const;
 
@@ -62,7 +62,7 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
 
 private:
-    std::variant<std::monostate, SVInt, double, NullPlaceholder, Array> value;
+    std::variant<std::monostate, SVInt, double, NullPlaceholder, Elements> value;
 };
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative
