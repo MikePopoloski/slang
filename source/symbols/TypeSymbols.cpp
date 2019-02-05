@@ -729,8 +729,7 @@ ConstantValue UnpackedArrayType::getDefaultValueImpl() const {
 bool FieldSymbol::isPacked() const {
     const Scope* scope = getScope();
     ASSERT(scope);
-    return scope->asSymbol().kind == SymbolKind::PackedStructType ||
-           scope->asSymbol().kind == SymbolKind::UnpackedStructType;
+    return scope->asSymbol().kind == SymbolKind::PackedStructType;
 }
 
 void FieldSymbol::toJson(json& j) const {

@@ -428,8 +428,6 @@ logic f = 1;
 }
 
 TEST_CASE("Unpacked array eval") {
-    // The above bit select cases test the "normal" case where vectors are specified
-    // with [N : 0]. Here we test "up-vectors" and non-zero lower bounds.
     ScriptSession session;
     session.eval("int arr[8];");
     session.eval("arr[0] = 42;");
@@ -459,6 +457,22 @@ TEST_CASE("Unpacked array eval") {
     cv = session.eval("'x ? arr[1:2] : arr2");
     CHECK(cv.elements()[1].integer() == 0);
     CHECK(cv.elements()[0].integer() == 19);
+
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Unpacked struct eval") {
+    ScriptSession session;
+    session.eval("struct { integer a[2:0]; bit b; } foo;");
+    session.eval("foo.a[0] = 42;");
+    session.eval("foo.b = 1;");
+
+    auto cv = session.eval("foo");
+    CHECK(cv.elements()[0].elements()[0].integer() == 42);
+
+    CHECK(session.eval("foo.a[0] == 42").integer() == 1);
+    CHECK_THAT(session.eval("foo == foo").integer(), exactlyEquals(SVInt(logic_t::x)));
+    CHECK(session.eval("foo === foo").integer() == 1);
 
     NO_SESSION_ERRORS;
 }

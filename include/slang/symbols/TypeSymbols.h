@@ -108,6 +108,11 @@ public:
         return getCanonicalType().kind == SymbolKind::UnpackedArrayType;
     }
 
+    /// Indicates whether this is an unpacked structure type.
+    bool isUnpackedStruct() const {
+        return getCanonicalType().kind == SymbolKind::UnpackedStructType;
+    }
+
     /// Indicates whether this is an enum type.
     bool isEnum() const { return getCanonicalType().kind == SymbolKind::EnumType; }
 

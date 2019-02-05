@@ -697,20 +697,25 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
-    // TODO: handle unpacked
-    ASSERT(field.isPacked());
     int32_t offset = (int32_t)field.offset;
+    if (value().type->isUnpackedStruct())
+        return cv.elements()[offset];
+
     int32_t width = (int32_t)type->getBitWidth();
     return cv.integer().slice(width + offset - 1, offset);
 }
 
 LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
-    // TODO: handle unpacked
-    ASSERT(field.isPacked());
-    int32_t offset = (int32_t)field.offset;
-    int32_t width = (int32_t)type->getBitWidth();
+    LValue lval = value().evalLValue(context);
+    if (!lval)
+        return nullptr;
 
-    return value().evalLValue(context).selectRange({ width + offset - 1, offset });
+    int32_t offset = (int32_t)field.offset;
+    if (value().type->isUnpackedStruct())
+        return lval.selectIndex(offset);
+
+    int32_t width = (int32_t)type->getBitWidth();
+    return lval.selectRange({ width + offset - 1, offset });
 }
 
 ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
