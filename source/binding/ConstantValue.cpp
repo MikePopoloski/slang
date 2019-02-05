@@ -140,7 +140,7 @@ void LValue::store(const ConstantValue& newValue) {
                     auto src = newValue.array();
                     auto dest = cv.array();
 
-                    for (int32_t i = l; i != u; i++)
+                    for (int32_t i = l; i <= u; i++)
                         dest[i] = src[i - l];
                 }
                 else {

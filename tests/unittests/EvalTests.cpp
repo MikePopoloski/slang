@@ -426,3 +426,39 @@ logic f = 1;
       ^
 )");
 }
+
+TEST_CASE("Unpacked array eval") {
+    // The above bit select cases test the "normal" case where vectors are specified
+    // with [N : 0]. Here we test "up-vectors" and non-zero lower bounds.
+    ScriptSession session;
+    session.eval("int arr[8];");
+    session.eval("arr[0] = 42;");
+    CHECK(session.eval("arr[0]").integer() == 42);
+
+    session.eval("int arr2[2];");
+    session.eval("arr2[0] = 1234;");
+    session.eval("arr2[1] = 19;");
+    session.eval("arr[1:2] = arr2;");
+
+    auto cv = session.eval("arr");
+    CHECK(cv.array()[7].integer() == 42);
+    CHECK(cv.array()[6].integer() == 1234);
+    CHECK(cv.array()[5].integer() == 19);
+
+    CHECK(session.eval("arr[1:2] == arr2").integer() == 1);
+
+    cv = session.eval("1 ? arr[1:2] : arr2");
+    CHECK(cv.array()[1].integer() == 1234);
+    CHECK(cv.array()[0].integer() == 19);
+
+    cv = session.eval("'x ? arr[1:2] : arr2");
+    CHECK(cv.array()[1].integer() == 1234);
+    CHECK(cv.array()[0].integer() == 19);
+
+    session.eval("arr2[0] = 1;");
+    cv = session.eval("'x ? arr[1:2] : arr2");
+    CHECK(cv.array()[1].integer() == 0);
+    CHECK(cv.array()[0].integer() == 19);
+
+    NO_SESSION_ERRORS;
+}

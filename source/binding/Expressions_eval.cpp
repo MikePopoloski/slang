@@ -105,7 +105,7 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                 OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
                 OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
                 default:
-                    break;
+                    THROW_UNREACHABLE;
             }
         }
     }
@@ -134,7 +134,7 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                 OP(LogicalImplication, SVInt(!bl || br));
                 OP(LogicalEquivalence, SVInt((!bl || br) && (!br || bl)));
                 default:
-                    break;
+                    THROW_UNREACHABLE;
             }
         }
         else if (cvr.isInteger()) {
@@ -147,9 +147,26 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                 OP(LogicalImplication, SVInt(SVInt::logicalImplication(b, r)));
                 OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(b, r)));
                 default:
-                    break;
+                    THROW_UNREACHABLE;
             }
         }
+    }
+    else if (cvl.isArray()) {
+        span<const ConstantValue> la = cvl.array();
+        span<const ConstantValue> ra = cvr.array();
+        ASSERT(la.size() == ra.size());
+
+        for (ptrdiff_t i = 0; i < la.size(); i++) {
+            ConstantValue result = evalBinaryOperator(op, la[i], ra[i]);
+            if (!result)
+                return nullptr;
+
+            logic_t l = (logic_t)result.integer();
+            if (l.isUnknown() || !l)
+                return SVInt(l);
+        }
+
+        return SVInt(true);
     }
 
 #undef OP
@@ -502,6 +519,38 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
 
         if (cvl.isInteger() && cvr.isInteger())
             return SVInt::conditional(cp.integer(), cvl.integer(), cvr.integer());
+
+        if (cvl.isArray()) {
+            span<const ConstantValue> la = cvl.array();
+            span<const ConstantValue> ra = cvr.array();
+            ASSERT(la.size() == ra.size());
+
+            ConstantValue resultValue = type->getDefaultValue();
+            span<ConstantValue> result = resultValue.array();
+            ASSERT(la.size() == result.size());
+
+            const Type& ct = type->getCanonicalType();
+            ConstantValue defaultElement =
+                ct.isUnpackedArray() ? ct.as<UnpackedArrayType>().elementType.getDefaultValue()
+                                     : ct.as<PackedArrayType>().elementType.getDefaultValue();
+
+            // [11.4.11] says that if both sides are unpacked arrays, we
+            // check each element. If they are equal, take it in the result,
+            // otherwise use the default.
+            for (ptrdiff_t i = 0; i < la.size(); i++) {
+                ConstantValue comp = evalBinaryOperator(BinaryOperator::Equality, la[i], ra[i]);
+                if (!comp)
+                    return nullptr;
+
+                logic_t l = (logic_t)comp.integer();
+                if (l.isUnknown() || !l)
+                    result[i] = defaultElement;
+                else
+                    result[i] = la[i];
+            }
+
+            return resultValue;
+        }
 
         return type->getDefaultValue();
     }
