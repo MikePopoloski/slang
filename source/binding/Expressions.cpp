@@ -186,9 +186,11 @@ struct Expression::PropagationVisitor {
 
 const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance);
 
-const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindContext& context) {
-    const Expression& result = selfDetermined(context.scope.getCompilation(), syntax, context);
-    result.checkBindFlags(context);
+const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindContext& context,
+                                   bitmask<BindFlags> extraFlags) {
+    const Expression& result =
+        selfDetermined(context.scope.getCompilation(), syntax, context, extraFlags);
+    result.checkBindFlags(context.resetFlags(extraFlags));
     return result;
 }
 
@@ -1201,12 +1203,10 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     // Left and right are either the extents of a part-select, in which case they must
     // both be constant, or the left hand side is the start and the right hand side is
     // the width of an indexed part select, in which case only the rhs need be constant.
-    BindFlags lhsFlags = BindFlags::None;
     RangeSelectionKind selectionKind;
     switch (syntax.kind) {
         case SyntaxKind::SimpleRangeSelect:
             selectionKind = RangeSelectionKind::Simple;
-            lhsFlags = BindFlags::Constant;
             break;
         case SyntaxKind::AscendingRangeSelect:
             selectionKind = RangeSelectionKind::IndexedUp;
@@ -1218,8 +1218,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             THROW_UNREACHABLE;
     }
 
-    Expression& left = selfDetermined(compilation, *syntax.left, context, lhsFlags);
-    Expression& right = selfDetermined(compilation, *syntax.right, context, BindFlags::Constant);
+    const Expression& left = selectionKind == RangeSelectionKind::Simple
+                                 ? bind(*syntax.left, context, BindFlags::Constant)
+                                 : selfDetermined(compilation, *syntax.left, context);
+
+    const Expression& right = bind(*syntax.right, context, BindFlags::Constant);
 
     auto result = compilation.emplace<RangeSelectExpression>(
         selectionKind, compilation.getErrorType(), value, left, right, fullRange);
@@ -1446,8 +1449,7 @@ void ConcatenationExpression::toJson(json& j) const {
 Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
                                               const MultipleConcatenationExpressionSyntax& syntax,
                                               const BindContext& context) {
-    Expression& left =
-        selfDetermined(compilation, *syntax.expression, context, BindFlags::Constant);
+    const Expression& left = bind(*syntax.expression, context, BindFlags::Constant);
     Expression& right = selfDetermined(compilation, *syntax.concatenation, context);
 
     auto result = compilation.emplace<ReplicationExpression>(compilation.getErrorType(), left,
@@ -1621,8 +1623,7 @@ void CallExpression::toJson(json& j) const {
 Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const CastExpressionSyntax& syntax,
                                              const BindContext& context) {
-    auto& targetExpr = selfDetermined(compilation, *syntax.left, context,
-                                      BindFlags::AllowDataType | BindFlags::Constant);
+    auto& targetExpr = bind(*syntax.left, context, BindFlags::AllowDataType | BindFlags::Constant);
     auto& operand = selfDetermined(compilation, *syntax.right, context);
 
     auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(), operand,

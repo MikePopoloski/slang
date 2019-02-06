@@ -118,7 +118,8 @@ public:
     SourceRange sourceRange;
 
     /// Binds an expression tree from the given syntax nodes.
-    static const Expression& bind(const ExpressionSyntax& syntax, const BindContext& context);
+    static const Expression& bind(const ExpressionSyntax& syntax, const BindContext& context,
+                                  bitmask<BindFlags> extraFlags = BindFlags::None);
 
     /// Binds an assignment-like expression from the given syntax nodes.
     static const Expression& bind(const Type& lhs, const ExpressionSyntax& rhs,
@@ -511,7 +512,7 @@ public:
     RangeSelectionKind selectionKind;
 
     RangeSelectExpression(RangeSelectionKind selectionKind, const Type& type, Expression& value,
-                          Expression& left, Expression& right, SourceRange sourceRange) :
+                          const Expression& left, const Expression& right, SourceRange sourceRange) :
         Expression(ExpressionKind::RangeSelect, type, sourceRange),
         selectionKind(selectionKind), value_(&value), left_(&left), right_(&right) {}
 
@@ -519,10 +520,7 @@ public:
     Expression& value() { return *value_; }
 
     const Expression& left() const { return *left_; }
-    Expression& left() { return *left_; }
-
     const Expression& right() const { return *right_; }
-    Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
@@ -542,8 +540,8 @@ private:
                                      const ConstantValue& cr) const;
 
     Expression* value_;
-    Expression* left_;
-    Expression* right_;
+    const Expression* left_;
+    const Expression* right_;
 };
 
 /// Represents an access of a structure variable's members.
@@ -602,13 +600,12 @@ private:
 /// Represents a replication expression.
 class ReplicationExpression : public Expression {
 public:
-    ReplicationExpression(const Type& type, Expression& count, Expression& concat,
+    ReplicationExpression(const Type& type, const Expression& count, Expression& concat,
                           SourceRange sourceRange) :
         Expression(ExpressionKind::Replication, type, sourceRange),
         count_(&count), concat_(&concat) {}
 
     const Expression& count() const { return *count_; }
-    Expression& count() { return *count_; }
 
     const Expression& concat() const { return *concat_; }
     Expression& concat() { return *concat_; }
@@ -624,7 +621,7 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Replication; }
 
 private:
-    Expression* count_;
+    const Expression* count_;
     Expression* concat_;
 };
 

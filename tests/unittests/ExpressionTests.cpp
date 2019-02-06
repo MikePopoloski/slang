@@ -338,3 +338,32 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Checking for required constant subexpressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+
+    int a;
+    function int foo;
+        return a;
+    endfunction
+
+    logic [3:0] asdf;
+    always_comb asdf = asdf[foo:0];
+    always_comb asdf = asdf[0+:foo];
+    always_comb asdf = {foo {1}};
+    always_comb asdf = foo'(1);
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == DiagCode::ExpressionNotConstant);
+    CHECK(diags[1].code == DiagCode::ExpressionNotConstant);
+    CHECK(diags[2].code == DiagCode::ExpressionNotConstant);
+    CHECK(diags[3].code == DiagCode::ExpressionNotConstant);
+}
