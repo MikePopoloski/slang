@@ -306,8 +306,7 @@ public:
 /// Represents a string literal.
 class StringLiteral : public Expression {
 public:
-    StringLiteral(const Type& type, string_view value, SourceRange sourceRange) :
-        Expression(ExpressionKind::StringLiteral, type, sourceRange), value(value) {}
+    StringLiteral(const Type& type, string_view value, ConstantValue& intVal, SourceRange sourceRange);
 
     string_view getValue() const { return value; }
 
@@ -321,6 +320,7 @@ public:
 
 private:
     string_view value;
+    ConstantValue* intStorage;
 };
 
 /// Represents an expression that references a named value.

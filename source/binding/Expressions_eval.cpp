@@ -293,12 +293,7 @@ ConstantValue NullLiteral::evalImpl(EvalContext&) const {
 }
 
 ConstantValue StringLiteral::evalImpl(EvalContext&) const {
-    // TODO: truncation / resizing?
-    if (value.empty())
-        return SVInt(8, 0, false);
-
-    // TODO: store SVInt locally
-    return SVInt(type->getBitWidth(), as_bytes(make_span(value)), false);
+    return *intStorage;
 }
 
 ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {

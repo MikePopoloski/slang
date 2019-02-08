@@ -668,17 +668,39 @@ Expression& NullLiteral::fromSyntax(Compilation& compilation,
     return *compilation.emplace<NullLiteral>(compilation.getNullType(), syntax.sourceRange());
 }
 
+StringLiteral::StringLiteral(const Type& type, string_view value, ConstantValue& intVal,
+                             SourceRange sourceRange) :
+    Expression(ExpressionKind::StringLiteral, type, sourceRange),
+    value(value), intStorage(&intVal) {
+}
+
 Expression& StringLiteral::fromSyntax(Compilation& compilation,
                                       const LiteralExpressionSyntax& syntax) {
     ASSERT(syntax.kind == SyntaxKind::StringLiteralExpression);
 
-    // The standard does not say what the type width should be when the literal is empty
-    // (since you can't have a zero-width integer) so let's pretend there's a null byte there.
     string_view value = syntax.literal.valueText();
-    bitwidth_t width = value.empty() ? 8 : bitwidth_t(value.size()) * 8;
-    const auto& type = compilation.getType(width, IntegralFlags::Unsigned);
+    bitwidth_t width;
+    ConstantValue* intVal;
 
-    return *compilation.emplace<StringLiteral>(type, value, syntax.sourceRange());
+    if (value.empty()) {
+        // [11.10.3] says that empty string literals take on a value of "\0" (8 zero bits).
+        width = 8;
+        intVal = compilation.allocConstant(SVInt(8, 0, false));
+    }
+    else {
+        width = bitwidth_t(value.size()) * 8;
+
+        // String literals represented as integers put the first character on the
+        // left, which translates to the msb, so we have to reverse the string.
+        SmallVectorSized<byte, 64> bytes;
+        for (char c : make_reverse_range(value))
+            bytes.append((byte)c);
+
+        intVal = compilation.allocConstant(SVInt(width, bytes, false));
+    }
+
+    auto& type = compilation.getType(width, IntegralFlags::Unsigned);
+    return *compilation.emplace<StringLiteral>(type, value, *intVal, syntax.sourceRange());
 }
 
 void StringLiteral::toJson(json& j) const {

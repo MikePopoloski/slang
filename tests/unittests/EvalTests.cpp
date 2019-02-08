@@ -476,3 +476,33 @@ TEST_CASE("Unpacked struct eval") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("String literal ops") {
+    ScriptSession session;
+    session.eval("bit [8*14:1] str;");
+
+    SVInt v = session.eval("str = \"Hello world\";").integer();
+    CHECK(v == "112'h48656c6c6f20776f726c64"_si);
+
+    v = session.eval("str = {str, \"!!!\"};").integer();
+    CHECK(v == "112'h48656c6c6f20776f726c64212121"_si);
+
+    session.eval("bit [8*10:1] s1, s2;");
+    session.eval("s1 = \"Hello\";");
+    session.eval("s2 = \" world!\";");
+
+    // Comparison fails because of zero padding
+    v = session.eval("{s1,s2} == \"Hello world!\"").integer();
+    CHECK(v == 0);
+
+    // Make the comparison succeed
+    v = session.eval("{s1[5*8:1], s2[7*8:1]} == \"Hello world!\"").integer();
+    CHECK(v == 1);
+
+    // Multi-dimensional packed array
+    session.eval("bit [0:11] [7:0] str2 = \"Hello world\\n\";");
+    CHECK(session.eval("str2[0] == \"H\"").integer() == 1);
+    CHECK(session.eval("str2[11] == 8'hA").integer() == 1);
+
+    NO_SESSION_ERRORS;
+}
