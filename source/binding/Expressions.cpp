@@ -1418,14 +1418,13 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             continue;
         }
 
-        bitwidth_t newWidth = totalWidth + type.getBitWidth();
-        if (newWidth < totalWidth) {
+        // Can't overflow because 2*maxWidth is still less than 2^32-1.
+        totalWidth += type.getBitWidth();
+
+        if (!context.requireValidBitWidth(totalWidth, syntax.sourceRange())) {
             errored = true;
-            context.addDiag(DiagCode::ValueExceedsMaxBitWidth, syntax.sourceRange())
-                << (int)SVInt::MAX_BITS;
             break;
         }
-        totalWidth = newWidth;
 
         if (type.isFourState())
             flags |= IntegralFlags::FourState;
@@ -1454,20 +1453,29 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
 
     auto result = compilation.emplace<ReplicationExpression>(compilation.getErrorType(), left,
                                                              right, syntax.sourceRange());
+    if (left.bad() || right.bad())
+        return badExpr(compilation, result);
 
-    // If left was not a constant we already issued an error, so just bail out.
-    if (left.bad() || right.bad() || !left.constant ||
-        !context.requireIntegral(*left.constant, left.sourceRange)) {
+    // TODO: strings, unpacked arrays
+    if (!left.type->isIntegral() || !right.type->isIntegral()) {
+        auto& diag = context.addDiag(DiagCode::BadReplicationExpression,
+                                     syntax.concatenation->getFirstToken().location());
+        diag << *left.type << *right.type;
+        diag << left.sourceRange;
+        diag << right.sourceRange;
         return badExpr(compilation, result);
     }
 
-    const SVInt& value = left.constant->integer();
-    if (!context.requireNoUnknowns(value, left.sourceRange) ||
-        !context.requirePositive(value, left.sourceRange)) {
+    optional<int32_t> count = context.evalInteger(left);
+    if (!count)
+        return badExpr(compilation, result);
+
+    if (*count < 0) {
+        context.requireGtZero(count, left.sourceRange);
         return badExpr(compilation, result);
     }
 
-    if (value == 0) {
+    if (*count == 0) {
         if ((context.flags & BindFlags::InsideConcatenation) == 0) {
             context.addDiag(DiagCode::ReplicationZeroOutsideConcat, left.sourceRange);
             return badExpr(compilation, result);
@@ -1479,8 +1487,8 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return *result;
     }
 
-    auto width =
-        context.requireValidBitWidth(value * right.type->getBitWidth(), syntax.sourceRange());
+    auto width = context.requireValidBitWidth(SVInt(32, *count, true) * right.type->getBitWidth(),
+                                              syntax.sourceRange());
     if (!width)
         return badExpr(compilation, result);
 

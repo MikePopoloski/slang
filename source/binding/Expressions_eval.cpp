@@ -732,22 +732,18 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
         values.append(v.integer());
     }
 
-    // TODO: add support for other Nary Expressions, like stream concatenation
-    // switch (expr.syntax.kind) {
-    //  case SyntaxKind::ConcatenationExpression: return concatenate(values);
-    //}
-
     return concatenate(values);
 }
 
 ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
-    if (type->isVoid())
-        return SVInt(0);
-
+    // Operands are always evaluated, even if count is zero.
     ConstantValue v = concat().eval(context);
     ConstantValue c = count().eval(context);
     if (!v || !c)
         return nullptr;
+
+    if (type->isVoid())
+        return SVInt(0);
 
     return v.integer().replicate(c.integer());
 }
