@@ -154,7 +154,9 @@ void LValue::store(const ConstantValue& newValue) {
                 else if (cv.isString()) {
                     ASSERT(l == u);
                     ASSERT(l >= 0);
-                    cv.str()[l] = (char)*newValue.integer().as<uint8_t>();
+                    char c = (char)*newValue.integer().as<uint8_t>();
+                    if (c)
+                        cv.str()[l] = c;
                 }
                 else {
                     cv.integer().set(u, l, newValue.integer());

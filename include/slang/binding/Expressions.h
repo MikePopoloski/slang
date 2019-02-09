@@ -137,6 +137,10 @@ public:
     /// Indicates whether the expression evaluates to an lvalue.
     bool isLValue() const;
 
+    /// Indicates whether the expression is of type string, or if it
+    /// is implicitly convertible to a string.
+    bool isImplicitString() const;
+
     /// Evaluates the expression as a constant value.
     ConstantValue eval() const;
 
@@ -175,8 +179,6 @@ public:
 protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
-
-    void checkBindFlags(const BindContext& context) const;
 
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax,
                               const BindContext& context,
@@ -575,13 +577,12 @@ private:
 /// Represents a concatenation expression.
 class ConcatenationExpression : public Expression {
 public:
-    ConcatenationExpression(const Type& type, span<const Expression*> operands,
+    ConcatenationExpression(const Type& type, span<const Expression* const> operands,
                             SourceRange sourceRange) :
         Expression(ExpressionKind::Concatenation, type, sourceRange),
         operands_(operands) {}
 
     span<const Expression* const> operands() const { return operands_; }
-    span<const Expression*> operands() { return operands_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
 
@@ -594,7 +595,7 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Concatenation; }
 
 private:
-    span<const Expression*> operands_;
+    span<const Expression* const> operands_;
 };
 
 /// Represents a replication expression.

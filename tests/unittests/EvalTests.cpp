@@ -535,5 +535,29 @@ TEST_CASE("Dynamic string ops") {
     CHECK(session.eval("str2 >= \"aaaaa\"").integer() == 0);
     CHECK(session.eval("str2 > str2").integer() == 0);
 
+    CHECK(session.eval("str2[0]").integer() == '\n');
+    CHECK(session.eval("str2[0] == \"\\n\"").integer() == 1);
+
+    session.eval("str2[0] = \"\\0\"");
+    CHECK(session.eval("str2[0]").integer() == '\n');
+
+    session.eval("str2[0] = \"aaB\"");
+    CHECK(session.eval("str2[0]").integer() == 'B');
+
+    CHECK(session.eval("1 ? str2 : str1").str() == "BA");
+    CHECK(session.eval("1 ? \"C\" : str1").str() == "C");
+    CHECK(session.eval("0 ? str2 : \"D\"").str() == "D");
+    CHECK(session.eval("'x ? str2 : str1").str() == "");
+
+    session.eval("integer i = 5;");
+    CHECK(session.eval("str1 = {5{\"Hi\"}}").str() == "HiHiHiHiHi");
+    CHECK(session.eval("str2 = {i{\"Hi\"}}").str() == "HiHiHiHiHi");
+
+    session.eval("str1 = \"a\";");
+    CHECK(session.eval("str2 = {i{str1}}").str() == "aaaaa");
+    CHECK(session.eval("{str1,str2}").str() == "aaaaaa");
+    CHECK(session.eval("{\"Hi\",str2}").str() == "Hiaaaaa");
+    CHECK(session.eval("str2 = {\"Hi\", \"Bye\"}").str() == "HiBye");
+
     NO_SESSION_ERRORS;
 }

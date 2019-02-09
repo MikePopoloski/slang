@@ -237,8 +237,18 @@ bool isFalse(const ConstantValue& cv) {
 }
 
 bool checkArrayIndex(EvalContext& context, const Type& type, const ConstantValue& cs,
-                     SourceRange sourceRange, int32_t& result) {
+                     const std::string& str, SourceRange sourceRange, int32_t& result) {
     optional<int32_t> index = cs.integer().as<int32_t>();
+    if (index && type.isString()) {
+        if (*index < 0 || size_t(*index) >= str.size()) {
+            context.addDiag(DiagCode::NoteStringIndexInvalid, sourceRange) << cs << str.size();
+            return false;
+        }
+
+        result = *index;
+        return true;
+    }
+
     ConstantRange range = type.getArrayRange();
     if (!index || !range.containsPoint(*index)) {
         context.addDiag(DiagCode::NoteArrayIndexInvalid, sourceRange) << cs << type;
@@ -581,13 +591,10 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     if (!lvalue || !rvalue)
         return nullptr;
 
-    if (!isCompound())
-        lvalue.store(rvalue);
-    else {
+    if (isCompound())
         rvalue = evalBinaryOperator(*op, lvalue.load(), rvalue);
-        lvalue.store(rvalue);
-    }
 
+    lvalue.store(rvalue);
     return rvalue;
 }
 
@@ -597,12 +604,17 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv || !cs)
         return nullptr;
 
+    std::string str = value().type->isString() ? cv.str() : "";
+
     int32_t index;
-    if (!checkArrayIndex(context, *value().type, cs, sourceRange, index))
+    if (!checkArrayIndex(context, *value().type, cs, str, sourceRange, index))
         return nullptr;
 
     if (value().type->isUnpackedArray())
         return cv.elements()[index];
+
+    if (value().type->isString())
+        return cv.getSlice(index, index);
 
     // For packed arrays, we're selecting bit ranges, not necessarily single bits.
     int32_t width = (int32_t)type->getBitWidth();
@@ -616,12 +628,17 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval || !cs)
         return nullptr;
 
+    std::string str = value().type->isString() ? lval.load().str() : "";
+
     int32_t index;
-    if (!checkArrayIndex(context, *value().type, cs, sourceRange, index))
+    if (!checkArrayIndex(context, *value().type, cs, str, sourceRange, index))
         return nullptr;
 
     if (value().type->isUnpackedArray())
         return lval.selectIndex(index);
+
+    if (value().type->isString())
+        return lval.selectRange({ index, index });
 
     // For packed arrays, we're selecting bit ranges, not necessarily single bits.
     int32_t width = (int32_t)type->getBitWidth();
@@ -733,15 +750,32 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
 }
 
 ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
+    if (type->isString()) {
+        std::string result;
+        for (auto operand : operands()) {
+            ConstantValue v = operand->eval(context);
+            if (!v)
+                return nullptr;
+
+            // Skip zero-width replication operands.
+            if (operand->type->isVoid())
+                continue;
+
+            result.append(v.str());
+        }
+
+        return result;
+    }
+
     SmallVectorSized<SVInt, 8> values;
     for (auto operand : operands()) {
-        // Skip zero-width replication operands.
-        if (operand->type->isVoid())
-            continue;
-
         ConstantValue v = operand->eval(context);
         if (!v)
             return nullptr;
+
+        // Skip zero-width replication operands.
+        if (operand->type->isVoid())
+            continue;
 
         values.append(v.integer());
     }
@@ -757,7 +791,21 @@ ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     if (type->isVoid())
-        return SVInt(0);
+        return ConstantValue::NullPlaceholder();
+
+    if (type->isString()) {
+        optional<int32_t> optCount = c.integer().as<int32_t>();
+        if (!optCount || *optCount < 0) {
+            context.addDiag(DiagCode::NoteReplicationCountInvalid, count().sourceRange) << c;
+            return nullptr;
+        }
+
+        std::string result;
+        for (int32_t i = 0; i < *optCount; i++)
+            result.append(v.str());
+
+        return result;
+    }
 
     return v.integer().replicate(c.integer());
 }

@@ -83,13 +83,17 @@ const Type* singleBitType(Compilation& compilation, const Type* lt, const Type* 
 }
 
 const Type& getIndexedType(Compilation& compilation, const BindContext& context,
-                           const Type& valueType, SourceRange exprRange, SourceRange valueRange) {
+                           const Type& valueType, SourceRange exprRange, SourceRange valueRange,
+                           bool isRangeSelect) {
     const Type& ct = valueType.getCanonicalType();
     if (ct.kind == SymbolKind::UnpackedArrayType) {
         return ct.as<UnpackedArrayType>().elementType;
     }
     else if (ct.kind == SymbolKind::PackedArrayType) {
         return ct.as<PackedArrayType>().elementType;
+    }
+    else if (ct.kind == SymbolKind::StringType && !isRangeSelect) {
+        return compilation.getByteType();
     }
     else if (!ct.isIntegral()) {
         auto& diag = context.addDiag(DiagCode::BadIndexExpression, exprRange);
@@ -127,6 +131,20 @@ struct ToJsonVisitor {
     void visitInvalid(const Expression& expr, json& j) { visit(expr.as<InvalidExpression>(), j); }
 };
 
+void checkBindFlags(const Expression& expr, const BindContext& context) {
+    if (context.flags & BindFlags::Constant) {
+        EvalContext evalContext;
+        expr.eval(evalContext);
+
+        const Diagnostics& diags = evalContext.getDiagnostics();
+        if (!diags.empty()) {
+            Diagnostic& diag = context.addDiag(DiagCode::ExpressionNotConstant, expr.sourceRange);
+            for (const Diagnostic& note : diags)
+                diag.addNote(note);
+        }
+    }
+}
+
 } // namespace
 
 namespace slang {
@@ -161,7 +179,7 @@ struct Expression::PropagationVisitor {
         bool needConversion = !newType.isEquivalent(*expr.type);
         if constexpr (has_propagateType_v<T, bool, Compilation&, const Type&>) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
-                (newType.isIntegral() && expr.type->isIntegral())) {
+                (newType.isIntegral() && expr.type->isIntegral()) || newType.isString()) {
 
                 if (expr.propagateType(compilation, newType))
                     needConversion = false;
@@ -190,7 +208,7 @@ const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindCon
                                    bitmask<BindFlags> extraFlags) {
     const Expression& result =
         selfDetermined(context.scope.getCompilation(), syntax, context, extraFlags);
-    result.checkBindFlags(context.resetFlags(extraFlags));
+    checkBindFlags(result, context.resetFlags(extraFlags));
     return result;
 }
 
@@ -200,22 +218,8 @@ const Expression& Expression::bind(const Type& lhs, const ExpressionSyntax& rhs,
     Expression& expr = create(comp, rhs, context);
 
     const Expression& result = convertAssignment(context.scope, lhs, expr, location);
-    result.checkBindFlags(context);
+    checkBindFlags(result, context);
     return result;
-}
-
-void Expression::checkBindFlags(const BindContext& context) const {
-    if (context.flags & BindFlags::Constant) {
-        EvalContext evalContext;
-        eval(evalContext);
-
-        const Diagnostics& diags = evalContext.getDiagnostics();
-        if (!diags.empty()) {
-            Diagnostic& diag = context.addDiag(DiagCode::ExpressionNotConstant, sourceRange);
-            for (const Diagnostic& note : diags)
-                diag.addNote(note);
-        }
-    }
 }
 
 bool Expression::bad() const {
@@ -230,6 +234,30 @@ bool Expression::isLValue() const {
         case ExpressionKind::RangeSelect:
         case ExpressionKind::MemberAccess:
             return true;
+        default:
+            return false;
+    }
+}
+
+bool Expression::isImplicitString() const {
+    if (type->isString())
+        return true;
+
+    switch (kind) {
+        case ExpressionKind::StringLiteral:
+            return true;
+        case ExpressionKind::Concatenation: {
+            auto& concat = as<ConcatenationExpression>();
+            for (auto op : concat.operands()) {
+                if (!op->isImplicitString())
+                    return false;
+            }
+            return true;
+        }
+        case ExpressionKind::Replication: {
+            auto& repl = as<ReplicationExpression>();
+            return repl.concat().isImplicitString();
+        }
         default:
             return false;
     }
@@ -537,7 +565,7 @@ Expression& Expression::selfDetermined(Compilation& compilation, const Expressio
 Expression& Expression::implicitConversion(Compilation& compilation, const Type& targetType,
                                            Expression& expr) {
     ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
-           (targetType.isString() && expr.kind == ExpressionKind::StringLiteral));
+           (targetType.isString() && expr.isImplicitString()));
     ASSERT(!targetType.isEquivalent(*expr.type));
 
     Expression* result = &expr;
@@ -558,7 +586,7 @@ Expression& Expression::convertAssignment(const Scope& scope, const Type& type, 
     if (!type.isAssignmentCompatible(*rt)) {
         // String literals have a type of integer, but are allowed to implicitly convert to the
         // string type.
-        if (type.isString() && expr.kind == ExpressionKind::StringLiteral) {
+        if (type.isString() && expr.isImplicitString()) {
             Expression* result = &expr;
             result = &implicitConversion(compilation, type, *result);
             selfDetermined(compilation, result);
@@ -874,8 +902,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
 
     bool bothIntegral = lt->isIntegral() && rt->isIntegral();
     bool bothNumeric = lt->isNumeric() && rt->isNumeric();
-    bool bothStrings = (lt->isString() || lhs.kind == ExpressionKind::StringLiteral) &&
-                       (rt->isString() || rhs.kind == ExpressionKind::StringLiteral);
+    bool bothStrings = lhs.isImplicitString() && rhs.isImplicitString();
 
     bool good;
     switch (syntax.kind) {
@@ -1145,6 +1172,9 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
         else if (lt.isEquivalent(rt)) {
             result->type = &lt;
         }
+        else if (left.isImplicitString() && right.isImplicitString()) {
+            result->type = &compilation.getStringType();
+        }
         else {
             good = false;
         }
@@ -1218,8 +1248,8 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
                                                 const ExpressionSyntax& syntax,
                                                 SourceRange fullRange, const BindContext& context) {
     Expression& selector = selfDetermined(compilation, syntax, context);
-    const Type& resultType =
-        getIndexedType(compilation, context, *value.type, syntax.sourceRange(), value.sourceRange);
+    const Type& resultType = getIndexedType(compilation, context, *value.type, syntax.sourceRange(),
+                                            value.sourceRange, false);
 
     auto result =
         compilation.emplace<ElementSelectExpression>(resultType, value, selector, fullRange);
@@ -1292,8 +1322,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         return badExpr(compilation, result);
     }
 
-    const Type& elementType =
-        getIndexedType(compilation, context, *value.type, syntax.sourceRange(), value.sourceRange);
+    const Type& elementType = getIndexedType(compilation, context, *value.type,
+                                             syntax.sourceRange(), value.sourceRange, true);
     if (elementType.isError())
         return badExpr(compilation, result);
 
@@ -1441,9 +1471,10 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                                                 const ConcatenationExpressionSyntax& syntax,
                                                 const BindContext& context) {
     bool errored = false;
+    bool anyStrings = false;
     bitmask<IntegralFlags> flags;
     bitwidth_t totalWidth = 0;
-    SmallVectorSized<const Expression*, 8> buffer;
+    SmallVectorSized<Expression*, 8> buffer;
 
     for (auto argSyntax : syntax.expressions) {
         // Replications inside of concatenations have a special feature that allows them to have
@@ -1451,9 +1482,9 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
         // an additional flag so that it knows it's ok to have that zero count.
         Expression* arg;
         if (argSyntax->kind == SyntaxKind::MultipleConcatenationExpression)
-            arg = &selfDetermined(compilation, *argSyntax, context, BindFlags::InsideConcatenation);
+            arg = &create(compilation, *argSyntax, context, BindFlags::InsideConcatenation);
         else
-            arg = &selfDetermined(compilation, *argSyntax, context);
+            arg = &create(compilation, *argSyntax, context);
         buffer.append(arg);
 
         if (arg->bad()) {
@@ -1465,10 +1496,15 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
         if (type.isVoid() && argSyntax->kind == SyntaxKind::MultipleConcatenationExpression)
             continue;
 
+        if (type.isString()) {
+            anyStrings = true;
+            continue;
+        }
+
         if (!type.isIntegral()) {
             errored = true;
-            context.addDiag(DiagCode::BadConcatExpression, arg->sourceRange);
-            continue;
+            context.addDiag(DiagCode::BadConcatExpression, arg->sourceRange) << type;
+            break;
         }
 
         // Can't overflow because 2*maxWidth is still less than 2^32-1.
@@ -1483,14 +1519,40 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             flags |= IntegralFlags::FourState;
     }
 
+    if (!errored) {
+        for (uint32_t i = 0; i < buffer.size(); i++) {
+            if (!anyStrings)
+                selfDetermined(compilation, buffer[i]);
+            else {
+                Expression* expr = buffer[i];
+                if (expr->type->isString())
+                    selfDetermined(compilation, expr);
+                else if (expr->isImplicitString())
+                    contextDetermined(compilation, expr, compilation.getStringType());
+                else {
+                    errored = true;
+                    context.addDiag(DiagCode::ConcatWithStringInt, expr->sourceRange);
+                    break;
+                }
+                buffer[i] = expr;
+            }
+        }
+    }
+
     if (errored) {
         return badExpr(compilation, compilation.emplace<ConcatenationExpression>(
                                         compilation.getErrorType(), span<const Expression*>(),
                                         syntax.sourceRange()));
     }
 
-    return *compilation.emplace<ConcatenationExpression>(
-        compilation.getType(totalWidth, flags), buffer.copy(compilation), syntax.sourceRange());
+    const Type* type;
+    if (anyStrings)
+        type = &compilation.getStringType();
+    else
+        type = &compilation.getType(totalWidth, flags);
+
+    return *compilation.emplace<ConcatenationExpression>(*type, buffer.copy(compilation),
+                                                         syntax.sourceRange());
 }
 
 void ConcatenationExpression::toJson(json& j) const {
@@ -1501,22 +1563,38 @@ void ConcatenationExpression::toJson(json& j) const {
 Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
                                               const MultipleConcatenationExpressionSyntax& syntax,
                                               const BindContext& context) {
-    const Expression& left = bind(*syntax.expression, context, BindFlags::Constant);
-    Expression& right = selfDetermined(compilation, *syntax.concatenation, context);
+    Expression& left = selfDetermined(compilation, *syntax.expression, context);
+    Expression* right = &create(compilation, *syntax.concatenation, context);
 
     auto result = compilation.emplace<ReplicationExpression>(compilation.getErrorType(), left,
-                                                             right, syntax.sourceRange());
-    if (left.bad() || right.bad())
+                                                             *right, syntax.sourceRange());
+    if (left.bad() || right->bad())
         return badExpr(compilation, result);
 
-    // TODO: strings, unpacked arrays
-    if (!left.type->isIntegral() || !right.type->isIntegral()) {
+    // TODO: unpacked arrays
+    if (!left.type->isIntegral() || (!right->type->isIntegral() && !right->type->isString())) {
         auto& diag = context.addDiag(DiagCode::BadReplicationExpression,
                                      syntax.concatenation->getFirstToken().location());
-        diag << *left.type << *right.type;
+        diag << *left.type << *right->type;
         diag << left.sourceRange;
-        diag << right.sourceRange;
+        diag << right->sourceRange;
         return badExpr(compilation, result);
+    }
+
+    // If the multiplier isn't constant this must be a string replication.
+    if (!left.constant) {
+        if (!right->isImplicitString()) {
+            // They probably meant for this to be a constant (non-string) replication,
+            // so do the normal error reporting for that case.
+            checkBindFlags(left, context.resetFlags(BindFlags::Constant));
+            return badExpr(compilation, result);
+        }
+
+        contextDetermined(compilation, right, compilation.getStringType());
+
+        result->concat_ = right;
+        result->type = &compilation.getStringType();
+        return *result;
     }
 
     optional<int32_t> count = context.evalInteger(left);
@@ -1540,13 +1618,21 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return *result;
     }
 
-    auto width = context.requireValidBitWidth(SVInt(32, *count, true) * right.type->getBitWidth(),
+    selfDetermined(compilation, right);
+    result->concat_ = right;
+
+    if (right->type->isString()) {
+        result->type = &compilation.getStringType();
+        return *result;
+    }
+
+    auto width = context.requireValidBitWidth(SVInt(32, *count, true) * right->type->getBitWidth(),
                                               syntax.sourceRange());
     if (!width)
         return badExpr(compilation, result);
 
     result->type = &compilation.getType(
-        *width, right.type->isFourState() ? IntegralFlags::FourState : IntegralFlags::TwoState);
+        *width, right->type->isFourState() ? IntegralFlags::FourState : IntegralFlags::TwoState);
     return *result;
 }
 
