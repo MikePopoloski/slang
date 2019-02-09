@@ -536,7 +536,8 @@ Expression& Expression::selfDetermined(Compilation& compilation, const Expressio
 
 Expression& Expression::implicitConversion(Compilation& compilation, const Type& targetType,
                                            Expression& expr) {
-    ASSERT(targetType.isAssignmentCompatible(*expr.type));
+    ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
+           (targetType.isString() && expr.kind == ExpressionKind::StringLiteral));
     ASSERT(!targetType.isEquivalent(*expr.type));
 
     Expression* result = &expr;
@@ -555,6 +556,15 @@ Expression& Expression::convertAssignment(const Scope& scope, const Type& type, 
 
     const Type* rt = expr.type;
     if (!type.isAssignmentCompatible(*rt)) {
+        // String literals have a type of integer, but are allowed to implicitly convert to the
+        // string type.
+        if (type.isString() && expr.kind == ExpressionKind::StringLiteral) {
+            Expression* result = &expr;
+            result = &implicitConversion(compilation, type, *result);
+            selfDetermined(compilation, result);
+            return *result;
+        }
+
         DiagCode code =
             type.isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
         auto& diag = scope.addDiag(code, location);
@@ -574,15 +584,17 @@ Expression& Expression::convertAssignment(const Scope& scope, const Type& type, 
 
     if (type.isNumeric() && rt->isNumeric()) {
         rt = binaryOperatorType(compilation, &type, rt, false);
-        if (type.isEquivalent(*rt)) {
-            contextDetermined(compilation, result, *rt);
-            return *result;
-        }
+        contextDetermined(compilation, result, *rt);
 
-        result->type = rt;
+        if (type.isEquivalent(*rt))
+            return *result;
+
+        result = compilation.emplace<ConversionExpression>(type, *result, result->sourceRange);
+    }
+    else {
+        result = &implicitConversion(compilation, type, *result);
     }
 
-    result = &implicitConversion(compilation, type, *result);
     selfDetermined(compilation, result);
     return *result;
 }
