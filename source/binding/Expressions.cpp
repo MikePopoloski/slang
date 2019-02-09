@@ -1551,8 +1551,9 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     else
         type = &compilation.getType(totalWidth, flags);
 
-    return *compilation.emplace<ConcatenationExpression>(*type, buffer.copy(compilation),
-                                                         syntax.sourceRange());
+    auto copied = buffer.copy(compilation);
+    span<const Expression* const> elements(copied.data(), copied.size());
+    return *compilation.emplace<ConcatenationExpression>(*type, elements, syntax.sourceRange());
 }
 
 void ConcatenationExpression::toJson(json& j) const {
@@ -1626,8 +1627,8 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return *result;
     }
 
-    auto width = context.requireValidBitWidth(SVInt(32, *count, true) * right->type->getBitWidth(),
-                                              syntax.sourceRange());
+    auto width = context.requireValidBitWidth(
+        SVInt(32, uint64_t(*count), true) * right->type->getBitWidth(), syntax.sourceRange());
     if (!width)
         return badExpr(compilation, result);
 

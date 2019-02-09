@@ -60,7 +60,7 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower) const {
     if (isString()) {
         ASSERT(upper == lower);
         ASSERT(upper >= 0);
-        return SVInt(8, str()[upper], false);
+        return SVInt(8, (uint64_t)str()[uint64_t(upper)], false);
     }
 
     return nullptr;
@@ -156,7 +156,7 @@ void LValue::store(const ConstantValue& newValue) {
                     ASSERT(l >= 0);
                     char c = (char)*newValue.integer().as<uint8_t>();
                     if (c)
-                        cv.str()[l] = c;
+                        cv.str()[uint64_t(l)] = c;
                 }
                 else {
                     cv.integer().set(u, l, newValue.integer());
