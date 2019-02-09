@@ -30,6 +30,8 @@ public:
     ConstantValue(NullPlaceholder nul) : value(nul) {}
     ConstantValue(const Elements& elements) : value(elements) {}
     ConstantValue(Elements&& elements) : value(std::move(elements)) {}
+    ConstantValue(const std::string& str) : value(str) {}
+    ConstantValue(std::string&& str) : value(std::move(str)) {}
 
     template<typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
     ConstantValue(T real) : value(double(real)) {}
@@ -41,6 +43,7 @@ public:
     bool isReal() const { return std::holds_alternative<double>(value); }
     bool isNullHandle() const { return std::holds_alternative<NullPlaceholder>(value); }
     bool isUnpacked() const { return std::holds_alternative<Elements>(value); }
+    bool isString() const { return std::holds_alternative<std::string>(value); }
 
     SVInt& integer() & { return std::get<SVInt>(value); }
     const SVInt& integer() const& { return std::get<SVInt>(value); }
@@ -52,6 +55,11 @@ public:
     span<ConstantValue> elements() { return std::get<Elements>(value); }
     span<ConstantValue const> elements() const { return std::get<Elements>(value); }
 
+    std::string& str() & { return std::get<std::string>(value); }
+    const std::string& str() const& { return std::get<std::string>(value); }
+    std::string str() && { return std::get<std::string>(std::move(value)); }
+    std::string str() const&& { return std::get<std::string>(std::move(value)); }
+
     ConstantValue getSlice(int32_t upper, int32_t lower) const;
 
     std::string toString() const;
@@ -62,7 +70,7 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
 
 private:
-    std::variant<std::monostate, SVInt, double, NullPlaceholder, Elements> value;
+    std::variant<std::monostate, SVInt, double, NullPlaceholder, Elements, std::string> value;
 };
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative

@@ -40,6 +40,8 @@ std::string ConstantValue::toString() const {
                 buffer.append("]");
                 return buffer.str();
             }
+            else if constexpr (std::is_same_v<T, std::string>)
+                return arg;
             else
                 static_assert(always_false<T>::value, "Missing case");
         },
@@ -53,6 +55,12 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower) const {
     if (isUnpacked()) {
         auto slice = elements().subspan(lower, upper - lower + 1);
         return std::vector<ConstantValue>(slice.begin(), slice.end());
+    }
+
+    if (isString()) {
+        ASSERT(upper == lower);
+        ASSERT(upper >= 0);
+        return SVInt(8, str()[upper], false);
     }
 
     return nullptr;
@@ -142,6 +150,11 @@ void LValue::store(const ConstantValue& newValue) {
 
                     for (int32_t i = l; i <= u; i++)
                         dest[i] = src[i - l];
+                }
+                else if (cv.isString()) {
+                    ASSERT(l == u);
+                    ASSERT(l >= 0);
+                    cv.str()[l] = (char)*newValue.integer().as<uint8_t>();
                 }
                 else {
                     cv.integer().set(u, l, newValue.integer());

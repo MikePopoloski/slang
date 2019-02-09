@@ -592,8 +592,8 @@ NameSyntax& Parser::parseName(bool isForEach) {
             usedDot = true;
         else if (usedDot && !reportedError) {
             reportedError = true;
-            addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "::"
-                                                                           << ".";
+            addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "::"sv
+                                                                           << "."sv;
         }
         else if (peek().kind == TokenKind::NewKeyword)
             return factory.classScope(*name, separator);
@@ -602,16 +602,16 @@ NameSyntax& Parser::parseName(bool isForEach) {
             case SyntaxKind::UnitScope:
             case SyntaxKind::LocalScope:
                 if (kind != TokenKind::DoubleColon) {
-                    addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "."
-                                                                                   << "::";
+                    addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "."sv
+                                                                                   << "::"sv;
                 }
                 break;
             case SyntaxKind::RootScope:
             case SyntaxKind::ThisHandle:
             case SyntaxKind::SuperHandle:
                 if (kind != TokenKind::Dot) {
-                    addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "::"
-                                                                                   << ".";
+                    addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "::"sv
+                                                                                   << "."sv;
                 }
                 break;
             default:

@@ -41,6 +41,11 @@ bool Diagnostic::isSuppressed() const {
     return false;
 }
 
+Diagnostic& operator<<(Diagnostic& diag, const std::string& arg) {
+    diag.args.emplace_back(arg);
+    return diag;
+}
+
 Diagnostic& operator<<(Diagnostic& diag, string_view arg) {
     diag.args.emplace_back(std::string(arg));
     return diag;

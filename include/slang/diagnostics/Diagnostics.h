@@ -58,6 +58,7 @@ public:
 
     /// Adds an argument to the diagnostic.
     friend Diagnostic& operator<<(Diagnostic& diag, const Type& arg);
+    friend Diagnostic& operator<<(Diagnostic& diag, const std::string& arg);
     friend Diagnostic& operator<<(Diagnostic& diag, string_view arg);
     friend Diagnostic& operator<<(Diagnostic& diag, SourceRange arg);
     friend Diagnostic& operator<<(Diagnostic& diag, const ConstantValue& arg);

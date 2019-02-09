@@ -284,6 +284,9 @@ bool Type::isCastCompatible(const Type& rhs) const {
     if (l->isEnum())
         return r->isIntegral() || r->isFloating();
 
+    if (l->isString())
+        return r->isIntegral();
+
     return false;
 }
 
@@ -863,8 +866,7 @@ ConstantValue CHandleType::getDefaultValueImpl() const {
 }
 
 ConstantValue StringType::getDefaultValueImpl() const {
-    // TODO: implement this
-    THROW_UNREACHABLE;
+    return ""s;
 }
 
 ConstantValue EventType::getDefaultValueImpl() const {
@@ -961,19 +963,19 @@ void TypeAliasType::checkForwardDecls() const {
                 getScope()->addDiag(DiagCode::ForwardTypedefDoesNotMatch, forward->location);
             switch (forward->category) {
                 case ForwardingTypedefSymbol::Enum:
-                    diag << "enum";
+                    diag << "enum"sv;
                     break;
                 case ForwardingTypedefSymbol::Struct:
-                    diag << "struct";
+                    diag << "struct"sv;
                     break;
                 case ForwardingTypedefSymbol::Union:
-                    diag << "union";
+                    diag << "union"sv;
                     break;
                 case ForwardingTypedefSymbol::Class:
-                    diag << "class";
+                    diag << "class"sv;
                     break;
                 case ForwardingTypedefSymbol::InterfaceClass:
-                    diag << "interface class";
+                    diag << "interface class"sv;
                     break;
                 default:
                     THROW_UNREACHABLE;
