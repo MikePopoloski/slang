@@ -874,6 +874,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
 
     bool bothIntegral = lt->isIntegral() && rt->isIntegral();
     bool bothNumeric = lt->isNumeric() && rt->isNumeric();
+    bool bothStrings = (lt->isString() || lhs.kind == ExpressionKind::StringLiteral) &&
+                       (rt->isString() || rhs.kind == ExpressionKind::StringLiteral);
 
     bool good;
     switch (syntax.kind) {
@@ -931,12 +933,13 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
         case SyntaxKind::LessThanEqualExpression:
         case SyntaxKind::LessThanExpression: {
             // Result is always a single bit.
-            good = bothNumeric;
+            good = bothNumeric || bothStrings;
             result->type = singleBitType(compilation, lt, rt);
 
             // Result type is fixed but the two operands affect each other as they would in
             // other context-determined operators.
-            auto nt = binaryOperatorType(compilation, lt, rt, false);
+            auto nt = (good && !bothNumeric) ? &compilation.getStringType()
+                                             : binaryOperatorType(compilation, lt, rt, false);
             contextDetermined(compilation, result->left_, *nt);
             contextDetermined(compilation, result->right_, *nt);
             break;
@@ -974,7 +977,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 }
                 else if (syntax.kind == SyntaxKind::CaseEqualityExpression ||
                          syntax.kind == SyntaxKind::CaseInequalityExpression) {
-                    good = bothIntegral;
+                    good = true;
                     result->type = &compilation.getBitType();
                 }
                 else {
@@ -990,8 +993,21 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 contextDetermined(compilation, result->right_, *nt);
             }
             else {
-                if (lt->isAggregate() && lt->isEquivalent(*rt)) {
-                    good = true;
+                bool isContext = false;
+                bool isWildcard = syntax.kind == SyntaxKind::WildcardEqualityExpression ||
+                                  syntax.kind == SyntaxKind::WildcardInequalityExpression;
+
+                if (bothStrings) {
+                    good = !isWildcard;
+                    result->type = &compilation.getBitType();
+
+                    // If there is a literal involved, make sure it's converted to string.
+                    isContext = true;
+                    contextDetermined(compilation, result->left_, compilation.getStringType());
+                    contextDetermined(compilation, result->right_, compilation.getStringType());
+                }
+                else if (lt->isAggregate() && lt->isEquivalent(*rt)) {
+                    good = !isWildcard;
                     result->type = singleBitType(compilation, lt, rt);
                 }
                 else if ((lt->isClass() && lt->isAssignmentCompatible(*rt)) ||
@@ -1006,8 +1022,11 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 else {
                     good = false;
                 }
-                selfDetermined(compilation, result->left_);
-                selfDetermined(compilation, result->right_);
+
+                if (!isContext) {
+                    selfDetermined(compilation, result->left_);
+                    selfDetermined(compilation, result->right_);
+                }
             }
             break;
         default:

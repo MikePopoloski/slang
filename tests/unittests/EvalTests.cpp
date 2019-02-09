@@ -506,3 +506,34 @@ TEST_CASE("String literal ops") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Dynamic string ops") {
+    ScriptSession session;
+    session.eval("string str1;");
+    session.eval("string str2 = \"asdf\";");
+
+    auto v = session.eval("str2").str();
+    CHECK(v == "asdf");
+
+    v = session.eval("str2 = \"Hello\\0World\\0\";").str();
+    CHECK(v == "HelloWorld");
+
+    session.eval("bit [19:0] b = 20'haxx41;");
+    v = session.eval("str2 = string'(b);").str();
+    CHECK(v == "\nA");
+
+    CHECK(session.eval("str1 == str2").integer() == 0);
+    CHECK(session.eval("str2 == str2").integer() == 1);
+    CHECK(session.eval("str1 != str2").integer() == 1);
+
+    CHECK(session.eval("str1 == \"\"").integer() == 1);
+    CHECK(session.eval("\"\\nA\" == str2").integer() == 1);
+
+    CHECK(session.eval("str1 <= str1").integer() == 1);
+    CHECK(session.eval("str1 < str2").integer() == 1);
+    CHECK(session.eval("\"aaaaa\" >= str2").integer() == 1);
+    CHECK(session.eval("str2 >= \"aaaaa\"").integer() == 0);
+    CHECK(session.eval("str2 > str2").integer() == 0);
+
+    NO_SESSION_ERRORS;
+}

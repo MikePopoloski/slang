@@ -367,3 +367,31 @@ endmodule
     CHECK(diags[2].code == DiagCode::ExpressionNotConstant);
     CHECK(diags[3].code == DiagCode::ExpressionNotConstant);
 }
+
+TEST_CASE("Invalid string conversions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+
+    string s;
+
+    typedef logic[15:0] r_t;
+    r_t r;
+
+    always_comb begin
+        s = r;
+        r = s;
+        r = r_t'(s);    // ok
+        s = string'(r); // ok
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == DiagCode::NoImplicitConversion);
+    CHECK(diags[1].code == DiagCode::NoImplicitConversion);
+}

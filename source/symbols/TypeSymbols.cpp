@@ -287,6 +287,9 @@ bool Type::isCastCompatible(const Type& rhs) const {
     if (l->isString())
         return r->isIntegral();
 
+    if (r->isString())
+        return l->isIntegral();
+
     return false;
 }
 

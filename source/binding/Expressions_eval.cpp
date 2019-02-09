@@ -129,6 +129,8 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                 OP(LessThan, SVInt(l < r));
                 OP(Equality, SVInt(l == r));
                 OP(Inequality, SVInt(l != r));
+                OP(CaseEquality, SVInt(l == r));
+                OP(CaseInequality, SVInt(l != r));
                 OP(LogicalAnd, SVInt(bl && br));
                 OP(LogicalOr, SVInt(bl || br));
                 OP(LogicalImplication, SVInt(!bl || br));
@@ -167,6 +169,23 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
         }
 
         return SVInt(true);
+    }
+    else if (cvl.isString()) {
+        auto& l = cvl.str();
+        auto& r = cvr.str();
+
+        switch (op) {
+            OP(GreaterThanEqual, SVInt(l >= r));
+            OP(GreaterThan, SVInt(l > r));
+            OP(LessThanEqual, SVInt(l <= r));
+            OP(LessThan, SVInt(l < r));
+            OP(Equality, SVInt(l == r));
+            OP(Inequality, SVInt(l != r));
+            OP(CaseEquality, SVInt(l == r));
+            OP(CaseInequality, SVInt(l != r));
+            default:
+                THROW_UNREACHABLE;
+        }
     }
 
 #undef OP
@@ -782,6 +801,31 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
 
     const Type& rt = *operand().type;
     const Type& lt = *type;
+
+    if (lt.isString()) {
+        // Conversion is described in [6.16]: take each 8 bit chunk,
+        // remove it if it's zero, otherwise add as character to the string.
+        SVInt& v = value.integer();
+        int32_t msb = int32_t(v.getBitWidth() - 1);
+        int32_t extraBits = int32_t(v.getBitWidth() % 8);
+
+        std::string result;
+        if (extraBits) {
+            auto c = v.slice(msb, msb - extraBits + 1).as<uint8_t>();
+            if (c && *c)
+                result.push_back(char(*c));
+            msb -= extraBits;
+        }
+
+        while (msb >= 7) {
+            auto c = v.slice(msb, msb - 7).as<uint8_t>();
+            if (c && *c)
+                result.push_back(char(*c));
+            msb -= 8;
+        }
+
+        return result;
+    }
 
     SVInt& result = value.integer();
     if (lt.isFloating()) {
