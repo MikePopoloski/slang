@@ -1782,27 +1782,33 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     if (targetExpr.kind == ExpressionKind::DataType) {
         result->type = targetExpr.type;
     }
-    else if (!targetExpr.constant ||
-             !context.requireIntegral(*targetExpr.constant, targetExpr.sourceRange)) {
-        return badExpr(compilation, result);
-    }
     else {
-        // TODO: check for zero
-        const SVInt& value = targetExpr.constant->integer();
-        if (!context.requireNoUnknowns(value, targetExpr.sourceRange) ||
-            !context.requirePositive(value, targetExpr.sourceRange)) {
+        auto val = context.evalInteger(targetExpr);
+        if (!val || !context.requireGtZero(val, targetExpr.sourceRange))
+            return badExpr(compilation, result);
+
+        bitwidth_t width = bitwidth_t(*val);
+        if (!context.requireValidBitWidth(width, targetExpr.sourceRange))
+            return badExpr(compilation, result);
+
+        if (!operand.type->isIntegral()) {
+            auto& diag = context.addDiag(DiagCode::BadIntegerCast, syntax.apostrophe.location());
+            diag << *operand.type;
+            diag << targetExpr.sourceRange << operand.sourceRange;
             return badExpr(compilation, result);
         }
 
-        auto width = context.requireValidBitWidth(value, targetExpr.sourceRange);
-        if (!width)
-            return badExpr(compilation, result);
-
-        // TODO: require integer expression
-        result->type = &compilation.getType(*width, operand.type->getIntegralFlags());
+        result->type = &compilation.getType(width, operand.type->getIntegralFlags());
     }
 
-    // TODO: make sure cast compatible
+    const Type& type = *result->type;
+    if (!type.isCastCompatible(*operand.type)) {
+        auto& diag = context.addDiag(DiagCode::BadConversion, syntax.apostrophe.location());
+        diag << *operand.type << type;
+        diag << targetExpr.sourceRange << operand.sourceRange;
+        return badExpr(compilation, result);
+    }
+
     return *result;
 }
 

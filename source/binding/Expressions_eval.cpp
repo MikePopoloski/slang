@@ -7,6 +7,7 @@
 #include "slang/binding/Expressions.h"
 #include "slang/binding/Statements.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/numeric/ValueConverter.h"
 #include "slang/symbols/ASTVisitor.h"
 
 namespace {
@@ -845,60 +846,15 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
     if (!value)
         return nullptr;
 
-    // TODO: handle non-integral
+    const Type& to = *type;
+    if (to.isString())
+        return ValueConverter::intToStr(value.integer());
 
-    const Type& rt = *operand().type;
-    const Type& lt = *type;
+    if (to.isFloating())
+        return ValueConverter::intToFloat(value.integer());
 
-    if (lt.isString()) {
-        // Conversion is described in [6.16]: take each 8 bit chunk,
-        // remove it if it's zero, otherwise add as character to the string.
-        SVInt& v = value.integer();
-        int32_t msb = int32_t(v.getBitWidth() - 1);
-        int32_t extraBits = int32_t(v.getBitWidth() % 8);
-
-        std::string result;
-        if (extraBits) {
-            auto c = v.slice(msb, msb - extraBits + 1).as<uint8_t>();
-            if (c && *c)
-                result.push_back(char(*c));
-            msb -= extraBits;
-        }
-
-        while (msb >= 7) {
-            auto c = v.slice(msb, msb - 7).as<uint8_t>();
-            if (c && *c)
-                result.push_back(char(*c));
-            msb -= 8;
-        }
-
-        return result;
-    }
-
-    SVInt& result = value.integer();
-    if (lt.isFloating()) {
-        // TODO: make this more robust
-        return (double)result.as<int64_t>().value();
-    }
-
-    // TODO: handle four state changes
-    // TODO: sign handling is not quite right
-    result.setSigned(lt.isSigned());
-
-    bitwidth_t lw = lt.getBitWidth();
-    bitwidth_t rw = rt.getBitWidth();
-    if (lw != rw) {
-        if (lw < rw) {
-            // TODO: add a truncate() method
-            return result.slice((int32_t)lw - 1, 0);
-        }
-        else {
-            ASSERT(result.getBitWidth() == rw);
-            return extend(result, lw, result.isSigned());
-        }
-    }
-
-    return result;
+    // TODO: other types
+    return ValueConverter::intToInt(value.integer(), to.getBitWidth(), to.isSigned());
 }
 
 ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {
