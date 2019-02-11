@@ -178,12 +178,18 @@ error ReplicationZeroOutsideConcat "replication constant can only be zero inside
 error InvalidMemberAccess "invalid member access for type {}"
 error ExpressionNotCallable "expression is not callable"
 error NotBooleanConvertible "value of type {} is not convertible to a boolean predicate"
+error EnumValueNotIntegral "enum value must be integral"
+error EnumValueSizeMismatch "expression width of {} does not exactly match declared enum type width of {}"
 
 // statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
 
 // types
-error InvalidEnumBase ""
+error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"
+error EnumValueUnknownBits "value of {} is invalid for enum with base type {}"
+error EnumValueOverflow "incrementing previous value {} would overflow enum base type {}"
+error EnumIncrementUnknown "cannot increment previous value {} because it has unknown bits"
+error EnumValueDuplicate "redefinition of enum value {}"
 
 // lookups
 error AmbiguousWildcardImport "multiple imports found for identifier '{}'"

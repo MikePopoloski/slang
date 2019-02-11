@@ -69,11 +69,15 @@ const Expression& DeclaredType::resolveInitializer(const Type& type,
     // instead of the actual enum type (which doesn't allow implicit conversions from
     // normal integral values).
     auto& scope = context.scope;
+    bitmask<BindFlags> flags = context.flags;
     const Type* targetType = &type;
-    if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType)
+    if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType) {
         targetType = &targetType->as<EnumType>().baseType;
+        flags |= BindFlags::EnumInitializer;
+    }
 
-    return Expression::bind(*targetType, initializerSyntax, initializerLocation, context);
+    return Expression::bind(*targetType, initializerSyntax, initializerLocation,
+                            context.resetFlags(flags));
 }
 
 const Expression& DeclaredType::resolveInitializer(

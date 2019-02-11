@@ -127,8 +127,8 @@ public:
 
     /// Converts the given expression to the specified type, as if the right hand side had been
     /// assigned (without a cast) to a left hand side of the specified type.
-    static Expression& convertAssignment(const Scope& scope, const Type& type, Expression& expr,
-                                         SourceLocation location,
+    static Expression& convertAssignment(const BindContext& context, const Type& type,
+                                         Expression& expr, SourceLocation location,
                                          optional<SourceRange> lhsRange = std::nullopt);
 
     /// Indicates whether the expression is invalid.
@@ -228,8 +228,12 @@ public:
 /// Represents an integer literal.
 class IntegerLiteral : public Expression {
 public:
+    /// Indicates whether the original token in the source text was declared
+    /// unsized; if false, an explicit size was given.
+    bool isDeclaredUnsized;
+
     IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
-                   SourceRange sourceRange);
+                   bool isDeclaredUnsized, SourceRange sourceRange);
 
     SVInt getValue() const { return valueStorage; }
 
@@ -308,7 +312,8 @@ public:
 /// Represents a string literal.
 class StringLiteral : public Expression {
 public:
-    StringLiteral(const Type& type, string_view value, ConstantValue& intVal, SourceRange sourceRange);
+    StringLiteral(const Type& type, string_view value, ConstantValue& intVal,
+                  SourceRange sourceRange);
 
     string_view getValue() const { return value; }
 
@@ -514,7 +519,8 @@ public:
     RangeSelectionKind selectionKind;
 
     RangeSelectExpression(RangeSelectionKind selectionKind, const Type& type, Expression& value,
-                          const Expression& left, const Expression& right, SourceRange sourceRange) :
+                          const Expression& left, const Expression& right,
+                          SourceRange sourceRange) :
         Expression(ExpressionKind::RangeSelect, type, sourceRange),
         selectionKind(selectionKind), value_(&value), left_(&left), right_(&right) {}
 
@@ -676,8 +682,12 @@ private:
 /// Represents a type conversion expression.
 class ConversionExpression : public Expression {
 public:
-    ConversionExpression(const Type& type, Expression& operand, SourceRange sourceRange) :
-        Expression(ExpressionKind::Conversion, type, sourceRange), operand_(&operand) {}
+    bool isImplicit;
+
+    ConversionExpression(const Type& type, bool isImplicit, Expression& operand,
+                         SourceRange sourceRange) :
+        Expression(ExpressionKind::Conversion, type, sourceRange),
+        isImplicit(isImplicit), operand_(&operand) {}
 
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }

@@ -15,9 +15,10 @@ enum class BindFlags : uint8_t {
     None = 0,
     Constant = 1,
     InsideConcatenation = 2,
-    AllowDataType = 4
+    AllowDataType = 4,
+    EnumInitializer = 8
 };
-BITMASK_DEFINE_MAX_ELEMENT(BindFlags, AllowDataType);
+BITMASK_DEFINE_MAX_ELEMENT(BindFlags, EnumInitializer);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

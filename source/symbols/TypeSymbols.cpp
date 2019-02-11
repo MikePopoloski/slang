@@ -11,6 +11,7 @@
 #include "slang/binding/ConstantValue.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/TypePrinter.h"
+#include "slang/util/StackContainer.h"
 
 namespace {
 
@@ -595,7 +596,7 @@ ConstantValue FloatingType::getDefaultValueImpl() const {
 }
 
 EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType_,
-                   const Scope& scope) :
+                   LookupLocation lookupLocation) :
     IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(), baseType_.isSigned(),
                  baseType_.isFourState()),
     Scope(compilation, this), baseType(baseType_) {
@@ -603,26 +604,27 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& bas
     // Enum types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
     // lookups.
-    setParent(scope);
+    auto scope = lookupLocation.getScope();
+    ASSERT(scope);
+    setParent(*scope, lookupLocation.getIndex());
 }
 
 const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
                                  LookupLocation location, const Scope& scope, bool forceSigned) {
     const Type* base;
-    const Type* canonicalBase;
+    const Type* cb;
     if (!syntax.baseType) {
         base = &compilation.getIntType();
-        canonicalBase = base;
+        cb = base;
     }
     else {
         base = &compilation.getType(*syntax.baseType, location, scope, forceSigned);
 
-        canonicalBase = &base->getCanonicalType();
-        if (canonicalBase->isError())
-            return *canonicalBase;
+        cb = &base->getCanonicalType();
+        if (cb->isError())
+            return *cb;
 
-        // TODO: better checking of enum base types
-        if (!canonicalBase->isSimpleBitVector()) {
+        if (!cb->isSimpleBitVector()) {
             scope.addDiag(DiagCode::InvalidEnumBase, syntax.baseType->getFirstToken().location())
                 << *base;
             return compilation.getErrorType();
@@ -630,11 +632,25 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     }
 
     auto resultType =
-        compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base, scope);
+        compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base, location);
     resultType->setSyntax(syntax);
 
-    SVInt one(canonicalBase->getBitWidth(), 1, canonicalBase->isSigned());
-    SVInt current(canonicalBase->getBitWidth(), 0, canonicalBase->isSigned());
+    // Values must be unique; this set / lambda check for that.
+    SmallMap<SVInt, SourceLocation, 8> usedValues;
+    auto checkValue = [&usedValues, &scope](const SVInt& value, SourceLocation loc) {
+        auto pair = usedValues.emplace(value, loc);
+        if (!pair.second) {
+            auto& diag = scope.addDiag(DiagCode::EnumValueDuplicate, loc) << value;
+            diag.addNote(DiagCode::NotePreviousDefinition, pair.first->second);
+            return false;
+        }
+        return true;
+    };
+
+    SVInt one(cb->getBitWidth(), 1, cb->isSigned());
+    SVInt previous;
+    SourceRange previousRange;
+    bool first = true;
 
     // TODO: error if no members
     for (auto member : syntax.members) {
@@ -645,17 +661,54 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         resultType->addMember(*ev);
 
         if (!member->initializer) {
-            ev->setValue(current);
-            current += one;
+            auto loc = member->getFirstToken().location();
+
+            SVInt value;
+            if (first) {
+                value = SVInt(cb->getBitWidth(), 0, cb->isSigned());
+                first = false;
+            }
+            else if (previous.hasUnknown()) {
+                auto& diag = scope.addDiag(DiagCode::EnumIncrementUnknown, loc);
+                diag << previous << *base << previousRange;
+                return compilation.getErrorType();
+            }
+            else if (previous.getMinRepresentedBits() == cb->getBitWidth()) {
+                auto& diag = scope.addDiag(DiagCode::EnumValueOverflow, loc);
+                diag << previous << *base << previousRange;
+                return compilation.getErrorType();
+            }
+            else {
+                value = previous + one;
+            }
+
+            if (!checkValue(value, loc))
+                return compilation.getErrorType();
+
+            ev->setValue(value);
+            previous = value;
+            previousRange = member->sourceRange();
+            continue;
         }
-        else {
-            // TODO: require integer in binding
-            ev->setInitializerSyntax(*member->initializer->expr,
-                                     member->initializer->equals.location());
-            if (auto& cv = ev->getConstantValue())
-                current = cv.integer() + one;
-            else
-                current += one;
+
+        ev->setInitializerSyntax(*member->initializer->expr,
+                                 member->initializer->equals.location());
+
+        auto& cv = ev->getConstantValue();
+        if (!cv)
+            return compilation.getErrorType();
+
+        first = false;
+        previous = cv.integer();
+        previousRange = ev->getInitializer()->sourceRange;
+
+        if (!checkValue(previous, previousRange.start()))
+            return compilation.getErrorType();
+
+        if (previous.hasUnknown() && !cb->isFourState()) {
+            auto& diag = scope.addDiag(DiagCode::EnumValueUnknownBits, previousRange);
+            diag << cv << *base;
+            return compilation.getErrorType();
         }
     }
 

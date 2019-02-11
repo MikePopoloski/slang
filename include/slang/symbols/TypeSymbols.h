@@ -284,7 +284,7 @@ public:
     const Type& baseType;
 
     EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType,
-             const Scope& scope);
+             LookupLocation lookupLocation);
 
     static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope, bool forceSigned);

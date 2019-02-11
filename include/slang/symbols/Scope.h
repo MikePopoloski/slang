@@ -57,6 +57,9 @@ class LookupLocation {
 public:
     LookupLocation() = default;
 
+    const Scope* getScope() const { return scope; }
+    Symbol::Index getIndex() const { return Symbol::Index(index); }
+
     /// Places a location just before the given symbol in its parent scope.
     static LookupLocation before(const Symbol& symbol);
 

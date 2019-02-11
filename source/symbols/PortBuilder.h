@@ -640,8 +640,8 @@ private:
             return;
         }
 
-        port.setExternalConnection(
-            &Expression::convertAssignment(scope, port.getType(), *expr, range.start()));
+        port.setExternalConnection(&Expression::convertAssignment(
+            BindContext(scope, LookupLocation::max), port.getType(), *expr, range.start()));
     }
 
     void setInterfaceExpr(InterfacePortSymbol& port, const ExpressionSyntax& syntax) {

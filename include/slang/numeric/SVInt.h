@@ -606,4 +606,11 @@ struct hash<slang::SVInt> {
     size_t operator()(const slang::SVInt& sv) const { return sv.hash(); }
 };
 
+template<>
+struct equal_to<slang::SVInt> {
+    bool operator()(const slang::SVInt& lhs, const slang::SVInt& rhs) const {
+        return exactlyEqual(lhs, rhs);
+    }
+};
+
 } // namespace std

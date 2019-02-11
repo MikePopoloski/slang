@@ -145,6 +145,60 @@ void checkBindFlags(const Expression& expr, const BindContext& context) {
     }
 }
 
+bool recurseCheckEnum(const Expression& expr) {
+    switch (expr.kind) {
+        case ExpressionKind::UnbasedUnsizedIntegerLiteral:
+        case ExpressionKind::NamedValue:
+        case ExpressionKind::MemberAccess:
+            return true;
+        case ExpressionKind::IntegerLiteral:
+            return expr.as<IntegerLiteral>().isDeclaredUnsized;
+        case ExpressionKind::UnaryOp:
+            return recurseCheckEnum(expr.as<UnaryExpression>().operand());
+        case ExpressionKind::BinaryOp: {
+            auto& bin = expr.as<BinaryExpression>();
+            return recurseCheckEnum(bin.left()) && recurseCheckEnum(bin.right());
+        }
+        case ExpressionKind::ConditionalOp: {
+            auto& cond = expr.as<ConditionalExpression>();
+            return recurseCheckEnum(cond.left()) && recurseCheckEnum(cond.right());
+        }
+        case ExpressionKind::Conversion: {
+            auto& conv = expr.as<ConversionExpression>();
+            return conv.isImplicit && recurseCheckEnum(conv.operand());
+        }
+        default:
+            return false;
+    }
+}
+
+bool checkEnumInitializer(const BindContext& context, const Type& lt, const Expression& rhs) {
+    // [6.19] says that the initializer for an enum value must be an integer expression that
+    // does not truncate any bits. Furthermore, if a sized literal constant is used, it must
+    // be sized exactly to the size of the enum base type. It's not well defined what happens
+    // if the sized constant is used further down in some sub-expression, so what we check here
+    // is cases where it seems ok to suppress the error:
+    // - Unsized literals, variable references
+    // - Unary, binary, conditional expressions of the above
+
+    const Type& rt = *rhs.type;
+    if (!rt.isIntegral()) {
+        context.addDiag(DiagCode::EnumValueNotIntegral, rhs.sourceRange);
+        return false;
+    }
+
+    if (lt.getBitWidth() == rt.getBitWidth())
+        return true;
+
+    if (!recurseCheckEnum(rhs)) {
+        auto& diag = context.addDiag(DiagCode::EnumValueSizeMismatch, rhs.sourceRange);
+        diag << rt.getBitWidth() << lt.getBitWidth();
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace
 
 namespace slang {
@@ -172,10 +226,10 @@ struct Expression::PropagationVisitor {
             return expr;
         }
 
-        // If the new type is equivalent to the old type, there's no need for a conversion.
-        // Otherwise if both types are integral or both are real, we have to check if the
-        // conversion should be pushed further down the tree. Otherwise we should insert
-        // the implicit conversion here.
+        // If the new type is equivalent to the old type, there's no need for a
+        // conversion. Otherwise if both types are integral or both are real, we have to
+        // check if the conversion should be pushed further down the tree. Otherwise we
+        // should insert the implicit conversion here.
         bool needConversion = !newType.isEquivalent(*expr.type);
         if constexpr (has_propagateType_v<T, bool, Compilation&, const Type&>) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
@@ -217,7 +271,7 @@ const Expression& Expression::bind(const Type& lhs, const ExpressionSyntax& rhs,
     Compilation& comp = context.scope.getCompilation();
     Expression& expr = create(comp, rhs, context);
 
-    const Expression& result = convertAssignment(context.scope, lhs, expr, location);
+    const Expression& result = convertAssignment(context, lhs, expr, location);
     checkBindFlags(result, context);
     return result;
 }
@@ -570,15 +624,17 @@ Expression& Expression::implicitConversion(Compilation& compilation, const Type&
 
     Expression* result = &expr;
     selfDetermined(compilation, result);
-    return *compilation.emplace<ConversionExpression>(targetType, *result, result->sourceRange);
+    return *compilation.emplace<ConversionExpression>(targetType, true, *result,
+                                                      result->sourceRange);
 }
 
-Expression& Expression::convertAssignment(const Scope& scope, const Type& type, Expression& expr,
-                                          SourceLocation location, optional<SourceRange> lhsRange) {
+Expression& Expression::convertAssignment(const BindContext& context, const Type& type,
+                                          Expression& expr, SourceLocation location,
+                                          optional<SourceRange> lhsRange) {
     if (expr.bad())
         return expr;
 
-    Compilation& compilation = scope.getCompilation();
+    Compilation& compilation = context.scope.getCompilation();
     if (type.isError())
         return badExpr(compilation, &expr);
 
@@ -595,7 +651,7 @@ Expression& Expression::convertAssignment(const Scope& scope, const Type& type, 
 
         DiagCode code =
             type.isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
-        auto& diag = scope.addDiag(code, location);
+        auto& diag = context.addDiag(code, location);
         diag << *rt << type;
         if (lhsRange)
             diag << *lhsRange;
@@ -611,13 +667,20 @@ Expression& Expression::convertAssignment(const Scope& scope, const Type& type, 
     }
 
     if (type.isNumeric() && rt->isNumeric()) {
+        if ((context.flags & BindFlags::EnumInitializer) != 0 &&
+            !checkEnumInitializer(context, type, *result)) {
+
+            return badExpr(compilation, &expr);
+        }
+
         rt = binaryOperatorType(compilation, &type, rt, false);
         contextDetermined(compilation, result, *rt);
 
         if (type.isEquivalent(*rt))
             return *result;
 
-        result = compilation.emplace<ConversionExpression>(type, *result, result->sourceRange);
+        result =
+            compilation.emplace<ConversionExpression>(type, true, *result, result->sourceRange);
     }
     else {
         result = &implicitConversion(compilation, type, *result);
@@ -637,8 +700,9 @@ void InvalidExpression::toJson(json& j) const {
 }
 
 IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
-                               SourceRange sourceRange) :
+                               bool isDeclaredUnsized, SourceRange sourceRange) :
     Expression(ExpressionKind::IntegerLiteral, type, sourceRange),
+    isDeclaredUnsized(isDeclaredUnsized),
     valueStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown()) {
 
     if (value.isSingleWord())
@@ -655,7 +719,8 @@ Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
     ASSERT(syntax.kind == SyntaxKind::IntegerLiteralExpression);
 
     return *compilation.emplace<IntegerLiteral>(compilation, compilation.getIntType(),
-                                                syntax.literal.intValue(), syntax.sourceRange());
+                                                syntax.literal.intValue(), true,
+                                                syntax.sourceRange());
 }
 
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
@@ -669,7 +734,8 @@ Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
         flags |= IntegralFlags::FourState;
 
     const Type& type = compilation.getType(value.getBitWidth(), flags);
-    return *compilation.emplace<IntegerLiteral>(compilation, type, value, syntax.sourceRange());
+    return *compilation.emplace<IntegerLiteral>(compilation, type, value, !syntax.size.valid(),
+                                                syntax.sourceRange());
 }
 
 Expression& RealLiteral::fromSyntax(Compilation& compilation,
@@ -1229,7 +1295,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
 
     result->right_ =
-        &convertAssignment(context.scope, *lhs.type, *result->right_, location, lhs.sourceRange);
+        &convertAssignment(context, *lhs.type, *result->right_, location, lhs.sourceRange);
     if (result->right_->bad())
         return badExpr(compilation, result);
 
@@ -1774,8 +1840,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     auto& targetExpr = bind(*syntax.left, context, BindFlags::AllowDataType | BindFlags::Constant);
     auto& operand = selfDetermined(compilation, *syntax.right, context);
 
-    auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(), operand,
-                                                            syntax.sourceRange());
+    auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(), false,
+                                                            operand, syntax.sourceRange());
     if (targetExpr.bad() || operand.bad())
         return badExpr(compilation, result);
 

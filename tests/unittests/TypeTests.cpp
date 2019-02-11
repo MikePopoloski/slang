@@ -31,8 +31,60 @@ endmodule
     CHECK(values->getValue().integer() == 5);
     values++;
 
-    // TODO: test (and implement) all the restrictions on enum and enum values
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Enum initializer restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter logic [3:0] foo = '0;
+    parameter struct packed { logic [2:0] asdf; } foo2 = '0;
+
+    enum logic [2:0] { SDF1 = 1 + 1 } e1;           // ok
+    enum logic [2:0] { SDF2 = 1'd1 + 1'd1 } e2;     // bad
+    enum logic [2:0] { SDF3 = 2.0 } e3;             // bad
+    enum logic [2:0] { SDF4 = foo } e4;             // ok
+    enum logic [2:0] { SDF5 = foo + 1 } e5;         // ok
+    enum logic [2:0] { SDF6 = foo + 1'd1 } e6;      // bad
+    enum logic [2:0] { SDF7 = 1 ? foo : 1'd1 } e7;  // bad
+    enum logic [2:0] { SDF8 = 1 ? foo : '1 } e8;    // ok
+    enum logic [2:0] { SDF9 = foo2.asdf } e9;       // ok
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == DiagCode::EnumValueSizeMismatch);
+    CHECK(diags[1].code == DiagCode::EnumValueNotIntegral);
+    CHECK(diags[2].code == DiagCode::EnumValueSizeMismatch);
+    CHECK(diags[3].code == DiagCode::EnumValueSizeMismatch);
+}
+
+TEST_CASE("Enum value errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum bit [2:0] { A, B = 'x } e1;            // unknown not allowed
+    enum logic [2:0] { C, D = 'x, E } e2;       // incremented 'x not allowed
+    enum logic [2:0] { F, G = 3'b111, H } e3;   // overflow
+    enum logic [2:0] { I = 2, J = 1, K } e4;    // reuse of value
+    enum logic [2:0] { L = 2, M = 2 } e5;       // reuse of value
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == DiagCode::EnumValueUnknownBits);
+    CHECK(diags[1].code == DiagCode::EnumIncrementUnknown);
+    CHECK(diags[2].code == DiagCode::EnumValueOverflow);
+    CHECK(diags[3].code == DiagCode::EnumValueDuplicate);
+    CHECK(diags[4].code == DiagCode::EnumValueDuplicate);
 }
 
 TEST_CASE("Enum value leakage") {
