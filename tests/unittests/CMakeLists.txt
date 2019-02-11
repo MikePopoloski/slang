@@ -19,6 +19,11 @@ add_executable(unittests
 
 target_link_libraries(unittests PRIVATE slang CONAN_PKG::Catch2)
 
+if(CI_BUILD)
+	message("Running CI build")
+	target_compile_definitions(unittests PRIVATE CI_BUILD)
+endif()
+
 # Copy the data directory for running tests from the build folder.
 add_custom_command(
 	TARGET unittests POST_BUILD

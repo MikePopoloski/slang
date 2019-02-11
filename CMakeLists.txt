@@ -5,6 +5,7 @@ project(slang VERSION 0.1.0 LANGUAGES CXX)
 option(SLANG_MSVC_W4 "Enable /W4 for MSVC builds" ON)
 option(SLANG_MSVC_STATIC_RUNTIME "Enable linking to the MSVC static runtime" ON)
 option(SLANG_COVERAGE "Enable code coverage" OFF)
+option(CI_BUILD "Enable longer running tests for CI builds" OFF)
 set(SLANG_SANITIZERS "" CACHE STRING "List of Clang sanitizers to include in build")
 
 # Default build type if none is set
