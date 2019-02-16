@@ -155,6 +155,7 @@ SVInt VectorBuilder::finish() {
             default:
                 THROW_UNREACHABLE;
         }
+
         // All of the digits in the number require `multiplier` bits, except for
         // possibly the first (leading) digit. This one has leading zeros in it,
         // so only requires clog2(d+1) bits. If the leading digit is unknown
@@ -175,8 +176,7 @@ SVInt VectorBuilder::finish() {
                     bits = SVInt::MAX_BITS;
                 }
 
-                return SVInt::fromDigits(std::max(32u, bits), literalBase, signFlag, hasUnknown,
-                                         digits);
+                sizeBits = std::max(32u, bits);
             }
             else {
                 // we should warn about overflow here, but the spec says it is valid and

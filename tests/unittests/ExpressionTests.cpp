@@ -465,3 +465,18 @@ source:22:15: error: expected vector literal digits
               ^
 )");
 }
+
+TEST_CASE("Crazy long integer literal") {
+    std::string str = "int i = 'h";
+    str += std::string(4194304, 'f');
+    str += ';';
+
+    auto tree = SyntaxTree::fromText(str);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == DiagCode::VectorLiteralOverflow);
+}

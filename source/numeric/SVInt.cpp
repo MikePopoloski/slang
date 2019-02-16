@@ -252,9 +252,16 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
 
     uint32_t numWords = getNumWords(bits, false);
     uint32_t ones = (1 << shift) - 1;
-    for (const logic_t& d : digits) {
-        uint32_t unknown = 0;
-        uint32_t value = d.value;
+    uint64_t word = 0;
+    uint64_t unknownWord = 0;
+    uint64_t* dest = result.pVal;
+    uint64_t* endPtr = dest + numWords;
+    int bitPos = 0;
+
+    for (ptrdiff_t i = digits.size() - 1; i >= 0; i--) {
+        logic_t d = digits[i];
+        uint64_t unknown = 0;
+        uint64_t value = d.value;
 
         if (exactlyEqual(d, logic_t::x)) {
             value = 0;
@@ -269,26 +276,30 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
                 fmt::format("Digit {} too large for radix {}", value, radix));
         }
 
-        if (shift >= bits) {
-            // We only get here when the number has very few bits but has unknowns,
-            // so just clear out the lower word and move on.
-            result.pVal[0] = 0;
-            result.pVal[numWords] = 0;
-        }
-        else {
-            // Shift, including the unknown bits if necessary.
-            shlFar(result.pVal, result.pVal, shift, 0, 0, numWords);
+        word |= value << bitPos;
+        unknownWord |= unknown << bitPos;
+        bitPos += shift;
+
+        if (bitPos >= BITS_PER_WORD) {
+            *dest = word;
             if (anyUnknown)
-                shlFar(result.pVal, result.pVal, shift, 0, numWords, numWords);
+                *(dest + numWords) = unknownWord;
+
+            dest++;
+            if (dest == endPtr)
+                break;
+
+            bitPos -= BITS_PER_WORD;
+            word = value >> (shift - bitPos);
+            unknownWord = unknown >> (shift - bitPos);
         }
+    }
 
-        // Because we're shifting bits for the radix involved (2, 8, or 16) we
-        // know that the bits we're setting are fresh and all zero, so adding
-        // won't cause any kind of carry.
-        result.pVal[0] += value;
-
-        if (anyUnknown)
-            result.pVal[getNumWords(bits, false)] += unknown;
+    if (dest != endPtr) {
+        if (word)
+            *dest = word;
+        if (anyUnknown && unknownWord)
+            *(dest + numWords) = unknownWord;
     }
 
     result.clearUnusedBits();
