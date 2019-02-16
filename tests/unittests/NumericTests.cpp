@@ -156,6 +156,7 @@ TEST_CASE("logic_t operators") {
     CHECK(logic_t::z.isUnknown());
     CHECK(!bool(logic_t::x));
     CHECK(!bool(logic_t::z));
+    CHECK((logic_t(1) && true));
 
     CHECK_THAT(v1 == logic_t::x, exactlyEquals(logic_t::x));
     CHECK_THAT(v1 != logic_t::z, exactlyEquals(logic_t::x));
@@ -233,8 +234,8 @@ TEST_CASE("Comparison") {
     CHECK(bool("100'd1234"_si || "100'd0"_si));
     CHECK(bool(logic_t::x || "100'd1"_si));
 
-    CHECK(SVInt::logicalEquivalence("1234"_si, "98765"_si));
-    CHECK(SVInt::logicalImplication("0"_si, "98765"_si));
+    CHECK(SVInt::logicalEquiv("1234"_si, "98765"_si));
+    CHECK(SVInt::logicalImpl("0"_si, "98765"_si));
 
     CHECK(!("-58"_si < "-59"_si));
     CHECK(!("-58"_si < "-58"_si));
@@ -296,7 +297,7 @@ TEST_CASE("Arithmetic") {
     --v4;
     CHECK_THAT(v4, exactlyEquals("10'bx"_si));
     v4 = SVInt(4, 1, false);
-    --v4;
+    v4--;
     CHECK(v4 == 0);
 
     SVInt v5 = "-87'sd38"_si;
@@ -519,6 +520,10 @@ TEST_CASE("Slicing") {
     v2.set(0, 0, "1'b0"_si);
     CHECK_THAT(v2, exactlyEquals("128'b0"_si));
 
+    v1.set(9, 9, 0);
+    CHECK_THAT(v1.slice(8, -1), exactlyEquals("10'bxx0111x10x"_si));
+    CHECK_THAT(v2.slice(130, 129), exactlyEquals("2'bxx"_si));
+
     // Test huge values
     SVInt v3 =
         ("16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si
@@ -549,5 +554,17 @@ TEST_CASE("SVInt misc functions") {
 
     CHECK(slang::countLeadingZeros32(0) == 32);
 
-    CHECK_THAT(signExtend("11'bx101011x01z"_si, 15), exactlyEquals("15'bxxxxx101011x01z"_si));
+    CHECK_THAT("11'bx101011x01z"_si.sext(15), exactlyEquals("15'bxxxxx101011x01z"_si));
+
+    CHECK_THAT((SVInt::One || logic_t::x), exactlyEquals(logic_t(1)));
+    CHECK_THAT((SVInt::One && logic_t::x), exactlyEquals(logic_t::x));
+    CHECK_THAT((logic_t::x && SVInt::Zero), exactlyEquals(logic_t(0)));
+
+    CHECK(SVInt::concat({}) == SVInt::Zero);
+
+    CHECK(wildcardEqual("5'b10110"_si, "5'b10110"_si));
+    CHECK_THAT(wildcardEqual("5'bxx101"_si, "5'bxx10x"_si), exactlyEquals(logic_t(1)));
+    CHECK_THAT(wildcardEqual("12'bxx101"_si, "5'bxx10x"_si), exactlyEquals(logic_t::x));
+    CHECK_THAT(wildcardEqual("5'bxx100"_si, "12'bxx101"_si), exactlyEquals(logic_t(0)));
+    CHECK_THAT(wildcardEqual("5'bxx10x"_si, "12'bxx101"_si), exactlyEquals(logic_t::x));
 }

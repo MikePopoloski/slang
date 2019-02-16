@@ -333,6 +333,24 @@ public:
     /// Replace a range of bits in the number with the given bit pattern.
     void set(int32_t msb, int32_t lsb, const SVInt& value);
 
+    /// Perform sign extension to the given number of bits.
+    SVInt sext(bitwidth_t bits) const;
+
+    /// Perform zero extension to the given number of bits.
+    SVInt zext(bitwidth_t bits) const;
+
+    /// Extend the number to the given number of bits, performing sign extension
+    /// if `isSigned` is true.
+    SVInt extend(bitwidth_t bits, bool isSigned) const;
+
+    /// Truncate the number to the given number of bits.
+    SVInt trunc(bitwidth_t bits) const;
+
+    /// Resize the number to the given number of bits, truncating if smaller,
+    /// making a copy if the same size, zero extending if larger and unsigned,
+    /// and sign extending if larger and signed.
+    SVInt resize(bitwidth_t bits) const;
+
     SVInt& operator=(const SVInt& rhs) {
         if (isSingleWord() && rhs.isSingleWord()) {
             val = rhs.val;
@@ -435,24 +453,24 @@ public:
     static SVInt conditional(const SVInt& condition, const SVInt& lhs, const SVInt& rhs);
 
     /// Implements logical implication: lhs -> rhs. This is equivalent to (!lhs || rhs).
-    static logic_t logicalImplication(const SVInt& lhs, const SVInt& rhs);
+    static logic_t logicalImpl(const SVInt& lhs, const SVInt& rhs);
 
-    /// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs ->
-    /// lhs)).
-    static logic_t logicalEquivalence(const SVInt& lhs, const SVInt& rhs);
+    /// Implements logical equivalence: lhs <-> rhs.
+    /// This is equivalent to ((lhs -> rhs) && (rhs -> lhs)).
+    static logic_t logicalEquiv(const SVInt& lhs, const SVInt& rhs);
+
+    /// Concatenates one or more integers into one output integer.
+    static SVInt concat(span<SVInt const> operands);
 
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
     friend std::ostream& operator<<(std::ostream& os, const SVInt& rhs);
 
-    friend SVInt signExtend(const SVInt& value, bitwidth_t bits);
-    friend SVInt zeroExtend(const SVInt& value, bitwidth_t bits);
-    friend SVInt extend(const SVInt& value, bitwidth_t bits, bool sign);
+    /// Stricter equality, taking into account unknown bits.
     friend bool exactlyEqual(const SVInt& lhs, const SVInt& rhs);
-    friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
-    /// Concatenation operator
-    friend SVInt concatenate(span<SVInt const> operands);
+    /// Wildcard based equality, with unknown bits as wildcards.
+    friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     enum {
         MAX_BITS = (1 << 24) - 1,
@@ -485,11 +503,6 @@ private:
     logic_t equalsSlowCase(const SVInt& rhs) const;
     bitwidth_t countLeadingZerosSlowCase() const;
     bitwidth_t countLeadingOnesSlowCase() const;
-
-    // Get a specific word holding the given bit index.
-    uint64_t getWord(bitwidth_t bitIndex) const {
-        return isSingleWord() ? val : pVal[whichWord(bitIndex)];
-    }
 
     // Get the number of bits that are useful in the top word
     void getTopWordMask(bitwidth_t& bitsInMsw, uint64_t& mask) const;
@@ -572,14 +585,14 @@ inline bool operator&&(logic_t lhs, bool rhs) {
 }
 
 /// Implements logical implication: lhs -> rhs. This is equivalent to (!lhs || rhs).
-inline logic_t SVInt::logicalImplication(const SVInt& lhs, const SVInt& rhs) {
+inline logic_t SVInt::logicalImpl(const SVInt& lhs, const SVInt& rhs) {
     return !lhs || rhs;
 }
 
 /// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs ->
 /// lhs)).
-inline logic_t SVInt::logicalEquivalence(const SVInt& lhs, const SVInt& rhs) {
-    return logicalImplication(lhs, rhs) && logicalImplication(rhs, lhs);
+inline logic_t SVInt::logicalEquiv(const SVInt& lhs, const SVInt& rhs) {
+    return logicalImpl(lhs, rhs) && logicalImpl(rhs, lhs);
 }
 
 /// Returns the ceiling of the log_2 of the value. If value is zero, returns zero.

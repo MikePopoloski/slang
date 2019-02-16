@@ -93,8 +93,8 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                 OP(LessThan, SVInt(l < r));
                 OP(LogicalAnd, SVInt(l && r));
                 OP(LogicalOr, SVInt(l || r));
-                OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
-                OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
+                OP(LogicalImplication, SVInt(SVInt::logicalImpl(l, r)));
+                OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(l, r)));
                 OP(Power, l.pow(r));
             }
         }
@@ -103,8 +103,8 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
             switch (op) {
                 OP(LogicalAnd, SVInt(l && r));
                 OP(LogicalOr, SVInt(l || r));
-                OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
-                OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
+                OP(LogicalImplication, SVInt(SVInt::logicalImpl(l, r)));
+                OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(l, r)));
                 default:
                     THROW_UNREACHABLE;
             }
@@ -147,8 +147,8 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
             switch (op) {
                 OP(LogicalAnd, SVInt(r && b));
                 OP(LogicalOr, SVInt(r || b));
-                OP(LogicalImplication, SVInt(SVInt::logicalImplication(b, r)));
-                OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(b, r)));
+                OP(LogicalImplication, SVInt(SVInt::logicalImpl(b, r)));
+                OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(b, r)));
                 default:
                     THROW_UNREACHABLE;
             }
@@ -781,7 +781,7 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
         values.append(v.integer());
     }
 
-    return concatenate(values);
+    return SVInt::concat(values);
 }
 
 ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {

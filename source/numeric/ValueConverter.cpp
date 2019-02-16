@@ -16,19 +16,7 @@ SVInt ValueConverter::intToInt(const SVInt& integer, bitwidth_t width, bool isSi
     // TODO: sign handling is not quite right
     SVInt result = integer;
     result.setSigned(isSigned);
-
-    bitwidth_t oldWidth = result.getBitWidth();
-    if (oldWidth != width) {
-        if (width < oldWidth) {
-            // TODO: add a truncate() method
-            return result.slice((int32_t)width - 1, 0);
-        }
-        else {
-            return extend(result, width, result.isSigned());
-        }
-    }
-
-    return result;
+    return result.resize(width);
 }
 
 std::string ValueConverter::intToStr(const SVInt& integer) {

@@ -69,8 +69,4 @@ inline uint32_t countPopulation64(uint64_t value) {
 #endif
 }
 
-inline constexpr bool isPowerOfTwo(uint32_t value) {
-    return value && ((value & (value - 1)) == 0);
-}
-
 } // namespace slang

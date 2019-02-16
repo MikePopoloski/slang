@@ -220,7 +220,7 @@ TEST_CASE("Real operators") {
     session.eval("real r = 3.14;");
 
     using namespace Catch::literals;
-#define EVAL(expr, result) CHECK(session.eval(expr).real() == result)
+#define EVAL(expr, result) CHECK(session.eval(expr).real() == (result))
     EVAL("+r", 3.14_a);
     EVAL("-r", -3.14_a);
     EVAL("++r", 4.14_a);
@@ -237,7 +237,7 @@ TEST_CASE("Real operators") {
     EVAL("-3.0 ** 2.0", 9.0);
 #undef EVAL
 
-#define EVAL(expr, result) CHECK(session.eval(expr).integer() == result)
+#define EVAL(expr, result) CHECK(session.eval(expr).integer() == (result))
     EVAL("!r", 0);
     EVAL("r || 0", 1);
     EVAL("r && 0", 0);
@@ -259,7 +259,7 @@ TEST_CASE("Operator short circuiting") {
     ScriptSession session;
     session.eval("int a = 2, b = 3;");
 
-#define EVAL(expr, result) CHECK(session.eval(expr).integer() == result)
+#define EVAL(expr, result) CHECK(session.eval(expr).integer() == (result))
 
     session.eval("1 || b++");
     EVAL("b", 3);
