@@ -57,7 +57,7 @@ public:
                  const Bag& options = {});
 
     /// Push a new source file onto the stack.
-    void pushSource(string_view source);
+    void pushSource(string_view source, string_view name = "");
     void pushSource(SourceBuffer buffer);
 
     /// Predefines the given macro definition. The given definition string is lexed

@@ -507,3 +507,15 @@ TEST_CASE("Simple class new expression") {
     CHECK(expr.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Error at EOF") {
+    auto& text = "'d\n";
+    parseExpression(text);
+
+    std::string result = "\n" + DiagnosticWriter(getSourceManager()).report(diagnostics);
+    CHECK(result == R"(
+source:1:3: error: expected vector literal digits
+'d
+  ^
+)");
+}

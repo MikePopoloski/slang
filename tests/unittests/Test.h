@@ -160,7 +160,7 @@ inline const ExpressionSyntax& parseExpression(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(string_view(text));
+    preprocessor.pushSource(string_view(text), "source");
 
     Parser parser(preprocessor);
     return parser.parseExpression();

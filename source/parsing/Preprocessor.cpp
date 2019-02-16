@@ -89,8 +89,8 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
         undefine(string_view(undef));
 }
 
-void Preprocessor::pushSource(string_view source) {
-    auto buffer = sourceManager.assignText(source);
+void Preprocessor::pushSource(string_view source, string_view name) {
+    auto buffer = sourceManager.assignText(name, source);
     pushSource(buffer);
 }
 

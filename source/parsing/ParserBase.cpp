@@ -29,6 +29,14 @@ Diagnostics& ParserBase::getDiagnostics() {
 }
 
 Diagnostic& ParserBase::addDiag(DiagCode code, SourceLocation location) {
+    // If we issued this error in response to seeing an EOF token, back up and put
+    // the error on the last consumed token instead.
+    if (peek(TokenKind::EndOfFile) && peek().location() == location) {
+        Token last = getLastConsumed();
+        if (last)
+            location = last.location() + last.rawText().size();
+    }
+
     return getDiagnostics().add(code, location);
 }
 
