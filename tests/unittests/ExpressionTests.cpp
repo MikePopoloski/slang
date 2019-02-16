@@ -395,3 +395,73 @@ endmodule
     CHECK(diags[0].code == DiagCode::NoImplicitConversion);
     CHECK(diags[1].code == DiagCode::NoImplicitConversion);
 }
+
+TEST_CASE("Integer literal corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+`define FOO aa_ff
+`define BAR 'h
+
+module m1;
+
+    int i = 'd123498234978234;
+    int j = 0'd234;
+    int k = 16777216'd1;
+    int l = 16   `BAR `FOO;
+    integer m = 'b ??0101?1;
+    int n = 999999999999;
+    int o = 'b _?1;
+    int p = 'b3;
+    int q = 'ox789;
+    int r = 'd?;
+    int s = 'd  z_;
+    int t = 'd x1;
+    int u = 'd a;
+    int v = 'h g;
+    int w = 3'h f;
+    int x = 'd;
+
+endmodule
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:7:15: error: decimal literal overflows 32 bits
+    int i = 'd123498234978234;
+              ^
+source:8:13: error: size of vector literal cannot be zero
+    int j = 0'd234;
+            ^
+source:9:13: error: size of vector literal is too large (> 16777215 bits)
+    int k = 16777216'd1;
+            ^
+source:13:16: error: vector literals must not start with a leading underscore
+    int o = 'b _?1;
+               ^
+source:14:15: error: expected binary digit
+    int p = 'b3;
+              ^
+source:15:17: error: expected octal digit
+    int q = 'ox789;
+                ^
+source:18:17: error: decimal literals cannot have multiple digits if at least one of them is X or Z
+    int t = 'd x1;
+                ^
+source:19:16: error: expected decimal digit
+    int u = 'd a;
+               ^
+source:20:16: error: expected hexadecimal digit
+    int v = 'h g;
+               ^
+source:21:17: warning: vector literal too large for the given number of bits
+    int w = 3'h f;
+                ^
+source:22:15: error: expected vector literal digits
+    int x = 'd;
+              ^
+)");
+}

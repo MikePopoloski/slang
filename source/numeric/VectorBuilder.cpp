@@ -40,11 +40,8 @@ void VectorBuilder::append(Token token) {
 
     // underscore as the first char is not allowed
     string_view text = token.rawText();
-    if (text.length() == 0)
-        return;
-
     SourceLocation location = token.location();
-    if (first && text[0] == '_') {
+    if (first && text.length() && text[0] == '_') {
         diagnostics.add(DiagCode::VectorDigitsLeadingUnderscore, location);
         return;
     }
@@ -85,12 +82,17 @@ void VectorBuilder::append(Token token) {
             }
 
             for (char c : text) {
-                if (isLogicDigit(c)) {
-                    diagnostics.add(DiagCode::DecimalDigitMultipleUnknown, location + index);
-                    return;
+                if (isLogicDigit(c) || isDecimalDigit(c)) {
+                    if (hasUnknown) {
+                        diagnostics.add(DiagCode::DecimalDigitMultipleUnknown, location + index);
+                        return;
+                    }
+
+                    if (isLogicDigit(c))
+                        addDigit(getLogicCharValue(text[0]), 10);
+                    else
+                        addDigit(logic_t(getDigitValue(c)), 10);
                 }
-                else if (isDecimalDigit(c))
-                    addDigit(logic_t(getDigitValue(c)), 10);
                 else if (c != '_') {
                     diagnostics.add(DiagCode::BadDecimalDigit, location + index);
                     return;
@@ -167,11 +169,12 @@ SVInt VectorBuilder::finish() {
             bits += clog2(digits[0].value + 1);
 
         if (bits > sizeBits) {
-            if (bits > SVInt::MAX_BITS) {
-                diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
-                bits = SVInt::MAX_BITS;
-            }
             if (sizeBits == 0) {
+                if (bits > SVInt::MAX_BITS) {
+                    diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
+                    bits = SVInt::MAX_BITS;
+                }
+
                 return SVInt::fromDigits(std::max(32u, bits), literalBase, signFlag, hasUnknown,
                                          digits);
             }
