@@ -519,6 +519,11 @@ private:
     static constexpr uint32_t whichBit(bitwidth_t bitIndex) { return bitIndex % BITS_PER_WORD; }
     static constexpr uint64_t maskBit(bitwidth_t bitIndex) { return 1ULL << whichBit(bitIndex); }
 
+    static SVInt fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t const> digits);
+
+    static SVInt fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uint32_t radix,
+                                uint32_t shift, span<logic_t const> digits);
+
     // Split an integer's data into 32-bit words.
     static void splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords);
 

@@ -175,6 +175,9 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
     if (digits.empty())
         throw std::invalid_argument("No digits provided");
 
+    // Note: If the user specified a number too large to fit in the number of bits specified,
+    // the spec says to truncate from the left, which this method will successfully do.
+
     uint32_t radix = 0;
     uint32_t shift = 0;
     switch (base) {
@@ -206,6 +209,7 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
                 val <<= shift;
             else
                 val *= radix;
+
             val += d.value;
             if (d.value >= radix) {
                 throw std::invalid_argument(
@@ -215,40 +219,83 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
         return SVInt(bits, val, isSigned);
     }
 
-    // If the user specified a number too large to fit in the number of bits specified,
-    // the spec says to truncate from the left, which this method will successfully do.
-    SVInt result = allocZeroed(bits, isSigned, anyUnknown);
-
     if (radix == 10) {
-        SVInt digit(bits, 0, false);
-        SVInt radixSv(bits, 10, false);
-
-        for (const logic_t& d : digits) {
-            // In base ten we can't have individual bits be X or Z, it's all or nothing
-            if (anyUnknown) {
-                if (digits.size() != 1) {
-                    throw std::invalid_argument(
-                        "If a decimal number is unknown, it must have exactly one digit.");
-                }
-
-                if (exactlyEqual(d, logic_t::z))
-                    return createFillZ(bits, isSigned);
-                else
-                    return createFillX(bits, isSigned);
-            }
-
-            uint8_t value = d.value;
-            if (value >= radix) {
+        // In base ten we can't have individual bits be X or Z, it's all or nothing
+        if (anyUnknown) {
+            if (digits.size() != 1) {
                 throw std::invalid_argument(
-                    fmt::format("Digit {} too large for radix {}", value, radix));
+                    "If a decimal number is unknown, it must have exactly one digit.");
             }
 
-            result *= radixSv;
-            digit.pVal[0] = value;
-            result += digit;
+            if (exactlyEqual(digits[0], logic_t::z))
+                return createFillZ(bits, isSigned);
+            else
+                return createFillX(bits, isSigned);
         }
-        return result;
+
+        return fromDecimalDigits(bits, isSigned, digits);
     }
+
+    return fromPow2Digits(bits, isSigned, anyUnknown, radix, shift, digits);
+}
+
+SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t const> digits) {
+    SVInt result = allocZeroed(bits, isSigned, false);
+
+    constexpr int charsPerWord = 18;    // 18 decimal digits can fit in a 64-bit word
+    const logic_t* d = digits.data();
+    uint64_t maxWord = (uint64_t)std::pow(10, charsPerWord);
+    uint32_t count = 0;
+    uint64_t word;
+
+    auto nextDigit = [&]() {
+        uint8_t v = d->value;
+        if (v >= 10) {
+            throw std::invalid_argument(fmt::format("Digit {} too large for radix {}", v, 10));
+        }
+        d++;
+        return v;
+    };
+
+    auto writeWord = [&]() {
+        if (!count) {
+            if (word)
+                result.pVal[count++] = word;
+        }
+        else {
+            uint64_t carry = mulOne(result.pVal, result.pVal, count, maxWord);
+            carry += addOne(result.pVal, result.pVal, count, word);
+            if (carry)
+                result.pVal[count++] = carry;
+        }
+    };
+
+    uint32_t i;
+    for (i = charsPerWord; i < digits.size(); i += charsPerWord) {
+        word = nextDigit();
+        for (uint32_t j = charsPerWord - 1; j != 0; j--)
+            word = word * 10 + nextDigit();
+
+        writeWord();
+    }
+
+    maxWord = 10;
+    word = nextDigit();
+
+    for (uint32_t j = (uint32_t)digits.size() - (i - charsPerWord) - 1; j > 0; j--) {
+        word = word * 10 + nextDigit();
+        maxWord *= 10;
+    }
+
+    writeWord();
+
+    return result;
+}
+
+SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uint32_t radix,
+                            uint32_t shift, span<logic_t const> digits) {
+
+    SVInt result = allocZeroed(bits, isSigned, anyUnknown);
 
     uint32_t numWords = getNumWords(bits, false);
     uint32_t ones = (1 << shift) - 1;
