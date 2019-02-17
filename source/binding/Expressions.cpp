@@ -718,9 +718,11 @@ Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
                                        const LiteralExpressionSyntax& syntax) {
     ASSERT(syntax.kind == SyntaxKind::IntegerLiteralExpression);
 
+    SVInt val = syntax.literal.intValue().resize(32);
+    val.setSigned(true);
+
     return *compilation.emplace<IntegerLiteral>(compilation, compilation.getIntType(),
-                                                syntax.literal.intValue(), true,
-                                                syntax.sourceRange());
+                                                std::move(val), true, syntax.sourceRange());
 }
 
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation,

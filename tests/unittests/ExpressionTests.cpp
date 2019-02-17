@@ -439,6 +439,9 @@ source:8:13: error: size of vector literal cannot be zero
 source:9:13: error: size of vector literal is too large (> 16777215 bits)
     int k = 16777216'd1;
             ^
+source:12:13: error: signed integer overflows 32 bits
+    int n = 999999999999;
+            ^
 source:13:16: error: vector literals must not start with a leading underscore
     int o = 'b _?1;
                ^
@@ -478,5 +481,5 @@ TEST_CASE("Crazy long integer literal") {
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == DiagCode::VectorLiteralOverflow);
+    CHECK(diags[0].code == DiagCode::LiteralSizeTooLarge);
 }

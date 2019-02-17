@@ -16,9 +16,11 @@
 
 namespace slang {
 
+namespace {
+
 static const int MaxMantissaDigits = 18;
 
-inline bool composeDouble(double fraction, int exp, double& result) {
+bool composeDouble(double fraction, int exp, double& result) {
     static const double powersOf10[] = { 10.0,   100.0,  1.0e4,   1.0e8,  1.0e16,
                                          1.0e32, 1.0e64, 1.0e128, 1.0e256 };
 
@@ -47,8 +49,8 @@ inline bool composeDouble(double fraction, int exp, double& result) {
     return std::isfinite(result);
 }
 
-inline double computeRealValue(uint64_t value, int decPoint, int digits, uint64_t expValue,
-                               bool negative) {
+double computeRealValue(uint64_t value, int decPoint, int digits, uint64_t expValue,
+                        bool negative) {
     int fracExp = decPoint - std::min(digits, MaxMantissaDigits);
     int exp;
     if (negative)
@@ -61,6 +63,8 @@ inline double computeRealValue(uint64_t value, int decPoint, int digits, uint64_
 
     return result;
 }
+
+} // namespace
 
 SyntaxKind getDirectiveKind(string_view directive);
 
@@ -782,15 +786,16 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         advance();
 
     // scan past decimal digits; we know we have at least one if we got here
+    uint32_t startOfNum = currentOffset();
     uint64_t value = 0;
-    int digits = 0;
+    SmallVectorSized<logic_t, 32> digits;
     scanUnsignedNumber(value, digits);
 
     // check if we have a fractional number here
     switch (peek()) {
         case '.': {
             // fractional digits
-            int decPoint = digits;
+            int decPoint = (int)digits.size();
             advance();
             if (!isDecimalDigit(peek()))
                 addDiag(DiagCode::MissingFractionalDigits, currentOffset());
@@ -809,7 +814,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             else if (lexTimeLiteral(info))
                 result = TokenKind::TimeLiteral;
 
-            info->setReal(computeRealValue(value, decPoint, digits, exp, neg));
+            info->setReal(computeRealValue(value, decPoint, digits.size(), exp, neg));
             return result;
         }
         case 'e':
@@ -820,7 +825,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             uint64_t exp;
             bool neg;
             if (scanExponent(exp, neg)) {
-                info->setReal(computeRealValue(value, digits, digits, exp, neg));
+                info->setReal(computeRealValue(value, digits.size(), digits.size(), exp, neg));
                 return TokenKind::RealLiteral;
             }
             break;
@@ -833,8 +838,24 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         return TokenKind::TimeLiteral;
     }
 
-    // normal signed numeric literal
-    info->setInt(alloc, SVInt(32, value, true));
+    // normal numeric literal
+    if (digits.empty())
+        info->setInt(alloc, SVInt::Zero);
+    else {
+        static const double BitsPerDecimal = log2(10.0);
+
+        double bitsDbl = ceil(BitsPerDecimal * digits.size());
+        bitwidth_t bits;
+        if (bitsDbl <= SVInt::MAX_BITS)
+            bits = (bitwidth_t)bitsDbl;
+        else {
+            addDiag(DiagCode::LiteralSizeTooLarge, startOfNum) << (int)SVInt::MAX_BITS;
+            bits = SVInt::MAX_BITS;
+        }
+
+        info->setInt(alloc, SVInt::fromDigits(bits, LiteralBase::Decimal, false, false, digits));
+    }
+
     return TokenKind::IntegerLiteral;
 }
 
@@ -856,7 +877,7 @@ bool Lexer::scanExponent(uint64_t& value, bool& negative) {
         return false;
 
     // otherwise, we have a real exponent, so skip remaining digits
-    int unused = 0;
+    SmallVectorSized<logic_t, 32> unused;
     advance(index);
     scanUnsignedNumber(value, unused);
     return true;
@@ -992,7 +1013,7 @@ void Lexer::scanIdentifier() {
     }
 }
 
-void Lexer::scanUnsignedNumber(uint64_t& value, int& digits) {
+void Lexer::scanUnsignedNumber(uint64_t& value, SmallVector<logic_t>& digits) {
     while (true) {
         char c = peek();
         if (c == '_')
@@ -1002,9 +1023,11 @@ void Lexer::scanUnsignedNumber(uint64_t& value, int& digits) {
         else {
             // After 18 digits stop caring. For normal integers we're going to truncate
             // to 32-bits anyway. For reals, later digits won't have any effect on the result.
-            if (digits < MaxMantissaDigits)
-                value = (value * 10) + getDigitValue(c);
-            digits++;
+            uint8_t v = getDigitValue(c);
+            if (digits.size() < MaxMantissaDigits)
+                value = (value * 10) + v;
+
+            digits.append(logic_t(v));
             advance();
         }
     }
@@ -1080,9 +1103,9 @@ void Lexer::addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer) {
     triviaBuffer.emplace(kind, lexeme());
 }
 
-void Lexer::addDiag(DiagCode code, uint32_t offset) {
-    diagnostics.emplace(code, SourceLocation(getBufferID(), offset));
+Diagnostic& Lexer::addDiag(DiagCode code, uint32_t offset) {
     errorCount++;
+    return diagnostics.add(code, SourceLocation(getBufferID(), offset));
 }
 
 uint32_t Lexer::currentOffset() {

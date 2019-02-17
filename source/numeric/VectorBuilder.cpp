@@ -172,8 +172,9 @@ SVInt VectorBuilder::finish() {
         if (bits > sizeBits) {
             if (sizeBits == 0) {
                 if (bits > SVInt::MAX_BITS) {
-                    diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
                     bits = SVInt::MAX_BITS;
+                    diagnostics.add(DiagCode::LiteralSizeTooLarge, firstLocation)
+                        << (int)SVInt::MAX_BITS;
                 }
 
                 sizeBits = std::max(32u, bits);
