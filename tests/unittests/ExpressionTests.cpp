@@ -403,7 +403,7 @@ TEST_CASE("Integer literal corner cases") {
 
 module m1;
 
-    int i = 'd123498234978234;
+    int i = 35'd123498234978234;
     int j = 0'd234;
     int k = 16777216'd1;
     int l = 16   `BAR `FOO;
@@ -430,9 +430,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:7:15: error: decimal literal overflows 32 bits
-    int i = 'd123498234978234;
-              ^
+source:7:17: warning: vector literal too large for the given number of bits
+    int i = 35'd123498234978234;
+                ^
 source:8:13: error: size of vector literal cannot be zero
     int j = 0'd234;
             ^
@@ -469,7 +469,7 @@ source:22:15: error: expected vector literal digits
 )");
 }
 
-TEST_CASE("Crazy long integer literal") {
+TEST_CASE("Crazy long hex literal") {
     std::string str = "int i = 'h";
     str += std::string(4194304, 'f');
     str += ';';
@@ -483,3 +483,18 @@ TEST_CASE("Crazy long integer literal") {
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == DiagCode::LiteralSizeTooLarge);
 }
+
+//TEST_CASE("Crazy long decimal literal") {
+//    std::string str = "int i = 'd";
+//    str += std::string(5050446, '9');
+//    str += ';';
+//
+//    auto tree = SyntaxTree::fromText(str);
+//
+//    Compilation compilation;
+//    compilation.addSyntaxTree(tree);
+//
+//    auto& diags = compilation.getAllDiagnostics();
+//    REQUIRE(diags.size() == 1);
+//    CHECK(diags[0].code == DiagCode::LiteralSizeTooLarge);
+//}

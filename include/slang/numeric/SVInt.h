@@ -258,6 +258,10 @@ public:
     void setAllX();
     void setAllZ();
 
+    /// Resize the number to be the minimum number of bits without changing
+    /// the stored value. Note that this modifies the value in place.
+    void shrinkToFit();
+
     // Create an integer of the given bit width filled with X's or Z's.
     static SVInt createFillX(bitwidth_t bitWidth, bool isSigned);
     static SVInt createFillZ(bitwidth_t bitWidth, bool isSigned);
@@ -334,22 +338,22 @@ public:
     void set(int32_t msb, int32_t lsb, const SVInt& value);
 
     /// Perform sign extension to the given number of bits.
-    SVInt sext(bitwidth_t bits) const;
+    [[nodiscard]] SVInt sext(bitwidth_t bits) const;
 
     /// Perform zero extension to the given number of bits.
-    SVInt zext(bitwidth_t bits) const;
+    [[nodiscard]] SVInt zext(bitwidth_t bits) const;
 
     /// Extend the number to the given number of bits, performing sign extension
     /// if `isSigned` is true.
-    SVInt extend(bitwidth_t bits, bool isSigned) const;
+    [[nodiscard]] SVInt extend(bitwidth_t bits, bool isSigned) const;
 
     /// Truncate the number to the given number of bits.
-    SVInt trunc(bitwidth_t bits) const;
+    [[nodiscard]] SVInt trunc(bitwidth_t bits) const;
 
     /// Resize the number to the given number of bits, truncating if smaller,
     /// making a copy if the same size, zero extending if larger and unsigned,
     /// and sign extending if larger and signed.
-    SVInt resize(bitwidth_t bits) const;
+    [[nodiscard]] SVInt resize(bitwidth_t bits) const;
 
     SVInt& operator=(const SVInt& rhs) {
         if (isSingleWord() && rhs.isSingleWord()) {

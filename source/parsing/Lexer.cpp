@@ -853,7 +853,9 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             bits = SVInt::MAX_BITS;
         }
 
-        info->setInt(alloc, SVInt::fromDigits(bits, LiteralBase::Decimal, false, false, digits));
+        SVInt intVal = SVInt::fromDigits(bits, LiteralBase::Decimal, false, false, digits);
+        intVal.shrinkToFit();
+        info->setInt(alloc, std::move(intVal));
     }
 
     return TokenKind::IntegerLiteral;

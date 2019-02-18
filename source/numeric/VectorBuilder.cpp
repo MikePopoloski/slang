@@ -75,12 +75,24 @@ void VectorBuilder::append(Token token) {
             }
             break;
         case LiteralBase::Decimal:
-            // in decimal literals you can only use x or z if it's the only digit
-            if (first && text.length() == 1 && isLogicDigit(text[0])) {
-                addDigit(getLogicCharValue(text[0]), 10);
-                break;
+            // Decimals have the restriction that you can only use x or z if it's the only digit.
+            // Further, they can obviously only have decimal numbers (not A-F letters). Combined,
+            // this means that we should only ever see one token here in practice, unless there's
+            // an error. Optimize for this case and just suck the decimal value that's already
+            // been computed out of the token itself.
+            if (first) {
+                if (text.length() == 1 && isLogicDigit(text[0])) {
+                    addDigit(getLogicCharValue(text[0]), 10);
+                    break;
+                }
+
+                if (token.kind == TokenKind::IntegerLiteral) {
+                    decimalValue = token.intValue();
+                    break;
+                }
             }
 
+            // As mentioned above, this loop is just for checking errors.
             for (char c : text) {
                 if (isLogicDigit(c) || isDecimalDigit(c)) {
                     if (hasUnknown) {
@@ -88,10 +100,7 @@ void VectorBuilder::append(Token token) {
                         return;
                     }
 
-                    if (isLogicDigit(c))
-                        addDigit(getLogicCharValue(text[0]), 10);
-                    else
-                        addDigit(logic_t(getDigitValue(c)), 10);
+                    hasUnknown = isLogicDigit(c);
                 }
                 else if (c != '_') {
                     diagnostics.add(DiagCode::BadDecimalDigit, location + index);
@@ -125,22 +134,41 @@ SVInt VectorBuilder::finish() {
     if (!valid)
         return 0;
 
-    if (digits.empty())
-        digits.append(logic_t(0));
-    else if (literalBase == LiteralBase::Decimal) {
+    if (literalBase == LiteralBase::Decimal) {
+        // If we added an x or z, fall through to the general handler below.
+        // Otherwise, optimize for this case by reusing the integer value already
+        // computed by the token itself.
         if (!hasUnknown) {
-            uint64_t value = 0;
-            for (logic_t d : digits) {
-                value *= 10;
-                value += d.value;
-                if (value > UINT32_MAX) {
-                    diagnostics.add(DiagCode::DecimalLiteralOverflow, firstLocation);
-                    return 0;
-                }
+            // If no size was specified, just return the value as-is. Otherwise,
+            // resize it to match the desired size. Warn if that will truncate.
+            bitwidth_t width = decimalValue.getBitWidth();
+            SVInt result;
+            if (!sizeBits) {
+                // Unsized numbers are required to be at least 32 bits by the spec.
+                if (width < 32)
+                    result = decimalValue.resize(32);
+                else
+                    result = std::move(decimalValue);
             }
+            else if (width != sizeBits) {
+                if (width > sizeBits)
+                    diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
+
+                result = decimalValue.resize(sizeBits);
+            }
+            else {
+                result = std::move(decimalValue);
+            }
+
+            result.setSigned(signFlag);
+            return result;
         }
     }
-    else {
+
+    if (digits.empty()) {
+        digits.append(logic_t(0));
+    }
+    else if (literalBase != LiteralBase::Decimal) {
         uint32_t multiplier = 0;
         switch (literalBase) {
             case LiteralBase::Binary:
@@ -180,7 +208,7 @@ SVInt VectorBuilder::finish() {
                 sizeBits = std::max(32u, bits);
             }
             else {
-                // we should warn about overflow here, but the spec says it is valid and
+                // We should warn about overflow here, but the spec says it is valid and
                 // the literal gets truncated. Definitely a warning though.
                 diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
             }

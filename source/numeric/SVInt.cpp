@@ -242,7 +242,7 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
 SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t const> digits) {
     SVInt result = allocZeroed(bits, isSigned, false);
 
-    constexpr int charsPerWord = 18;    // 18 decimal digits can fit in a 64-bit word
+    constexpr int charsPerWord = 18; // 18 decimal digits can fit in a 64-bit word
     const logic_t* d = digits.data();
     uint64_t maxWord = (uint64_t)std::pow(10, charsPerWord);
     uint32_t count = 0;
@@ -445,6 +445,12 @@ void SVInt::setAllZ() {
     for (uint32_t i = 0; i < getNumWords(); i++)
         pVal[i] = UINT64_MAX;
     clearUnusedBits();
+}
+
+void SVInt::shrinkToFit() {
+    bitwidth_t minBits = getMinRepresentedBits();
+    if (minBits != bitWidth)
+        *this = resize(minBits);
 }
 
 SVInt SVInt::shl(const SVInt& rhs) const {

@@ -39,6 +39,7 @@ private:
     SourceLocation firstLocation;
     bitwidth_t sizeBits = 0;
     LiteralBase literalBase = LiteralBase::Binary;
+    SVInt decimalValue;
     bool signFlag = false;
     bool hasUnknown = false;
     bool valid = false;
