@@ -303,7 +303,7 @@ SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uin
     uint64_t unknownWord = 0;
     uint64_t* dest = result.pVal;
     uint64_t* endPtr = dest + numWords;
-    int bitPos = 0;
+    uint32_t bitPos = 0;
 
     for (ptrdiff_t i = digits.size() - 1; i >= 0; i--) {
         logic_t d = digits[i];

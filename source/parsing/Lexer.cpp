@@ -814,7 +814,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             else if (lexTimeLiteral(info))
                 result = TokenKind::TimeLiteral;
 
-            info->setReal(computeRealValue(value, decPoint, digits.size(), exp, neg));
+            info->setReal(computeRealValue(value, decPoint, (int)digits.size(), exp, neg));
             return result;
         }
         case 'e':
@@ -825,7 +825,8 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             uint64_t exp;
             bool neg;
             if (scanExponent(exp, neg)) {
-                info->setReal(computeRealValue(value, digits.size(), digits.size(), exp, neg));
+                info->setReal(
+                    computeRealValue(value, (int)digits.size(), (int)digits.size(), exp, neg));
                 return TokenKind::RealLiteral;
             }
             break;
@@ -855,7 +856,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
 
         SVInt intVal = SVInt::fromDigits(bits, LiteralBase::Decimal, false, false, digits);
         intVal.shrinkToFit();
-        info->setInt(alloc, std::move(intVal));
+        info->setInt(alloc, intVal);
     }
 
     return TokenKind::IntegerLiteral;

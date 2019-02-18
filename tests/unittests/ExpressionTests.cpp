@@ -484,6 +484,7 @@ TEST_CASE("Crazy long hex literal") {
     CHECK(diags[0].code == DiagCode::LiteralSizeTooLarge);
 }
 
+// TODO: optimize and re-enable
 //TEST_CASE("Crazy long decimal literal") {
 //    std::string str = "int i = 'd";
 //    str += std::string(5050446, '9');
