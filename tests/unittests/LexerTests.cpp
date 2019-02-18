@@ -493,6 +493,18 @@ TEST_CASE("Real literal (exponent overflow)") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString() == text);
     CHECK(std::isinf(token.realValue()));
+    CHECK(token.numericFlags().outOfRange());
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Real literal (underflow)") {
+    auto& text = "32e-9000";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toString() == text);
+    CHECK(token.realValue() == 0);
+    CHECK(token.numericFlags().outOfRange());
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
@@ -501,7 +513,7 @@ TEST_CASE("Real literal (bad exponent)") {
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
-    CHECK(token.toString() == "32.234");
+    CHECK(token.toString() == "32.234e");
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics.back().code == DiagCode::MissingExponentDigits);
 }
@@ -515,10 +527,11 @@ TEST_CASE("Real literal (digit overflow)") {
     CHECK_DIAGNOSTICS_EMPTY;
 
     CHECK(std::isinf(token.realValue()));
+    CHECK(token.numericFlags().outOfRange());
 }
 
 TEST_CASE("Integer literal (not an exponent)") {
-    auto& text = "32e_9";
+    auto& text = "32ef9";
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);

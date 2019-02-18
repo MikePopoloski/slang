@@ -442,7 +442,7 @@ source:9:13: error: size of vector literal is too large (> 16777215 bits)
 source:12:13: error: signed integer overflows 32 bits
     int n = 999999999999;
             ^
-source:13:16: error: vector literals must not start with a leading underscore
+source:13:16: error: numeric literals must not start with a leading underscore
     int o = 'b _?1;
                ^
 source:14:15: error: expected binary digit

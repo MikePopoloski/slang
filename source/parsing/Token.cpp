@@ -22,6 +22,10 @@ void NumericTokenFlags::set(TimeUnit unit_) {
     raw |= uint8_t(unit_) << 3;
 }
 
+void NumericTokenFlags::setOutOfRange(bool value) {
+    raw |= uint8_t(value) << 6;
+}
+
 Trivia::Trivia() : rawText{ "", 0 }, kind(TriviaKind::Unknown) {
 }
 
@@ -113,15 +117,15 @@ void Token::Info::setBit(logic_t value) {
     }
 }
 
-void Token::Info::setReal(double value) {
+void Token::Info::setReal(double value, bool outOfRange) {
     NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);
-    if (target)
-        target->value = value;
-    else {
-        NumericLiteralInfo numInfo;
-        numInfo.value = value;
-        extra = numInfo;
+    if (!target) {
+        extra = NumericLiteralInfo();
+        target = std::get_if<NumericLiteralInfo>(&extra);
     }
+
+    target->value = value;
+    target->numericFlags.setOutOfRange(outOfRange);
 }
 
 void Token::Info::setInt(BumpAllocator& alloc, const SVInt& value) {
@@ -253,7 +257,8 @@ logic_t Token::bitValue() const {
 }
 
 NumericTokenFlags Token::numericFlags() const {
-    ASSERT(kind == TokenKind::IntegerBase || kind == TokenKind::TimeLiteral);
+    ASSERT(kind == TokenKind::IntegerBase || kind == TokenKind::TimeLiteral ||
+           kind == TokenKind::RealLiteral);
     return info->numInfo().numericFlags;
 }
 
@@ -307,7 +312,7 @@ Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation 
             info->setBit(logic_t::x);
             break;
         case TokenKind::RealLiteral:
-            info->setReal(0.0);
+            info->setReal(0.0, false);
             break;
         case TokenKind::TimeLiteral:
             info->setTimeUnit(TimeUnit::Seconds);

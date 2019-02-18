@@ -14,57 +14,9 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
 
+static_assert(std::numeric_limits<double>::is_iec559, "SystemVerilog requires IEEE 754");
+
 namespace slang {
-
-namespace {
-
-static const int MaxMantissaDigits = 18;
-
-bool composeDouble(double fraction, int exp, double& result) {
-    static const double powersOf10[] = { 10.0,   100.0,  1.0e4,   1.0e8,  1.0e16,
-                                         1.0e32, 1.0e64, 1.0e128, 1.0e256 };
-
-    bool neg = false;
-    if (exp < 0) {
-        neg = true;
-        exp = -exp;
-    }
-
-    static const int MaxExponent = 511;
-    if (exp > MaxExponent)
-        exp = MaxExponent;
-
-    double dblExp = 1.0;
-    for (auto d = powersOf10; exp != 0; exp >>= 1, d++) {
-        if (exp & 0x1)
-            dblExp *= *d;
-    }
-
-    if (neg)
-        fraction /= dblExp;
-    else
-        fraction *= dblExp;
-
-    result = fraction;
-    return std::isfinite(result);
-}
-
-double computeRealValue(uint64_t value, int decPoint, int digits, uint64_t expValue,
-                        bool negative) {
-    int fracExp = decPoint - std::min(digits, MaxMantissaDigits);
-    int exp;
-    if (negative)
-        exp = fracExp - int(expValue);
-    else
-        exp = fracExp + int(expValue);
-
-    double result;
-    composeDouble(double(value), exp, result);
-
-    return result;
-}
-
-} // namespace
 
 SyntaxKind getDirectiveKind(string_view directive);
 
@@ -785,58 +737,144 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
     while (peek() == '0')
         advance();
 
-    // scan past decimal digits; we know we have at least one if we got here
+    // Keep track of digits as we iterate through them; convert them
+    // into logic_t to pass into SVInt parsing method. If it turns out
+    // that this is actually a float, we'll go back and populate `floatChars`
+    // instead. Since we expect many more ints than floats, it makes sense to
+    // not waste time populating that array up front.
     uint32_t startOfNum = currentOffset();
-    uint64_t value = 0;
     SmallVectorSized<logic_t, 32> digits;
-    scanUnsignedNumber(value, digits);
+    SmallVectorSized<char, 32> floatChars;
 
-    // check if we have a fractional number here
-    switch (peek()) {
-        case '.': {
-            // fractional digits
-            int decPoint = (int)digits.size();
+    while (true) {
+        char c = peek();
+        if (c == '_')
             advance();
-            if (!isDecimalDigit(peek()))
-                addDiag(DiagCode::MissingFractionalDigits, currentOffset());
-            scanUnsignedNumber(value, digits);
-
-            TokenKind result = TokenKind::RealLiteral;
-            uint64_t exp = 0;
-            bool neg = false;
-
-            char c = peek();
-            if (c == 'e' || c == 'E') {
-                uint32_t startOfExponent = currentOffset() + 1;
-                if (!scanExponent(exp, neg))
-                    addDiag(DiagCode::MissingExponentDigits, startOfExponent);
-            }
-            else if (lexTimeLiteral(info))
-                result = TokenKind::TimeLiteral;
-
-            info->setReal(computeRealValue(value, decPoint, (int)digits.size(), exp, neg));
-            return result;
-        }
-        case 'e':
-        case 'E': {
-            // Check if this is an exponent or just something like a hex digit.
-            // We disambiguate by always choosing a real if possible; someone
-            // downstream might need to fix it up later.
-            uint64_t exp;
-            bool neg;
-            if (scanExponent(exp, neg)) {
-                info->setReal(
-                    computeRealValue(value, (int)digits.size(), (int)digits.size(), exp, neg));
-                return TokenKind::RealLiteral;
-            }
+        else if (!isDecimalDigit(c))
             break;
+        else {
+            digits.append(logic_t(getDigitValue(c)));
+            advance();
         }
     }
 
-    if (lexTimeLiteral(info)) {
-        // TODO: overflow?
-        info->setReal((double)value);
-        return TokenKind::TimeLiteral;
+    auto populateChars = [&]() {
+        if (digits.empty())
+            floatChars.append('0');
+        else {
+            for (auto d : digits)
+                floatChars.append(d.value + '0');
+        }
+    };
+
+    // Check for fractional digits.
+    if (peek() == '.') {
+        advance();
+        populateChars();
+        floatChars.append('.');
+
+        if (peek() == '_')
+            addDiag(DiagCode::DigitsLeadingUnderscore, currentOffset());
+
+        bool any = false;
+        while (true) {
+            char c = peek();
+            if (c == '_')
+                advance();
+            else if (!isDecimalDigit(c))
+                break;
+            else {
+                any = true;
+                floatChars.append(c);
+                advance();
+            }
+        }
+
+        if (!any) {
+            addDiag(DiagCode::MissingFractionalDigits, currentOffset());
+            floatChars.append('0');
+        }
+    }
+
+    // Check for an exponent. Note that this case can be indistinguishable from
+    // the vector digits for a hex literal, so we can't issue any errors here if
+    // we don't have a decimal point (from above).
+    //
+    // Consider this nasty case we need to support:
+    // `FOO 3e+2
+    // If `FOO is defined to be 'h this represents an expression: 62 + 2
+    // Otherwise, this represents a real literal: 300.0
+
+    bool hasTimeSuffix = false;
+    char c = peek();
+    if (c == 'e' || c == 'E') {
+        bool hasDecimal = !floatChars.empty();
+        if (!hasDecimal)
+            populateChars();
+
+        floatChars.append('e');
+
+        // skip over leading sign
+        int index = 1;
+        c = peek(index);
+        if (c == '+' || c == '-') {
+            floatChars.append(c);
+            c = peek(++index);
+        }
+
+        if (c == '_' && hasDecimal)
+            addDiag(DiagCode::DigitsLeadingUnderscore, currentOffset());
+
+        bool any = false;
+        while (true) {
+            if (c == '_')
+                c = peek(++index);
+            else if (!isDecimalDigit(c))
+                break;
+            else {
+                any = true;
+                floatChars.append(c);
+                c = peek(++index);
+            }
+        }
+
+        if (any || hasDecimal) {
+            advance(index);
+            if (!any) {
+                addDiag(DiagCode::MissingExponentDigits, currentOffset());
+                floatChars.append('1');
+            }
+        }
+        else {
+            // This isn't a float, it's probably a hex literal. Back up (by not calling advance)
+            // and clear out the floatChars array so we don't think it should be a float.
+            floatChars.clear();
+        }
+    }
+    // Check for a time literal suffix directly adjacent. Time literal
+    // values are always interpreted as doubles.
+    else if (lexTimeLiteral(info)) {
+        hasTimeSuffix = true;
+        if (floatChars.empty())
+            populateChars();
+    }
+
+    if (!floatChars.empty()) {
+        // We have a floating point result. Let the standard library do the heavy lifting of
+        // converting and rounding correctly.
+        // TODO: change to use std::from_chars once it's available.
+        floatChars.append('\0');
+
+        char* end;
+        double value = strtod(floatChars.data(), &end);
+        ASSERT(end == floatChars.end() - 1); // should never error
+
+        // If we had an overflow or underflow, errno is now ERANGE. We can't warn here in case
+        // this turns out to actually be a hex literal. Have the token carry this info so someone
+        // can check it later if they care.
+        info->setReal(value, errno == ERANGE);
+
+        return hasTimeSuffix ? TokenKind::TimeLiteral : TokenKind::RealLiteral;
     }
 
     // normal numeric literal
@@ -860,30 +898,6 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
     }
 
     return TokenKind::IntegerLiteral;
-}
-
-bool Lexer::scanExponent(uint64_t& value, bool& negative) {
-    value = 0;
-    negative = false;
-
-    // skip over leading sign
-    int index = 1;
-    char c = peek(index);
-    if (c == '+' || c == '-') {
-        negative = c == '-';
-        index++;
-        c = peek(index);
-    }
-
-    // need at least one decimal digit
-    if (!isDecimalDigit(c))
-        return false;
-
-    // otherwise, we have a real exponent, so skip remaining digits
-    SmallVectorSized<logic_t, 32> unused;
-    advance(index);
-    scanUnsignedNumber(value, unused);
-    return true;
 }
 
 TokenKind Lexer::lexApostrophe(Token::Info* info) {
@@ -1013,26 +1027,6 @@ void Lexer::scanIdentifier() {
             advance();
         else
             return;
-    }
-}
-
-void Lexer::scanUnsignedNumber(uint64_t& value, SmallVector<logic_t>& digits) {
-    while (true) {
-        char c = peek();
-        if (c == '_')
-            advance();
-        else if (!isDecimalDigit(c))
-            return;
-        else {
-            // After 18 digits stop caring. For normal integers we're going to truncate
-            // to 32-bits anyway. For reals, later digits won't have any effect on the result.
-            uint8_t v = getDigitValue(c);
-            if (digits.size() < MaxMantissaDigits)
-                value = (value * 10) + v;
-
-            digits.append(logic_t(v));
-            advance();
-        }
     }
 }
 

@@ -86,8 +86,6 @@ private:
     void scanLineComment(SmallVector<Trivia>& triviaBuffer);
     void scanWhitespace(SmallVector<Trivia>& triviaBuffer);
     void scanIdentifier();
-    void scanUnsignedNumber(uint64_t& value, SmallVector<logic_t>& digits);
-    bool scanExponent(uint64_t& value, bool& negative);
 
     void addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer);
     Diagnostic& addDiag(DiagCode code, uint32_t offset);

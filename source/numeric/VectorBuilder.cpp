@@ -42,7 +42,7 @@ void VectorBuilder::append(Token token) {
     string_view text = token.rawText();
     SourceLocation location = token.location();
     if (first && text.length() && text[0] == '_') {
-        diagnostics.add(DiagCode::VectorDigitsLeadingUnderscore, location);
+        diagnostics.add(DiagCode::DigitsLeadingUnderscore, location);
         return;
     }
 

@@ -33,9 +33,11 @@ struct NumericTokenFlags {
     LiteralBase base() const { return LiteralBase(raw & 0b11); }
     bool isSigned() const { return (raw & 0b100) != 0; }
     TimeUnit unit() const { return TimeUnit((raw & 0b111000) >> 3); }
+    bool outOfRange() const { return (raw & 0b1000000) != 0; }
 
     void set(LiteralBase base, bool isSigned);
     void set(TimeUnit unit);
+    void setOutOfRange(bool value);
 };
 
 /// The original kind of identifier represented by a token.
@@ -159,7 +161,7 @@ public:
              bitmask<TokenFlags> flags = TokenFlags::None);
 
         void setBit(logic_t value);
-        void setReal(double value);
+        void setReal(double value, bool outOfRange);
         void setInt(BumpAllocator& alloc, const SVInt& value);
         void setNumFlags(LiteralBase base, bool isSigned);
         void setTimeUnit(TimeUnit unit);
