@@ -143,7 +143,7 @@ void ParserBase::Window::moveToNext() {
 void ParserBase::Window::insertHead(span<const Token> tokens) {
     if (currentOffset >= (uint32_t)tokens.size()) {
         currentOffset -= (uint32_t)tokens.size();
-        memcpy(buffer + currentOffset, tokens.data(), tokens.size() * sizeof(Token));
+        memcpy(buffer + currentOffset, tokens.data(), (uint32_t)tokens.size() * sizeof(Token));
         return;
     }
 
@@ -151,7 +151,7 @@ void ParserBase::Window::insertHead(span<const Token> tokens) {
     ASSERT((uint32_t)tokens.size() + existing < capacity);
 
     memmove(buffer + tokens.size(), buffer + currentOffset, existing * sizeof(Token));
-    memcpy(buffer, tokens.data(), tokens.size() * sizeof(Token));
+    memcpy(buffer, tokens.data(), (uint32_t)tokens.size() * sizeof(Token));
 
     currentOffset = 0;
     count = (uint32_t)tokens.size() + existing;
