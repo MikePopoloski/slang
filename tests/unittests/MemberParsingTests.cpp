@@ -98,6 +98,12 @@ TEST_CASE("Module members") {
     parseModuleMember("typedef foo #(T, B) bar;", SyntaxKind::TypedefDeclaration);
 }
 
+TEST_CASE("Parse buffer resize") {
+    // Test the resizing codepath for the parse speculation buffer.
+    parseModuleMember("parameter foo[1+1+1+1+1+1+1+1+1+1+1+1+1+1+1];",
+                      SyntaxKind::ParameterDeclarationStatement);
+}
+
 const MemberSyntax* parseClassMember(const std::string& text, SyntaxKind kind) {
     auto fullText = "class foo; " + text + " endclass";
     const auto& classDecl = parseClass(fullText);

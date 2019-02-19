@@ -112,23 +112,24 @@ Token ParserBase::getLastConsumed() const {
 void ParserBase::Window::addNew() {
     if (count >= capacity) {
         // shift tokens to the left if we are too far to the right
+        uint32_t shift = count - currentOffset;
         if (currentOffset > (capacity >> 1)) {
-            uint32_t shift = count - currentOffset;
             if (shift > 0)
                 memmove(buffer, buffer + currentOffset, shift * sizeof(Token));
-
-            count -= currentOffset;
-            currentOffset = 0;
         }
         else {
             capacity *= 2;
             Token* newBuffer = new Token[capacity];
-            memcpy(newBuffer, buffer, count * sizeof(Token));
+            memcpy(newBuffer, buffer + currentOffset, shift * sizeof(Token));
 
             delete[] buffer;
             buffer = newBuffer;
         }
+
+        count -= currentOffset;
+        currentOffset = 0;
     }
+
     buffer[count] = tokenSource.next();
     count++;
 }
