@@ -26,7 +26,7 @@ public:
     void start(LiteralBase base, bitwidth_t size, bool isSigned, SourceLocation location);
 
     /// Add another token to the literal.
-    void append(Token token);
+    int append(Token token);
 
     /// Finish off the literal and convert it into an SVInt instance.
     SVInt finish();

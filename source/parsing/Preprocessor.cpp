@@ -997,7 +997,7 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                 // and then appending those tokens to the destination as well.
                 SmallVectorSized<Token, 8> splits;
                 Lexer::splitTokens(alloc, diagnostics, sourceManager, newToken, offset + 2,
-                                   keywordVersionStack.back(), splits);
+                                   getCurrentKeywordVersion(), splits);
                 anyNewMacros |= applyMacroOps(splits, dest);
                 continue;
             }

@@ -28,11 +28,11 @@ void VectorBuilder::start(LiteralBase base, bitwidth_t size, bool isSigned,
     digits.clear();
 }
 
-void VectorBuilder::append(Token token) {
+int VectorBuilder::append(Token token) {
     // If we've had an error thus far, don't bother doing anything else that
     // might just add more errors on the pile.
     if (!valid)
-        return;
+        return -1;
 
     // set valid to false since we return early when we encounter errors
     // if we're still good at the end of the function we'll flip this back
@@ -43,7 +43,7 @@ void VectorBuilder::append(Token token) {
     SourceLocation location = token.location();
     if (first && text.length() && text[0] == '_') {
         diagnostics.add(DiagCode::DigitsLeadingUnderscore, location);
-        return;
+        return -1;
     }
 
     int index = 0;
@@ -56,7 +56,7 @@ void VectorBuilder::append(Token token) {
                     addDigit(logic_t(getDigitValue(c)), 2);
                 else if (c != '_') {
                     diagnostics.add(DiagCode::BadBinaryDigit, location + index);
-                    return;
+                    return -1;
                 }
                 index++;
             }
@@ -69,7 +69,7 @@ void VectorBuilder::append(Token token) {
                     addDigit(logic_t(getDigitValue(c)), 8);
                 else if (c != '_') {
                     diagnostics.add(DiagCode::BadOctalDigit, location + index);
-                    return;
+                    return -1;
                 }
                 index++;
             }
@@ -97,14 +97,14 @@ void VectorBuilder::append(Token token) {
                 if (isLogicDigit(c) || isDecimalDigit(c)) {
                     if (hasUnknown) {
                         diagnostics.add(DiagCode::DecimalDigitMultipleUnknown, location + index);
-                        return;
+                        return -1;
                     }
 
                     hasUnknown = isLogicDigit(c);
                 }
                 else if (c != '_') {
                     diagnostics.add(DiagCode::BadDecimalDigit, location + index);
-                    return;
+                    return -1;
                 }
                 index++;
             }
@@ -115,9 +115,15 @@ void VectorBuilder::append(Token token) {
                     addDigit(getLogicCharValue(c), 16);
                 else if (isHexDigit(c))
                     addDigit(logic_t(getHexDigitValue(c)), 16);
+                else if (c == '+' || c == '-') {
+                    // This is ok, this was initially lexed as a real token with exponent.
+                    first = false;
+                    valid = true;
+                    return index;
+                }
                 else if (c != '_') {
                     diagnostics.add(DiagCode::BadHexDigit, location + index);
-                    return;
+                    return -1;
                 }
                 index++;
             }
@@ -128,6 +134,7 @@ void VectorBuilder::append(Token token) {
 
     first = false;
     valid = true;
+    return -1;
 }
 
 SVInt VectorBuilder::finish() {

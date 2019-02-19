@@ -103,6 +103,8 @@ public:
     BumpAllocator& getAllocator() const { return alloc; }
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
+    KeywordVersion getCurrentKeywordVersion() const { return keywordVersionStack.back(); }
+
 private:
     // Internal methods to grab and handle the next token
     Token nextProcessed();

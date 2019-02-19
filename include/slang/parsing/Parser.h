@@ -282,6 +282,8 @@ private:
     template<bool (*IsEnd)(TokenKind)>
     bool scanTypePart(uint32_t& index, TokenKind start, TokenKind end);
 
+    void handleExponentSplit(Token token, size_t offset);
+
     SyntaxFactory factory;
     ParserOptions parseOptions;
     MetadataMap metadataMap;

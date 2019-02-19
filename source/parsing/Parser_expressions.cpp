@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
+#include "slang/parsing/Preprocessor.h"
 
 namespace slang {
 
@@ -315,7 +316,17 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
         count++;
         text.appendRange(next.rawText());
         consume();
-        vectorBuilder.append(next);
+
+        int index = vectorBuilder.append(next);
+        if (index >= 0) {
+            // This handles a really obnoxious case: 'h 3e+2
+            // The second token is initially lexed as a real literal, but we need to split
+            // it apart here now that we know it's a hex literal and put the remaining (new)
+            // tokens back on the parser's stack.
+            handleExponentSplit(next, (size_t)index);
+            break;
+        }
+
         next = peek();
     } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
@@ -326,6 +337,14 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
 
     return factory.integerVectorExpression(sizeToken, baseToken,
                                            Token(TokenKind::IntegerLiteral, info));
+}
+
+void Parser::handleExponentSplit(Token token, size_t offset) {
+    SmallVectorSized<Token, 4> split;
+    Lexer::splitTokens(alloc, getDiagnostics(), getPP().getSourceManager(), token, offset,
+                       getPP().getCurrentKeywordVersion(), split);
+
+    pushTokens(split);
 }
 
 ExpressionSyntax& Parser::parseInsideExpression(ExpressionSyntax& expr) {

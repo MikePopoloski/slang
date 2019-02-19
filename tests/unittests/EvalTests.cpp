@@ -561,3 +561,16 @@ TEST_CASE("Dynamic string ops") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Ambiguous numeric literals") {
+    ScriptSession session;
+    CHECK(session.eval("3e+2").real() == 3e2);
+    CHECK(session.eval("3e2").real() == 3e2);
+    CHECK(session.eval("'h 3e+2").integer() == 64);
+    CHECK(session.eval("'h 3e2").integer() == 994);
+
+    // This check is intended to hit a buffer wraparound case in ParserBase::Window::insertHead
+    CHECK(session.eval("1+1+1+1+1+1+1+1+1+1+1+1+1+1+'d1+ 'h 3e+2").integer() == 79);
+
+    NO_SESSION_ERRORS;
+}

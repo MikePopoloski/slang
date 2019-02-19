@@ -97,6 +97,10 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
         addDiag(*diagCode, token.location()) << token.range();
 }
 
+void ParserBase::pushTokens(span<const Token> tokens) {
+    window.insertHead(tokens);
+}
+
 Token ParserBase::missingToken(TokenKind kind, SourceLocation location) {
     return Token::createMissing(alloc, kind, location);
 }
@@ -133,6 +137,23 @@ void ParserBase::Window::moveToNext() {
     lastConsumed = currentToken;
     currentToken = Token();
     currentOffset++;
+}
+
+void ParserBase::Window::insertHead(span<const Token> tokens) {
+    if (currentOffset >= (uint32_t)tokens.size()) {
+        currentOffset -= (uint32_t)tokens.size();
+        memcpy(buffer + currentOffset, tokens.data(), tokens.size() * sizeof(Token));
+        return;
+    }
+
+    uint32_t existing = count - currentOffset;
+    ASSERT((uint32_t)tokens.size() + existing < capacity);
+
+    memmove(buffer + tokens.size(), buffer + currentOffset, existing * sizeof(Token));
+    memcpy(buffer, tokens.data(), tokens.size() * sizeof(Token));
+
+    currentOffset = 0;
+    count = (uint32_t)tokens.size() + existing;
 }
 
 } // namespace slang

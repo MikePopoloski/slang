@@ -33,6 +33,7 @@ protected:
     Token consumeIf(TokenKind kind);
     Token expect(TokenKind kind);
     void skipToken(std::optional<DiagCode> diagCode);
+    void pushTokens(span<const Token> tokens);
 
     Token missingToken(TokenKind kind, SourceLocation location);
 
@@ -73,6 +74,7 @@ protected:
 
         void addNew();
         void moveToNext();
+        void insertHead(span<const Token> tokens);
     };
 
     BumpAllocator& alloc;
