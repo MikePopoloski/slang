@@ -2084,26 +2084,7 @@ ClockingSkewSyntax* Parser::parseClockingSkew() {
 
     if (peek(TokenKind::Hash)) {
         hash = consume();
-        switch (peek().kind) {
-            case TokenKind::OpenParenthesis: {
-                auto openParen = consume();
-                auto& innerExpr = parseMinTypMaxExpression();
-                auto closeParen = expect(TokenKind::CloseParenthesis);
-                value = &factory.parenthesizedExpression(openParen, innerExpr, closeParen);
-                break;
-            }
-            case TokenKind::IntegerLiteral:
-            case TokenKind::RealLiteral:
-            case TokenKind::TimeLiteral:
-            case TokenKind::OneStep: {
-                auto literal = consume();
-                value = &factory.literalExpression(getLiteralExpression(literal.kind), literal);
-                break;
-            }
-            default:
-                value = &factory.identifierName(expect(TokenKind::Identifier));
-                break;
-        }
+        value = &parsePrimaryExpression();
     }
 
     if (!edge && !hash)

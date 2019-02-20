@@ -172,8 +172,18 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
         case TokenKind::RealLiteral: {
             // have to check for overflow here, now that we know this is actually a real
             auto literal = consume();
-            if (!std::isfinite(literal.realValue()))
-                addDiag(DiagCode::RealExponentOverflow, literal.location());
+            if (literal.numericFlags().outOfRange()) {
+                if (literal.realValue() == 0) {
+                    addDiag(DiagCode::RealLiteralUnderflow, literal.location())
+                        << std::numeric_limits<double>::denorm_min();
+                }
+                else {
+                    ASSERT(!std::isfinite(literal.realValue()));
+                    addDiag(DiagCode::RealLiteralOverflow, literal.location())
+                        << std::numeric_limits<double>::max();
+                }
+            }
+
             expr = &factory.literalExpression(SyntaxKind::RealLiteralExpression, literal);
             break;
         }

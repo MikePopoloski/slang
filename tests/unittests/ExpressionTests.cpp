@@ -469,6 +469,30 @@ source:22:15: error: expected vector literal digits
 )");
 }
 
+TEST_CASE("Real literal corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+    real a = 9999e99999;
+    real b = 9999e-99999;
+endmodule
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:3:14: warning: value of real literal is too large; maximum is 1.79769e+308
+    real a = 9999e99999;
+             ^
+source:4:14: warning: value of real literal is too small; minimum is 4.94066e-324
+    real b = 9999e-99999;
+             ^
+)");
+}
+
 TEST_CASE("Crazy long hex literal") {
     std::string str = "int i = 'h";
     str += std::string(4194304, 'f');
@@ -485,7 +509,7 @@ TEST_CASE("Crazy long hex literal") {
 }
 
 // TODO: optimize and re-enable
-//TEST_CASE("Crazy long decimal literal") {
+// TEST_CASE("Crazy long decimal literal") {
 //    std::string str = "int i = 'd";
 //    str += std::string(5050446, '9');
 //    str += ';';

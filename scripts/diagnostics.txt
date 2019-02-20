@@ -33,7 +33,6 @@ error TooManyLexerErrors "lexer has encountered too many errors (input is a bina
 // numeric
 error LiteralSizeIsZero "size of vector literal cannot be zero"
 error LiteralSizeTooLarge "size of vector literal is too large (> {} bits)"
-error RealExponentOverflow "real literal overflows 64 bits"
 error SignedIntegerOverflow "signed integer overflows 32 bits"
 error ValueMustBeIntegral "value must be integral"
 error ValueMustNotBeUnknown "value must not have any unknown bits"
@@ -229,6 +228,8 @@ note NoteFunctionIdentifiersMustBeLocal "all identifiers that are not parameters
 note NoteParamUsedInCEBeforeDecl "parameter '{}' is declared after the invocation of the current constant function"
 
 // warnings
+warning real-underflow RealLiteralUnderflow "value of real literal is too small; minimum is {}"
+warning real-overflow RealLiteralOverflow "value of real literal is too large; maximum is {}"
 warning literal-overflow VectorLiteralOverflow "vector literal too large for the given number of bits"
 warning ignored-macro-paste IgnoredMacroPaste "paste token is pointless because it is adjacent to whitespace"
 warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"

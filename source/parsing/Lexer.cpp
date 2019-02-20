@@ -866,6 +866,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         floatChars.append('\0');
 
         char* end;
+        errno = 0;
         double value = strtod(floatChars.data(), &end);
         ASSERT(end == floatChars.end() - 1); // should never error
 
