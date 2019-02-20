@@ -21,6 +21,8 @@ public:
     /// This type represents the null value (class handles, etc) in expressions.
     struct NullPlaceholder : std::monostate {};
     using Elements = std::vector<ConstantValue>;
+    using Variant =
+        std::variant<std::monostate, SVInt, double, NullPlaceholder, Elements, std::string>;
 
     ConstantValue() = default;
     ConstantValue(nullptr_t) {}
@@ -62,6 +64,8 @@ public:
 
     ConstantValue getSlice(int32_t upper, int32_t lower) const;
 
+    const Variant& getVariant() const { return value; }
+
     std::string toString() const;
 
     static const ConstantValue Invalid;
@@ -70,7 +74,7 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
 
 private:
-    std::variant<std::monostate, SVInt, double, NullPlaceholder, Elements, std::string> value;
+    Variant value;
 };
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative

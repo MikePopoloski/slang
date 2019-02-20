@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/Diagnostics.h"
 
-#include "slang/symbols/TypePrinter.h"
+#include "slang/symbols/HierarchySymbols.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {
@@ -64,21 +64,6 @@ Diagnostic& operator<<(Diagnostic& diag, SourceRange range) {
 Diagnostic& operator<<(Diagnostic& diag, const ConstantValue& arg) {
     diag.args.emplace_back(arg);
     return diag;
-}
-
-std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
-    return std::visit(
-        [&](auto&& t) -> auto& {
-            if constexpr (std::is_same_v<std::decay_t<decltype(t)>, const Type*>) {
-                TypePrinter printer;
-                printer.append(*t);
-                return os << printer.toString();
-            }
-            else {
-                return os << t;
-            }
-        },
-        static_cast<const Diagnostic::ArgVariantType&>(arg));
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {

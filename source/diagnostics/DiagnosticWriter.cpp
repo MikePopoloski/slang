@@ -8,9 +8,51 @@
 
 #include <fmt/ostream.h>
 
+#include "slang/symbols/TypePrinter.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/StackContainer.h"
+
+template<>
+struct fmt::formatter<slang::Type> {
+    template<typename ParseContext>
+    constexpr auto parse(ParseContext& ctx) {
+        return ctx.begin();
+    }
+
+    template<typename FormatContext>
+    auto format(const slang::Type& type, FormatContext& ctx) {
+        slang::TypePrinter printer;
+        printer.append(type);
+
+        std::string result = printer.toString();
+        return std::copy(result.begin(), result.end(), ctx.out());
+    }
+};
+
+template<>
+struct fmt::formatter<std::monostate> {
+    template<typename ParseContext>
+    constexpr auto parse(ParseContext& ctx) {
+        return ctx.begin();
+    }
+
+    template<typename FormatContext>
+    auto format(const std::monostate&, FormatContext& ctx) {
+        auto result = "<error>"sv;
+        return std::copy(result.begin(), result.end(), ctx.out());
+    }
+};
+
+template<>
+struct fmt::formatter<slang::ConstantValue> : dynamic_formatter<> {
+    template<typename FormatContext>
+    auto format(const slang::ConstantValue& cv, FormatContext& ctx) {
+        return std::visit([&](auto&& arg) {
+            return dynamic_formatter<>::format(std::forward<decltype(arg)>(arg), ctx);
+        }, cv.getVariant());
+    }
+};
 
 namespace slang {
 
@@ -183,8 +225,17 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         // The fmtlib API for arg lists isn't very pretty, but it gets the job done
         using ctx = fmt::format_context;
         std::vector<fmt::basic_format_arg<ctx>> args;
-        for (auto& arg : diagnostic.args)
-            args.push_back(fmt::internal::make_arg<ctx>(arg));
+        for (auto& arg : diagnostic.args) {
+            std::visit(
+                [&](auto&& t) {
+                    using T = std::decay_t<decltype(t)>;
+                    if constexpr (std::is_pointer_v<T>)
+                        args.push_back(fmt::internal::make_arg<ctx>(*t));
+                    else
+                        args.push_back(fmt::internal::make_arg<ctx>(t));
+                },
+                arg);
+        }
 
         message =
             fmt::vformat(format, fmt::basic_format_args<ctx>(args.data(), (unsigned)args.size()));
