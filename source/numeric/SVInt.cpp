@@ -12,7 +12,6 @@
 #include <stdexcept>
 
 #include "slang/util/Hash.h"
-#include "slang/util/TempBuffer.h"
 
 namespace slang {
 
