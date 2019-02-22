@@ -32,7 +32,8 @@ steps:
 
 - script: |
     sudo apt-get install -y python3-setuptools python3-pip
-    pip3 install wheel conan
+    pip3 install wheel
+    pip3 install conan
     conan user
   displayName: 'Install Conan'
 
