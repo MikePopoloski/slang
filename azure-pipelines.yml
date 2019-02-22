@@ -16,19 +16,12 @@ pool:
 
 steps:
 - script: |
-    sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-    sudo apt-get update
-    sudo apt-get install -y gcc-8 g++-8
-  displayName: 'Install gcc 8'
-  condition: eq(variables['compiler'], 'g++-8')
-
-- script: |
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
     sudo apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main" -y
+    sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
     sudo apt-get update
-    sudo apt-get install -y clang-7 clang-tidy-7
-  displayName: 'Install clang 7'
-  condition: eq(variables['compiler'], 'clang++-7')
+    sudo apt-get install -y gcc-8 g++-8 clang-7 clang-tidy-7
+  displayName: 'Install compilers'
 
 - script: |
     export PATH="$HOME/.local/bin:$PATH"
@@ -48,5 +41,14 @@ steps:
 
 - script: |
     export LLVM_PROFILE_FILE=%p.profraw
+    cd build
     ctest
   displayName: 'Run tests'
+
+- script: |
+    cd build
+    find . -name *.profraw -exec llvm-profdata-7 merge -o merged.profdata -sparse {} + ;
+    llvm-cov-7 show bin/unittests -instr-profile=merged.profdata > coverage.txt
+    bash <(curl -s https://codecov.io/bash) || echo 'Codecov failed to upload'
+  displayName: 'Upload code coverage'
+  condition: eq(variables['compiler'], 'clang++-7')
