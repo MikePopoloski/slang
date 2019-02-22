@@ -31,6 +31,7 @@ steps:
   condition: eq(variables['compiler'], 'clang++-7')
 
 - script: |
+    export PATH="$HOME/.local/bin:$PATH"
     sudo apt-get install -y python3-setuptools python3-pip
     pip3 install wheel
     pip3 install conan
@@ -45,5 +46,6 @@ steps:
   displayName: 'Build'
 
 - script: |
+    export LLVM_PROFILE_FILE=%p.profraw
     ctest
   displayName: 'Run tests'
