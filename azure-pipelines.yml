@@ -1,10 +1,16 @@
 # Build script for continuous integration builds with Azure Pipelines
 
-trigger:
-- master
+#strategy:
+  #matrix:
+  #  gcc:
+  #    imageName: 'ubuntu-16.04'
+  #    compiler: g++-8
+  #  clang:
+  #    imageName: 'ubuntu-16.04'
+  #    compiler: clang-
 
 pool:
-  vmImage: 'Ubuntu-16.04'
+  vmImage: 'ubuntu-16.04'
 
 steps:
 - script: |
@@ -12,11 +18,12 @@ steps:
     sudo apt-get update
     sudo apt-get install -y gcc-8 g++-8
   displayName: 'Install GCC 8'
+  #condition: eq()
 
 - script: |
     sudo apt-get install -y python3-setuptools python3-pip
-    pip3 install --upgrade pip
-    pip3 install conan
+    python3 -m pip install --upgrade pip
+    python3 -m pip install conan
     conan user
   displayName: 'Install Conan'
 
