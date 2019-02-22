@@ -9,12 +9,12 @@ pool:
 steps:
 - script: |
     sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-    sudo apt update
-    sudo apt install -y python3-distutils python3-setuptools python3-pip
+    sudo apt-get update
+    sudo apt-get install -y python3-setuptools python3-pip
   displayName: 'Install build tools'
 
 - script: |
-    sudo apt install -y gcc-8 g++-8
+    sudo apt-get install -y gcc-8 g++-8
   displayName: 'Install GCC 8'
 
 - script: |
