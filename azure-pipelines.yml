@@ -1,7 +1,4 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# Build script for continuous integration builds with Azure Pipelines
 
 trigger:
 - master
@@ -10,10 +7,24 @@ pool:
   vmImage: 'Ubuntu-16.04'
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- script: |
+    sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+    sudo apt update
+    sudo apt install -y gcc-8 g++-8
+  displayName: 'Install GCC 8'
 
 - script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+    pip3 install conan
+    conan user
+  displayName: 'Install Conan'
+
+- script: |
+    mkdir build
+    cd build
+    cmake -DCMAKE_CXX_COMPILER=g++-8 -DCMAKE_BUILD_TYPE=Debug -DCI_BUILD=ON ..
+    make -j 8
+  displayName: 'Build'
+
+- script: |
+    ctest
+  displayName: 'Run tests'
