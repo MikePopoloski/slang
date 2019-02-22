@@ -49,6 +49,6 @@ steps:
     cd build
     find . -name *.profraw -exec llvm-profdata-7 merge -o merged.profdata -sparse {} + ;
     llvm-cov-7 show bin/unittests -instr-profile=merged.profdata > coverage.txt
-    bash <(curl -s https://codecov.io/bash) || echo 'Codecov failed to upload'
+    bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN) || echo 'Codecov failed to upload'
   displayName: 'Upload code coverage'
   condition: eq(variables['compiler'], 'clang++-7')
