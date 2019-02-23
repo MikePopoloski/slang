@@ -210,6 +210,9 @@ TEST_CASE("SVInt to string (and back)") {
     ss.str("");
     ss << logic_t(1);
     CHECK(ss.str() == "1");
+
+    // This caught a heap corruption bug in from-string truncation.
+    { "54'bxx0111x10xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"_si; }
 }
 
 TEST_CASE("Comparison") {
@@ -271,6 +274,7 @@ TEST_CASE("Arithmetic") {
     CHECK("32'sd32"_si - "100'sd32"_si == 0);
     CHECK("100'sd99999999999"_si * "-120'sd999987654321"_si == "-137'sd99998765431100012345679"_si);
     CHECK("-120'sd999987654321"_si * "0"_si == 0);
+    CHECK("0"_si * "-120'sd999987654321"_si == 0);
 
     CHECK_THAT("100'bx"_si + "98'bx"_si, exactlyEquals("100'bx"_si));
     CHECK_THAT("100'bx"_si - "98'bx"_si, exactlyEquals("100'bx"_si));
@@ -522,7 +526,22 @@ TEST_CASE("Slicing") {
 
     v1.set(9, 9, 0);
     CHECK_THAT(v1.slice(8, -1), exactlyEquals("10'bxx0111x10x"_si));
+    CHECK_THAT(v1.slice(8, 0), exactlyEquals("9'bxx0111x10"_si));
+    CHECK_THAT(
+        v1.slice(8, -65),
+        exactlyEquals(
+            "74'bxx0111x10xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"_si));
     CHECK_THAT(v2.slice(130, 129), exactlyEquals("2'bxx"_si));
+
+    v1.set(-1, -10, SVInt(10, 0, false));
+    CHECK_THAT(v1, exactlyEquals("7'b111x10"_si));
+
+    v1.set(1, 1, 0);
+    CHECK_THAT(v1, exactlyEquals("7'b111x00"_si));
+
+    v2.set(12, 0, "13'b0x"_si);
+    v2.set(100, 0, SVInt(101, 0, false));
+    CHECK(v2 == 0);
 
     // Test huge values
     SVInt v3 =
@@ -567,4 +586,6 @@ TEST_CASE("SVInt misc functions") {
     CHECK_THAT(wildcardEqual("12'bxx101"_si, "5'bxx10x"_si), exactlyEquals(logic_t::x));
     CHECK_THAT(wildcardEqual("5'bxx100"_si, "12'bxx101"_si), exactlyEquals(logic_t(0)));
     CHECK_THAT(wildcardEqual("5'bxx10x"_si, "12'bxx101"_si), exactlyEquals(logic_t::x));
+
+    CHECK_THAT("7'b10z1110"_si.trunc(5), exactlyEquals("5'bz1110"_si));
 }

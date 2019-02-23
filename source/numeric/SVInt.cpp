@@ -353,7 +353,7 @@ SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uin
 
     if (result.hasUnknown()) {
         // If the most significant bit is X or Z, we need to extend that out to the full range.
-        uint32_t givenBits = (uint32_t)digits.size() * shift;
+        uint32_t givenBits = std::min((uint32_t)digits.size() * shift, result.getBitWidth());
         uint32_t wordBits = givenBits % BITS_PER_WORD;
         uint32_t wordOffset = givenBits / BITS_PER_WORD;
         uint64_t mask = UINT64_MAX;
