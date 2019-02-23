@@ -110,7 +110,7 @@ static void signExtendCopy(uint64_t* output, const uint64_t* input, bitwidth_t o
 static bool addOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
     uint8_t carry = 0;
     for (uint32_t i = 0; i < len; i++) {
-        uint64_t result;
+        unsigned long long result;
         carry = _addcarry_u64(carry, src[i], value, &result);
         dst[i] = result;
 
@@ -124,7 +124,7 @@ static bool addOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
 static bool subOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
     uint8_t borrow = 0;
     for (uint32_t i = 0; i < len; i++) {
-        uint64_t result;
+        unsigned long long result;
         borrow = _subborrow_u64(borrow, src[i], value, &result);
         dst[i] = result;
 
@@ -139,7 +139,7 @@ NO_SANITIZE("unsigned-integer-overflow")
 static bool addGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint32_t len) {
     uint8_t carry = 0;
     for (uint32_t i = 0; i < len; i++) {
-        uint64_t result;
+        unsigned long long result;
         carry = _addcarry_u64(carry, x[i], y[i], &result);
         dst[i] = result;
     }
@@ -151,7 +151,7 @@ NO_SANITIZE("unsigned-integer-overflow")
 static bool subGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint32_t len) {
     uint8_t borrow = 0;
     for (uint32_t i = 0; i < len; i++) {
-        uint64_t result;
+        unsigned long long result;
         borrow = _subborrow_u64(borrow, x[i], y[i], &result);
         dst[i] = result;
     }
@@ -197,7 +197,7 @@ static void mul(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t*
     for (uint32_t i = 1; i < ylen; i++) {
         uint64_t carry = 0;
         for (uint32_t j = 0; j < xlen; j++) {
-            uint64_t result;
+            unsigned long long result;
             uint8_t c = _addcarry_u64(0, mulTerm(x[j], y[i], carry), dst[i + j], &result);
 
             dst[i + j] = result;
@@ -217,12 +217,12 @@ static void unevenAdd(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uin
     uint32_t i;
     uint8_t carry = 0;
     for (i = 0; i < ylen; ++i) {
-        uint64_t result;
+        unsigned long long result;
         carry = _addcarry_u64(carry, x[i], y[i], &result);
         dst[i] = result;
     }
     for (; i < xlen; ++i) {
-        uint64_t result;
+        unsigned long long result;
         carry = _addcarry_u64(carry, x[i], 0, &result);
         dst[i] = result;
     }
