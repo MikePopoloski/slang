@@ -52,6 +52,6 @@ DefinitionKind getDefinitionKind(SyntaxKind kind) {
 }
 // clang-format on
 
-}
+} // namespace SemanticFacts
 
-}
+} // namespace slang
