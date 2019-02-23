@@ -10,6 +10,7 @@ def main():
     args = parser.parse_args()
 
     ourdir = os.path.dirname(os.path.realpath(__file__))
+    print("Scripts dir: {}".format(ourdir))
     inf = open(os.path.join(ourdir, "diagnostics.txt"))
 
     headerdir = os.path.join(args.dir, 'slang', 'diagnostics')
@@ -18,6 +19,7 @@ def main():
     except OSError:
         pass
 
+    print("Header dir: {}".format(headerdir))
     diags = []
 
     for line in [x.strip('\n') for x in inf]:
@@ -37,6 +39,7 @@ def main():
 
     createheader(open(os.path.join(headerdir, "DiagCode.h"), 'w'), diags)
     createsource(open(os.path.join(args.dir, "DiagCode.cpp"), 'w'), diags)
+    print("Done generating diagnostics!")
 
 def createheader(outf, diags):
     outf.write('''//------------------------------------------------------------------------------
