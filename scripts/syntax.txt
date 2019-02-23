@@ -632,10 +632,6 @@ ImplicitType base=DataType kind=ImplicitType
 token signing
 list<VariableDimension> dimensions
 
-VarDataType base=DataType kind=VarDataType
-token var
-DataType type
-
 // ----- ASSERTIONS -----
 
 DeferredAssertion kind=DeferredAssertion

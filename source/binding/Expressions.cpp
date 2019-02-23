@@ -442,6 +442,60 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &ConversionExpression::fromSyntax(compilation,
                                                        syntax.as<CastExpressionSyntax>(), context);
             break;
+        case SyntaxKind::AcceptOnPropertyExpression:
+        case SyntaxKind::AlwaysPropertyExpression:
+        case SyntaxKind::AndSequenceExpression:
+        case SyntaxKind::AssignmentPatternExpression:
+        case SyntaxKind::BadExpression:
+        case SyntaxKind::BinarySequenceDelayExpression:
+        case SyntaxKind::DefaultPatternKeyExpression:
+        case SyntaxKind::ElementSelect:
+        case SyntaxKind::EmptyQueueExpression:
+        case SyntaxKind::EventuallyPropertyExpression:
+        case SyntaxKind::ExpressionOrDist:
+        case SyntaxKind::IffPropertyExpression:
+        case SyntaxKind::ImpliesPropertyExpression:
+        case SyntaxKind::InsideExpression:
+        case SyntaxKind::IntersectSequenceExpression:
+        case SyntaxKind::MinTypMaxExpression:
+        case SyntaxKind::NewArrayExpression:
+        case SyntaxKind::NewClassExpression:
+        case SyntaxKind::NewExpression:
+        case SyntaxKind::NextTimePropertyExpression:
+        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
+        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
+        case SyntaxKind::NonblockingAssignmentExpression:
+        case SyntaxKind::OneStepLiteralExpression:
+        case SyntaxKind::OrSequenceExpression:
+        case SyntaxKind::OverlappedFollowedByPropertyExpression:
+        case SyntaxKind::OverlappedImplicationPropertyExpression:
+        case SyntaxKind::RandomizeMethodWithClause:
+        case SyntaxKind::RejectOnPropertyExpression:
+        case SyntaxKind::SAlwaysPropertyExpression:
+        case SyntaxKind::SEventuallyPropertyExpression:
+        case SyntaxKind::SNextTimePropertyExpression:
+        case SyntaxKind::SUntilPropertyExpression:
+        case SyntaxKind::SUntilWithPropertyExpression:
+        case SyntaxKind::SignedCastExpression:
+        case SyntaxKind::StreamingConcatenationExpression:
+        case SyntaxKind::SyncAcceptOnPropertyExpression:
+        case SyntaxKind::SyncRejectOnPropertyExpression:
+        case SyntaxKind::TaggedUnionExpression:
+        case SyntaxKind::ThroughoutSequenceExpression:
+        case SyntaxKind::TimeLiteralExpression:
+        case SyntaxKind::TimingControlExpression:
+        case SyntaxKind::TimingControlExpressionConcatenation:
+        case SyntaxKind::UnaryNotPropertyExpression:
+        case SyntaxKind::UnarySequenceDelayExpression:
+        case SyntaxKind::UnarySequenceEventExpression:
+        case SyntaxKind::UntilPropertyExpression:
+        case SyntaxKind::UntilWithPropertyExpression:
+        case SyntaxKind::WildcardLiteralExpression:
+        case SyntaxKind::WithClause:
+        case SyntaxKind::WithinSequenceExpression:
+            context.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            result = &badExpr(compilation, nullptr);
+            break;
         default:
             if (NameSyntax::isKind(syntax.kind)) {
                 result = &bindName(compilation, syntax.as<NameSyntax>(), nullptr, context);

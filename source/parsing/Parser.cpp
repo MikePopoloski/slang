@@ -599,6 +599,7 @@ MemberSyntax& Parser::parseModportSubroutinePortList(span<AttributeInstanceSynta
 MemberSyntax& Parser::parseModportPort() {
     auto attributes = parseAttributes();
 
+    Token direction;
     switch (peek().kind) {
         case TokenKind::ClockingKeyword: {
             auto clocking = consume();
@@ -611,12 +612,13 @@ MemberSyntax& Parser::parseModportPort() {
         case TokenKind::OutputKeyword:
         case TokenKind::InOutKeyword:
         case TokenKind::RefKeyword:
+            direction = consume();
             break;
         default:
-            THROW_UNREACHABLE;
+            addDiag(DiagCode::MissingModportPortDirection, peek().location());
+            direction = missingToken(TokenKind::InputKeyword, peek().location());
+            break;
     }
-
-    auto direction = consume();
 
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     while (true) {

@@ -137,6 +137,9 @@ public:
 
                 return add(decl, definition, modport);
             }
+            case SyntaxKind::InterconnectPortHeader:
+                scope.addDiag(DiagCode::NotYetSupported, syntax.header->sourceRange());
+                return addInherited(decl);
             default:
                 // TODO:
                 THROW_UNREACHABLE;
@@ -280,8 +283,10 @@ public:
                 port->getDeclaredType()->copyTypeFrom(*info->internalSymbol->getDeclaredType());
                 return port;
             }
+            case SyntaxKind::PortConcatenation:
+                scope.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+                return port;
             default:
-                // TODO: handle concatenations
                 THROW_UNREACHABLE;
         }
     }
@@ -378,8 +383,11 @@ private:
                 info.internalSymbol = net;
                 break;
             }
+            case SyntaxKind::InterconnectPortHeader:
+            case SyntaxKind::InterfacePortHeader:
+                scope.addDiag(DiagCode::NotYetSupported, header.sourceRange());
+                break;
             default:
-                // TODO:
                 THROW_UNREACHABLE;
         }
     }

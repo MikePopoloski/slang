@@ -139,6 +139,7 @@ Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definit
             inst =
                 &InterfaceInstanceSymbol::instantiate(compilation, syntax, definition, overrides);
             break;
+        case DefinitionKind::Program: // TODO: handle this
         default:
             THROW_UNREACHABLE;
     }

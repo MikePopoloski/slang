@@ -385,6 +385,15 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                 compilation, SyntaxKind::LogicType, implicit.dimensions,
                 implicit.signing.kind == TokenKind::SignedKeyword || forceSigned, location, parent);
         }
+        case SyntaxKind::PropertyType:
+        case SyntaxKind::SequenceType:
+        case SyntaxKind::TypeReference:
+        case SyntaxKind::TypeType:
+        case SyntaxKind::UnionType:
+        case SyntaxKind::Untyped:
+        case SyntaxKind::VirtualInterfaceType:
+            parent.addDiag(DiagCode::NotYetSupported, node.sourceRange());
+            return compilation.getErrorType();
         default:
             THROW_UNREACHABLE;
     }

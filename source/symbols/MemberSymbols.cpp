@@ -204,8 +204,10 @@ void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
                     case SyntaxKind::ImplicitAnsiPort:
                         results.append(builder.createPort(port->as<ImplicitAnsiPortSyntax>()));
                         break;
+                    case SyntaxKind::ExplicitAnsiPort:
+                        scope.addDiag(DiagCode::NotYetSupported, port->sourceRange());
+                        break;
                     default:
-                        // TODO:
                         THROW_UNREACHABLE;
                 }
             }
@@ -217,6 +219,9 @@ void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
                 switch (port->kind) {
                     case SyntaxKind::ImplicitNonAnsiPort:
                         results.append(builder.createPort(port->as<ImplicitNonAnsiPortSyntax>()));
+                        break;
+                    case SyntaxKind::ExplicitNonAnsiPort:
+                        scope.addDiag(DiagCode::NotYetSupported, port->sourceRange());
                         break;
                     default:
                         THROW_UNREACHABLE;

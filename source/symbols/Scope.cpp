@@ -290,7 +290,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(NetType::fromSyntax(compilation, syntax.as<NetTypeDeclarationSyntax>()));
             break;
         default:
-            // TODO: handle all cases
             addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
             break;
     }
@@ -336,7 +335,10 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
             // Handle qualified names completely separately.
             lookupQualified(syntax.as<ScopedNameSyntax>(), location, flags, result);
             return;
-        case SyntaxKind::ThisHandle: // TODO: handle this
+        case SyntaxKind::ThisHandle:
+            result.addDiag(*this, DiagCode::NotYetSupported, syntax.sourceRange());
+            result.found = nullptr;
+            return;
         default:
             THROW_UNREACHABLE;
     }
@@ -1111,9 +1113,11 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             result.found = &compilation.getRoot();
             downward();
             return;
-        case SyntaxKind::LocalScope: // TODO: handle these
+        case SyntaxKind::LocalScope:
         case SyntaxKind::ThisHandle:
         case SyntaxKind::SuperHandle:
+            result.addDiag(*this, DiagCode::NotYetSupported, syntax.sourceRange());
+            return;
         default:
             THROW_UNREACHABLE;
     }

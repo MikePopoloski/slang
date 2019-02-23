@@ -44,7 +44,6 @@ Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax,
         case SyntaxKind::SequentialBlockStatement:
             return bindBlockStatement(syntax.as<BlockStatementSyntax>(), context);
         default:
-            // TODO: handle all cases
             addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
             return badStmt(nullptr);
     }
@@ -68,6 +67,12 @@ Statement& StatementBodiedScope::bindStatementList(const SyntaxList<SyntaxNode>&
             case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
             case SyntaxKind::PackageImportDeclaration:
                 addMembers(*item);
+                break;
+            case SyntaxKind::PortDeclaration:
+            case SyntaxKind::ParameterDeclarationStatement:
+            case SyntaxKind::LetDeclaration:
+            case SyntaxKind::NetTypeDeclaration:
+                addDiag(DiagCode::NotYetSupported, item->sourceRange());
                 break;
             default:
                 if (StatementSyntax::isKind(item->kind))
