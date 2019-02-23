@@ -1,5 +1,6 @@
 slang - SystemVerilog Language Services
 =======================================
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/dffb699a55a74daa96b0e2339ab99117)](https://app.codacy.com/app/MikePopoloski/slang?utm_source=github.com&utm_medium=referral&utm_content=MikePopoloski/slang&utm_campaign=Badge_Grade_Dashboard)
 [![Build Status](https://dev.azure.com/mike0815/slang/_apis/build/status/MikePopoloski.slang?branchName=master)](https://dev.azure.com/mike0815/slang/_build/latest?definitionId=1&branchName=master)
 [![codecov](https://codecov.io/gh/MikePopoloski/slang/branch/master/graph/badge.svg)](https://codecov.io/gh/MikePopoloski/slang)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/MikePopoloski/slang/blob/master/LICENSE)
