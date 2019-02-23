@@ -193,18 +193,18 @@ public:
     SyntaxList(span<T*> elements);
 
 private:
-    TokenOrSyntax getChild(uint32_t index) override final { return (*this)[index]; }
-    ConstTokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
+    TokenOrSyntax getChild(uint32_t index) final { return (*this)[index]; }
+    ConstTokenOrSyntax getChild(uint32_t index) const final { return (*this)[index]; }
 
-    void setChild(uint32_t index, TokenOrSyntax child) override final {
+    void setChild(uint32_t index, TokenOrSyntax child) final {
         (*this)[index] = &child.node()->as<T>();
     }
 
-    SyntaxListBase* clone(BumpAllocator& alloc) const override final {
+    SyntaxListBase* clone(BumpAllocator& alloc) const final {
         return alloc.emplace<SyntaxList<T>>(*this);
     }
 
-    void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) override final {
+    void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
         SmallVectorSized<T*, 8> buffer((uint32_t)children.size());
         for (auto& t : children)
             buffer.append(&t.node()->as<T>());
@@ -220,17 +220,17 @@ public:
     TokenList(span<Token> elements);
 
 private:
-    TokenOrSyntax getChild(uint32_t index) override final { return (*this)[index]; }
-    ConstTokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
-    void setChild(uint32_t index, TokenOrSyntax child) override final {
+    TokenOrSyntax getChild(uint32_t index) final { return (*this)[index]; }
+    ConstTokenOrSyntax getChild(uint32_t index) const final { return (*this)[index]; }
+    void setChild(uint32_t index, TokenOrSyntax child) final {
         (*this)[index] = child.token();
     }
 
-    SyntaxListBase* clone(BumpAllocator& alloc) const override final {
+    SyntaxListBase* clone(BumpAllocator& alloc) const final {
         return alloc.emplace<TokenList>(*this);
     }
 
-    void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) override final {
+    void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
         SmallVectorSized<Token, 8> buffer((uint32_t)children.size());
         for (auto& t : children)
             buffer.append(t.token());
@@ -304,15 +304,15 @@ public:
     const_iterator cend() const { return const_iterator(*this, size()); }
 
 private:
-    TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
-    ConstTokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
-    void setChild(uint32_t index, TokenOrSyntax child) override final { elements[index] = child; }
+    TokenOrSyntax getChild(uint32_t index) final { return elements[index]; }
+    ConstTokenOrSyntax getChild(uint32_t index) const final { return elements[index]; }
+    void setChild(uint32_t index, TokenOrSyntax child) final { elements[index] = child; }
 
-    SyntaxListBase* clone(BumpAllocator& alloc) const override final {
+    SyntaxListBase* clone(BumpAllocator& alloc) const final {
         return alloc.emplace<SeparatedSyntaxList<T>>(*this);
     }
 
-    void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) override final {
+    void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
         SmallVectorSized<TokenOrSyntax, 8> buffer((uint32_t)children.size());
         buffer.appendRange(children);
 
