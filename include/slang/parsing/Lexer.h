@@ -45,9 +45,7 @@ public:
     /// an infinite stream of EndOfFile tokens will be generated
     Token lex(KeywordVersion keywordVersion = getDefaultKeywordVersion());
 
-    BufferID getBufferID() const;
-    BumpAllocator& getAllocator() { return alloc; }
-    Diagnostics& getDiagnostics() { return diagnostics; }
+    
 
     /// Concatenates two tokens together; used for macro pasting.
     static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);

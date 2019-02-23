@@ -47,6 +47,17 @@ TEST_CASE("Embedded null") {
     CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
 }
 
+TEST_CASE("Embedded null (string literal)") {
+    const char text[] = "\"\0\"\0";
+    auto str = std::string(text, text + sizeof(text) - 1);
+    Token token = lexToken(string_view(str));
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == str.substr(0, str.length() - 1));
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
+}
+
 TEST_CASE("Line Comment") {
     auto& text = "// comment";
     Token token = lexToken(text);
@@ -264,6 +275,12 @@ TEST_CASE("Invalid escapes") {
     Token token2 = lexToken("\\  ");
     CHECK(token2.kind == TokenKind::Unknown);
     CHECK(token2.toString() == "\\");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == DiagCode::EscapedWhitespace);
+
+    Token token3 = lexToken("`\\  ");
+    CHECK(token3.kind == TokenKind::Unknown);
+    CHECK(token3.toString() == "`\\");
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::EscapedWhitespace);
 }
@@ -484,6 +501,18 @@ TEST_CASE("Real literal (fraction exponent)") {
     CHECK(token.toString() == text);
     CHECK(withinUlp(token.realValue(), 32.3456e57));
     CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Real literal (underscores)") {
+    auto& text = "32._34__56e_57";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toString() == text);
+    CHECK(withinUlp(token.realValue(), 32.3456e57));
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == DiagCode::DigitsLeadingUnderscore);
+    CHECK(diagnostics[1].code == DiagCode::DigitsLeadingUnderscore);
 }
 
 TEST_CASE("Real literal (exponent overflow)") {

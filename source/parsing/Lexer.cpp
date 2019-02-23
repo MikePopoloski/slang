@@ -177,7 +177,7 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
 
 TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
     uint32_t offset = currentOffset();
-    info->location = SourceLocation(getBufferID(), offset);
+    info->location = SourceLocation(bufferId, offset);
 
     char c = peek();
     advance();
@@ -695,6 +695,7 @@ TokenKind Lexer::lexDollarSign(Token::Info* info) {
 TokenKind Lexer::lexDirective(Token::Info* info) {
     if (peek() == '\\') {
         // Handle escaped macro names as well.
+        advance();
         TokenKind kind = lexEscapeSequence(info);
         if (kind == TokenKind::Identifier) {
             info->extra = SyntaxKind::MacroUsage;
@@ -1103,15 +1104,11 @@ void Lexer::addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer) {
 
 Diagnostic& Lexer::addDiag(DiagCode code, uint32_t offset) {
     errorCount++;
-    return diagnostics.add(code, SourceLocation(getBufferID(), offset));
+    return diagnostics.add(code, SourceLocation(bufferId, offset));
 }
 
 uint32_t Lexer::currentOffset() {
     return (uint32_t)(sourceBuffer - originalBegin);
-}
-
-BufferID Lexer::getBufferID() const {
-    return bufferId;
 }
 
 } // namespace slang

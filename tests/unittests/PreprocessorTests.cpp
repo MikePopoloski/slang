@@ -244,6 +244,23 @@ TEST_CASE("Macro pasting (whitespace)") {
     REQUIRE(diagnostics.size() == 1);
 }
 
+TEST_CASE("Macro pasting (weird)") {
+    auto& text = "`define FOO(x) x``\\  \n`FOO(`)";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::Unknown);
+    REQUIRE(diagnostics.size() == 2);
+}
+
+TEST_CASE("Macro pasting (weird 2)") {
+    auto& text = "`define FOO(x,y) x``y  \n`FOO(a,)";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::Identifier);
+    CHECK(token.valueText() == "a");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Macro stringify") {
     auto& text = "`define FOO(x) `\" `\\`\" x``foo``42 `\\`\" `\"\n`FOO(bar_)";
     Token token = lexToken(text);
