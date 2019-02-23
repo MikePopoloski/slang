@@ -5,11 +5,11 @@ strategy:
     gcc:
       imageName: 'ubuntu-16.04'
       compiler: g++-8
-      flags: ''
+      flags: '-DCMAKE_BUILD_TYPE=Release'
     clang:
       imageName: 'ubuntu-16.04'
       compiler: clang++-7
-      flags: '-DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address "-DCMAKE_CXX_CLANG_TIDY=/usr/lib/llvm-7/bin/clang-tidy;-quiet;-checks=-*,clang-analyzer-*,bugprone-*,performance-*,modernize-*,-modernize-use-auto,-modernize-raw-string-literal,-bugprone-suspicious-semicolon,-clang-analyzer-cplusplus.NewDelete*,-clang-analyzer-cplusplus.InnerPointer,misc-*"'
+      flags: '-DCMAKE_BUILD_TYPE=Debug -DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address "-DCMAKE_CXX_CLANG_TIDY=/usr/lib/llvm-7/bin/clang-tidy;-quiet;-checks=-*,clang-analyzer-*,bugprone-*,performance-*,modernize-*,-modernize-use-auto,-modernize-raw-string-literal,-bugprone-suspicious-semicolon,-clang-analyzer-cplusplus.NewDelete*,-clang-analyzer-cplusplus.InnerPointer,misc-*"'
     msvc:
       imageName: 'vs2017-win2016'
 
@@ -47,7 +47,7 @@ steps:
 - script: |
     mkdir build
     cd build
-    cmake -DCMAKE_CXX_COMPILER=$(compiler) -DCMAKE_BUILD_TYPE=Debug -DCI_BUILD=ON $(flags) ..
+    cmake -DCMAKE_CXX_COMPILER=$(compiler) -DCI_BUILD=ON $(flags) ..
     make -j 8
   displayName: 'Build (Linux)'
   condition: eq(variables['Agent.OS'], 'Linux')
@@ -55,7 +55,7 @@ steps:
 - script: |
     mkdir build
     cd build
-    cmake -E env CXXFLAGS="-I\"$(Build.Repository.LocalPath)\build\source\"" cmake -G"Visual Studio 15 2017 Win64" ..
+    cmake -G"Visual Studio 15 2017 Win64" ..
   displayName: 'Generate VS Solution'
   condition: eq(variables['Agent.OS'], 'Windows_NT')
 
@@ -72,7 +72,12 @@ steps:
     export LLVM_PROFILE_FILE=%p.profraw
     cd build
     ctest
-  displayName: 'Run tests'
+  displayName: 'Run tests (Linux)'
+
+- script: |
+    cd build
+    ctest -C Release
+  displayName: 'Run tests (Windows)'
 
 - script: |
     cd build
