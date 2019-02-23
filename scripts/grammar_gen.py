@@ -33,8 +33,7 @@ def entry(line):
 			t = t.replace(c, '\\' + c)
 		if s not in ['|', '[', ']', '{', '}']:
 			return '`{}`'.format(s)
-		else:
-			return t
+		return t
 
 	line = line.replace('{,', '{ ,')
 	line = re.sub(r'([^\w\s]+)', replacer, line)
@@ -46,7 +45,7 @@ def entry(line):
 
 for line in inf:
 	line = line.strip()
-	if len(line) == 0:
+	if not line:
 		continue
 
 	if line.startswith('A.'):

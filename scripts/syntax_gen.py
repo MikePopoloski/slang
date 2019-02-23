@@ -81,7 +81,7 @@ namespace slang {
         if line.startswith('//'):
             outf.write(line)
             outf.write('\n\n')
-        elif len(line) == 0 or (currtype is not None and line == 'empty'):
+        elif not line or (currtype is not None and line == 'empty'):
             if currtype is not None:
                 generate(outf, currtype_name, tags, currtype, alltypes, kindmap)
             currtype = None
@@ -165,11 +165,11 @@ namespace slang {
 
         cppf.write('}\n\n')
 
-        if len(v.members) != 0 or v.final != '':
+        if v.members or v.final != '':
             for returnType in ('TokenOrSyntax', 'ConstTokenOrSyntax'):
                 cppf.write('{} {}::getChild(uint32_t index){} {{\n'.format(returnType, k, '' if returnType == 'TokenOrSyntax' else ' const'))
 
-                if len(v.combinedMembers) > 0:
+                if v.combinedMembers:
                     cppf.write('    switch (index) {\n')
 
                     index = 0
@@ -188,7 +188,7 @@ namespace slang {
                 cppf.write('}\n\n')
 
             cppf.write('void {}::setChild(uint32_t index, TokenOrSyntax child) {{\n'.format(k))
-            if len(v.combinedMembers) > 0:
+            if v.combinedMembers:
                 cppf.write('    switch (index) {\n')
 
                 index = 0
@@ -416,7 +416,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
             raise Exception("More than one kind map for {}".format(k))
         kindmap[k] = name
 
-    if kindArg and len(processed_members) > 0:
+    if kindArg and processed_members:
         kindArg += ', '
 
     initializers = ', '.join(['{0}({1}{0})'.format(x[1], '&' if x[1] in notNullMembers else '') for x in members])
@@ -451,7 +451,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 
     outf.write('    }\n\n')
 
-    if len(members) == 0 and final == '':
+    if not members and final == '':
         outf.write('    static bool isKind(SyntaxKind kind);\n')
     else:
         outf.write('    static bool isKind(SyntaxKind kind);\n\n')
