@@ -54,7 +54,6 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     else
         leftOperand = &parsePrimaryExpression();
 
-    int newPrecedence = 0;
     while (true) {
         // either a binary operator, or we're done
         current = peek();
@@ -78,7 +77,7 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         }
 
         // see if we should take this operator or if it's part of our parent due to precedence
-        newPrecedence = getPrecedence(opKind);
+        int newPrecedence = getPrecedence(opKind);
         if (newPrecedence < precedence)
             break;
 

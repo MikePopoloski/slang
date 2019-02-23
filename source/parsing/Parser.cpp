@@ -2120,9 +2120,9 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(
     Token semi = expect(TokenKind::Semicolon);
     SmallVectorSized<ClockingItemSyntax*, 4> buffer;
     SmallVectorSized<Token, 4> skipped;
-    bool error = false;
 
     if (globalOrDefault.kind != TokenKind::GlobalKeyword) {
+        bool error = false;
         while (!isEndKeyword(peek().kind) && !peek(TokenKind::EndOfFile)) {
             Token defaultKeyword, inputKeyword, outputKeyword;
             ClockingDirectionSyntax* direction = nullptr;

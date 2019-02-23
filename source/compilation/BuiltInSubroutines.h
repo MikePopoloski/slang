@@ -30,7 +30,7 @@ public:
 
 class EnumFirstLastMethod : public SystemSubroutine {
 public:
-    EnumFirstLastMethod(std::string name, bool first);
+    EnumFirstLastMethod(const std::string& name, bool first);
     const Type& checkArguments(Compilation& compilation, const Args& args) const final;
     ConstantValue eval(EvalContext& context, const Args& args) const final;
 

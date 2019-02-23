@@ -82,8 +82,8 @@ ConstantValue IncrementSubroutine::eval(EvalContext&, const Args& args) const {
     return SVInt(32, (uint64_t)(range.isLittleEndian() ? 1 : -1), true);
 }
 
-EnumFirstLastMethod::EnumFirstLastMethod(std::string name, bool first) :
-    SystemSubroutine(std::move(name)), first(first) {
+EnumFirstLastMethod::EnumFirstLastMethod(const std::string& name, bool first) :
+    SystemSubroutine(name), first(first) {
 }
 
 const Type& EnumFirstLastMethod::checkArguments(Compilation&, const Args& args) const {

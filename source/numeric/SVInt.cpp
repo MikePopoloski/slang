@@ -568,7 +568,7 @@ SVInt SVInt::ashr(bitwidth_t amount) const {
         result.pVal[0] = uint64_t((int64_t)newVal >> (SVInt::BITS_PER_WORD - contractedWidth));
         for (size_t i = 1; i < getNumWords(); ++i) {
             // sign extend the rest based on original sign
-            result.pVal[i] = val & (1ULL << 63) ? 0 : ~0ULL;
+            result.pVal[i] = (val & (1ULL << 63)) ? 0 : ~0ULL;
         }
         result.clearUnusedBits();
         return result;
