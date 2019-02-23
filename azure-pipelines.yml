@@ -55,7 +55,7 @@ steps:
 - script: |
     mkdir build
     cd build
-    cmake -E env CXXFLAGS="-I\"$(Build.Repository.LocalPath)\build\"" cmake -G"Visual Studio 15 2017 Win64" ..
+    cmake -E env CXXFLAGS="-I\"$(Build.Repository.LocalPath)\build\source\"" cmake -G"Visual Studio 15 2017 Win64" ..
   displayName: 'Generate VS Solution'
   condition: eq(variables['Agent.OS'], 'Windows_NT')
 
