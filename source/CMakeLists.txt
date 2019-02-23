@@ -1,12 +1,12 @@
 add_custom_command(
-	COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/diagnostic_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
+	COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/diagnostic_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/DiagCode.h ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
 	DEPENDS ../scripts/diagnostic_gen.py ../scripts/diagnostics.txt
-	COMMENT "Generating diagnostics in ${CMAKE_CURRENT_BINARY_DIR} with ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}"
+	COMMENT "Generating diagnostics in ${CMAKE_CURRENT_BINARY_DIR} with ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 add_custom_command(
-	COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/syntax_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
+	COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/syntax_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
 	DEPENDS ../scripts/syntax_gen.py ../scripts/syntax.txt
 	COMMENT "Generating syntax in ${CMAKE_CURRENT_BINARY_DIR}"

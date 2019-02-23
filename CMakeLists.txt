@@ -14,6 +14,8 @@ if(NOT CMAKE_BUILD_TYPE)
       "Build type (Release/Debug/RelWithDebInfo/MinSizeRel)" FORCE)
 endif()
 
+find_package (Python COMPONENTS Interpreter)
+
 # Defaults for a bunch of Windows-specific junk
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_definitions(-DNOMINMAX)
