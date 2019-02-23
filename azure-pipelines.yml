@@ -55,8 +55,7 @@ steps:
 - script: |
     mkdir build
     cd build
-    cmake -G"Visual Studio 15 2017 Win64" ..
-    msbuild slang.sln /p:Configuration=Release -m -v:m
+    cmake -DCMAKE_CXX_FLAGS="-I\"./\"" -G"Visual Studio 15 2017 Win64" ..
   displayName: 'Generate VS Solution'
   condition: eq(variables['Agent.OS'], 'Windows_NT')
 
