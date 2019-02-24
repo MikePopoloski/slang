@@ -164,23 +164,19 @@ void writeToFile(Stream& os, string_view fileName, String contents) {
         throw std::runtime_error(fmt::format("Unable to write AST to '{}'", fileName));
 }
 
+#if defined(_MSC_VER)
+#    include <fcntl.h>
+#    include <io.h>
+
 void writeToFile(string_view fileName, string_view contents) {
     if (fileName == "-") {
-#if defined(_MSC_VER)
         writeToFile(std::wcout, "stdout", widen(contents));
-#else
-        writeToFile(std::cout, "stdout", contents);
-#endif
     }
     else {
         std::ofstream file(widen(fileName));
         writeToFile(file, fileName, contents);
     }
 }
-
-#if defined(_MSC_VER)
-#    include <fcntl.h>
-#    include <io.h>
 
 template<typename T>
 T convert(T&& t) {
@@ -222,6 +218,16 @@ int wmain(int argc, wchar_t** argv) {
 }
 
 #else
+
+void writeToFile(string_view fileName, string_view contents) {
+    if (fileName == "-") {
+        writeToFile(std::cout, "stdout", contents);
+    }
+    else {
+        std::ofstream file {std::string(fileName)};
+        writeToFile(file, fileName, contents);
+    }
+}
 
 template<typename... Args>
 void print(string_view format, const Args&... args) {
