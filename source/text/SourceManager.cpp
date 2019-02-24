@@ -12,6 +12,14 @@
 
 namespace slang {
 
+#if defined(_MSC_VER)
+static std::wstring widen(string_view str);
+#else
+static string_view widen(string_view str) {
+    return str;
+}
+#endif
+
 SourceManager::SourceManager() {
     // add a dummy entry to the start of the directory list so that our file IDs line up
     FileInfo file;
@@ -23,11 +31,11 @@ std::string SourceManager::makeAbsolutePath(string_view path) const {
 }
 
 void SourceManager::addSystemDirectory(string_view path) {
-    systemDirectories.push_back(fs::canonical(path));
+    systemDirectories.push_back(fs::canonical(widen(path)));
 }
 
 void SourceManager::addUserDirectory(string_view path) {
-    userDirectories.push_back(fs::canonical(path));
+    userDirectories.push_back(fs::canonical(widen(path)));
 }
 
 uint32_t SourceManager::getLineNumber(SourceLocation location) const {
@@ -284,14 +292,14 @@ SourceBuffer SourceManager::assignBuffer(string_view path, std::vector<char>&& b
 
 SourceBuffer SourceManager::readSource(string_view path) {
     ASSERT(!path.empty());
-    return openCached(path, SourceLocation());
+    return openCached(widen(path), SourceLocation());
 }
 
 SourceBuffer SourceManager::readHeader(string_view path, SourceLocation includedFrom,
                                        bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     ASSERT(!path.empty());
-    fs::path p = path;
+    fs::path p = widen(path);
     if (p.is_absolute())
         return openCached(p, includedFrom);
 
@@ -331,14 +339,14 @@ void SourceManager::addLineDirective(SourceLocation location, uint32_t lineNum, 
         return;
 
     fs::path full;
-    fs::path linePath = name;
+    fs::path linePath = widen(name);
     if (linePath.has_relative_path())
         full = linePath.lexically_proximate(fs::current_path());
     else
-        full = fs::path(fd->name).replace_filename(linePath);
+        full = fs::path(widen(fd->name)).replace_filename(linePath);
 
     uint32_t sourceLineNum = getRawLineNumber(fileLocation);
-    fd->lineDirectives.emplace_back(full.string(), sourceLineNum, lineNum, level);
+    fd->lineDirectives.emplace_back(full.u8string(), sourceLineNum, lineNum, level);
 }
 
 SourceManager::FileData* SourceManager::getFileData(BufferID buffer) const {
@@ -363,7 +371,7 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
         return SourceBuffer();
 
     // first see if we have this file cached
-    auto it = lookupCache.find(absPath.string());
+    auto it = lookupCache.find(absPath.u8string());
     if (it != lookupCache.end()) {
         FileData* fd = it->second.get();
         if (!fd)
@@ -374,7 +382,7 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
     // do the read
     std::vector<char> buffer;
     if (!readFile(absPath, buffer)) {
-        lookupCache.emplace(absPath.string(), nullptr);
+        lookupCache.emplace(absPath.u8string(), nullptr);
         return SourceBuffer();
     }
 
@@ -387,14 +395,14 @@ SourceBuffer SourceManager::cacheBuffer(const fs::path& path, SourceLocation inc
     std::error_code ec;
     fs::path rel = fs::proximate(path, ec);
     if (ec || rel.empty())
-        name = path.filename().string();
+        name = path.filename().u8string();
     else
-        name = rel.string();
+        name = rel.u8string();
 
     auto fd = std::make_unique<FileData>(&*directories.insert(path.parent_path()).first,
                                          std::move(name), std::move(buffer));
 
-    FileData* fdPtr = lookupCache.emplace(path.string(), std::move(fd)).first->second.get();
+    FileData* fdPtr = lookupCache.emplace(path.u8string(), std::move(fd)).first->second.get();
     return createBufferEntry(fdPtr, includedFrom);
 }
 
@@ -480,5 +488,24 @@ uint32_t SourceManager::getRawLineNumber(SourceLocation location) const {
         line++;
     return line;
 }
+
+#if defined(_MSC_VER)
+#    include <Windows.h>
+
+std::wstring widen(string_view str) {
+    if (str.empty())
+        return L"";
+
+    int bufSize = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.length(), NULL, 0);
+    if (bufSize <= 0)
+        throw std::runtime_error("Failed to convert string to UTF8");
+
+    std::wstring result;
+    result.resize(bufSize);
+    MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.length(), result.data(), bufSize);
+
+    return result;
+}
+#endif
 
 } // namespace slang

@@ -90,7 +90,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
     return diagnostics.empty();
 }
 
-int main(int argc, char** argv) try {
+int driverMain(int argc, char** argv) try {
     std::vector<std::string> sourceFiles;
     std::vector<std::string> includeDirs;
     std::vector<std::string> includeSystemDirs;
@@ -173,3 +173,36 @@ catch (const std::exception& e) {
     fmt::print("{}\n", e.what());
     return 3;
 }
+
+#if defined(_MSC_VER)
+#    include <Windows.h>
+
+int wmain(int argc, wchar_t** argv) {
+    std::vector<std::string> storage;
+    storage.reserve(argc);
+
+    for (int i = 0; i < argc; ++i) {
+        int bufSize = WideCharToMultiByte(CP_UTF8, 0, argv[i], -1, NULL, 0, NULL, NULL);
+        if (bufSize <= 0)
+            throw std::runtime_error("Failed to convert string to UTF16");
+
+        std::string str;
+        str.resize(bufSize);
+
+        WideCharToMultiByte(CP_UTF8, 0, argv[i], -1, str.data(), bufSize, NULL, NULL);
+        storage.emplace_back(std::move(str));
+    }
+
+    std::vector<char*> utf8Argv;
+    utf8Argv.reserve(argc);
+
+    for (auto& str : storage)
+        utf8Argv.push_back(str.data());
+
+    return driverMain(argc, utf8Argv.data());
+}
+#else
+int main(int argc, char** argv) {
+    return driverMain(argc, argv);
+}
+#endif
