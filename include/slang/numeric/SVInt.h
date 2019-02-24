@@ -222,9 +222,10 @@ public:
 
     /// Checks whether it's possible to convert the value to a simple built-in
     /// integer type and if so returns it.
-    template<typename T>
+    template<typename T, typename = std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>>>
     optional<T> as() const {
-        if (unknownFlag || getMinRepresentedBits() > std::numeric_limits<T>::digits)
+        bitwidth_t bits = getMinRepresentedBits();
+        if (unknownFlag || bits > sizeof(T) * CHAR_BIT)
             return std::nullopt;
 
         uint64_t word = getRawData()[0];
@@ -232,13 +233,17 @@ public:
             // If we're a negative value, make sure the top "unused" bits
             // have ones in them, so that when we cast to an int it correctly
             // appears to be negative.
-            uint32_t wordBits = bitWidth % BITS_PER_WORD;
+            uint32_t wordBits = bits % BITS_PER_WORD;
             if (wordBits > 0)
                 word |= ~uint64_t(0ULL) << wordBits;
         }
 
         return static_cast<T>(word);
     }
+
+    /// Convert the integer to a double value, rounding where necessary.
+    /// Any unknown bits are converted to zero during conversion.
+    double toDouble() const;
 
     /// Check whether the number is negative. Note that this doesn't care about
     /// the sign flag; it simply looks at the highest bit to determine whether it is set.
@@ -257,6 +262,9 @@ public:
     void setAllZeros();
     void setAllX();
     void setAllZ();
+
+    /// Removes all unknown bits from the number, converting them to zeros.
+    void flattenUnknowns();
 
     /// Resize the number to be the minimum number of bits without changing
     /// the stored value. Note that this modifies the value in place.

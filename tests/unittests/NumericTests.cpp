@@ -589,3 +589,25 @@ TEST_CASE("SVInt misc functions") {
 
     CHECK_THAT("7'b10z1110"_si.trunc(5), exactlyEquals("5'bz1110"_si));
 }
+
+TEST_CASE("Other conversions") {
+    CHECK("112'b1xxx1"_si.toDouble() == 17.0);
+    CHECK("112'd0"_si.toDouble() == 0.0);
+    CHECK("-112'sd9223372036854775808"_si.toDouble() == -9223372036854775808.0);
+    CHECK("112'sd9223372036854775807"_si.toDouble() == 9223372036854775807.0);
+    CHECK("-112'sd9223372036854775809"_si.toDouble() == -9223372036854775809.0);
+
+    CHECK("112'd18446744073709551615"_si.toDouble() == 18446744073709551615.0);
+    CHECK("112'd18446744073709551616"_si.toDouble() == 18446744073709551616.0);
+
+    // Each of these test cases hits a specific rounding case in the conversion code.
+    CHECK("112'd36893488147419103230"_si.toDouble() == 36893488147419103230.0);
+    CHECK("112'd36893488147419107328"_si.toDouble() == 36893488147419107328.0);
+    CHECK("112'd36893488147419115520"_si.toDouble() == 36893488147419115520.0);
+    CHECK("128'd332306998946229005119439912489189377"_si.toDouble() ==
+          332306998946229005119439912489189377.0);
+
+    // Test overflow.
+    CHECK("2048'd1"_si.shl(1024).toDouble() == INFINITY);
+    CHECK("-2048'sd1"_si.shl(1024).toDouble() == -INFINITY);
+}
