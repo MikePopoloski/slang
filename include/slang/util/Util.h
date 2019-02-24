@@ -148,6 +148,23 @@ inline void hash_combine(size_t& seed, const T& v, Rest... rest) {
     hash_combine(seed, rest...);
 }
 
+#if defined(_MSC_VER)
+
+std::wstring widen(string_view str);
+std::string narrow(std::wstring_view str);
+
+#else
+
+inline string_view widen(string_view str) {
+    return str;
+}
+
+inline string_view narrow(string_view str) {
+    return str;
+}
+
+#endif
+
 namespace assert {
 
 class AssertionException : public std::logic_error {

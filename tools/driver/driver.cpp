@@ -18,27 +18,10 @@
 
 using namespace slang;
 
-void writeToFile(const std::string& fileName, const std::string& contents) {
-    auto onError = [&]() {
-        throw fmt::system_error(errno, "Unable to write AST to '{}'", fileName);
-    };
+template<typename... Args>
+void print(string_view format, const Args&... args);
 
-    FILE* fp;
-    if (fileName == "-")
-        fp = stdout;
-    else {
-        fp = fopen(fileName.c_str(), "w");
-        if (!fp)
-            onError();
-    }
-
-    int rc = fputs(contents.c_str(), fp);
-    if (rc == EOF)
-        onError();
-
-    if (fp != stdout)
-        fclose(fp);
-}
+void writeToFile(string_view fileName, string_view contents);
 
 bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
                      const std::vector<SourceBuffer>& buffers) {
@@ -60,27 +43,26 @@ bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
         }
 
         if (diagnostics.empty())
-            fmt::print("{}:\n", sourceManager.getRawFileName(buffer.id));
+            print("{}:\n", sourceManager.getRawFileName(buffer.id));
         else {
-            fmt::print("%s", writer.report(diagnostics));
+            print("{}", writer.report(diagnostics));
             success = false;
         }
 
-        fmt::print("==============================\n{}\n", output.str());
+        print("==============================\n{}\n", output.str());
     }
     return success;
 }
 
 bool runCompiler(SourceManager& sourceManager, const Bag& options,
                  const std::vector<SourceBuffer>& buffers, const std::string& astJsonFile) {
-
     Compilation compilation;
     for (const SourceBuffer& buffer : buffers)
         compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
 
     auto& diagnostics = compilation.getAllDiagnostics();
     DiagnosticWriter writer(sourceManager);
-    fmt::print("{}", writer.report(diagnostics));
+    print("{}", writer.report(diagnostics));
 
     if (!astJsonFile.empty()) {
         json output = compilation.getRoot();
@@ -143,7 +125,7 @@ int driverMain(int argc, char** argv) try {
     for (const std::string& file : sourceFiles) {
         SourceBuffer buffer = sourceManager.readSource(file);
         if (!buffer) {
-            fmt::print("error: no such file or directory: '{}'\n", file);
+            print("error: no such file or directory: '{}'\n", file);
             anyErrors = true;
             continue;
         }
@@ -163,46 +145,91 @@ int driverMain(int argc, char** argv) try {
             anyErrors |= !runCompiler(sourceManager, options, buffers, astJsonFile);
     }
     catch (const std::exception& e) {
-        fmt::print("internal compiler error: {}\n", e.what());
+        print("internal compiler error: {}\n", e.what());
         return 2;
     }
 
     return anyErrors ? 1 : 0;
 }
 catch (const std::exception& e) {
-    fmt::print("{}\n", e.what());
+    print("{}\n", e.what());
     return 3;
 }
 
+template<typename Stream, typename String>
+void writeToFile(Stream& os, string_view fileName, String contents) {
+    os.write(contents.data(), contents.size());
+    os.flush();
+    if (!os)
+        throw std::runtime_error(fmt::format("Unable to write AST to '{}'", fileName));
+}
+
+void writeToFile(string_view fileName, string_view contents) {
+    if (fileName == "-") {
 #if defined(_MSC_VER)
-#    include <Windows.h>
+        writeToFile(std::wcout, "stdout", widen(contents));
+#else
+        writeToFile(std::cout, "stdout", contents);
+#endif
+    }
+    else {
+        std::ofstream file(widen(fileName));
+        writeToFile(file, fileName, contents);
+    }
+}
+
+#if defined(_MSC_VER)
+#    include <fcntl.h>
+#    include <io.h>
+
+template<typename T>
+T convert(T&& t) {
+    return std::forward<T>(t);
+}
+
+std::wstring convert(const std::string& s) {
+    return widen(s);
+}
+
+std::wstring convert(const std::string_view& s) {
+    return widen(s);
+}
+
+std::wstring convert(const char* s) {
+    return widen(s);
+}
+
+template<typename... Args>
+void print(string_view format, const Args&... args) {
+    fmt::vprint(widen(format), fmt::make_format_args<fmt::wformat_context>(convert(args)...));
+}
 
 int wmain(int argc, wchar_t** argv) {
+    _setmode(_fileno(stdout), _O_U16TEXT);
+
     std::vector<std::string> storage;
-    storage.reserve(argc);
-
-    for (int i = 0; i < argc; ++i) {
-        int bufSize = WideCharToMultiByte(CP_UTF8, 0, argv[i], -1, NULL, 0, NULL, NULL);
-        if (bufSize <= 0)
-            throw std::runtime_error("Failed to convert string to UTF16");
-
-        std::string str;
-        str.resize(bufSize);
-
-        WideCharToMultiByte(CP_UTF8, 0, argv[i], -1, str.data(), bufSize, NULL, NULL);
-        storage.emplace_back(std::move(str));
-    }
-
     std::vector<char*> utf8Argv;
+
+    storage.reserve(argc);
     utf8Argv.reserve(argc);
 
-    for (auto& str : storage)
-        utf8Argv.push_back(str.data());
+    for (int i = 0; i < argc; ++i) {
+        storage.emplace_back(narrow(argv[i]));
+        utf8Argv.push_back(storage.back().data());
+    }
 
     return driverMain(argc, utf8Argv.data());
 }
+
 #else
+
+template<typename... Args>
+void print(string_view format, const Args&... args) {
+    fmt::vprint(format, fmt::make_format_args(args...));
+}
+
 int main(int argc, char** argv) {
     return driverMain(argc, argv);
 }
+
 #endif

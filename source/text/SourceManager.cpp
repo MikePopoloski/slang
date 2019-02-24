@@ -12,14 +12,6 @@
 
 namespace slang {
 
-#if defined(_MSC_VER)
-static std::wstring widen(string_view str);
-#else
-static string_view widen(string_view str) {
-    return str;
-}
-#endif
-
 SourceManager::SourceManager() {
     // add a dummy entry to the start of the directory list so that our file IDs line up
     FileInfo file;
@@ -488,24 +480,5 @@ uint32_t SourceManager::getRawLineNumber(SourceLocation location) const {
         line++;
     return line;
 }
-
-#if defined(_MSC_VER)
-#    include <Windows.h>
-
-std::wstring widen(string_view str) {
-    if (str.empty())
-        return L"";
-
-    int bufSize = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.length(), NULL, 0);
-    if (bufSize <= 0)
-        throw std::runtime_error("Failed to convert string to UTF8");
-
-    std::wstring result;
-    result.resize(bufSize);
-    MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.length(), result.data(), bufSize);
-
-    return result;
-}
-#endif
 
 } // namespace slang

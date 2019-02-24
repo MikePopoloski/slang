@@ -19,4 +19,39 @@ namespace assert {
 }
 }
 
+#if defined(_MSC_VER)
+#    include <Windows.h>
+
+std::wstring widen(string_view str) {
+    if (str.empty())
+        return L"";
+
+    int sz = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0);
+    if (sz <= 0)
+        throw std::runtime_error("Failed to convert string to UTF16");
+
+    std::wstring result;
+    result.resize(sz);
+
+    MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.length(), result.data(), sz);
+    return result;
+}
+
+std::string narrow(std::wstring_view str) {
+    if (str.empty())
+        return "";
+
+    int sz = WideCharToMultiByte(CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0, NULL, NULL);
+    if (sz <= 0)
+        throw std::runtime_error("Failed to convert string to UTF8");
+
+    std::string result;
+    result.resize(sz);
+
+    WideCharToMultiByte(CP_UTF8, 0, str.data(), (int)str.size(), result.data(), sz, NULL, NULL);
+    return result;
+}
+
+#endif
+
 } // namespace slang
