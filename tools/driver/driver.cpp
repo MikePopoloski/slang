@@ -133,27 +133,30 @@ int driverMain(int argc, char** argv) try {
         buffers.push_back(buffer);
     }
 
-    if (buffers.empty()) {
-        puts("error: no input files\n");
+    if (anyErrors)
         return 1;
+
+    if (buffers.empty()) {
+        print("error: no input files\n");
+        return 2;
     }
 
     try {
         if (onlyPreprocess)
-            anyErrors |= !runPreprocessor(sourceManager, options, buffers);
+            anyErrors = !runPreprocessor(sourceManager, options, buffers);
         else
-            anyErrors |= !runCompiler(sourceManager, options, buffers, astJsonFile);
+            anyErrors = !runCompiler(sourceManager, options, buffers, astJsonFile);
     }
     catch (const std::exception& e) {
         print("internal compiler error: {}\n", e.what());
-        return 2;
+        return 3;
     }
 
     return anyErrors ? 1 : 0;
 }
 catch (const std::exception& e) {
     print("{}\n", e.what());
-    return 3;
+    return 4;
 }
 
 template<typename Stream, typename String>
