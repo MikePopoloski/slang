@@ -148,15 +148,23 @@ int driverMain(int argc, char** argv) try {
             anyErrors = !runCompiler(sourceManager, options, buffers, astJsonFile);
     }
     catch (const std::exception& e) {
+#ifdef FUZZ_TARGET
+        throw;
+#else
         print("internal compiler error: {}\n", e.what());
         return 3;
+#endif
     }
 
     return anyErrors ? 1 : 0;
 }
 catch (const std::exception& e) {
+#ifdef FUZZ_TARGET
+    throw;
+#else
     print("{}\n", e.what());
     return 4;
+#endif
 }
 
 template<typename Stream, typename String>
@@ -227,7 +235,7 @@ void writeToFile(string_view fileName, string_view contents) {
         writeToFile(std::cout, "stdout", contents);
     }
     else {
-        std::ofstream file {std::string(fileName)};
+        std::ofstream file{ std::string(fileName) };
         writeToFile(file, fileName, contents);
     }
 }
