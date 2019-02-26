@@ -300,7 +300,7 @@ bool Parser::scanTypePart(uint32_t& index, TokenKind start, TokenKind end) {
     int nesting = 1;
     while (true) {
         auto kind = peek(index).kind;
-        if (IsEnd(kind))
+        if (IsEnd(kind) || kind == TokenKind::EndOfFile)
             return false;
 
         index++;
