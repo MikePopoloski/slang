@@ -926,9 +926,10 @@ TokenKind Lexer::lexApostrophe(Token::Info* info) {
         case 's':
         case 'S':
             advance();
-            if (!lexIntegerBase(info, true))
+            if (!lexIntegerBase(info, true)) {
                 addDiag(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
-
+                info->setNumFlags(LiteralBase::Decimal, true);
+            }
             return TokenKind::IntegerBase;
 
         default:
