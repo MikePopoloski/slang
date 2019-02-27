@@ -1247,9 +1247,11 @@ void BinaryExpression::toJson(json& j) const {
 Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
                                               const ConditionalExpressionSyntax& syntax,
                                               const BindContext& context) {
-    // TODO: handle the pattern matching conditional predicate case, rather than just assuming
-    // that it's a simple expression
-    ASSERT(syntax.predicate->conditions.size() == 1);
+    if (syntax.predicate->conditions.size() != 1) {
+        context.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+        return badExpr(compilation, nullptr);
+    }
+
     Expression& pred = selfDetermined(compilation, *syntax.predicate->conditions[0]->expr, context);
     Expression& left = create(compilation, *syntax.left, context);
     Expression& right = create(compilation, *syntax.right, context);
