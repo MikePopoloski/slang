@@ -38,7 +38,7 @@ steps:
   condition: eq(variables['Agent.OS'], 'Linux')
 
 - script: |
-    pip install conan
+    pip install conan -v -v -v
     conan user
     conan --version
   displayName: 'Install Conan (Windows)'
