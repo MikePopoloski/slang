@@ -71,13 +71,13 @@ steps:
 - script: |
     export LLVM_PROFILE_FILE=%p.profraw
     cd build
-    ctest
+    ctest --output-on-failure
   displayName: 'Run tests (Linux)'
   condition: eq(variables['Agent.OS'], 'Linux')
 
 - script: |
     cd build
-    ctest -C Release
+    ctest -C Release --output-on-failure
   displayName: 'Run tests (Windows)'
   condition: eq(variables['Agent.OS'], 'Windows_NT')
 
