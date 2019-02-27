@@ -336,6 +336,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
             lookupQualified(syntax.as<ScopedNameSyntax>(), location, flags, result);
             return;
         case SyntaxKind::ThisHandle:
+        case SyntaxKind::ClassName:
             result.addDiag(*this, DiagCode::NotYetSupported, syntax.sourceRange());
             result.found = nullptr;
             return;
