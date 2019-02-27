@@ -658,6 +658,7 @@ NameSyntax& Parser::parseName(bool isForEach) {
     switch (name->kind) {
         case SyntaxKind::UnitScope:
         case SyntaxKind::LocalScope:
+        case SyntaxKind::ClassName:
             expectedKind = TokenKind::DoubleColon;
             break;
         case SyntaxKind::RootScope:

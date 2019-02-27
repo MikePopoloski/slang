@@ -798,6 +798,11 @@ NameComponent decomposeName(const NameSyntax& name) {
             auto& idSelect = name.as<IdentifierSelectNameSyntax>();
             return { idSelect.identifier, &idSelect.selectors };
         }
+        case SyntaxKind::ClassName: {
+            // TODO: handle class params
+            auto& cn = name.as<ClassNameSyntax>();
+            return { cn.identifier, nullptr };
+        }
         case SyntaxKind::UnitScope:
         case SyntaxKind::RootScope:
         case SyntaxKind::LocalScope:
@@ -1113,6 +1118,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             result.found = &compilation.getRoot();
             downward();
             return;
+        case SyntaxKind::ClassName:
         case SyntaxKind::LocalScope:
         case SyntaxKind::ThisHandle:
         case SyntaxKind::SuperHandle:
