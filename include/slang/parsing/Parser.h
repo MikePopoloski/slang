@@ -213,7 +213,7 @@ private:
                                                   Token virtualOrInterface);
     MemberSyntax* parseClassMember();
     ContinuousAssignSyntax& parseContinuousAssign(span<AttributeInstanceSyntax*> attributes);
-    DeclaratorSyntax& parseDeclarator(bool isFirst);
+    DeclaratorSyntax& parseDeclarator();
     span<TokenOrSyntax> parseOneDeclarator();
     MemberSyntax* parseCoverageMember();
     BlockEventExpressionSyntax& parseBlockEventExpression();

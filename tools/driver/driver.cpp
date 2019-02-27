@@ -149,6 +149,7 @@ int driverMain(int argc, char** argv) try {
     }
     catch (const std::exception& e) {
 #ifdef FUZZ_TARGET
+        (void)e;
         throw;
 #else
         print("internal compiler error: {}\n", e.what());
@@ -160,6 +161,7 @@ int driverMain(int argc, char** argv) try {
 }
 catch (const std::exception& e) {
 #ifdef FUZZ_TARGET
+    (void)e;
     throw;
 #else
     print("{}\n", e.what());

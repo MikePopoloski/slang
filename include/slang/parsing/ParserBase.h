@@ -150,7 +150,7 @@ protected:
         while (true) {
             // Parse the next item in the list.
             current = peek();
-            buffer.append(parseItem(true));
+            buffer.append(parseItem());
 
             // If we found the end token, we're done with list processing.
             if (IsEnd(peek().kind))

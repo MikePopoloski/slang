@@ -208,7 +208,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
                     parseSeparatedList<isPossibleOpenRangeElement, isEndOfCaseItem>(
                         buffer, TokenKind::Colon, TokenKind::Comma, colon,
                         DiagCode::ExpectedOpenRangeElement,
-                        [this](bool) { return &parseOpenRangeElement(); });
+                        [this] { return &parseOpenRangeElement(); });
                     itemBuffer.append(
                         &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
                 }
@@ -231,7 +231,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
 
                     parseSeparatedList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                         buffer, TokenKind::Colon, TokenKind::Comma, colon,
-                        DiagCode::ExpectedExpression, [this](bool) { return &parseExpression(); });
+                        DiagCode::ExpectedExpression, [this] { return &parseExpression(); });
                     itemBuffer.append(
                         &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
                 }
@@ -287,8 +287,7 @@ SyntaxNode& Parser::parseForInitializer() {
     if (isVariableDeclaration()) {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto& type = parseDataType(/* allowImplicit */ false);
-        return factory.forVariableDeclaration(varKeyword, type,
-                                              parseDeclarator(/* isFirst */ true));
+        return factory.forVariableDeclaration(varKeyword, type, parseDeclarator());
     }
     return parseExpression();
 }
@@ -302,7 +301,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
     SmallVectorSized<TokenOrSyntax, 4> initializers;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
         initializers, TokenKind::Semicolon, TokenKind::Comma, semi1,
-        DiagCode::ExpectedForInitializer, [this](bool) { return &parseForInitializer(); });
+        DiagCode::ExpectedForInitializer, [this] { return &parseForInitializer(); });
 
     auto& stopExpr = parseExpression();
     auto semi2 = expect(TokenKind::Semicolon);
@@ -311,7 +310,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
     SmallVectorSized<TokenOrSyntax, 4> steps;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
         steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-        DiagCode::ExpectedExpression, [this](bool) { return &parseExpression(); });
+        DiagCode::ExpectedExpression, [this] { return &parseExpression(); });
 
     return factory.forLoopStatement(label, attributes, forKeyword, openParen,
                                     initializers.copy(alloc), semi1, stopExpr, semi2,
@@ -326,7 +325,7 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     Token closeBracket;
     parseSeparatedList<isIdentifierOrComma, isEndOfBracketedList>(
         TokenKind::OpenBracket, TokenKind::CloseBracket, TokenKind::Comma, openBracket, list,
-        closeBracket, DiagCode::ExpectedIdentifier, [this](bool) { return &parseName(true); });
+        closeBracket, DiagCode::ExpectedIdentifier, [this] { return &parseName(true); });
 
     auto closeParen = expect(TokenKind::CloseParenthesis);
     return factory.foreachLoopList(openParen, arrayName, openBracket, list, closeBracket,
@@ -619,7 +618,7 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(
     Token closeParen;
     parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
         buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-        DiagCode::ExpectedIdentifier, [this](bool) { return &parseName(); });
+        DiagCode::ExpectedIdentifier, [this] { return &parseName(); });
 
     return factory.waitOrderStatement(label, attributes, keyword, openParen, buffer.copy(alloc),
                                       closeParen, parseActionBlock());

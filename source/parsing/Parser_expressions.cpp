@@ -369,7 +369,7 @@ OpenRangeListSyntax& Parser::parseOpenRangeList() {
 
     parseSeparatedList<isPossibleOpenRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, list, closeBrace,
-        DiagCode::ExpectedOpenRangeElement, [this](bool) { return &parseOpenRangeElement(); });
+        DiagCode::ExpectedOpenRangeElement, [this] { return &parseOpenRangeElement(); });
 
     return factory.openRangeList(openBrace, list, closeBrace);
 }
@@ -396,7 +396,7 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
     Token closeBrace;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
         buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, DiagCode::ExpectedExpression,
-        [this](bool) { return &parseExpression(); });
+        [this] { return &parseExpression(); });
     return factory.concatenationExpression(openBrace, buffer.copy(alloc), closeBrace);
 }
 
@@ -413,7 +413,7 @@ StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token o
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBraceInner, list,
         closeBraceInner, DiagCode::ExpectedStreamExpression,
-        [this](bool) { return &parseStreamExpression(); });
+        [this] { return &parseStreamExpression(); });
 
     auto closeBrace = expect(TokenKind::CloseBrace);
     return factory.streamingConcatenationExpression(openBrace, op, sliceSize, openBraceInner, list,
@@ -452,7 +452,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             parseSeparatedList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
                 DiagCode::ExpectedAssignmentKey,
-                [this](bool) { return &parseAssignmentPatternItem(nullptr); });
+                [this] { return &parseAssignmentPatternItem(nullptr); });
             pattern =
                 &factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
@@ -460,7 +460,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             auto innerOpenBrace = consume();
             parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
-                DiagCode::ExpectedExpression, [this](bool) { return &parseExpression(); });
+                DiagCode::ExpectedExpression, [this] { return &parseExpression(); });
             pattern = &factory.replicatedAssignmentPattern(openBrace, *firstExpr, innerOpenBrace,
                                                            buffer.copy(alloc), closeBrace,
                                                            expect(TokenKind::CloseBrace));
@@ -471,14 +471,14 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             buffer.append(consume());
             parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
-                DiagCode::ExpectedExpression, [this](bool) { return &parseExpression(); });
+                DiagCode::ExpectedExpression, [this] { return &parseExpression(); });
             pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
         default:
             buffer.append(firstExpr);
             parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
-                DiagCode::ExpectedExpression, [this](bool) { return &parseExpression(); });
+                DiagCode::ExpectedExpression, [this] { return &parseExpression(); });
             pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
     }
@@ -731,7 +731,7 @@ ArgumentListSyntax& Parser::parseArgumentList() {
 
     parseSeparatedList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
-        closeParen, DiagCode::ExpectedArgument, [this](bool) { return &parseArgument(); });
+        closeParen, DiagCode::ExpectedArgument, [this] { return &parseArgument(); });
 
     return factory.argumentList(openParen, list, closeParen);
 }
@@ -796,7 +796,7 @@ ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& 
 
     parseSeparatedList<isPossibleExpressionOrTripleAnd, isEndOfConditionalPredicate>(
         buffer, endKind, TokenKind::TripleAnd, end, DiagCode::ExpectedConditionalPattern,
-        [this](bool) { return &parseConditionalPattern(); });
+        [this] { return &parseConditionalPattern(); });
 
     return factory.conditionalPredicate(buffer.copy(alloc));
 }
@@ -957,7 +957,7 @@ ExpressionSyntax& Parser::parseArrayOrRandomizeWithClause() {
     SmallVectorSized<TokenOrSyntax, 4> buffer;
     parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
         buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-        DiagCode::ExpectedIdentifier, [this](bool) { return &factory.identifierName(consume()); });
+        DiagCode::ExpectedIdentifier, [this] { return &factory.identifierName(consume()); });
 
     auto& idList = factory.identifierList(openParen, buffer.copy(alloc), closeParen);
     return factory.randomizeMethodWithClause(with, &idList, parseConstraintBlock());
