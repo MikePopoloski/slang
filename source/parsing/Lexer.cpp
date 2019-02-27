@@ -551,7 +551,8 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                 addDiag(DiagCode::NonPrintableChar, offset);
             else {
                 // skip over UTF-8 sequences
-                advance(utf8SeqBytes(c));
+                int skip = utf8SeqBytes(c);
+                advance(std::min((int)(sourceEnd - sourceBuffer - 1), skip));
                 addDiag(DiagCode::UTF8Char, offset);
             }
             return TokenKind::Unknown;
