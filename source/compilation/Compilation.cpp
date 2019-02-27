@@ -263,7 +263,7 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(
 const DefinitionSymbol* Compilation::getDefinition(string_view lookupName,
                                                    const Scope& scope) const {
     const Scope* searchScope = &scope;
-    while (true) {
+    while (searchScope) {
         auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
         if (it != definitionMap.end()) {
             std::get<1>(it->second) = true;
@@ -275,6 +275,8 @@ const DefinitionSymbol* Compilation::getDefinition(string_view lookupName,
 
         searchScope = searchScope->getParent();
     }
+
+    return nullptr;
 }
 
 const DefinitionSymbol* Compilation::getDefinition(string_view lookupName) const {
