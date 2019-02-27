@@ -79,8 +79,6 @@ protected:
 
     BumpAllocator& alloc;
 
-    enum class SkipAction { Continue, Abort };
-
     /// Generalized helper method for parsing a group of things that are bookended by
     /// known token kinds. The point of wrapping it in a function is that if the starting
     /// token is missing, we don't even bother trying to parse the rest of the group.
@@ -159,7 +157,7 @@ protected:
             // If the next token isn't expected, try skipping over some tokens until
             // we find a good place to continue.
             if (!IsExpected(peek().kind)) {
-                if (skipBadTokens<IsExpected, IsEnd>(code) == SkipAction::Abort)
+                if (!skipBadTokens<IsExpected, IsEnd>(code))
                     break;
 
                 // We're back on track; continue on below to make sure we get a
@@ -186,7 +184,7 @@ protected:
                                                   diags.back().location != current.location());
 
                 skipToken(needDiag ? std::make_optional(code) : std::nullopt);
-                if (IsEnd(peek().kind) || skipBadTokens<IsExpected, IsEnd>(code) == SkipAction::Abort)
+                if (IsEnd(peek().kind) || !skipBadTokens<IsExpected, IsEnd>(code))
                     break;
             }
         }
@@ -194,19 +192,19 @@ protected:
     }
 
     template<bool (*IsExpected)(TokenKind), bool (*IsAbort)(TokenKind)>
-    SkipAction skipBadTokens(DiagCode code) {
+    bool skipBadTokens(DiagCode code) {
         auto current = peek();
         bool first = true;
 
         while (!IsExpected(current.kind)) {
             if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind))
-                return SkipAction::Abort;
+                return false;
 
             skipToken(first ? std::make_optional(code) : std::nullopt);
             current = peek();
             first = false;
         }
-        return SkipAction::Continue;
+        return true;
     }
 
 private:
