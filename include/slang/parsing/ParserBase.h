@@ -145,52 +145,50 @@ protected:
             return;
         }
 
+        // Heads up: the ordering of events in this loop can be pretty subtle.
+        // Be careful when changing it.
         while (true) {
-            if (IsExpected(current.kind)) {
-                buffer.append(parseItem(true));
-                while (true) {
-                    current = peek();
-                    if (IsEnd(current.kind))
-                        break;
+            // Parse the next item in the list.
+            current = peek();
+            buffer.append(parseItem(true));
 
-                    if (IsExpected(current.kind)) {
-                        buffer.append(expect(separatorKind));
+            // If we found the end token, we're done with list processing.
+            if (IsEnd(peek().kind))
+                break;
 
-                        if (IsEnd(peek().kind)) {
-                            // Specific check for misplaced trailing separators here.
-                            auto& diag = addDiag(DiagCode::MisplacedTrailingSeparator,
-                                                 window.lastConsumed.location());
-                            diag << getTokenKindText(window.lastConsumed.kind);
-                            break;
-                        }
+            // If the next token isn't expected, try skipping over some tokens until
+            // we find a good place to continue.
+            if (!IsExpected(peek().kind)) {
+                if (skipBadTokens<IsExpected, IsEnd>(code) == SkipAction::Abort)
+                    break;
 
-                        buffer.append(parseItem(false));
+                // We're back on track; continue on below to make sure we get a
+                // separator into the output buffer.
+            }
 
-                        // If parseItem() failed to consume any tokens we will be stuck in
-                        // an infinite loop. Detect that here and bail out. If parseItem()
-                        // did not issue a diagnostic on this token, add one now as well.
-                        if (current.getInfo() == peek().getInfo()) {
-                            auto location = getLastLocation();
-                            bool needDiag =
-                                diags.empty() || (diags.back().location != location &&
-                                                  diags.back().location != current.location());
+            buffer.append(expect(separatorKind));
 
-                            skipToken(needDiag ? std::make_optional(code) : std::nullopt);
-                        }
-
-                        continue;
-                    }
-
-                    if (skipBadTokens<IsExpected, IsEnd>(code) == SkipAction::Abort)
-                        break;
-                }
-                // found the end
+            // TODO: parameter to allow empty elements
+            if (IsEnd(peek().kind)) {
+                // Specific check for misplaced trailing separators here.
+                auto& diag =
+                    addDiag(DiagCode::MisplacedTrailingSeparator, window.lastConsumed.location());
+                diag << getTokenKindText(window.lastConsumed.kind);
                 break;
             }
-            else if (skipBadTokens<IsExpected, IsEnd>(code) == SkipAction::Abort)
-                break;
-            else
-                current = peek();
+
+            // If parseItem() failed to consume any tokens we will be stuck in
+            // an infinite loop. Detect that here and bail out. If parseItem()
+            // did not issue a diagnostic on this token, add one now as well.
+            if (current.getInfo() == peek().getInfo()) {
+                auto location = getLastLocation();
+                bool needDiag = diags.empty() || (diags.back().location != location &&
+                                                  diags.back().location != current.location());
+
+                skipToken(needDiag ? std::make_optional(code) : std::nullopt);
+                if (IsEnd(peek().kind) || skipBadTokens<IsExpected, IsEnd>(code) == SkipAction::Abort)
+                    break;
+            }
         }
         closeToken = expect(closeKind);
     }
