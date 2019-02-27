@@ -128,17 +128,15 @@ protected:
         }
 
         // If the very first token isn't expected just bail out of list parsing.
+        Diagnostics& diags = getDiagnostics();
         if (!IsExpected(current.kind)) {
             // If there's already an error here don't report another; otherwise use
             // the provided diagnostic code to report an error.
-            auto location = window.lastConsumed ? window.lastConsumed.location() +
-                                                      window.lastConsumed.rawText().length()
-                                                : current.location();
+            auto location = getLastLocation();
 
-            Diagnostics& diagnostics = getDiagnostics();
-            if (diagnostics.empty() || diagnostics.back().code != DiagCode::ExpectedToken ||
-                (diagnostics.back().location != location &&
-                 diagnostics.back().location != current.location())) {
+            if (diags.empty() || diags.back().code != DiagCode::ExpectedToken ||
+                (diags.back().location != location &&
+                 diags.back().location != current.location())) {
 
                 addDiag(code, location);
             }
@@ -167,6 +165,19 @@ protected:
                         }
 
                         buffer.append(parseItem(false));
+
+                        // If parseItem() failed to consume any tokens we will be stuck in
+                        // an infinite loop. Detect that here and bail out. If parseItem()
+                        // did not issue a diagnostic on this token, add one now as well.
+                        if (current.getInfo() == peek().getInfo()) {
+                            auto location = getLastLocation();
+                            bool needDiag =
+                                diags.empty() || (diags.back().location != location &&
+                                                  diags.back().location != current.location());
+
+                            skipToken(needDiag ? std::make_optional(code) : std::nullopt);
+                        }
+
                         continue;
                     }
 
@@ -201,6 +212,7 @@ protected:
     }
 
 private:
+    SourceLocation getLastLocation();
     void prependSkippedTokens(Token& node);
 
     Window window;

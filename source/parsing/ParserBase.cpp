@@ -109,6 +109,13 @@ Token ParserBase::getLastConsumed() const {
     return window.lastConsumed;
 }
 
+SourceLocation ParserBase::getLastLocation() {
+    if (window.lastConsumed)
+        return window.lastConsumed.location() + window.lastConsumed.rawText().length();
+
+    return peek().location();
+}
+
 void ParserBase::Window::addNew() {
     if (count >= capacity) {
         // shift tokens to the left if we are too far to the right
