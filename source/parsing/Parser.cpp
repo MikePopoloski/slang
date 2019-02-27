@@ -149,7 +149,8 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
             SmallVectorSized<TokenOrSyntax, 8> buffer;
             parseSeparatedList<isPossibleNonAnsiPort, isEndOfParenList>(
                 buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-                DiagCode::ExpectedNonAnsiPort, [this](bool) { return &parseNonAnsiPort(); });
+                DiagCode::ExpectedNonAnsiPort, [this](bool) { return &parseNonAnsiPort(); },
+                AllowEmpty::True);
             ports = &factory.nonAnsiPortList(openParen, buffer.copy(alloc), closeParen);
         }
         else {
@@ -205,7 +206,7 @@ PortExpressionSyntax& Parser::parsePortExpression() {
 }
 
 NonAnsiPortSyntax& Parser::parseNonAnsiPort() {
-    if (peek(TokenKind::Comma))
+    if (peek(TokenKind::Comma) || peek(TokenKind::CloseParenthesis))
         return factory.implicitNonAnsiPort(nullptr);
 
     if (peek(TokenKind::Dot)) {
@@ -1783,8 +1784,7 @@ MemberSyntax& Parser::parseVariableDeclaration(span<AttributeInstanceSyntax*> at
             Token semi;
             auto keyword = consume();
             auto& type = parseDataType(/* allowImplicit */ true);
-            auto& parameter =
-                factory.parameterDeclaration(keyword, type, parseDeclarators(semi));
+            auto& parameter = factory.parameterDeclaration(keyword, type, parseDeclarators(semi));
             return factory.parameterDeclarationStatement(attributes, parameter, semi);
         }
         case TokenKind::LetKeyword: {
