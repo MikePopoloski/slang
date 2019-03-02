@@ -519,3 +519,13 @@ source:1:3: error: expected vector literal digits
   ^
 )");
 }
+
+TEST_CASE("scanTypePart test") {
+    auto& text = "int i = a[d";
+    parseCompilationUnit(text);
+}
+
+TEST_CASE("List parsing recovery") {
+    auto& text = "assign foo = if";
+    parseCompilationUnit(text);
+}

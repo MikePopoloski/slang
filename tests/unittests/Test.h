@@ -166,6 +166,16 @@ inline const ExpressionSyntax& parseExpression(const std::string& text) {
     return parser.parseExpression();
 }
 
+inline const CompilationUnitSyntax& parseCompilationUnit(const std::string& text) {
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(string_view(text), "source");
+
+    Parser parser(preprocessor);
+    return parser.parseCompilationUnit();
+}
+
 inline const ModuleInstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax,
                                               Compilation& compilation) {
     compilation.addSyntaxTree(syntax);

@@ -427,6 +427,7 @@ TEST_CASE("Vector base (bad)") {
     Token token = lexToken(string_view("'sf"));
 
     CHECK(token.kind == TokenKind::IntegerBase);
+    CHECK(token.numericFlags().base() == LiteralBase::Decimal);
     CHECK(token.toString() == "'s");
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics.back().code == DiagCode::ExpectedIntegerBaseAfterSigned);
