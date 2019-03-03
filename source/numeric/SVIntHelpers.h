@@ -518,4 +518,159 @@ static void clearBits(uint64_t* dest, uint32_t destOffset, uint32_t length) {
         *dest &= ~((1ull << length) - 1);
 }
 
+template<typename TVal, int ExpBits, int MantissaBits, int Bias>
+static SVInt fromIEEE754(bitwidth_t bits, TVal value, bool isSigned) {
+    // TODO: use bit_cast once we have C++20
+    uint64_t ival = 0;
+    memcpy(&ival, &value, sizeof(TVal));
+
+    constexpr int FullBits = sizeof(TVal) * 8;
+    constexpr int ExpMask = (1ull << ExpBits) - 1;
+
+    bool neg = ival >> (FullBits - 1);
+    int64_t exp = ((ival >> MantissaBits) & ExpMask) - Bias;
+    uint64_t mantissa = (ival & ((1ull << MantissaBits) - 1)) | (1ull << MantissaBits);
+
+    // If exponent is negative the value is less than 1. The SystemVerilog
+    // spec says that values of exactly 0.5 round away from zero, so check
+    // for an exponent of -1 (which sets us at 0.5) and return 1 in that case.
+    if (exp == -1) {
+        SVInt result(bits, 1, isSigned);
+        return neg ? -result : result;
+    }
+
+    // Also check for infinities / NaNs; the standard doesn't say what to do
+    // with these, but all other tools I tried just convert to zero.
+    if (exp < 0 || exp == Bias + 1)
+        return SVInt(bits, 0, isSigned);
+
+    // At an exponent of MantissaBits we no longer have any fractional bits,
+    // so if it's less than that we still need to handle rounding.
+    if (exp < MantissaBits) {
+        int64_t shift = MantissaBits - exp;
+        uint64_t remainder = mantissa & ((1ull << shift) - 1);
+        uint64_t halfway = 1ull << (shift - 1);
+        mantissa >>= shift;
+
+        if (remainder >= halfway)
+            mantissa++;
+
+        SVInt result(bits, mantissa, isSigned);
+        return neg ? -result : result;
+    }
+
+    // Otherwise just shift the bits to the right location, they're all integral.
+    SVInt result(bits, mantissa, isSigned);
+    result = result.shl(bitwidth_t(exp - MantissaBits));
+    return neg ? -result : result;
+}
+
+template<typename TVal, int ExpBits, int MantissaBits, int Bias>
+static TVal toIEEE754(SVInt value) {
+    // If the value has unknown bits, flatten them out.
+    if (value.hasUnknown())
+        value.flattenUnknowns();
+
+    // Optimize for single word case.
+    if (value.isSigned()) {
+        optional<int64_t> i64 = value.as<int64_t>();
+        if (i64)
+            return TVal(*i64);
+    }
+    else {
+        optional<uint64_t> u64 = value.as<uint64_t>();
+        if (u64)
+            return TVal(*u64);
+    }
+
+    // If the number is negative, invert it so that we can work with
+    // just positive numbers below.
+    bool neg = value.isSigned() && value.isNegative();
+    if (neg)
+        value = -value;
+
+    // Get the top bits for the mantissa. If the number has more than MantissaBits in it,
+    // we also need to properly round. There are three cases for rounding:
+    // 1. If they are greater than half way (0b1000..0) then round up.
+    // 2. If they are less than half way then round down.
+    // 3. If they are exactly equal to the half way point, round to even.
+    bitwidth_t bwidth = value.getActiveBits();
+    ASSERT(bwidth);
+
+    uint64_t mantissa, remainder = 0, halfway = 1;
+    uint32_t word = (bwidth - 1) / SVInt::BITS_PER_WORD;
+    uint32_t bit = bwidth % SVInt::BITS_PER_WORD;
+    if (bit == 0)
+        bit = SVInt::BITS_PER_WORD;
+
+    constexpr int FullMantissa = MantissaBits + 1;
+
+    if (!word || bit >= FullMantissa) {
+        mantissa = value.getRawPtr()[word];
+        if (bit > FullMantissa) {
+            uint32_t shift = bit - FullMantissa;
+            remainder = mantissa & ((1ull << shift) - 1);
+            halfway = 1ull << (shift - 1);
+            mantissa >>= shift;
+        }
+    }
+    else {
+        uint64_t high = value.getRawPtr()[word] << (FullMantissa - bit);
+        uint32_t shift = SVInt::BITS_PER_WORD - FullMantissa + bit;
+        uint64_t low = value.getRawPtr()[word - 1] >> shift;
+        mantissa = high | low;
+
+        remainder = value.getRawPtr()[word - 1] & ((1ull << shift) - 1);
+        halfway = 1ull << (shift - 1);
+        word--;
+    }
+
+    if (remainder > halfway)
+        mantissa++;
+    else if (remainder == halfway) {
+        // Two possibilities here; if the mantissa is odd we're going to
+        // round up no matter what. Otherwise, check all remaining words
+        // to see if they contain any bits, which would make the remainder
+        // greater than the halfway point.
+        if (mantissa & 1)
+            mantissa++;
+        else {
+            for (uint32_t i = word; i > 0; i--) {
+                if (value.getRawPtr()[word - 1] != 0) {
+                    mantissa++;
+                    break;
+                }
+            }
+        }
+    }
+
+    // The exponent of the number is equivalent to the number of active bits in
+    // the integer minus one. If rounding the mantissa caused it to just tick
+    // over the max mantissa bits, shift it back down and bump the exponent.
+    uint64_t exp = bwidth - 1;
+    if (mantissa == (1ull << FullMantissa)) {
+        mantissa >>= 1;
+        exp++;
+    }
+
+    // Check for overflow of the exponent.
+    if (exp > Bias) {
+        if (neg)
+            return -std::numeric_limits<TVal>::infinity();
+        return std::numeric_limits<TVal>::infinity();
+    }
+
+    // Build the final bit pattern (IEEE754 format)
+    constexpr int FullBits = sizeof(TVal) * 8;
+    constexpr uint64_t MantissaMask = (1ull << MantissaBits) - 1;
+
+    uint64_t sign = neg ? (1ull << (FullBits - 1)) : 0;
+    uint64_t ival = sign | ((exp + Bias) << MantissaBits) | (mantissa & MantissaMask);
+
+    // TODO: make this bit_cast once we have C++20
+    TVal result;
+    memcpy(&result, &ival, sizeof(TVal));
+    return result;
+}
+
 } // namespace slang

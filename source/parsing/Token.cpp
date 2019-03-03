@@ -131,11 +131,11 @@ void Token::Info::setReal(double value, bool outOfRange) {
 void Token::Info::setInt(BumpAllocator& alloc, const SVInt& value) {
     SVIntStorage storage(value.getBitWidth(), value.isSigned(), value.hasUnknown());
     if (value.isSingleWord())
-        storage.val = *value.getRawData();
+        storage.val = *value.getRawPtr();
     else {
         storage.pVal =
             (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
-        memcpy(storage.pVal, value.getRawData(), sizeof(uint64_t) * value.getNumWords());
+        memcpy(storage.pVal, value.getRawPtr(), sizeof(uint64_t) * value.getNumWords());
     }
 
     NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);

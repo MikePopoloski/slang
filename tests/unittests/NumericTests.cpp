@@ -590,7 +590,7 @@ TEST_CASE("SVInt misc functions") {
     CHECK_THAT("7'b10z1110"_si.trunc(5), exactlyEquals("5'bz1110"_si));
 }
 
-TEST_CASE("Other conversions") {
+TEST_CASE("Double conversions") {
     CHECK("112'b1xxx1"_si.toDouble() == 17.0);
     CHECK("112'd0"_si.toDouble() == 0.0);
     CHECK("-112'sd9223372036854775808"_si.toDouble() == -9223372036854775808.0);
@@ -632,4 +632,48 @@ TEST_CASE("Other conversions") {
     CHECK(SVInt::fromDouble(19, NAN, true) == "19'sd0"_si);
     CHECK(SVInt::fromDouble(19, INFINITY, true) == "19'sd0"_si);
     CHECK(SVInt::fromDouble(19, -INFINITY, true) == "19'sd0"_si);
+}
+
+TEST_CASE("Float conversions") {
+    CHECK("112'b1xxx1"_si.toFloat() == 17.0f);
+    CHECK("112'd0"_si.toFloat() == 0.0f);
+    CHECK("-112'sd2147483648"_si.toFloat() == -2147483648.0f);
+    CHECK("112'sd2147483648"_si.toFloat() == 2147483648.0f);
+    CHECK("-112'sd2147483650"_si.toFloat() == -2147483650.0f);
+
+    CHECK("112'd18446744073709551615"_si.toFloat() == 18446744073709551615.0f);
+    CHECK("112'd18446744073709551616"_si.toFloat() == 18446744073709551616.0f);
+
+    CHECK("112'd36893488147419103230"_si.toFloat() == 36893488147419103230.0f);
+    CHECK("112'd36893488147419107328"_si.toFloat() == 36893488147419107328.0f);
+    CHECK("112'd36893488147419115520"_si.toFloat() == 36893488147419115520.0f);
+    CHECK("128'd332306998946229005119439912489189377"_si.toFloat() ==
+          332306998946229005119439912489189377.0f);
+
+    // Test overflow.
+    CHECK("2048'd1"_si.shl(128).toFloat() == INFINITY);
+    CHECK("-2048'sd1"_si.shl(128).toFloat() == -INFINITY);
+
+    CHECK(SVInt::fromFloat(112, 0.0f, false) == "112'd0"_si);
+    CHECK(SVInt::fromFloat(112, 0.4999999f, false) == "112'd0"_si);
+    CHECK(SVInt::fromFloat(112, 0.5f, false) == "112'd1"_si);
+    CHECK(SVInt::fromFloat(112, 0.8987f, false) == "112'd1"_si);
+    CHECK(SVInt::fromFloat(16, 1.0f, false) == "16'd1"_si);
+    CHECK(SVInt::fromFloat(16, 1024.4999f, false) == "16'd1024"_si);
+    CHECK(SVInt::fromFloat(16, 1024.5f, false) == "16'd1025"_si);
+    CHECK(SVInt::fromFloat(112, 36893488147419107328.0f, false) == "112'd36893488147419103232"_si);
+
+    CHECK(SVInt::fromFloat(112, -0.0f, true) == "112'sd0"_si);
+    CHECK(SVInt::fromFloat(112, -0.4999999f, true) == "112'sd0"_si);
+    CHECK(SVInt::fromFloat(112, -0.5f, true) == "-112'sd1"_si);
+    CHECK(SVInt::fromFloat(112, -0.8987f, true) == "-112'sd1"_si);
+    CHECK(SVInt::fromFloat(16, -1.0f, true) == "-16'sd1"_si);
+    CHECK(SVInt::fromFloat(16, -1024.4999f, true) == "-16'sd1024"_si);
+    CHECK(SVInt::fromFloat(16, -1024.5f, true) == "-16'sd1025"_si);
+    CHECK(SVInt::fromFloat(112, -36893488147419107328.0f, true) ==
+          "-112'sd36893488147419103232"_si);
+
+    CHECK(SVInt::fromFloat(19, NAN, true) == "19'sd0"_si);
+    CHECK(SVInt::fromFloat(19, INFINITY, true) == "19'sd0"_si);
+    CHECK(SVInt::fromFloat(19, -INFINITY, true) == "19'sd0"_si);
 }

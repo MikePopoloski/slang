@@ -760,11 +760,11 @@ IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVI
     valueStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown()) {
 
     if (value.isSingleWord())
-        valueStorage.val = *value.getRawData();
+        valueStorage.val = *value.getRawPtr();
     else {
         valueStorage.pVal =
             (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
-        memcpy(valueStorage.pVal, value.getRawData(), sizeof(uint64_t) * value.getNumWords());
+        memcpy(valueStorage.pVal, value.getRawPtr(), sizeof(uint64_t) * value.getNumWords());
     }
 }
 

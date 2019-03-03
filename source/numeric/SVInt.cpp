@@ -386,152 +386,19 @@ SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uin
 }
 
 SVInt SVInt::fromDouble(bitwidth_t bits, double value, bool isSigned) {
-    // TODO: use bit_cast once we have C++20
-    uint64_t ival;
-    memcpy(&ival, &value, sizeof(uint64_t));
+    return fromIEEE754<double, 11, 52, 1023>(bits, value, isSigned);
+}
 
-    bool neg = ival >> 63;
-    int64_t exp = ((ival >> 52) & 0x7ff) - 1023;
-    uint64_t mantissa = (ival & ((1ull << 52) - 1)) | (1ull << 52);
-
-    // If exponent is negative the value is less than 1. The SystemVerilog
-    // spec says that values of exactly 0.5 round away from zero, so check
-    // for an exponent of -1 (which sets us at 0.5) and return 1 in that case.
-    if (exp == -1) {
-        SVInt result(bits, 1, isSigned);
-        return neg ? -result : result;
-    }
-
-    // Also check for infinities / NaNs; the standard doesn't say what to do
-    // with these, but all other tools I tried just convert to zero.
-    if (exp < 0 || exp == 1024)
-        return SVInt(bits, 0, isSigned);
-
-    // At an exponent of 52 we no longer have any fractional bits, so
-    // if it's less than that we still need to handle rounding.
-    if (exp < 52) {
-        int64_t shift = 52 - exp;
-        uint64_t remainder = mantissa & ((1ull << shift) - 1);
-        uint64_t halfway = 1ull << (shift - 1);
-        mantissa >>= shift;
-
-        if (remainder >= halfway)
-            mantissa++;
-
-        SVInt result(bits, mantissa, isSigned);
-        return neg ? -result : result;
-    }
-
-    // Otherwise just shift the bits to the right location, they're all integral.
-    SVInt result(bits, mantissa, isSigned);
-    result = result.shl(bitwidth_t(exp - 52));
-    return neg ? -result : result;
+SVInt SVInt::fromFloat(bitwidth_t bits, float value, bool isSigned) {
+    return fromIEEE754<float, 8, 23, 127>(bits, value, isSigned);
 }
 
 double SVInt::toDouble() const {
-    // If the value has unknown bits, flatten them out.
-    SVInt tmp = *this;
-    if (unknownFlag)
-        tmp.flattenUnknowns();
+    return toIEEE754<double, 11, 52, 1023>(*this);
+}
 
-    // Optimize for single word case.
-    if (signFlag) {
-        optional<int64_t> i64 = tmp.as<int64_t>();
-        if (i64)
-            return double(*i64);
-    }
-    else {
-        optional<uint64_t> u64 = tmp.as<uint64_t>();
-        if (u64)
-            return double(*u64);
-    }
-
-    // If the number is negative, invert it so that we can work with
-    // just positive numbers below.
-    bool neg = signFlag && isNegative();
-    if (neg)
-        tmp = -tmp;
-
-    // Get the top 53 bits for the mantissa. If the number has more than 53 bits in it,
-    // we also need to properly round. There are three cases for rounding:
-    // 1. If they are greater than half way (0b1000..0) then round up.
-    // 2. If they are less than half way then round down.
-    // 3. If they are exactly equal to the half way point, round to even.
-    bitwidth_t bwidth = tmp.getActiveBits();
-    ASSERT(bwidth);
-
-    uint64_t mantissa, remainder = 0, halfway = 1;
-    uint32_t word = whichWord(bwidth - 1);
-    uint32_t bit = bwidth % BITS_PER_WORD;
-    if (bit == 0)
-        bit = BITS_PER_WORD;
-
-    if (!word || bit >= 53) {
-        mantissa = tmp.getRawData()[word];
-        if (bit > 53) {
-            uint32_t shift = bit - 53;
-            remainder = mantissa & ((1ull << shift) - 1);
-            halfway = 1ull << (shift - 1);
-            mantissa >>= shift;
-        }
-    }
-    else {
-        uint64_t high = tmp.pVal[word] << (53 - bit);
-        uint32_t shift = 11 + bit;
-        uint64_t low = tmp.pVal[word - 1] >> shift;
-        mantissa = high | low;
-
-        remainder = tmp.pVal[word - 1] & ((1ull << shift) - 1);
-        halfway = 1ull << (shift - 1);
-        word--;
-    }
-
-    if (remainder > halfway)
-        mantissa++;
-    else if (remainder == halfway) {
-        // Two possibilities here; if the mantissa is odd we're going to
-        // round up no matter what. Otherwise, check all remaining words
-        // to see if they contain any bits, which would make the remainder
-        // greater than the halfway point.
-        if (mantissa & 1)
-            mantissa++;
-        else {
-            for (uint32_t i = word; i > 0; i--) {
-                if (tmp.pVal[word - 1] != 0) {
-                    mantissa++;
-                    break;
-                }
-            }
-        }
-    }
-
-    // The exponent of the number is equivalent to the number of active bits in
-    // the integer minus one. If rounding the mantissa caused it to just tick
-    // over from 53 to 54 bits, shift it back down and bump the exponent.
-    uint64_t exp = bwidth - 1;
-    if (mantissa == (1ull << 53)) {
-        mantissa >>= 1;
-        exp++;
-    }
-
-    // Check for overflow of the exponent.
-    if (exp > 1023) {
-        if (neg)
-            return -std::numeric_limits<double>::infinity();
-        return std::numeric_limits<double>::infinity();
-    }
-
-    // Build the final bit pattern (IEEE754 format):
-    // 1 bit sign, 11 bit exponent, 52 bit mantissa
-    // The exponent is biased by 1023.
-    // The mantissa's 53rd bit is implicit, so mask it out.
-    uint64_t sign = neg ? (1ull << 63) : 0;
-    uint64_t value = sign | ((exp + 1023) << 52) | (mantissa & ((1ull << 52) - 1));
-
-    // TODO: make this bit_cast once we have C++20
-    double result;
-    memcpy(&result, &value, sizeof(double));
-    return result;
+float SVInt::toFloat() const {
+    return toIEEE754<float, 8, 23, 127>(*this);
 }
 
 void SVInt::setAllZeros() {

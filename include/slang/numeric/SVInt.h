@@ -218,7 +218,7 @@ public:
     uint32_t getNumWords() const { return getNumWords(bitWidth, unknownFlag); }
 
     /// Gets a pointer to the underlying numeric data.
-    const uint64_t* getRawData() const { return isSingleWord() ? &val : pVal; }
+    const uint64_t* getRawPtr() const { return isSingleWord() ? &val : pVal; }
 
     /// Checks whether it's possible to convert the value to a simple built-in
     /// integer type and if so returns it.
@@ -241,9 +241,13 @@ public:
         return static_cast<T>(word);
     }
 
-    /// Convert the integer to a double value, rounding where necessary.
-    /// Any unknown bits are converted to zero during conversion.
+    /// Convert the integer to a double precision floating point value, rounding
+    /// where necessary. Any unknown bits are converted to zero during conversion.
     double toDouble() const;
+
+    /// Convert the integer to a single precision floating point value, rounding
+    /// where necessary. Any unknown bits are converted to zero during conversion.
+    float toFloat() const;
 
     /// Check whether the number is negative. Note that this doesn't care about
     /// the sign flag; it simply looks at the highest bit to determine whether it is set.
@@ -463,6 +467,7 @@ public:
 
     /// Construct from a floating point value.
     static SVInt fromDouble(bitwidth_t bits, double value, bool isSigned);
+    static SVInt fromFloat(bitwidth_t bits, float value, bool isSigned);
 
     /// Evaluates a conditional expression; i.e. condition ? left : right
     static SVInt conditional(const SVInt& condition, const SVInt& lhs, const SVInt& rhs);
@@ -512,6 +517,7 @@ private:
     void initSlowCase(const SVIntStorage& other);
 
     uint64_t* getRawData() { return isSingleWord() ? &val : pVal; }
+    const uint64_t* getRawData() const { return isSingleWord() ? &val : pVal; }
 
     // Slow cases for assignment, equality checking, and counting leading zeros.
     SVInt& assignSlowCase(const SVInt& other);
