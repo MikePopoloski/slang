@@ -123,7 +123,7 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                 OP(Subtract, l - r);
                 OP(Multiply, l * r);
                 OP(Divide, l / r);
-                OP(Power, std::pow(l, r)); // TODO: handle errors for this?
+                OP(Power, std::pow(l, r));
                 OP(GreaterThanEqual, SVInt(l >= r));
                 OP(GreaterThan, SVInt(l > r));
                 OP(LessThanEqual, SVInt(l <= r));
