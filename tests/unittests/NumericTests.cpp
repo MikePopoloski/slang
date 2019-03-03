@@ -610,4 +610,26 @@ TEST_CASE("Other conversions") {
     // Test overflow.
     CHECK("2048'd1"_si.shl(1024).toDouble() == INFINITY);
     CHECK("-2048'sd1"_si.shl(1024).toDouble() == -INFINITY);
+
+    CHECK(SVInt::fromDouble(112, 0.0, false) == "112'd0"_si);
+    CHECK(SVInt::fromDouble(112, 0.49999999999999, false) == "112'd0"_si);
+    CHECK(SVInt::fromDouble(112, 0.5, false) == "112'd1"_si);
+    CHECK(SVInt::fromDouble(112, 0.8987, false) == "112'd1"_si);
+    CHECK(SVInt::fromDouble(16, 1.0, false) == "16'd1"_si);
+    CHECK(SVInt::fromDouble(16, 1024.499999, false) == "16'd1024"_si);
+    CHECK(SVInt::fromDouble(16, 1024.5, false) == "16'd1025"_si);
+    CHECK(SVInt::fromDouble(112, 36893488147419107328.0, false) == "112'd36893488147419103232"_si);
+
+    CHECK(SVInt::fromDouble(112, -0.0, true) == "112'sd0"_si);
+    CHECK(SVInt::fromDouble(112, -0.49999999999999, true) == "112'sd0"_si);
+    CHECK(SVInt::fromDouble(112, -0.5, true) == "-112'sd1"_si);
+    CHECK(SVInt::fromDouble(112, -0.8987, true) == "-112'sd1"_si);
+    CHECK(SVInt::fromDouble(16, -1.0, true) == "-16'sd1"_si);
+    CHECK(SVInt::fromDouble(16, -1024.499999, true) == "-16'sd1024"_si);
+    CHECK(SVInt::fromDouble(16, -1024.5, true) == "-16'sd1025"_si);
+    CHECK(SVInt::fromDouble(112, -36893488147419107328.0, true) == "-112'sd36893488147419103232"_si);
+
+    CHECK(SVInt::fromDouble(19, NAN, true) == "19'sd0"_si);
+    CHECK(SVInt::fromDouble(19, INFINITY, true) == "19'sd0"_si);
+    CHECK(SVInt::fromDouble(19, -INFINITY, true) == "19'sd0"_si);
 }

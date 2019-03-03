@@ -385,6 +385,49 @@ SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uin
     return result;
 }
 
+SVInt SVInt::fromDouble(bitwidth_t bits, double value, bool isSigned) {
+    // TODO: use bit_cast once we have C++20
+    uint64_t ival;
+    memcpy(&ival, &value, sizeof(uint64_t));
+
+    bool neg = ival >> 63;
+    int64_t exp = ((ival >> 52) & 0x7ff) - 1023;
+    uint64_t mantissa = (ival & ((1ull << 52) - 1)) | (1ull << 52);
+
+    // If exponent is negative the value is less than 1. The SystemVerilog
+    // spec says that values of exactly 0.5 round away from zero, so check
+    // for an exponent of -1 (which sets us at 0.5) and return 1 in that case.
+    if (exp == -1) {
+        SVInt result(bits, 1, isSigned);
+        return neg ? -result : result;
+    }
+
+    // Also check for infinities / NaNs; the standard doesn't say what to do
+    // with these, but all other tools I tried just convert to zero.
+    if (exp < 0 || exp == 1024)
+        return SVInt(bits, 0, isSigned);
+
+    // At an exponent of 52 we no longer have any fractional bits, so
+    // if it's less than that we still need to handle rounding.
+    if (exp < 52) {
+        int64_t shift = 52 - exp;
+        uint64_t remainder = mantissa & ((1ull << shift) - 1);
+        uint64_t halfway = 1ull << (shift - 1);
+        mantissa >>= shift;
+
+        if (remainder >= halfway)
+            mantissa++;
+
+        SVInt result(bits, mantissa, isSigned);
+        return neg ? -result : result;
+    }
+
+    // Otherwise just shift the bits to the right location, they're all integral.
+    SVInt result(bits, mantissa, isSigned);
+    result = result.shl(bitwidth_t(exp - 52));
+    return neg ? -result : result;
+}
+
 double SVInt::toDouble() const {
     // If the value has unknown bits, flatten them out.
     SVInt tmp = *this;

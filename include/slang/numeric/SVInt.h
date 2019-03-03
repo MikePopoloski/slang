@@ -461,6 +461,9 @@ public:
     static SVInt fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool anyUnknown,
                             span<logic_t const> digits);
 
+    /// Construct from a floating point value.
+    static SVInt fromDouble(bitwidth_t bits, double value, bool isSigned);
+
     /// Evaluates a conditional expression; i.e. condition ? left : right
     static SVInt conditional(const SVInt& condition, const SVInt& lhs, const SVInt& rhs);
 
