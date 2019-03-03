@@ -588,6 +588,10 @@ TEST_CASE("SVInt misc functions") {
     CHECK_THAT(wildcardEqual("5'bxx10x"_si, "12'bxx101"_si), exactlyEquals(logic_t::x));
 
     CHECK_THAT("7'b10z1110"_si.trunc(5), exactlyEquals("5'bz1110"_si));
+
+    SVInt a = "8'd2"_si;
+    a.flattenUnknowns();
+    CHECK(a == "8'd2"_si);
 }
 
 TEST_CASE("Double conversions") {
