@@ -31,7 +31,6 @@ add_library(slang STATIC
 
 	numeric/SVInt.cpp
 	numeric/Time.cpp
-	numeric/ValueConverter.cpp
 	numeric/VectorBuilder.cpp
 
 	parsing/Lexer.cpp

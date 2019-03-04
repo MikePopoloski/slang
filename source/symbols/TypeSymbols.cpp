@@ -644,7 +644,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base, location);
     resultType->setSyntax(syntax);
 
-    // Values must be unique; this set / lambda check for that.
+    // Values must be unique; this set and lambda check for that.
     SmallMap<SVInt, SourceLocation, 8> usedValues;
     auto checkValue = [&usedValues, &scope](const SVInt& value, SourceLocation loc) {
         auto pair = usedValues.emplace(value, loc);
@@ -713,12 +713,6 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
         if (!checkValue(previous, previousRange.start()))
             return compilation.getErrorType();
-
-        if (previous.hasUnknown() && !cb->isFourState()) {
-            auto& diag = scope.addDiag(DiagCode::EnumValueUnknownBits, previousRange);
-            diag << cv << *base;
-            return compilation.getErrorType();
-        }
     }
 
     return *resultType;

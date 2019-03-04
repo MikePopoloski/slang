@@ -7,7 +7,6 @@
 #include "slang/binding/Expressions.h"
 #include "slang/binding/Statements.h"
 #include "slang/compilation/Compilation.h"
-#include "slang/numeric/ValueConverter.h"
 #include "slang/symbols/ASTVisitor.h"
 
 namespace {
@@ -258,6 +257,49 @@ bool checkArrayIndex(EvalContext& context, const Type& type, const ConstantValue
 
     result = range.translateIndex(*index);
     return true;
+}
+
+SVInt convertIntToInt(const SVInt& integer, bitwidth_t width, bool isSigned, bool isFourState) {
+    SVInt result = integer;
+    if (!isFourState)
+        result.flattenUnknowns();
+
+    // [11.8.3] says that during an assignment we sign extend iff the rhs is signed.
+    // That means we should resize first, and only then change the sign flag if desired.
+    if (width != result.getBitWidth())
+        result = result.resize(width);
+
+    result.setSigned(isSigned);
+    return result;
+}
+
+std::string convertIntToStr(const SVInt& integer) {
+    // Conversion is described in [6.16]: take each 8 bit chunk,
+    // remove it if it's zero, otherwise add as character to the string.
+    int32_t msb = int32_t(integer.getBitWidth() - 1);
+    int32_t extraBits = int32_t(integer.getBitWidth() % 8);
+
+    std::string result;
+    if (extraBits) {
+        auto c = integer.slice(msb, msb - extraBits + 1).as<uint8_t>();
+        if (c && *c)
+            result.push_back(char(*c));
+        msb -= extraBits;
+    }
+
+    while (msb >= 7) {
+        auto c = integer.slice(msb, msb - 7).as<uint8_t>();
+        if (c && *c)
+            result.push_back(char(*c));
+        msb -= 8;
+    }
+
+    return result;
+}
+
+double convertIntToFloat(const SVInt& integer) {
+    // TODO: make this more robust
+    return (double)integer.as<int64_t>().value();
 }
 
 } // namespace
@@ -848,13 +890,13 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
 
     const Type& to = *type;
     if (to.isString())
-        return ValueConverter::intToStr(value.integer());
+        return convertIntToStr(value.integer());
 
     if (to.isFloating())
-        return ValueConverter::intToFloat(value.integer());
+        return convertIntToFloat(value.integer());
 
     // TODO: other types
-    return ValueConverter::intToInt(value.integer(), to.getBitWidth(), to.isSigned());
+    return convertIntToInt(value.integer(), to.getBitWidth(), to.isSigned(), to.isFourState());
 }
 
 ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {
