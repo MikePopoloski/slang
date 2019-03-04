@@ -52,14 +52,54 @@ public:
     LValue visitInvalid(const Expression&, EvalContext&) { return nullptr; }
 };
 
+#define OP(k, v)            \
+    case BinaryOperator::k: \
+        return v
+
+template<typename TL, typename TR>
+ConstantValue evalLogicalOp(BinaryOperator op, const TL& l, const TR& r) {
+    switch (op) {
+        OP(LogicalAnd, SVInt(logic_t(l) && r));
+        OP(LogicalOr, SVInt(logic_t(l) || r));
+        OP(LogicalImplication, SVInt(SVInt::logicalImpl(l, r)));
+        OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(l, r)));
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
+template<typename TRes, typename TFloat>
+ConstantValue evalFloatOp(BinaryOperator op, TFloat l, TFloat r) {
+    bool bl = (bool)l;
+    bool br = (bool)r;
+
+    switch (op) {
+        OP(Add, TRes(l + r));
+        OP(Subtract, TRes(l - r));
+        OP(Multiply, TRes(l * r));
+        OP(Divide, TRes(l / r));
+        OP(Power, TRes(std::pow(l, r)));
+        OP(GreaterThanEqual, SVInt(l >= r));
+        OP(GreaterThan, SVInt(l > r));
+        OP(LessThanEqual, SVInt(l <= r));
+        OP(LessThan, SVInt(l < r));
+        OP(Equality, SVInt(l == r));
+        OP(Inequality, SVInt(l != r));
+        OP(CaseEquality, SVInt(l == r));
+        OP(CaseInequality, SVInt(l != r));
+        OP(LogicalAnd, SVInt(bl && br));
+        OP(LogicalOr, SVInt(bl || br));
+        OP(LogicalImplication, SVInt(!bl || br));
+        OP(LogicalEquivalence, SVInt((!bl || br) && (!br || bl)));
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
 ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                                  const ConstantValue& cvr) {
     if (!cvl || !cvr)
         return nullptr;
-
-#define OP(k, v)            \
-    case BinaryOperator::k: \
-        return v
 
     if (cvl.isInteger()) {
         const SVInt& l = cvl.integer();
@@ -98,60 +138,31 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
             }
         }
         else if (cvr.isReal()) {
-            bool r = (bool)cvr.real();
-            switch (op) {
-                OP(LogicalAnd, SVInt(l && r));
-                OP(LogicalOr, SVInt(l || r));
-                OP(LogicalImplication, SVInt(SVInt::logicalImpl(l, r)));
-                OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(l, r)));
-                default:
-                    THROW_UNREACHABLE;
-            }
+            return evalLogicalOp(op, l, (bool)cvr.real());
+        }
+        else if (cvr.isShortReal()) {
+            return evalLogicalOp(op, l, (bool)cvr.shortReal());
         }
     }
     else if (cvl.isReal()) {
         double l = cvl.real();
 
-        if (cvr.isReal()) {
-            double r = cvr.real();
-            bool bl = (bool)l;
-            bool br = (bool)r;
+        if (cvr.isReal())
+            return evalFloatOp<real_t>(op, l, (double)cvr.real());
+        else if (cvr.isInteger())
+            return evalLogicalOp(op, (bool)l, cvr.integer());
+        else if (cvr.isShortReal())
+            return evalLogicalOp(op, (bool)l, (bool)cvr.shortReal());
+    }
+    else if (cvl.isShortReal()) {
+        float l = cvl.shortReal();
 
-            switch (op) {
-                OP(Add, l + r);
-                OP(Subtract, l - r);
-                OP(Multiply, l * r);
-                OP(Divide, l / r);
-                OP(Power, std::pow(l, r));
-                OP(GreaterThanEqual, SVInt(l >= r));
-                OP(GreaterThan, SVInt(l > r));
-                OP(LessThanEqual, SVInt(l <= r));
-                OP(LessThan, SVInt(l < r));
-                OP(Equality, SVInt(l == r));
-                OP(Inequality, SVInt(l != r));
-                OP(CaseEquality, SVInt(l == r));
-                OP(CaseInequality, SVInt(l != r));
-                OP(LogicalAnd, SVInt(bl && br));
-                OP(LogicalOr, SVInt(bl || br));
-                OP(LogicalImplication, SVInt(!bl || br));
-                OP(LogicalEquivalence, SVInt((!bl || br) && (!br || bl)));
-                default:
-                    THROW_UNREACHABLE;
-            }
-        }
-        else if (cvr.isInteger()) {
-            bool b = (bool)l;
-            const SVInt& r = cvr.integer();
-
-            switch (op) {
-                OP(LogicalAnd, SVInt(r && b));
-                OP(LogicalOr, SVInt(r || b));
-                OP(LogicalImplication, SVInt(SVInt::logicalImpl(b, r)));
-                OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(b, r)));
-                default:
-                    THROW_UNREACHABLE;
-            }
-        }
+        if (cvr.isShortReal())
+            return evalFloatOp<shortreal_t>(op, l, (float)cvr.shortReal());
+        else if (cvr.isInteger())
+            return evalLogicalOp(op, (bool)l, cvr.integer());
+        else if (cvr.isReal())
+            return evalLogicalOp(op, (bool)l, (bool)cvr.real());
     }
     else if (cvl.isUnpacked()) {
         span<const ConstantValue> la = cvl.elements();
@@ -220,6 +231,8 @@ bool isTrue(const ConstantValue& cv) {
         return (bool)(logic_t)cv.integer();
     if (cv.isReal())
         return (bool)cv.real();
+    if (cv.isShortReal())
+        return (bool)cv.shortReal();
     return false;
 }
 
@@ -230,6 +243,8 @@ bool isFalse(const ConstantValue& cv) {
     }
     if (cv.isReal())
         return !(bool)cv.real();
+    if (cv.isShortReal())
+        return !(bool)cv.shortReal();
     if (cv.isNullHandle())
         return true;
 
@@ -297,11 +312,6 @@ std::string convertIntToStr(const SVInt& integer) {
     return result;
 }
 
-double convertIntToFloat(const SVInt& integer) {
-    // TODO: make this more robust
-    return (double)integer.as<int64_t>().value();
-}
-
 } // namespace
 
 namespace slang {
@@ -336,7 +346,7 @@ ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
 }
 
 ConstantValue RealLiteral::evalImpl(EvalContext&) const {
-    return value;
+    return real_t(value);
 }
 
 ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
@@ -466,12 +476,12 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
         if (!cv)
             return nullptr;
 
+        if (cv.isInteger()) {
 #define OP(k, val)         \
     case UnaryOperator::k: \
         lvalue.store(val); \
-        return v;
+        return v
 
-        if (cv.isInteger()) {
             SVInt v = std::move(cv).integer();
             switch (op) {
                 OP(Preincrement, ++v);
@@ -481,8 +491,14 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
                 default:
                     break;
             }
+#undef OP
         }
         else if (cv.isReal()) {
+#define OP(k, val)                 \
+    case UnaryOperator::k:         \
+        lvalue.store(real_t(val)); \
+        return real_t(v)
+
             double v = cv.real();
             switch (op) {
                 OP(Preincrement, ++v);
@@ -492,9 +508,26 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
                 default:
                     break;
             }
+#undef OP
+        }
+        else if (cv.isShortReal()) {
+#define OP(k, val)                      \
+    case UnaryOperator::k:              \
+        lvalue.store(shortreal_t(val)); \
+        return shortreal_t(v)
+
+            float v = cv.shortReal();
+            switch (op) {
+                OP(Preincrement, ++v);
+                OP(Predecrement, --v);
+                OP(Postincrement, v + 1);
+                OP(Postdecrement, v - 1);
+                default:
+                    break;
+            }
+#undef OP
         }
 
-#undef OP
         THROW_UNREACHABLE;
     }
 
@@ -526,8 +559,18 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     else if (cv.isReal()) {
         double v = cv.real();
         switch (op) {
-            OP(Plus, v);
-            OP(Minus, -v);
+            OP(Plus, real_t(v));
+            OP(Minus, real_t(-v));
+            OP(LogicalNot, SVInt(!(bool)v));
+            default:
+                break;
+        }
+    }
+    else if (cv.isShortReal()) {
+        float v = cv.shortReal();
+        switch (op) {
+            OP(Plus, shortreal_t(v));
+            OP(Minus, shortreal_t(-v));
             OP(LogicalNot, SVInt(!(bool)v));
             default:
                 break;
@@ -889,14 +932,35 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     const Type& to = *type;
+    if (to.isIntegral()) {
+        if (value.isReal())
+            return SVInt::fromDouble(to.getBitWidth(), value.real(), to.isSigned());
+
+        if (value.isShortReal())
+            return SVInt::fromFloat(to.getBitWidth(), value.shortReal(), to.isSigned());
+
+        return convertIntToInt(value.integer(), to.getBitWidth(), to.isSigned(), to.isFourState());
+    }
+
+    if (to.isFloating()) {
+        if (value.isReal())
+            return shortreal_t((float)value.real());
+
+        if (value.isShortReal())
+            return real_t(value.shortReal());
+
+        if (to.getBitWidth() == 64)
+            return real_t(value.integer().toDouble());
+
+        ASSERT(to.getBitWidth() == 32);
+        return shortreal_t(value.integer().toFloat());
+    }
+
     if (to.isString())
         return convertIntToStr(value.integer());
 
-    if (to.isFloating())
-        return convertIntToFloat(value.integer());
-
     // TODO: other types
-    return convertIntToInt(value.integer(), to.getBitWidth(), to.isSigned(), to.isFourState());
+    THROW_UNREACHABLE;
 }
 
 ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {

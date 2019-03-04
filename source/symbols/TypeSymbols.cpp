@@ -601,7 +601,10 @@ FloatingType::FloatingType(Kind floatKind_) :
 }
 
 ConstantValue FloatingType::getDefaultValueImpl() const {
-    return 0.0;
+    if (floatKind == ShortReal)
+        return shortreal_t(0.0f);
+
+    return real_t(0.0);
 }
 
 EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType_,

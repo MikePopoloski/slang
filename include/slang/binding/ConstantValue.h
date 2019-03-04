@@ -12,6 +12,28 @@
 
 namespace slang {
 
+/// Represents an IEEE754 double precision floating point number.
+/// This is a separate type from `double` to make it less likely that
+/// an implicit C++ conversion will mess us up somewhere.
+struct real_t {
+    double v;
+
+    real_t() : v(0.0) {}
+    real_t(double v) : v(v) {}
+    operator double() const { return v; }
+};
+
+/// Represents an IEEE754 single precision floating point number.
+/// This is a separate type from `double` to make it less likely that
+/// an implicit C++ conversion will mess us up somewhere.
+struct shortreal_t {
+    float v;
+
+    shortreal_t() : v(0.0) {}
+    shortreal_t(float v) : v(v) {}
+    operator float() const { return v; }
+};
+
 /// Represents a constant (compile-time evaluated) value, of one of a few possible types.
 /// By default the value is indeterminate, or "bad". Expressions involving bad
 /// values result in bad values, as you might expect.
@@ -21,28 +43,29 @@ public:
     /// This type represents the null value (class handles, etc) in expressions.
     struct NullPlaceholder : std::monostate {};
     using Elements = std::vector<ConstantValue>;
-    using Variant =
-        std::variant<std::monostate, SVInt, double, NullPlaceholder, Elements, std::string>;
+    using Variant = std::variant<std::monostate, SVInt, real_t, shortreal_t, NullPlaceholder,
+                                 Elements, std::string>;
 
     ConstantValue() = default;
     ConstantValue(nullptr_t) {}
 
     ConstantValue(const SVInt& integer) : value(integer) {}
     ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
+    ConstantValue(real_t real) : value(real) {}
+    ConstantValue(shortreal_t real) : value(real) {}
+
     ConstantValue(NullPlaceholder nul) : value(nul) {}
     ConstantValue(const Elements& elements) : value(elements) {}
     ConstantValue(Elements&& elements) : value(std::move(elements)) {}
     ConstantValue(const std::string& str) : value(str) {}
     ConstantValue(std::string&& str) : value(std::move(str)) {}
 
-    template<typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
-    ConstantValue(T real) : value(double(real)) {}
-
     bool bad() const { return std::holds_alternative<std::monostate>(value); }
     explicit operator bool() const { return !bad(); }
 
     bool isInteger() const { return std::holds_alternative<SVInt>(value); }
-    bool isReal() const { return std::holds_alternative<double>(value); }
+    bool isReal() const { return std::holds_alternative<real_t>(value); }
+    bool isShortReal() const { return std::holds_alternative<shortreal_t>(value); }
     bool isNullHandle() const { return std::holds_alternative<NullPlaceholder>(value); }
     bool isUnpacked() const { return std::holds_alternative<Elements>(value); }
     bool isString() const { return std::holds_alternative<std::string>(value); }
@@ -52,7 +75,8 @@ public:
     SVInt integer() && { return std::get<SVInt>(std::move(value)); }
     SVInt integer() const&& { return std::get<SVInt>(std::move(value)); }
 
-    double real() const { return std::get<double>(value); }
+    real_t real() const { return std::get<real_t>(value); }
+    shortreal_t shortReal() const { return std::get<shortreal_t>(value); }
 
     span<ConstantValue> elements() { return std::get<Elements>(value); }
     span<ConstantValue const> elements() const { return std::get<Elements>(value); }

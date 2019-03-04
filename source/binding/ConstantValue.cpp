@@ -23,7 +23,9 @@ std::string ConstantValue::toString() const {
                 return "<unset>"s;
             else if constexpr (std::is_same_v<T, SVInt>)
                 return arg.toString();
-            else if constexpr (std::is_same_v<T, double>)
+            else if constexpr (std::is_same_v<T, real_t>)
+                return std::to_string(arg);
+            else if constexpr (std::is_same_v<T, shortreal_t>)
                 return std::to_string(arg);
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 return "null"s;

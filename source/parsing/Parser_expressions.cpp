@@ -174,12 +174,12 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             if (literal.numericFlags().outOfRange()) {
                 if (literal.realValue() == 0) {
                     addDiag(DiagCode::RealLiteralUnderflow, literal.location())
-                        << std::numeric_limits<double>::denorm_min();
+                        << real_t(std::numeric_limits<double>::denorm_min());
                 }
                 else {
                     ASSERT(!std::isfinite(literal.realValue()));
                     addDiag(DiagCode::RealLiteralOverflow, literal.location())
-                        << std::numeric_limits<double>::max();
+                        << real_t(std::numeric_limits<double>::max());
                 }
             }
 
