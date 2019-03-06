@@ -30,6 +30,9 @@ public:
 protected:
     using Scope::Scope;
 
+    static void findScopes(const Scope& scope, const StatementSyntax& syntax,
+                           SmallVector<Symbol*>& results);
+
 private:
     friend class Scope;
 

@@ -30,6 +30,126 @@ void StatementBodiedScope::bindBody() {
                                BindContext(*this, LookupLocation::max)));
 }
 
+void StatementBodiedScope::findScopes(const Scope& scope, const StatementSyntax& syntax,
+                                      SmallVector<Symbol*>& results) {
+    // TODO:
+    /*if (syntax.label) {
+        results.append(SequentialBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
+        return;
+    }*/
+
+    auto recurse = [&](auto stmt) { findScopes(scope, *stmt, results); };
+
+    switch (syntax.kind) {
+        case SyntaxKind::ReturnStatement:
+        case SyntaxKind::JumpStatement:
+        case SyntaxKind::ProceduralAssignStatement:
+        case SyntaxKind::ProceduralForceStatement:
+        case SyntaxKind::ProceduralDeassignStatement:
+        case SyntaxKind::ProceduralReleaseStatement:
+        case SyntaxKind::DisableStatement:
+        case SyntaxKind::DisableForkStatement:
+        case SyntaxKind::EmptyStatement:
+        case SyntaxKind::BlockingEventTriggerStatement:
+        case SyntaxKind::NonblockingEventTriggerStatement:
+        case SyntaxKind::ExpressionStatement:
+        case SyntaxKind::WaitForkStatement:
+            // These statements don't have child statements within them.
+            break;
+
+        case SyntaxKind::SequentialBlockStatement:
+        case SyntaxKind::ParallelBlockStatement: {
+            // Block statements form their own hierarhcy scope if:
+            // - They have a name
+            // - They are unnamed but have variable declarations within them
+            auto& block = syntax.as<BlockStatementSyntax>();
+            if (block.blockName) {
+                results.append(&SequentialBlockSymbol::fromSyntax(scope.getCompilation(), block));
+                return;
+            }
+
+            for (auto item : block.items) {
+                if (StatementSyntax::isKind(item->kind))
+                    recurse(&item->as<StatementSyntax>());
+                else {
+                    // This takes advantage of the fact that in a well formed program,
+                    // all declaration in this block must be at the start, before
+                    // any statements. The parser will enforce this for us.
+                    results.append(
+                        &SequentialBlockSymbol::fromSyntax(scope.getCompilation(), block));
+                    return;
+                }
+            }
+            break;
+        }
+
+        case SyntaxKind::CaseStatement:
+            for (auto item : syntax.as<CaseStatementSyntax>().items) {
+                switch (item->kind) {
+                    case SyntaxKind::StandardCaseItem:
+                        recurse(&item->as<StandardCaseItemSyntax>().clause->as<StatementSyntax>());
+                        break;
+                    case SyntaxKind::PatternCaseItem:
+                        recurse(item->as<PatternCaseItemSyntax>().statement);
+                        break;
+                    case SyntaxKind::DefaultCaseItem:
+                        recurse(&item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>());
+                        break;
+                    default:
+                        THROW_UNREACHABLE;
+                }
+            }
+            break;
+        case SyntaxKind::ConditionalStatement: {
+            auto& cond = syntax.as<ConditionalStatementSyntax>();
+            recurse(cond.statement);
+            if (cond.elseClause)
+                recurse(&cond.elseClause->clause->as<StatementSyntax>());
+            break;
+        }
+        case SyntaxKind::ForeverStatement:
+            recurse(syntax.as<ForeverStatementSyntax>().statement);
+            break;
+        case SyntaxKind::LoopStatement:
+            recurse(syntax.as<LoopStatementSyntax>().statement);
+            break;
+        case SyntaxKind::DoWhileStatement:
+            recurse(syntax.as<DoWhileStatementSyntax>().statement);
+            break;
+        case SyntaxKind::ForLoopStatement:
+            recurse(syntax.as<ForLoopStatementSyntax>().statement);
+            break;
+        case SyntaxKind::ForeachLoopStatement:
+            recurse(syntax.as<ForeachLoopStatementSyntax>().statement);
+            break;
+        case SyntaxKind::TimingControlStatement:
+            recurse(syntax.as<TimingControlStatementSyntax>().statement);
+            break;
+        case SyntaxKind::WaitStatement:
+            recurse(syntax.as<WaitStatementSyntax>().statement);
+            break;
+        case SyntaxKind::RandCaseStatement:
+            for (auto item : syntax.as<RandCaseStatementSyntax>().items)
+                recurse(item->statement);
+            break;
+
+        case SyntaxKind::ImmediateAssertStatement:
+        case SyntaxKind::ImmediateAssumeStatement:
+        case SyntaxKind::ImmediateCoverStatement:
+        case SyntaxKind::AssertPropertyStatement:
+        case SyntaxKind::AssumePropertyStatement:
+        case SyntaxKind::CoverSequenceStatement:
+        case SyntaxKind::CoverPropertyStatement:
+        case SyntaxKind::RestrictPropertyStatement:
+        case SyntaxKind::ExpectPropertyStatement:
+        case SyntaxKind::WaitOrderStatement:
+            scope.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
 Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax,
                                                const BindContext& context) {
     switch (syntax.kind) {

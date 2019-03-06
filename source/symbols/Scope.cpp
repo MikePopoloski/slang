@@ -250,10 +250,16 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::AlwaysLatchBlock:
         case SyntaxKind::AlwaysFFBlock:
         case SyntaxKind::InitialBlock:
-        case SyntaxKind::FinalBlock:
-            addMember(
-                ProceduralBlockSymbol::fromSyntax(compilation, syntax.as<ProceduralBlockSyntax>()));
+        case SyntaxKind::FinalBlock: {
+            SmallVectorSized<Symbol*, 8> blocks;
+            addMember(ProceduralBlockSymbol::fromSyntax(*this, syntax.as<ProceduralBlockSyntax>(),
+                                                        blocks));
+
+            for (auto block : blocks)
+                addMember(*block);
+
             break;
+        }
         case SyntaxKind::EmptyMember:
             break;
         case SyntaxKind::TypedefDeclaration:

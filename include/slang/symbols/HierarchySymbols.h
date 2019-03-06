@@ -177,8 +177,9 @@ public:
 
     void toJson(json& j) const;
 
-    static ProceduralBlockSymbol& fromSyntax(Compilation& compilation,
-                                             const ProceduralBlockSyntax& syntax);
+    static ProceduralBlockSymbol& fromSyntax(const Scope& scope,
+                                             const ProceduralBlockSyntax& syntax,
+                                             SmallVector<Symbol*>& additionalBlocks);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ProceduralBlock; }
 };

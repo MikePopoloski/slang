@@ -458,14 +458,21 @@ SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilatio
     return *result;
 }
 
-ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Compilation& compilation,
-                                                         const ProceduralBlockSyntax& syntax) {
+ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(const Scope& scope,
+                                                         const ProceduralBlockSyntax& syntax,
+                                                         SmallVector<Symbol*>& additionalBlocks) {
+    auto& comp = scope.getCompilation();
     auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
-    auto result =
-        compilation.emplace<ProceduralBlockSymbol>(compilation, syntax.keyword.location(), kind);
+    auto result = comp.emplace<ProceduralBlockSymbol>(comp, syntax.keyword.location(), kind);
+
     result->setBody(*syntax.statement);
     result->setSyntax(syntax);
-    compilation.addAttributes(*result, syntax.attributes);
+    comp.addAttributes(*result, syntax.attributes);
+
+    // We need to look through all statements and find ones that create new hierarchy
+    // scopes at the same level as this procedure.
+    findScopes(scope, *syntax.statement, additionalBlocks);
+
     return *result;
 }
 
