@@ -77,17 +77,6 @@ struct ToJsonVisitor {
 
 namespace slang {
 
-const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
-    const Symbol* current = this;
-    while (current->kind != searchKind) {
-        if (current->kind == SymbolKind::Root)
-            return nullptr;
-
-        current = &current->getScope()->asSymbol();
-    }
-    return current;
-}
-
 bool Symbol::isType() const {
     return Type::isKind(kind);
 }

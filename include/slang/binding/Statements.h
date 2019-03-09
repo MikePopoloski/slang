@@ -7,10 +7,11 @@
 #pragma once
 
 #include "slang/binding/EvalContext.h"
-#include "slang/symbols/HierarchySymbols.h"
-#include "slang/symbols/MemberSymbols.h"
 
 namespace slang {
+
+class SequentialBlockSymbol;
+class VariableSymbol;
 
 enum class StatementKind {
     Invalid,
@@ -30,13 +31,21 @@ public:
     StatementKind kind;
 
     /// The syntax used to create this statement, if it was parsed from a source file.
-    const StatementSyntax* syntax;
+    const StatementSyntax* syntax = nullptr;
 
     /// Indicates whether the statement is invalid.
     bool bad() const { return kind == StatementKind::Invalid; }
 
-    /// Evaluates the statement under the given evaluation context.
+    /// Evaluates the statement under the given evaluation context. Returns true if
+    /// evaluation should continue and false if something has gone wrong and the
+    /// evaluation should be halted.
     bool eval(EvalContext& context) const;
+
+    using BlockList = span<const SequentialBlockSymbol* const>;
+
+    /// Binds a statement tree from the given syntax nodes.
+    static const Statement& bind(const StatementSyntax& syntax, const BindContext& context,
+                                 BlockList& blocks);
 
     template<typename T>
     T& as() {
@@ -54,8 +63,29 @@ public:
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
 protected:
-    explicit Statement(StatementKind kind) : kind(kind), syntax(nullptr) {}
-    Statement(StatementKind kind, const StatementSyntax& syntax) : kind(kind), syntax(&syntax) {}
+    explicit Statement(StatementKind kind) : kind(kind) {}
+
+    static Statement& badStmt(Compilation& compilation, const Statement* stmt);
+};
+
+/// A wrapper around a statement syntax node and some associated symbols that can later
+/// be turned into an actual statement tree. The point of this is to allow symbols to
+/// defer statement binding until its actually needed.
+class StatementBinder {
+public:
+    void setSyntax(const Scope& scope, const StatementSyntax& syntax);
+    void setSyntax(const SequentialBlockSymbol& scope, const ForLoopStatementSyntax& syntax);
+    void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax);
+
+    const Statement& getStatement(const Scope& scope, LookupLocation location) const;
+    span<const SequentialBlockSymbol* const> getBlocks() const { return blocks; }
+
+private:
+    const Statement& bindStatement(const Scope& scope, LookupLocation location) const;
+
+    std::variant<const StatementSyntax*, const SyntaxList<SyntaxNode>*> syntax;
+    mutable const Statement* stmt = nullptr;
+    span<const SequentialBlockSymbol* const> blocks;
 };
 
 /// Represents an invalid statement, which is usually generated and inserted
@@ -78,7 +108,8 @@ class StatementList : public Statement {
 public:
     span<const Statement* const> list;
 
-    StatementList(span<const Statement* const> list) : Statement(StatementKind::List), list(list) {}
+    explicit StatementList(span<const Statement* const> list) :
+        Statement(StatementKind::List), list(list) {}
 
     bool eval(EvalContext& context) const;
 
@@ -89,24 +120,36 @@ public:
 /// Represents a sequential block statement.
 class SequentialBlockStatement : public Statement {
 public:
-    const SequentialBlockSymbol& block;
+    explicit SequentialBlockStatement(const SequentialBlockSymbol& block) :
+        Statement(StatementKind::SequentialBlock), block(&block) {}
 
-    SequentialBlockStatement(const SequentialBlockSymbol& block) :
-        Statement(StatementKind::SequentialBlock), block(block) {}
+    explicit SequentialBlockStatement(const StatementList& list) :
+        Statement(StatementKind::SequentialBlock), list(&list) {}
 
+    const Statement& getStatements() const;
     bool eval(EvalContext& context) const;
 
+    static Statement& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
+                                 const BindContext& context, BlockList& blocks);
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::SequentialBlock; }
+
+private:
+    const SequentialBlockSymbol* block = nullptr;
+    const StatementList* list = nullptr;
 };
 
 class ReturnStatement : public Statement {
 public:
     const Expression* expr;
 
-    ReturnStatement(const StatementSyntax& syntax, const Expression* expr) :
-        Statement(StatementKind::Return, syntax), expr(expr) {}
+    explicit ReturnStatement(const Expression* expr) :
+        Statement(StatementKind::Return), expr(expr) {}
 
     bool eval(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const ReturnStatementSyntax& syntax,
+                                 const BindContext& context);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Return; }
 };
@@ -115,7 +158,7 @@ class VariableDeclStatement : public Statement {
 public:
     const VariableSymbol& symbol;
 
-    VariableDeclStatement(const VariableSymbol& symbol) :
+    explicit VariableDeclStatement(const VariableSymbol& symbol) :
         Statement(StatementKind::VariableDeclaration), symbol(symbol) {}
 
     bool eval(EvalContext& context) const;
@@ -129,12 +172,15 @@ public:
     const Statement& ifTrue;
     const Statement* ifFalse;
 
-    ConditionalStatement(const StatementSyntax& syntax, const Expression& cond,
-                         const Statement& ifTrue, const Statement* ifFalse) :
-        Statement(StatementKind::Conditional, syntax),
+    ConditionalStatement(const Expression& cond, const Statement& ifTrue,
+                         const Statement* ifFalse) :
+        Statement(StatementKind::Conditional),
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
     bool eval(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const ConditionalStatementSyntax& syntax,
+                                 const BindContext& context, BlockList& blocks);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Conditional; }
 };
@@ -146,13 +192,15 @@ public:
     span<const Expression* const> steps;
     const Statement& body;
 
-    ForLoopStatement(const StatementSyntax& syntax, const StatementList& initializers,
-                     const Expression* stopExpr, span<const Expression* const> steps,
-                     const Statement& body) :
-        Statement(StatementKind::ForLoop, syntax),
+    ForLoopStatement(const StatementList& initializers, const Expression* stopExpr,
+                     span<const Expression* const> steps, const Statement& body) :
+        Statement(StatementKind::ForLoop),
         initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
 
     bool eval(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const ForLoopStatementSyntax& syntax,
+                                 const BindContext& context, BlockList& blocks);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForLoop; }
 };
@@ -161,10 +209,13 @@ class ExpressionStatement : public Statement {
 public:
     const Expression& expr;
 
-    ExpressionStatement(const ExpressionStatementSyntax& syntax, const Expression& expr) :
-        Statement(StatementKind::ExpressionStatement, syntax), expr(expr) {}
+    explicit ExpressionStatement(const Expression& expr) :
+        Statement(StatementKind::ExpressionStatement), expr(expr) {}
 
     bool eval(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const ExpressionStatementSyntax& syntax,
+                                 const BindContext& context);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }
 };

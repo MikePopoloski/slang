@@ -456,13 +456,14 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     // TODO: don't do this if returning void; also handle name collisions with this thing
     auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location);
     implicitReturnVar->setDeclaredType(*proto->returnType);
+    implicitReturnVar->isCompilerGenerated = true;
     result->addMember(*implicitReturnVar);
     result->returnValVar = implicitReturnVar;
 
     // TODO: mising return type
     result->arguments = arguments.copy(compilation);
     result->declaredReturnType.setTypeSyntax(*proto->returnType);
-    result->setBody(syntax.items);
+    result->binder.setItems(*result, syntax.items);
     return *result;
 }
 

@@ -453,25 +453,44 @@ void InstanceArraySymbol::toJson(json& j) const {
 SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilation,
                                                          const BlockStatementSyntax& syntax) {
     auto result = compilation.emplace<SequentialBlockSymbol>(compilation, syntax.begin.location());
-    result->setBody(syntax.items);
+    result->binder.setItems(*result, syntax.items);
     result->setSyntax(syntax);
+
     return *result;
 }
 
-ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(const Scope& scope,
-                                                         const ProceduralBlockSyntax& syntax,
-                                                         SmallVector<Symbol*>& additionalBlocks) {
+SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilation,
+                                                         const ForLoopStatementSyntax& syntax) {
+    auto result =
+        compilation.emplace<SequentialBlockSymbol>(compilation, syntax.forKeyword.location());
+    result->setSyntax(syntax);
+
+    // If one entry is a variable declaration, they should all be. Checked by the parser.
+    for (auto initializer : syntax.initializers) {
+        result->addMember(VariableSymbol::fromSyntax(
+            compilation, initializer->as<ForVariableDeclarationSyntax>()));
+    }
+
+    result->binder.setSyntax(*result, syntax);
+    for (auto block : result->binder.getBlocks())
+        result->addMember(*block);
+
+    return *result;
+}
+
+ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
+    const Scope& scope, const ProceduralBlockSyntax& syntax,
+    span<const SequentialBlockSymbol* const>& additionalBlocks) {
+
     auto& comp = scope.getCompilation();
     auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
-    auto result = comp.emplace<ProceduralBlockSymbol>(comp, syntax.keyword.location(), kind);
+    auto result = comp.emplace<ProceduralBlockSymbol>(syntax.keyword.location(), kind);
 
-    result->setBody(*syntax.statement);
+    result->binder.setSyntax(scope, *syntax.statement);
     result->setSyntax(syntax);
     comp.addAttributes(*result, syntax.attributes);
 
-    // We need to look through all statements and find ones that create new hierarchy
-    // scopes at the same level as this procedure.
-    findScopes(scope, *syntax.statement, additionalBlocks);
+    additionalBlocks = result->binder.getBlocks();
 
     return *result;
 }

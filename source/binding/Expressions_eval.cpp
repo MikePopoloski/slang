@@ -920,7 +920,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 
     context.createLocal(symbol.returnValVar);
 
-    bool succeeded = symbol.getBody()->eval(context);
+    bool succeeded = symbol.getBody().eval(context);
     ConstantValue result = context.popFrame();
 
     return succeeded ? result : nullptr;

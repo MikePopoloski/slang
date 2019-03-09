@@ -92,10 +92,6 @@ public:
     /// Gets the lexical scope that contains this symbol.
     const Scope* getScope() const { return parentScope; }
 
-    /// Finds the first ancestor symbol of the given kind. If this symbol is already of
-    /// the given kind, returns this symbol.
-    const Symbol* findAncestor(SymbolKind searchKind) const;
-
     /// Gets the syntax node that was used to create this symbol, if any. Symbols can
     /// be created without any originating syntax; in those cases, this returns nullptr.
     const SyntaxNode* getSyntax() const { return originatingSyntax; }

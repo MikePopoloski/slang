@@ -7,8 +7,8 @@
 #pragma once
 
 #include "slang/binding/ConstantValue.h"
+#include "slang/binding/Statements.h"
 #include "slang/symbols/SemanticFacts.h"
-#include "slang/symbols/StatementBodiedScope.h"
 #include "slang/symbols/Symbol.h"
 
 namespace slang {
@@ -151,37 +151,48 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }
 };
 
-class SequentialBlockSymbol : public Symbol, public StatementBodiedScope {
+class SequentialBlockSymbol : public Symbol, public Scope {
 public:
     SequentialBlockSymbol(Compilation& compilation, SourceLocation loc) :
-        Symbol(SymbolKind::SequentialBlock, "", loc), StatementBodiedScope(compilation, this) {}
+        Symbol(SymbolKind::SequentialBlock, "", loc), Scope(compilation, this) {}
 
     void setTemporaryParent(const Scope& scope, Index index) { setParent(scope, index); }
+    const Statement& getBody() const { return binder.getStatement(*this, LookupLocation::max); }
 
     void toJson(json&) const {}
 
     static SequentialBlockSymbol& fromSyntax(Compilation& compilation,
                                              const BlockStatementSyntax& syntax);
+    static SequentialBlockSymbol& fromSyntax(Compilation& compilation,
+                                             const ForLoopStatementSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::SequentialBlock; }
+
+private:
+    StatementBinder binder;
 };
 
-class ProceduralBlockSymbol : public Symbol, public StatementBodiedScope {
+class ProceduralBlockSymbol : public Symbol {
 public:
     ProceduralBlockKind procedureKind;
 
-    ProceduralBlockSymbol(Compilation& compilation, SourceLocation loc,
-                          ProceduralBlockKind procedureKind) :
-        Symbol(SymbolKind::ProceduralBlock, "", loc),
-        StatementBodiedScope(compilation, this), procedureKind(procedureKind) {}
+    ProceduralBlockSymbol(SourceLocation loc, ProceduralBlockKind procedureKind) :
+        Symbol(SymbolKind::ProceduralBlock, "", loc), procedureKind(procedureKind) {}
+
+    const Statement& getBody() const {
+        return binder.getStatement(*getScope(), LookupLocation::after(*this));
+    }
 
     void toJson(json& j) const;
 
-    static ProceduralBlockSymbol& fromSyntax(const Scope& scope,
-                                             const ProceduralBlockSyntax& syntax,
-                                             SmallVector<Symbol*>& additionalBlocks);
+    static ProceduralBlockSymbol& fromSyntax(
+        const Scope& scope, const ProceduralBlockSyntax& syntax,
+        span<const SequentialBlockSymbol* const>& additionalBlocks);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ProceduralBlock; }
+
+private:
+    StatementBinder binder;
 };
 
 /// Represents blocks that are instantiated by a loop generate or conditional

@@ -251,13 +251,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::AlwaysFFBlock:
         case SyntaxKind::InitialBlock:
         case SyntaxKind::FinalBlock: {
-            SmallVectorSized<Symbol*, 8> blocks;
-            addMember(ProceduralBlockSymbol::fromSyntax(*this, syntax.as<ProceduralBlockSyntax>(),
-                                                        blocks));
+            span<const SequentialBlockSymbol* const> additional;
+            auto& block = ProceduralBlockSymbol::fromSyntax(
+                *this, syntax.as<ProceduralBlockSyntax>(), additional);
 
-            for (auto block : blocks)
-                addMember(*block);
-
+            for (auto b : additional)
+                addMember(*b);
+            addMember(block);
             break;
         }
         case SyntaxKind::EmptyMember:
@@ -511,142 +511,135 @@ void Scope::elaborate() const {
         }
     }
 
-    if (deferredData.hasStatement()) {
-        auto stmt = deferredData.getStatement();
-        ASSERT(stmt);
-        stmt->bindBody();
-    }
-    else {
-        // Go through deferred members and elaborate them now. We skip generate blocks in
-        // the initial pass because evaluating their conditions may depend on other members
-        // that have yet to be elaborated. This implicitly implements the elaboration algorithm
-        // described in [23.10.4.1].
-        auto deferred = deferredData.getMembers();
-        for (auto symbol : deferred) {
-            auto& member = symbol->as<DeferredMemberSymbol>();
-            switch (member.node.kind) {
-                case SyntaxKind::HierarchyInstantiation: {
-                    SmallVectorSized<const Symbol*, 8> instances;
-                    LookupLocation location = LookupLocation::before(*symbol);
-                    InstanceSymbol::fromSyntax(compilation,
-                                               member.node.as<HierarchyInstantiationSyntax>(),
-                                               location, *this, instances);
+    // Go through deferred members and elaborate them now. We skip generate blocks in
+    // the initial pass because evaluating their conditions may depend on other members
+    // that have yet to be elaborated. This implicitly implements the elaboration algorithm
+    // described in [23.10.4.1].
+    auto deferred = deferredData.getMembers();
+    for (auto symbol : deferred) {
+        auto& member = symbol->as<DeferredMemberSymbol>();
+        switch (member.node.kind) {
+            case SyntaxKind::HierarchyInstantiation: {
+                SmallVectorSized<const Symbol*, 8> instances;
+                LookupLocation location = LookupLocation::before(*symbol);
+                InstanceSymbol::fromSyntax(compilation,
+                                           member.node.as<HierarchyInstantiationSyntax>(), location,
+                                           *this, instances);
 
-                    const Symbol* last = symbol;
-                    for (auto instance : instances) {
-                        insertMember(instance, last);
-                        last = instance;
-                    }
-                    break;
+                const Symbol* last = symbol;
+                for (auto instance : instances) {
+                    insertMember(instance, last);
+                    last = instance;
                 }
-                case SyntaxKind::AnsiPortList:
-                case SyntaxKind::NonAnsiPortList: {
-                    SmallVectorSized<Symbol*, 8> ports;
-                    PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
-                                           deferredData.getPortDeclarations());
+                break;
+            }
+            case SyntaxKind::AnsiPortList:
+            case SyntaxKind::NonAnsiPortList: {
+                SmallVectorSized<Symbol*, 8> ports;
+                PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
+                                       deferredData.getPortDeclarations());
 
-                    // Only a few kinds of symbols can have port maps; grab that port map
-                    // now so we can add each port to it for future lookup.
-                    // The const_cast here is ugly but valid.
-                    SymbolMap* portMap;
-                    const Symbol& sym = asSymbol();
-                    if (sym.kind == SymbolKind::Definition)
-                        portMap = const_cast<SymbolMap*>(&sym.as<DefinitionSymbol>().getPortMap());
-                    else
-                        portMap = const_cast<SymbolMap*>(&sym.as<InstanceSymbol>().getPortMap());
+                // Only a few kinds of symbols can have port maps; grab that port map
+                // now so we can add each port to it for future lookup.
+                // The const_cast here is ugly but valid.
+                SymbolMap* portMap;
+                const Symbol& sym = asSymbol();
+                if (sym.kind == SymbolKind::Definition)
+                    portMap = const_cast<SymbolMap*>(&sym.as<DefinitionSymbol>().getPortMap());
+                else
+                    portMap = const_cast<SymbolMap*>(&sym.as<InstanceSymbol>().getPortMap());
 
-                    const Symbol* last = symbol;
-                    for (auto port : ports) {
-                        portMap->emplace(port->name, port);
-                        insertMember(port, last);
-                        last = port;
+                const Symbol* last = symbol;
+                for (auto port : ports) {
+                    portMap->emplace(port->name, port);
+                    insertMember(port, last);
+                    last = port;
 
-                        if (port->kind == SymbolKind::Port) {
-                            auto& valuePort = port->as<PortSymbol>();
-                            if (valuePort.internalSymbol && !valuePort.internalSymbol->getScope()) {
-                                insertMember(valuePort.internalSymbol, last);
-                                last = valuePort.internalSymbol;
-                            }
+                    if (port->kind == SymbolKind::Port) {
+                        auto& valuePort = port->as<PortSymbol>();
+                        if (valuePort.internalSymbol && !valuePort.internalSymbol->getScope()) {
+                            insertMember(valuePort.internalSymbol, last);
+                            last = valuePort.internalSymbol;
                         }
                     }
-
-                    // If we have port connections, tie them to the ports now.
-                    if (auto connections = deferredData.getPortConnections())
-                        PortSymbol::makeConnections(*this, ports, *connections);
-
-                    break;
                 }
-                case SyntaxKind::DataDeclaration: {
-                    SmallVectorSized<const ValueSymbol*, 4> symbols;
-                    VariableSymbol::fromSyntax(compilation, member.node.as<DataDeclarationSyntax>(),
-                                               *this, symbols);
 
-                    const Symbol* last = symbol;
-                    for (auto var : symbols) {
-                        insertMember(var, last);
-                        last = var;
-                    }
-                    break;
-                }
-                default:
-                    break;
+                // If we have port connections, tie them to the ports now.
+                if (auto connections = deferredData.getPortConnections())
+                    PortSymbol::makeConnections(*this, ports, *connections);
+
+                break;
             }
+            case SyntaxKind::DataDeclaration: {
+                SmallVectorSized<const ValueSymbol*, 4> symbols;
+                VariableSymbol::fromSyntax(compilation, member.node.as<DataDeclarationSyntax>(),
+                                           *this, symbols);
+
+                const Symbol* last = symbol;
+                for (auto var : symbols) {
+                    insertMember(var, last);
+                    last = var;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    // Now that all instances have been inserted, go back through and elaborate generate
+    // blocks. The spec requires that we give each generate construct an index, starting
+    // from one. This index is used to generate external names for unnamed generate blocks.
+    uint32_t constructIndex = 1;
+    for (auto symbol : deferred) {
+        auto& member = symbol->as<DeferredMemberSymbol>();
+        LookupLocation location = LookupLocation::before(*symbol);
+
+        switch (member.node.kind) {
+            case SyntaxKind::IfGenerate: {
+                SmallVectorSized<GenerateBlockSymbol*, 8> blocks;
+                GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
+                                                location, *this, constructIndex, true, blocks);
+
+                const Symbol* last = symbol;
+                for (auto block : blocks) {
+                    insertMember(block, last);
+                    last = block;
+                }
+                break;
+            }
+            case SyntaxKind::LoopGenerate:
+                insertMember(&GenerateBlockArraySymbol::fromSyntax(
+                                 compilation, member.node.as<LoopGenerateSyntax>(),
+                                 getInsertionIndex(*symbol), location, *this, constructIndex),
+                             symbol);
+                break;
+            default:
+                break;
         }
 
-        // Now that all instances have been inserted, go back through and elaborate generate
-        // blocks. The spec requires that we give each generate construct an index, starting
-        // from one. This index is used to generate external names for unnamed generate blocks.
-        uint32_t constructIndex = 1;
-        for (auto symbol : deferred) {
-            auto& member = symbol->as<DeferredMemberSymbol>();
-            LookupLocation location = LookupLocation::before(*symbol);
+        constructIndex++;
+    }
 
-            switch (member.node.kind) {
-                case SyntaxKind::IfGenerate: {
-                    SmallVectorSized<GenerateBlockSymbol*, 8> blocks;
-                    GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
-                                                    location, *this, constructIndex, true, blocks);
+    // Finally unlink any deferred members we had; we no longer need them.
+    if (!deferred.empty()) {
+        const Symbol* symbol = firstMember;
+        const Symbol* prev = nullptr;
 
-                    const Symbol* last = symbol;
-                    for (auto block : blocks) {
-                        insertMember(block, last);
-                        last = block;
-                    }
-                    break;
-                }
-                case SyntaxKind::LoopGenerate:
-                    insertMember(&GenerateBlockArraySymbol::fromSyntax(
-                                     compilation, member.node.as<LoopGenerateSyntax>(),
-                                     getInsertionIndex(*symbol), location, *this, constructIndex),
-                                 symbol);
-                    break;
-                default:
-                    break;
+        while (symbol) {
+            if (symbol->kind == SymbolKind::DeferredMember) {
+                if (prev)
+                    prev->nextInScope = symbol->nextInScope;
+                else
+                    firstMember = symbol->nextInScope;
+
+                if (lastMember == symbol)
+                    lastMember = symbol->nextInScope;
             }
-
-            constructIndex++;
-        }
-
-        // Finally unlink any deferred members we had; we no longer need them.
-        if (!deferred.empty()) {
-            const Symbol* symbol = firstMember;
-            const Symbol* prev = nullptr;
-
-            while (symbol) {
-                if (symbol->kind == SymbolKind::DeferredMember) {
-                    if (prev)
-                        prev->nextInScope = symbol->nextInScope;
-                    else
-                        firstMember = symbol->nextInScope;
-
-                    if (lastMember == symbol)
-                        lastMember = symbol->nextInScope;
-                }
-                else {
-                    prev = symbol;
-                }
-                symbol = symbol->nextInScope;
+            else {
+                prev = symbol;
             }
+            symbol = symbol->nextInScope;
         }
     }
 
@@ -1248,23 +1241,11 @@ void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<Lookup
 }
 
 void Scope::DeferredMemberData::addMember(Symbol* symbol) {
-    std::get<0>(membersOrStatement).emplace_back(symbol);
+    members.emplace_back(symbol);
 }
 
 span<Symbol* const> Scope::DeferredMemberData::getMembers() const {
-    return std::get<0>(membersOrStatement);
-}
-
-bool Scope::DeferredMemberData::hasStatement() const {
-    return membersOrStatement.index() == 1;
-}
-
-void Scope::DeferredMemberData::setStatement(StatementBodiedScope& stmt) {
-    membersOrStatement = &stmt;
-}
-
-StatementBodiedScope* Scope::DeferredMemberData::getStatement() const {
-    return std::get<1>(membersOrStatement);
+    return members;
 }
 
 void Scope::DeferredMemberData::setPortConnections(

@@ -140,7 +140,7 @@ endmodule
     const auto& x = top.memberAt<GenerateBlockSymbol>(1)
                         .memberAt<ProceduralBlockSymbol>(0)
                         .getBody()
-                        ->as<ExpressionStatement>()
+                        .as<ExpressionStatement>()
                         .expr.as<AssignmentExpression>()
                         .left()
                         .as<NamedValueExpression>()

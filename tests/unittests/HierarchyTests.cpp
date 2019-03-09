@@ -287,7 +287,7 @@ endmodule
     CHECK(args[4]->getType().getBitWidth() == 1);
     CHECK(args[4]->direction == FormalArgumentDirection::InOut);
 
-    const auto& returnStmt = foo.getBody()->as<StatementList>().list[0]->as<ReturnStatement>();
+    const auto& returnStmt = foo.getBody().as<ReturnStatement>();
     REQUIRE(returnStmt.kind == StatementKind::Return);
     CHECK(!returnStmt.expr->bad());
     CHECK(returnStmt.expr->type->getBitWidth() == 16);

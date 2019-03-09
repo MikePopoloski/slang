@@ -47,7 +47,6 @@ add_library(slang STATIC
 	symbols/MemberSymbols.cpp
 	symbols/Scope.cpp
 	symbols/SemanticFacts.cpp
-	symbols/StatementBodiedScope.cpp
 	symbols/Symbol.cpp
 	symbols/TypePrinter.cpp
 	symbols/TypeSymbols.cpp

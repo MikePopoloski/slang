@@ -10,7 +10,7 @@
 
 #include "slang/binding/ConstantValue.h"
 #include "slang/symbols/SemanticFacts.h"
-#include "slang/symbols/StatementBodiedScope.h"
+#include "slang/binding/Statements.h"
 #include "slang/symbols/Symbol.h"
 
 namespace slang {
@@ -207,6 +207,7 @@ class VariableSymbol : public ValueSymbol {
 public:
     VariableLifetime lifetime;
     bool isConst;
+    bool isCompilerGenerated = false;
 
     VariableSymbol(string_view name, SourceLocation loc,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false) :
@@ -254,7 +255,7 @@ public:
 };
 
 /// Represents a subroutine (task or function).
-class SubroutineSymbol : public Symbol, public StatementBodiedScope {
+class SubroutineSymbol : public Symbol, public Scope {
 public:
     using ArgList = span<const FormalArgumentSymbol* const>;
 
@@ -267,9 +268,10 @@ public:
     SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                      VariableLifetime defaultLifetime, bool isTask, const Scope&) :
         Symbol(SymbolKind::Subroutine, name, loc),
-        StatementBodiedScope(compilation, this), declaredReturnType(*this),
-        defaultLifetime(defaultLifetime), isTask(isTask) {}
+        Scope(compilation, this), declaredReturnType(*this), defaultLifetime(defaultLifetime),
+        isTask(isTask) {}
 
+    const Statement& getBody() const { return binder.getStatement(*this, LookupLocation::max); }
     const Type& getReturnType() const { return declaredReturnType.getType(); }
 
     void toJson(json& j) const;
@@ -279,6 +281,9 @@ public:
                                         const Scope& parent);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
+
+private:
+    StatementBinder binder;
 };
 
 /// Represents a modport within an interface definition.

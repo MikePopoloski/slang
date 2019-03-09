@@ -20,6 +20,7 @@ namespace slang {
 template<typename TDerived>
 class ASTVisitor {
     HAS_METHOD_TRAIT(handle);
+    HAS_METHOD_TRAIT(getBody);
 
 public:
 #define DERIVED *static_cast<TDerived*>(this)
@@ -40,12 +41,11 @@ public:
         for (const auto& member : symbol.members())
             member.visit(DERIVED);
 
-        if constexpr (std::is_base_of_v<StatementBodiedScope, T>) {
-            auto body = symbol.getBody();
-            if (body)
-                body->visit(DERIVED);
-        }
+        if constexpr (has_getBody_v<T, const Statement&>)
+            symbol.getBody().visit(DERIVED);
     }
+
+    void visitDefault(const ProceduralBlockSymbol& symbol) { symbol.getBody().visit(DERIVED); }
 
 #undef DERIVED
 };

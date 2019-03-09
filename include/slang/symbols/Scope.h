@@ -19,7 +19,6 @@ class Compilation;
 class ForwardingTypedefSymbol;
 class NetType;
 class Scope;
-class StatementBodiedScope;
 class SystemSubroutine;
 class WildcardImportSymbol;
 
@@ -281,8 +280,6 @@ protected:
             elaborate();
     }
 
-    void setStatement(StatementBodiedScope& stmt) { getOrAddDeferredData().setStatement(stmt); }
-
     void setPortConnections(const SeparatedSyntaxList<PortConnectionSyntax>& connections) {
         getOrAddDeferredData().setPortConnections(connections);
     }
@@ -306,10 +303,6 @@ private:
         void addMember(Symbol* symbol);
         span<Symbol* const> getMembers() const;
 
-        bool hasStatement() const;
-        void setStatement(StatementBodiedScope& stmt);
-        StatementBodiedScope* getStatement() const;
-
         void setPortConnections(const SeparatedSyntaxList<PortConnectionSyntax>& connections);
         const SeparatedSyntaxList<PortConnectionSyntax>* getPortConnections() const {
             return portConns;
@@ -326,11 +319,8 @@ private:
         span<const PortDeclarationSyntax* const> getPortDeclarations() const;
 
     private:
-        // A given scope only ever stores one of the following:
-        // - A list of syntax nodes that represent deferred members that need to be elaborated
-        //   before any lookups or iterations are done of members in the scope.
-        // - A StatementBodiedScope.
-        std::variant<std::vector<Symbol*>, StatementBodiedScope*> membersOrStatement;
+        // A list of deferred member symbols.
+        std::vector<Symbol*> members;
 
         // Some types are special in that their members leak into the surrounding scope; this
         // set keeps track of all variables, parameters, arguments, etc that have such data types

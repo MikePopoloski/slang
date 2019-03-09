@@ -7,6 +7,7 @@
 #include "slang/binding/Statements.h"
 
 #include "slang/binding/Expressions.h"
+#include "slang/compilation/Compilation.h"
 
 namespace slang {
 
@@ -35,6 +36,330 @@ bool Statement::eval(EvalContext& context) const {
     THROW_UNREACHABLE;
 }
 
+const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
+                                 span<const SequentialBlockSymbol* const>& blocks) {
+    // TODO:
+    /*if (syntax.label) {
+        results.append(SequentialBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
+        return;
+    }*/
+
+    auto& comp = context.scope.getCompilation();
+    Statement* result;
+    switch (syntax.kind) {
+        case SyntaxKind::ReturnStatement:
+            result =
+                &ReturnStatement::fromSyntax(comp, syntax.as<ReturnStatementSyntax>(), context);
+            break;
+        case SyntaxKind::ConditionalStatement:
+            result = &ConditionalStatement::fromSyntax(
+                comp, syntax.as<ConditionalStatementSyntax>(), context, blocks);
+            break;
+        case SyntaxKind::ForLoopStatement:
+            // We might have an implicit block here; check for that first.
+            if (!blocks.empty() && blocks[0]->getSyntax() == &syntax) {
+                result = comp.emplace<SequentialBlockStatement>(*blocks[0]);
+                blocks = blocks.subspan(1);
+            }
+            else {
+                result = &ForLoopStatement::fromSyntax(comp, syntax.as<ForLoopStatementSyntax>(),
+                                                       context, blocks);
+            }
+            break;
+        case SyntaxKind::ExpressionStatement:
+            result = &ExpressionStatement::fromSyntax(comp, syntax.as<ExpressionStatementSyntax>(),
+                                                      context);
+            break;
+        case SyntaxKind::SequentialBlockStatement:
+            // A block statement may or may not match up with a hierarchy node. Handle both cases
+            // here. We traverse statements in the same order as the findScopes call below, so this
+            // should always sync up exactly.
+            if (!blocks.empty() && blocks[0]->getSyntax() == &syntax) {
+                result = comp.emplace<SequentialBlockStatement>(*blocks[0]);
+                blocks = blocks.subspan(1);
+            }
+            else {
+                result = &SequentialBlockStatement::fromSyntax(
+                    comp, syntax.as<BlockStatementSyntax>(), context, blocks);
+            }
+            break;
+        case SyntaxKind::JumpStatement:
+        case SyntaxKind::ProceduralAssignStatement:
+        case SyntaxKind::ProceduralForceStatement:
+        case SyntaxKind::ProceduralDeassignStatement:
+        case SyntaxKind::ProceduralReleaseStatement:
+        case SyntaxKind::DisableStatement:
+        case SyntaxKind::DisableForkStatement:
+        case SyntaxKind::EmptyStatement:
+        case SyntaxKind::BlockingEventTriggerStatement:
+        case SyntaxKind::NonblockingEventTriggerStatement:
+        case SyntaxKind::WaitForkStatement:
+        case SyntaxKind::ParallelBlockStatement:
+        case SyntaxKind::CaseStatement:
+        case SyntaxKind::ForeverStatement:
+        case SyntaxKind::LoopStatement:
+        case SyntaxKind::DoWhileStatement:
+        case SyntaxKind::ForeachLoopStatement:
+        case SyntaxKind::TimingControlStatement:
+        case SyntaxKind::WaitStatement:
+        case SyntaxKind::RandCaseStatement:
+        case SyntaxKind::ImmediateAssertStatement:
+        case SyntaxKind::ImmediateAssumeStatement:
+        case SyntaxKind::ImmediateCoverStatement:
+        case SyntaxKind::AssertPropertyStatement:
+        case SyntaxKind::AssumePropertyStatement:
+        case SyntaxKind::CoverSequenceStatement:
+        case SyntaxKind::CoverPropertyStatement:
+        case SyntaxKind::RestrictPropertyStatement:
+        case SyntaxKind::ExpectPropertyStatement:
+        case SyntaxKind::WaitOrderStatement:
+            context.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            result = &badStmt(comp, nullptr);
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    result->syntax = &syntax;
+    return *result;
+}
+
+Statement& Statement::badStmt(Compilation& compilation, const Statement* stmt) {
+    return *compilation.emplace<InvalidStatement>(stmt);
+}
+
+static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
+                       SmallVector<const SequentialBlockSymbol*>& results) {
+    // TODO:
+    /*if (syntax.label) {
+        results.append(SequentialBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
+        return;
+    }*/
+
+    auto recurse = [&](auto stmt) { findBlocks(scope, *stmt, results); };
+
+    switch (syntax.kind) {
+        case SyntaxKind::ReturnStatement:
+        case SyntaxKind::JumpStatement:
+        case SyntaxKind::ProceduralAssignStatement:
+        case SyntaxKind::ProceduralForceStatement:
+        case SyntaxKind::ProceduralDeassignStatement:
+        case SyntaxKind::ProceduralReleaseStatement:
+        case SyntaxKind::DisableStatement:
+        case SyntaxKind::DisableForkStatement:
+        case SyntaxKind::EmptyStatement:
+        case SyntaxKind::BlockingEventTriggerStatement:
+        case SyntaxKind::NonblockingEventTriggerStatement:
+        case SyntaxKind::ExpressionStatement:
+        case SyntaxKind::WaitForkStatement:
+            // These statements don't have child statements within them.
+            return;
+
+        case SyntaxKind::SequentialBlockStatement:
+        case SyntaxKind::ParallelBlockStatement: {
+            // Block statements form their own hierarchy scope if:
+            // - They have a name
+            // - They are unnamed but have variable declarations within them
+            auto& block = syntax.as<BlockStatementSyntax>();
+            if (block.blockName) {
+                results.append(&SequentialBlockSymbol::fromSyntax(scope.getCompilation(), block));
+                return;
+            }
+
+            for (auto item : block.items) {
+                // If we find any decls at all, this block gets its own scope.
+                if (!StatementSyntax::isKind(item->kind)) {
+                    results.append(
+                        &SequentialBlockSymbol::fromSyntax(scope.getCompilation(), block));
+                    return;
+                }
+            }
+
+            for (auto item : block.items)
+                recurse(&item->as<StatementSyntax>());
+            return;
+        }
+
+        case SyntaxKind::CaseStatement:
+            for (auto item : syntax.as<CaseStatementSyntax>().items) {
+                switch (item->kind) {
+                    case SyntaxKind::StandardCaseItem:
+                        recurse(&item->as<StandardCaseItemSyntax>().clause->as<StatementSyntax>());
+                        break;
+                    case SyntaxKind::PatternCaseItem:
+                        recurse(item->as<PatternCaseItemSyntax>().statement);
+                        break;
+                    case SyntaxKind::DefaultCaseItem:
+                        recurse(&item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>());
+                        break;
+                    default:
+                        THROW_UNREACHABLE;
+                }
+            }
+            return;
+        case SyntaxKind::ConditionalStatement: {
+            auto& cond = syntax.as<ConditionalStatementSyntax>();
+            recurse(cond.statement);
+            if (cond.elseClause)
+                recurse(&cond.elseClause->clause->as<StatementSyntax>());
+            return;
+        }
+        case SyntaxKind::ForeverStatement:
+            recurse(syntax.as<ForeverStatementSyntax>().statement);
+            return;
+        case SyntaxKind::LoopStatement:
+            recurse(syntax.as<LoopStatementSyntax>().statement);
+            return;
+        case SyntaxKind::DoWhileStatement:
+            recurse(syntax.as<DoWhileStatementSyntax>().statement);
+            return;
+        case SyntaxKind::ForLoopStatement: {
+            // For loops are special; if they declare variables, they get
+            // wrapped in an implicit block. Otherwise they are transparent.
+            auto& forLoop = syntax.as<ForLoopStatementSyntax>();
+            if (!forLoop.initializers.empty() &&
+                forLoop.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
+
+                results.append(&SequentialBlockSymbol::fromSyntax(scope.getCompilation(), forLoop));
+            }
+            else {
+                recurse(forLoop.statement);
+            }
+            return;
+        }
+        case SyntaxKind::ForeachLoopStatement:
+            recurse(syntax.as<ForeachLoopStatementSyntax>().statement);
+            return;
+        case SyntaxKind::TimingControlStatement:
+            recurse(syntax.as<TimingControlStatementSyntax>().statement);
+            return;
+        case SyntaxKind::WaitStatement:
+            recurse(syntax.as<WaitStatementSyntax>().statement);
+            return;
+        case SyntaxKind::RandCaseStatement:
+            for (auto item : syntax.as<RandCaseStatementSyntax>().items)
+                recurse(item->statement);
+            return;
+
+        case SyntaxKind::ImmediateAssertStatement:
+        case SyntaxKind::ImmediateAssumeStatement:
+        case SyntaxKind::ImmediateCoverStatement:
+        case SyntaxKind::AssertPropertyStatement:
+        case SyntaxKind::AssumePropertyStatement:
+        case SyntaxKind::CoverSequenceStatement:
+        case SyntaxKind::CoverPropertyStatement:
+        case SyntaxKind::RestrictPropertyStatement:
+        case SyntaxKind::ExpectPropertyStatement:
+        case SyntaxKind::WaitOrderStatement:
+            scope.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            return;
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
+void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& syntax_) {
+    stmt = nullptr;
+    syntax = &syntax_;
+
+    SmallVectorSized<const SequentialBlockSymbol*, 8> buffer;
+    findBlocks(scope, syntax_, buffer);
+    blocks = buffer.copy(scope.getCompilation());
+}
+
+void StatementBinder::setSyntax(const SequentialBlockSymbol& scope,
+                                const ForLoopStatementSyntax& syntax_) {
+    stmt = nullptr;
+    syntax = &syntax_;
+
+    SmallVectorSized<const SequentialBlockSymbol*, 8> buffer;
+    findBlocks(scope, *syntax_.statement, buffer);
+    blocks = buffer.copy(scope.getCompilation());
+}
+
+void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items) {
+    stmt = nullptr;
+    syntax = &items;
+
+    SmallVectorSized<const SequentialBlockSymbol*, 8> buffer;
+    for (auto item : items) {
+        switch (item->kind) {
+            case SyntaxKind::DataDeclaration:
+            case SyntaxKind::TypedefDeclaration:
+            case SyntaxKind::ForwardTypedefDeclaration:
+            case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
+            case SyntaxKind::PackageImportDeclaration:
+                scope.addMembers(*item);
+                break;
+            case SyntaxKind::PortDeclaration:
+            case SyntaxKind::ParameterDeclarationStatement:
+            case SyntaxKind::LetDeclaration:
+            case SyntaxKind::NetTypeDeclaration:
+                scope.addDiag(DiagCode::NotYetSupported, item->sourceRange());
+                break;
+            default:
+                findBlocks(scope, item->as<StatementSyntax>(), buffer);
+                break;
+        }
+    }
+
+    blocks = buffer.copy(scope.getCompilation());
+    for (auto block : blocks)
+        scope.addMember(*block);
+}
+
+const Statement& StatementBinder::getStatement(const Scope& scope, LookupLocation location) const {
+    if (!stmt)
+        stmt = &bindStatement(scope, location);
+    return *stmt;
+}
+
+const Statement& StatementBinder::bindStatement(const Scope& scope, LookupLocation location) const {
+    auto& comp = scope.getCompilation();
+    BindContext context(scope, location);
+    SmallVectorSized<const Statement*, 8> buffer;
+
+    auto scopeKind = scope.asSymbol().kind;
+    if (scopeKind == SymbolKind::SequentialBlock || scopeKind == SymbolKind::Subroutine) {
+        // This relies on the language requiring all declarations be at the start
+        // of a statement block. Additional work would be required to support
+        // declarations anywhere in the block.
+        for (auto& member : scope.members()) {
+            if (member.kind != SymbolKind::Variable)
+                continue;
+
+            // Filter out implicitly generate function return type variables,
+            // they are initialized elsewhere.
+            auto& var = member.as<VariableSymbol>();
+            if (!var.isCompilerGenerated)
+                buffer.append(comp.emplace<VariableDeclStatement>(var));
+        }
+    }
+
+    auto blocksCopy = blocks;
+    if (auto stmtSyntax = std::get_if<const StatementSyntax*>(&syntax)) {
+        if (auto ptr = *stmtSyntax)
+            buffer.append(&Statement::bind(*ptr, context, blocksCopy));
+    }
+    else {
+        auto& items = *std::get<const SyntaxList<SyntaxNode>*>(syntax);
+        for (auto item : items) {
+            if (StatementSyntax::isKind(item->kind))
+                buffer.append(&Statement::bind(item->as<StatementSyntax>(), context, blocksCopy));
+        }
+    }
+
+    ASSERT(blocksCopy.empty());
+
+    if (buffer.empty())
+        return InvalidStatement::Instance;
+
+    if (buffer.size() == 1)
+        return *buffer[0];
+
+    return *comp.emplace<StatementList>(buffer.copy(comp));
+}
+
 bool StatementList::eval(EvalContext& context) const {
     for (auto item : list) {
         if (!item->eval(context))
@@ -46,12 +371,52 @@ bool StatementList::eval(EvalContext& context) const {
     return true;
 }
 
-bool SequentialBlockStatement::eval(EvalContext& context) const {
-    return block.getBody()->eval(context);
+Statement& SequentialBlockStatement::fromSyntax(Compilation& compilation,
+                                                const BlockStatementSyntax& syntax,
+                                                const BindContext& context, BlockList& blocks) {
+    SmallVectorSized<const Statement*, 8> buffer;
+    for (auto item : syntax.items)
+        buffer.append(&Statement::bind(item->as<StatementSyntax>(), context, blocks));
+
+    auto list = compilation.emplace<StatementList>(buffer.copy(compilation));
+    return *compilation.emplace<SequentialBlockStatement>(*list);
 }
 
-bool ExpressionStatement::eval(EvalContext& context) const {
-    return bool(expr.eval(context));
+const Statement& SequentialBlockStatement::getStatements() const {
+    if (block)
+        return block->getBody();
+    return *list;
+}
+
+bool SequentialBlockStatement::eval(EvalContext& context) const {
+    return getStatements().eval(context);
+}
+
+Statement& ReturnStatement::fromSyntax(Compilation& compilation,
+                                       const ReturnStatementSyntax& syntax,
+                                       const BindContext& context) {
+    // Find the parent subroutine.
+    const Scope* scope = &context.scope;
+    while (scope->asSymbol().kind == SymbolKind::SequentialBlock)
+        scope = scope->getParent();
+
+    auto stmtLoc = syntax.returnKeyword.location();
+    if (scope->asSymbol().kind != SymbolKind::Subroutine) {
+        context.addDiag(DiagCode::ReturnNotInSubroutine, stmtLoc);
+        return badStmt(compilation, nullptr);
+    }
+
+    auto& subroutine = scope->asSymbol().as<SubroutineSymbol>();
+    auto& expr =
+        Expression::bind(subroutine.getReturnType(), *syntax.returnValue, stmtLoc, context);
+
+    return *compilation.emplace<ReturnStatement>(&expr);
+}
+
+bool ReturnStatement::eval(EvalContext& context) const {
+    // TODO: empty return?
+    context.setReturned(expr->eval(context));
+    return true;
 }
 
 bool VariableDeclStatement::eval(EvalContext& context) const {
@@ -67,10 +432,20 @@ bool VariableDeclStatement::eval(EvalContext& context) const {
     return true;
 }
 
-bool ReturnStatement::eval(EvalContext& context) const {
-    // TODO: empty return?
-    context.setReturned(expr->eval(context));
-    return true;
+Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
+                                            const ConditionalStatementSyntax& syntax,
+                                            const BindContext& context, BlockList& blocks) {
+    ASSERT(syntax.predicate->conditions.size() == 1);
+    ASSERT(!syntax.predicate->conditions[0]->matchesClause);
+
+    auto& cond = Expression::bind(*syntax.predicate->conditions[0]->expr, context);
+    auto& ifTrue = Statement::bind(*syntax.statement, context, blocks);
+    const Statement* ifFalse = nullptr;
+    if (syntax.elseClause)
+        ifFalse =
+            &Statement::bind(syntax.elseClause->clause->as<StatementSyntax>(), context, blocks);
+
+    return *compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse);
 }
 
 bool ConditionalStatement::eval(EvalContext& context) const {
@@ -84,6 +459,33 @@ bool ConditionalStatement::eval(EvalContext& context) const {
     else if (ifFalse)
         return ifFalse->eval(context);
     return true;
+}
+
+Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
+                                        const ForLoopStatementSyntax& syntax,
+                                        const BindContext& context, BlockList& blocks) {
+    // If the initializers were variable declarations, they've already been hoisted
+    // out into a parent block and will be initialized there.
+    SmallVectorSized<const Statement*, 4> initializers;
+    if (syntax.initializers.empty() ||
+        syntax.initializers[0]->kind != SyntaxKind::ForVariableDeclaration) {
+
+        BlockList emptySpan;
+        for (auto initializer : syntax.initializers) {
+            initializers.append(
+                &Statement::bind(initializer->as<StatementSyntax>(), context, emptySpan));
+        }
+    }
+
+    SmallVectorSized<const Expression*, 2> steps;
+    auto& stopExpr = Expression::bind(*syntax.stopExpr, context);
+    for (auto step : syntax.steps)
+        steps.append(&Expression::bind(*step, context));
+
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
+    auto initList = compilation.emplace<StatementList>(initializers.copy(compilation));
+    return *compilation.emplace<ForLoopStatement>(*initList, &stopExpr, steps.copy(compilation),
+                                                  bodyStmt);
 }
 
 bool ForLoopStatement::eval(EvalContext& context) const {
@@ -110,6 +512,17 @@ bool ForLoopStatement::eval(EvalContext& context) const {
         }
     }
     return true;
+}
+
+Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
+                                           const ExpressionStatementSyntax& syntax,
+                                           const BindContext& context) {
+    auto& expr = Expression::bind(*syntax.expr, context);
+    return *compilation.emplace<ExpressionStatement>(expr);
+}
+
+bool ExpressionStatement::eval(EvalContext& context) const {
+    return bool(expr.eval(context));
 }
 
 } // namespace slang
