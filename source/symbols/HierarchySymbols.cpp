@@ -452,7 +452,19 @@ void InstanceArraySymbol::toJson(json& j) const {
 
 SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilation,
                                                          const BlockStatementSyntax& syntax) {
-    auto result = compilation.emplace<SequentialBlockSymbol>(compilation, syntax.begin.location());
+    string_view name;
+    SourceLocation loc;
+    if (syntax.blockName) {
+        auto token = syntax.blockName->name;
+        name = token.valueText();
+        loc = token.location();
+    }
+    else {
+        name = "";
+        loc = syntax.begin.location();
+    }
+
+    auto result = compilation.emplace<SequentialBlockSymbol>(compilation, name, loc);
     result->binder.setItems(*result, syntax.items);
     result->setSyntax(syntax);
 
@@ -462,7 +474,7 @@ SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilatio
 SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilation,
                                                          const ForLoopStatementSyntax& syntax) {
     auto result =
-        compilation.emplace<SequentialBlockSymbol>(compilation, syntax.forKeyword.location());
+        compilation.emplace<SequentialBlockSymbol>(compilation, "", syntax.forKeyword.location());
     result->setSyntax(syntax);
 
     // If one entry is a variable declaration, they should all be. Checked by the parser.
@@ -615,7 +627,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     }
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    SequentialBlockSymbol iterScope(compilation, SourceLocation());
+    SequentialBlockSymbol iterScope(compilation, "", SourceLocation());
     VariableSymbol local{ syntax.identifier.valueText(), syntax.identifier.location() };
     local.setType(compilation.getIntType());
 

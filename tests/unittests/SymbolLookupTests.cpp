@@ -967,3 +967,31 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Nested block statement lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module M;
+
+    initial begin
+        begin
+            begin : a
+                int foo;
+            end
+        end
+        begin : b
+            int bar;
+        end
+    end
+
+    initial begin
+        a.foo = 0;
+        b.bar = 1;
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

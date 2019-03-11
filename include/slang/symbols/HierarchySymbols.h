@@ -153,8 +153,8 @@ public:
 
 class SequentialBlockSymbol : public Symbol, public Scope {
 public:
-    SequentialBlockSymbol(Compilation& compilation, SourceLocation loc) :
-        Symbol(SymbolKind::SequentialBlock, "", loc), Scope(compilation, this) {}
+    SequentialBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
+        Symbol(SymbolKind::SequentialBlock, name, loc), Scope(compilation, this) {}
 
     void setTemporaryParent(const Scope& scope, Index index) { setParent(scope, index); }
     const Statement& getBody() const { return binder.getStatement(*this, LookupLocation::max); }
