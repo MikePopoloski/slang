@@ -35,6 +35,10 @@ struct TimescaleValue {
     TimescaleValue() = default;
     TimescaleValue(TimeUnit unit, TimescaleMagnitude magnitude) :
         unit(unit), magnitude(magnitude) {}
+
+    static optional<TimescaleValue> fromLiteral(double value, TimeUnit unit);
+
+    bool operator>(const TimescaleValue& rhs) const;
 };
 
 /// A collection of a base time and a precision value that

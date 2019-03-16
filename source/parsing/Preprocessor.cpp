@@ -627,79 +627,68 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
     return parseBranchDirective(directive, Token(), taken);
 }
 
-bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit,
-                                            TimescaleMagnitude& magnitude) {
-    auto token = peek();
-    if (token.kind == TokenKind::IntegerLiteral) {
-        value = consume();
-        unit = expect(TokenKind::Identifier);
+bool Preprocessor::expectTimescaleSpecifier(Token& token, TimescaleValue& value) {
+    if (peek(TokenKind::IntegerLiteral)) {
+        // We wanted to see a time literal here, but for directives we will allow there
+        // to be a space between the integer and suffix portions of the time.
+        token = consume();
 
-        string_view unused;
-        optional<uint32_t> v = value.intValue().as<uint32_t>();
-        return v && checkTimeMagnitude(*v, unused, magnitude);
-    }
+        TimeUnit unit;
+        auto suffix = peek();
+        if (suffix.kind != TokenKind::Identifier || !isOnSameLine(suffix) ||
+            !suffixToTimeUnit(suffix.rawText(), unit)) {
 
-    if (token.kind == TokenKind::TimeLiteral) {
-        // So long as we are dealing with a time literal, we should consume and
-        // output the split tokens, even though those split tokens might be
-        // invalid if the data is poorly formated, i.e with a number other than 1,10,100
-        string_view numText;
-        bool success = checkTimeMagnitude(token.realValue(), numText, magnitude);
+            addDiag(DiagCode::ExpectedTimeLiteral, token.location());
+            return false;
+        }
 
-        // generate the tokens that come from splitting the TimeLiteral
-        auto valueInfo = alloc.emplace<Token::Info>(token.trivia(), numText, token.location(),
-                                                    token.getInfo()->flags);
-        value = Token(TokenKind::IntegerLiteral, valueInfo);
-        valueInfo->setInt(alloc, SVInt(32, (uint64_t)token.realValue(), true));
-
-        string_view timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit());
-        Token::Info* unitInfo =
-            alloc.emplace<Token::Info>(token.trivia(), timeUnitSuffix,
-                                       token.location() + numText.length(), token.getInfo()->flags);
-
-        unit = Token(TokenKind::Identifier, unitInfo);
-        unitInfo->extra = IdentifierType::Normal;
-
+        // Glue the tokens together to form a "time literal"
         consume();
-        if (!success)
-            addDiag(DiagCode::InvalidTimescaleSpecifier, token.location());
-        return success;
+        auto start = token.rawText().data();
+        auto text = string_view(start, suffix.rawText().data() + suffix.rawText().size() - start);
+        auto info = alloc.emplace<Token::Info>(token.trivia(), text, token.location());
+        info->setReal(token.intValue().toDouble(), false);
+        info->setTimeUnit(unit);
+
+        token = Token(TokenKind::TimeLiteral, info);
+    }
+    else {
+        token = expect(TokenKind::TimeLiteral);
+        if (token.isMissing())
+            return false;
     }
 
-    value =
-        Token::createExpected(alloc, diagnostics, token, TokenKind::IntegerLiteral, lastConsumed);
-    unit = Token::createExpected(alloc, diagnostics, token, TokenKind::Identifier, lastConsumed);
-    return false;
+    auto checked = TimescaleValue::fromLiteral(token.realValue(), token.numericFlags().unit());
+    if (!checked) {
+        addDiag(DiagCode::InvalidTimescaleSpecifier, token.location());
+        return false;
+    }
+
+    value = *checked;
+    return true;
 }
 
 Trivia Preprocessor::handleTimescaleDirective(Token directive) {
-    Token value, valueUnit, precision, precisionUnit;
-    TimescaleMagnitude valueMagnitude = TimescaleMagnitude::One;
-    TimescaleMagnitude precisionMagnitude = TimescaleMagnitude::One;
-    bool foundSpecifiers = expectTimescaleSpecifier(value, valueUnit, valueMagnitude);
+    Token unitToken, precisionToken;
+    TimescaleValue unit, precision;
+    bool success = expectTimescaleSpecifier(unitToken, unit);
 
     auto slash = expect(TokenKind::Slash);
-    foundSpecifiers |= expectTimescaleSpecifier(precision, precisionUnit, precisionMagnitude);
+    success |= expectTimescaleSpecifier(precisionToken, precision);
 
-    if (foundSpecifiers) {
-        TimeUnit unitValue, unitPrecision;
-        bool success1 = suffixToTimeUnit(valueUnit.valueText(), unitValue);
-        bool success2 = suffixToTimeUnit(precisionUnit.valueText(), unitPrecision);
-
-        // both unit and precision must have valid units, and
-        // the precision must be at least as precise as the value.
-        // larger values of TimeUnit are more precise than smaller values
-        if (!success1 || !success2 || unitPrecision < unitValue ||
-            (unitPrecision == unitValue && precision.intValue() > value.intValue())) {
-            addDiag(DiagCode::InvalidTimescaleSpecifier, directive.location());
+    if (success) {
+        // Precision must be equal to or smaller than the unit (i.e. more precise).
+        if (precision > unit) {
+            auto& diag = addDiag(DiagCode::InvalidTimescalePrecision, precisionToken.location());
+            diag << unitToken.range() << precisionToken.range();
         }
         else {
-            activeTimescale = Timescale(TimescaleValue(unitValue, valueMagnitude),
-                                        TimescaleValue(unitPrecision, precisionMagnitude));
+            activeTimescale = { unit, precision };
         }
     }
-    auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, value, valueUnit, slash,
-                                                             precision, precisionUnit);
+
+    auto timescale =
+        alloc.emplace<TimescaleDirectiveSyntax>(directive, unitToken, slash, precisionToken);
     return Trivia(TriviaKind::Directive, timescale);
 }
 

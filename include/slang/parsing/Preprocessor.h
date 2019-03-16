@@ -137,7 +137,7 @@ private:
     Trivia parseBranchDirective(Token directive, Token condition, bool taken);
 
     // Timescale specifier parser
-    bool expectTimescaleSpecifier(Token& value, Token& unit, TimescaleMagnitude& magnitude);
+    bool expectTimescaleSpecifier(Token& token, TimescaleValue& value);
 
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic { None, Line, File };

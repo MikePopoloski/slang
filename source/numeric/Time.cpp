@@ -38,4 +38,24 @@ string_view timeUnitToSuffix(TimeUnit unit) {
     THROW_UNREACHABLE;
 }
 
+optional<TimescaleValue> TimescaleValue::fromLiteral(double value, TimeUnit unit) {
+    if (value == 1)
+        return TimescaleValue(unit, TimescaleMagnitude::One);
+    if (value == 10)
+        return TimescaleValue(unit, TimescaleMagnitude::Ten);
+    if (value == 100)
+        return TimescaleValue(unit, TimescaleMagnitude::Hundred);
+
+    return std::nullopt;
+}
+
+bool TimescaleValue::operator>(const TimescaleValue& rhs) const {
+    // Unit enum is specified in reverse order, so check in the opposite direction.
+    if (unit < rhs.unit)
+        return true;
+    if (unit > rhs.unit)
+        return false;
+    return magnitude > rhs.magnitude;
+}
+
 } // namespace slang

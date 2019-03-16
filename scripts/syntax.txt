@@ -1544,10 +1544,8 @@ MacroActualArgumentList? args
 
 TimescaleDirective base=Directive kind=TimescaleDirective
 token timeUnit
-token timeUnitUnit
 token slash
 token timePrecision
-token timePrecisionUnit
 
 DefaultNetTypeDirective base=Directive kind=DefaultNetTypeDirective
 token netType

@@ -56,7 +56,8 @@ error InvalidLineDirectiveLevel "invalid level for `line directive, must be 0, 1
 error UndefineBuiltinDirective "cannot `undef compiler directives"
 error UnrecognizedKeywordVersion "unsupported keyword version specified for `begin_keywords"
 error MismatchedEndKeywordsDirective "no opening `begin_keywords directive"
-error InvalidTimescaleSpecifier "timescale specifiers must be powers of ten with precision more precise than unit"
+error InvalidTimescaleSpecifier "time scale must have a value of 1, 10, or 100"
+error InvalidTimescalePrecision "time precision must be at least as precise as the time unit (i.e. it cannot be a longer unit of time)"
 error RecursiveMacro "expansion of macro '{}' is recursive"
 error MacroOpsOutsideDefinition "macro operators may only be used within a macro definition"
 
