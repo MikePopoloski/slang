@@ -13,16 +13,18 @@ namespace slang {
 class SequentialBlockSymbol;
 class VariableSymbol;
 
-enum class StatementKind {
-    Invalid,
-    List,
-    SequentialBlock,
-    ExpressionStatement,
-    VariableDeclaration,
-    Return,
-    Conditional,
-    ForLoop
-};
+// clang-format off
+#define STATEMENT(x) \
+    x(Invalid) \
+    x(List) \
+    x(SequentialBlock) \
+    x(ExpressionStatement) \
+    x(VariableDeclaration) \
+    x(Return) \
+    x(Conditional) \
+    x(ForLoop)
+ENUM(StatementKind, STATEMENT);
+#undef STATEMENT
 
 /// The base class for all statements in SystemVerilog.
 class Statement {

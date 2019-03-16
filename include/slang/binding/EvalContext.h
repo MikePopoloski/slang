@@ -18,7 +18,7 @@ namespace slang {
 
 class SubroutineSymbol;
 
-/// A container for all context required to evaluate an expression.
+/// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining
 /// storage for local variables.
 class EvalContext {
