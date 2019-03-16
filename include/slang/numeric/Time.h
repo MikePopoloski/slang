@@ -35,10 +35,20 @@ struct TimescaleValue {
     TimescaleValue() = default;
     TimescaleValue(TimeUnit unit, TimescaleMagnitude magnitude) :
         unit(unit), magnitude(magnitude) {}
+    TimescaleValue(string_view str);
+
+    template<size_t N>
+    TimescaleValue(const char (&str)[N]) : TimescaleValue(string_view(str)) {}
+
+    std::string toString() const;
 
     static optional<TimescaleValue> fromLiteral(double value, TimeUnit unit);
 
     bool operator>(const TimescaleValue& rhs) const;
+    bool operator==(const TimescaleValue& rhs) const;
+    bool operator!=(const TimescaleValue& rhs) const { return !(*this == rhs); }
+
+    friend std::ostream& operator<<(std::ostream& os, const TimescaleValue& tv);
 };
 
 /// A collection of a base time and a precision value that
@@ -49,6 +59,13 @@ struct Timescale {
 
     Timescale() = default;
     Timescale(TimescaleValue base, TimescaleValue precision) : base(base), precision(precision) {}
+
+    std::string toString() const;
+
+    bool operator==(const Timescale& rhs) const;
+    bool operator!=(const Timescale& rhs) const { return !(*this == rhs); }
+
+    friend std::ostream& operator<<(std::ostream& os, const Timescale& ts);
 };
 
 } // namespace slang

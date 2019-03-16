@@ -88,6 +88,8 @@ ModuleDeclarationSyntax& Parser::parseModule(span<AttributeInstanceSyntax*> attr
     auto& header = parseModuleHeader();
     auto endKind = getModuleEndKind(header.moduleKeyword.kind);
 
+    NodeMetadata meta{ getPP().getDefaultNetType(), getPP().getTimescale() };
+
     Token endmodule;
     auto members =
         parseMemberList<MemberSyntax>(endKind, endmodule, [this]() { return parseMember(); });
@@ -96,7 +98,7 @@ ModuleDeclarationSyntax& Parser::parseModule(span<AttributeInstanceSyntax*> attr
         factory.moduleDeclaration(getModuleDeclarationKind(header.moduleKeyword.kind), attributes,
                                   header, members, endmodule, parseNamedBlockClause());
 
-    metadataMap[&result] = { getPP().getDefaultNetType(), getPP().getTimescale() };
+    metadataMap[&result] = meta;
     return result;
 }
 
@@ -197,8 +199,7 @@ PortExpressionSyntax& Parser::parsePortExpression() {
 
         parseSeparatedList<isIdentifierOrComma, isEndOfBracedList>(
             TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, items,
-            closeBrace, DiagCode::ExpectedExpression,
-            [this] { return &parsePortReference(); });
+            closeBrace, DiagCode::ExpectedExpression, [this] { return &parsePortReference(); });
 
         return factory.portConcatenation(openBrace, items, closeBrace);
     }
@@ -560,7 +561,7 @@ TimeUnitsDeclarationSyntax& Parser::parseTimeUnitsDeclaration(
     auto time = expect(TokenKind::TimeLiteral);
 
     DividerClauseSyntax* divider = nullptr;
-    if (peek(TokenKind::Slash)) {
+    if (keyword.kind == TokenKind::TimeUnitKeyword && peek(TokenKind::Slash)) {
         auto divide = consume();
         divider = &factory.dividerClause(divide, expect(TokenKind::TimeLiteral));
     }
@@ -765,8 +766,7 @@ GenvarDeclarationSyntax& Parser::parseGenvarDeclaration(span<AttributeInstanceSy
 
     parseSeparatedList<isIdentifierOrComma, isSemicolon>(
         TokenKind::GenVarKeyword, TokenKind::Semicolon, TokenKind::Comma, keyword, identifiers,
-        semi, DiagCode::ExpectedIdentifier,
-        [this] { return &factory.identifierName(consume()); });
+        semi, DiagCode::ExpectedIdentifier, [this] { return &factory.identifierName(consume()); });
 
     return factory.genvarDeclaration(attributes, keyword, identifiers, semi);
 }
@@ -1292,8 +1292,7 @@ TransSetSyntax& Parser::parseTransSet() {
 
     parseSeparatedList<isPossibleTransSet, isEndOfTransSet>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::EqualsArrow, openParen,
-        list, closeParen, DiagCode::ExpectedExpression,
-        [this] { return &parseTransRange(); });
+        list, closeParen, DiagCode::ExpectedExpression, [this] { return &parseTransRange(); });
 
     return factory.transSet(openParen, list, closeParen);
 }
@@ -1845,9 +1844,9 @@ span<TokenOrSyntax> Parser::parseOneDeclarator() {
 template<bool (*IsEnd)(TokenKind)>
 span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end) {
     SmallVectorSized<TokenOrSyntax, 4> buffer;
-    parseSeparatedList<isIdentifierOrComma, IsEnd>(
-        buffer, endKind, TokenKind::Comma, end, DiagCode::ExpectedDeclarator,
-        [this] { return &parseDeclarator(); });
+    parseSeparatedList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end,
+                                                   DiagCode::ExpectedDeclarator,
+                                                   [this] { return &parseDeclarator(); });
 
     return buffer.copy(alloc);
 }
@@ -2210,8 +2209,7 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
 
     parseSeparatedList<isPossiblePortConnection, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, items,
-        closeParen, DiagCode::ExpectedPortConnection,
-        [this] { return &parsePortConnection(); });
+        closeParen, DiagCode::ExpectedPortConnection, [this] { return &parsePortConnection(); });
 
     return factory.hierarchicalInstance(name, dimensions, openParen, items, closeParen);
 }

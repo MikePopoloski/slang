@@ -125,6 +125,12 @@ public:
     /// the given declaration was parsed. Returns nullopt if there was no such directive.
     optional<Timescale> getDirectiveTimescale(const ModuleDeclarationSyntax& decl) const;
 
+    /// Sets the default timescale to use when none is specified in the source code.
+    void setDefaultTimeScale(Timescale timescale) { defaultTimescale = timescale; }
+
+    /// Gets the default timescale to use when none is specified in the source code.
+    Timescale getDefaultTimeScale() const { return defaultTimescale; }
+
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
                         bool forceSigned = false);
@@ -181,6 +187,7 @@ private:
     std::unique_ptr<RootSymbol> root;
     CompilationUnitSymbol* emptyUnit = nullptr;
     const SourceManager* sourceManager = nullptr;
+    Timescale defaultTimescale;
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()
 

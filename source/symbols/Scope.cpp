@@ -125,11 +125,11 @@ Timescale Scope::getTimescale() const {
     while (current) {
         switch (current->asSymbol().kind) {
             case SymbolKind::CompilationUnit:
-                return current->asSymbol().as<CompilationUnitSymbol>().timescale;
+                return current->asSymbol().as<CompilationUnitSymbol>().getTimescale();
             case SymbolKind::Definition:
-                return current->asSymbol().as<DefinitionSymbol>().timescale;
+                return current->asSymbol().as<DefinitionSymbol>().getTimescale();
             case SymbolKind::Package:
-                return current->asSymbol().as<PackageSymbol>().timescale;
+                return current->asSymbol().as<PackageSymbol>().getTimescale();
             default:
                 if (InstanceSymbol::isKind(current->asSymbol().kind))
                     current = &current->asSymbol().as<InstanceSymbol>().definition;
@@ -139,7 +139,7 @@ Timescale Scope::getTimescale() const {
         }
     }
 
-    THROW_UNREACHABLE;
+    return getCompilation().getDefaultTimeScale();
 }
 
 Diagnostic& Scope::addDiag(DiagCode code, SourceLocation location) const {
@@ -169,8 +169,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration: {
             // Definitions exist in their own namespace and are tracked in the Compilation.
-            auto& def =
-                DefinitionSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
+            auto& def = DefinitionSymbol::fromSyntax(compilation,
+                                                     syntax.as<ModuleDeclarationSyntax>(), *this);
             addMember(def);
             compilation.addDefinition(def);
             break;
@@ -178,7 +178,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::PackageDeclaration: {
             // Packages exist in their own namespace and are tracked in the Compilation.
             auto& package =
-                PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>());
+                PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>(), *this);
             addMember(package);
             compilation.addPackage(package);
             break;
@@ -316,6 +316,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::NetTypeDeclaration:
             addMember(NetType::fromSyntax(compilation, syntax.as<NetTypeDeclarationSyntax>()));
+            break;
+        case SyntaxKind::TimeUnitsDeclaration:
+            // These are handled elsewhere; just ignore here.
             break;
         default:
             addDiag(DiagCode::NotYetSupported, syntax.sourceRange());

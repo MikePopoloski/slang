@@ -13,6 +13,23 @@
 
 namespace slang {
 
+CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :
+    Symbol(SymbolKind::CompilationUnit, "", SourceLocation()), Scope(compilation, this) {
+
+    // Default the timescale to the compilation default. If it turns out
+    // this scope has a time unit declaration it will overwrite the member.
+    timescale = compilation.getDefaultTimeScale();
+}
+
+void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {
+    if (syntax.kind == SyntaxKind::TimeUnitsDeclaration)
+        setTimeScale(*this, syntax.as<TimeUnitsDeclarationSyntax>(), !anyMembers);
+    else {
+        anyMembers = true;
+        Scope::addMembers(syntax);
+    }
+}
+
 PackageSymbol::PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                              const NetType& defaultNetType) :
     Symbol(SymbolKind::Package, name, loc),
@@ -20,13 +37,24 @@ PackageSymbol::PackageSymbol(Compilation& compilation, string_view name, SourceL
 }
 
 PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation,
-                                         const ModuleDeclarationSyntax& syntax) {
+                                         const ModuleDeclarationSyntax& syntax,
+                                         const Scope& scope) {
 
     auto result = compilation.emplace<PackageSymbol>(compilation, syntax.header->name.valueText(),
                                                      syntax.header->name.location(),
                                                      compilation.getDefaultNetType(syntax));
-    for (auto member : syntax.members)
-        result->addMembers(*member);
+
+    bool first = true;
+    for (auto member : syntax.members) {
+        if (member->kind == SyntaxKind::TimeUnitsDeclaration)
+            result->setTimeScale(*result, member->as<TimeUnitsDeclarationSyntax>(), first);
+        else {
+            first = false;
+            result->addMembers(*member);
+        }
+    }
+
+    result->finalizeTimeScale(scope, syntax);
 
     result->setSyntax(syntax);
     compilation.addAttributes(*result, syntax.attributes);
@@ -64,7 +92,7 @@ const ModportSymbol* DefinitionSymbol::getModportOrError(string_view modport, co
 }
 
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
-                                               const ModuleDeclarationSyntax& syntax) {
+                                               const ModuleDeclarationSyntax& syntax, const Scope& scope) {
     auto nameToken = syntax.header->name;
     auto result = compilation.emplace<DefinitionSymbol>(
         compilation, nameToken.valueText(), nameToken.location(),
@@ -98,10 +126,17 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
     if (syntax.header->ports)
         result->addMembers(*syntax.header->ports);
 
+    bool first = true;
     for (auto member : syntax.members) {
-        if (member->kind != SyntaxKind::ParameterDeclarationStatement)
+        if (member->kind == SyntaxKind::TimeUnitsDeclaration)
+            result->setTimeScale(*result, member->as<TimeUnitsDeclarationSyntax>(), first);
+        else if (member->kind != SyntaxKind::ParameterDeclarationStatement) {
             result->addMembers(*member);
+            first = false;
+        }
         else {
+            first = false;
+
             auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
             bool isLocal =
                 hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
@@ -116,6 +151,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
+    result->finalizeTimeScale(scope, syntax);
     result->parameters = parameters.copy(compilation);
     return *result;
 }
@@ -658,6 +694,75 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
 void GenerateBlockArraySymbol::toJson(json& j) const {
     j["constructIndex"] = constructIndex;
+}
+
+void TimeScaleSymbolBase::setTimeScale(const Scope& scope, const TimeUnitsDeclarationSyntax& syntax,
+                                       bool isFirst) {
+    bool errored = false;
+    auto handle = [&](Token token, optional<SourceRange>& prevRange, TimescaleValue& value) {
+        // If there were syntax errors just bail out, diagnostics have already been issued.
+        if (token.isMissing() || token.kind != TokenKind::TimeLiteral)
+            return;
+
+        auto val = TimescaleValue::fromLiteral(token.realValue(), token.numericFlags().unit());
+        if (!val) {
+            scope.addDiag(DiagCode::InvalidTimescaleSpecifier, token.location());
+            return;
+        }
+
+        if (prevRange) {
+            // If the value was previously set, we need to make sure this new
+            // value is exactly the same, otherwise we error.
+            if (value != *val && !errored) {
+                auto& diag = scope.addDiag(DiagCode::MismatchedTimescales, token.range());
+                diag.addNote(DiagCode::NotePreviousDefinition, prevRange->start()) << *prevRange;
+                errored = true;
+            }
+        }
+        else {
+            // The first time scale declarations must be the first elements in the parent scope.
+            if (!isFirst && !errored) {
+                scope.addDiag(DiagCode::TimescaleFirstInScope, token.range());
+                errored = true;
+            }
+
+            value = *val;
+            prevRange = token.range();
+        }
+    };
+
+    if (syntax.keyword.kind == TokenKind::TimeUnitKeyword) {
+        handle(syntax.time, unitsRange, timescale.base);
+        if (syntax.divider)
+            handle(syntax.divider->value, precisionRange, timescale.precision);
+    }
+    else {
+        handle(syntax.time, precisionRange, timescale.precision);
+    }
+}
+
+void TimeScaleSymbolBase::finalizeTimeScale(const Scope& parentScope,
+                                            const ModuleDeclarationSyntax& syntax) {
+    // If no time unit was set, infer one based on the following rules:
+    // - If the scope is nested (inside another definition), inherit from that definition.
+    // - Otherwise use a `timescale directive if there is one.
+    // - Otherwise, look for a time unit in the compilation scope.
+    // - Finally use the compilation default.
+    if (unitsRange && precisionRange)
+        return;
+
+    optional<Timescale> ts;
+    auto& comp = parentScope.getCompilation();
+    if (parentScope.asSymbol().kind == SymbolKind::CompilationUnit)
+        ts = comp.getDirectiveTimescale(syntax);
+
+    if (!ts)
+        ts = parentScope.getTimescale();
+
+    if (!unitsRange)
+        timescale.base = ts->base;
+    if (!precisionRange)
+        timescale.precision = ts->precision;
 }
 
 } // namespace slang

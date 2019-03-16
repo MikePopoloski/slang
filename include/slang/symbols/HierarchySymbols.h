@@ -19,43 +19,58 @@ class NetType;
 class ParameterSymbol;
 class PortSymbol;
 
-/// The root of a single compilation unit.
-class CompilationUnitSymbol : public Symbol, public Scope {
-public:
+/// A helper base class for symbols that have an associated time scale.
+class TimeScaleSymbolBase {
+protected:
+    void setTimeScale(const Scope& scope, const TimeUnitsDeclarationSyntax& syntax, bool isFirst);
+    void finalizeTimeScale(const Scope& parentScope, const ModuleDeclarationSyntax& syntax);
+
     Timescale timescale;
+    optional<SourceRange> unitsRange;
+    optional<SourceRange> precisionRange;
+};
 
-    explicit CompilationUnitSymbol(Compilation& compilation) :
-        Symbol(SymbolKind::CompilationUnit, "", SourceLocation()), Scope(compilation, this) {}
+/// The root of a single compilation unit.
+class CompilationUnitSymbol : public Symbol, public Scope, TimeScaleSymbolBase {
+public:
+    explicit CompilationUnitSymbol(Compilation& compilation);
 
+    void addMembers(const SyntaxNode& syntax);
+
+    Timescale getTimescale() const { return timescale; }
     void toJson(json&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CompilationUnit; }
+
+private:
+    // Used for tracking whether a timescale directive is first in scope.
+    bool anyMembers = false;
 };
 
 /// A SystemVerilog package construct.
-class PackageSymbol : public Symbol, public Scope {
+class PackageSymbol : public Symbol, public Scope, TimeScaleSymbolBase {
 public:
     const NetType& defaultNetType;
-    Timescale timescale;
 
     PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                   const NetType& defaultNetType);
 
+    Timescale getTimescale() const { return timescale; }
     void toJson(json&) const {}
 
     static PackageSymbol& fromSyntax(Compilation& compilation,
-                                     const ModuleDeclarationSyntax& syntax);
+                                     const ModuleDeclarationSyntax& syntax, const Scope& scope);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Package; }
 };
 
 /// Represents a definition (module, interface, or program) that can be instantiated
 /// to form a node in the design hierarchy.
-class DefinitionSymbol : public Symbol, public Scope {
+class DefinitionSymbol : public Symbol, public Scope, TimeScaleSymbolBase {
 public:
     span<const ParameterSymbol* const> parameters;
     DefinitionKind definitionKind;
     const NetType& defaultNetType;
-    Timescale timescale;
 
     DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                      DefinitionKind definitionKind, const NetType& defaultNetType);
@@ -69,10 +84,11 @@ public:
     const ModportSymbol* getModportOrError(string_view modport, const Scope& scope,
                                            SourceRange range) const;
 
+    Timescale getTimescale() const { return timescale; }
     void toJson(json& j) const;
 
     static DefinitionSymbol& fromSyntax(Compilation& compilation,
-                                        const ModuleDeclarationSyntax& syntax);
+                                        const ModuleDeclarationSyntax& syntax, const Scope& scope);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Definition; }
 
 private:

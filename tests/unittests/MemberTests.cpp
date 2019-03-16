@@ -139,3 +139,68 @@ endmodule
     CHECK(attrs[1]->value.integer() == SVInt(1));
     CHECK(attrs[2]->value.integer() == SVInt(7));
 }
+
+TEST_CASE("Time units declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+timeunit 10us;
+
+module m;
+    timeunit 10ns / 10ps;
+    logic f;
+
+    // Further decls ok as long as identical
+    timeprecision 10ps;
+    timeunit 10ns;
+    timeunit 10ns / 10ps;
+endmodule
+
+module n;
+endmodule
+
+`timescale 100s / 10fs
+module o;
+endmodule
+
+package p;
+    timeprecision 1ps;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    CHECK(compilation.getDefinition("m")->getTimescale() == Timescale("10ns", "10ps"));
+    CHECK(compilation.getDefinition("n")->getTimescale() == Timescale("10us", "1ns"));
+    CHECK(compilation.getDefinition("o")->getTimescale() == Timescale("100s", "10fs"));
+    CHECK(compilation.getPackage("p")->getTimescale() == Timescale("100s", "1ps"));
+}
+
+TEST_CASE("Time units error cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    timeunit;
+endmodule
+
+module n;
+    logic f;
+    timeunit 10ns;
+    timeunit 100ns / 10ps;
+endmodule
+
+module o;
+    timeunit 20ns;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::ExpectedTimeLiteral);
+    CHECK((it++)->code == DiagCode::TimescaleFirstInScope);
+    CHECK((it++)->code == DiagCode::MismatchedTimescales);
+    CHECK((it++)->code == DiagCode::InvalidTimescaleSpecifier);
+    CHECK(it == diags.end());
+}

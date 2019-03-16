@@ -14,25 +14,6 @@ namespace {
 
 using namespace slang;
 
-bool checkTimeMagnitude(double value, string_view& text, TimescaleMagnitude& magnitude) {
-    if (value == 1) {
-        text = "1";
-        magnitude = TimescaleMagnitude::One;
-    }
-    else if (value == 10) {
-        text = "10";
-        magnitude = TimescaleMagnitude::Ten;
-    }
-    else if (value == 100) {
-        text = "100";
-        magnitude = TimescaleMagnitude::Hundred;
-    }
-    else {
-        return false;
-    }
-    return true;
-}
-
 bool isOnSameLine(Token token) {
     for (auto& t : token.trivia()) {
         switch (t.kind) {

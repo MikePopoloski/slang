@@ -118,6 +118,9 @@ Compilation::Compilation() :
     registerScalar(signedLogicType);
     registerScalar(signedRegType);
 
+    defaultTimescale.base = { TimeUnit::Nanoseconds, TimescaleMagnitude::One };
+    defaultTimescale.precision = { TimeUnit::Nanoseconds, TimescaleMagnitude::One };
+
     root = std::make_unique<RootSymbol>(*this);
 
     // Register all system functions.

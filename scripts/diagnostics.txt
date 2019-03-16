@@ -152,6 +152,8 @@ error TooManyPortConnections "too many port connections given to instantiation o
 error PortDoesNotExist "port '{}' does not exist in module '{}'"
 error InterfacePortNotConnected "interface port '{}' not connected"
 error InterfacePortInvalidExpression "invalid expression for interface port '{}'"
+error MismatchedTimescales "duplicate time scale declaration must match previous value"
+error TimescaleFirstInScope "time scale declaration must come before all other items in scope"
 
 // expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
