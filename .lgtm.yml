@@ -7,7 +7,7 @@ extraction:
         - "g++-8"
     after_prepare:
       - "python3 -m venv conan_venv"
-      - "source conan_venv/bin/activate && pip install --upgrade pip && pip install certifi && pip install conan && conan --version"
+      - "source conan_venv/bin/activate && pip install --upgrade pip && pip install --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org certifi && pip install conan && conan --version"
     configure:
       command: "source conan_venv/bin/activate && mkdir build && cd build && cmake -GNinja -D CMAKE_CXX_COMPILER=g++-8 .."
     index:
