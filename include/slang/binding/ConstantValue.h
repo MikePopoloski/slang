@@ -92,6 +92,9 @@ public:
 
     std::string toString() const;
 
+    bool isTrue() const;
+    bool isFalse() const;
+
     static const ConstantValue Invalid;
 
     friend void to_json(json& j, const ConstantValue& cv);

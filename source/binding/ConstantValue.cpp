@@ -68,6 +68,42 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower) const {
     return nullptr;
 }
 
+bool ConstantValue::isTrue() const {
+    return std::visit(
+        [](auto&& arg) noexcept {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, SVInt>)
+                return (bool)(logic_t)arg;
+            else if constexpr (std::is_same_v<T, real_t>)
+                return (bool)arg;
+            else if constexpr (std::is_same_v<T, shortreal_t>)
+                return (bool)arg;
+            else
+                return false;
+        },
+        value);
+}
+
+bool ConstantValue::isFalse() const {
+    return std::visit(
+        [](auto&& arg) noexcept {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, SVInt>) {
+                logic_t l = (logic_t)arg;
+                return !l.isUnknown() && l.value == 0;
+            }
+            else if constexpr (std::is_same_v<T, real_t>)
+                return !(bool)arg;
+            else if constexpr (std::is_same_v<T, shortreal_t>)
+                return !(bool)arg;
+            else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
+                return true;
+            else
+                return false;
+        },
+        value);
+}
+
 void to_json(json& j, const ConstantValue& cv) {
     j = cv.toString();
 }

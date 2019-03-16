@@ -645,7 +645,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
     // Generate blocks!
     bool any = false;
-    for (; stopExpr.evalBool(context); iterExpr.eval(context)) {
+    for (; stopExpr.eval(context).isTrue(); iterExpr.eval(context)) {
         createBlock(*genvar, true);
         any = true;
     }

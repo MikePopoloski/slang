@@ -226,31 +226,6 @@ bool isShortCircuitOp(BinaryOperator op) {
     }
 }
 
-bool isTrue(const ConstantValue& cv) {
-    if (cv.isInteger())
-        return (bool)(logic_t)cv.integer();
-    if (cv.isReal())
-        return (bool)cv.real();
-    if (cv.isShortReal())
-        return (bool)cv.shortReal();
-    return false;
-}
-
-bool isFalse(const ConstantValue& cv) {
-    if (cv.isInteger()) {
-        logic_t l = (logic_t)cv.integer();
-        return !l.isUnknown() && l.value == 0;
-    }
-    if (cv.isReal())
-        return !(bool)cv.real();
-    if (cv.isShortReal())
-        return !(bool)cv.shortReal();
-    if (cv.isNullHandle())
-        return true;
-
-    return false;
-}
-
 bool checkArrayIndex(EvalContext& context, const Type& type, const ConstantValue& cs,
                      const std::string& str, SourceRange sourceRange, int32_t& result) {
     optional<int32_t> index = cs.integer().as<int32_t>();
@@ -315,14 +290,6 @@ std::string convertIntToStr(const SVInt& integer) {
 } // namespace
 
 namespace slang {
-
-bool Expression::evalBool(EvalContext& context) const {
-    ConstantValue result = eval(context);
-    if (!result.isInteger())
-        return false;
-
-    return (bool)(logic_t)result.integer();
-}
 
 ConstantValue Expression::eval(EvalContext& context) const {
     EvalVisitor visitor;
@@ -591,15 +558,15 @@ ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
     if (isShortCircuitOp(op)) {
         switch (op) {
             case BinaryOperator::LogicalOr:
-                if (isTrue(cvl))
+                if (cvl.isTrue())
                     return SVInt(true);
                 break;
             case BinaryOperator::LogicalAnd:
-                if (isFalse(cvl))
+                if (cvl.isFalse())
                     return SVInt(false);
                 break;
             case BinaryOperator::LogicalImplication:
-                if (isFalse(cvl))
+                if (cvl.isFalse())
                     return SVInt(true);
                 break;
             default:
@@ -665,7 +632,7 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
         return type->getDefaultValue();
     }
 
-    if (isTrue(cp))
+    if (cp.isTrue())
         return left().eval(context);
     else
         return right().eval(context);
