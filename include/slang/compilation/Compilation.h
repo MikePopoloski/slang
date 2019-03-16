@@ -121,6 +121,10 @@ public:
     /// Gets the default net type that was in place at the time the given declaration was parsed.
     const NetType& getDefaultNetType(const ModuleDeclarationSyntax& decl) const;
 
+    /// Gets the timescale that was put in place by a preprocessor directive at the time
+    /// the given declaration was parsed. Returns nullopt if there was no such directive.
+    optional<Timescale> getDirectiveTimescale(const ModuleDeclarationSyntax& decl) const;
+
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
                         bool forceSigned = false);
@@ -229,6 +233,9 @@ private:
 
     // Map from syntax nodes to parse-time metadata about default net types.
     flat_hash_map<const ModuleDeclarationSyntax*, const NetType*> defaultNetTypeMap;
+
+    // Map from syntax nodes to parse-time metadata about timescale directives.
+    flat_hash_map<const ModuleDeclarationSyntax*, Timescale> timescaleDirectiveMap;
 
     // Map from symbols to their associated attributes.
     flat_hash_map<const Symbol*, std::vector<const AttributeSymbol*>> symbolAttributes;

@@ -22,6 +22,8 @@ class PortSymbol;
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public Symbol, public Scope {
 public:
+    Timescale timescale;
+
     explicit CompilationUnitSymbol(Compilation& compilation) :
         Symbol(SymbolKind::CompilationUnit, "", SourceLocation()), Scope(compilation, this) {}
 
@@ -34,6 +36,7 @@ public:
 class PackageSymbol : public Symbol, public Scope {
 public:
     const NetType& defaultNetType;
+    Timescale timescale;
 
     PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                   const NetType& defaultNetType);
@@ -52,6 +55,7 @@ public:
     span<const ParameterSymbol* const> parameters;
     DefinitionKind definitionKind;
     const NetType& defaultNetType;
+    Timescale timescale;
 
     DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                      DefinitionKind definitionKind, const NetType& defaultNetType);

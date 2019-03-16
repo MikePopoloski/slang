@@ -135,6 +135,9 @@ public:
     /// Gets the default net type for implicit nets in this scope.
     const NetType& getDefaultNetType() const;
 
+    /// Gets the timescale for delay values expressed within this scope.
+    Timescale getTimescale() const;
+
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 

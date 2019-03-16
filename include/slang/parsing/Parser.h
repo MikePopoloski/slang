@@ -76,9 +76,15 @@ public:
     /// Gets the EndOfFile token, if one has been consumed. Otherwise returns an empty token.
     Token getEOFToken();
 
-    /// Gets metadata that was in effect when various syntax nodes were parsed (such as various
+    /// Collection of metadata that can be associated with a syntax node at parse time.
+    struct NodeMetadata {
+        TokenKind defaultNetType;
+        optional<Timescale> timescale;
+    };
+    using MetadataMap = flat_hash_map<const SyntaxNode*, NodeMetadata>;
+
+    /// Gets metadata that was in effect when certain syntax nodes were parsed (such as various
     /// bits of preprocessor state).
-    using MetadataMap = flat_hash_map<const SyntaxNode*, TokenKind>;
     MetadataMap&& getMetadataMap() { return std::move(metadataMap); }
 
 private:

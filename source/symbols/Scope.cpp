@@ -120,6 +120,28 @@ const NetType& Scope::getDefaultNetType() const {
     return getCompilation().getNetType(TokenKind::Unknown);
 }
 
+Timescale Scope::getTimescale() const {
+    const Scope* current = this;
+    while (current) {
+        switch (current->asSymbol().kind) {
+            case SymbolKind::CompilationUnit:
+                return current->asSymbol().as<CompilationUnitSymbol>().timescale;
+            case SymbolKind::Definition:
+                return current->asSymbol().as<DefinitionSymbol>().timescale;
+            case SymbolKind::Package:
+                return current->asSymbol().as<PackageSymbol>().timescale;
+            default:
+                if (InstanceSymbol::isKind(current->asSymbol().kind))
+                    current = &current->asSymbol().as<InstanceSymbol>().definition;
+                else
+                    current = current->getParent();
+                break;
+        }
+    }
+
+    THROW_UNREACHABLE;
+}
+
 Diagnostic& Scope::addDiag(DiagCode code, SourceLocation location) const {
     return compilation.diags.add(*thisSym, code, location);
 }

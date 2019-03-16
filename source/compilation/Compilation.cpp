@@ -155,8 +155,12 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         }
     }
 
-    for (auto [node, tokenKind] : tree->getMetadataMap()) {
-        defaultNetTypeMap.emplace(&node->as<ModuleDeclarationSyntax>(), &getNetType(tokenKind));
+    for (auto& [node, meta] : tree->getMetadataMap()) {
+        auto decl = &node->as<ModuleDeclarationSyntax>();
+        defaultNetTypeMap.emplace(decl, &getNetType(meta.defaultNetType));
+
+        if (meta.timescale)
+            timescaleDirectiveMap.emplace(decl, *meta.timescale);
     }
 
     auto unit = emplace<CompilationUnitSymbol>(*this);
@@ -482,6 +486,13 @@ const NetType& Compilation::getDefaultNetType(const ModuleDeclarationSyntax& dec
     if (it == defaultNetTypeMap.end())
         return getNetType(TokenKind::Unknown);
     return *it->second;
+}
+
+optional<Timescale> Compilation::getDirectiveTimescale(const ModuleDeclarationSyntax& decl) const {
+    auto it = timescaleDirectiveMap.find(&decl);
+    if (it == timescaleDirectiveMap.end())
+        return std::nullopt;
+    return it->second;
 }
 
 const Type& Compilation::getType(SyntaxKind typeKind) const {

@@ -56,6 +56,9 @@ public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics,
                  const Bag& options = {});
 
+    /// Gets the next token in the stream, after applying preprocessor rules.
+    Token next();
+
     /// Push a new source file onto the stack.
     void pushSource(string_view source, string_view name = "");
     void pushSource(SourceBuffer buffer);
@@ -96,14 +99,12 @@ public:
     /// will return TokenKind::Unknown.
     TokenKind getDefaultNetType() const { return defaultNetType; }
 
-    /// Gets the next token in the stream, after applying preprocessor rules.
-    Token next();
+    /// Gets the currently active keyword version in use by the preprocessor.
+    KeywordVersion getCurrentKeywordVersion() const { return keywordVersionStack.back(); }
 
     SourceManager& getSourceManager() const { return sourceManager; }
     BumpAllocator& getAllocator() const { return alloc; }
     Diagnostics& getDiagnostics() const { return diagnostics; }
-
-    KeywordVersion getCurrentKeywordVersion() const { return keywordVersionStack.back(); }
 
 private:
     // Internal methods to grab and handle the next token

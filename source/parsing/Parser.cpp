@@ -96,7 +96,7 @@ ModuleDeclarationSyntax& Parser::parseModule(span<AttributeInstanceSyntax*> attr
         factory.moduleDeclaration(getModuleDeclarationKind(header.moduleKeyword.kind), attributes,
                                   header, members, endmodule, parseNamedBlockClause());
 
-    metadataMap[&result] = getPP().getDefaultNetType();
+    metadataMap[&result] = { getPP().getDefaultNetType(), getPP().getTimescale() };
     return result;
 }
 
