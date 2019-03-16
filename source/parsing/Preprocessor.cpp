@@ -626,7 +626,8 @@ bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value)
         // Glue the tokens together to form a "time literal"
         consume();
         auto start = token.rawText().data();
-        auto text = string_view(start, suffix.rawText().data() + suffix.rawText().size() - start);
+        auto end = suffix.rawText().data() + suffix.rawText().size();
+        auto text = string_view(start, size_t(end - start));
         auto info = alloc.emplace<Token::Info>(token.trivia(), text, token.location());
         info->setReal(token.intValue().toDouble(), false);
         info->setTimeUnit(unit);
