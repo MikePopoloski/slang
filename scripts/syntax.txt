@@ -1542,7 +1542,7 @@ token closeParen
 MacroUsage base=Directive kind=MacroUsage
 MacroActualArgumentList? args
 
-TimescaleDirective base=Directive kind=TimescaleDirective
+TimeScaleDirective base=Directive kind=TimeScaleDirective
 token timeUnit
 token slash
 token timePrecision

@@ -16,9 +16,9 @@ namespace slang {
 CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :
     Symbol(SymbolKind::CompilationUnit, "", SourceLocation()), Scope(compilation, this) {
 
-    // Default the timescale to the compilation default. If it turns out
+    // Default the time scale to the compilation default. If it turns out
     // this scope has a time unit declaration it will overwrite the member.
-    timescale = compilation.getDefaultTimeScale();
+    timeScale = compilation.getDefaultTimeScale();
 }
 
 void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {
@@ -699,14 +699,14 @@ void GenerateBlockArraySymbol::toJson(json& j) const {
 void TimeScaleSymbolBase::setTimeScale(const Scope& scope, const TimeUnitsDeclarationSyntax& syntax,
                                        bool isFirst) {
     bool errored = false;
-    auto handle = [&](Token token, optional<SourceRange>& prevRange, TimescaleValue& value) {
+    auto handle = [&](Token token, optional<SourceRange>& prevRange, TimeScaleValue& value) {
         // If there were syntax errors just bail out, diagnostics have already been issued.
         if (token.isMissing() || token.kind != TokenKind::TimeLiteral)
             return;
 
-        auto val = TimescaleValue::fromLiteral(token.realValue(), token.numericFlags().unit());
+        auto val = TimeScaleValue::fromLiteral(token.realValue(), token.numericFlags().unit());
         if (!val) {
-            scope.addDiag(DiagCode::InvalidTimescaleSpecifier, token.location());
+            scope.addDiag(DiagCode::InvalidTimeScaleSpecifier, token.location());
             return;
         }
 
@@ -714,7 +714,7 @@ void TimeScaleSymbolBase::setTimeScale(const Scope& scope, const TimeUnitsDeclar
             // If the value was previously set, we need to make sure this new
             // value is exactly the same, otherwise we error.
             if (value != *val && !errored) {
-                auto& diag = scope.addDiag(DiagCode::MismatchedTimescales, token.range());
+                auto& diag = scope.addDiag(DiagCode::MismatchedTimeScales, token.range());
                 diag.addNote(DiagCode::NotePreviousDefinition, prevRange->start()) << *prevRange;
                 errored = true;
             }
@@ -722,7 +722,7 @@ void TimeScaleSymbolBase::setTimeScale(const Scope& scope, const TimeUnitsDeclar
         else {
             // The first time scale declarations must be the first elements in the parent scope.
             if (!isFirst && !errored) {
-                scope.addDiag(DiagCode::TimescaleFirstInScope, token.range());
+                scope.addDiag(DiagCode::TimeScaleFirstInScope, token.range());
                 errored = true;
             }
 
@@ -732,12 +732,12 @@ void TimeScaleSymbolBase::setTimeScale(const Scope& scope, const TimeUnitsDeclar
     };
 
     if (syntax.keyword.kind == TokenKind::TimeUnitKeyword) {
-        handle(syntax.time, unitsRange, timescale.base);
+        handle(syntax.time, unitsRange, timeScale.base);
         if (syntax.divider)
-            handle(syntax.divider->value, precisionRange, timescale.precision);
+            handle(syntax.divider->value, precisionRange, timeScale.precision);
     }
     else {
-        handle(syntax.time, precisionRange, timescale.precision);
+        handle(syntax.time, precisionRange, timeScale.precision);
     }
 }
 
@@ -751,18 +751,18 @@ void TimeScaleSymbolBase::finalizeTimeScale(const Scope& parentScope,
     if (unitsRange && precisionRange)
         return;
 
-    optional<Timescale> ts;
+    optional<TimeScale> ts;
     auto& comp = parentScope.getCompilation();
     if (parentScope.asSymbol().kind == SymbolKind::CompilationUnit)
-        ts = comp.getDirectiveTimescale(syntax);
+        ts = comp.getDirectiveTimeScale(syntax);
 
     if (!ts)
-        ts = parentScope.getTimescale();
+        ts = parentScope.getTimeScale();
 
     if (!unitsRange)
-        timescale.base = ts->base;
+        timeScale.base = ts->base;
     if (!precisionRange)
-        timescale.precision = ts->precision;
+        timeScale.precision = ts->precision;
 }
 
 } // namespace slang

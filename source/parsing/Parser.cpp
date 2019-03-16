@@ -88,7 +88,7 @@ ModuleDeclarationSyntax& Parser::parseModule(span<AttributeInstanceSyntax*> attr
     auto& header = parseModuleHeader();
     auto endKind = getModuleEndKind(header.moduleKeyword.kind);
 
-    NodeMetadata meta{ getPP().getDefaultNetType(), getPP().getTimescale() };
+    NodeMetadata meta{ getPP().getDefaultNetType(), getPP().getTimeScale() };
 
     Token endmodule;
     auto members =

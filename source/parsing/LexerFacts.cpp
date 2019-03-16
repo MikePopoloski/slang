@@ -32,7 +32,7 @@ const static StringTable<SyntaxKind> directiveTable = {
     { "nounconnected_drive", SyntaxKind::NoUnconnectedDriveDirective },
     { "pragma", SyntaxKind::PragmaDirective },
     { "resetall", SyntaxKind::ResetAllDirective },
-    { "timescale", SyntaxKind::TimescaleDirective },
+    { "timescale", SyntaxKind::TimeScaleDirective },
     { "unconnected_drive", SyntaxKind::UnconnectedDriveDirective },
     { "undef", SyntaxKind::UndefDirective },
     { "undefineall", SyntaxKind::UndefineAllDirective }
@@ -667,7 +667,7 @@ string_view getDirectiveText(SyntaxKind kind) {
         case SyntaxKind::NoUnconnectedDriveDirective: return "`nounconnected_drive";
         case SyntaxKind::PragmaDirective: return "`pragma";
         case SyntaxKind::ResetAllDirective: return "`resetall";
-        case SyntaxKind::TimescaleDirective: return "`timescale";
+        case SyntaxKind::TimeScaleDirective: return "`timescale";
         case SyntaxKind::UnconnectedDriveDirective: return "`unconnected_drive";
         case SyntaxKind::UndefDirective: return "`undef";
         case SyntaxKind::UndefineAllDirective: return "`undefineall";

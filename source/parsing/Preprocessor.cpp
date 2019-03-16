@@ -128,7 +128,7 @@ void Preprocessor::setKeywordVersion(KeywordVersion version) {
 }
 
 void Preprocessor::resetAllDirectives() {
-    activeTimescale = std::nullopt;
+    activeTimeScale = std::nullopt;
     defaultNetType = TokenKind::WireKeyword;
 }
 
@@ -210,8 +210,8 @@ Token Preprocessor::handleDirectives(Token token) {
                     case SyntaxKind::EndIfDirective:
                         trivia.append(handleEndIfDirective(token));
                         break;
-                    case SyntaxKind::TimescaleDirective:
-                        trivia.append(handleTimescaleDirective(token));
+                    case SyntaxKind::TimeScaleDirective:
+                        trivia.append(handleTimeScaleDirective(token));
                         break;
                     case SyntaxKind::DefaultNetTypeDirective:
                         trivia.append(handleDefaultNetTypeDirective(token));
@@ -608,7 +608,7 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
     return parseBranchDirective(directive, Token(), taken);
 }
 
-bool Preprocessor::expectTimescaleSpecifier(Token& token, TimescaleValue& value) {
+bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value) {
     if (peek(TokenKind::IntegerLiteral)) {
         // We wanted to see a time literal here, but for directives we will allow there
         // to be a space between the integer and suffix portions of the time.
@@ -639,9 +639,9 @@ bool Preprocessor::expectTimescaleSpecifier(Token& token, TimescaleValue& value)
             return false;
     }
 
-    auto checked = TimescaleValue::fromLiteral(token.realValue(), token.numericFlags().unit());
+    auto checked = TimeScaleValue::fromLiteral(token.realValue(), token.numericFlags().unit());
     if (!checked) {
-        addDiag(DiagCode::InvalidTimescaleSpecifier, token.location());
+        addDiag(DiagCode::InvalidTimeScaleSpecifier, token.location());
         return false;
     }
 
@@ -649,28 +649,28 @@ bool Preprocessor::expectTimescaleSpecifier(Token& token, TimescaleValue& value)
     return true;
 }
 
-Trivia Preprocessor::handleTimescaleDirective(Token directive) {
+Trivia Preprocessor::handleTimeScaleDirective(Token directive) {
     Token unitToken, precisionToken;
-    TimescaleValue unit, precision;
-    bool success = expectTimescaleSpecifier(unitToken, unit);
+    TimeScaleValue unit, precision;
+    bool success = expectTimeScaleSpecifier(unitToken, unit);
 
     auto slash = expect(TokenKind::Slash);
-    success |= expectTimescaleSpecifier(precisionToken, precision);
+    success |= expectTimeScaleSpecifier(precisionToken, precision);
 
     if (success) {
         // Precision must be equal to or smaller than the unit (i.e. more precise).
         if (precision > unit) {
-            auto& diag = addDiag(DiagCode::InvalidTimescalePrecision, precisionToken.location());
+            auto& diag = addDiag(DiagCode::InvalidTimeScalePrecision, precisionToken.location());
             diag << unitToken.range() << precisionToken.range();
         }
         else {
-            activeTimescale = { unit, precision };
+            activeTimeScale = { unit, precision };
         }
     }
 
-    auto timescale =
-        alloc.emplace<TimescaleDirectiveSyntax>(directive, unitToken, slash, precisionToken);
-    return Trivia(TriviaKind::Directive, timescale);
+    auto timeScale =
+        alloc.emplace<TimeScaleDirectiveSyntax>(directive, unitToken, slash, precisionToken);
+    return Trivia(TriviaKind::Directive, timeScale);
 }
 
 Trivia Preprocessor::handleLineDirective(Token directive) {

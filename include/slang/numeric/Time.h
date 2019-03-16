@@ -25,47 +25,47 @@ string_view timeUnitToSuffix(TimeUnit unit);
 
 /// As allowed by SystemVerilog, time scales can be expressed
 /// in one of only a few magnitudes.
-enum class TimescaleMagnitude : uint8_t { One = 1, Ten = 10, Hundred = 100 };
+enum class TimeScaleMagnitude : uint8_t { One = 1, Ten = 10, Hundred = 100 };
 
-/// A combination of a unit and magnitude for a timescale value.
-struct TimescaleValue {
+/// A combination of a unit and magnitude for a time scale value.
+struct TimeScaleValue {
     TimeUnit unit;
-    TimescaleMagnitude magnitude;
+    TimeScaleMagnitude magnitude;
 
-    TimescaleValue() = default;
-    TimescaleValue(TimeUnit unit, TimescaleMagnitude magnitude) :
+    TimeScaleValue() = default;
+    TimeScaleValue(TimeUnit unit, TimeScaleMagnitude magnitude) :
         unit(unit), magnitude(magnitude) {}
-    TimescaleValue(string_view str);
+    TimeScaleValue(string_view str);
 
     template<size_t N>
-    TimescaleValue(const char (&str)[N]) : TimescaleValue(string_view(str)) {}
+    TimeScaleValue(const char (&str)[N]) : TimeScaleValue(string_view(str)) {}
 
     std::string toString() const;
 
-    static optional<TimescaleValue> fromLiteral(double value, TimeUnit unit);
+    static optional<TimeScaleValue> fromLiteral(double value, TimeUnit unit);
 
-    bool operator>(const TimescaleValue& rhs) const;
-    bool operator==(const TimescaleValue& rhs) const;
-    bool operator!=(const TimescaleValue& rhs) const { return !(*this == rhs); }
+    bool operator>(const TimeScaleValue& rhs) const;
+    bool operator==(const TimeScaleValue& rhs) const;
+    bool operator!=(const TimeScaleValue& rhs) const { return !(*this == rhs); }
 
-    friend std::ostream& operator<<(std::ostream& os, const TimescaleValue& tv);
+    friend std::ostream& operator<<(std::ostream& os, const TimeScaleValue& tv);
 };
 
 /// A collection of a base time and a precision value that
 /// determines the scale of simulation time steps.
-struct Timescale {
-    TimescaleValue base;
-    TimescaleValue precision;
+struct TimeScale {
+    TimeScaleValue base;
+    TimeScaleValue precision;
 
-    Timescale() = default;
-    Timescale(TimescaleValue base, TimescaleValue precision) : base(base), precision(precision) {}
+    TimeScale() = default;
+    TimeScale(TimeScaleValue base, TimeScaleValue precision) : base(base), precision(precision) {}
 
     std::string toString() const;
 
-    bool operator==(const Timescale& rhs) const;
-    bool operator!=(const Timescale& rhs) const { return !(*this == rhs); }
+    bool operator==(const TimeScale& rhs) const;
+    bool operator!=(const TimeScale& rhs) const { return !(*this == rhs); }
 
-    friend std::ostream& operator<<(std::ostream& os, const Timescale& ts);
+    friend std::ostream& operator<<(std::ostream& os, const TimeScale& ts);
 };
 
 } // namespace slang

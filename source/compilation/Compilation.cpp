@@ -118,8 +118,8 @@ Compilation::Compilation() :
     registerScalar(signedLogicType);
     registerScalar(signedRegType);
 
-    defaultTimescale.base = { TimeUnit::Nanoseconds, TimescaleMagnitude::One };
-    defaultTimescale.precision = { TimeUnit::Nanoseconds, TimescaleMagnitude::One };
+    defaultTimeScale.base = { TimeUnit::Nanoseconds, TimeScaleMagnitude::One };
+    defaultTimeScale.precision = { TimeUnit::Nanoseconds, TimeScaleMagnitude::One };
 
     root = std::make_unique<RootSymbol>(*this);
 
@@ -162,8 +162,8 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         auto decl = &node->as<ModuleDeclarationSyntax>();
         defaultNetTypeMap.emplace(decl, &getNetType(meta.defaultNetType));
 
-        if (meta.timescale)
-            timescaleDirectiveMap.emplace(decl, *meta.timescale);
+        if (meta.timeScale)
+            timeScaleDirectiveMap.emplace(decl, *meta.timeScale);
     }
 
     auto unit = emplace<CompilationUnitSymbol>(*this);
@@ -491,9 +491,9 @@ const NetType& Compilation::getDefaultNetType(const ModuleDeclarationSyntax& dec
     return *it->second;
 }
 
-optional<Timescale> Compilation::getDirectiveTimescale(const ModuleDeclarationSyntax& decl) const {
-    auto it = timescaleDirectiveMap.find(&decl);
-    if (it == timescaleDirectiveMap.end())
+optional<TimeScale> Compilation::getDirectiveTimeScale(const ModuleDeclarationSyntax& decl) const {
+    auto it = timeScaleDirectiveMap.find(&decl);
+    if (it == timeScaleDirectiveMap.end())
         return std::nullopt;
     return it->second;
 }

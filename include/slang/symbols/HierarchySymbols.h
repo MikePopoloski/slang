@@ -25,7 +25,7 @@ protected:
     void setTimeScale(const Scope& scope, const TimeUnitsDeclarationSyntax& syntax, bool isFirst);
     void finalizeTimeScale(const Scope& parentScope, const ModuleDeclarationSyntax& syntax);
 
-    Timescale timescale;
+    TimeScale timeScale;
     optional<SourceRange> unitsRange;
     optional<SourceRange> precisionRange;
 };
@@ -37,13 +37,13 @@ public:
 
     void addMembers(const SyntaxNode& syntax);
 
-    Timescale getTimescale() const { return timescale; }
+    TimeScale getTimeScale() const { return timeScale; }
     void toJson(json&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CompilationUnit; }
 
 private:
-    // Used for tracking whether a timescale directive is first in scope.
+    // Used for tracking whether a time scale directive is first in scope.
     bool anyMembers = false;
 };
 
@@ -55,7 +55,7 @@ public:
     PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                   const NetType& defaultNetType);
 
-    Timescale getTimescale() const { return timescale; }
+    TimeScale getTimeScale() const { return timeScale; }
     void toJson(json&) const {}
 
     static PackageSymbol& fromSyntax(Compilation& compilation,
@@ -84,7 +84,7 @@ public:
     const ModportSymbol* getModportOrError(string_view modport, const Scope& scope,
                                            SourceRange range) const;
 
-    Timescale getTimescale() const { return timescale; }
+    TimeScale getTimeScale() const { return timeScale; }
     void toJson(json& j) const;
 
     static DefinitionSymbol& fromSyntax(Compilation& compilation,

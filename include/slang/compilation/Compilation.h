@@ -121,15 +121,15 @@ public:
     /// Gets the default net type that was in place at the time the given declaration was parsed.
     const NetType& getDefaultNetType(const ModuleDeclarationSyntax& decl) const;
 
-    /// Gets the timescale that was put in place by a preprocessor directive at the time
+    /// Gets the time scale that was put in place by a preprocessor directive at the time
     /// the given declaration was parsed. Returns nullopt if there was no such directive.
-    optional<Timescale> getDirectiveTimescale(const ModuleDeclarationSyntax& decl) const;
+    optional<TimeScale> getDirectiveTimeScale(const ModuleDeclarationSyntax& decl) const;
 
-    /// Sets the default timescale to use when none is specified in the source code.
-    void setDefaultTimeScale(Timescale timescale) { defaultTimescale = timescale; }
+    /// Sets the default time scale to use when none is specified in the source code.
+    void setDefaultTimeScale(TimeScale timeScale) { defaultTimeScale = timeScale; }
 
-    /// Gets the default timescale to use when none is specified in the source code.
-    Timescale getDefaultTimeScale() const { return defaultTimescale; }
+    /// Gets the default time scale to use when none is specified in the source code.
+    TimeScale getDefaultTimeScale() const { return defaultTimeScale; }
 
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
@@ -187,7 +187,7 @@ private:
     std::unique_ptr<RootSymbol> root;
     CompilationUnitSymbol* emptyUnit = nullptr;
     const SourceManager* sourceManager = nullptr;
-    Timescale defaultTimescale;
+    TimeScale defaultTimeScale;
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()
 
@@ -241,8 +241,8 @@ private:
     // Map from syntax nodes to parse-time metadata about default net types.
     flat_hash_map<const ModuleDeclarationSyntax*, const NetType*> defaultNetTypeMap;
 
-    // Map from syntax nodes to parse-time metadata about timescale directives.
-    flat_hash_map<const ModuleDeclarationSyntax*, Timescale> timescaleDirectiveMap;
+    // Map from syntax nodes to parse-time metadata about time scale directives.
+    flat_hash_map<const ModuleDeclarationSyntax*, TimeScale> timeScaleDirectiveMap;
 
     // Map from symbols to their associated attributes.
     flat_hash_map<const Symbol*, std::vector<const AttributeSymbol*>> symbolAttributes;

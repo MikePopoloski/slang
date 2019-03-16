@@ -79,7 +79,7 @@ public:
     /// Collection of metadata that can be associated with a syntax node at parse time.
     struct NodeMetadata {
         TokenKind defaultNetType;
-        optional<Timescale> timescale;
+        optional<TimeScale> timeScale;
     };
     using MetadataMap = flat_hash_map<const SyntaxNode*, NodeMetadata>;
 

@@ -40,7 +40,7 @@ string_view timeUnitToSuffix(TimeUnit unit) {
     THROW_UNREACHABLE;
 }
 
-TimescaleValue::TimescaleValue(string_view str) {
+TimeScaleValue::TimeScaleValue(string_view str) {
     size_t idx;
     int i = std::stoi(std::string(str), &idx);
 
@@ -53,29 +53,29 @@ TimescaleValue::TimescaleValue(string_view str) {
 
     auto tv = fromLiteral(double(i), u);
     if (!tv)
-        throw std::invalid_argument("Invalid timescale value");
+        throw std::invalid_argument("Invalid time scale value");
 
     *this = *tv;
 }
 
-optional<TimescaleValue> TimescaleValue::fromLiteral(double value, TimeUnit unit) {
+optional<TimeScaleValue> TimeScaleValue::fromLiteral(double value, TimeUnit unit) {
     if (value == 1)
-        return TimescaleValue(unit, TimescaleMagnitude::One);
+        return TimeScaleValue(unit, TimeScaleMagnitude::One);
     if (value == 10)
-        return TimescaleValue(unit, TimescaleMagnitude::Ten);
+        return TimeScaleValue(unit, TimeScaleMagnitude::Ten);
     if (value == 100)
-        return TimescaleValue(unit, TimescaleMagnitude::Hundred);
+        return TimeScaleValue(unit, TimeScaleMagnitude::Hundred);
 
     return std::nullopt;
 }
 
-std::string TimescaleValue::toString() const {
+std::string TimeScaleValue::toString() const {
     std::string result = std::to_string(int(magnitude));
     result.append(timeUnitToSuffix(unit));
     return result;
 }
 
-bool TimescaleValue::operator>(const TimescaleValue& rhs) const {
+bool TimeScaleValue::operator>(const TimeScaleValue& rhs) const {
     // Unit enum is specified in reverse order, so check in the opposite direction.
     if (unit < rhs.unit)
         return true;
@@ -84,23 +84,23 @@ bool TimescaleValue::operator>(const TimescaleValue& rhs) const {
     return magnitude > rhs.magnitude;
 }
 
-bool TimescaleValue::operator==(const TimescaleValue& rhs) const {
+bool TimeScaleValue::operator==(const TimeScaleValue& rhs) const {
     return unit == rhs.unit && magnitude == rhs.magnitude;
 }
 
-std::ostream& operator<<(std::ostream& os, const TimescaleValue& tv) {
+std::ostream& operator<<(std::ostream& os, const TimeScaleValue& tv) {
     return os << tv.toString();
 }
 
-std::string Timescale::toString() const {
+std::string TimeScale::toString() const {
     return fmt::format("{} / {}", base.toString(), precision.toString());
 }
 
-bool Timescale::operator==(const Timescale& rhs) const {
+bool TimeScale::operator==(const TimeScale& rhs) const {
     return base == rhs.base && precision == rhs.precision;
 }
 
-std::ostream& operator<<(std::ostream& os, const Timescale& ts) {
+std::ostream& operator<<(std::ostream& os, const TimeScale& ts) {
     return os << ts.toString();
 }
 

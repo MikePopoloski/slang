@@ -170,10 +170,10 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    CHECK(compilation.getDefinition("m")->getTimescale() == Timescale("10ns", "10ps"));
-    CHECK(compilation.getDefinition("n")->getTimescale() == Timescale("10us", "1ns"));
-    CHECK(compilation.getDefinition("o")->getTimescale() == Timescale("100s", "10fs"));
-    CHECK(compilation.getPackage("p")->getTimescale() == Timescale("100s", "1ps"));
+    CHECK(compilation.getDefinition("m")->getTimeScale() == TimeScale("10ns", "10ps"));
+    CHECK(compilation.getDefinition("n")->getTimeScale() == TimeScale("10us", "1ns"));
+    CHECK(compilation.getDefinition("o")->getTimeScale() == TimeScale("100s", "10fs"));
+    CHECK(compilation.getPackage("p")->getTimeScale() == TimeScale("100s", "1ps"));
 }
 
 TEST_CASE("Time units error cases") {
@@ -199,8 +199,8 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
     CHECK((it++)->code == DiagCode::ExpectedTimeLiteral);
-    CHECK((it++)->code == DiagCode::TimescaleFirstInScope);
-    CHECK((it++)->code == DiagCode::MismatchedTimescales);
-    CHECK((it++)->code == DiagCode::InvalidTimescaleSpecifier);
+    CHECK((it++)->code == DiagCode::TimeScaleFirstInScope);
+    CHECK((it++)->code == DiagCode::MismatchedTimeScales);
+    CHECK((it++)->code == DiagCode::InvalidTimeScaleSpecifier);
     CHECK(it == diags.end());
 }

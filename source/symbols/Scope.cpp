@@ -120,16 +120,16 @@ const NetType& Scope::getDefaultNetType() const {
     return getCompilation().getNetType(TokenKind::Unknown);
 }
 
-Timescale Scope::getTimescale() const {
+TimeScale Scope::getTimeScale() const {
     const Scope* current = this;
     while (current) {
         switch (current->asSymbol().kind) {
             case SymbolKind::CompilationUnit:
-                return current->asSymbol().as<CompilationUnitSymbol>().getTimescale();
+                return current->asSymbol().as<CompilationUnitSymbol>().getTimeScale();
             case SymbolKind::Definition:
-                return current->asSymbol().as<DefinitionSymbol>().getTimescale();
+                return current->asSymbol().as<DefinitionSymbol>().getTimeScale();
             case SymbolKind::Package:
-                return current->asSymbol().as<PackageSymbol>().getTimescale();
+                return current->asSymbol().as<PackageSymbol>().getTimeScale();
             default:
                 if (InstanceSymbol::isKind(current->asSymbol().kind))
                     current = &current->asSymbol().as<InstanceSymbol>().definition;

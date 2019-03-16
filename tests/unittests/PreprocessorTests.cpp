@@ -70,7 +70,7 @@ TEST_CASE("Directives") {
     testDirective(SyntaxKind::NoUnconnectedDriveDirective);
     testDirective(SyntaxKind::PragmaDirective);
     testDirective(SyntaxKind::ResetAllDirective);
-    testDirective(SyntaxKind::TimescaleDirective);
+    testDirective(SyntaxKind::TimeScaleDirective);
     testDirective(SyntaxKind::UnconnectedDriveDirective);
     testDirective(SyntaxKind::UndefDirective);
     testDirective(SyntaxKind::UndefineAllDirective);
@@ -951,7 +951,7 @@ TEST_CASE("begin_keywords (nested)") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-optional<Timescale> lexTimescale(string_view text) {
+optional<TimeScale> lexTimeScale(string_view text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -959,47 +959,47 @@ optional<Timescale> lexTimescale(string_view text) {
 
     Token token = preprocessor.next();
     REQUIRE(token);
-    return preprocessor.getTimescale();
+    return preprocessor.getTimeScale();
 }
 
 TEST_CASE("timescale directive") {
-    auto ts = lexTimescale("`timescale 10 ns / 1 fs");
+    auto ts = lexTimeScale("`timescale 10 ns / 1 fs");
     CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(ts.has_value());
-    CHECK(ts->base.magnitude == TimescaleMagnitude::Ten);
+    CHECK(ts->base.magnitude == TimeScaleMagnitude::Ten);
     CHECK(ts->base.unit == TimeUnit::Nanoseconds);
-    CHECK(ts->precision.magnitude == TimescaleMagnitude::One);
+    CHECK(ts->precision.magnitude == TimeScaleMagnitude::One);
     CHECK(ts->precision.unit == TimeUnit::Femtoseconds);
 
-    ts = lexTimescale("`timescale 100 s / 10ms");
+    ts = lexTimeScale("`timescale 100 s / 10ms");
     CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(ts.has_value());
-    CHECK(ts->base.magnitude == TimescaleMagnitude::Hundred);
+    CHECK(ts->base.magnitude == TimeScaleMagnitude::Hundred);
     CHECK(ts->base.unit == TimeUnit::Seconds);
-    CHECK(ts->precision.magnitude == TimescaleMagnitude::Ten);
+    CHECK(ts->precision.magnitude == TimeScaleMagnitude::Ten);
     CHECK(ts->precision.unit == TimeUnit::Milliseconds);
 
-    ts = lexTimescale("`timescale 1us/1ps");
+    ts = lexTimeScale("`timescale 1us/1ps");
     CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(ts.has_value());
-    CHECK(ts->base.magnitude == TimescaleMagnitude::One);
+    CHECK(ts->base.magnitude == TimeScaleMagnitude::One);
     CHECK(ts->base.unit == TimeUnit::Microseconds);
-    CHECK(ts->precision.magnitude == TimescaleMagnitude::One);
+    CHECK(ts->precision.magnitude == TimeScaleMagnitude::One);
     CHECK(ts->precision.unit == TimeUnit::Picoseconds);
 
-    lexTimescale("`timescale 10fs / 100fs");
+    lexTimeScale("`timescale 10fs / 100fs");
     CHECK(!diagnostics.empty());
 
-    lexTimescale("`timescale 10fs 100ns");
+    lexTimeScale("`timescale 10fs 100ns");
     CHECK(!diagnostics.empty());
 
-    lexTimescale("`timescale 1fs / 10us");
+    lexTimeScale("`timescale 1fs / 10us");
     CHECK(!diagnostics.empty());
 
-    lexTimescale("`timescale 1 bs / 2fs");
+    lexTimeScale("`timescale 1 bs / 2fs");
     CHECK(!diagnostics.empty());
 
-    lexTimescale("`timescale 1.2fs / 1fs");
+    lexTimeScale("`timescale 1.2fs / 1fs");
     CHECK(!diagnostics.empty());
 }
 

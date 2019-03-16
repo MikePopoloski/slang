@@ -91,8 +91,8 @@ public:
     /// macros that have been defined.
     void resetAllDirectives();
 
-    /// Gets the currently active timescale value, if any has been set by the user.
-    const optional<Timescale>& getTimescale() const { return activeTimescale; }
+    /// Gets the currently active time scale value, if any has been set by the user.
+    const optional<TimeScale>& getTimeScale() const { return activeTimeScale; }
 
     /// Gets the default net type to use if none is specified. This is set via
     /// the `default_nettype directive. If it is set to "none" by the user, this
@@ -121,7 +121,7 @@ private:
     Trivia handleElsIfDirective(Token directive);
     Trivia handleElseDirective(Token directive);
     Trivia handleEndIfDirective(Token directive);
-    Trivia handleTimescaleDirective(Token directive);
+    Trivia handleTimeScaleDirective(Token directive);
     Trivia handleDefaultNetTypeDirective(Token directive);
     Trivia handleLineDirective(Token directive);
     Trivia handleUndefDirective(Token directive);
@@ -136,8 +136,8 @@ private:
     // Handle parsing a branch of a conditional directive
     Trivia parseBranchDirective(Token directive, Token condition, bool taken);
 
-    // Timescale specifier parser
-    bool expectTimescaleSpecifier(Token& token, TimescaleValue& value);
+    // TimeScale specifier parser
+    bool expectTimeScaleSpecifier(Token& token, TimeScaleValue& value);
 
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic { None, Line, File };
@@ -285,7 +285,7 @@ private:
 
     /// Various state set by preprocessor directives.
     std::vector<KeywordVersion> keywordVersionStack;
-    optional<Timescale> activeTimescale;
+    optional<TimeScale> activeTimeScale;
     TokenKind defaultNetType;
 };
 
