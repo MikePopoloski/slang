@@ -46,6 +46,7 @@ public:
     }
 
     void visitDefault(const ProceduralBlockSymbol& symbol) { symbol.getBody().visit(DERIVED); }
+    void visitInvalid(const Statement&) {}
 
 #undef DERIVED
 };
@@ -119,7 +120,7 @@ decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case StatementKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
-        case StatementKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
+        case StatementKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
         CASE(List, StatementList);
         CASE(SequentialBlock, SequentialBlockStatement);
         CASE(ExpressionStatement, ExpressionStatement);

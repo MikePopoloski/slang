@@ -62,19 +62,6 @@ ConstantValue EvalContext::popFrame() {
     return result;
 }
 
-void EvalContext::setReturned(ConstantValue value) {
-    Frame& frame = stack.back();
-    frame.hasReturned = true;
-
-    const SubroutineSymbol* subroutine = frame.subroutine;
-    ASSERT(subroutine);
-
-    ConstantValue* storage = findLocal(subroutine->returnValVar);
-    ASSERT(storage);
-
-    *storage = std::move(value);
-}
-
 std::string EvalContext::dumpStack() const {
     FormatBuffer buffer;
     int index = 0;

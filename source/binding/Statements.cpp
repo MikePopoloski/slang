@@ -8,32 +8,34 @@
 
 #include "slang/binding/Expressions.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/symbols/ASTVisitor.h"
+
+namespace {
+
+using namespace slang;
+using ER = Statement::EvalResult;
+
+struct EvalVisitor {
+    template<typename T>
+    ER visit(const T& stmt, EvalContext& context) {
+        if (stmt.bad())
+            return ER::Fail;
+        return stmt.evalImpl(context);
+    }
+
+    ER visitInvalid(const Statement&, EvalContext&) { return ER::Fail; }
+};
+
+} // namespace
 
 namespace slang {
 
 const InvalidStatement InvalidStatement::Instance(nullptr);
 const StatementList StatementList::Empty({});
 
-bool Statement::eval(EvalContext& context) const {
-    switch (kind) {
-        case StatementKind::Invalid:
-            return false;
-        case StatementKind::List:
-            return as<StatementList>().eval(context);
-        case StatementKind::SequentialBlock:
-            return as<SequentialBlockStatement>().eval(context);
-        case StatementKind::ExpressionStatement:
-            return as<ExpressionStatement>().eval(context);
-        case StatementKind::VariableDeclaration:
-            return as<VariableDeclStatement>().eval(context);
-        case StatementKind::Return:
-            return as<ReturnStatement>().eval(context);
-        case StatementKind::Conditional:
-            return as<ConditionalStatement>().eval(context);
-        case StatementKind::ForLoop:
-            return as<ForLoopStatement>().eval(context);
-    }
-    THROW_UNREACHABLE;
+ER Statement::eval(EvalContext& context) const {
+    EvalVisitor visitor;
+    return visit(visitor, context);
 }
 
 const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
@@ -360,15 +362,14 @@ const Statement& StatementBinder::bindStatement(const Scope& scope, LookupLocati
     return *comp.emplace<StatementList>(buffer.copy(comp));
 }
 
-bool StatementList::eval(EvalContext& context) const {
+ER StatementList::evalImpl(EvalContext& context) const {
     for (auto item : list) {
-        if (!item->eval(context))
-            return false;
-        if (context.hasReturned())
-            break;
+        ER result = item->eval(context);
+        if (result != ER::Success)
+            return result;
     }
 
-    return true;
+    return ER::Success;
 }
 
 Statement& SequentialBlockStatement::fromSyntax(Compilation& compilation,
@@ -388,7 +389,7 @@ const Statement& SequentialBlockStatement::getStatements() const {
     return *list;
 }
 
-bool SequentialBlockStatement::eval(EvalContext& context) const {
+ER SequentialBlockStatement::evalImpl(EvalContext& context) const {
     return getStatements().eval(context);
 }
 
@@ -413,23 +414,29 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
     return *compilation.emplace<ReturnStatement>(&expr);
 }
 
-bool ReturnStatement::eval(EvalContext& context) const {
+ER ReturnStatement::evalImpl(EvalContext& context) const {
     // TODO: empty return?
-    context.setReturned(expr->eval(context));
-    return true;
+    const SubroutineSymbol* subroutine = context.topFrame().subroutine;
+    ASSERT(subroutine);
+
+    ConstantValue* storage = context.findLocal(subroutine->returnValVar);
+    ASSERT(storage);
+
+    *storage = expr->eval(context);
+    return ER::Return;
 }
 
-bool VariableDeclStatement::eval(EvalContext& context) const {
+ER VariableDeclStatement::evalImpl(EvalContext& context) const {
     // Create storage for the variable
     ConstantValue initial;
     if (auto initializer = symbol.getInitializer()) {
         initial = initializer->eval(context);
         if (!initial)
-            return false;
+            return ER::Fail;
     }
 
     context.createLocal(&symbol, initial);
-    return true;
+    return ER::Success;
 }
 
 Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
@@ -448,17 +455,17 @@ Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
     return *compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse);
 }
 
-bool ConditionalStatement::eval(EvalContext& context) const {
+ER ConditionalStatement::evalImpl(EvalContext& context) const {
     auto result = cond.eval(context);
     if (result.bad())
-        return false;
+        return ER::Fail;
 
-    // TODO: non integers?
-    if ((bool)(logic_t)result.integer())
+    if (result.isTrue())
         return ifTrue.eval(context);
-    else if (ifFalse)
+    if (ifFalse)
         return ifFalse->eval(context);
-    return true;
+
+    return ER::Success;
 }
 
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
@@ -488,30 +495,35 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
                                                   bodyStmt);
 }
 
-bool ForLoopStatement::eval(EvalContext& context) const {
-    if (!initializers.eval(context))
-        return false;
+ER ForLoopStatement::evalImpl(EvalContext& context) const {
+    if (ER result = initializers.eval(context); result != ER::Success)
+        return result;
 
     while (true) {
         if (stopExpr) {
             auto result = stopExpr->eval(context);
             if (result.bad())
-                return false;
+                return ER::Fail;
 
-            // TODO: non integers?
-            if (!(bool)(logic_t)result.integer())
+            if (!result.isTrue())
                 break;
         }
 
-        if (!body.eval(context))
-            return false;
+        ER result = body.eval(context);
+        if (result != ER::Success) {
+            if (result == ER::Break)
+                break;
+            else if (result == ER::Fail || result == ER::Return)
+                return result;
+        }
 
         for (auto step : steps) {
             if (!step->eval(context))
-                return false;
+                return ER::Fail;
         }
     }
-    return true;
+
+    return ER::Success;
 }
 
 Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
@@ -521,8 +533,8 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
     return *compilation.emplace<ExpressionStatement>(expr);
 }
 
-bool ExpressionStatement::eval(EvalContext& context) const {
-    return bool(expr.eval(context));
+ER ExpressionStatement::evalImpl(EvalContext& context) const {
+    return expr.eval(context) ? ER::Success : ER::Fail;
 }
 
 } // namespace slang

@@ -25,6 +25,7 @@ class VariableSymbol;
     x(ForLoop)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
+// clang-format on
 
 /// The base class for all statements in SystemVerilog.
 class Statement {
@@ -38,10 +39,26 @@ public:
     /// Indicates whether the statement is invalid.
     bool bad() const { return kind == StatementKind::Invalid; }
 
-    /// Evaluates the statement under the given evaluation context. Returns true if
-    /// evaluation should continue and false if something has gone wrong and the
-    /// evaluation should be halted.
-    bool eval(EvalContext& context) const;
+    /// Specifies possible results of evaluating a statement.
+    enum class EvalResult {
+        /// Evaluation totally failed and we should give up on any further processing.
+        Fail,
+
+        /// Evaluation succeeded.
+        Success,
+
+        /// A return statement was invoked; we should exit the current function.
+        Return,
+
+        /// A break statement was invoked; we should exit the current loop.
+        Break,
+
+        /// A continue statement was invoked; we should continue the current loop.
+        Continue
+    };
+
+    /// Evaluates the statement under the given evaluation context.
+    EvalResult eval(EvalContext& context) const;
 
     using BlockList = span<const SequentialBlockSymbol* const>;
 
@@ -113,7 +130,7 @@ public:
     explicit StatementList(span<const Statement* const> list) :
         Statement(StatementKind::List), list(list) {}
 
-    bool eval(EvalContext& context) const;
+    EvalResult evalImpl(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::List; }
     static const StatementList Empty;
@@ -129,7 +146,7 @@ public:
         Statement(StatementKind::SequentialBlock), list(&list) {}
 
     const Statement& getStatements() const;
-    bool eval(EvalContext& context) const;
+    EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
                                  const BindContext& context, BlockList& blocks);
@@ -148,7 +165,7 @@ public:
     explicit ReturnStatement(const Expression* expr) :
         Statement(StatementKind::Return), expr(expr) {}
 
-    bool eval(EvalContext& context) const;
+    EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ReturnStatementSyntax& syntax,
                                  const BindContext& context);
@@ -163,7 +180,7 @@ public:
     explicit VariableDeclStatement(const VariableSymbol& symbol) :
         Statement(StatementKind::VariableDeclaration), symbol(symbol) {}
 
-    bool eval(EvalContext& context) const;
+    EvalResult evalImpl(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::VariableDeclaration; }
 };
@@ -179,7 +196,7 @@ public:
         Statement(StatementKind::Conditional),
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
-    bool eval(EvalContext& context) const;
+    EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ConditionalStatementSyntax& syntax,
                                  const BindContext& context, BlockList& blocks);
@@ -199,7 +216,7 @@ public:
         Statement(StatementKind::ForLoop),
         initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
 
-    bool eval(EvalContext& context) const;
+    EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ForLoopStatementSyntax& syntax,
                                  const BindContext& context, BlockList& blocks);
@@ -214,7 +231,7 @@ public:
     explicit ExpressionStatement(const Expression& expr) :
         Statement(StatementKind::ExpressionStatement), expr(expr) {}
 
-    bool eval(EvalContext& context) const;
+    EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ExpressionStatementSyntax& syntax,
                                  const BindContext& context);

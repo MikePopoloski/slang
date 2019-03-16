@@ -887,10 +887,14 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 
     context.createLocal(symbol.returnValVar);
 
-    bool succeeded = symbol.getBody().eval(context);
+    using ER = Statement::EvalResult;
+    ER er = symbol.getBody().eval(context);
     ConstantValue result = context.popFrame();
+    if (er == ER::Fail)
+        return nullptr;
 
-    return succeeded ? result : nullptr;
+    ASSERT(er == ER::Success || er == ER::Return);
+    return result;
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {

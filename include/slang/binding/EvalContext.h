@@ -37,9 +37,6 @@ public:
 
         /// The lookup location of the function call site.
         LookupLocation lookupLocation;
-
-        // TODO: remove this
-        bool hasReturned = false;
     };
 
     explicit EvalContext(bool isScriptEval = false);
@@ -64,10 +61,6 @@ public:
 
     /// Gets the top of the call stack.
     const Frame& topFrame() const { return stack.back(); }
-
-    // TODO: get rid of this
-    bool hasReturned() { return stack.back().hasReturned; }
-    void setReturned(ConstantValue value);
 
     /// Dumps the contents of the call stack to a string for debugging.
     std::string dumpStack() const;
