@@ -85,14 +85,28 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		-Wassign-enum
 		-Wbad-function-cast
 		-Wcast-qual
+		-Wchar-subscripts
 		-Wcomma
+		-Wconditional-uninitialized
+		-Wconversion
+		-Wdelete-non-virtual-dtor
+		-Wdeprecated
 		-Wduplicate-enum
 		-Wduplicate-method-arg
+		-Wembedded-directive
+		-Wfor-loop-analysis
+		-Wformat-nonliteral
+		-Wformat-pedantic
+		-Widiomatic-parentheses
 		-Wimplicit-fallthrough
-		-Wrange-loop-analysis
 		-Wpedantic
-		-Wconversion
+		-Wrange-loop-analysis
+		-Wredundant-parens
+		-Wreserved-id-macro
 		-Wshadow
+		-Wundefined-reinterpret-cast
+		-Wunreachable-code-aggressive
+		-Wzero-as-null-pointer-constant
 		-Wno-missing-braces
 	)
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")

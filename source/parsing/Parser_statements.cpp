@@ -39,7 +39,6 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
                         label, attributes, missingToken(TokenKind::Semicolon, peek().location()));
                 }
             }
-            break;
         }
         case TokenKind::CaseKeyword:
         case TokenKind::CaseXKeyword:

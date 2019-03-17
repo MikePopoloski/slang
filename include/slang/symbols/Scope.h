@@ -197,6 +197,7 @@ public:
     class iterator : public iterator_facade<iterator, std::forward_iterator_tag, const Symbol> {
     public:
         iterator(const Symbol* firstSymbol) : current(firstSymbol) {}
+        iterator(const iterator& other) : current(other.current) {}
 
         iterator& operator=(const iterator& other) {
             current = other.current;
@@ -226,6 +227,7 @@ public:
                                  const SpecificType> {
     public:
         specific_symbol_iterator(const Symbol* firstSymbol) : current(firstSymbol) { skipToNext(); }
+        specific_symbol_iterator(const specific_symbol_iterator& other) : current(other.current) {}
 
         specific_symbol_iterator& operator=(const specific_symbol_iterator& other) {
             current = other.current;

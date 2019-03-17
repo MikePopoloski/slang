@@ -391,7 +391,7 @@ public:
         unknownFlag = rhs.unknownFlag;
 
         // prevent the other object from releasing memory
-        rhs.pVal = 0;
+        rhs.pVal = nullptr;
         return *this;
     }
 
