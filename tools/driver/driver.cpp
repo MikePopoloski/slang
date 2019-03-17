@@ -105,12 +105,27 @@ int driverMain(int argc, char** argv) try {
         return cmd.exit(e);
     }
 
+    bool anyErrors = false;
     SourceManager sourceManager;
-    for (const std::string& dir : includeDirs)
-        sourceManager.addUserDirectory(string_view(dir));
+    for (const std::string& dir : includeDirs) {
+        try {
+            sourceManager.addUserDirectory(string_view(dir));
+        }
+        catch (const std::exception& e) {
+            print("error: include directory '{}' does not exist\n", dir);
+            anyErrors = true;
+        }
+    }
 
-    for (const std::string& dir : includeSystemDirs)
-        sourceManager.addSystemDirectory(string_view(dir));
+    for (const std::string& dir : includeSystemDirs) {
+        try {
+            sourceManager.addSystemDirectory(string_view(dir));
+        }
+        catch (const std::exception& e) {
+            print("error: include directory '{}' does not exist\n", dir);
+            anyErrors = true;
+        }
+    }
 
     PreprocessorOptions ppoptions;
     ppoptions.predefines = defines;
@@ -120,7 +135,6 @@ int driverMain(int argc, char** argv) try {
     Bag options;
     options.add(ppoptions);
 
-    bool anyErrors = false;
     std::vector<SourceBuffer> buffers;
     for (const std::string& file : sourceFiles) {
         SourceBuffer buffer = sourceManager.readSource(file);
