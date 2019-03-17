@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/symbols/SemanticFacts.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -13,7 +14,9 @@ namespace slang {
 // clang-format off
 #define CONTROL(x) \
     x(Invalid) \
-    x(Delay)
+    x(Delay) \
+    x(SignalEvent) \
+    x(EventList)
 ENUM(TimingControlKind, CONTROL);
 #undef CONTROL
 // clang-format on
@@ -22,6 +25,9 @@ class BindContext;
 class Compilation;
 class Expression;
 struct DelaySyntax;
+struct EventControlSyntax;
+struct EventExpressionSyntax;
+struct SignalEventExpressionSyntax;
 struct TimingControlSyntax;
 
 class TimingControl {
@@ -66,12 +72,49 @@ class DelayControl : public TimingControl {
 public:
     const Expression& expr;
 
-    explicit DelayControl(const Expression& expr) : TimingControl(TimingControlKind::Delay), expr(expr) {}
+    explicit DelayControl(const Expression& expr) :
+        TimingControl(TimingControlKind::Delay), expr(expr) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
                                      const BindContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay; }
+};
+
+class SignalEventControl : public TimingControl {
+public:
+    const Expression& expr;
+    EdgeKind edge;
+
+    SignalEventControl(EdgeKind edge, const Expression& expr) :
+        TimingControl(TimingControlKind::SignalEvent), edge(edge), expr(expr) {}
+
+    static TimingControl& fromSyntax(Compilation& compilation,
+                                     const SignalEventExpressionSyntax& syntax,
+                                     const BindContext& context);
+
+    static TimingControl& fromSyntax(Compilation& compilation, const EventControlSyntax& syntax,
+                                     const BindContext& context);
+
+    static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::SignalEvent; }
+
+private:
+    static TimingControl& fromExpr(Compilation& compilation, EdgeKind edge, const Expression& expr,
+                                   const BindContext& context);
+};
+
+class EventListControl : public TimingControl {
+public:
+    span<const TimingControl* const> events;
+
+    explicit EventListControl(span<const TimingControl* const> events) :
+        TimingControl(TimingControlKind::EventList), events(events) {}
+
+    static TimingControl& fromSyntax(Compilation& compilation,
+                                     const EventExpressionSyntax& syntax,
+                                     const BindContext& context);
+
+    static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::EventList; }
 };
 
 } // namespace slang

@@ -38,6 +38,11 @@ ENUM(PortDirection, PORT);
 ENUM(DefinitionKind, DEF);
 #undef DEF
 
+#define EDGE(x) x(None) x(PosEdge) x(NegEdge) x(BothEdges)
+/// Specifies possible edge kinds.
+ENUM(EdgeKind, EDGE);
+#undef EDGE
+
 namespace SemanticFacts {
 
 /// Interprets a keyword token as a variable lifetime value.
@@ -49,6 +54,8 @@ PortDirection getPortDirection(TokenKind kind);
 ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind);
 
 DefinitionKind getDefinitionKind(SyntaxKind kind);
+
+EdgeKind getEdgeKind(TokenKind kind);
 
 } // namespace SemanticFacts
 

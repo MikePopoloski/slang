@@ -50,6 +50,9 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
     auto& comp = context.scope.getCompilation();
     Statement* result;
     switch (syntax.kind) {
+        case SyntaxKind::EmptyStatement:
+            result = comp.emplace<EmptyStatement>();
+            break;
         case SyntaxKind::ReturnStatement:
             result =
                 &ReturnStatement::fromSyntax(comp, syntax.as<ReturnStatementSyntax>(), context);
@@ -97,7 +100,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::ProceduralReleaseStatement:
         case SyntaxKind::DisableStatement:
         case SyntaxKind::DisableForkStatement:
-        case SyntaxKind::EmptyStatement:
         case SyntaxKind::BlockingEventTriggerStatement:
         case SyntaxKind::NonblockingEventTriggerStatement:
         case SyntaxKind::WaitForkStatement:

@@ -50,6 +50,16 @@ DefinitionKind getDefinitionKind(SyntaxKind kind) {
         default: THROW_UNREACHABLE;
     }
 }
+
+EdgeKind getEdgeKind(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::EdgeKeyword: return EdgeKind::BothEdges;
+        case TokenKind::PosEdgeKeyword: return EdgeKind::PosEdge;
+        case TokenKind::NegEdgeKeyword: return EdgeKind::NegEdge;
+        default: return EdgeKind::None;
+    }
+}
+
 // clang-format on
 
 } // namespace SemanticFacts

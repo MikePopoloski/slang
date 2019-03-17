@@ -121,6 +121,7 @@ decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
 #define CASE(k, n) case StatementKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
         case StatementKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
+        CASE(Empty, EmptyStatement);
         CASE(List, StatementList);
         CASE(SequentialBlock, SequentialBlockStatement);
         CASE(ExpressionStatement, ExpressionStatement);

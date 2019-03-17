@@ -17,6 +17,7 @@ class VariableSymbol;
 // clang-format off
 #define STATEMENT(x) \
     x(Invalid) \
+    x(Empty) \
     x(List) \
     x(SequentialBlock) \
     x(ExpressionStatement) \
@@ -122,6 +123,16 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Invalid; }
 
     static const InvalidStatement Instance;
+};
+
+/// Represents an empty statement, used as a placeholder or an anchor for attributes.
+class EmptyStatement : public Statement {
+public:
+    EmptyStatement() : Statement(StatementKind::Empty) {}
+
+    EvalResult evalImpl(EvalContext&) const { return EvalResult::Success; }
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Empty; }
 };
 
 /// Represents a list of statements.
