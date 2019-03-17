@@ -121,8 +121,10 @@ TEST_CASE("Timing control statements") {
     testTimingControl("## foo ;", SyntaxKind::CycleDelay);
     testTimingControl("##92 ;", SyntaxKind::CycleDelay);
     testTimingControl("@* ;", SyntaxKind::ImplicitEventControl);
-    testTimingControl("@ (*) ;", SyntaxKind::ParenImplicitEventControl);
-    testTimingControl("@* ;", SyntaxKind::ImplicitEventControl);
+    testTimingControl("@ (*) ;", SyntaxKind::ImplicitEventControl);
+    testTimingControl("@ (*  ) ;", SyntaxKind::ImplicitEventControl);
+    testTimingControl("@ (   *  ) ;", SyntaxKind::ImplicitEventControl);
+    testTimingControl("@   * ;", SyntaxKind::ImplicitEventControl);
     testTimingControl("@(posedge foo iff foo+92 == 76 or negedge clk, (edge clk)) ;",
                       SyntaxKind::EventControlWithExpression);
 }

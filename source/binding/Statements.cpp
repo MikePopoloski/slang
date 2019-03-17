@@ -99,7 +99,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                 case SyntaxKind::ImplicitEventControl:
                 case SyntaxKind::EventControl:
                 case SyntaxKind::EventControlWithExpression:
-                case SyntaxKind::ParenImplicitEventControl:
                 case SyntaxKind::RepeatedEventControl:
                     context.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
                     result = &badStmt(comp, &nested);

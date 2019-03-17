@@ -686,7 +686,6 @@ string_view getTokenKindText(TokenKind kind) {
         case TokenKind::CloseBracket: return "]";
         case TokenKind::OpenParenthesis: return "(";
         case TokenKind::OpenParenthesisStar: return "(*";
-        case TokenKind::OpenParenthesisStarCloseParenthesis: return "(*)";
         case TokenKind::CloseParenthesis: return ")";
         case TokenKind::StarCloseParenthesis: return "*)";
         case TokenKind::Semicolon: return ";";
@@ -759,7 +758,6 @@ string_view getTokenKindText(TokenKind kind) {
         case TokenKind::OrMinusDoubleArrow: return "|->>";
         case TokenKind::OrEqualsArrow: return "|=>";
         case TokenKind::At: return "@";
-        case TokenKind::AtStar: return "@*";
         case TokenKind::DoubleAt: return "@@";
         case TokenKind::And: return "&";
         case TokenKind::DoubleAnd: return "&&";

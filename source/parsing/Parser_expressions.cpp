@@ -897,7 +897,6 @@ TimingControlSyntax* Parser::parseTimingControl() {
                 }
             }
             else {
-                // TODO: make sure primary expression ends up being the right type
                 delay = &parsePrimaryExpression();
             }
 
@@ -907,20 +906,32 @@ TimingControlSyntax* Parser::parseTimingControl() {
         }
         case TokenKind::At: {
             auto at = consume();
-            if (peek(TokenKind::OpenParenthesis)) {
-                auto openParen = consume();
-                auto& eventExpr = parseEventExpression();
-                auto closeParen = expect(TokenKind::CloseParenthesis);
-                return &factory.eventControlWithExpression(
-                    at, factory.parenthesizedEventExpression(openParen, eventExpr, closeParen));
+            switch (peek().kind) {
+                case TokenKind::OpenParenthesis: {
+                    auto openParen = consume();
+                    if (peek(TokenKind::Star)) {
+                        auto star = consume();
+                        return &factory.implicitEventControl(at, openParen, star,
+                                                             expect(TokenKind::CloseParenthesis));
+                    }
+
+                    auto& eventExpr = parseEventExpression();
+                    auto closeParen = expect(TokenKind::CloseParenthesis);
+                    return &factory.eventControlWithExpression(
+                        at, factory.parenthesizedEventExpression(openParen, eventExpr, closeParen));
+                }
+                case TokenKind::OpenParenthesisStar: {
+                    // Special case since @(*) will be lexed as '@' '(*' ')'
+                    auto openParen = consume();
+                    return &factory.implicitEventControl(at, openParen, Token(),
+                                                         expect(TokenKind::CloseParenthesis));
+                }
+                case TokenKind::Star:
+                    return &factory.implicitEventControl(at, Token(), consume(), Token());
+                default:
+                    return &factory.eventControl(at, parseName());
             }
-            else if (peek(TokenKind::OpenParenthesisStarCloseParenthesis))
-                return &factory.parenImplicitEventControl(at, consume());
-            else
-                return &factory.eventControl(at, parseName());
         }
-        case TokenKind::AtStar:
-            return &factory.implicitEventControl(consume());
         case TokenKind::RepeatKeyword: {
             auto repeat = consume();
             auto openParen = expect(TokenKind::OpenParenthesis);

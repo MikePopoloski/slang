@@ -67,8 +67,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
             return parseJumpStatement(label, attributes);
         case TokenKind::Hash:
         case TokenKind::DoubleHash:
-        case TokenKind::At:
-        case TokenKind::AtStar: {
+        case TokenKind::At: {
             auto timingControl = parseTimingControl();
             ASSERT(timingControl);
             return factory.timingControlStatement(label, attributes, *timingControl,

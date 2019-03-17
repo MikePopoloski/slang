@@ -946,7 +946,6 @@ TEST_CASE("All Punctuation") {
     testPunctuation(TokenKind::CloseBracket);
     testPunctuation(TokenKind::OpenParenthesis);
     testPunctuation(TokenKind::OpenParenthesisStar);
-    testPunctuation(TokenKind::OpenParenthesisStarCloseParenthesis);
     testPunctuation(TokenKind::CloseParenthesis);
     testPunctuation(TokenKind::StarCloseParenthesis);
     testPunctuation(TokenKind::Semicolon);
@@ -1019,7 +1018,6 @@ TEST_CASE("All Punctuation") {
     testPunctuation(TokenKind::OrMinusDoubleArrow);
     testPunctuation(TokenKind::OrEqualsArrow);
     testPunctuation(TokenKind::At);
-    testPunctuation(TokenKind::AtStar);
     testPunctuation(TokenKind::DoubleAt);
     testPunctuation(TokenKind::And);
     testPunctuation(TokenKind::DoubleAnd);

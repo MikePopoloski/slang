@@ -409,11 +409,10 @@ EventExpression expr
 token closeParen
 
 ImplicitEventControl base=TimingControl kind=ImplicitEventControl
-token atStar
-
-ParenImplicitEventControl base=TimingControl kind=ParenImplicitEventControl
 token at
-token openParenStarCloseParen
+token openParen
+token star
+token closeParen
 
 EventControlWithExpression base=TimingControl kind=EventControlWithExpression
 token at

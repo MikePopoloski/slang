@@ -260,8 +260,6 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
         case '(':
             if (!consume('*'))
                 return TokenKind::OpenParenthesis;
-            else if (consume(')'))
-                return TokenKind::OpenParenthesisStarCloseParenthesis;
             else
                 return TokenKind::OpenParenthesisStar;
         case ')':
@@ -439,9 +437,6 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                 case '@':
                     advance();
                     return TokenKind::DoubleAt;
-                case '*':
-                    advance();
-                    return TokenKind::AtStar;
                 default:
                     return TokenKind::At;
             }

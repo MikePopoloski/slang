@@ -439,7 +439,6 @@ bool isPossibleStatement(TokenKind kind) {
         case TokenKind::Hash:
         case TokenKind::DoubleHash:
         case TokenKind::At:
-        case TokenKind::AtStar:
         case TokenKind::BeginKeyword:
         case TokenKind::WaitKeyword:
         case TokenKind::WaitOrderKeyword:
@@ -693,7 +692,6 @@ bool isPossibleDelayOrEventControl(TokenKind kind) {
     switch (kind) {
         case TokenKind::Hash:
         case TokenKind::At:
-        case TokenKind::AtStar:
         case TokenKind::RepeatKeyword:
             return true;
         default:
