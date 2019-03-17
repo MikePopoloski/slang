@@ -184,6 +184,7 @@ error EnumValueSizeMismatch "expression width of {} does not exactly match decla
 
 // statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
+error DelayNotNumeric "delay expression type {} is not numeric"
 
 // types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"

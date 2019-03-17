@@ -22,7 +22,8 @@ class VariableSymbol;
     x(VariableDeclaration) \
     x(Return) \
     x(Conditional) \
-    x(ForLoop)
+    x(ForLoop) \
+    x(Delayed)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
 // clang-format on
@@ -237,6 +238,22 @@ public:
                                  const BindContext& context);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }
+};
+
+class DelayedStatement : public Statement {
+public:
+    const Expression& delay;
+    const Statement& stmt;
+
+    DelayedStatement(const Expression& delay, const Statement& stmt) :
+        Statement(StatementKind::Delayed), delay(delay), stmt(stmt) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
+                                 const Statement& stmt, const BindContext& context);
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Delayed; }
 };
 
 } // namespace slang

@@ -13,6 +13,7 @@ add_executable(unittests
 	PreprocessorTests.cpp
 	RewriterTests.cpp
 	StatementParsingTests.cpp
+	StatementTests.cpp
 	SymbolLookupTests.cpp
 	TypeTests.cpp
 )

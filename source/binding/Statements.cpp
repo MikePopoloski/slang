@@ -85,6 +85,30 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                     comp, syntax.as<BlockStatementSyntax>(), context, blocks);
             }
             break;
+        case SyntaxKind::TimingControlStatement: {
+            auto& timedStmt = syntax.as<TimingControlStatementSyntax>();
+            auto& ctrl = *timedStmt.timingControl;
+            auto& nested = bind(*timedStmt.statement, context, blocks);
+
+            switch (timedStmt.timingControl->kind) {
+                case SyntaxKind::DelayControl:
+                    result = &DelayedStatement::fromSyntax(comp, ctrl.as<DelaySyntax>(), nested,
+                                                           context);
+                    break;
+                case SyntaxKind::CycleDelay:
+                case SyntaxKind::ImplicitEventControl:
+                case SyntaxKind::EventControl:
+                case SyntaxKind::EventControlWithExpression:
+                case SyntaxKind::ParenImplicitEventControl:
+                case SyntaxKind::RepeatedEventControl:
+                    context.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+                    result = &badStmt(comp, &nested);
+                    break;
+                default:
+                    THROW_UNREACHABLE;
+            }
+            break;
+        }
         case SyntaxKind::JumpStatement:
         case SyntaxKind::ProceduralAssignStatement:
         case SyntaxKind::ProceduralForceStatement:
@@ -102,7 +126,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::LoopStatement:
         case SyntaxKind::DoWhileStatement:
         case SyntaxKind::ForeachLoopStatement:
-        case SyntaxKind::TimingControlStatement:
         case SyntaxKind::WaitStatement:
         case SyntaxKind::RandCaseStatement:
         case SyntaxKind::ImmediateAssertStatement:
@@ -535,6 +558,30 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
 
 ER ExpressionStatement::evalImpl(EvalContext& context) const {
     return expr.eval(context) ? ER::Success : ER::Fail;
+}
+
+Statement& DelayedStatement::fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
+                                        const Statement& stmt, const BindContext& context) {
+    auto& delay = Expression::bind(*syntax.delayValue, context);
+    auto result = compilation.emplace<DelayedStatement>(delay, stmt);
+    if (delay.bad())
+        return badStmt(compilation, result);
+
+    if (!delay.type->isNumeric()) {
+        context.addDiag(DiagCode::DelayNotNumeric, delay.sourceRange) << *delay.type;
+        return badStmt(compilation, result);
+    }
+
+    return *result;
+}
+
+ER DelayedStatement::evalImpl(EvalContext& context) const {
+    // This kind of statement should never be evaluated at compile time (since it passes time).
+    // In a script context just ignore the delay; otherwise throw an error.
+    if (context.isScriptEval())
+        return stmt.eval(context);
+
+    THROW_UNREACHABLE;
 }
 
 } // namespace slang
