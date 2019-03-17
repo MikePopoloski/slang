@@ -7,6 +7,7 @@
 #include "slang/binding/Statements.h"
 
 #include "slang/binding/Expressions.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTVisitor.h"
 
@@ -85,29 +86,10 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                     comp, syntax.as<BlockStatementSyntax>(), context, blocks);
             }
             break;
-        case SyntaxKind::TimingControlStatement: {
-            auto& timedStmt = syntax.as<TimingControlStatementSyntax>();
-            auto& ctrl = *timedStmt.timingControl;
-            auto& nested = bind(*timedStmt.statement, context, blocks);
-
-            switch (timedStmt.timingControl->kind) {
-                case SyntaxKind::DelayControl:
-                    result = &DelayedStatement::fromSyntax(comp, ctrl.as<DelaySyntax>(), nested,
-                                                           context);
-                    break;
-                case SyntaxKind::CycleDelay:
-                case SyntaxKind::ImplicitEventControl:
-                case SyntaxKind::EventControl:
-                case SyntaxKind::EventControlWithExpression:
-                case SyntaxKind::RepeatedEventControl:
-                    context.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
-                    result = &badStmt(comp, &nested);
-                    break;
-                default:
-                    THROW_UNREACHABLE;
-            }
+        case SyntaxKind::TimingControlStatement:
+            result = &TimedStatement::fromSyntax(comp, syntax.as<TimingControlStatementSyntax>(),
+                                                 context, blocks);
             break;
-        }
         case SyntaxKind::JumpStatement:
         case SyntaxKind::ProceduralAssignStatement:
         case SyntaxKind::ProceduralForceStatement:
@@ -559,22 +541,20 @@ ER ExpressionStatement::evalImpl(EvalContext& context) const {
     return expr.eval(context) ? ER::Success : ER::Fail;
 }
 
-Statement& DelayedStatement::fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
-                                        const Statement& stmt, const BindContext& context) {
-    auto& delay = Expression::bind(*syntax.delayValue, context);
-    auto result = compilation.emplace<DelayedStatement>(delay, stmt);
-    if (delay.bad())
-        return badStmt(compilation, result);
+Statement& TimedStatement::fromSyntax(Compilation& compilation,
+                                      const TimingControlStatementSyntax& syntax,
+                                      const BindContext& context, BlockList& blocks) {
+    auto& timing = TimingControl::bind(*syntax.timingControl, context);
+    auto& stmt = Statement::bind(*syntax.statement, context, blocks);
+    auto result = compilation.emplace<TimedStatement>(timing, stmt);
 
-    if (!delay.type->isNumeric()) {
-        context.addDiag(DiagCode::DelayNotNumeric, delay.sourceRange) << *delay.type;
+    if (timing.bad() || stmt.bad())
         return badStmt(compilation, result);
-    }
 
     return *result;
 }
 
-ER DelayedStatement::evalImpl(EvalContext& context) const {
+ER TimedStatement::evalImpl(EvalContext& context) const {
     // This kind of statement should never be evaluated at compile time (since it passes time).
     // In a script context just ignore the delay; otherwise throw an error.
     if (context.isScriptEval())

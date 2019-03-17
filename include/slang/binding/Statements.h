@@ -11,6 +11,7 @@
 namespace slang {
 
 class SequentialBlockSymbol;
+class TimingControl;
 class VariableSymbol;
 
 // clang-format off
@@ -23,7 +24,7 @@ class VariableSymbol;
     x(Return) \
     x(Conditional) \
     x(ForLoop) \
-    x(Delayed)
+    x(Timed)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
 // clang-format on
@@ -240,20 +241,21 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }
 };
 
-class DelayedStatement : public Statement {
+class TimedStatement : public Statement {
 public:
-    const Expression& delay;
+    const TimingControl& timing;
     const Statement& stmt;
 
-    DelayedStatement(const Expression& delay, const Statement& stmt) :
-        Statement(StatementKind::Delayed), delay(delay), stmt(stmt) {}
+    TimedStatement(const TimingControl& timing, const Statement& stmt) :
+        Statement(StatementKind::Timed), timing(timing), stmt(stmt) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
-                                 const Statement& stmt, const BindContext& context);
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const TimingControlStatementSyntax& syntax,
+                                 const BindContext& context, BlockList& blocks);
 
-    static bool isKind(StatementKind kind) { return kind == StatementKind::Delayed; }
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Timed; }
 };
 
 } // namespace slang
