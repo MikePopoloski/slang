@@ -1675,6 +1675,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     else
         type = &compilation.getType(totalWidth, flags);
 
+    // TODO: Workaround GCC bugs
     auto copied = buffer.copy(compilation);
     span<const Expression* const> elements(copied.data(), copied.size());
     return *compilation.emplace<ConcatenationExpression>(*type, elements, syntax.sourceRange());

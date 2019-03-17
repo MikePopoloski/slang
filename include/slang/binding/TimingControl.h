@@ -87,7 +87,7 @@ public:
     EdgeKind edge;
 
     SignalEventControl(EdgeKind edge, const Expression& expr) :
-        TimingControl(TimingControlKind::SignalEvent), edge(edge), expr(expr) {}
+        TimingControl(TimingControlKind::SignalEvent), expr(expr), edge(edge) {}
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const SignalEventExpressionSyntax& syntax,

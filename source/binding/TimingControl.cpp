@@ -130,7 +130,11 @@ TimingControl& EventListControl::fromSyntax(Compilation& compilation,
     if (events.size() == 1)
         return *events[0];
 
-    auto result = compilation.emplace<EventListControl>(events.copy(compilation));
+    // TODO: Workaround GCC bugs
+    auto copied = events.copy(compilation);
+    span<const TimingControl* const> sp(copied.data(), copied.size());
+
+    auto result = compilation.emplace<EventListControl>(sp);
     for (auto ev : events) {
         if (ev->bad())
             return badCtrl(compilation, result);
