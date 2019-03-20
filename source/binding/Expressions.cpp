@@ -276,6 +276,103 @@ const Expression& Expression::bind(const Type& lhs, const ExpressionSyntax& rhs,
     return result;
 }
 
+bool Expression::bindCaseExpressions(const BindContext& context, TokenKind caseKind,
+                                     const ExpressionSyntax& valueExpr,
+                                     span<const ExpressionSyntax* const> expressions,
+                                     SmallVector<const Expression*>& results) {
+
+    Compilation& comp = context.scope.getCompilation();
+    Expression& valueRes = create(comp, valueExpr, context);
+    results.append(&valueRes);
+
+    const Type* type = valueRes.type;
+    bool bad = valueRes.bad();
+    bool wildcard = caseKind != TokenKind::CaseKeyword;
+    bool canBeStrings = valueRes.isImplicitString();
+
+    if ((!wildcard && type->isAggregate()) || (wildcard && !type->isIntegral())) {
+        if (!bad) {
+            context.addDiag(DiagCode::InvalidCaseStmtType, valueRes.sourceRange)
+                << *type << getTokenKindText(caseKind);
+            bad = true;
+        }
+    }
+
+    // We need to find a common type across all expressions. If this is for a wildcard
+    // case statement, the types can only be integral. Otherwise all singular types are allowed.
+    for (auto expr : expressions) {
+        Expression* bound = &create(comp, *expr, context);
+        results.append(bound);
+        bad |= bound->bad();
+        if (bad)
+            continue;
+
+        const Type& bt = *bound->type;
+        if (wildcard) {
+            if (!bt.isIntegral()) {
+                context.addDiag(DiagCode::InvalidCaseStmtType, bound->sourceRange)
+                    << bt << getTokenKindText(caseKind);
+                bad = true;
+            }
+            else {
+                type = binaryOperatorType(comp, type, &bt, false);
+            }
+        }
+        else {
+            if (canBeStrings && !bound->isImplicitString())
+                canBeStrings = false;
+
+            if (bt.isNumeric() && type->isNumeric()) {
+                type = binaryOperatorType(comp, type, &bt, false);
+            }
+            else if ((bt.isClass() && bt.isAssignmentCompatible(*type)) ||
+                     (type->isClass() && type->isAssignmentCompatible(bt))) {
+                // ok
+            }
+            else if ((bt.isCHandle() || bt.isNull()) && (type->isCHandle() || type->isNull())) {
+                // ok
+            }
+            else if (canBeStrings) {
+                // If canBeStrings is still true, it means either this specific type or
+                // the common type (or both) are of type string. This is ok, but force
+                // all further expressions to also be strings (or implicitly
+                // convertible to them).
+                type = &comp.getStringType();
+            }
+            else if (bt.isAggregate()) {
+                // Aggregates are just never allowed in case expressions.
+                context.addDiag(DiagCode::InvalidCaseStmtType, bound->sourceRange)
+                    << bt << getTokenKindText(caseKind);
+                bad = true;
+            }
+            else {
+                // Couldn't find a common type.
+                context.addDiag(DiagCode::NoCommonCaseStmtType, bound->sourceRange) << bt << *type;
+                bad = true;
+            }
+        }
+    }
+
+    if (bad)
+        return false;
+
+    for (size_t i = 0; i < results.size(); i++) {
+        // const_casts here are because we want the result array to be constant and
+        // don't want to waste time / space allocating another array here locally just
+        // to immediately copy it to the output.
+        Expression* expr = const_cast<Expression*>(results[i]);
+
+        if (type->isNumeric() || type->isString())
+            contextDetermined(comp, expr, *type);
+        else
+            selfDetermined(comp, expr);
+
+        results[i] = expr;
+    }
+
+    return true;
+}
+
 bool Expression::bad() const {
     return kind == ExpressionKind::Invalid || type->isError();
 }

@@ -187,6 +187,8 @@ error ReturnNotInSubroutine "return statement is only valid inside task and func
 error DelayNotNumeric "delay expression type {} is not numeric"
 error InvalidEventExpression "invalid type {} for event expression"
 error InvalidEdgeEventExpression "edge expression must be integral"
+error InvalidCaseStmtType "invalid expression type {} for {} statement"
+error NoCommonCaseStmtType "case expression of type {} is not comparable to common type {}"
 warning event-const EventExpressionConstant "edge expression is constant"
 
 // types

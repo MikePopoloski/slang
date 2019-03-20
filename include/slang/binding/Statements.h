@@ -24,6 +24,7 @@ class VariableSymbol;
     x(VariableDeclaration) \
     x(Return) \
     x(Conditional) \
+    x(Case) \
     x(ForLoop) \
     x(Timed)
 ENUM(StatementKind, STATEMENT);
@@ -215,6 +216,33 @@ public:
                                  const BindContext& context, BlockList& blocks);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Conditional; }
+};
+
+class CaseStatement : public Statement {
+public:
+    struct Item {
+        const Expression& expr;
+        const Statement& stmt;
+    };
+
+    enum ConditionKind { Normal, WildcardXOrZ, WildcardJustZ };
+
+    const Expression& expr;
+    span<Item const> items;
+    const Statement* defaultCase = nullptr;
+    ConditionKind condition;
+
+    CaseStatement(ConditionKind condition, const Expression& expr, span<Item const> items,
+                  const Statement* defaultCase) :
+        Statement(StatementKind::Case),
+        expr(expr), items(items), defaultCase(defaultCase), condition(condition) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
+                                 const BindContext& context, BlockList& blocks);
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Case; }
 };
 
 class ForLoopStatement : public Statement {

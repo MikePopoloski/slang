@@ -61,6 +61,10 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             result = &ConditionalStatement::fromSyntax(
                 comp, syntax.as<ConditionalStatementSyntax>(), context, blocks);
             break;
+        case SyntaxKind::CaseStatement:
+            result =
+                &CaseStatement::fromSyntax(comp, syntax.as<CaseStatementSyntax>(), context, blocks);
+            break;
         case SyntaxKind::ForLoopStatement:
             // We might have an implicit block here; check for that first.
             if (!blocks.empty() && blocks[0]->getSyntax() == &syntax) {
@@ -104,7 +108,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::NonblockingEventTriggerStatement:
         case SyntaxKind::WaitForkStatement:
         case SyntaxKind::ParallelBlockStatement:
-        case SyntaxKind::CaseStatement:
         case SyntaxKind::ForeverStatement:
         case SyntaxKind::LoopStatement:
         case SyntaxKind::DoWhileStatement:
@@ -471,6 +474,92 @@ ER ConditionalStatement::evalImpl(EvalContext& context) const {
     if (ifFalse)
         return ifFalse->eval(context);
 
+    return ER::Success;
+}
+
+Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
+                                     const BindContext& context, BlockList& blocks) {
+    if (syntax.matchesOrInside) {
+        context.addDiag(DiagCode::NotYetSupported, syntax.matchesOrInside.range());
+        return badStmt(compilation, nullptr);
+    }
+
+    if (syntax.uniqueOrPriority) {
+        context.addDiag(DiagCode::NotYetSupported, syntax.uniqueOrPriority.range());
+        return badStmt(compilation, nullptr);
+    }
+
+    ConditionKind condition;
+    switch (syntax.caseKeyword.kind) {
+        case TokenKind::CaseKeyword:
+            condition = Normal;
+            break;
+        case TokenKind::CaseXKeyword:
+            condition = WildcardXOrZ;
+            break;
+        case TokenKind::CaseZKeyword:
+            condition = WildcardJustZ;
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
+    SmallVectorSized<const Statement*, 8> statements;
+    const Statement* defStmt = nullptr;
+    bool bad = false;
+
+    for (auto item : syntax.items) {
+        switch (item->kind) {
+            case SyntaxKind::StandardCaseItem: {
+                auto& sci = item->as<StandardCaseItemSyntax>();
+                auto& stmt = Statement::bind(sci.clause->as<StatementSyntax>(), context, blocks);
+                for (auto es : sci.expressions) {
+                    expressions.append(es);
+                    statements.append(&stmt);
+                }
+
+                bad |= stmt.bad();
+                break;
+            }
+            case SyntaxKind::DefaultCaseItem:
+                // The parser already errored for duplicate defaults,
+                // so just ignore if it happens here.
+                if (!defStmt) {
+                    defStmt = &Statement::bind(
+                        item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>(), context,
+                        blocks);
+                    bad |= defStmt->bad();
+                }
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    SmallVectorSized<const Expression*, 8> bound;
+    bad |= !Expression::bindCaseExpressions(context, syntax.caseKeyword.kind, *syntax.expr,
+                                            expressions, bound);
+
+    SmallVectorSized<Item, 8> items;
+    for (size_t i = 1; i < bound.size(); i++) {
+        bad |= bound[i]->bad();
+        items.append({ *bound[i], *statements[i - 1] });
+    }
+
+    auto& expr = *bound[0];
+    bad |= expr.bad();
+
+    auto result =
+        compilation.emplace<CaseStatement>(condition, expr, items.copy(compilation), defStmt);
+    if (bad)
+        return badStmt(compilation, result);
+
+    return *result;
+}
+
+ER CaseStatement::evalImpl(EvalContext&) const {
+    // TODO
     return ER::Success;
 }
 

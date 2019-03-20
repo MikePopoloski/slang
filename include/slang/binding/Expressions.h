@@ -131,6 +131,13 @@ public:
                                          Expression& expr, SourceLocation location,
                                          optional<SourceRange> lhsRange = std::nullopt);
 
+    /// Specialized method for binding all of the expressions in a case statement at once.
+    /// This requires specific support because all of the expressions can affect each other.
+    static bool bindCaseExpressions(const BindContext& context, TokenKind caseKind,
+                                    const ExpressionSyntax& valueExpr,
+                                    span<const ExpressionSyntax* const> expressions,
+                                    SmallVector<const Expression*>& results);
+
     /// Indicates whether the expression is invalid.
     bool bad() const;
 
