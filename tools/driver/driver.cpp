@@ -111,7 +111,7 @@ int driverMain(int argc, char** argv) try {
         try {
             sourceManager.addUserDirectory(string_view(dir));
         }
-        catch (const std::exception& e) {
+        catch (const std::exception&) {
             print("error: include directory '{}' does not exist\n", dir);
             anyErrors = true;
         }
@@ -121,7 +121,7 @@ int driverMain(int argc, char** argv) try {
         try {
             sourceManager.addSystemDirectory(string_view(dir));
         }
-        catch (const std::exception& e) {
+        catch (const std::exception&) {
             print("error: include directory '{}' does not exist\n", dir);
             anyErrors = true;
         }
