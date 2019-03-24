@@ -1999,7 +1999,7 @@ bool exactlyEqual(const SVInt& lhs, const SVInt& rhs) {
     return memcmp(lhs.pVal, rhs.pVal, lhs.getNumWords() * SVInt::WORD_SIZE) == 0;
 }
 
-logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
+logic_t condWildcardEqual(const SVInt& lhs, const SVInt& rhs) {
     // if no unknown flags, do normal comparison
     if (!rhs.unknownFlag)
         return lhs == rhs;
@@ -2008,9 +2008,9 @@ logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
     if (lhs.bitWidth != rhs.bitWidth) {
         bool bothSigned = lhs.signFlag && rhs.signFlag;
         if (lhs.bitWidth < rhs.bitWidth)
-            return wildcardEqual(lhs.extend(rhs.bitWidth, bothSigned), rhs);
+            return condWildcardEqual(lhs.extend(rhs.bitWidth, bothSigned), rhs);
         else
-            return wildcardEqual(lhs, rhs.extend(lhs.bitWidth, bothSigned));
+            return condWildcardEqual(lhs, rhs.extend(lhs.bitWidth, bothSigned));
     }
 
     uint32_t words = SVInt::getNumWords(rhs.bitWidth, false);
@@ -2025,6 +2025,76 @@ logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
     }
 
     return logic_t(true);
+}
+
+bool caseXWildcardEqual(const SVInt& lhs, const SVInt& rhs) {
+    // if no unknown flags, do normal comparison
+    if (!lhs.unknownFlag && !rhs.unknownFlag)
+        return exactlyEqual(lhs, rhs);
+
+    // handle sign extension if necessary
+    if (lhs.bitWidth != rhs.bitWidth) {
+        bool bothSigned = lhs.signFlag && rhs.signFlag;
+        if (lhs.bitWidth < rhs.bitWidth)
+            return caseXWildcardEqual(lhs.extend(rhs.bitWidth, bothSigned), rhs);
+        else
+            return caseXWildcardEqual(lhs, rhs.extend(lhs.bitWidth, bothSigned));
+    }
+
+    uint32_t words = SVInt::getNumWords(rhs.bitWidth, false);
+    for (uint32_t i = 0; i < words; ++i) {
+        // bitmask to avoid comparing the unknown bits on either side
+        uint64_t mask = UINT64_MAX;
+        if (lhs.unknownFlag)
+            mask &= ~lhs.pVal[i + words];
+        if (rhs.unknownFlag)
+            mask &= ~rhs.pVal[i + words];
+
+        if ((lhs.getRawData()[i] & mask) != (rhs.getRawData()[i] & mask))
+            return false;
+    }
+
+    return true;
+}
+
+bool caseZWildcardEqual(const SVInt& lhs, const SVInt& rhs) {
+    // if no unknown flags, do normal comparison
+    if (!lhs.unknownFlag && !rhs.unknownFlag)
+        return exactlyEqual(lhs, rhs);
+
+    // handle sign extension if necessary
+    if (lhs.bitWidth != rhs.bitWidth) {
+        bool bothSigned = lhs.signFlag && rhs.signFlag;
+        if (lhs.bitWidth < rhs.bitWidth)
+            return caseZWildcardEqual(lhs.extend(rhs.bitWidth, bothSigned), rhs);
+        else
+            return caseZWildcardEqual(lhs, rhs.extend(lhs.bitWidth, bothSigned));
+    }
+
+    uint32_t words = SVInt::getNumWords(rhs.bitWidth, false);
+    for (uint32_t i = 0; i < words; ++i) {
+        // bitmask to avoid comparing the Z bits on either side
+        uint64_t mask = UINT64_MAX;
+
+        uint64_t lunknown = 0;
+        if (lhs.unknownFlag) {
+            lunknown = lhs.pVal[i + words] & ~lhs.pVal[i];
+            mask &= ~(lhs.pVal[i + words] & lhs.pVal[i]);
+        }
+
+        uint64_t runknown = 0;
+        if (rhs.unknownFlag) {
+            runknown = rhs.pVal[i + words] & ~rhs.pVal[i];
+            mask &= ~(rhs.pVal[i + words] & rhs.pVal[i]);
+        }
+
+        if ((lhs.getRawData()[i] & mask) != (rhs.getRawData()[i] & mask) ||
+            (lunknown & mask) != (runknown & mask)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 } // namespace slang

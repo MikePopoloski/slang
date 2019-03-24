@@ -42,6 +42,8 @@ TEST_CASE("Construction") {
     value5 = value5;
     CHECK(value5 == value5);
 
+    CHECK(value5 == value5.resize(69));
+
     CHECK(value6.as<uint8_t>() == std::nullopt);
     CHECK(value6.as<uint16_t>() == uint16_t(-924));
     CHECK(value6.as<int16_t>() == -924);
@@ -581,11 +583,22 @@ TEST_CASE("SVInt misc functions") {
 
     CHECK(SVInt::concat({}) == SVInt::Zero);
 
-    CHECK(wildcardEqual("5'b10110"_si, "5'b10110"_si));
-    CHECK_THAT(wildcardEqual("5'bxx101"_si, "5'bxx10x"_si), exactlyEquals(logic_t(1)));
-    CHECK_THAT(wildcardEqual("12'bxx101"_si, "5'bxx10x"_si), exactlyEquals(logic_t::x));
-    CHECK_THAT(wildcardEqual("5'bxx100"_si, "12'bxx101"_si), exactlyEquals(logic_t(0)));
-    CHECK_THAT(wildcardEqual("5'bxx10x"_si, "12'bxx101"_si), exactlyEquals(logic_t::x));
+    CHECK(condWildcardEqual("5'b10110"_si, "5'b10110"_si));
+    CHECK_THAT(condWildcardEqual("5'bxx101"_si, "5'bxx10x"_si), exactlyEquals(logic_t(1)));
+    CHECK_THAT(condWildcardEqual("12'bxx101"_si, "5'bxx10x"_si), exactlyEquals(logic_t::x));
+    CHECK_THAT(condWildcardEqual("5'bxx100"_si, "12'bxx101"_si), exactlyEquals(logic_t(0)));
+    CHECK_THAT(condWildcardEqual("5'bxx10x"_si, "12'bxx101"_si), exactlyEquals(logic_t::x));
+
+    CHECK(caseZWildcardEqual("5'b10110"_si, "5'b10110"_si));
+    CHECK(!caseZWildcardEqual("5'b10010"_si, "5'b10110"_si));
+    CHECK(caseZWildcardEqual("7'b??101x0"_si, "5'b101?0"_si));
+    CHECK(!caseZWildcardEqual("5'b101?0"_si, "7'bxx101?0"_si));
+
+    CHECK(caseXWildcardEqual("5'b10110"_si, "5'b10110"_si));
+    CHECK(!caseXWildcardEqual("5'b10010"_si, "5'b10110"_si));
+    CHECK(caseXWildcardEqual("7'b??101x0"_si, "5'b101?0"_si));
+    CHECK(caseXWildcardEqual("5'b101?0"_si, "7'bxx101?0"_si));
+    CHECK(!caseXWildcardEqual("5'b101?0"_si, "7'bx1101?0"_si));
 
     CHECK_THAT("7'b10z1110"_si.trunc(5), exactlyEquals("5'bz1110"_si));
 

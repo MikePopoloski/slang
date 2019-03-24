@@ -490,7 +490,16 @@ public:
     friend bool exactlyEqual(const SVInt& lhs, const SVInt& rhs);
 
     /// Wildcard based equality, with unknown bits as wildcards.
-    friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
+    /// This method only looks for wildcard bits on the rhs, as needed by the conditional operator.
+    friend logic_t condWildcardEqual(const SVInt& lhs, const SVInt& rhs);
+
+    /// Wildcard based equality, with unknown bits as wildcards.
+    /// This method implements matching as required by casex statements.
+    friend bool caseXWildcardEqual(const SVInt& lhs, const SVInt& rhs);
+
+    /// Wildcard based equality, with Z bits as wildcards.
+    /// This method implements matching as required by casez statements.
+    friend bool caseZWildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     enum {
         MAX_BITS = (1 << 24) - 1,

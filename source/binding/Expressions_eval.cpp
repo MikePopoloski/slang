@@ -124,8 +124,8 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                 OP(Inequality, SVInt(l != r));
                 OP(CaseEquality, SVInt((logic_t)exactlyEqual(l, r)));
                 OP(CaseInequality, SVInt((logic_t)!exactlyEqual(l, r)));
-                OP(WildcardEquality, SVInt(wildcardEqual(l, r)));
-                OP(WildcardInequality, SVInt(!wildcardEqual(l, r)));
+                OP(WildcardEquality, SVInt(condWildcardEqual(l, r)));
+                OP(WildcardInequality, SVInt(!condWildcardEqual(l, r)));
                 OP(GreaterThanEqual, SVInt(l >= r));
                 OP(GreaterThan, SVInt(l > r));
                 OP(LessThanEqual, SVInt(l <= r));

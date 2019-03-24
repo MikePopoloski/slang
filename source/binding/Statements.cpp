@@ -592,10 +592,12 @@ static bool checkMatch(CaseStatement::Condition condition, const ConstantValue& 
                        const ConstantValue& cvr) {
 
     if (condition != CaseStatement::Condition::Normal) {
-        // TODO: implement wildcard matching
         const SVInt& l = cvl.integer();
         const SVInt& r = cvr.integer();
-        return exactlyEqual(l, r);
+        if (condition == CaseStatement::Condition::WildcardJustZ)
+            return caseZWildcardEqual(l, r);
+        else
+            return caseXWildcardEqual(l, r);
     }
 
     // We only need to check the type of the lhs; it's guaranteed
