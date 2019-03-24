@@ -484,21 +484,34 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
         return badStmt(compilation, nullptr);
     }
 
-    if (syntax.uniqueOrPriority) {
-        context.addDiag(DiagCode::NotYetSupported, syntax.uniqueOrPriority.range());
-        return badStmt(compilation, nullptr);
-    }
-
-    ConditionKind condition;
+    Condition condition;
     switch (syntax.caseKeyword.kind) {
         case TokenKind::CaseKeyword:
-            condition = Normal;
+            condition = Condition::Normal;
             break;
         case TokenKind::CaseXKeyword:
-            condition = WildcardXOrZ;
+            condition = Condition::WildcardXOrZ;
             break;
         case TokenKind::CaseZKeyword:
-            condition = WildcardJustZ;
+            condition = Condition::WildcardJustZ;
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    Check check;
+    switch (syntax.uniqueOrPriority.kind) {
+        case TokenKind::Unknown:
+            check = Check::None;
+            break;
+        case TokenKind::UniqueKeyword:
+            check = Check::Unique;
+            break;
+        case TokenKind::Unique0Keyword:
+            check = Check::Unique0;
+            break;
+        case TokenKind::PriorityKeyword:
+            check = Check::Priority;
             break;
         default:
             THROW_UNREACHABLE;
@@ -541,25 +554,130 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     bad |= !Expression::bindCaseExpressions(context, syntax.caseKeyword.kind, *syntax.expr,
                                             expressions, bound);
 
-    SmallVectorSized<Item, 8> items;
-    for (size_t i = 1; i < bound.size(); i++) {
-        bad |= bound[i]->bad();
-        items.append({ *bound[i], *statements[i - 1] });
+    SmallVectorSized<ItemGroup, 8> items;
+    SmallVectorSized<const Expression*, 8> group;
+    auto boundIt = bound.begin();
+    auto stmtIt = statements.begin();
+
+    auto expr = *boundIt++;
+    bad |= expr->bad();
+
+    for (auto item : syntax.items) {
+        switch (item->kind) {
+            case SyntaxKind::StandardCaseItem: {
+                auto& sci = item->as<StandardCaseItemSyntax>();
+                for (ptrdiff_t i = 0; i < sci.expressions.size(); i++) {
+                    bad |= (*boundIt)->bad();
+                    group.append(*boundIt++);
+                }
+
+                const Statement* stmt = *stmtIt++;
+                items.append({ group.copy(compilation), *stmt });
+                group.clear();
+            }
+            default:
+                break;
+        }
     }
 
-    auto& expr = *bound[0];
-    bad |= expr.bad();
-
-    auto result =
-        compilation.emplace<CaseStatement>(condition, expr, items.copy(compilation), defStmt);
+    auto result = compilation.emplace<CaseStatement>(condition, check, *expr,
+                                                     items.copy(compilation), defStmt);
     if (bad)
         return badStmt(compilation, result);
 
     return *result;
 }
 
-ER CaseStatement::evalImpl(EvalContext&) const {
-    // TODO
+static bool checkMatch(CaseStatement::Condition condition, const ConstantValue& cvl,
+                       const ConstantValue& cvr) {
+
+    if (condition != CaseStatement::Condition::Normal) {
+        // TODO: implement wildcard matching
+        const SVInt& l = cvl.integer();
+        const SVInt& r = cvr.integer();
+        return exactlyEqual(l, r);
+    }
+
+    // We only need to check the type of the lhs; it's guaranteed
+    // that the type of the rhs will match.
+    if (cvl.isInteger()) {
+        const SVInt& l = cvl.integer();
+        const SVInt& r = cvr.integer();
+        return exactlyEqual(l, r);
+    }
+
+    if (cvl.isReal()) {
+        double l = cvl.real();
+        double r = cvr.real();
+        return l == r;
+    }
+
+    if (cvl.isShortReal()) {
+        float l = cvl.shortReal();
+        float r = cvr.shortReal();
+        return l == r;
+    }
+
+    if (cvl.isString()) {
+        auto& l = cvl.str();
+        auto& r = cvr.str();
+        return l == r;
+    }
+
+    THROW_UNREACHABLE;
+}
+
+ER CaseStatement::evalImpl(EvalContext& context) const {
+    auto cv = expr.eval(context);
+    if (!cv)
+        return ER::Fail;
+
+    const Statement* matchedStmt = nullptr;
+    SourceRange matchRange;
+    bool unique = check == Check::Unique || check == Check::Unique0;
+
+    for (auto& group : items) {
+        for (auto item : group.expressions) {
+            auto val = item->eval(context);
+            if (!val)
+                return ER::Fail;
+
+            if (checkMatch(condition, cv, val)) {
+                // If we already matched with a previous item, the only we reason
+                // we'd still get here is to check for uniqueness. The presence of
+                // another match means we failed the uniqueness check.
+                if (matchedStmt) {
+                    context.addDiag(DiagCode::NoteCaseItemsNotUnique, item->sourceRange) << val;
+                    context.addDiag(DiagCode::NotePreviousMatch, matchRange);
+                    unique = false;
+                }
+                else {
+                    // Always break out of the item group once we find a match -- even when
+                    // checking uniqueness, expressions in a single group are not required
+                    // to be unique.
+                    matchedStmt = &group.stmt;
+                    matchRange = item->sourceRange;
+                }
+                break;
+            }
+        }
+
+        if (matchedStmt && !unique)
+            break;
+    }
+
+    if (!matchedStmt)
+        matchedStmt = defaultCase;
+
+    if (matchedStmt)
+        return matchedStmt->eval(context);
+
+    if (check == Check::Priority || check == Check::Unique) {
+        auto& diag = context.addDiag(DiagCode::NoteNoCaseItemsMatched, expr.sourceRange);
+        diag << (check == Check::Priority ? "priority"sv : "unique"sv);
+        diag << cv;
+    }
+
     return ER::Success;
 }
 

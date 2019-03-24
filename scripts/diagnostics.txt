@@ -235,6 +235,9 @@ note NoteReplicationCountInvalid "string replication count {} is invalid"
 note NoteHierarchicalNameInCE "reference to '{}' by hierarchical name is not allowed in a constant expression"
 note NoteFunctionIdentifiersMustBeLocal "all identifiers that are not parameters must be declared locally to a constant function"
 note NoteParamUsedInCEBeforeDecl "parameter '{}' is declared after the invocation of the current constant function"
+note NoteNoCaseItemsMatched "no items in {} case statement matched value {}"
+note NoteCaseItemsNotUnique "more than one match found in unique case statement for value {}"
+note NotePreviousMatch "previous match here"
 
 // warnings
 warning real-underflow RealLiteralUnderflow "value of real literal is too small; minimum is {}"

@@ -220,22 +220,25 @@ public:
 
 class CaseStatement : public Statement {
 public:
-    struct Item {
-        const Expression& expr;
+    struct ItemGroup {
+        span<const Expression* const> expressions;
         const Statement& stmt;
     };
 
-    enum ConditionKind { Normal, WildcardXOrZ, WildcardJustZ };
+    enum class Condition { Normal, WildcardXOrZ, WildcardJustZ };
+    enum class Check { None, Unique, Unique0, Priority };
 
     const Expression& expr;
-    span<Item const> items;
+    span<ItemGroup const> items;
     const Statement* defaultCase = nullptr;
-    ConditionKind condition;
+    Condition condition;
+    Check check;
 
-    CaseStatement(ConditionKind condition, const Expression& expr, span<Item const> items,
-                  const Statement* defaultCase) :
+    CaseStatement(Condition condition, Check check, const Expression& expr,
+                  span<ItemGroup const> items, const Statement* defaultCase) :
         Statement(StatementKind::Case),
-        expr(expr), items(items), defaultCase(defaultCase), condition(condition) {}
+        expr(expr), items(items), defaultCase(defaultCase), condition(condition),
+        check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
