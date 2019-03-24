@@ -571,9 +571,9 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                     group.append(*boundIt++);
                 }
 
-                const Statement* stmt = *stmtIt++;
-                items.append({ group.copy(compilation), *stmt });
+                items.append({ group.copy(compilation), *stmtIt++ });
                 group.clear();
+                break;
             }
             default:
                 break;
@@ -655,7 +655,7 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
                     // Always break out of the item group once we find a match -- even when
                     // checking uniqueness, expressions in a single group are not required
                     // to be unique.
-                    matchedStmt = &group.stmt;
+                    matchedStmt = group.stmt;
                     matchRange = item->sourceRange;
                 }
                 break;

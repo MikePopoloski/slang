@@ -356,18 +356,19 @@ bool Expression::bindCaseExpressions(const BindContext& context, TokenKind caseK
     if (bad)
         return false;
 
-    for (size_t i = 0; i < results.size(); i++) {
+    size_t index = 0;
+    for (auto result : results) {
         // const_casts here are because we want the result array to be constant and
         // don't want to waste time / space allocating another array here locally just
         // to immediately copy it to the output.
-        Expression* expr = const_cast<Expression*>(results[i]);
+        Expression* expr = const_cast<Expression*>(result);
 
         if (type->isNumeric() || type->isString())
             contextDetermined(comp, expr, *type);
         else
             selfDetermined(comp, expr);
 
-        results[i] = expr;
+        results[index++] = expr;
     }
 
     return true;

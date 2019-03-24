@@ -222,7 +222,7 @@ class CaseStatement : public Statement {
 public:
     struct ItemGroup {
         span<const Expression* const> expressions;
-        const Statement& stmt;
+        not_null<const Statement*> stmt;
     };
 
     enum class Condition { Normal, WildcardXOrZ, WildcardJustZ };
