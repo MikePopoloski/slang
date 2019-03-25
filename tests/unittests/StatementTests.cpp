@@ -80,7 +80,10 @@ module m;
     end
 
     always begin
-        case (sp) endcase // aggregates not allowed
+        case (sp)
+            default:;
+        endcase // aggregates not allowed
+
         case (1)
             sp: ;   // aggregates not allowed
         endcase
@@ -107,7 +110,9 @@ module m;
             default;
         endcase
 
-        casez (3.2) endcase // not integral
+        casez (3.2)
+            default;
+        endcase // not integral
 
         casez (3'b1x1)
             3.2:; // not integral

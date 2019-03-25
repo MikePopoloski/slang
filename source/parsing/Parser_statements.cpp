@@ -162,6 +162,8 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
 
     Token matchesOrInside;
     SmallVectorSized<CaseItemSyntax*, 16> itemBuffer;
+    SourceLocation lastDefault;
+    bool errored = false;
 
     switch (peek().kind) {
         case TokenKind::MatchesKeyword:
@@ -169,8 +171,17 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
             matchesOrInside = consume();
             while (true) {
                 auto kind = peek().kind;
-                if (kind == TokenKind::DefaultKeyword)
+                if (kind == TokenKind::DefaultKeyword) {
+                    if (lastDefault && !errored) {
+                        auto& diag = addDiag(DiagCode::MultipleDefaultCases, peek().location());
+                        diag << getTokenKindText(caseKeyword.kind);
+                        diag.addNote(DiagCode::NotePreviousDefinition, lastDefault);
+                        errored = true;
+                    }
+
+                    lastDefault = peek().location();
                     itemBuffer.append(&parseDefaultCaseItem());
+                }
                 else if (isPossiblePattern(kind)) {
                     auto& pattern = parsePattern();
                     Token tripleAnd;
@@ -197,8 +208,17 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
             matchesOrInside = consume();
             while (true) {
                 auto kind = peek().kind;
-                if (kind == TokenKind::DefaultKeyword)
+                if (kind == TokenKind::DefaultKeyword) {
+                    if (lastDefault && !errored) {
+                        auto& diag = addDiag(DiagCode::MultipleDefaultCases, peek().location());
+                        diag << getTokenKindText(caseKeyword.kind);
+                        diag.addNote(DiagCode::NotePreviousDefinition, lastDefault);
+                        errored = true;
+                    }
+
+                    lastDefault = peek().location();
                     itemBuffer.append(&parseDefaultCaseItem());
+                }
                 else if (isPossibleOpenRangeElement(kind)) {
                     Token colon;
                     SmallVectorSized<TokenOrSyntax, 8> buffer;
@@ -221,8 +241,17 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
             // normal case statement
             while (true) {
                 auto kind = peek().kind;
-                if (kind == TokenKind::DefaultKeyword)
+                if (kind == TokenKind::DefaultKeyword) {
+                    if (lastDefault && !errored) {
+                        auto& diag = addDiag(DiagCode::MultipleDefaultCases, peek().location());
+                        diag << getTokenKindText(caseKeyword.kind);
+                        diag.addNote(DiagCode::NotePreviousDefinition, lastDefault);
+                        errored = true;
+                    }
+
+                    lastDefault = peek().location();
                     itemBuffer.append(&parseDefaultCaseItem());
+                }
                 else if (isPossibleExpression(kind)) {
                     Token colon;
                     SmallVectorSized<TokenOrSyntax, 8> buffer;
@@ -239,6 +268,11 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
                 }
             }
             break;
+    }
+
+    if (itemBuffer.empty()) {
+        addDiag(DiagCode::CaseStatementEmpty, caseKeyword.location())
+            << getTokenKindText(caseKeyword.kind);
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
