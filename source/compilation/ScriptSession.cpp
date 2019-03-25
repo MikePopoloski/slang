@@ -63,6 +63,7 @@ Diagnostics ScriptSession::getDiagnostics() {
         result.appendRange(tree->diagnostics());
 
     result.appendRange(compilation.getAllDiagnostics());
+    result.appendRange(evalContext.getDiagnostics());
     return result;
 }
 

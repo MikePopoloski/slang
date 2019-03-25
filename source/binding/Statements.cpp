@@ -522,6 +522,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     const Statement* defStmt = nullptr;
     bool bad = false;
 
+    // TODO: check for cases we statically know we can never hit
     for (auto item : syntax.items) {
         switch (item->kind) {
             case SyntaxKind::StandardCaseItem: {

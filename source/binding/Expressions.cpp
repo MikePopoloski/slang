@@ -244,11 +244,12 @@ struct Expression::PropagationVisitor {
         if (needConversion)
             result = &Expression::implicitConversion(compilation, newType, expr);
 
-        // Try to fold any constant values.
+        // Try to fold any constant values. If this results in diagnostics we
+        // don't save the value here to force re-evaluation later on.
         ASSERT(!result->constant);
         EvalContext context;
         ConstantValue value = result->eval(context);
-        if (value)
+        if (value && context.getDiagnostics().empty())
             result->constant = compilation.allocConstant(std::move(value));
         return *result;
     }

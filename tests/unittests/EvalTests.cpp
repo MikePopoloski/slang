@@ -574,3 +574,110 @@ TEST_CASE("Ambiguous numeric literals") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Eval case statements") {
+    ScriptSession session;
+    session.eval(R"(
+function logic func1(string foo);
+    unique case (foo)
+        "bar", "foo", "foo": return 1;
+        "baz": ;
+        "foo": ; // error
+    endcase
+    return 0;
+endfunction
+)");
+    CHECK(session.eval("func1(\"foo\")").integer() == 1);
+    CHECK(session.eval("func1(\"blah\")").integer() == 0);
+
+    session.eval(R"(
+function logic func2(real foo);
+    priority case (foo)
+        3.4: return 1;
+        2.1: ;
+        3.4: ;
+    endcase
+    return 0;
+endfunction
+)");
+    CHECK(session.eval("func2(3.4)").integer() == 1);
+    CHECK(session.eval("func2(3.5)").integer() == 0);
+
+    session.eval(R"(
+function int func3(shortreal foo);
+    case (foo)
+        shortreal'(3.4): return 2;
+        default: return 3;
+    endcase
+    return 5;
+endfunction
+)");
+    CHECK(session.eval("func3(3.4)").integer() == 2);
+    CHECK(session.eval("func3(3.5)").integer() == 3);
+
+    session.eval(R"(
+function int func4(int foo);
+    unique0 case (foo)
+        1,2,3: return 2;
+    endcase
+    return 5;
+endfunction
+)");
+    CHECK(session.eval("func4(3)").integer() == 2);
+    CHECK(session.eval("func4(6)").integer() == 5);
+
+    session.eval(R"(
+function int func5(logic [3:0] foo);
+    casez (foo)
+        4'b11?1: return 1;
+        4'b1?11: return 2;
+    endcase
+    return 3;
+endfunction
+)");
+    CHECK(session.eval("func5(4'b1011)").integer() == 2);
+    CHECK(session.eval("func5(4'b1111)").integer() == 1);
+
+    session.eval(R"(
+function int func6(logic [3:0] foo);
+    casex (foo)
+        4'b1x?1: return 1;
+        4'b1?10: return 2;
+    endcase
+    return 3;
+endfunction
+)");
+    CHECK(session.eval("func6(4'b1011)").integer() == 1);
+    CHECK(session.eval("func6(4'bx110)").integer() == 2);
+
+    session.eval(R"(
+function int func7;
+    casex (foo)
+        1: return 1;
+    endcase
+    return 2;
+endfunction
+)");
+    session.eval("func7()");
+
+    session.eval("int foo = 0;");
+    session.eval(R"(
+function int func8;
+    casex (1)
+        foo: return 1;
+    endcase
+    return 2;
+endfunction
+)");
+    session.eval("func8()");
+
+    session.eval(R"(
+function int func9;
+    casex (foo)
+        1: return 1;
+    endcase
+    return 2;
+endfunction
+)");
+    session.eval("func9()");
+}
