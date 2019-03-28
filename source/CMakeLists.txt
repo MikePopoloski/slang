@@ -19,6 +19,7 @@ add_library(slang STATIC
 	binding/Expressions.cpp
 	binding/Expressions_eval.cpp
 	binding/Statements.cpp
+	binding/SystemSubroutine.cpp
 	binding/TimingControl.cpp
 
 	compilation/BuiltInSubroutines.cpp

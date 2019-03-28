@@ -97,6 +97,9 @@ public:
     /// Indicates whether this is any form of structure or union type.
     bool isStructUnion() const;
 
+    /// Indicates whether this type can be packed into a stream of bits.
+    bool isBitstreamType() const;
+
     /// Indicates whether this is a numeric type, which includes all integral and floating types.
     bool isNumeric() const { return isIntegral() || isFloating(); }
 

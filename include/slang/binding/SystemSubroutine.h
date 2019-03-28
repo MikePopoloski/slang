@@ -12,7 +12,7 @@
 
 namespace slang {
 
-class Compilation;
+class BindContext;
 class EvalContext;
 class Expression;
 class Type;
@@ -32,7 +32,7 @@ public:
     std::string name;
     bitmask<SystemSubroutineFlags> flags;
 
-    virtual const Type& checkArguments(Compilation& compilation, const Args& args) const = 0;
+    virtual const Type& checkArguments(const BindContext& context, const Args& args) const = 0;
     virtual ConstantValue eval(EvalContext& context, const Args& args) const = 0;
 
 protected:
@@ -40,6 +40,10 @@ protected:
                      bitmask<SystemSubroutineFlags> flags = SystemSubroutineFlags::None) :
         name(std::move(name)),
         flags(flags) {}
+
+    string_view kindStr() const;
+    static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
+                              size_t expected);
 };
 
 } // namespace slang

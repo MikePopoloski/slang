@@ -13,25 +13,25 @@ namespace slang::Builtins {
 class IntegerMathFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
-    const Type& checkArguments(Compilation& compilation, const Args& args) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args) const final;
 };
 
 class DataQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
-    const Type& checkArguments(Compilation& compilation, const Args& args) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args) const final;
 };
 
 class ArrayQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
-    const Type& checkArguments(Compilation& compilation, const Args& args) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args) const final;
 };
 
 class EnumFirstLastMethod : public SystemSubroutine {
 public:
     EnumFirstLastMethod(const std::string& name, bool first);
-    const Type& checkArguments(Compilation& compilation, const Args& args) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args) const final;
     ConstantValue eval(EvalContext& context, const Args& args) const final;
 
 private:
@@ -41,7 +41,7 @@ private:
 class EnumNumMethod : public SystemSubroutine {
 public:
     EnumNumMethod() : SystemSubroutine("num") {}
-    const Type& checkArguments(Compilation& compilation, const Args& args) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args) const final;
     ConstantValue eval(EvalContext& context, const Args& args) const final;
 };
 

@@ -44,6 +44,8 @@ public:
         scope(scope),
         lookupLocation(lookupLocation), flags(flags) {}
 
+    Compilation& getCompilation() const { return scope.getCompilation(); }
+
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 

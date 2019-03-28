@@ -184,6 +184,11 @@ bool Type::isStructUnion() const {
     }
 }
 
+bool Type::isBitstreamType() const {
+    // TODO: dynamic types, classes
+    return isIntegral() || isUnpackedArray() || isUnpackedStruct();
+}
+
 bool Type::isMatching(const Type& rhs) const {
     // See [6.22.1] for Matching Types.
     const Type* l = &getCanonicalType();

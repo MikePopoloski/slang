@@ -10,21 +10,51 @@
 
 namespace slang::Builtins {
 
-// TODO: check all of these for whether return type should be int or integer
+const Type& IntegerMathFunction::checkArguments(const BindContext& context,
+                                                const Args& args) const {
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, false, args, 1))
+        return comp.getErrorType();
 
-const Type& IntegerMathFunction::checkArguments(Compilation& compilation, const Args&) const {
-    // TODO: error checking
-    return compilation.getIntegerType();
+    if (!args[0]->type->isIntegral()) {
+        context.addDiag(DiagCode::BadSystemSubroutineArg, args[0]->sourceRange)
+            << *args[0]->type << kindStr();
+        return comp.getErrorType();
+    }
+
+    return comp.getIntegerType();
 }
 
-const Type& DataQueryFunction::checkArguments(Compilation& compilation, const Args&) const {
-    // TODO: error checking
-    return compilation.getIntegerType();
+const Type& DataQueryFunction::checkArguments(const BindContext& context, const Args& args) const {
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, false, args, 1))
+        return comp.getErrorType();
+
+    if (!args[0]->type->isBitstreamType()) {
+        context.addDiag(DiagCode::BadSystemSubroutineArg, args[0]->sourceRange)
+            << *args[0]->type << kindStr();
+        return comp.getErrorType();
+    }
+
+    // TODO: not allowed on some dynamic types
+
+    return comp.getIntegerType();
 }
 
-const Type& ArrayQueryFunction::checkArguments(Compilation& compilation, const Args&) const {
-    // TODO: error checking
-    return compilation.getIntegerType();
+const Type& ArrayQueryFunction::checkArguments(const BindContext& context, const Args& args) const {
+    // TODO: support optional second argument
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, false, args, 1))
+        return comp.getErrorType();
+
+    auto& type = *args[0]->type;
+    if (!type.isIntegral() && !type.isUnpackedArray()) {
+        context.addDiag(DiagCode::BadSystemSubroutineArg, args[0]->sourceRange)
+            << type << kindStr();
+        return comp.getErrorType();
+    }
+
+    return comp.getIntegerType();
 }
 
 ConstantValue Clog2Subroutine::eval(EvalContext& context, const Args& args) const {
@@ -32,53 +62,41 @@ ConstantValue Clog2Subroutine::eval(EvalContext& context, const Args& args) cons
     if (!v)
         return nullptr;
 
-    // TODO: other types?
     return SVInt(32, clog2(v.integer()), true);
 }
 
 ConstantValue BitsSubroutine::eval(EvalContext&, const Args& args) const {
+    // TODO: support for unpacked sizes
     return SVInt(32, args[0]->type->getBitWidth(), true);
 }
 
 ConstantValue LowSubroutine::eval(EvalContext&, const Args& args) const {
-    // TODO: other types?
-    const auto& argType = args[0]->type->as<IntegralType>();
-    ConstantRange range = argType.getBitVectorRange();
+    ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.lower(), true);
 }
 
 ConstantValue HighSubroutine::eval(EvalContext&, const Args& args) const {
-    // TODO: other types?
-    const auto& argType = args[0]->type->as<IntegralType>();
-    ConstantRange range = argType.getBitVectorRange();
+    ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.upper(), true);
 }
 
 ConstantValue LeftSubroutine::eval(EvalContext&, const Args& args) const {
-    // TODO: other types?
-    const auto& argType = args[0]->type->as<IntegralType>();
-    ConstantRange range = argType.getBitVectorRange();
+    ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.left, true);
 }
 
 ConstantValue RightSubroutine::eval(EvalContext&, const Args& args) const {
-    // TODO: other types?
-    const auto& argType = args[0]->type->as<IntegralType>();
-    ConstantRange range = argType.getBitVectorRange();
+    ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.right, true);
 }
 
 ConstantValue SizeSubroutine::eval(EvalContext&, const Args& args) const {
-    // TODO: other types?
-    // TODO: bitwidth is not quite right here
-    const auto& argType = args[0]->type->as<IntegralType>();
-    return SVInt(32, argType.bitWidth, true);
+    ConstantRange range = args[0]->type->getArrayRange();
+    return SVInt(32, range.width(), true);
 }
 
 ConstantValue IncrementSubroutine::eval(EvalContext&, const Args& args) const {
-    // TODO: other types?
-    const auto& argType = args[0]->type->as<IntegralType>();
-    ConstantRange range = argType.getBitVectorRange();
+    ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)(range.isLittleEndian() ? 1 : -1), true);
 }
 
@@ -86,8 +104,12 @@ EnumFirstLastMethod::EnumFirstLastMethod(const std::string& name, bool first) :
     SystemSubroutine(name), first(first) {
 }
 
-const Type& EnumFirstLastMethod::checkArguments(Compilation&, const Args& args) const {
-    // TODO: check too many args
+const Type& EnumFirstLastMethod::checkArguments(const BindContext& context,
+                                                const Args& args) const {
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, true, args, 0))
+        return comp.getErrorType();
+
     return *args.at(0)->type;
 }
 
@@ -116,9 +138,12 @@ ConstantValue EnumFirstLastMethod::eval(EvalContext&, const Args& args) const {
     return value->getValue();
 }
 
-const Type& EnumNumMethod::checkArguments(Compilation& compilation, const Args&) const {
-    // TODO: check too many args
-    return compilation.getIntegerType();
+const Type& EnumNumMethod::checkArguments(const BindContext& context, const Args& args) const {
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, true, args, 0))
+        return comp.getErrorType();
+
+    return comp.getIntegerType();
 }
 
 ConstantValue EnumNumMethod::eval(EvalContext&, const Args& args) const {
