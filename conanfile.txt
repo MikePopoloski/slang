@@ -1,7 +1,7 @@
 [requires]
-Catch2/2.5.0@catchorg/stable
-jsonformoderncpp/3.5.0@vthiery/stable
-CLI11/1.6.2@cliutils/stable
+Catch2/2.7.0@catchorg/stable
+jsonformoderncpp/3.6.1@vthiery/stable
+CLI11/1.7.1@cliutils/stable
 fmt/5.3.0@bincrafters/stable
 
 [generators]
