@@ -17,8 +17,8 @@ string_view SystemSubroutine::kindStr() const {
 }
 
 bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, const Args& args,
-                                     size_t expected) {
-    size_t provided = args.size();
+                                     ptrdiff_t expected) {
+    ptrdiff_t provided = args.size();
     if (isMethod) {
         ASSERT(provided);
         provided--;

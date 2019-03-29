@@ -43,7 +43,7 @@ protected:
 
     string_view kindStr() const;
     static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
-                              size_t expected);
+                              ptrdiff_t expected);
 };
 
 } // namespace slang
