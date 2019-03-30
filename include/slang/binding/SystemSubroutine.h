@@ -34,6 +34,7 @@ public:
 
     virtual const Type& checkArguments(const BindContext& context, const Args& args) const = 0;
     virtual ConstantValue eval(EvalContext& context, const Args& args) const = 0;
+    virtual bool verifyConstant(EvalContext& context, const Args& args) const = 0;
 
 protected:
     SystemSubroutine(std::string name,

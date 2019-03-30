@@ -18,6 +18,13 @@ namespace slang {
 
 class SubroutineSymbol;
 
+enum class EvalFlags : uint8_t {
+    None = 0,
+    IsScript = 1,
+    IsVerifying = 2
+};
+BITMASK_DEFINE_MAX_ELEMENT(EvalFlags, IsVerifying);
+
 /// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining
 /// storage for local variables.
@@ -39,7 +46,7 @@ public:
         LookupLocation lookupLocation;
     };
 
-    explicit EvalContext(bool isScriptEval = false);
+    explicit EvalContext(bitmask<EvalFlags> flags = {});
 
     /// Creates storage for a local variable in the current frame.
     ConstantValue* createLocal(const ValueSymbol* symbol, ConstantValue value = nullptr);
@@ -52,12 +59,16 @@ public:
     void pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
                    LookupLocation lookupLocation);
 
-    /// Pop the active frame from the call stack and returns its value, if any.
-    ConstantValue popFrame();
+    /// Pop the active frame from the call stack.
+    void popFrame();
 
     /// Indicates whether this evaluation context is for a script session
     /// (not used during normal compilation flow).
-    bool isScriptEval() const { return isScriptEval_; }
+    bool isScriptEval() const { return (flags & EvalFlags::IsScript) != 0; }
+
+    /// Indicates whether this context is for verifying const-ness
+    /// without actually evaluating anything.
+    bool isVerifying() const { return (flags & EvalFlags::IsVerifying) != 0; }
 
     /// Gets the top of the call stack.
     const Frame& topFrame() const { return stack.back(); }
@@ -77,8 +88,8 @@ private:
 
     std::deque<Frame> stack;
     Diagnostics diags;
+    bitmask<EvalFlags> flags;
     bool reportedCallstack = false;
-    bool isScriptEval_ = false;
 };
 
 } // namespace slang

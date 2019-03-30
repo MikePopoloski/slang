@@ -159,6 +159,10 @@ public:
     /// if the expression does not represent an lvalue.
     LValue evalLValue(EvalContext& context) const;
 
+    /// Verifies that this expression is valid as a constant expression.
+    /// If it's not, appropriate diagnostics will be issued.
+    bool verifyConstant(EvalContext& context) const;
+
     template<typename T>
     T& as() {
         ASSERT(T::isKind(kind));
@@ -242,6 +246,7 @@ public:
     SVInt getValue() const { return valueStorage; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
 
@@ -264,6 +269,7 @@ public:
     double getValue() const { return value; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
 
@@ -285,6 +291,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(Compilation& compilation, const Type& newType);
+    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
 
@@ -305,6 +312,7 @@ public:
         Expression(ExpressionKind::NullLiteral, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
 
@@ -322,6 +330,7 @@ public:
     string_view getValue() const { return value; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json& j) const;
 
@@ -346,6 +355,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -353,9 +363,6 @@ public:
                                   SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
-
-private:
-    bool verifyAccess(EvalContext& context) const;
 };
 
 /// Represents a unary operator expression.
@@ -373,6 +380,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(Compilation& compilation, const Type& newType);
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -408,6 +416,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(Compilation& compilation, const Type& newType);
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -440,6 +449,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(Compilation& compilation, const Type& newType);
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -474,6 +484,7 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -503,6 +514,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -536,6 +548,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -571,6 +584,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -595,6 +609,7 @@ public:
     span<const Expression* const> operands() const { return operands_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -622,6 +637,7 @@ public:
     Expression& concat() { return *concat_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -654,6 +670,7 @@ public:
     bool isSystemCall() const { return subroutine.index() == 1; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -697,6 +714,7 @@ public:
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
 
@@ -718,6 +736,7 @@ public:
         Expression(ExpressionKind::DataType, type, sourceRange) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
 

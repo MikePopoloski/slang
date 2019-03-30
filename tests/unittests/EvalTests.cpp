@@ -415,10 +415,10 @@ localparam int p = bar(1);
 source:1:33: note: all identifiers that are not parameters must be declared locally to a constant function
 function int foo(int a); return f + a; endfunction
                                 ^
-source:1:33: note: in call to 'foo(2)'
+source:1:33: note: in call to 'foo'
 function int bar(int b); return foo(b + 1); endfunction
                                 ^
-source:1:20: note: in call to 'bar(1)'
+source:1:20: note: in call to 'bar'
 localparam int p = bar(1);
                    ^
 source:1:7: note: declared here

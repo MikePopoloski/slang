@@ -350,14 +350,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    // TODO: $bits() function should check argument even though it's not evaluated
-    // REQUIRE(diags.size() == 5);
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == DiagCode::RecursiveDefinition);
     CHECK(diags[1].code == DiagCode::RecursiveDefinition);
     CHECK(diags[2].code == DiagCode::ExpressionNotConstant);
     CHECK(diags[3].code == DiagCode::RecursiveDefinition);
-    // CHECK(diags[4].code == DiagCode::ExpressionNotConstant);
+    CHECK(diags[4].code == DiagCode::ExpressionNotConstant);
 }
 
 TEST_CASE("Module ANSI ports") {

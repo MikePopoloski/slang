@@ -64,6 +64,10 @@ public:
     /// Evaluates the statement under the given evaluation context.
     EvalResult eval(EvalContext& context) const;
 
+    /// Verifies that this statement is valid in a constant function.
+    /// If it's not, appropriate diagnostics will be issued.
+    bool verifyConstant(EvalContext& context) const;
+
     using BlockList = span<const SequentialBlockSymbol* const>;
 
     /// Binds a statement tree from the given syntax nodes.
@@ -132,6 +136,7 @@ public:
     EmptyStatement() : Statement(StatementKind::Empty) {}
 
     EvalResult evalImpl(EvalContext&) const { return EvalResult::Success; }
+    bool verifyConstantImpl(EvalContext&) const { return true; }
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Empty; }
 };
@@ -145,6 +150,7 @@ public:
         Statement(StatementKind::List), list(list) {}
 
     EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::List; }
     static const StatementList Empty;
@@ -161,6 +167,7 @@ public:
 
     const Statement& getStatements() const;
     EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
                                  const BindContext& context, BlockList& blocks);
@@ -180,6 +187,7 @@ public:
         Statement(StatementKind::Return), expr(expr) {}
 
     EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ReturnStatementSyntax& syntax,
                                  const BindContext& context);
@@ -195,6 +203,7 @@ public:
         Statement(StatementKind::VariableDeclaration), symbol(symbol) {}
 
     EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::VariableDeclaration; }
 };
@@ -211,6 +220,7 @@ public:
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
     EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ConditionalStatementSyntax& syntax,
                                  const BindContext& context, BlockList& blocks);
@@ -241,6 +251,7 @@ public:
         check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
                                  const BindContext& context, BlockList& blocks);
@@ -261,6 +272,7 @@ public:
         initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ForLoopStatementSyntax& syntax,
                                  const BindContext& context, BlockList& blocks);
@@ -276,6 +288,7 @@ public:
         Statement(StatementKind::ExpressionStatement), expr(expr) {}
 
     EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ExpressionStatementSyntax& syntax,
                                  const BindContext& context);
@@ -292,6 +305,7 @@ public:
         Statement(StatementKind::Timed), timing(timing), stmt(stmt) {}
 
     EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const TimingControlStatementSyntax& syntax,

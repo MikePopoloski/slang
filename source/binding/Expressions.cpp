@@ -132,17 +132,27 @@ struct ToJsonVisitor {
 };
 
 void checkBindFlags(const Expression& expr, const BindContext& context) {
-    if (context.flags & BindFlags::Constant) {
-        EvalContext evalContext;
-        expr.eval(evalContext);
+    if ((context.flags & BindFlags::Constant) == 0)
+        return;
 
-        const Diagnostics& diags = evalContext.getDiagnostics();
+    auto reportDiags = [&](EvalContext& evctx) {
+        const Diagnostics& diags = evctx.getDiagnostics();
         if (!diags.empty()) {
             Diagnostic& diag = context.addDiag(DiagCode::ExpressionNotConstant, expr.sourceRange);
             for (const Diagnostic& note : diags)
                 diag.addNote(note);
         }
-    }
+    };
+
+    EvalContext verifyContext(EvalFlags::IsVerifying);
+    bool canBeConst = expr.verifyConstant(verifyContext);
+    reportDiags(verifyContext);
+    if (!canBeConst)
+        return;
+
+    EvalContext evalContext;
+    expr.eval(evalContext);
+    reportDiags(evalContext);
 }
 
 bool recurseCheckEnum(const Expression& expr) {
@@ -1913,9 +1923,14 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         }
     }
 
-    return *compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(),
-                                                argBuffer.copy(compilation), context.lookupLocation,
-                                                range);
+    auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(),
+                                                      argBuffer.copy(compilation),
+                                                      context.lookupLocation, range);
+    for (auto arg : result->arguments()) {
+        if (arg->bad())
+            return badExpr(compilation, result);
+    }
+    return *result;
 }
 
 Expression& CallExpression::fromSystemMethod(Compilation& compilation, const Expression& expr,

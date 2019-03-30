@@ -52,6 +52,18 @@ public:
     LValue visitInvalid(const Expression&, EvalContext&) { return nullptr; }
 };
 
+struct VerifyVisitor {
+    template<typename T>
+    bool visit(const T& expr, EvalContext& context) {
+        if (expr.bad())
+            return false;
+
+        return expr.verifyConstantImpl(context);
+    }
+
+    bool visitInvalid(const Expression&, EvalContext&) { return false; }
+};
+
 #define OP(k, v)            \
     case BinaryOperator::k: \
         return v
@@ -306,6 +318,11 @@ LValue Expression::evalLValue(EvalContext& context) const {
     return visit(visitor, context);
 }
 
+bool Expression::verifyConstant(EvalContext& context) const {
+    VerifyVisitor visitor;
+    return visit(visitor, context);
+}
+
 ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
     SVInt result = getValue();
     ASSERT(result.getBitWidth() == type->getBitWidth());
@@ -346,7 +363,7 @@ ConstantValue StringLiteral::evalImpl(EvalContext&) const {
 }
 
 ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
-    if (!verifyAccess(context))
+    if (!verifyConstantImpl(context))
         return nullptr;
 
     switch (symbol.kind) {
@@ -369,7 +386,7 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
 }
 
 LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
-    if (!verifyAccess(context))
+    if (!verifyConstantImpl(context))
         return nullptr;
 
     auto cv = context.findLocal(&symbol);
@@ -382,7 +399,7 @@ LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
     return LValue(*cv);
 }
 
-bool NamedValueExpression::verifyAccess(EvalContext& context) const {
+bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     if (context.isScriptEval())
         return true;
 
@@ -548,6 +565,10 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     THROW_UNREACHABLE;
 }
 
+bool UnaryExpression::verifyConstantImpl(EvalContext& context) const {
+    return operand().verifyConstant(context);
+}
+
 ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
     ConstantValue cvl = left().eval(context);
     if (!cvl)
@@ -579,6 +600,10 @@ ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     return evalBinaryOperator(op, cvl, cvr);
+}
+
+bool BinaryExpression::verifyConstantImpl(EvalContext& context) const {
+    return left().verifyConstant(context) && right().verifyConstant(context);
 }
 
 ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
@@ -638,6 +663,11 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
         return right().eval(context);
 }
 
+bool ConditionalExpression::verifyConstantImpl(EvalContext& context) const {
+    return left().verifyConstant(context) && right().verifyConstant(context) &&
+           pred().verifyConstant(context);
+}
+
 ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     LValue lvalue = left().evalLValue(context);
     ConstantValue rvalue = right().eval(context);
@@ -649,6 +679,10 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
 
     lvalue.store(rvalue);
     return rvalue;
+}
+
+bool AssignmentExpression::verifyConstantImpl(EvalContext& context) const {
+    return left().verifyConstant(context) && right().verifyConstant(context);
 }
 
 ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
@@ -699,6 +733,10 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     return lval.selectRange({ index + width - 1, index });
 }
 
+bool ElementSelectExpression::verifyConstantImpl(EvalContext& context) const {
+    return value().verifyConstant(context) && selector().verifyConstant(context);
+}
+
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = value().eval(context);
     ConstantValue cl = left().eval(context);
@@ -725,6 +763,11 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
         return nullptr;
 
     return lval.selectRange(*range);
+}
+
+bool RangeSelectExpression::verifyConstantImpl(EvalContext& context) const {
+    return value().verifyConstant(context) && left().verifyConstant(context) &&
+           right().verifyConstant(context);
 }
 
 optional<ConstantRange> RangeSelectExpression::getRange(EvalContext& context,
@@ -802,6 +845,10 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     return lval.selectRange({ width + offset - 1, offset });
 }
 
+bool MemberAccessExpression::verifyConstantImpl(EvalContext& context) const {
+    return value().verifyConstant(context);
+}
+
 ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
     if (type->isString()) {
         std::string result;
@@ -836,6 +883,14 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
     return SVInt::concat(values);
 }
 
+bool ConcatenationExpression::verifyConstantImpl(EvalContext& context) const {
+    for (auto operand : operands()) {
+        if (!operand->verifyConstant(context))
+            return false;
+    }
+    return true;
+}
+
 ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
     // Operands are always evaluated, even if count is zero.
     ConstantValue v = concat().eval(context);
@@ -863,9 +918,12 @@ ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
     return v.integer().replicate(c.integer());
 }
 
+bool ReplicationExpression::verifyConstantImpl(EvalContext& context) const {
+    return count().verifyConstant(context) && concat().verifyConstant(context);
+}
+
 ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     // Delegate system calls to their appropriate handler.
-    // TODO: handle non-constant system calls.
     if (isSystemCall())
         return std::get<1>(subroutine)->eval(context, arguments());
 
@@ -889,11 +947,32 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 
     using ER = Statement::EvalResult;
     ER er = symbol.getBody().eval(context);
-    ConstantValue result = context.popFrame();
+    
+    ConstantValue result = std::move(*context.findLocal(symbol.returnValVar));
+    context.popFrame();
+    
     if (er == ER::Fail)
         return nullptr;
 
     ASSERT(er == ER::Success || er == ER::Return);
+    return result;
+}
+
+bool CallExpression::verifyConstantImpl(EvalContext& context) const {
+    for (auto arg : arguments()) {
+        if (!arg->verifyConstant(context))
+            return false;
+    }
+
+    if (isSystemCall())
+        return std::get<1>(subroutine)->verifyConstant(context, arguments());
+    
+    // TODO: implement all rules here
+    const SubroutineSymbol& symbol = *std::get<0>(subroutine);
+    context.pushFrame(symbol, sourceRange.start(), lookupLocation);
+
+    bool result = symbol.getBody().verifyConstant(context);
+    context.popFrame();
     return result;
 }
 
@@ -932,6 +1011,10 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
 
     // TODO: other types
     THROW_UNREACHABLE;
+}
+
+bool ConversionExpression::verifyConstantImpl(EvalContext& context) const {
+    return operand().verifyConstant(context);
 }
 
 ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {

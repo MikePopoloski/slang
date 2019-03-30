@@ -12,7 +12,7 @@
 
 namespace slang {
 
-EvalContext::EvalContext(bool isScriptEval) : isScriptEval_(isScriptEval) {
+EvalContext::EvalContext(bitmask<EvalFlags> flags) : flags(flags) {
     stack.emplace_back(Frame{});
 }
 
@@ -48,18 +48,8 @@ void EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation c
     stack.emplace_back(std::move(frame));
 }
 
-ConstantValue EvalContext::popFrame() {
-    ConstantValue result;
-    Frame& frame = stack.back();
-    if (frame.subroutine) {
-        ConstantValue* storage = findLocal(frame.subroutine->returnValVar);
-        ASSERT(storage);
-        if (storage)
-            result = std::move(*storage);
-    }
-
+void EvalContext::popFrame() {
     stack.pop_back();
-    return result;
 }
 
 std::string EvalContext::dumpStack() const {
@@ -96,21 +86,26 @@ void EvalContext::reportStack() {
         if (!frame.subroutine)
             break;
 
-        buffer.clear();
-        buffer.format("{}(", frame.subroutine->name);
-
-        for (auto arg : frame.subroutine->arguments) {
-            auto it = frame.temporaries.find(arg);
-            ASSERT(it != frame.temporaries.end());
-
-            buffer.append(it->second.toString());
-            if (arg != frame.subroutine->arguments.last(1)[0])
-                buffer.append(", ");
+        if (isVerifying()) {
+            diags.add(DiagCode::NoteInCallTo, frame.callLocation) << frame.subroutine->name;
         }
+        else {
+            buffer.clear();
+            buffer.format("{}(", frame.subroutine->name);
 
-        buffer.append(")");
+            for (auto arg : frame.subroutine->arguments) {
+                auto it = frame.temporaries.find(arg);
+                ASSERT(it != frame.temporaries.end());
 
-        diags.add(DiagCode::NoteInCallTo, frame.callLocation) << buffer.str();
+                buffer.append(it->second.toString());
+                if (arg != frame.subroutine->arguments.last(1)[0])
+                    buffer.append(", ");
+            }
+
+            buffer.append(")");
+
+            diags.add(DiagCode::NoteInCallTo, frame.callLocation) << buffer.str();
+        }
     }
 }
 

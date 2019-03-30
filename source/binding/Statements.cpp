@@ -27,6 +27,18 @@ struct EvalVisitor {
     ER visitInvalid(const Statement&, EvalContext&) { return ER::Fail; }
 };
 
+struct VerifyVisitor {
+    template<typename T>
+    bool visit(const T& stmt, EvalContext& context) {
+        if (stmt.bad())
+            return false;
+
+        return stmt.verifyConstantImpl(context);
+    }
+
+    bool visitInvalid(const Statement&, EvalContext&) { return false; }
+};
+
 } // namespace
 
 namespace slang {
@@ -36,6 +48,11 @@ const StatementList StatementList::Empty({});
 
 ER Statement::eval(EvalContext& context) const {
     EvalVisitor visitor;
+    return visit(visitor, context);
+}
+
+bool Statement::verifyConstant(EvalContext& context) const {
+    VerifyVisitor visitor;
     return visit(visitor, context);
 }
 
@@ -381,6 +398,14 @@ ER StatementList::evalImpl(EvalContext& context) const {
     return ER::Success;
 }
 
+bool StatementList::verifyConstantImpl(EvalContext& context) const {
+    for (auto item : list) {
+        if (!item->verifyConstant(context))
+            return false;
+    }
+    return true;
+}
+
 Statement& SequentialBlockStatement::fromSyntax(Compilation& compilation,
                                                 const BlockStatementSyntax& syntax,
                                                 const BindContext& context, BlockList& blocks) {
@@ -400,6 +425,10 @@ const Statement& SequentialBlockStatement::getStatements() const {
 
 ER SequentialBlockStatement::evalImpl(EvalContext& context) const {
     return getStatements().eval(context);
+}
+
+bool SequentialBlockStatement::verifyConstantImpl(EvalContext& context) const {
+    return getStatements().verifyConstant(context);
 }
 
 Statement& ReturnStatement::fromSyntax(Compilation& compilation,
@@ -435,6 +464,11 @@ ER ReturnStatement::evalImpl(EvalContext& context) const {
     return ER::Return;
 }
 
+bool ReturnStatement::verifyConstantImpl(EvalContext& context) const {
+    // TODO: empty return
+    return expr->verifyConstant(context);
+}
+
 ER VariableDeclStatement::evalImpl(EvalContext& context) const {
     // Create storage for the variable
     ConstantValue initial;
@@ -446,6 +480,14 @@ ER VariableDeclStatement::evalImpl(EvalContext& context) const {
 
     context.createLocal(&symbol, initial);
     return ER::Success;
+}
+
+bool VariableDeclStatement::verifyConstantImpl(EvalContext& context) const {
+    if (auto initializer = symbol.getInitializer()) {
+        if (!initializer->verifyConstant(context))
+            return false;
+    }
+    return true;
 }
 
 Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
@@ -475,6 +517,16 @@ ER ConditionalStatement::evalImpl(EvalContext& context) const {
         return ifFalse->eval(context);
 
     return ER::Success;
+}
+
+bool ConditionalStatement::verifyConstantImpl(EvalContext& context) const {
+    if (!cond.verifyConstant(context) || !ifTrue.verifyConstant(context))
+        return false;
+
+    if (ifFalse)
+        return ifFalse->verifyConstant(context);
+
+    return true;
 }
 
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
@@ -684,6 +736,25 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
     return ER::Success;
 }
 
+bool CaseStatement::verifyConstantImpl(EvalContext& context) const {
+    if (!expr.verifyConstant(context))
+        return false;
+
+    for (auto& group : items) {
+        for (auto item : group.expressions) {
+            if (!item->verifyConstant(context))
+                return false;
+        }
+        if (!group.stmt->verifyConstant(context))
+            return false;
+    }
+
+    if (defaultCase)
+        return defaultCase->verifyConstant(context);
+
+    return true;
+}
+
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
                                         const ForLoopStatementSyntax& syntax,
                                         const BindContext& context, BlockList& blocks) {
@@ -742,6 +813,21 @@ ER ForLoopStatement::evalImpl(EvalContext& context) const {
     return ER::Success;
 }
 
+bool ForLoopStatement::verifyConstantImpl(EvalContext& context) const {
+    if (!initializers.verifyConstant(context))
+        return false;
+
+    if (stopExpr && !stopExpr->verifyConstant(context))
+        return false;
+
+    for (auto step : steps) {
+        if (!step->verifyConstant(context))
+            return false;
+    }
+
+    return body.verifyConstant(context);
+}
+
 Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const ExpressionStatementSyntax& syntax,
                                            const BindContext& context) {
@@ -751,6 +837,10 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
 
 ER ExpressionStatement::evalImpl(EvalContext& context) const {
     return expr.eval(context) ? ER::Success : ER::Fail;
+}
+
+bool ExpressionStatement::verifyConstantImpl(EvalContext& context) const {
+    return expr.verifyConstant(context);
 }
 
 Statement& TimedStatement::fromSyntax(Compilation& compilation,
@@ -767,12 +857,19 @@ Statement& TimedStatement::fromSyntax(Compilation& compilation,
 }
 
 ER TimedStatement::evalImpl(EvalContext& context) const {
-    // This kind of statement should never be evaluated at compile time (since it passes time).
-    // In a script context just ignore the delay; otherwise throw an error.
     if (context.isScriptEval())
         return stmt.eval(context);
 
-    THROW_UNREACHABLE;
+    return ER::Fail;
+}
+
+bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
+    if (context.isScriptEval())
+        return true;
+
+    ASSERT(timing.syntax);
+    context.addDiag(DiagCode::NoteTimedStmtNotConst, timing.syntax->sourceRange());
+    return false;
 }
 
 } // namespace slang

@@ -54,6 +54,8 @@ const Type& ArrayQueryFunction::checkArguments(const BindContext& context, const
         return comp.getErrorType();
     }
 
+    // TODO: not allowed on some dynamic types
+
     return comp.getIntegerType();
 }
 
