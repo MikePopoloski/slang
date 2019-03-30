@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/binding/ConstantValue.h"
+#include "slang/symbols/SemanticFacts.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
@@ -30,6 +31,7 @@ public:
     using Args = span<const Expression* const>;
 
     std::string name;
+    SubroutineKind kind;
     bitmask<SystemSubroutineFlags> flags;
 
     virtual const Type& checkArguments(const BindContext& context, const Args& args) const = 0;
@@ -37,9 +39,9 @@ public:
     virtual bool verifyConstant(EvalContext& context, const Args& args) const = 0;
 
 protected:
-    SystemSubroutine(std::string name,
+    SystemSubroutine(std::string name, SubroutineKind kind,
                      bitmask<SystemSubroutineFlags> flags = SystemSubroutineFlags::None) :
-        name(std::move(name)),
+        name(std::move(name)), kind(kind),
         flags(flags) {}
 
     string_view kindStr() const;

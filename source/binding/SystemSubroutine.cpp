@@ -12,8 +12,7 @@
 namespace slang {
 
 string_view SystemSubroutine::kindStr() const {
-    // TODO: also check for tasks
-    return "function"sv;
+    return kind == SubroutineKind::Task ? "task"sv : "function"sv;
 }
 
 bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, const Args& args,

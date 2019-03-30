@@ -386,9 +386,10 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     auto lifetime =
         SemanticFacts::getVariableLifetime(proto->lifetime).value_or(VariableLifetime::Automatic);
 
+    auto subroutineKind = syntax.kind == SyntaxKind::TaskDeclaration ? SubroutineKind::Task
+                                                                     : SubroutineKind::Function;
     auto result = compilation.emplace<SubroutineSymbol>(
-        compilation, nameToken.valueText(), nameToken.location(), lifetime,
-        syntax.kind == SyntaxKind::TaskDeclaration, parent);
+        compilation, nameToken.valueText(), nameToken.location(), lifetime, subroutineKind, parent);
 
     result->setSyntax(syntax);
     compilation.addAttributes(*result, syntax.attributes);
@@ -470,7 +471,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 void SubroutineSymbol::toJson(json& j) const {
     j["returnType"] = getReturnType();
     j["defaultLifetime"] = toString(defaultLifetime);
-    j["isTask"] = isTask;
+    j["subroutineKind"] = subroutineKind;
 }
 
 ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc) :

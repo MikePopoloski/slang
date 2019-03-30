@@ -103,7 +103,7 @@ ConstantValue IncrementSubroutine::eval(EvalContext&, const Args& args) const {
 }
 
 EnumFirstLastMethod::EnumFirstLastMethod(const std::string& name, bool first) :
-    SystemSubroutine(name), first(first) {
+    SystemSubroutine(name, SubroutineKind::Function), first(first) {
 }
 
 const Type& EnumFirstLastMethod::checkArguments(const BindContext& context,

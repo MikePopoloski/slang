@@ -269,7 +269,7 @@ endmodule
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
     const auto& foo = instance.memberAt<SubroutineSymbol>(0);
-    CHECK(!foo.isTask);
+    CHECK(foo.subroutineKind == SubroutineKind::Function);
     CHECK(foo.defaultLifetime == VariableLifetime::Static);
     CHECK(foo.getReturnType().getBitWidth() == 16);
     CHECK(foo.name == "foo");

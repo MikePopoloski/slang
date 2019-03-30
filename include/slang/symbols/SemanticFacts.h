@@ -43,6 +43,11 @@ ENUM(DefinitionKind, DEF);
 ENUM(EdgeKind, EDGE);
 #undef EDGE
 
+#define SRK(x) x(Function) x(Task)
+/// Specifies possible subroutine kinds.
+ENUM(SubroutineKind, SRK);
+#undef SRK
+
 namespace SemanticFacts {
 
 /// Interprets a keyword token as a variable lifetime value.

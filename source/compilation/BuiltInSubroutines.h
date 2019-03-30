@@ -44,12 +44,14 @@ private:
 
 class EnumNumMethod : public SystemSubroutine {
 public:
-    EnumNumMethod() : SystemSubroutine("num") {}
+    EnumNumMethod() : SystemSubroutine("num", SubroutineKind::Function) {}
     const Type& checkArguments(const BindContext& context, const Args& args) const final;
     ConstantValue eval(EvalContext& context, const Args& args) const final;
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
+#define FUNC SubroutineKind::Function
+#define TASK SubroutineKind::Task
 #define SUBROUTINE(className, base, ...)                                        \
     class className : public base {                                             \
     public:                                                                     \
@@ -57,17 +59,20 @@ public:
         ConstantValue eval(EvalContext& context, const Args& args) const final; \
     }
 
-SUBROUTINE(Clog2Subroutine, IntegerMathFunction, "$clog2");
+SUBROUTINE(Clog2Subroutine, IntegerMathFunction, "$clog2", FUNC);
 
-SUBROUTINE(BitsSubroutine, DataQueryFunction, "$bits", SystemSubroutineFlags::AllowDataTypeArg);
+SUBROUTINE(BitsSubroutine, DataQueryFunction, "$bits", FUNC,
+           SystemSubroutineFlags::AllowDataTypeArg);
 
-SUBROUTINE(LowSubroutine, ArrayQueryFunction, "$low");
-SUBROUTINE(HighSubroutine, ArrayQueryFunction, "$high");
-SUBROUTINE(LeftSubroutine, ArrayQueryFunction, "$left");
-SUBROUTINE(RightSubroutine, ArrayQueryFunction, "$right");
-SUBROUTINE(SizeSubroutine, ArrayQueryFunction, "$size");
-SUBROUTINE(IncrementSubroutine, ArrayQueryFunction, "$increment");
+SUBROUTINE(LowSubroutine, ArrayQueryFunction, "$low", FUNC);
+SUBROUTINE(HighSubroutine, ArrayQueryFunction, "$high", FUNC);
+SUBROUTINE(LeftSubroutine, ArrayQueryFunction, "$left", FUNC);
+SUBROUTINE(RightSubroutine, ArrayQueryFunction, "$right", FUNC);
+SUBROUTINE(SizeSubroutine, ArrayQueryFunction, "$size", FUNC);
+SUBROUTINE(IncrementSubroutine, ArrayQueryFunction, "$increment", FUNC);
 
 #undef SUBROUTINE
+#undef TASK
+#undef FUNC
 
 } // namespace slang::Builtins

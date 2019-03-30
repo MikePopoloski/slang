@@ -9,8 +9,8 @@
 #include <tuple>
 
 #include "slang/binding/ConstantValue.h"
-#include "slang/symbols/SemanticFacts.h"
 #include "slang/binding/Statements.h"
+#include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
 
 namespace slang {
@@ -263,13 +263,14 @@ public:
     const VariableSymbol* returnValVar = nullptr;
     ArgList arguments;
     VariableLifetime defaultLifetime = VariableLifetime::Automatic;
-    bool isTask = false;
+    SubroutineKind subroutineKind;
 
     SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     VariableLifetime defaultLifetime, bool isTask, const Scope&) :
+                     VariableLifetime defaultLifetime, SubroutineKind subroutineKind,
+                     const Scope&) :
         Symbol(SymbolKind::Subroutine, name, loc),
         Scope(compilation, this), declaredReturnType(*this), defaultLifetime(defaultLifetime),
-        isTask(isTask) {}
+        subroutineKind(subroutineKind) {}
 
     const Statement& getBody() const { return binder.getStatement(*this, LookupLocation::max); }
     const Type& getReturnType() const { return declaredReturnType.getType(); }
