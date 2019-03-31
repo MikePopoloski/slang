@@ -939,10 +939,10 @@ Expression& NullLiteral::fromSyntax(Compilation& compilation,
     return *compilation.emplace<NullLiteral>(compilation.getNullType(), syntax.sourceRange());
 }
 
-StringLiteral::StringLiteral(const Type& type, string_view value, ConstantValue& intVal,
-                             SourceRange sourceRange) :
+StringLiteral::StringLiteral(const Type& type, string_view value, string_view rawValue,
+                             ConstantValue& intVal, SourceRange sourceRange) :
     Expression(ExpressionKind::StringLiteral, type, sourceRange),
-    value(value), intStorage(&intVal) {
+    value(value), rawValue(rawValue), intStorage(&intVal) {
 }
 
 Expression& StringLiteral::fromSyntax(Compilation& compilation,
@@ -971,7 +971,8 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
     }
 
     auto& type = compilation.getType(width, IntegralFlags::Unsigned);
-    return *compilation.emplace<StringLiteral>(type, value, *intVal, syntax.sourceRange());
+    return *compilation.emplace<StringLiteral>(type, value, syntax.literal.rawText(), *intVal,
+                                               syntax.sourceRange());
 }
 
 void StringLiteral::toJson(json& j) const {

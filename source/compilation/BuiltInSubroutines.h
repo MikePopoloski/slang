@@ -8,6 +8,10 @@
 
 #include "slang/binding/SystemSubroutine.h"
 
+namespace slang {
+class Compilation;
+}
+
 namespace slang::Builtins {
 
 class IntegerMathFunction : public SystemSubroutine {
@@ -28,6 +32,14 @@ class ArrayQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
     const Type& checkArguments(const BindContext& context, const Args& args) const final;
+    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+};
+
+class DisplayTask : public SystemSubroutine {
+public:
+    DisplayTask(const std::string& name);
+    const Type& checkArguments(const BindContext& context, const Args& args) const final;
+    ConstantValue eval(EvalContext&, const Args&) const final { return nullptr; }
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
@@ -74,5 +86,8 @@ SUBROUTINE(IncrementSubroutine, ArrayQueryFunction, "$increment", FUNC);
 #undef SUBROUTINE
 #undef TASK
 #undef FUNC
+
+/// Registers all defined system subroutines with the given compilation object.
+void registerAll(Compilation& compilation);
 
 } // namespace slang::Builtins

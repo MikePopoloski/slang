@@ -123,24 +123,8 @@ Compilation::Compilation() :
 
     root = std::make_unique<RootSymbol>(*this);
 
-    // Register all system functions.
-#define REGISTER(name) addSystemSubroutine(std::make_unique<Builtins::name##Subroutine>())
-    REGISTER(Clog2);
-    REGISTER(Bits);
-    REGISTER(Low);
-    REGISTER(High);
-    REGISTER(Left);
-    REGISTER(Right);
-    REGISTER(Size);
-    REGISTER(Increment);
-#undef REGISTER
-
-#define REGISTER(kind, name, ...) \
-    addSystemMethod(kind, std::make_unique<Builtins::name##Method>(__VA_ARGS__))
-    REGISTER(SymbolKind::EnumType, EnumFirstLast, "first", true);
-    REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
-    REGISTER(SymbolKind::EnumType, EnumNum, );
-#undef REGISTER
+    // Register all system tasks, functions, and methods.
+    Builtins::registerAll(*this);
 
     emptyUnit = &createScriptScope();
 }

@@ -47,6 +47,8 @@ protected:
     string_view kindStr() const;
     static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
                               ptrdiff_t expected);
+
+    static bool checkFormatArgs(const BindContext& context, const Args& args);
 };
 
 } // namespace slang

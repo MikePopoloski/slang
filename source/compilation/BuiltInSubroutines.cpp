@@ -59,6 +59,17 @@ const Type& ArrayQueryFunction::checkArguments(const BindContext& context, const
     return comp.getIntegerType();
 }
 
+DisplayTask::DisplayTask(const std::string& name) : SystemSubroutine(name, SubroutineKind::Task) {
+}
+
+const Type& DisplayTask::checkArguments(const BindContext& context, const Args& args) const {
+    auto& comp = context.getCompilation();
+    if (!checkFormatArgs(context, args))
+        return comp.getErrorType();
+
+    return comp.getVoidType();
+}
+
 ConstantValue Clog2Subroutine::eval(EvalContext& context, const Args& args) const {
     ConstantValue v = args[0]->eval(context);
     if (!v)
@@ -152,6 +163,45 @@ ConstantValue EnumNumMethod::eval(EvalContext&, const Args& args) const {
     // Expression isn't actually evaluated here; we know the value to return at compile time.
     const EnumType& type = args.at(0)->type->getCanonicalType().as<EnumType>();
     return SVInt(32, (uint64_t)type.values().size(), true);
+}
+
+void registerAll(Compilation& compilation) {
+#define REGISTER(name) compilation.addSystemSubroutine(std::make_unique<name##Subroutine>())
+    REGISTER(Clog2);
+    REGISTER(Bits);
+    REGISTER(Low);
+    REGISTER(High);
+    REGISTER(Left);
+    REGISTER(Right);
+    REGISTER(Size);
+    REGISTER(Increment);
+#undef REGISTER
+
+#define REGISTER(name) compilation.addSystemSubroutine(std::make_unique<DisplayTask>(name))
+    REGISTER("$display");
+    REGISTER("$displayb");
+    REGISTER("$displayo");
+    REGISTER("$displayh");
+    REGISTER("$write");
+    REGISTER("$writeb");
+    REGISTER("$writeo");
+    REGISTER("$writeh");
+    REGISTER("$strobe");
+    REGISTER("$strobeb");
+    REGISTER("$strobeo");
+    REGISTER("$strobeh");
+    REGISTER("$monitor");
+    REGISTER("$monitorb");
+    REGISTER("$monitoro");
+    REGISTER("$monitorh");
+#undef REGISTER
+
+#define REGISTER(kind, name, ...) \
+    compilation.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
+    REGISTER(SymbolKind::EnumType, EnumFirstLast, "first", true);
+    REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
+    REGISTER(SymbolKind::EnumType, EnumNum, );
+#undef REGISTER
 }
 
 } // namespace slang::Builtins

@@ -184,7 +184,6 @@ error ExpressionNotCallable "expression is not callable"
 error NotBooleanConvertible "value of type {} is not convertible to a boolean predicate"
 error EnumValueNotIntegral "enum value must be integral"
 error EnumValueSizeMismatch "expression width of {} does not exactly match declared enum type width of {}"
-error BadSystemSubroutineArg "invalid argument type {} to system {}"
 
 // statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -227,6 +226,16 @@ error ScopeNotIndexable "hierarchical scope '{}' is not indexable"
 error InvalidScopeIndexExpression "invalid hierarchical index expression"
 error ScopeIndexOutOfRange "hierarchical index {} is out of scope's declared range"
 error CouldNotResolveHierarchicalPath "could not resolve hierarchical path name '{}'"
+
+// system functions
+error BadSystemSubroutineArg "invalid argument type {} to system {}"
+error UnknownFormatSpecifier "unknown format specifier '%{}'"
+error MissingFormatSpecifier "missing format specifier"
+error FormatSpecifierWidthNotAllowed "field width not allowed on '%{}' format specifiers"
+error FormatSpecifierInvalidWidth "field width is invalid"
+error FormatSpecifierNotFloat "floating point format specifier options used on non-floating point field"
+error FormatUnspecifiedType "cannot format values of type {} without a specification string"
+error FormatMismatchedType "value of type {} is invalid for '%{}' format specifier"
 
 // constant evaluation
 error ExpressionNotConstant "expression is not constant"

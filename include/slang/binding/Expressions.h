@@ -324,10 +324,11 @@ public:
 /// Represents a string literal.
 class StringLiteral : public Expression {
 public:
-    StringLiteral(const Type& type, string_view value, ConstantValue& intVal,
+    StringLiteral(const Type& type, string_view value, string_view rawValue, ConstantValue& intVal,
                   SourceRange sourceRange);
 
     string_view getValue() const { return value; }
+    string_view getRawValue() const { return rawValue; }
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const { return true; }
@@ -340,6 +341,7 @@ public:
 
 private:
     string_view value;
+    string_view rawValue;
     ConstantValue* intStorage;
 };
 
