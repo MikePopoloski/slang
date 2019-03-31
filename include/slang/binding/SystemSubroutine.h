@@ -34,19 +34,20 @@ public:
     SubroutineKind kind;
     bitmask<SystemSubroutineFlags> flags;
 
-    virtual const Type& checkArguments(const BindContext& context, const Args& args) const = 0;
+    virtual const Type& checkArguments(const BindContext& context, const Args& args,
+                                       SourceRange range) const = 0;
     virtual ConstantValue eval(EvalContext& context, const Args& args) const = 0;
     virtual bool verifyConstant(EvalContext& context, const Args& args) const = 0;
 
 protected:
     SystemSubroutine(std::string name, SubroutineKind kind,
                      bitmask<SystemSubroutineFlags> flags = SystemSubroutineFlags::None) :
-        name(std::move(name)), kind(kind),
-        flags(flags) {}
+        name(std::move(name)),
+        kind(kind), flags(flags) {}
 
     string_view kindStr() const;
     static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
-                              ptrdiff_t expected);
+                              SourceRange callRange, ptrdiff_t min, ptrdiff_t max);
 
     static bool checkFormatArgs(const BindContext& context, const Args& args);
 };

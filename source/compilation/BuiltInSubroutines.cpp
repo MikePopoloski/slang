@@ -10,10 +10,10 @@
 
 namespace slang::Builtins {
 
-const Type& IntegerMathFunction::checkArguments(const BindContext& context,
-                                                const Args& args) const {
+const Type& IntegerMathFunction::checkArguments(const BindContext& context, const Args& args,
+                                                SourceRange range) const {
     auto& comp = context.getCompilation();
-    if (!checkArgCount(context, false, args, 1))
+    if (!checkArgCount(context, false, args, range, 1, 1))
         return comp.getErrorType();
 
     if (!args[0]->type->isIntegral()) {
@@ -25,9 +25,10 @@ const Type& IntegerMathFunction::checkArguments(const BindContext& context,
     return comp.getIntegerType();
 }
 
-const Type& DataQueryFunction::checkArguments(const BindContext& context, const Args& args) const {
+const Type& DataQueryFunction::checkArguments(const BindContext& context, const Args& args,
+                                              SourceRange range) const {
     auto& comp = context.getCompilation();
-    if (!checkArgCount(context, false, args, 1))
+    if (!checkArgCount(context, false, args, range, 1, 1))
         return comp.getErrorType();
 
     if (!args[0]->type->isBitstreamType()) {
@@ -41,10 +42,11 @@ const Type& DataQueryFunction::checkArguments(const BindContext& context, const 
     return comp.getIntegerType();
 }
 
-const Type& ArrayQueryFunction::checkArguments(const BindContext& context, const Args& args) const {
+const Type& ArrayQueryFunction::checkArguments(const BindContext& context, const Args& args,
+                                               SourceRange range) const {
     // TODO: support optional second argument
     auto& comp = context.getCompilation();
-    if (!checkArgCount(context, false, args, 1))
+    if (!checkArgCount(context, false, args, range, 1, 1))
         return comp.getErrorType();
 
     auto& type = *args[0]->type;
@@ -59,13 +61,46 @@ const Type& ArrayQueryFunction::checkArguments(const BindContext& context, const
     return comp.getIntegerType();
 }
 
-DisplayTask::DisplayTask(const std::string& name) : SystemSubroutine(name, SubroutineKind::Task) {
-}
-
-const Type& DisplayTask::checkArguments(const BindContext& context, const Args& args) const {
+const Type& DisplayTask::checkArguments(const BindContext& context, const Args& args,
+                                        SourceRange) const {
     auto& comp = context.getCompilation();
     if (!checkFormatArgs(context, args))
         return comp.getErrorType();
+
+    return comp.getVoidType();
+}
+
+const Type& SimpleControlTask::checkArguments(const BindContext& context, const Args& args,
+                                              SourceRange range) const {
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, false, args, range, 0, 0))
+        return comp.getErrorType();
+
+    return comp.getVoidType();
+}
+
+const Type& FinishControlTask::checkArguments(const BindContext& context, const Args& args,
+                                              SourceRange range) const {
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, false, args, range, 0, 1))
+        return comp.getErrorType();
+
+    // TODO: check optional first arg
+
+    return comp.getVoidType();
+}
+
+const Type& FatalTask::checkArguments(const BindContext& context, const Args& args,
+                                      SourceRange) const {
+    auto& comp = context.getCompilation();
+    if (!args.empty()) {
+        // TODO: check finish number
+        if (args[0]->bad())
+            return comp.getErrorType();
+
+        if (!checkFormatArgs(context, args.subspan(1)))
+            return comp.getErrorType();
+    }
 
     return comp.getVoidType();
 }
@@ -117,10 +152,10 @@ EnumFirstLastMethod::EnumFirstLastMethod(const std::string& name, bool first) :
     SystemSubroutine(name, SubroutineKind::Function), first(first) {
 }
 
-const Type& EnumFirstLastMethod::checkArguments(const BindContext& context,
-                                                const Args& args) const {
+const Type& EnumFirstLastMethod::checkArguments(const BindContext& context, const Args& args,
+                                                SourceRange range) const {
     auto& comp = context.getCompilation();
-    if (!checkArgCount(context, true, args, 0))
+    if (!checkArgCount(context, true, args, range, 0, 0))
         return comp.getErrorType();
 
     return *args.at(0)->type;
@@ -151,9 +186,10 @@ ConstantValue EnumFirstLastMethod::eval(EvalContext&, const Args& args) const {
     return value->getValue();
 }
 
-const Type& EnumNumMethod::checkArguments(const BindContext& context, const Args& args) const {
+const Type& EnumNumMethod::checkArguments(const BindContext& context, const Args& args,
+                                          SourceRange range) const {
     auto& comp = context.getCompilation();
-    if (!checkArgCount(context, true, args, 0))
+    if (!checkArgCount(context, true, args, range, 0, 0))
         return comp.getErrorType();
 
     return comp.getIntegerType();
@@ -177,23 +213,36 @@ void registerAll(Compilation& compilation) {
     REGISTER(Increment);
 #undef REGISTER
 
-#define REGISTER(name) compilation.addSystemSubroutine(std::make_unique<DisplayTask>(name))
-    REGISTER("$display");
-    REGISTER("$displayb");
-    REGISTER("$displayo");
-    REGISTER("$displayh");
-    REGISTER("$write");
-    REGISTER("$writeb");
-    REGISTER("$writeo");
-    REGISTER("$writeh");
-    REGISTER("$strobe");
-    REGISTER("$strobeb");
-    REGISTER("$strobeo");
-    REGISTER("$strobeh");
-    REGISTER("$monitor");
-    REGISTER("$monitorb");
-    REGISTER("$monitoro");
-    REGISTER("$monitorh");
+#define REGISTER(type, name) compilation.addSystemSubroutine(std::make_unique<type>(name))
+    REGISTER(DisplayTask, "$display");
+    REGISTER(DisplayTask, "$displayb");
+    REGISTER(DisplayTask, "$displayo");
+    REGISTER(DisplayTask, "$displayh");
+    REGISTER(DisplayTask, "$write");
+    REGISTER(DisplayTask, "$writeb");
+    REGISTER(DisplayTask, "$writeo");
+    REGISTER(DisplayTask, "$writeh");
+    REGISTER(DisplayTask, "$strobe");
+    REGISTER(DisplayTask, "$strobeb");
+    REGISTER(DisplayTask, "$strobeo");
+    REGISTER(DisplayTask, "$strobeh");
+    REGISTER(DisplayTask, "$monitor");
+    REGISTER(DisplayTask, "$monitorb");
+    REGISTER(DisplayTask, "$monitoro");
+    REGISTER(DisplayTask, "$monitorh");
+
+    REGISTER(DisplayTask, "$error");
+    REGISTER(DisplayTask, "$warning");
+    REGISTER(DisplayTask, "$info");
+
+    REGISTER(FatalTask, "$fatal");
+
+    REGISTER(FinishControlTask, "$finish");
+    REGISTER(FinishControlTask, "$stop");
+
+    REGISTER(SimpleControlTask, "$exit");
+    REGISTER(SimpleControlTask, "$monitoron");
+    REGISTER(SimpleControlTask, "$monitoroff");
 #undef REGISTER
 
 #define REGISTER(kind, name, ...) \

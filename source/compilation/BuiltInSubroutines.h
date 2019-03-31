@@ -14,39 +14,70 @@ class Compilation;
 
 namespace slang::Builtins {
 
+class SystemTaskBase : public SystemSubroutine {
+public:
+    SystemTaskBase(const std::string& name) : SystemSubroutine(name, SubroutineKind::Task) {}
+    ConstantValue eval(EvalContext&, const Args&) const final { return nullptr; }
+    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+};
+
 class IntegerMathFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
-    const Type& checkArguments(const BindContext& context, const Args& args) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
 class DataQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
-    const Type& checkArguments(const BindContext& context, const Args& args) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
 class ArrayQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
-    const Type& checkArguments(const BindContext& context, const Args& args) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
-class DisplayTask : public SystemSubroutine {
+class DisplayTask : public SystemTaskBase {
 public:
-    DisplayTask(const std::string& name);
-    const Type& checkArguments(const BindContext& context, const Args& args) const final;
-    ConstantValue eval(EvalContext&, const Args&) const final { return nullptr; }
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    using SystemTaskBase::SystemTaskBase;
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
+};
+
+class SimpleControlTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
+};
+
+class FinishControlTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
+};
+
+class FatalTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
 };
 
 class EnumFirstLastMethod : public SystemSubroutine {
 public:
     EnumFirstLastMethod(const std::string& name, bool first);
-    const Type& checkArguments(const BindContext& context, const Args& args) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
     ConstantValue eval(EvalContext& context, const Args& args) const final;
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 
@@ -57,7 +88,8 @@ private:
 class EnumNumMethod : public SystemSubroutine {
 public:
     EnumNumMethod() : SystemSubroutine("num", SubroutineKind::Function) {}
-    const Type& checkArguments(const BindContext& context, const Args& args) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
     ConstantValue eval(EvalContext& context, const Args& args) const final;
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };

@@ -18,21 +18,20 @@ string_view SystemSubroutine::kindStr() const {
 }
 
 bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, const Args& args,
-                                     ptrdiff_t expected) {
+                                     SourceRange callRange, ptrdiff_t min, ptrdiff_t max) {
     ptrdiff_t provided = args.size();
     if (isMethod) {
         ASSERT(provided);
         provided--;
     }
 
-    if (provided != expected) {
-        Diagnostic* diag;
-        if (provided > expected)
-            diag = &context.addDiag(DiagCode::TooManyArguments, args[expected]->sourceRange);
-        else
-            diag = &context.addDiag(DiagCode::TooFewArguments, args[expected]->sourceRange);
-        (*diag) << expected << provided;
+    if (provided < min) {
+        context.addDiag(DiagCode::TooFewArguments, callRange) << min << provided;
+        return false;
+    }
 
+    if (provided > max) {
+        context.addDiag(DiagCode::TooManyArguments, args[max]->sourceRange) << max << provided;
         return false;
     }
 

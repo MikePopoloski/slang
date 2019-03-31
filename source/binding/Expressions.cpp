@@ -1979,7 +1979,7 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
         }
     }
 
-    const Type& type = subroutine.checkArguments(context, buffer);
+    const Type& type = subroutine.checkArguments(context, buffer, range);
     auto expr = compilation.emplace<CallExpression>(&subroutine, type, buffer.copy(compilation),
                                                     context.lookupLocation, range);
 
