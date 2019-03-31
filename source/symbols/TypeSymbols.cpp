@@ -664,6 +664,9 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         return true;
     };
 
+    SVInt allOnes(cb->getBitWidth(), 0, cb->isSigned());
+    allOnes.setAllOnes();
+
     SVInt one(cb->getBitWidth(), 1, cb->isSigned());
     SVInt previous;
     SourceRange previousRange;
@@ -690,7 +693,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 diag << previous << *base << previousRange;
                 return compilation.getErrorType();
             }
-            else if (previous.getMinRepresentedBits() == cb->getBitWidth()) {
+            else if (previous == allOnes) {
                 auto& diag = scope.addDiag(DiagCode::EnumValueOverflow, loc);
                 diag << previous << *base << previousRange;
                 return compilation.getErrorType();
@@ -866,6 +869,9 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
         }
     }
 
+    if (!bitWidth)
+        return compilation.getErrorType();
+
     auto structType =
         compilation.emplace<PackedStructType>(compilation, bitWidth, isSigned, isFourState);
     for (auto member : make_reverse_range(members))
@@ -993,6 +999,7 @@ void ForwardingTypedefSymbol::toJson(json& j) const {
 
 const TypeAliasType& TypeAliasType::fromSyntax(Compilation& compilation,
                                                const TypedefDeclarationSyntax& syntax) {
+    // TODO: interface based typedefs
     // TODO: unpacked dimensions
     auto result =
         compilation.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
