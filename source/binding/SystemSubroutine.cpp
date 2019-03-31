@@ -80,7 +80,7 @@ static bool parseFormatString(const BindContext& context, string_view str, Sourc
         if (ptr != end && isDecimalDigit(*ptr)) {
             hasSize = true;
             do {
-                width = width * 10 + *ptr;
+                width = width * 10 + uint8_t(*ptr);
                 if (width > INT32_MAX)
                     break;
                 ptr++;
