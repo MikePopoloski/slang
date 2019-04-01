@@ -1,0 +1,30 @@
+//------------------------------------------------------------------------------
+// Version.cpp.in
+// Input file for build-time version source generation.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
+#include "slang/util/Version.h"
+
+using std::string_view;
+using namespace std::literals;
+
+namespace slang {
+
+int VersionInfo::getMajor() {
+    return @_version_major@;
+}
+
+int VersionInfo::getMinor() {
+    return @_version_minor@;
+}
+
+string_view VersionInfo::getRevision() {
+    return "@_build_version@"sv;
+}
+
+string_view VersionInfo::getTimestamp() {
+    return "@_time_stamp@"sv;
+}
+
+}

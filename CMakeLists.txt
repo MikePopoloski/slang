@@ -9,6 +9,9 @@ option(CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(FUZZ_TARGET "Enables changes to make binaries easier to fuzz test" OFF)
 set(SLANG_SANITIZERS "" CACHE STRING "List of Clang sanitizers to include in build")
 
+set(SLANG_VERSION_MAJOR 0)
+set(SLANG_VERSION_MINOR 1)
+
 # Default build type if none is set
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING

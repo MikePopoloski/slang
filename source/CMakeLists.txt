@@ -12,6 +12,19 @@ add_custom_command(
 	COMMENT "Generating syntax"
 )
 
+add_custom_command(
+	PRE_BUILD
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
+	COMMAND ${CMAKE_COMMAND}
+	-Dinfile="${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in"
+	-Doutfile="${CMAKE_CURRENT_BINARY_DIR}/Version.cpp"
+		-Dlocal_dir="${CMAKE_CURRENT_SOURCE_DIR}"
+		-D_version_major=${SLANG_VERSION_MAJOR}
+		-D_version_minor=${SLANG_VERSION_MINOR}
+	-P "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/gitversion.cmake"
+)
+
 add_library(slang STATIC
 	binding/BindContext.cpp
 	binding/ConstantValue.cpp
@@ -62,6 +75,7 @@ add_library(slang STATIC
 
 	text/SourceManager.cpp
 
+	${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
 	util/BumpAllocator.cpp
 	util/Hash.cpp
 	util/Util.cpp
