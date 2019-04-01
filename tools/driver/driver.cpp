@@ -15,6 +15,7 @@
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/Version.h"
 
 using namespace slang;
 
@@ -81,10 +82,12 @@ int driverMain(int argc, char** argv) try {
 
     std::string astJsonFile;
 
+    bool showVersion;
     bool onlyPreprocess;
 
     CLI::App cmd("SystemVerilog compiler");
     cmd.add_option("files", sourceFiles, "Source files to compile");
+    cmd.add_flag("-v,--version", showVersion, "Display version information and exit");
     cmd.add_option("-I,--include-directory", includeDirs, "Additional include search paths");
     cmd.add_option("--include-system-directory", includeSystemDirs,
                    "Additional system include search paths");
@@ -103,6 +106,12 @@ int driverMain(int argc, char** argv) try {
     }
     catch (const CLI::ParseError& e) {
         return cmd.exit(e);
+    }
+
+    if (showVersion) {
+        print("slang version {}.{}.{}\n", VersionInfo::getMajor(), VersionInfo::getMinor(),
+              VersionInfo::getRevision());
+        return 0;
     }
 
     bool anyErrors = false;
