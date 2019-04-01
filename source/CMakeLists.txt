@@ -12,9 +12,9 @@ add_custom_command(
 	COMMENT "Generating syntax"
 )
 
-add_custom_command(
-	PRE_BUILD
-	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
+add_custom_target(gen_version
+	ALL
+	BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
 	COMMAND ${CMAKE_COMMAND}
 	-Dinfile="${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in"

@@ -14,6 +14,4 @@ else()
   	message(STATUS "git not found")
 endif()
 
-string(TIMESTAMP _time_stamp)
-
 configure_file(${infile} ${outfile} @ONLY)

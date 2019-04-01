@@ -15,7 +15,6 @@ public:
     static int getMajor();
     static int getMinor();
     static std::string_view getRevision();
-    static std::string_view getTimestamp();
 };
 
 } // namespace slang

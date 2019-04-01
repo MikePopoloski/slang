@@ -23,8 +23,4 @@ string_view VersionInfo::getRevision() {
     return "@_build_version@"sv;
 }
 
-string_view VersionInfo::getTimestamp() {
-    return "@_time_stamp@"sv;
-}
-
 }
