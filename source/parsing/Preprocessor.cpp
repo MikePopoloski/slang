@@ -9,6 +9,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
+#include "slang/util/Version.h"
 
 namespace {
 
@@ -51,23 +52,16 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
     sourceManager(sourceManager),
     alloc(alloc), diagnostics(diagnostics), options(options_.getOrDefault<PreprocessorOptions>()),
     lexerOptions(options_.getOrDefault<LexerOptions>()) {
+
     keywordVersionStack.push_back(getDefaultKeywordVersion());
     resetAllDirectives();
     undefineAll();
+}
 
-    for (std::string& predef : options.predefines) {
-        // Find location of equals sign to indicate start of body.
-        // If there is no equals sign, predefine to a value of 1.
-        size_t index = predef.find('=');
-        if (index != std::string::npos)
-            predef[index] = ' ';
-        else
-            predef += " 1";
-        predefine(predef, options.predefineSource);
-    }
+Preprocessor::Preprocessor(const Preprocessor& other) :
+    sourceManager(other.sourceManager), alloc(other.alloc), diagnostics(other.diagnostics) {
 
-    for (const std::string& undef : options.undefines)
-        undefine(string_view(undef));
+    keywordVersionStack.push_back(getDefaultKeywordVersion());
 }
 
 void Preprocessor::pushSource(string_view source, string_view name) {
@@ -83,12 +77,11 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
     lexerStack.push_back(lexer);
 }
 
-void Preprocessor::predefine(string_view definition, string_view fileName) {
-    std::string text = "`define " + std::string(definition) + "\n";
+void Preprocessor::predefine(const std::string& definition, string_view fileName) {
+    std::string text = "`define " + definition + "\n";
 
-    Preprocessor pp(sourceManager, alloc, diagnostics);
+    Preprocessor pp(*this);
     pp.pushSource(sourceManager.assignText(fileName, string_view(text)));
-    pp.undefineAll();
 
     // Consume all of the definition text.
     while (pp.next().kind != TokenKind::EndOfFile) {
@@ -117,6 +110,27 @@ void Preprocessor::undefineAll() {
     macros.clear();
     macros["__FILE__"] = MacroIntrinsic::File;
     macros["__LINE__"] = MacroIntrinsic::Line;
+
+    for (std::string predef : options.predefines) {
+        // Find location of equals sign to indicate start of body.
+        // If there is no equals sign, predefine to a value of 1.
+        size_t index = predef.find('=');
+        if (index != std::string::npos)
+            predef[index] = ' ';
+        else
+            predef += " 1";
+        predefine(predef, options.predefineSource);
+    }
+
+    for (const std::string& undef : options.undefines)
+        undefine(string_view(undef));
+
+    predefine("__slang__ 1"s, options.predefineSource);
+    predefine("__slang_major__ "s + std::to_string(VersionInfo::getMajor()),
+              options.predefineSource);
+    predefine("__slang_minor__ "s + std::to_string(VersionInfo::getMinor()),
+              options.predefineSource);
+    predefine("__slang_rev__ "s + std::string(VersionInfo::getRevision()), options.predefineSource);
 }
 
 bool Preprocessor::isDefined(string_view name) {

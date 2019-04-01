@@ -67,7 +67,7 @@ public:
     /// as if it were source text immediately following a `define directive.
     /// If any diagnostics are printed for the created text, they will be marked
     /// as coming from @a fileName.
-    void predefine(string_view definition, string_view fileName = "<api>");
+    void predefine(const std::string& definition, string_view fileName = "<api>");
 
     /// Undefines a previously defined macro. If the macro is not defined, or
     /// if you pass the name of an intrinsic macro, this call returns false and
@@ -107,6 +107,8 @@ public:
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
+    Preprocessor(const Preprocessor& other);
+
     // Internal methods to grab and handle the next token
     Token nextProcessed();
     Token nextRaw();
