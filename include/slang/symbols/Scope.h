@@ -329,6 +329,9 @@ private:
         void addPortDeclaration(const PortDeclarationSyntax& syntax);
         span<const PortDeclarationSyntax* const> getPortDeclarations() const;
 
+        void addNameConflict(const Symbol& member);
+        span<const Symbol* const> getNameConflicts() const;
+
     private:
         // A list of deferred member symbols.
         std::vector<Symbol*> members;
@@ -346,6 +349,9 @@ private:
         // elaborated we'll go back and make sure they're valid.
         std::vector<const PortDeclarationSyntax*> portDecls;
 
+        // A list of members that have name conflicts that need to be reported.
+        std::vector<const Symbol*> nameConflicts;
+
         // For instances, track port connections.
         const SeparatedSyntaxList<PortConnectionSyntax>* portConns = nullptr;
     };
@@ -355,10 +361,10 @@ private:
 
     // Inserts the given member symbol into our own list of members, right after
     // the given symbol. If `at` is null, it will insert at the head of the list.
-    void insertMember(const Symbol* member, const Symbol* at) const;
+    void insertMember(const Symbol* member, const Symbol* at, bool isElaborating) const;
 
     // Gets or creates deferred member data in the Compilation object's sideband table.
-    DeferredMemberData& getOrAddDeferredData();
+    DeferredMemberData& getOrAddDeferredData() const;
 
     // Elaborates all deferred members and then releases the entry from the
     // Compilation object's sideband table.
@@ -377,6 +383,13 @@ private:
     // Reports an error for an undeclared identifier.
     void reportUndeclared(string_view name, SourceRange range, bitmask<LookupFlags> flags,
                           bool isHierarchical, LookupResult& result) const;
+
+    // Handles name conflicts between symbols in the scope.
+    void handleNameConflict(const Symbol& member, const Symbol*& existing,
+                            bool isElaborating) const;
+
+    // Reports an error for a name conflict between two symbols.
+    void reportNameConflict(const Symbol& member, const Symbol& existing) const;
 
     // Gets the index of a new symbol inserted after the given symbol within this scope.
     Symbol::Index getInsertionIndex(const Symbol& at) const;

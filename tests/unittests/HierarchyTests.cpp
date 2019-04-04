@@ -738,3 +738,21 @@ endmodule
     auto& asdf = compilation.getRoot().lookupName<GenerateBlockSymbol>("test.m.asdf");
     CHECK(asdf.isInstantiated);
 }
+
+TEST_CASE("Name conflict bug") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(logic stuff);
+    logic foo;
+    logic[$bits(stuff)-1:0] foo;
+endmodule
+
+module n;
+    m m1(.stuff(1));
+endmodule
+)");
+
+    // This just tests that we don't crash.
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}

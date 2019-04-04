@@ -160,7 +160,7 @@ void Scope::addMember(const Symbol& symbol) {
             getOrAddDeferredData().registerTransparentType(lastMember, symbol);
     }
 
-    insertMember(&symbol, lastMember);
+    insertMember(&symbol, lastMember, false);
 }
 
 void Scope::addMembers(const SyntaxNode& syntax) {
@@ -424,11 +424,11 @@ const Symbol* Scope::lookupName(string_view name, LookupLocation location,
     return result.found;
 }
 
-Scope::DeferredMemberData& Scope::getOrAddDeferredData() {
+Scope::DeferredMemberData& Scope::getOrAddDeferredData() const {
     return compilation.getOrAddDeferredData(deferredMemberIndex);
 }
 
-void Scope::insertMember(const Symbol* member, const Symbol* at) const {
+void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborating) const {
     ASSERT(!member->parentScope);
     ASSERT(!member->nextInScope);
 
@@ -449,66 +449,84 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
     // Per the spec, ports and definitions exist in their own namespaces.
     if (!member->name.empty() && member->kind != SymbolKind::Port &&
         member->kind != SymbolKind::Definition && member->kind != SymbolKind::Package) {
-
         auto pair = nameMap->emplace(member->name, member);
-        if (!pair.second) {
-            // TODO: handle special generate block name conflict rules
+        if (!pair.second)
+            handleNameConflict(*member, pair.first->second, isElaborating);
+    }
+}
 
-            // We have a name collision; first check if this is ok (forwarding typedefs share a
-            // name with the actual typedef) and if not give the user a helpful error message.
-            const Symbol* existing = pair.first->second;
-            if (existing->kind == SymbolKind::TypeAlias &&
-                member->kind == SymbolKind::ForwardingTypedef) {
-                // Just add this forwarding typedef to a deferred list so we can process them
-                // once we know the kind of symbol the alias points to.
-                existing->as<TypeAliasType>().addForwardDecl(member->as<ForwardingTypedefSymbol>());
-            }
-            else if (existing->kind == SymbolKind::ForwardingTypedef &&
-                     member->kind == SymbolKind::ForwardingTypedef) {
-                // Found another forwarding typedef; link it to the previous one.
-                existing->as<ForwardingTypedefSymbol>().addForwardDecl(
-                    member->as<ForwardingTypedefSymbol>());
-            }
-            else if (existing->kind == SymbolKind::ForwardingTypedef &&
-                     member->kind == SymbolKind::TypeAlias) {
-                // We found the actual type for a previous forwarding declaration. Replace it in
-                // the name map.
-                member->as<TypeAliasType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
-                pair.first->second = member;
-            }
-            else if (existing->kind == SymbolKind::ExplicitImport &&
-                     member->kind == SymbolKind::ExplicitImport &&
-                     existing->as<ExplicitImportSymbol>().packageName ==
-                         member->as<ExplicitImportSymbol>().packageName) {
-                // Duplicate explicit imports are specifically allowed, so just ignore the other
-                // one.
-            }
-            else {
-                Diagnostic* diag;
-                if (existing->isValue() && member->isValue()) {
-                    const Type& memberType = member->as<ValueSymbol>().getType();
-                    const Type& existingType = existing->as<ValueSymbol>().getType();
-                    if (memberType.isMatching(existingType)) {
-                        diag = &addDiag(DiagCode::Redefinition, member->location);
-                        (*diag) << member->name;
-                    }
-                    else {
-                        diag = &addDiag(DiagCode::RedefinitionDifferentType, member->location);
-                        (*diag) << member->name << memberType << existingType;
-                    }
-                }
-                else if (existing->kind != member->kind) {
-                    diag = &addDiag(DiagCode::RedefinitionDifferentSymbolKind, member->location);
-                    (*diag) << member->name;
-                }
-                else {
-                    diag = &addDiag(DiagCode::Redefinition, member->location);
-                    (*diag) << member->name;
-                }
-                diag->addNote(DiagCode::NotePreviousDefinition, existing->location);
-            }
+void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
+                               bool isElaborating) const {
+    // TODO: handle special generate block name conflict rules
+
+    // We have a name collision; first check if this is ok (forwarding typedefs share a
+    // name with the actual typedef) and if not give the user a helpful error message.
+    if (existing->kind == SymbolKind::TypeAlias && member.kind == SymbolKind::ForwardingTypedef) {
+        // Just add this forwarding typedef to a deferred list so we can process them
+        // once we know the kind of symbol the alias points to.
+        existing->as<TypeAliasType>().addForwardDecl(member.as<ForwardingTypedefSymbol>());
+        return;
+    }
+
+    if (existing->kind == SymbolKind::ForwardingTypedef &&
+        member.kind == SymbolKind::ForwardingTypedef) {
+        // Found another forwarding typedef; link it to the previous one.
+        existing->as<ForwardingTypedefSymbol>().addForwardDecl(
+            member.as<ForwardingTypedefSymbol>());
+        return;
+    }
+
+    if (existing->kind == SymbolKind::ForwardingTypedef && member.kind == SymbolKind::TypeAlias) {
+        // We found the actual type for a previous forwarding declaration. Replace it in
+        // the name map.
+        member.as<TypeAliasType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
+        existing = &member;
+        return;
+    }
+
+    if (existing->kind == SymbolKind::ExplicitImport && member.kind == SymbolKind::ExplicitImport &&
+        existing->as<ExplicitImportSymbol>().packageName ==
+            member.as<ExplicitImportSymbol>().packageName) {
+        // Duplicate explicit imports are specifically allowed, so just ignore the other
+        // one.
+        return;
+    }
+
+    if (!isElaborating && existing->isValue() && member.isValue()) {
+        // We want to look at the symbol types here to provide nicer error messages, but
+        // it might not be safe to resolve the type at this point (because we're in the
+        // middle of elaborating the scope). Save the member for later reporting.
+        getOrAddDeferredData().addNameConflict(member);
+        return;
+    }
+
+    reportNameConflict(member, *existing);
+}
+
+void Scope::reportNameConflict(const Symbol& member, const Symbol& existing) const {
+    Diagnostic* diag;
+    if (existing.isValue() && member.isValue()) {
+        const Type& memberType = member.as<ValueSymbol>().getType();
+        const Type& existingType = existing.as<ValueSymbol>().getType();
+
+        if (memberType.isMatching(existingType)) {
+            diag = &addDiag(DiagCode::Redefinition, member.location);
+            (*diag) << member.name;
+        }
+        else {
+            diag = &addDiag(DiagCode::RedefinitionDifferentType, member.location);
+            (*diag) << member.name << memberType << existingType;
         }
     }
+    else if (existing.kind != member.kind) {
+        diag = &addDiag(DiagCode::RedefinitionDifferentSymbolKind, member.location);
+        (*diag) << member.name;
+    }
+    else {
+        diag = &addDiag(DiagCode::Redefinition, member.location);
+        (*diag) << member.name;
+    }
+    diag->addNote(DiagCode::NotePreviousDefinition, existing.location);
 }
 
 Symbol::Index Scope::getInsertionIndex(const Symbol& at) const {
@@ -520,6 +538,11 @@ void Scope::elaborate() const {
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
     deferredMemberIndex = DeferredMemberIndex::Invalid;
 
+    for (auto member : deferredData.getNameConflicts()) {
+        auto existing = nameMap->find(member->name)->second;
+        reportNameConflict(*member, *existing);
+    }
+
     SmallSet<const SyntaxNode*, 8> enumDecls;
     for (const auto& pair : deferredData.getTransparentTypes()) {
         const Symbol* insertAt = pair.first;
@@ -529,7 +552,7 @@ void Scope::elaborate() const {
             if (!type.getSyntax() || enumDecls.insert(type.getSyntax()).second) {
                 for (const auto& value : type.as<EnumType>().values()) {
                     auto wrapped = compilation.emplace<TransparentMemberSymbol>(value);
-                    insertMember(wrapped, insertAt);
+                    insertMember(wrapped, insertAt, true);
                     insertAt = wrapped;
                 }
             }
@@ -553,7 +576,7 @@ void Scope::elaborate() const {
 
                 const Symbol* last = symbol;
                 for (auto instance : instances) {
-                    insertMember(instance, last);
+                    insertMember(instance, last, true);
                     last = instance;
                 }
                 break;
@@ -577,13 +600,13 @@ void Scope::elaborate() const {
                 const Symbol* last = symbol;
                 for (auto port : ports) {
                     portMap->emplace(port->name, port);
-                    insertMember(port, last);
+                    insertMember(port, last, true);
                     last = port;
 
                     if (port->kind == SymbolKind::Port) {
                         auto& valuePort = port->as<PortSymbol>();
                         if (valuePort.internalSymbol && !valuePort.internalSymbol->getScope()) {
-                            insertMember(valuePort.internalSymbol, last);
+                            insertMember(valuePort.internalSymbol, last, true);
                             last = valuePort.internalSymbol;
                         }
                     }
@@ -602,7 +625,7 @@ void Scope::elaborate() const {
 
                 const Symbol* last = symbol;
                 for (auto var : symbols) {
-                    insertMember(var, last);
+                    insertMember(var, last, true);
                     last = var;
                 }
                 break;
@@ -628,7 +651,7 @@ void Scope::elaborate() const {
 
                 const Symbol* last = symbol;
                 for (auto block : blocks) {
-                    insertMember(block, last);
+                    insertMember(block, last, true);
                     last = block;
                 }
                 break;
@@ -637,7 +660,7 @@ void Scope::elaborate() const {
                 insertMember(&GenerateBlockArraySymbol::fromSyntax(
                                  compilation, member.node.as<LoopGenerateSyntax>(),
                                  getInsertionIndex(*symbol), location, *this, constructIndex),
-                             symbol);
+                             symbol, true);
                 break;
             default:
                 break;
@@ -684,6 +707,8 @@ void Scope::elaborate() const {
         else
             addDiag(DiagCode::UnresolvedForwardTypedef, symbol->location) << symbol->name;
     }
+
+    ASSERT(deferredMemberIndex == DeferredMemberIndex::Invalid);
 }
 
 void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
@@ -1294,7 +1319,6 @@ void Scope::DeferredMemberData::addForwardingTypedef(const ForwardingTypedefSymb
 
 span<const ForwardingTypedefSymbol* const> Scope::DeferredMemberData::getForwardingTypedefs()
     const {
-
     return forwardingTypedefs;
 }
 
@@ -1304,6 +1328,14 @@ void Scope::DeferredMemberData::addPortDeclaration(const PortDeclarationSyntax& 
 
 span<const PortDeclarationSyntax* const> Scope::DeferredMemberData::getPortDeclarations() const {
     return portDecls;
+}
+
+void Scope::DeferredMemberData::addNameConflict(const Symbol& member) {
+    nameConflicts.push_back(&member);
+}
+
+span<const Symbol* const> Scope::DeferredMemberData::getNameConflicts() const {
+    return nameConflicts;
 }
 
 } // namespace slang
