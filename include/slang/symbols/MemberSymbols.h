@@ -319,4 +319,17 @@ private:
     mutable const Expression* assign = nullptr;
 };
 
+/// Represents a genvar declaration.
+class GenvarSymbol : public Symbol {
+public:
+    GenvarSymbol(string_view name, SourceLocation loc);
+
+    void toJson(json&) const {}
+
+    static void fromSyntax(Compilation& compilation, const GenvarDeclarationSyntax& syntax,
+                           SmallVector<const GenvarSymbol*>& results);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Genvar; }
+};
+
 } // namespace slang

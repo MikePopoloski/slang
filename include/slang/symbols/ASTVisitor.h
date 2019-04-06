@@ -87,6 +87,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         SYMBOL(Subroutine);
         SYMBOL(Modport);
         SYMBOL(ContinuousAssign);
+        SYMBOL(Genvar);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);
@@ -107,7 +108,6 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         case SymbolKind::UnpackedUnionType: THROW_UNREACHABLE;
         case SymbolKind::ClassType: THROW_UNREACHABLE;
         case SymbolKind::Program: THROW_UNREACHABLE;
-        case SymbolKind::Genvar: THROW_UNREACHABLE;
     }
 #undef TYPE
 #undef SYMBOL

@@ -531,4 +531,21 @@ void ContinuousAssignSymbol::toJson(json& j) const {
     j["assignment"] = getAssignment();
 }
 
+GenvarSymbol::GenvarSymbol(string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::Genvar, name, loc) {
+}
+
+void GenvarSymbol::fromSyntax(Compilation& compilation, const GenvarDeclarationSyntax& syntax,
+                              SmallVector<const GenvarSymbol*>& results) {
+    for (auto id : syntax.identifiers) {
+        auto name = id->identifier;
+        if (name.valueText().empty())
+            continue;
+
+        auto genvar = compilation.emplace<GenvarSymbol>(name.valueText(), name.location());
+        genvar->setSyntax(*id);
+        results.append(genvar);
+    }
+}
+
 } // namespace slang

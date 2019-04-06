@@ -320,6 +320,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::TimeUnitsDeclaration:
             // These are handled elsewhere; just ignore here.
             break;
+        case SyntaxKind::GenvarDeclaration: {
+            SmallVectorSized<const GenvarSymbol*, 16> genvars;
+            GenvarSymbol::fromSyntax(compilation, syntax.as<GenvarDeclarationSyntax>(), genvars);
+            for (auto genvar : genvars)
+                addMember(*genvar);
+            break;
+        }
         default:
             addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
             break;
