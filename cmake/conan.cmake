@@ -52,6 +52,8 @@ function(_get_msvc_ide_version result)
         set(${result} 14 PARENT_SCOPE)
     elseif(NOT MSVC_VERSION VERSION_LESS 1910 AND MSVC_VERSION VERSION_LESS 1920)
         set(${result} 15 PARENT_SCOPE)
+    elseif(NOT MSVC_VERSION VERSION_LESS 1920 AND MSVC_VERSION VERSION_LESS 1930)
+        set(${result} 16 PARENT_SCOPE)
     else()
         message(FATAL_ERROR "Conan: Unknown MSVC compiler version [${MSVC_VERSION}]")
     endif()
@@ -122,7 +124,7 @@ function(conan_cmake_settings result)
         set(_CONAN_SETTING_COMPILER gcc)
         set(_CONAN_SETTING_COMPILER_VERSION ${COMPILER_VERSION})
         if (USING_CXX)
-            conan_cmake_detect_gnu_libcxx(_LIBCXX)
+            conan_cmake_detect_unix_libcxx(_LIBCXX)
             set(_CONAN_SETTING_COMPILER_LIBCXX ${_LIBCXX})
         endif ()
     elseif (${CMAKE_${LANGUAGE}_COMPILER_ID} STREQUAL AppleClang)
@@ -133,37 +135,29 @@ function(conan_cmake_settings result)
         set(_CONAN_SETTING_COMPILER apple-clang)
         set(_CONAN_SETTING_COMPILER_VERSION ${MAJOR}.${MINOR})
         if (USING_CXX)
-            set(_CONAN_SETTING_COMPILER_LIBCXX libc++)
+            conan_cmake_detect_unix_libcxx(_LIBCXX)
+            set(_CONAN_SETTING_COMPILER_LIBCXX ${_LIBCXX})
         endif ()
     elseif (${CMAKE_${LANGUAGE}_COMPILER_ID} STREQUAL Clang)
         string(REPLACE "." ";" VERSION_LIST ${CMAKE_${LANGUAGE}_COMPILER_VERSION})
         list(GET VERSION_LIST 0 MAJOR)
         list(GET VERSION_LIST 1 MINOR)
+        set(_CONAN_SETTING_COMPILER clang)
+        set(_CONAN_SETTING_COMPILER_VERSION ${MAJOR}.${MINOR})
         if(APPLE)
             cmake_policy(GET CMP0025 APPLE_CLANG_POLICY_ENABLED)
             if(NOT APPLE_CLANG_POLICY_ENABLED)
                 message(STATUS "Conan: APPLE and Clang detected. Assuming apple-clang compiler. Set CMP0025 to avoid it")
                 set(_CONAN_SETTING_COMPILER apple-clang)
-                set(_CONAN_SETTING_COMPILER_VERSION ${MAJOR}.${MINOR})
-            else()
-                set(_CONAN_SETTING_COMPILER clang)
-                set(_CONAN_SETTING_COMPILER_VERSION ${MAJOR}.${MINOR})
             endif()
-            if (USING_CXX)
-                set(_CONAN_SETTING_COMPILER_LIBCXX libc++)
-            endif ()
-        else()
-            set(_CONAN_SETTING_COMPILER clang)
-            if(${MAJOR} GREATER 7)
-                set(_CONAN_SETTING_COMPILER_VERSION ${MAJOR})
-            else()
-                set(_CONAN_SETTING_COMPILER_VERSION ${MAJOR}.${MINOR})
-            endif()
-            if (USING_CXX)
-                conan_cmake_detect_gnu_libcxx(_LIBCXX)
-                set(_CONAN_SETTING_COMPILER_LIBCXX ${_LIBCXX})
-            endif ()
         endif()
+        if(${_CONAN_SETTING_COMPILER} STREQUAL clang AND ${MAJOR} GREATER 7)
+            set(_CONAN_SETTING_COMPILER_VERSION ${MAJOR})
+        endif()
+        if (USING_CXX)
+            conan_cmake_detect_unix_libcxx(_LIBCXX)
+            set(_CONAN_SETTING_COMPILER_LIBCXX ${_LIBCXX})
+        endif ()
     elseif(${CMAKE_${LANGUAGE}_COMPILER_ID} STREQUAL MSVC)
         set(_VISUAL "Visual Studio")
         _get_msvc_ide_version(_VISUAL_VERSION)
@@ -202,16 +196,20 @@ function(conan_cmake_settings result)
 
     # If profile is defined it is used
     if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND ARGUMENTS_DEBUG_PROFILE)
-        set(_SETTINGS -pr ${ARGUMENTS_DEBUG_PROFILE})
+        set(_APPLIED_PROFILES ${ARGUMENTS_DEBUG_PROFILE})
     elseif(CMAKE_BUILD_TYPE STREQUAL "Release" AND ARGUMENTS_RELEASE_PROFILE)
-        set(_SETTINGS -pr ${ARGUMENTS_RELEASE_PROFILE})
+        set(_APPLIED_PROFILES ${ARGUMENTS_RELEASE_PROFILE})
     elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" AND ARGUMENTS_RELWITHDEBINFO_PROFILE)
-        set(_SETTINGS -pr ${ARGUMENTS_RELWITHDEBINFO_PROFILE})
+        set(_APPLIED_PROFILES ${ARGUMENTS_RELWITHDEBINFO_PROFILE})
     elseif(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel" AND ARGUMENTS_MINSIZEREL_PROFILE)
-        set(_SETTINGS -pr ${ARGUMENTS_MINSIZEREL_PROFILE})
+        set(_APPLIED_PROFILES ${ARGUMENTS_MINSIZEREL_PROFILE})
     elseif(ARGUMENTS_PROFILE)
-        set(_SETTINGS -pr ${ARGUMENTS_PROFILE})
+        set(_APPLIED_PROFILES ${ARGUMENTS_PROFILE})
     endif()
+
+    foreach(ARG ${_APPLIED_PROFILES})
+        set(_SETTINGS ${_SETTINGS} -pr ${ARG})
+    endforeach()
 
     if(NOT _SETTINGS OR ARGUMENTS_PROFILE_AUTO STREQUAL "ALL")
         set(ARGUMENTS_PROFILE_AUTO arch build_type compiler compiler.version
@@ -237,35 +235,52 @@ function(conan_cmake_settings result)
 endfunction()
 
 
-function(conan_cmake_detect_gnu_libcxx result)
-    # Allow -D_GLIBCXX_USE_CXX11_ABI=ON/OFF as argument to cmake
-    if(DEFINED _GLIBCXX_USE_CXX11_ABI)
-        if(_GLIBCXX_USE_CXX11_ABI)
-            set(${result} libstdc++11 PARENT_SCOPE)
-            return()
-        else()
-            set(${result} libstdc++ PARENT_SCOPE)
-            return()
-        endif()
-    endif()
+function(conan_cmake_detect_unix_libcxx result)
+    # Take into account any -stdlib in compile options
+    get_directory_property(compile_options DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMPILE_OPTIONS)
 
-    # Check if there's any add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+    # Take into account any _GLIBCXX_USE_CXX11_ABI in compile definitions
     get_directory_property(defines DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMPILE_DEFINITIONS)
     foreach(define ${defines})
-        if(define STREQUAL "_GLIBCXX_USE_CXX11_ABI=0")
-            set(${result} libstdc++ PARENT_SCOPE)
-            return()
+        if(define MATCHES "_GLIBCXX_USE_CXX11_ABI")
+            if(define MATCHES "^-D")
+                set(compile_options ${compile_options} "${define}")
+            else()
+                set(compile_options ${compile_options} "-D${define}")
+            endif()
         endif()
     endforeach()
 
-    # Use C++11 stdlib as default if gcc is 5.1+
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.1")
-      set(${result} libstdc++ PARENT_SCOPE)
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E echo "#include <string>"
+        COMMAND ${CMAKE_CXX_COMPILER} -x c++ ${compile_options} -E -dM -
+        OUTPUT_VARIABLE string_defines
+    )
+
+    if(string_defines MATCHES "#define __GLIBCXX__")
+        # Allow -D_GLIBCXX_USE_CXX11_ABI=ON/OFF as argument to cmake
+        if(DEFINED _GLIBCXX_USE_CXX11_ABI)
+            if(_GLIBCXX_USE_CXX11_ABI)
+                set(${result} libstdc++11 PARENT_SCOPE)
+                return()
+            else()
+                set(${result} libstdc++ PARENT_SCOPE)
+                return()
+            endif()
+        endif()
+
+        if(string_defines MATCHES "#define _GLIBCXX_USE_CXX11_ABI 1\n")
+            set(${result} libstdc++11 PARENT_SCOPE)
+        else()
+            # Either the compiler is missing the define because it is old, and so
+            # it can't use the new abi, or the compiler was configured to use the
+            # old abi by the user or distro (e.g. devtoolset on RHEL/CentOS)
+            set(${result} libstdc++ PARENT_SCOPE)
+        endif()
     else()
-      set(${result} libstdc++11 PARENT_SCOPE)
+        set(${result} libc++ PARENT_SCOPE)
     endif()
 endfunction()
-
 
 function(conan_cmake_detect_vs_runtime result)
     string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
@@ -290,9 +305,10 @@ endfunction()
 
 macro(parse_arguments)
   set(options BASIC_SETUP CMAKE_TARGETS UPDATE KEEP_RPATHS NO_OUTPUT_DIRS OUTPUT_QUIET NO_IMPORTS)
-  set(oneValueArgs CONANFILE DEBUG_PROFILE RELEASE_PROFILE RELWITHDEBINFO_PROFILE MINSIZEREL_PROFILE
-                   PROFILE ARCH BUILD_TYPE INSTALL_FOLDER CONAN_COMMAND)
-  set(multiValueArgs REQUIRES OPTIONS IMPORTS SETTINGS BUILD ENV GENERATORS PROFILE_AUTO INSTALL_ARGS)
+  set(oneValueArgs CONANFILE  ARCH BUILD_TYPE INSTALL_FOLDER CONAN_COMMAND)
+  set(multiValueArgs DEBUG_PROFILE RELEASE_PROFILE RELWITHDEBINFO_PROFILE MINSIZEREL_PROFILE
+                     PROFILE REQUIRES OPTIONS IMPORTS SETTINGS BUILD ENV GENERATORS PROFILE_AUTO
+                     INSTALL_ARGS)
   cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 endmacro()
 
@@ -362,11 +378,11 @@ function(conan_cmake_install)
     execute_process(COMMAND ${conan_command} ${conan_args}
                      RESULT_VARIABLE return_code
                      OUTPUT_VARIABLE conan_output
-                     ERROR_VARIABLE conan_output					 
+                     ERROR_VARIABLE conan_output
                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
     message(STATUS "${conan_output}")
-				 
+
     if(NOT "${return_code}" STREQUAL "0")
       message(FATAL_ERROR "Conan install failed='${return_code}'")
     endif()
@@ -516,4 +532,3 @@ macro(conan_add_remote)
     execute_process(COMMAND ${CONAN_CMD} remote add ${CONAN_NAME} ${CONAN_URL}
       ${CONAN_INDEX_ARG} -f)
 endmacro()
-
