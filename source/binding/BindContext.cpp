@@ -65,6 +65,14 @@ bool BindContext::requireGtZero(optional<int32_t> value, SourceRange range) cons
     return true;
 }
 
+bool BindContext::requireBooleanConvertible(const Expression& expr) const {
+    if (!expr.type->isBooleanConvertible()) {
+        addDiag(DiagCode::NotBooleanConvertible, expr.sourceRange) << *expr.type;
+        return false;
+    }
+    return true;
+}
+
 bool BindContext::requireValidBitWidth(bitwidth_t width, SourceRange range) const {
     if (width > SVInt::MAX_BITS) {
         addDiag(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;

@@ -54,6 +54,7 @@ public:
     bool requireNoUnknowns(const SVInt& value, SourceRange range) const;
     bool requirePositive(const SVInt& value, SourceRange range) const;
     bool requireGtZero(optional<int32_t> value, SourceRange range) const;
+    bool requireBooleanConvertible(const Expression& expr) const;
     bool requireValidBitWidth(bitwidth_t width, SourceRange range) const;
     optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
 

@@ -565,52 +565,57 @@ static string_view getGenerateBlockName(const SyntaxNode& node) {
     return "";
 }
 
+static void createCondGenBlock(Compilation& compilation, const SyntaxNode& syntax,
+                               LookupLocation location, const Scope& parent,
+                               uint32_t constructIndex, bool isInstantiated,
+                               const SyntaxList<AttributeInstanceSyntax>& attributes,
+                               SmallVector<GenerateBlockSymbol*>& results) {
+    // [27.5] If a generate block in a conditional generate construct consists of only one item
+    // that is itself a conditional generate construct and if that item is not surrounded by
+    // begin-end keywords, then this generate block is not treated as a separate scope. The
+    // generate construct within this block is said to be directly nested. The generate blocks
+    // of the directly nested construct are treated as if they belong to the outer construct.
+    switch (syntax.kind) {
+        case SyntaxKind::IfGenerate:
+            GenerateBlockSymbol::fromSyntax(compilation, syntax.as<IfGenerateSyntax>(), location,
+                                            parent, constructIndex, isInstantiated, results);
+            return;
+
+        case SyntaxKind::CaseGenerate: // TODO:
+        default:
+            break;
+    }
+
+    string_view name = getGenerateBlockName(syntax);
+    SourceLocation loc = syntax.getFirstToken().location();
+
+    auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc, constructIndex,
+                                                          isInstantiated);
+
+    block->addMembers(syntax);
+    block->setSyntax(syntax);
+    compilation.addAttributes(*block, attributes);
+    results.append(block);
+}
+
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                                      LookupLocation location, const Scope& parent,
                                      uint32_t constructIndex, bool isInstantiated,
                                      SmallVector<GenerateBlockSymbol*>& results) {
     optional<bool> selector;
     if (isInstantiated) {
-        // TODO: better error checking
         BindContext bindContext(parent, location, BindFlags::Constant);
         const auto& cond = Expression::bind(*syntax.condition, bindContext);
-        if (cond.constant)
-            selector = (bool)(logic_t)cond.constant->integer();
+        if (cond.constant && bindContext.requireBooleanConvertible(cond))
+            selector = cond.constant->isTrue();
     }
 
-    auto createBlock = [&](const SyntaxNode& syntax, bool isInstantiated, auto attributes) {
-        // [27.5] If a generate block in a conditional generate construct consists of only one item
-        // that is itself a conditional generate construct and if that item is not surrounded by
-        // begin-end keywords, then this generate block is not treated as a separate scope. The
-        // generate construct within this block is said to be directly nested. The generate blocks
-        // of the directly nested construct are treated as if they belong to the outer construct.
-        switch (syntax.kind) {
-            case SyntaxKind::IfGenerate:
-                fromSyntax(compilation, syntax.as<IfGenerateSyntax>(), location, parent,
-                           constructIndex, isInstantiated, results);
-                return;
-
-            case SyntaxKind::CaseGenerate: // TODO:
-            default:
-                break;
-        }
-
-        string_view name = getGenerateBlockName(syntax);
-        SourceLocation loc = syntax.getFirstToken().location();
-
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc,
-                                                              constructIndex, isInstantiated);
-
-        block->addMembers(syntax);
-        block->setSyntax(syntax);
-        compilation.addAttributes(*block, attributes);
-        results.append(block);
-    };
-
-    createBlock(*syntax.block, selector.has_value() && selector.value(), syntax.attributes);
+    createCondGenBlock(compilation, *syntax.block, location, parent, constructIndex,
+                       selector.has_value() && selector.value(), syntax.attributes, results);
     if (syntax.elseClause) {
-        createBlock(*syntax.elseClause->clause, selector.has_value() && !selector.value(),
-                    syntax.attributes);
+        createCondGenBlock(compilation, *syntax.elseClause->clause, location, parent,
+                           constructIndex, selector.has_value() && !selector.value(),
+                           syntax.attributes, results);
     }
 }
 
@@ -687,10 +692,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     if (stopExpr.bad() || iterExpr.bad())
         return *result;
 
-    if (!stopExpr.type->isBooleanConvertible()) {
-        parent.addDiag(DiagCode::NotBooleanConvertible, stopExpr.sourceRange) << *stopExpr.type;
+    if (!bindContext.requireBooleanConvertible(stopExpr))
         return *result;
-    }
 
     EvalContext stopVerifyContext(EvalFlags::IsVerifying);
     bool canBeConst = stopExpr.verifyConstant(stopVerifyContext);

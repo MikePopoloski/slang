@@ -1367,10 +1367,8 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
     if (pred.bad() || left.bad() || right.bad())
         return badExpr(compilation, result);
 
-    if (!pred.type->isBooleanConvertible()) {
-        context.addDiag(DiagCode::NotBooleanConvertible, pred.sourceRange) << *pred.type;
+    if (!context.requireBooleanConvertible(pred))
         return badExpr(compilation, result);
-    }
 
     // If both sides of the expression are numeric, we've already determined the correct
     // result type. Otherwise, follow the rules in [11.14.11].
