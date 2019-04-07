@@ -637,7 +637,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     // If the loop initializer has a `genvar` keyword, we can use the name directly
     // Otherwise we need to do a lookup to make sure we have the actual genvar somewhere.
     if (!syntax.genvar) {
-        auto symbol = parent.lookupUnqualifiedName(genvar.valueText(), location, genvar.range());
+        auto symbol = parent.lookupUnqualifiedName(genvar.valueText(), location, genvar.range(),
+                                                   LookupFlags::None, true);
         if (!symbol)
             return *result;
 
@@ -707,7 +708,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     EvalContext evalContext;
     auto loopVal = evalContext.createLocal(&local, *initial.constant);
 
-	if (loopVal->integer().hasUnknown())
+    if (loopVal->integer().hasUnknown())
         iterContext.addDiag(DiagCode::GenvarUnknownBits, genvar.range()) << *loopVal;
 
     // Generate blocks!
@@ -719,8 +720,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
             break;
 
         auto pair = usedValues.emplace(loopVal->integer());
-        if (!pair.second)
+        if (!pair.second) {
             iterContext.addDiag(DiagCode::GenvarDuplicate, genvar.range()) << *loopVal;
+            break;
+        }
 
         createBlock(*loopVal, true);
         any = true;
@@ -728,7 +731,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         if (!iterExpr.eval(evalContext))
             break;
 
-		if (loopVal->integer().hasUnknown())
+        if (loopVal->integer().hasUnknown())
             iterContext.addDiag(DiagCode::GenvarUnknownBits, genvar.range()) << *loopVal;
     }
 

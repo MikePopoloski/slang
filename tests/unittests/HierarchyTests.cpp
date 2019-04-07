@@ -756,3 +756,55 @@ endmodule
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Loop generate errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    if (1) begin : blah
+        int foo;
+    end
+
+    genvar i, j;
+    localparam int l = 0;
+    struct { logic l; } us;
+    logic arr[2];
+
+    for (i = i; i + 1; i + 1) begin end         // iter expr doesn't change genvar
+    for (i = 0; i; --i) begin end               // not an error
+    for (i = 0; i; i++) begin end               // not an error
+    for ( = 0; i; i++) begin end                // missing genvar
+    for (i = 0; i; j++) begin end               // different name in init and incr
+    for (k = 0; k; k++) begin end               // missing genvar
+    for (l = 0; l; l++) begin end               // l is not a genvar
+    for (i = 0; i < blah.foo; i++) begin end    // non-constant stop expr
+    for (i = 0; i; i += blah.foo) begin end     // non-constant iter expr
+    for (i = 0; us; i++) begin end              // stop expr is not boolean
+    for (i = 'x; i; i++) begin end              // unknown in init
+    for (i = 0; i < 10; i += 'x) begin end      // unknown in iter
+    for (i = 0; i < 10; i += 0) begin end       // repeated val
+    for (i = 0; i < 10; i += arr[i+4]) name: begin end       // bad iter expr
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::NotAValue);
+    CHECK((it++)->code == DiagCode::InvalidGenvarIterExpression);
+    CHECK((it++)->code == DiagCode::ExpectedIdentifier);
+    CHECK((it++)->code == DiagCode::ExpectedGenvarIterVar);
+    CHECK((it++)->code == DiagCode::UndeclaredIdentifier);
+    CHECK((it++)->code == DiagCode::NotAGenvar);
+    CHECK((it++)->code == DiagCode::ExpressionNotConstant);
+    CHECK((it++)->code == DiagCode::ExpressionNotConstant);
+    CHECK((it++)->code == DiagCode::NotBooleanConvertible);
+    CHECK((it++)->code == DiagCode::GenvarUnknownBits);
+    CHECK((it++)->code == DiagCode::GenvarUnknownBits);
+    CHECK((it++)->code == DiagCode::GenvarDuplicate);
+    CHECK((it++)->code == DiagCode::ExpressionNotConstant);
+    CHECK(it == diags.end());
+}

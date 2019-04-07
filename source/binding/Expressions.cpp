@@ -427,6 +427,9 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
     BindContext context = ctx.resetFlags(extraFlags);
     Expression* result;
     switch (syntax.kind) {
+        case SyntaxKind::BadExpression:
+            result = &badExpr(compilation, nullptr);
+            break;
         case SyntaxKind::NullLiteralExpression:
             result = &NullLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
             break;
@@ -546,7 +549,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::AlwaysPropertyExpression:
         case SyntaxKind::AndSequenceExpression:
         case SyntaxKind::AssignmentPatternExpression:
-        case SyntaxKind::BadExpression:
         case SyntaxKind::BinarySequenceDelayExpression:
         case SyntaxKind::DefaultPatternKeyExpression:
         case SyntaxKind::ElementSelect:

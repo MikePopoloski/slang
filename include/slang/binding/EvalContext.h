@@ -84,8 +84,8 @@ public:
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
     Diagnostic& addDiag(DiagCode code, SourceRange range);
 
-	/// Issues all recorded diagnostics to the given binding context.
-	void reportDiags(const BindContext& context, SourceRange range) const;
+    /// Issues all recorded diagnostics to the given binding context.
+    void reportDiags(const BindContext& context, SourceRange range) const;
 
 private:
     void reportStack();

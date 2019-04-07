@@ -183,7 +183,8 @@ public:
     /// chain until we reach root or the symbol is found.
     const Symbol* lookupUnqualifiedName(string_view name, LookupLocation location,
                                         SourceRange sourceRange,
-                                        bitmask<LookupFlags> flags = LookupFlags::None) const;
+                                        bitmask<LookupFlags> flags = LookupFlags::None,
+                                        bool errorIfNotFound = false) const;
 
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified
     /// type. This expects (and asserts) that the member at the given index is of the specified type

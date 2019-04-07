@@ -822,7 +822,7 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(span<AttributeInstanceSyn
             break;
     }
 
-	// Make sure the iteration expression only mentions the genvar on the lhs.
+    // Make sure the iteration expression only mentions the genvar on the lhs.
     if (iterVarCheck && !identifier.isMissing() &&
         (iterVarCheck->kind != SyntaxKind::IdentifierName ||
          iterVarCheck->as<IdentifierNameSyntax>().identifier.valueText() !=
