@@ -1484,18 +1484,18 @@ ConstraintItemSyntax& Parser::parseConstraintItem(bool allowBlock) {
 
     // at this point we either have an expression with optional distribution or
     // we have an implication constraint
-    auto& expr = parseExpression();
+    auto expr = &parseExpression();
     if (peek(TokenKind::MinusArrow)) {
         auto arrow = consume();
-        return factory.implicationConstraint(expr, arrow, parseConstraintItem(true));
+        return factory.implicationConstraint(*expr, arrow, parseConstraintItem(true));
     }
 
     if (peek(TokenKind::DistKeyword)) {
         auto& dist = parseDistConstraintList();
-        expr = factory.expressionOrDist(expr, dist);
+        expr = &factory.expressionOrDist(*expr, dist);
     }
 
-    return factory.expressionConstraint(Token(), expr, expect(TokenKind::Semicolon));
+    return factory.expressionConstraint(Token(), *expr, expect(TokenKind::Semicolon));
 }
 
 DistConstraintListSyntax& Parser::parseDistConstraintList() {
