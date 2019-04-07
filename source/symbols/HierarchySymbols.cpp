@@ -92,7 +92,8 @@ const ModportSymbol* DefinitionSymbol::getModportOrError(string_view modport, co
 }
 
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
-                                               const ModuleDeclarationSyntax& syntax, const Scope& scope) {
+                                               const ModuleDeclarationSyntax& syntax,
+                                               const Scope& scope) {
     auto nameToken = syntax.header->name;
     auto result = compilation.emplace<DefinitionSymbol>(
         compilation, nameToken.valueText(), nameToken.location(),
@@ -622,69 +623,116 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     Compilation& compilation, const LoopGenerateSyntax& syntax, Index scopeIndex,
     LookupLocation location, const Scope& parent, uint32_t constructIndex) {
 
-    // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
-    // we need to do a lookup to make sure we have the actual genvar.
-    // TODO: do the actual lookup
-
     string_view name = getGenerateBlockName(*syntax.block);
     SourceLocation loc = syntax.block->getFirstToken().location();
     auto result =
         compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc, constructIndex);
-
     result->setSyntax(syntax);
     compilation.addAttributes(*result, syntax.attributes);
 
-    // TODO: verify that localparam type should be int
+    auto genvar = syntax.identifier;
+    if (genvar.isMissing())
+        return *result;
+
+    // If the loop initializer has a `genvar` keyword, we can use the name directly
+    // Otherwise we need to do a lookup to make sure we have the actual genvar somewhere.
+    if (!syntax.genvar) {
+        auto symbol = parent.lookupUnqualifiedName(genvar.valueText(), location, genvar.range());
+        if (!symbol)
+            return *result;
+
+        if (symbol->kind != SymbolKind::Genvar) {
+            auto& diag = parent.addDiag(DiagCode::NotAGenvar, genvar.range());
+            diag << genvar.valueText();
+            diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+        }
+    }
 
     auto createBlock = [&](ConstantValue value, bool isInstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
-        // TODO: block name, location?
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation(),
-                                                              isInstantiated, 1);
+        auto block =
+            compilation.emplace<GenerateBlockSymbol>(compilation, "", loc, 1, isInstantiated);
         auto implicitParam = compilation.emplace<ParameterSymbol>(
-            syntax.identifier.valueText(), syntax.identifier.location(), true /* isLocal */,
-            false /* isPort */);
+            genvar.valueText(), genvar.location(), true /* isLocal */, false /* isPort */);
 
         block->addMember(*implicitParam);
         block->addMembers(*syntax.block);
         result->addMember(*block);
 
-        implicitParam->setType(compilation.getIntType());
+        implicitParam->setType(compilation.getIntegerType());
         implicitParam->setValue(std::move(value));
     };
 
-    // Initialize the genvar
+    // Bind the initialization expression.
     BindContext bindContext(parent, location, BindFlags::Constant);
-    const auto& initial = Expression::bind(*syntax.initialExpr, bindContext);
-    if (!initial.constant) {
-        createBlock(SVInt(32, 0, true), false);
+    const auto& initial = Expression::bind(compilation.getIntegerType(), *syntax.initialExpr,
+                                           syntax.equals.location(), bindContext);
+    if (!initial.constant)
         return *result;
-    }
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    SequentialBlockSymbol iterScope(compilation, "", SourceLocation());
-    VariableSymbol local{ syntax.identifier.valueText(), syntax.identifier.location() };
-    local.setType(compilation.getIntType());
+    auto& iterScope = *compilation.emplace<SequentialBlockSymbol>(compilation, "", loc);
+    auto& local = *compilation.emplace<VariableSymbol>(genvar.valueText(), genvar.location());
+    local.setType(compilation.getIntegerType());
 
     iterScope.setTemporaryParent(parent, scopeIndex);
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    BindContext iterContext(iterScope, LookupLocation::max); // TODO: should be constant
+    BindContext iterContext(iterScope, LookupLocation::max);
     const auto& stopExpr = Expression::bind(*syntax.stopExpr, iterContext);
     const auto& iterExpr = Expression::bind(*syntax.iterationExpr, iterContext);
+    if (stopExpr.bad() || iterExpr.bad())
+        return *result;
+
+    if (!stopExpr.type->isBooleanConvertible()) {
+        parent.addDiag(DiagCode::NotBooleanConvertible, stopExpr.sourceRange) << *stopExpr.type;
+        return *result;
+    }
+
+    EvalContext stopVerifyContext(EvalFlags::IsVerifying);
+    bool canBeConst = stopExpr.verifyConstant(stopVerifyContext);
+    stopVerifyContext.reportDiags(iterContext, stopExpr.sourceRange);
+    if (!canBeConst)
+        return *result;
+
+    EvalContext iterVerifyContext(EvalFlags::IsVerifying);
+    canBeConst = iterExpr.verifyConstant(iterVerifyContext);
+    iterVerifyContext.reportDiags(iterContext, iterExpr.sourceRange);
+    if (!canBeConst)
+        return *result;
 
     // Create storage for the iteration variable.
-    EvalContext context;
-    auto genvar = context.createLocal(&local, *initial.constant);
+    EvalContext evalContext;
+    auto loopVal = evalContext.createLocal(&local, *initial.constant);
+
+	if (loopVal->integer().hasUnknown())
+        iterContext.addDiag(DiagCode::GenvarUnknownBits, genvar.range()) << *loopVal;
 
     // Generate blocks!
+    SmallSet<SVInt, 8> usedValues;
     bool any = false;
-    for (; stopExpr.eval(context).isTrue(); iterExpr.eval(context)) {
-        createBlock(*genvar, true);
+    while (true) {
+        auto stop = stopExpr.eval(evalContext);
+        if (stop.bad() || !stop.isTrue())
+            break;
+
+        auto pair = usedValues.emplace(loopVal->integer());
+        if (!pair.second)
+            iterContext.addDiag(DiagCode::GenvarDuplicate, genvar.range()) << *loopVal;
+
+        createBlock(*loopVal, true);
         any = true;
+
+        if (!iterExpr.eval(evalContext))
+            break;
+
+		if (loopVal->integer().hasUnknown())
+            iterContext.addDiag(DiagCode::GenvarUnknownBits, genvar.range()) << *loopVal;
     }
+
+    evalContext.reportDiags(iterContext, syntax.sourceRange());
 
     if (!any)
         createBlock(SVInt(32, 0, true), false);

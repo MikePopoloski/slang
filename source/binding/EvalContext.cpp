@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/EvalContext.h"
 
+#include "slang/binding/BindContext.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
 #include "slang/text/FormatBuffer.h"
@@ -73,6 +74,14 @@ Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
     Diagnostic& diag = diags.add(code, range);
     reportStack();
     return diag;
+}
+
+void EvalContext::reportDiags(const BindContext& context, SourceRange range) const {
+    if (!diags.empty()) {
+        Diagnostic& diag = context.addDiag(DiagCode::ExpressionNotConstant, range);
+        for (const Diagnostic& note : diags)
+            diag.addNote(note);
+    }
 }
 
 void EvalContext::reportStack() {

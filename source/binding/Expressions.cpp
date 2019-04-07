@@ -135,24 +135,15 @@ void checkBindFlags(const Expression& expr, const BindContext& context) {
     if ((context.flags & BindFlags::Constant) == 0)
         return;
 
-    auto reportDiags = [&](EvalContext& evctx) {
-        const Diagnostics& diags = evctx.getDiagnostics();
-        if (!diags.empty()) {
-            Diagnostic& diag = context.addDiag(DiagCode::ExpressionNotConstant, expr.sourceRange);
-            for (const Diagnostic& note : diags)
-                diag.addNote(note);
-        }
-    };
-
     EvalContext verifyContext(EvalFlags::IsVerifying);
     bool canBeConst = expr.verifyConstant(verifyContext);
-    reportDiags(verifyContext);
+    verifyContext.reportDiags(context, expr.sourceRange);
     if (!canBeConst)
         return;
 
     EvalContext evalContext;
     expr.eval(evalContext);
-    reportDiags(evalContext);
+    evalContext.reportDiags(context, expr.sourceRange);
 }
 
 bool recurseCheckEnum(const Expression& expr) {

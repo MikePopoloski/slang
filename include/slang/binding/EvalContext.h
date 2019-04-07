@@ -16,6 +16,7 @@
 
 namespace slang {
 
+class BindContext;
 class SubroutineSymbol;
 
 enum class EvalFlags : uint8_t {
@@ -79,9 +80,12 @@ public:
     /// Gets the set of diagnostics that have been produced during constant evaluation.
     const Diagnostics& getDiagnostics() const { return diags; }
 
-    /// Reports a diagnostic under the current evaluation context.
+    /// Records a diagnostic under the current evaluation context.
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
     Diagnostic& addDiag(DiagCode code, SourceRange range);
+
+	/// Issues all recorded diagnostics to the given binding context.
+	void reportDiags(const BindContext& context, SourceRange range) const;
 
 private:
     void reportStack();

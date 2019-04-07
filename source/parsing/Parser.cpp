@@ -781,7 +781,7 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(span<AttributeInstanceSyn
     auto semi1 = expect(TokenKind::Semicolon);
     auto& stopExpr = parseExpression();
     auto semi2 = expect(TokenKind::Semicolon);
-    auto& iterationExpr = parseExpression();
+    ExpressionSyntax* iterationExpr = &parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
     // Make sure that the iteration statement is one of the few allowed by the standard:
@@ -790,7 +790,7 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(span<AttributeInstanceSyn
     // |    genvar_identifier inc_or_dec_operator
 
     ExpressionSyntax* iterVarCheck = nullptr;
-    switch (iterationExpr.kind) {
+    switch (iterationExpr->kind) {
         case SyntaxKind::AssignmentExpression:
         case SyntaxKind::AddAssignmentExpression:
         case SyntaxKind::SubtractAssignmentExpression:
@@ -804,31 +804,37 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(span<AttributeInstanceSyn
         case SyntaxKind::LogicalRightShiftAssignmentExpression:
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
-            iterVarCheck = iterationExpr.as<BinaryExpressionSyntax>().left;
+            iterVarCheck = iterationExpr->as<BinaryExpressionSyntax>().left;
             break;
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
-            iterVarCheck = iterationExpr.as<PrefixUnaryExpressionSyntax>().operand;
+            iterVarCheck = iterationExpr->as<PrefixUnaryExpressionSyntax>().operand;
             break;
         case SyntaxKind::PostincrementExpression:
         case SyntaxKind::PostdecrementExpression:
-            iterVarCheck = iterationExpr.as<PostfixUnaryExpressionSyntax>().operand;
+            iterVarCheck = iterationExpr->as<PostfixUnaryExpressionSyntax>().operand;
             break;
         default:
-            addDiag(DiagCode::InvalidGenvarIterExpression, iterationExpr.getFirstToken().location())
-                << iterationExpr.sourceRange();
-            iterationExpr = factory.badExpression(iterationExpr);
+            addDiag(DiagCode::InvalidGenvarIterExpression,
+                    iterationExpr->getFirstToken().location())
+                << iterationExpr->sourceRange();
+            iterationExpr = &factory.badExpression(*iterationExpr);
             break;
     }
 
-    if (iterVarCheck && iterVarCheck->kind != SyntaxKind::IdentifierName) {
+	// Make sure the iteration expression only mentions the genvar on the lhs.
+    if (iterVarCheck && !identifier.isMissing() &&
+        (iterVarCheck->kind != SyntaxKind::IdentifierName ||
+         iterVarCheck->as<IdentifierNameSyntax>().identifier.valueText() !=
+             identifier.valueText())) {
+
         addDiag(DiagCode::ExpectedGenvarIterVar, iterVarCheck->getFirstToken().location())
             << iterVarCheck->sourceRange();
-        iterationExpr = factory.badExpression(iterationExpr);
+        iterationExpr = &factory.badExpression(*iterationExpr);
     }
 
     return factory.loopGenerate(attributes, keyword, openParen, genvar, identifier, equals,
-                                initialExpr, semi1, stopExpr, semi2, iterationExpr, closeParen,
+                                initialExpr, semi1, stopExpr, semi2, *iterationExpr, closeParen,
                                 parseGenerateBlock());
 }
 
