@@ -861,6 +861,7 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(span<AttributeInstanceSyn
     auto& condition = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
+    // TODO: error on duplicate defaults, empty items
     SmallVectorSized<CaseItemSyntax*, 8> itemBuffer;
     while (true) {
         auto kind = peek().kind;

@@ -94,6 +94,7 @@ public:
 
     bool isTrue() const;
     bool isFalse() const;
+    bool equivalentTo(const ConstantValue& rhs) const;
 
     static const ConstantValue Invalid;
 

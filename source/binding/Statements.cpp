@@ -653,33 +653,7 @@ static bool checkMatch(CaseStatement::Condition condition, const ConstantValue& 
             return caseXWildcardEqual(l, r);
     }
 
-    // We only need to check the type of the lhs; it's guaranteed
-    // that the type of the rhs will match.
-    if (cvl.isInteger()) {
-        const SVInt& l = cvl.integer();
-        const SVInt& r = cvr.integer();
-        return exactlyEqual(l, r);
-    }
-
-    if (cvl.isReal()) {
-        double l = cvl.real();
-        double r = cvr.real();
-        return l == r;
-    }
-
-    if (cvl.isShortReal()) {
-        float l = cvl.shortReal();
-        float r = cvr.shortReal();
-        return l == r;
-    }
-
-    if (cvl.isString()) {
-        auto& l = cvl.str();
-        auto& r = cvr.str();
-        return l == r;
-    }
-
-    THROW_UNREACHABLE;
+    return cvl.equivalentTo(cvr);
 }
 
 ER CaseStatement::evalImpl(EvalContext& context) const {

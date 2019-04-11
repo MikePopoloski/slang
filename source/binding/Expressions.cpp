@@ -370,6 +370,7 @@ bool Expression::bindCaseExpressions(const BindContext& context, TokenKind caseK
         else
             selfDetermined(comp, expr);
 
+        checkBindFlags(*expr, context);
         results[index++] = expr;
     }
 
