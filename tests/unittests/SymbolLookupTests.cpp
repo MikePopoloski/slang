@@ -490,6 +490,45 @@ endmodule
     CHECK(it == diags.end());
 }
 
+TEST_CASE("Generate array indexing") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    for (genvar i = 1; i < 10; i *= 2) begin : array
+        logic foo;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto foo = compilation.getRoot().lookupName("m.array[8].foo");
+    REQUIRE(foo);
+    CHECK(foo->kind == SymbolKind::Variable);
+    CHECK(foo->as<VariableSymbol>().getType().isMatching(compilation.getLogicType()));
+}
+
+TEST_CASE("Generate array indexing errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    for (genvar i = 1; i < 10; i *= 2) begin : array
+        logic foo;
+    end
+
+    always_comb array[7].foo = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::ScopeIndexOutOfRange);
+    CHECK(it == diags.end());
+}
+
 TEST_CASE("Compilation scope vs instantiation scope") {
     auto file1 = SyntaxTree::fromText(R"(
 parameter int foo = 42;

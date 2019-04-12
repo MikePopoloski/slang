@@ -935,8 +935,26 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
                 symbol = array.elements[array.range.translateIndex(*index)];
                 break;
             }
-            case SymbolKind::GenerateBlockArray:
-                // TODO: handle this
+            case SymbolKind::GenerateBlockArray: {
+                bool found = false;
+                auto& array = symbol->as<GenerateBlockArraySymbol>();
+                for (auto& entry : array.entries) {
+                    if (entry.index == *index) {
+                        found = true;
+                        symbol = &entry.block;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    auto& diag = result.addDiag(context.scope, DiagCode::ScopeIndexOutOfRange,
+                                                syntax->sourceRange());
+                    diag << *index;
+                    diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+                    return nullptr;
+                }
+                break;
+            }
             default: {
                 // I think it's safe to assume that the symbol name here will not be empty
                 // because if it was, it'd be an instance array or generate array.

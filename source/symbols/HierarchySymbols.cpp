@@ -748,6 +748,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         }
     }
 
+    SmallVectorSized<ArrayEntry, 8> entries;
     auto createBlock = [&](ConstantValue value, bool isInstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
@@ -762,6 +763,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
         implicitParam->setType(compilation.getIntegerType());
         implicitParam->setValue(std::move(value));
+
+        entries.append({ implicitParam->getValue().integer(), *block });
     };
 
     // Bind the initialization expression.
@@ -822,8 +825,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
             break;
         }
 
-        createBlock(*loopVal, true);
         any = true;
+        createBlock(*loopVal, true);
 
         if (!iterExpr.eval(evalContext))
             break;
@@ -834,6 +837,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
     evalContext.reportDiags(iterContext, syntax.sourceRange());
 
+    result->entries = entries.copy(compilation);
     if (!any)
         createBlock(SVInt(32, 0, true), false);
 
