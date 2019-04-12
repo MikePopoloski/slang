@@ -156,6 +156,8 @@ error InterfacePortNotConnected "interface port '{}' not connected"
 error InterfacePortInvalidExpression "invalid expression for interface port '{}'"
 error MismatchedTimeScales "duplicate time scale declaration must match previous value"
 error TimeScaleFirstInScope "time scale declaration must come before all other items in scope"
+error CaseGenerateEmpty "case generate has no items"
+error MultipleGenerateDefaultCases "case generate has multiple default cases"
 warning case-gen-dup CaseGenerateDup "more than one case generate block matches the value {}"
 warning case-gen-none CaseGenerateNoBlock "no case generate expression matches the value {}"
 

@@ -186,6 +186,23 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Module children (case generate)") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top #(parameter int val = 10)();
+    case (val)
+        2,3: begin : u1 end
+        10: u2: begin end
+    endcase
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    compilation.getRoot().lookupName<GenerateBlockSymbol>("Top.u2");
+}
+
 TEST_CASE("Interface instantiation") {
     auto tree = SyntaxTree::fromText(R"(
 interface I2CBus(
@@ -568,12 +585,9 @@ endmodule
     checkPort("test", "m", PortDirection::In, nullptr, "logic[2:0]");
     checkPort("test", "n", PortDirection::In, nullptr, "logic$[0:2]");
     checkPort("test", "o", PortDirection::In, nullptr, "logic[2:0]$[0:2]");
-    checkPort("test", "p", PortDirection::In, nullptr,
-              "logic[2:0][3:1]$[1:2][2:0][0:4]");
-    checkPort("test", "q", PortDirection::In, nullptr,
-              "logic signed[2:0][3:1]$[1:2][2:0][0:4]");
-    checkPort("test", "r", PortDirection::In, nullptr,
-              "logic signed[2:0][3:2]$[1:2][2:0][0:4]");
+    checkPort("test", "p", PortDirection::In, nullptr, "logic[2:0][3:1]$[1:2][2:0][0:4]");
+    checkPort("test", "q", PortDirection::In, nullptr, "logic signed[2:0][3:1]$[1:2][2:0][0:4]");
+    checkPort("test", "r", PortDirection::In, nullptr, "logic signed[2:0][3:2]$[1:2][2:0][0:4]");
 
     auto& diags = compilation.getAllDiagnostics();
 
@@ -807,4 +821,70 @@ endmodule
     CHECK((it++)->code == DiagCode::GenvarDuplicate);
     CHECK((it++)->code == DiagCode::ExpressionNotConstant);
     CHECK(it == diags.end());
+}
+
+TEST_CASE("Case generate corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    int i;
+    case (i) endcase
+    case (j) 0: begin end endcase
+
+    case (1)
+        1: begin end
+        1: begin end
+    endcase
+
+    case (1)
+        0: begin end
+    endcase
+
+    case (1)
+        default: begin end
+        default: begin end
+    endcase
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::CaseGenerateEmpty);
+    CHECK((it++)->code == DiagCode::ExpressionNotConstant);
+    CHECK((it++)->code == DiagCode::UndeclaredIdentifier);
+    CHECK((it++)->code == DiagCode::CaseGenerateDup);
+    CHECK((it++)->code == DiagCode::CaseGenerateNoBlock);
+    CHECK((it++)->code == DiagCode::MultipleGenerateDefaultCases);
+    CHECK(it == diags.end());
+}
+
+TEST_CASE("Conditional generate same name") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    localparam p = 2, q = 1;
+
+    if (p == 1)
+        if (q == 0) begin : u1 localparam int foo = 1; end
+        else if (q == 2) begin : u1 localparam int foo = 2; end
+        else ;
+    else if (p == 2)
+        case (q)
+            0, 1, 2: begin : u1 localparam int foo = 3; end
+            default: begin : u1 localparam int foo = 4; end
+        endcase
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& foo = compilation.getRoot().lookupName<ParameterSymbol>("m.u1.foo");
+    CHECK(foo.getValue().integer() == 3);
 }

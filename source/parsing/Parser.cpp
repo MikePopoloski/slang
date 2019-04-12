@@ -861,11 +861,21 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(span<AttributeInstanceSyn
     auto& condition = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    // TODO: error on duplicate defaults, empty items
     SmallVectorSized<CaseItemSyntax*, 8> itemBuffer;
+    SourceLocation lastDefault;
+    bool errored = false;
+
     while (true) {
         auto kind = peek().kind;
         if (kind == TokenKind::DefaultKeyword) {
+            if (lastDefault && !errored) {
+                auto& diag = addDiag(DiagCode::MultipleGenerateDefaultCases, peek().location());
+                diag.addNote(DiagCode::NotePreviousDefinition, lastDefault);
+                errored = true;
+            }
+
+            lastDefault = peek().location();
+
             auto def = consume();
             auto colon = consumeIf(TokenKind::Colon);
             itemBuffer.append(&factory.defaultCaseItem(def, colon, parseGenerateBlock()));
@@ -883,6 +893,9 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(span<AttributeInstanceSyn
             break;
         }
     }
+
+    if (itemBuffer.empty())
+        addDiag(DiagCode::CaseGenerateEmpty, keyword.location());
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
     return factory.caseGenerate(attributes, keyword, openParen, condition, closeParen,
