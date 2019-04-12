@@ -580,8 +580,10 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
             GenerateBlockSymbol::fromSyntax(compilation, syntax.as<IfGenerateSyntax>(), location,
                                             parent, constructIndex, isInstantiated, results);
             return;
-
-        case SyntaxKind::CaseGenerate: // TODO:
+        case SyntaxKind::CaseGenerate:
+            GenerateBlockSymbol::fromSyntax(compilation, syntax.as<CaseGenerateSyntax>(), location,
+                                            parent, constructIndex, isInstantiated, results);
+            return;
         default:
             break;
     }
@@ -616,6 +618,98 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateS
         createCondGenBlock(compilation, *syntax.elseClause->clause, location, parent,
                            constructIndex, selector.has_value() && !selector.value(),
                            syntax.attributes, results);
+    }
+}
+
+void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerateSyntax& syntax,
+                                     LookupLocation location, const Scope& parent,
+                                     uint32_t constructIndex, bool isInstantiated,
+                                     SmallVector<GenerateBlockSymbol*>& results) {
+
+    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
+    const SyntaxNode* defBlock = nullptr;
+    for (auto item : syntax.items) {
+        switch (item->kind) {
+            case SyntaxKind::StandardCaseItem: {
+                auto& sci = item->as<StandardCaseItemSyntax>();
+                for (auto es : sci.expressions)
+                    expressions.append(es);
+                break;
+            }
+            case SyntaxKind::DefaultCaseItem:
+                // The parser already errored for duplicate defaults,
+                // so just ignore if it happens here.
+                defBlock = item->as<DefaultCaseItemSyntax>().clause;
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    BindContext bindContext(parent, location, BindFlags::Constant);
+    SmallVectorSized<const Expression*, 8> bound;
+    if (!Expression::bindCaseExpressions(bindContext, TokenKind::CaseKeyword, *syntax.condition,
+                                         expressions, bound)) {
+        return;
+    }
+
+    auto boundIt = bound.begin();
+    auto condExpr = *boundIt++;
+    if (!condExpr->constant)
+        return;
+
+    SourceRange matchRange;
+    bool found = false;
+    bool warned = false;
+
+    for (auto item : syntax.items) {
+        if (item->kind != SyntaxKind::StandardCaseItem)
+            continue;
+
+        // Check each case expression to see if it matches the condition value.
+        bool currentFound = false;
+        SourceRange currentMatchRange;
+        auto& sci = item->as<StandardCaseItemSyntax>();
+        for (ptrdiff_t i = 0; i < sci.expressions.size(); i++) {
+            // Have to keep incrementing the iterator here so that we stay in sync.
+            auto expr = *boundIt++;
+            auto val = expr->constant;
+            if (!currentFound && val && val->equivalentTo(*condExpr->constant)) {
+                currentFound = true;
+                currentMatchRange = expr->sourceRange;
+            }
+        }
+
+        if (currentFound && !found) {
+            // This is the first match for this entire case generate.
+            found = true;
+            matchRange = currentMatchRange;
+            createCondGenBlock(compilation, *sci.clause, location, parent, constructIndex,
+                               isInstantiated, syntax.attributes, results);
+        }
+        else {
+            // If we previously found a block, this block also matched, which we should warn about.
+            if (currentFound && !warned) {
+                auto& diag = parent.addDiag(DiagCode::CaseGenerateDup, currentMatchRange);
+                diag << *condExpr->constant;
+                diag.addNote(DiagCode::NotePreviousMatch, matchRange.start());
+                warned = true;
+            }
+
+            // This block is not taken, so create it as uninstantiated.
+            createCondGenBlock(compilation, *sci.clause, location, parent, constructIndex, false,
+                               syntax.attributes, results);
+        }
+    }
+
+    if (defBlock) {
+        // Only instantiated if no other blocks were instantiated.
+        createCondGenBlock(compilation, *defBlock, location, parent, constructIndex,
+                           isInstantiated && !found, syntax.attributes, results);
+    }
+    else if (!found) {
+        auto& diag = parent.addDiag(DiagCode::CaseGenerateNoBlock, condExpr->sourceRange);
+        diag << *condExpr->constant;
     }
 }
 

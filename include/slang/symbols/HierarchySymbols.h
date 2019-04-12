@@ -233,6 +233,10 @@ public:
                            LookupLocation location, const Scope& parent, uint32_t constructIndex,
                            bool isInstantiated, SmallVector<GenerateBlockSymbol*>& results);
 
+    static void fromSyntax(Compilation& compilation, const CaseGenerateSyntax& syntax,
+                           LookupLocation location, const Scope& parent, uint32_t constructIndex,
+                           bool isInstantiated, SmallVector<GenerateBlockSymbol*>& results);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenerateBlock; }
 };
 

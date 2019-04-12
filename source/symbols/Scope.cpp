@@ -210,6 +210,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::AnsiPortList:
         case SyntaxKind::NonAnsiPortList:
         case SyntaxKind::IfGenerate:
+        case SyntaxKind::CaseGenerate:
         case SyntaxKind::LoopGenerate: {
             auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
             addMember(*sym);
@@ -657,6 +658,18 @@ void Scope::elaborate() const {
             case SyntaxKind::IfGenerate: {
                 SmallVectorSized<GenerateBlockSymbol*, 8> blocks;
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
+                                                location, *this, constructIndex, true, blocks);
+
+                const Symbol* last = symbol;
+                for (auto block : blocks) {
+                    insertMember(block, last, true);
+                    last = block;
+                }
+                break;
+            }
+            case SyntaxKind::CaseGenerate: {
+                SmallVectorSized<GenerateBlockSymbol*, 8> blocks;
+                GenerateBlockSymbol::fromSyntax(compilation, member.node.as<CaseGenerateSyntax>(),
                                                 location, *this, constructIndex, true, blocks);
 
                 const Symbol* last = symbol;
