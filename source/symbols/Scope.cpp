@@ -468,8 +468,6 @@ void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborat
 
 void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
                                bool isElaborating) const {
-    // TODO: handle special generate block name conflict rules
-
     // We have a name collision; first check if this is ok (forwarding typedefs share a
     // name with the actual typedef) and if not give the user a helpful error message.
     if (existing->kind == SymbolKind::TypeAlias && member.kind == SymbolKind::ForwardingTypedef) {
@@ -501,6 +499,19 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
         // Duplicate explicit imports are specifically allowed, so just ignore the other
         // one.
         return;
+    }
+
+    if (existing->kind == SymbolKind::GenerateBlock && member.kind == SymbolKind::GenerateBlock) {
+        // If both are generate blocks and both are from the same generate construct, it's ok
+        // for them to have the same name. We take the one that is instantiated.
+        auto& gen1 = existing->as<GenerateBlockSymbol>();
+        auto& gen2 = member.as<GenerateBlockSymbol>();
+        if (gen1.constructIndex == gen2.constructIndex) {
+            ASSERT(!(gen1.isInstantiated && gen2.isInstantiated));
+            if (gen2.isInstantiated)
+                existing = &member;
+            return;
+        }
     }
 
     if (!isElaborating && existing->isValue() && member.isValue()) {
