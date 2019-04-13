@@ -29,7 +29,6 @@ public:
                std::shared_ptr<SyntaxTree> parent = nullptr);
 
     SyntaxTree(SyntaxTree&& other) = default;
-    SyntaxTree& operator=(SyntaxTree&&) = default;
 
     /// Creates a syntax tree from a full compilation unit.
     static std::shared_ptr<SyntaxTree> fromFile(string_view path);

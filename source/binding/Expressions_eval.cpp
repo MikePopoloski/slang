@@ -941,7 +941,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     context.pushFrame(symbol, sourceRange.start(), lookupLocation);
     span<const FormalArgumentSymbol* const> formals = symbol.arguments;
     for (ptrdiff_t i = 0; i < formals.size(); i++)
-        context.createLocal(formals[i], args[i]);
+        context.createLocal(formals[i], args[size_t(i)]);
 
     context.createLocal(symbol.returnValVar);
 
