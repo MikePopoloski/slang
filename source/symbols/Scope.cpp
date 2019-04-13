@@ -939,9 +939,9 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
                 bool found = false;
                 auto& array = symbol->as<GenerateBlockArraySymbol>();
                 for (auto& entry : array.entries) {
-                    if (entry.index == *index) {
+                    if (*entry.index == *index) {
                         found = true;
-                        symbol = &entry.block;
+                        symbol = entry.block;
                         break;
                     }
                 }

@@ -244,8 +244,8 @@ public:
 class GenerateBlockArraySymbol : public Symbol, public Scope {
 public:
     struct ArrayEntry {
-        const SVInt& index;
-        const GenerateBlockSymbol& block;
+        not_null<const SVInt*> index;
+        not_null<const GenerateBlockSymbol*> block;
     };
 
     span<const ArrayEntry> entries;

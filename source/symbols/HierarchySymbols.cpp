@@ -764,7 +764,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         implicitParam->setType(compilation.getIntegerType());
         implicitParam->setValue(std::move(value));
 
-        entries.append({ implicitParam->getValue().integer(), *block });
+        entries.append({ &implicitParam->getValue().integer(), block });
     };
 
     // Bind the initialization expression.
