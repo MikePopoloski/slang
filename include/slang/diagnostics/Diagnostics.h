@@ -79,7 +79,6 @@ public:
     Diagnostics() = default;
 
     Diagnostics(Diagnostics&& other) noexcept : SmallVectorSized<Diagnostic, 8>(std::move(other)) {}
-    Diagnostics& operator=(Diagnostics&& other) = default;
 
     /// Adds a new diagnostic to the collection, pointing to the given source location.
     Diagnostic& add(DiagCode code, SourceLocation location);

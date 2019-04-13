@@ -103,7 +103,7 @@ bool ConstantValue::isFalse() const {
 
 bool ConstantValue::equivalentTo(const ConstantValue& rhs) const {
     return std::visit(
-        [&](auto&& arg) noexcept {
+        [&](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Elements>) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return false;
@@ -124,7 +124,7 @@ bool ConstantValue::equivalentTo(const ConstantValue& rhs) const {
                     return false;
 
                 for (size_t i = 0; i < arg.size(); i++) {
-                    if (!arg[i].equivalentTo(rhsElements[i]))
+                    if (!arg[i].equivalentTo(rhsElements[ptrdiff_t(i)]))
                         return false;
                 }
 
@@ -202,7 +202,8 @@ ConstantValue LValue::load() const {
 
 void LValue::store(const ConstantValue& newValue) {
     std::visit(
-        [&newValue](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>) {
+        [&newValue](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat> &&
+                                         !std::is_same_v<std::decay_t<decltype(arg)>, CVRange>) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return;

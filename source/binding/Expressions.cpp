@@ -1909,7 +1909,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         }
 
         // TODO: handle named arguments in addition to ordered
-        for (uint32_t i = 0; i < actualArgs.size(); i++) {
+        for (ptrdiff_t i = 0; i < actualArgs.size(); i++) {
             const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
             argBuffer.append(&Expression::bind(formalArgs[i]->getType(), *arg.expr,
                                                arg.getFirstToken().location(), context));
@@ -1960,7 +1960,7 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
 
     if (syntax && syntax->arguments) {
         auto actualArgs = syntax->arguments->parameters;
-        for (uint32_t i = 0; i < actualArgs.size(); i++) {
+        for (ptrdiff_t i = 0; i < actualArgs.size(); i++) {
             // TODO: error if not ordered arguments
             const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
             BindFlags extra = BindFlags::None;

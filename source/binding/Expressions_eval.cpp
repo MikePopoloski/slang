@@ -940,7 +940,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     context.pushFrame(symbol, sourceRange.start(), lookupLocation);
     span<const FormalArgumentSymbol* const> formals = symbol.arguments;
-    for (uint32_t i = 0; i < formals.size(); i++)
+    for (ptrdiff_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
 
     context.createLocal(symbol.returnValVar);
