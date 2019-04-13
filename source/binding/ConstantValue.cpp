@@ -179,24 +179,20 @@ std::ostream& operator<<(std::ostream& os, const ConstantRange& cr) {
 }
 
 ConstantValue LValue::load() const {
-    return std::visit([](auto&& arg)
-    // This ifdef is here until MS fixes a compiler regression
-#ifndef _MSVC_LANG
-                          noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>)
-#endif
-                              ->ConstantValue {
-                                  using T = std::decay_t<decltype(arg)>;
-                                  if constexpr (std::is_same_v<T, std::monostate>)
-                                      return ConstantValue();
-                                  else if constexpr (std::is_same_v<T, ConstantValue*>)
-                                      return *arg;
-                                  else if constexpr (std::is_same_v<T, CVRange>)
-                                      return arg.cv->getSlice(arg.range.upper(), arg.range.lower());
-                                  else if constexpr (std::is_same_v<T, Concat>)
-                                      THROW_UNREACHABLE; // TODO: handle this case
-                                  else
-                                      static_assert(always_false<T>::value, "Missing case");
-                              },
+    return std::visit([](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>)
+                          ->ConstantValue {
+                              using T = std::decay_t<decltype(arg)>;
+                              if constexpr (std::is_same_v<T, std::monostate>)
+                                  return ConstantValue();
+                              else if constexpr (std::is_same_v<T, ConstantValue*>)
+                                  return *arg;
+                              else if constexpr (std::is_same_v<T, CVRange>)
+                                  return arg.cv->getSlice(arg.range.upper(), arg.range.lower());
+                              else if constexpr (std::is_same_v<T, Concat>)
+                                  THROW_UNREACHABLE; // TODO: handle this case
+                              else
+                                  static_assert(always_false<T>::value, "Missing case");
+                          },
                       value);
 }
 
