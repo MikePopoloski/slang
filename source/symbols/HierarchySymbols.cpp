@@ -759,6 +759,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
         block->addMember(*implicitParam);
         block->addMembers(*syntax.block);
+        block->setSyntax(*syntax.block);
         result->addMember(*block);
 
         implicitParam->setType(compilation.getIntegerType());
