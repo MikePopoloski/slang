@@ -270,7 +270,7 @@ SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t cons
     };
 
     uint32_t i;
-    for (i = charsPerWord; i < digits.size(); i += charsPerWord) {
+    for (i = charsPerWord; i < (uint32_t)digits.size(); i += charsPerWord) {
         word = nextDigit();
         for (uint32_t j = charsPerWord - 1; j != 0; j--)
             word = word * 10 + nextDigit();

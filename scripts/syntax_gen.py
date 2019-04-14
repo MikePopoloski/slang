@@ -6,13 +6,14 @@ import os
 
 class TypeInfo:
     def __init__(self, processedMembers, members, pointerMembers, optionalMembers,
-                 final, constructorArgs, base, combinedMembers, notNullMembers):
+                 final, constructorArgs, argNames, base, combinedMembers, notNullMembers):
         self.processedMembers = processedMembers
         self.members = members
         self.pointerMembers = pointerMembers
         self.optionalMembers = optionalMembers
         self.final = final
         self.constructorArgs = constructorArgs
+        self.argNames = argNames
         self.base = base
         self.combinedMembers = combinedMembers
         self.notNullMembers = notNullMembers
@@ -75,7 +76,7 @@ namespace slang {
     alltypes = {}
     kindmap = {}
 
-    alltypes['SyntaxNode'] = TypeInfo(None, None, None, None, '', None, None, [], None)
+    alltypes['SyntaxNode'] = TypeInfo(None, None, None, None, '', None, None, None, [], None)
 
     for line in [x.strip('\n') for x in inf]:
         if line.startswith('//'):
@@ -231,7 +232,7 @@ namespace slang {
         methodName = methodName[:1].lower() + methodName[1:]
         outf.write('    {}& {}({});\n'.format(k, methodName, v.constructorArgs))
 
-        argNames = ' '.join(v.constructorArgs.split(' ')[1::2])
+        argNames = ', '.join(v.argNames)
         cppf.write('{}& SyntaxFactory::{}({}) {{\n'.format(k, methodName, v.constructorArgs))
         cppf.write('    return *alloc.emplace<{}>({});\n'.format(k, argNames))
         cppf.write('}\n\n')
@@ -407,14 +408,19 @@ def generate(outf, name, tags, members, alltypes, kindmap):
         else:
             outf.write('    {} {};\n'.format(membertype, m[1]))
 
-    kindArg = 'SyntaxKind kind' if 'kind' not in tagdict else ''
-    kindValue = 'kind' if 'kind' not in tagdict else 'SyntaxKind::' + tagdict['kind']
+    kindArg = 'SyntaxKind kind'
+    kindValue = 'kind'
+    argNames = []
 
     if 'kind' in tagdict:
         k = tagdict['kind']
         if k in kindmap:
             raise Exception("More than one kind map for {}".format(k))
         kindmap[k] = name
+        kindArg = ''
+        kindValue = 'SyntaxKind::' + k
+    else:
+        argNames.append('kind')
 
     if kindArg and processed_members:
         kindArg += ', '
@@ -427,9 +433,19 @@ def generate(outf, name, tags, members, alltypes, kindmap):
     if 'final' in tagdict and tagdict['final'] == 'false':
         final = ''
 
-    constructorArgs = '{}{}'.format(kindArg, ', '.join(processed_members))
+    argMembers = []
+    for m in processed_members:
+        space = m.index(' ')
+        argNames.append(m[space + 1:])
+
+        if m.startswith('SyntaxList<') or m.startswith('SeparatedSyntaxList<'):
+            argMembers.append('const {}&{}'.format(m[:space], m[space:]))
+        else:
+            argMembers.append(m)
+
+    constructorArgs = '{}{}'.format(kindArg, ', '.join(argMembers))
     alltypes[name] = TypeInfo(processed_members, members, pointerMembers, optionalMembers,
-                              final, constructorArgs, base, combined, notNullMembers)
+                              final, constructorArgs, argNames, base, combined, notNullMembers)
 
     outf.write('\n')
     outf.write('    {}({}) :\n'.format(name, constructorArgs))

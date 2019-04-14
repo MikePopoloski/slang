@@ -753,7 +753,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         auto block =
-            compilation.emplace<GenerateBlockSymbol>(compilation, "", loc, 1, isInstantiated);
+            compilation.emplace<GenerateBlockSymbol>(compilation, "", loc, 1u, isInstantiated);
         auto implicitParam = compilation.emplace<ParameterSymbol>(
             genvar.valueText(), genvar.location(), true /* isLocal */, false /* isPort */);
 

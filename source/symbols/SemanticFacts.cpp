@@ -6,9 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/SemanticFacts.h"
 
-namespace slang {
-
-namespace SemanticFacts {
+namespace slang::SemanticFacts {
 
 // clang-format off
 std::optional<VariableLifetime> getVariableLifetime(Token token) {
@@ -62,6 +60,4 @@ EdgeKind getEdgeKind(TokenKind kind) {
 
 // clang-format on
 
-} // namespace SemanticFacts
-
-} // namespace slang
+} // namespace slang::SemanticFacts

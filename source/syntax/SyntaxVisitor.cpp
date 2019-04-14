@@ -103,9 +103,7 @@ struct CloneVisitor {
 
 } // namespace
 
-namespace slang {
-
-namespace detail {
+namespace slang::detail {
 
 std::shared_ptr<SyntaxTree> transformTree(
     const std::shared_ptr<SyntaxTree>& tree, const ChangeMap& changes,
@@ -124,6 +122,4 @@ std::shared_ptr<SyntaxTree> transformTree(
     return std::make_shared<SyntaxTree>(root, tree->sourceManager(), std::move(alloc), tree);
 }
 
-} // namespace detail
-
-} // namespace slang
+} // namespace slang::detail

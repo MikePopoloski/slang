@@ -370,7 +370,7 @@ void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc, span<const Sour
         std::string highlight(std::max(line.length(), (size_t)col), ' ');
 
         // handle tabs to get proper alignment on a terminal
-        for (uint32_t i = 0; i < line.length(); ++i) {
+        for (size_t i = 0; i < line.length(); ++i) {
             if (line[i] == '\t')
                 highlight[i] = '\t';
         }
