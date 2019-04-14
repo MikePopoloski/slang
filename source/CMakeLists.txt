@@ -140,8 +140,6 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 	)
 endif()
 
-add_dependencies(slang gen_version)
-
 target_link_libraries(slang PUBLIC CONAN_PKG::jsonformoderncpp)
 target_link_libraries(slang PUBLIC CONAN_PKG::fmt)
 

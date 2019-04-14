@@ -82,7 +82,7 @@ steps:
     mkdir build
     cd build
     cmake -G "Xcode" ..
-    xcodebuild
+    cmake --build .
   displayName: 'Build (MacOS)'
   condition: eq(variables['Agent.OS'], 'Darwin')
 
