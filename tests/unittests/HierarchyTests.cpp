@@ -682,6 +682,8 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
 
     auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
+    CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
     CHECK((it++)->code == DiagCode::MixingOrderedAndNamedPorts);
     CHECK((it++)->code == DiagCode::DuplicateWildcardPortConnection);
     CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
@@ -707,7 +709,7 @@ endmodule
 module test;
 
     I #(17) i();
-    M m(i);
+    M m(i, 1);
 
 endmodule
 )");
@@ -740,7 +742,7 @@ endmodule
 module test;
 
     I #(17) i();
-    M m(i);
+    M m(i, 1);
 
 endmodule
 )");

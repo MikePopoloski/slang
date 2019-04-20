@@ -160,6 +160,8 @@ error CaseGenerateEmpty "case generate has no items"
 error MultipleGenerateDefaultCases "case generate has multiple default cases"
 warning case-gen-dup CaseGenerateDup "more than one case generate block matches the value {}"
 warning case-gen-none CaseGenerateNoBlock "no case generate expression matches the value {}"
+warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"
+warning unconnected-unnamed-port UnconnectedUnnamedPort "instance does not provide a connection for an unnamed port"
 
 // expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -265,6 +267,5 @@ warning real-underflow RealLiteralUnderflow "value of real literal is too small;
 warning real-overflow RealLiteralOverflow "value of real literal is too large; maximum is {}"
 warning literal-overflow VectorLiteralOverflow "vector literal too large for the given number of bits"
 warning ignored-macro-paste IgnoredMacroPaste "paste token is pointless because it is adjacent to whitespace"
-warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
 warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed because `default_nettype is set to 'none'"

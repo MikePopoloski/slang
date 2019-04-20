@@ -487,8 +487,16 @@ public:
                 orderedIndex++;
                 if (port.defaultValue)
                     port.setExternalConnection(port.defaultValue);
+                else if (port.name.empty()) {
+                    if (!warnedAboutUnnamed) {
+                        auto& diag =
+                            scope.addDiag(DiagCode::UnconnectedUnnamedPort, instance.location);
+                        diag.addNote(DiagCode::NoteDeclarationHere, port.location);
+                        warnedAboutUnnamed = true;
+                    }
+                }
                 else {
-                    // TODO: warning about unconnected port
+                    scope.addDiag(DiagCode::UnconnectedNamedPort, instance.location) << port.name;
                 }
 
                 return;
@@ -504,8 +512,12 @@ public:
         }
 
         if (port.name.empty()) {
-            // TODO: warning about unconnected?
             // port is unnamed so can never be connected by name
+            if (!warnedAboutUnnamed) {
+                auto& diag = scope.addDiag(DiagCode::UnconnectedUnnamedPort, instance.location);
+                diag.addNote(DiagCode::NoteDeclarationHere, port.location);
+                warnedAboutUnnamed = true;
+            }
             return;
         }
 
@@ -710,6 +722,7 @@ private:
     size_t orderedIndex = 0;
     bool usingOrdered = true;
     bool hasWildcard = false;
+    bool warnedAboutUnnamed = false;
 };
 
 } // end anonymous namespace
