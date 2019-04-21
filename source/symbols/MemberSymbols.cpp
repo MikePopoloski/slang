@@ -169,27 +169,31 @@ void ParameterSymbol::toJson(json& j) const {
     j["isBody"] = isBodyParam();
 }
 
-const Expression* PortSymbol::getExternalConnection() const {
-    if (!externalConn) {
-        if (!externalSyntax)
-            externalConn = nullptr;
+PortSymbol::PortSymbol(string_view name, SourceLocation loc, bitmask<DeclaredTypeFlags> flags) :
+    ValueSymbol(SymbolKind::Port, name, loc, flags) {
+}
+
+const Expression* PortSymbol::getConnection() const {
+    if (!conn) {
+        if (!connSyntax)
+            conn = nullptr;
         else {
             BindContext context(*getScope(), LookupLocation::before(*this));
-            externalConn = &Expression::bind(getType(), *externalSyntax,
-                                             externalSyntax->getFirstToken().location(), context);
+            conn = &Expression::bind(getType(), *connSyntax, connSyntax->getFirstToken().location(),
+                                     context);
         }
     }
-    return *externalConn;
+    return *conn;
 }
 
-void PortSymbol::setExternalConnection(const Expression* expr) {
-    externalConn = expr;
-    externalSyntax = nullptr;
+void PortSymbol::setConnection(const Expression* expr) {
+    conn = expr;
+    connSyntax = nullptr;
 }
 
-void PortSymbol::setExternalConnection(const ExpressionSyntax& syntax) {
-    externalConn = nullptr;
-    externalSyntax = &syntax;
+void PortSymbol::setConnection(const ExpressionSyntax& syntax) {
+    conn = nullptr;
+    connSyntax = &syntax;
 }
 
 void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
@@ -204,7 +208,7 @@ void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
                         results.append(builder.createPort(port->as<ImplicitAnsiPortSyntax>()));
                         break;
                     case SyntaxKind::ExplicitAnsiPort:
-                        scope.addDiag(DiagCode::NotYetSupported, port->sourceRange());
+                        results.append(builder.createPort(port->as<ExplicitAnsiPortSyntax>()));
                         break;
                     default:
                         THROW_UNREACHABLE;
@@ -233,6 +237,9 @@ void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
             }
             break;
         }
+        case SyntaxKind::WildcardPortList:
+            scope.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            break;
         default:
             THROW_UNREACHABLE;
     }
@@ -263,10 +270,7 @@ void PortSymbol::toJson(json& j) const {
     if (defaultValue)
         j["default"] = *defaultValue;
 
-    if (internalConnection)
-        j["internalConnection"] = *internalConnection;
-
-    if (auto ext = getExternalConnection())
+    if (auto ext = getConnection())
         j["externalConnection"] = *ext;
 }
 

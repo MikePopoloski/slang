@@ -116,10 +116,8 @@ private:
 /// it can however connect directly to a symbol that is.
 class PortSymbol : public ValueSymbol {
 public:
-    /// The direction of data flowing across the port. Some port kinds
-    /// don't have meaningful semantics for direction; in those cases, this
-    /// is set to NotApplicable.
-    PortDirection direction = PortDirection::NotApplicable;
+    /// The direction of data flowing across the port.
+    PortDirection direction = PortDirection::InOut;
 
     /// An instance-internal symbol that this port connects to, if any.
     /// Ports that do not connect directly to an internal symbol will have
@@ -129,18 +127,15 @@ public:
     /// An optional default value that is used for the port when no connection is provided.
     const Expression* defaultValue = nullptr;
 
-    /// For explicit ports, this is the expression that controls how it
-    /// connects to the instance's internals.
-    const Expression* internalConnection = nullptr;
+    PortSymbol(string_view name, SourceLocation loc,
+               bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
 
     /// If the port is connected during instantiation, gets the expression that
-    /// indicates how it connects to the outside world.
-    const Expression* getExternalConnection() const;
+    /// indicates how it connects to the outside world. Otherwise returns nullptr.
+    const Expression* getConnection() const;
 
-    void setExternalConnection(const Expression* expr);
-    void setExternalConnection(const ExpressionSyntax& syntax);
-
-    PortSymbol(string_view name, SourceLocation loc) : ValueSymbol(SymbolKind::Port, name, loc) {}
+    void setConnection(const Expression* expr);
+    void setConnection(const ExpressionSyntax& syntax);
 
     void toJson(json& j) const;
 
@@ -154,8 +149,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
 
 private:
-    mutable optional<const Expression*> externalConn;
-    const ExpressionSyntax* externalSyntax = nullptr;
+    mutable optional<const Expression*> conn;
+    const ExpressionSyntax* connSyntax = nullptr;
 };
 
 /// Represents the public-facing side of a module / program / interface port

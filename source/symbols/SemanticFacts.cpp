@@ -24,7 +24,7 @@ PortDirection getPortDirection(TokenKind kind) {
         case TokenKind::InOutKeyword: return PortDirection::InOut;
         case TokenKind::OutputKeyword: return PortDirection::Out;
         case TokenKind::RefKeyword: return PortDirection::Ref;
-        default: return PortDirection::NotApplicable;
+        default: THROW_UNREACHABLE;
     }
 }
 

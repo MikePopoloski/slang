@@ -154,7 +154,13 @@ T DeclaredType::getBindContext() const {
     if (flags & DeclaredTypeFlags::RequireConstant)
         bindFlags = BindFlags::Constant;
 
-    return BindContext(getScope(), LookupLocation::after(parent), bindFlags);
+    LookupLocation location;
+    if (flags & DeclaredTypeFlags::LookupMax)
+        location = LookupLocation::max;
+    else
+        location = LookupLocation::after(parent);
+
+    return BindContext(getScope(), location, bindFlags);
 }
 
 } // namespace slang

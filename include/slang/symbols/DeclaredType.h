@@ -25,9 +25,10 @@ enum class DeclaredTypeFlags : uint8_t {
     None = 0,
     InferImplicit = 1,
     RequireConstant = 2,
-    ForceSigned = 4
+    ForceSigned = 4,
+    LookupMax = 8
 };
-BITMASK_DEFINE_MAX_ELEMENT(DeclaredTypeFlags, ForceSigned);
+BITMASK_DEFINE_MAX_ELEMENT(DeclaredTypeFlags, LookupMax);
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type.

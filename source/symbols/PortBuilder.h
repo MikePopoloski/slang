@@ -145,6 +145,25 @@ public:
         }
     }
 
+    Symbol* createPort(const ExplicitAnsiPortSyntax& syntax) {
+        auto port = compilation.emplace<PortSymbol>(syntax.name.valueText(), syntax.name.location(),
+                                                    DeclaredTypeFlags::LookupMax |
+                                                        DeclaredTypeFlags::InferImplicit);
+        port->direction = getDirection(syntax.direction);
+        port->setSyntax(syntax);
+        port->setDeclaredType(UnsetType);
+
+        if (syntax.expr)
+            port->setInitializerSyntax(*syntax.expr, syntax.expr->getFirstToken().location());
+
+        lastDirection = port->direction;
+        lastType = &UnsetType;
+        lastNetType = nullptr;
+        lastInterface = nullptr;
+
+        return port;
+    }
+
 private:
     PortDirection getDirection(Token token) const {
         return token ? SemanticFacts::getPortDirection(token.kind) : lastDirection;
@@ -485,7 +504,7 @@ public:
             if (orderedIndex >= orderedConns.size()) {
                 orderedIndex++;
                 if (port.defaultValue)
-                    port.setExternalConnection(port.defaultValue);
+                    port.setConnection(port.defaultValue);
                 else if (port.name.empty()) {
                     if (!warnedAboutUnnamed) {
                         auto& diag =
@@ -503,9 +522,9 @@ public:
 
             const ExpressionSyntax* expr = orderedConns[orderedIndex++];
             if (expr)
-                port.setExternalConnection(*expr);
+                port.setConnection(*expr);
             else
-                port.setExternalConnection(port.defaultValue);
+                port.setConnection(port.defaultValue);
 
             return;
         }
@@ -528,7 +547,7 @@ public:
             }
 
             if (port.defaultValue)
-                port.setExternalConnection(port.defaultValue);
+                port.setConnection(port.defaultValue);
             else
                 scope.addDiag(DiagCode::UnconnectedNamedPort, instance.location) << port.name;
             return;
@@ -544,7 +563,7 @@ public:
             // For explicit named port connections, having an empty expression means no connection,
             // so we never take the default value here.
             if (conn.expr)
-                port.setExternalConnection(*conn.expr);
+                port.setConnection(*conn.expr);
 
             return;
         }
@@ -641,7 +660,7 @@ private:
             // If this is a wildcard connection, we're allowed to use the port's default value,
             // if it has one.
             if (isWildcard && port.defaultValue)
-                port.setExternalConnection(port.defaultValue);
+                port.setConnection(port.defaultValue);
             else
                 scope.addDiag(DiagCode::ImplicitNamedPortNotFound, range) << port.name;
             return;
@@ -660,8 +679,8 @@ private:
         }
 
         // TODO: direction of assignment
-        port.setExternalConnection(&Expression::convertAssignment(
-            BindContext(scope, LookupLocation::max), port.getType(), *expr, range.start()));
+        port.setConnection(&Expression::convertAssignment(BindContext(scope, LookupLocation::max),
+                                                          port.getType(), *expr, range.start()));
     }
 
     void setInterfaceExpr(InterfacePortSymbol& port, const ExpressionSyntax& syntax) {

@@ -28,7 +28,7 @@ ENUM(FormalArgumentDirection, FORMAL);
 ENUM(ProceduralBlockKind, BLOCK);
 #undef BLOCK
 
-#define PORT(x) x(NotApplicable) x(In) x(Out) x(InOut) x(Ref)
+#define PORT(x) x(In) x(Out) x(InOut) x(Ref)
 /// Specifies the behavior of connections to a particular port.
 ENUM(PortDirection, PORT);
 #undef PORT
