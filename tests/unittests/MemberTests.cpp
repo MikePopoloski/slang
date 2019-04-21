@@ -204,3 +204,19 @@ endmodule
     CHECK((it++)->code == DiagCode::InvalidTimeScaleSpecifier);
     CHECK(it == diags.end());
 }
+
+TEST_CASE("Port decl in ANSI module") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic a);
+    input b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::PortDeclInANSIModule);
+    CHECK(it == diags.end());
+}

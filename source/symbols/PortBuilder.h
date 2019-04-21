@@ -141,7 +141,6 @@ public:
                 scope.addDiag(DiagCode::NotYetSupported, syntax.header->sourceRange());
                 return addInherited(decl);
             default:
-                // TODO:
                 THROW_UNREACHABLE;
         }
     }
@@ -660,6 +659,7 @@ private:
             return;
         }
 
+        // TODO: direction of assignment
         port.setExternalConnection(&Expression::convertAssignment(
             BindContext(scope, LookupLocation::max), port.getType(), *expr, range.start()));
     }

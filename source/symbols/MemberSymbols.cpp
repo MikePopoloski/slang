@@ -197,7 +197,6 @@ void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
                             span<const PortDeclarationSyntax* const> portDeclarations) {
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
-            // TODO: error if we have port declaration members
             AnsiPortListBuilder builder{ scope };
             for (auto port : syntax.as<AnsiPortListSyntax>().ports) {
                 switch (port->kind) {
@@ -210,6 +209,11 @@ void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
                     default:
                         THROW_UNREACHABLE;
                 }
+            }
+
+            if (!portDeclarations.empty()) {
+                scope.addDiag(DiagCode::PortDeclInANSIModule,
+                              portDeclarations[0]->getFirstToken().location());
             }
             break;
         }
