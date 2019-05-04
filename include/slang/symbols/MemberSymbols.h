@@ -149,6 +149,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
 
 private:
+
+
     mutable optional<const Expression*> conn;
     const ExpressionSyntax* connSyntax = nullptr;
 };

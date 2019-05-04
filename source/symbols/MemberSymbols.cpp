@@ -179,8 +179,31 @@ const Expression* PortSymbol::getConnection() const {
             conn = nullptr;
         else {
             BindContext context(*getScope(), LookupLocation::before(*this));
-            conn = &Expression::bind(getType(), *connSyntax, connSyntax->getFirstToken().location(),
-                                     context);
+            auto loc = connSyntax->getFirstToken().location();
+
+            switch (direction) {
+                case PortDirection::In:
+                    conn = &Expression::bind(getType(), *connSyntax,
+                                             loc, context);
+                    break;
+                case PortDirection::Out:
+                    // TODO: require assignable
+                    conn = &Expression::bind(*connSyntax, context);
+                    context.requireLValue(*conn.value(), loc);
+                    break;
+                case PortDirection::InOut:
+                    // TODO: require assignable
+                    // TODO: check not variable
+                    conn = &Expression::bind(*connSyntax, context);
+                    context.requireLValue(*conn.value(), loc);
+                    break;
+                case PortDirection::Ref:
+                    // TODO: implement this
+                    conn = nullptr;
+                    break;
+            }
+
+            // TODO: if port is explicit, check that expression as well
         }
     }
     return *conn;
