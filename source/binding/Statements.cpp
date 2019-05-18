@@ -114,6 +114,12 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             result = &TimedStatement::fromSyntax(comp, syntax.as<TimingControlStatementSyntax>(),
                                                  context, blocks);
             break;
+        case SyntaxKind::ImmediateAssertStatement:
+        case SyntaxKind::ImmediateAssumeStatement:
+        case SyntaxKind::ImmediateCoverStatement:
+            result = &AssertionStatement::fromSyntax(
+                comp, syntax.as<ImmediateAssertionStatementSyntax>(), context, blocks);
+            break;
         case SyntaxKind::JumpStatement:
         case SyntaxKind::ProceduralAssignStatement:
         case SyntaxKind::ProceduralForceStatement:
@@ -131,9 +137,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::ForeachLoopStatement:
         case SyntaxKind::WaitStatement:
         case SyntaxKind::RandCaseStatement:
-        case SyntaxKind::ImmediateAssertStatement:
-        case SyntaxKind::ImmediateAssumeStatement:
-        case SyntaxKind::ImmediateCoverStatement:
         case SyntaxKind::AssertPropertyStatement:
         case SyntaxKind::AssumePropertyStatement:
         case SyntaxKind::CoverSequenceStatement:
@@ -268,10 +271,17 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             for (auto item : syntax.as<RandCaseStatementSyntax>().items)
                 recurse(item->statement);
             return;
-
         case SyntaxKind::ImmediateAssertStatement:
         case SyntaxKind::ImmediateAssumeStatement:
-        case SyntaxKind::ImmediateCoverStatement:
+        case SyntaxKind::ImmediateCoverStatement: {
+            auto& ias = syntax.as<ImmediateAssertionStatementSyntax>();
+            if (ias.action->statement)
+                recurse(ias.action->statement);
+            if (ias.action->elseClause)
+                recurse(&ias.action->elseClause->clause->as<StatementSyntax>());
+            return;
+        }
+
         case SyntaxKind::AssertPropertyStatement:
         case SyntaxKind::AssumePropertyStatement:
         case SyntaxKind::CoverSequenceStatement:
@@ -844,6 +854,81 @@ bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
     ASSERT(timing.syntax);
     context.addDiag(DiagCode::NoteTimedStmtNotConst, timing.syntax->sourceRange());
     return false;
+}
+
+Statement& AssertionStatement::fromSyntax(Compilation& compilation,
+                                          const ImmediateAssertionStatementSyntax& syntax,
+                                          const BindContext& context, BlockList& blocks) {
+    AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
+    auto& cond = Expression::bind(*syntax.expr->expression, context);
+    if (!context.requireBooleanConvertible(cond))
+        return badStmt(compilation, nullptr);
+
+    const Statement* ifTrue = nullptr;
+    const Statement* ifFalse = nullptr;
+    if (syntax.action->statement)
+        ifTrue = &Statement::bind(*syntax.action->statement, context, blocks);
+
+    if (syntax.action->elseClause) {
+        ifFalse = &Statement::bind(syntax.action->elseClause->clause->as<StatementSyntax>(),
+                                   context, blocks);
+    }
+
+    bool isDeferred = syntax.delay != nullptr;
+    bool isFinal = false;
+    if (isDeferred)
+        isFinal = syntax.delay->finalKeyword.valid();
+
+    if (assertKind == AssertionKind::Cover && ifFalse)
+        context.addDiag(DiagCode::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
+
+    // TODO: add checking for requirements on deferred assertion actions
+
+    return *compilation.emplace<AssertionStatement>(assertKind, cond, ifTrue, ifFalse, isDeferred,
+                                                    isFinal);
+}
+
+ER AssertionStatement::evalImpl(EvalContext& context) const {
+    auto result = cond.eval(context);
+    if (result.bad())
+        return ER::Fail;
+
+    if (result.isTrue()) {
+        if (ifTrue)
+            return ifTrue->eval(context);
+        return ER::Success;
+    }
+
+    if (ifFalse)
+        return ifFalse->eval(context);
+
+    if (assertionKind == AssertionKind::Cover)
+        return ER::Success;
+
+    // TODO: give statements a guaranteed SourceRange member
+    ASSERT(cond.syntax);
+    context.addDiag(DiagCode::NoteAssertionFailed, cond.syntax->sourceRange());
+    return ER::Fail;
+}
+
+bool AssertionStatement::verifyConstantImpl(EvalContext& context) const {
+    if (!cond.verifyConstant(context))
+        return false;
+
+    if (ifTrue && !ifTrue->verifyConstant(context))
+        return false;
+
+    if (ifFalse && !ifFalse->verifyConstant(context))
+        return false;
+
+    if (isDeferred) {
+        // TODO: give statements a guaranteed SourceRange member
+        ASSERT(syntax);
+        context.addDiag(DiagCode::NoteTimedStmtNotConst, syntax->sourceRange());
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace slang

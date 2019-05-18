@@ -58,6 +58,15 @@ EdgeKind getEdgeKind(TokenKind kind) {
     }
 }
 
+AssertionKind getAssertKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ImmediateAssertStatement: return AssertionKind::Assert;
+        case SyntaxKind::ImmediateAssumeStatement: return AssertionKind::Assume;
+        case SyntaxKind::ImmediateCoverStatement: return AssertionKind::Cover;
+        default: THROW_UNREACHABLE;
+    }
+}
+
 // clang-format on
 
 } // namespace slang::SemanticFacts

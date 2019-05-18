@@ -131,6 +131,7 @@ decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
         CASE(Case, CaseStatement);
         CASE(ForLoop, ForLoopStatement);
         CASE(Timed, TimedStatement);
+        CASE(Assertion, AssertionStatement);
     }
 #undef CASE
     // clang-format on

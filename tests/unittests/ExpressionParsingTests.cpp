@@ -475,7 +475,7 @@ module M; localparam foo = (stackDepth == 100) || ((stackDepth == 200) || ((stac
 
     Diagnostics diags;
     Preprocessor preprocessor(SyntaxTree::getDefaultSourceManager(), alloc, diags);
-    preprocessor.pushSource(string_view(text));
+    preprocessor.pushSource(string_view(text), "source");
 
     Bag options;
     ParserOptions parserOptions;
@@ -487,7 +487,7 @@ module M; localparam foo = (stackDepth == 100) || ((stackDepth == 200) || ((stac
 
     std::string result = "\n" + report(diags);
     CHECK(result == R"(
-<unnamed_buffer0>:23:43: error: language constructs are too deeply nested
+source:23:43: error: language constructs are too deeply nested
 ((stackDepth == 11306) || ((stackDepth == 11307) || ((stackDepth == 11308) ||
                                           ^
 )");

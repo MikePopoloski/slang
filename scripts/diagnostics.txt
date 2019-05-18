@@ -203,6 +203,7 @@ error InvalidEventExpression "invalid type {} for event expression"
 error InvalidEdgeEventExpression "edge expression must be integral"
 error InvalidCaseStmtType "invalid expression type {} for {} statement"
 error NoCommonCaseStmtType "case expression of type {} is not comparable to common type {}"
+error CoverStmtNoFail "cover statement cannot have a fail statement"
 warning event-const EventExpressionConstant "edge expression is constant"
 
 // types
@@ -264,6 +265,7 @@ note NoteNoCaseItemsMatched "no items in {} case statement matched value {}"
 note NoteCaseItemsNotUnique "more than one match found in unique case statement for value {}"
 note NotePreviousMatch "previous match here"
 note NoteTimedStmtNotConst "constant functions cannot schedule events"
+note NoteAssertionFailed "assertion failed"
 
 // warnings
 warning real-underflow RealLiteralUnderflow "value of real literal is too small; minimum is {}"

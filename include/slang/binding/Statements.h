@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/binding/EvalContext.h"
+#include "slang/symbols/SemanticFacts.h"
 
 namespace slang {
 
@@ -26,7 +27,8 @@ class VariableSymbol;
     x(Conditional) \
     x(Case) \
     x(ForLoop) \
-    x(Timed)
+    x(Timed) \
+    x(Assertion)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
 // clang-format on
@@ -247,8 +249,7 @@ public:
     CaseStatement(Condition condition, Check check, const Expression& expr,
                   span<ItemGroup const> items, const Statement* defaultCase) :
         Statement(StatementKind::Case),
-        expr(expr), items(items), defaultCase(defaultCase), condition(condition),
-        check(check) {}
+        expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -312,6 +313,31 @@ public:
                                  const BindContext& context, BlockList& blocks);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Timed; }
+};
+
+class AssertionStatement : public Statement {
+public:
+    const Expression& cond;
+    const Statement* ifTrue;
+    const Statement* ifFalse;
+    AssertionKind assertionKind;
+    bool isDeferred;
+    bool isFinal;
+
+    AssertionStatement(AssertionKind assertionKind, const Expression& cond, const Statement* ifTrue,
+                       const Statement* ifFalse, bool isDeferred, bool isFinal) :
+        Statement(StatementKind::Assertion),
+        cond(cond), ifTrue(ifTrue), ifFalse(ifFalse), assertionKind(assertionKind),
+        isDeferred(isDeferred), isFinal(isFinal) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const ImmediateAssertionStatementSyntax& syntax,
+                                 const BindContext& context, BlockList& blocks);
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Assertion; }
 };
 
 } // namespace slang

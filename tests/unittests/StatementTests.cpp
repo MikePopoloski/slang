@@ -138,3 +138,58 @@ endmodule
     CHECK(diags[4].code == DiagCode::InvalidCaseStmtType);
     CHECK(diags[5].code == DiagCode::InvalidCaseStmtType);
 }
+
+TEST_CASE("Assertion statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    int i;
+    logic foo [3];
+
+    initial begin
+        assert (i > 0) i++; else i--;
+        assume #0 (i < 0) else i--;
+        cover final (i) i++;
+
+        assert (foo);                   // not boolean
+        cover (i) else $fatal("SDF");   // fail stmt not allowed
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == DiagCode::NotBooleanConvertible);
+    CHECK(diags[1].code == DiagCode::CoverStmtNoFail);
+}
+
+TEST_CASE("Assertion at compile time") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    function int foo(int x);
+        assert (x > 0) else x = 42;
+        assert (x < 99);
+        return x;
+    endfunction
+
+    localparam int i = foo(0);
+    localparam int j = foo(100);
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& i = compilation.getRoot().lookupName<ParameterSymbol>("m.i");
+    CHECK(i.getValue().integer() == 42);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == DiagCode::ExpressionNotConstant);
+}

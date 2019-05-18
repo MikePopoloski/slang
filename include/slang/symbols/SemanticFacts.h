@@ -48,6 +48,11 @@ ENUM(EdgeKind, EDGE);
 ENUM(SubroutineKind, SRK);
 #undef SRK
 
+#define ASK(x) x(Assert) x(Assume) x(Cover)
+/// Specifies possible assertion kinds.
+ENUM(AssertionKind, ASK);
+#undef ASK
+
 namespace SemanticFacts {
 
 /// Interprets a keyword token as a variable lifetime value.
@@ -61,6 +66,8 @@ ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind);
 DefinitionKind getDefinitionKind(SyntaxKind kind);
 
 EdgeKind getEdgeKind(TokenKind kind);
+
+AssertionKind getAssertKind(SyntaxKind kind);
 
 } // namespace SemanticFacts
 
