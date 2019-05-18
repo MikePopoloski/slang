@@ -45,7 +45,7 @@ public:
             case SyntaxKind::VariablePortHeader: {
                 // A VariablePortHeader is parsed as a catch-all when we aren't sure what kind of
                 // port this is. There are three components to a port that matter: kind, type,
-                // direction If all three are omitted, inherit them all from the previous port.
+                // direction. If all three are omitted, inherit them all from the previous port.
                 // We'll never even get into this code path if the very first port omitted all three
                 // because then it would be a non-ansi port list.
                 auto& header = syntax.header->as<VariablePortHeaderSyntax>();

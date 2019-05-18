@@ -1034,3 +1034,26 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Interface array port indexing") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I #(parameter int foo) ();
+endinterface
+
+module M(I i[4]);
+    localparam int j = i[0].foo;
+endmodule
+
+module N;
+    I #(.foo(9)) i[4] ();
+    M m(.i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& j = compilation.getRoot().lookupName<ParameterSymbol>("N.m.j");
+    CHECK(j.getValue().integer() == 9);
+}
