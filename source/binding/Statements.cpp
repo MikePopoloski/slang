@@ -419,12 +419,20 @@ bool StatementList::verifyConstantImpl(EvalContext& context) const {
 Statement& SequentialBlockStatement::fromSyntax(Compilation& compilation,
                                                 const BlockStatementSyntax& syntax,
                                                 const BindContext& context, BlockList& blocks) {
+    bool anyBad = false;
     SmallVectorSized<const Statement*, 8> buffer;
-    for (auto item : syntax.items)
-        buffer.append(&Statement::bind(item->as<StatementSyntax>(), context, blocks));
+    for (auto item : syntax.items) {
+        auto& stmt = Statement::bind(item->as<StatementSyntax>(), context, blocks);
+        buffer.append(&stmt);
+        anyBad |= stmt.bad();
+    }
 
     auto list = compilation.emplace<StatementList>(buffer.copy(compilation));
-    return *compilation.emplace<SequentialBlockStatement>(*list);
+    auto result = compilation.emplace<SequentialBlockStatement>(*list);
+    if (anyBad)
+        return badStmt(compilation, result);
+
+    return *result;
 }
 
 const Statement& SequentialBlockStatement::getStatements() const {
@@ -459,7 +467,11 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
     auto& expr =
         Expression::bind(subroutine.getReturnType(), *syntax.returnValue, stmtLoc, context);
 
-    return *compilation.emplace<ReturnStatement>(&expr);
+    auto result = compilation.emplace<ReturnStatement>(&expr);
+    if (expr.bad())
+        return badStmt(compilation, result);
+
+    return *result;
 }
 
 ER ReturnStatement::evalImpl(EvalContext& context) const {
@@ -503,17 +515,23 @@ bool VariableDeclStatement::verifyConstantImpl(EvalContext& context) const {
 Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
                                             const ConditionalStatementSyntax& syntax,
                                             const BindContext& context, BlockList& blocks) {
+    // TODO: don't assert for these
     ASSERT(syntax.predicate->conditions.size() == 1);
     ASSERT(!syntax.predicate->conditions[0]->matchesClause);
 
     auto& cond = Expression::bind(*syntax.predicate->conditions[0]->expr, context);
     auto& ifTrue = Statement::bind(*syntax.statement, context, blocks);
     const Statement* ifFalse = nullptr;
-    if (syntax.elseClause)
+    if (syntax.elseClause) {
         ifFalse =
             &Statement::bind(syntax.elseClause->clause->as<StatementSyntax>(), context, blocks);
+    }
 
-    return *compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse);
+    auto result = compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse);
+    if (cond.bad() || ifTrue.bad() || (ifFalse && ifFalse->bad()))
+        return badStmt(compilation, result);
+
+    return *result;
 }
 
 ER ConditionalStatement::evalImpl(EvalContext& context) const {
@@ -745,25 +763,34 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
     // If the initializers were variable declarations, they've already been hoisted
     // out into a parent block and will be initialized there.
     SmallVectorSized<const Statement*, 4> initializers;
+    bool anyBad = false;
     if (syntax.initializers.empty() ||
         syntax.initializers[0]->kind != SyntaxKind::ForVariableDeclaration) {
 
         BlockList emptySpan;
         for (auto initializer : syntax.initializers) {
-            initializers.append(
-                &Statement::bind(initializer->as<StatementSyntax>(), context, emptySpan));
+            auto& init = Statement::bind(initializer->as<StatementSyntax>(), context, emptySpan);
+            initializers.append(&init);
+            anyBad |= init.bad();
         }
     }
 
     SmallVectorSized<const Expression*, 2> steps;
     auto& stopExpr = Expression::bind(*syntax.stopExpr, context);
-    for (auto step : syntax.steps)
-        steps.append(&Expression::bind(*step, context));
+    for (auto step : syntax.steps) {
+        auto& expr = Expression::bind(*step, context);
+        steps.append(&expr);
+        anyBad |= expr.bad();
+    }
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
     auto initList = compilation.emplace<StatementList>(initializers.copy(compilation));
-    return *compilation.emplace<ForLoopStatement>(*initList, &stopExpr, steps.copy(compilation),
-                                                  bodyStmt);
+    auto result = compilation.emplace<ForLoopStatement>(*initList, &stopExpr,
+                                                        steps.copy(compilation), bodyStmt);
+
+    if (anyBad || stopExpr.bad() || bodyStmt.bad())
+        return badStmt(compilation, result);
+    return *result;
 }
 
 ER ForLoopStatement::evalImpl(EvalContext& context) const {
@@ -816,7 +843,11 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const ExpressionStatementSyntax& syntax,
                                            const BindContext& context) {
     auto& expr = Expression::bind(*syntax.expr, context);
-    return *compilation.emplace<ExpressionStatement>(expr);
+    auto result = compilation.emplace<ExpressionStatement>(expr);
+    if (expr.bad())
+        return badStmt(compilation, result);
+
+    return *result;
 }
 
 ER ExpressionStatement::evalImpl(EvalContext& context) const {
@@ -861,7 +892,7 @@ Statement& AssertionStatement::fromSyntax(Compilation& compilation,
                                           const BindContext& context, BlockList& blocks) {
     AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
     auto& cond = Expression::bind(*syntax.expr->expression, context);
-    if (!context.requireBooleanConvertible(cond))
+    if (cond.bad() || !context.requireBooleanConvertible(cond))
         return badStmt(compilation, nullptr);
 
     const Statement* ifTrue = nullptr;
@@ -884,8 +915,12 @@ Statement& AssertionStatement::fromSyntax(Compilation& compilation,
 
     // TODO: add checking for requirements on deferred assertion actions
 
-    return *compilation.emplace<AssertionStatement>(assertKind, cond, ifTrue, ifFalse, isDeferred,
-                                                    isFinal);
+    auto result = compilation.emplace<AssertionStatement>(assertKind, cond, ifTrue, ifFalse,
+                                                          isDeferred, isFinal);
+    if ((ifTrue && ifTrue->bad()) || (ifFalse && ifFalse->bad()))
+        return badStmt(compilation, result);
+
+    return *result;
 }
 
 ER AssertionStatement::evalImpl(EvalContext& context) const {
