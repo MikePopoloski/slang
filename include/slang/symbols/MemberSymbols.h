@@ -149,8 +149,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
 
 private:
-
-
     mutable optional<const Expression*> conn;
     const ExpressionSyntax* connSyntax = nullptr;
 };
@@ -170,7 +168,7 @@ public:
     const Symbol* connection = nullptr;
 
     /// Gets the set of dimensions for specifying interface arrays, if applicable.
-    span<const ConstantRange> getRange() const;
+    span<const ConstantRange> getDeclaredRange() const;
 
     InterfacePortSymbol(string_view name, SourceLocation loc) :
         Symbol(SymbolKind::InterfacePort, name, loc) {}

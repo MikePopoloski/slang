@@ -453,7 +453,7 @@ public:
     PortConnectionBuilder(const Scope& childScope, const Scope& instanceScope,
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
         scope(instanceScope),
-        instance(childScope.asSymbol()) {
+        instance(childScope.asSymbol().as<InstanceSymbol>()) {
 
         bool hasConnections = false;
         lookupLocation = LookupLocation::before(instance);
@@ -497,6 +497,16 @@ public:
                 }
             }
         }
+
+        // Build up the set of dimensions for the instantiating instance's array parent, if any.
+        // This builds up the dimensions in reverse order, so we have to reverse them back.
+        auto parent = instance.getParent();
+        while (parent && parent->asSymbol().kind == SymbolKind::InstanceArray) {
+            auto& sym = parent->asSymbol().as<InstanceArraySymbol>();
+            instanceDims.append(sym.range);
+            parent = sym.getParent();
+        }
+        std::reverse(instanceDims.begin(), instanceDims.end());
     }
 
     void setConnection(PortSymbol& port) {
@@ -572,6 +582,7 @@ public:
     }
 
     void setConnection(InterfacePortSymbol& port) {
+        // TODO: verify that interface ports must always have a name
         ASSERT(!port.name.empty());
 
         auto reportUnconnected = [&]() {
@@ -712,28 +723,88 @@ private:
         setInterface(port, symbol, range);
     }
 
+    static bool areDimSizesEqual(span<const ConstantRange> left, span<const ConstantRange> right) {
+        if (left.size() != right.size())
+            return false;
+
+        for (ptrdiff_t i = 0; i < left.size(); i++) {
+            if (left[i].width() != right[i].width())
+                return false;
+        }
+
+        return true;
+    }
+
     void setInterface(InterfacePortSymbol& port, const Symbol* symbol, SourceRange range) {
-        // TODO: check dimensions
-        const Symbol* original = symbol;
-        while (symbol->kind == SymbolKind::InstanceArray) {
-            auto& array = symbol->as<InstanceArraySymbol>();
+        if (!port.interfaceDef)
+            return;
+
+        // Make sure the thing we're connecting to is an interface or array of interfaces.
+        SmallVectorSized<ConstantRange, 4> dims;
+        const Symbol* child = symbol;
+        while (child->kind == SymbolKind::InstanceArray) {
+            // The array shouldn't be empty unless an error ocurred earlier in elaboration.
+            auto& array = child->as<InstanceArraySymbol>();
             if (array.elements.empty())
                 return;
 
-            symbol = array.elements[0];
+            dims.append(array.range);
+            child = array.elements[0];
         }
 
         // TODO: handle interface/modport ports as well
-        if (symbol->kind != SymbolKind::InterfaceInstance) {
-            scope.addDiag(DiagCode::NotAnInterface, range) << original->name;
+        if (child->kind != SymbolKind::InterfaceInstance) {
+            scope.addDiag(DiagCode::NotAnInterface, range) << symbol->name;
             return;
         }
 
-        port.connection = &symbol->as<InterfaceInstanceSymbol>();
+        auto connDef = &child->as<InterfaceInstanceSymbol>().definition;
+        if (connDef != port.interfaceDef) {
+            // TODO: print the potentially nested name path instead of the simple name
+            auto& diag = scope.addDiag(DiagCode::InterfacePortTypeMismatch, range);
+            diag << connDef->name << port.interfaceDef->name;
+            diag.addNote(DiagCode::NoteDeclarationHere, port.location);
+            return;
+        }
+
+        // If the dimensions match exactly what the port is expecting make the connection.
+        auto portDims = port.getDeclaredRange();
+        if (areDimSizesEqual(portDims, dims)) {
+            port.connection = symbol;
+            return;
+        }
+
+        // Otherwise, if the instance being instantiated is part of an array of instances *and*
+        // the symbol we're connecting to is an array of interfaces, we need to check to see whether
+        // to slice up that array among all the instances. We do the slicing operation if:
+        // instance array dimensions + port dimensions == connection dimensions
+        span<const ConstantRange> dimSpan = dims;
+        if (dimSpan.size() >= instanceDims.size() &&
+            areDimSizesEqual(dimSpan.subspan(0, instanceDims.size()), instanceDims) &&
+            areDimSizesEqual(dimSpan.subspan(instanceDims.size()), portDims)) {
+
+            // It's ok to do the slicing, so pick the correct slice for the connection
+            // based on the actual path of the instance we're elaborating.
+            for (ptrdiff_t i = 0; i < instance.arrayPath.size(); i++) {
+                auto& array = symbol->as<InstanceArraySymbol>();
+                int32_t index = instanceDims[i].translateIndex(instance.arrayPath[i]);
+                if (!array.range.isLittleEndian())
+                    index = array.range.upper() - index;
+
+                symbol = array.elements[index];
+            }
+
+            port.connection = symbol;
+            return;
+        }
+
+        auto& diag = scope.addDiag(DiagCode::PortConnDimensionsMismatch, range);
+        diag.addNote(DiagCode::NoteDeclarationHere, port.location);
     }
 
     const Scope& scope;
-    const Symbol& instance;
+    const InstanceSymbol& instance;
+    SmallVectorSized<ConstantRange, 4> instanceDims;
     SmallVectorSized<const ExpressionSyntax*, 8> orderedConns;
     SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
     LookupLocation lookupLocation;

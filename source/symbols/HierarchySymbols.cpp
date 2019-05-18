@@ -165,9 +165,9 @@ namespace {
 
 Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definition,
                        const HierarchicalInstanceSyntax& syntax,
-                       span<const Expression* const> overrides,
+                       span<const Expression* const> overrides, SmallVector<int32_t>& path,
                        span<const AttributeInstanceSyntax* const> attributes) {
-    Symbol* inst;
+    InstanceSymbol* inst;
     switch (definition.definitionKind) {
         case DefinitionKind::Module:
             inst = &ModuleInstanceSymbol::instantiate(compilation, syntax, definition, overrides);
@@ -181,6 +181,7 @@ Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definit
             THROW_UNREACHABLE;
     }
 
+    inst->arrayPath = path.copy(compilation);
     inst->setSyntax(syntax);
     compilation.addAttributes(*inst, attributes);
     return inst;
@@ -191,10 +192,10 @@ using DimIterator = span<VariableDimensionSyntax*>::iterator;
 Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& definition,
                              const HierarchicalInstanceSyntax& instanceSyntax,
                              span<const Expression* const> overrides, const BindContext& context,
-                             DimIterator it, DimIterator end,
+                             DimIterator it, DimIterator end, SmallVector<int32_t>& path,
                              span<const AttributeInstanceSyntax* const> attributes) {
     if (it == end)
-        return createInstance(compilation, definition, instanceSyntax, overrides, attributes);
+        return createInstance(compilation, definition, instanceSyntax, overrides, path, attributes);
 
     EvaluatedDimension dim = context.evalDimension(**it, true);
     if (!dim.isRange())
@@ -204,9 +205,12 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
 
     ConstantRange range = dim.range;
     SmallVectorSized<const Symbol*, 8> elements;
-    for (bitwidth_t i = 0; i < range.width(); i++) {
+    for (int32_t i = range.lower(); i <= range.upper(); i++) {
+        path.append(i);
         auto symbol = recurseInstanceArray(compilation, definition, instanceSyntax, overrides,
-                                           context, it, end, attributes);
+                                           context, it, end, path, attributes);
+        path.pop();
+
         if (!symbol)
             return nullptr;
 
@@ -367,9 +371,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 
     BindContext context(scope, location);
     for (auto instanceSyntax : syntax.instances) {
+        SmallVectorSized<int32_t, 4> path;
         auto symbol = recurseInstanceArray(compilation, *definition, *instanceSyntax, overrides,
                                            context, instanceSyntax->dimensions.begin(),
-                                           instanceSyntax->dimensions.end(), syntax.attributes);
+                                           instanceSyntax->dimensions.end(), path, syntax.attributes);
         if (symbol)
             results.append(symbol);
     }

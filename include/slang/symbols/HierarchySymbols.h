@@ -99,6 +99,7 @@ private:
 class InstanceSymbol : public Symbol, public Scope {
 public:
     const DefinitionSymbol& definition;
+    span<const int32_t> arrayPath;
 
     const SymbolMap& getPortMap() const {
         ensureElaborated();

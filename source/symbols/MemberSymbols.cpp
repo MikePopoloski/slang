@@ -297,7 +297,7 @@ void PortSymbol::toJson(json& j) const {
         j["externalConnection"] = *ext;
 }
 
-span<const ConstantRange> InterfacePortSymbol::getRange() const {
+span<const ConstantRange> InterfacePortSymbol::getDeclaredRange() const {
     if (range)
         return *range;
 
