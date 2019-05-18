@@ -1195,6 +1195,7 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
     // use two alternating buffers to hold the tokens
     SmallVectorSized<Token, 64> buffer1;
     SmallVectorSized<Token, 64> buffer2;
+    SmallVectorSized<Token, 64> expansionBuffer;
 
     SmallVector<Token>* currentBuffer = &buffer1;
     SmallVector<Token>* nextBuffer = &buffer2;
@@ -1204,13 +1205,6 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
         expandedSomething = false;
         MacroParser parser(*this);
         parser.setBuffer(tokens);
-
-        // Each round we will fully expand all macros that we come across. We use the
-        // `alreadyExpanded` set to avoid recursively expanding macros infinitely. On a given
-        // iteration through the tokens though we don't want duplicates uses of the same macro to
-        // trigger an error (since it's not recursive) so defer adding them to the real set until
-        // next round.
-        SmallVectorSized<DefineDirectiveSyntax*, 8> nextRoundAlreadyExpanded;
 
         // loop through each token in the replacement list and expand it if it's a nested macro
         Token token;
@@ -1242,17 +1236,25 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
                         return false;
                 }
 
-                MacroExpansion expansion{ alloc, *currentBuffer, token, false };
+                expansionBuffer.clear();
+                MacroExpansion expansion{ alloc, expansionBuffer, token, false };
                 if (!expandMacro(macro, expansion, actualArgs))
                     return false;
 
-                nextRoundAlreadyExpanded.append(macro.syntax);
+                // Recursively expand out nested macros; this ensures that we detect
+                // any potentially recursive macros.
+                alreadyExpanded.insert(macro.syntax);
+                span<const Token> expanded = expansionBuffer;
+                if (!expandReplacementList(expanded, alreadyExpanded))
+                    return false;
+
+                alreadyExpanded.erase(macro.syntax);
+                currentBuffer->appendRange(expanded);
                 expandedSomething = true;
             }
         }
 
         // keep shaking until there's no more noise!
-        alreadyExpanded.insert(nextRoundAlreadyExpanded.begin(), nextRoundAlreadyExpanded.end());
         tokens = span<Token const>(currentBuffer->begin(), currentBuffer->end());
         std::swap(currentBuffer, nextBuffer);
         currentBuffer->clear();

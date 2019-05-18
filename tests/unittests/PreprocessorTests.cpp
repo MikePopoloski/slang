@@ -560,6 +560,19 @@ TEST_CASE("Recursive macros") {
     CHECK(diagnostics[1].code == DiagCode::RecursiveMacro);
 }
 
+TEST_CASE("Not recursive macros") {
+    auto& text = R"(
+`define A `B
+`define B 1
+
+`define FOO  `A `B
+`FOO
+)";
+
+    preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Unknown macro as arg not an error") {
     auto& text = R"(
 `define FOO(a) foo
