@@ -515,11 +515,24 @@ bool VariableDeclStatement::verifyConstantImpl(EvalContext& context) const {
 Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
                                             const ConditionalStatementSyntax& syntax,
                                             const BindContext& context, BlockList& blocks) {
-    // TODO: don't assert for these
-    ASSERT(syntax.predicate->conditions.size() == 1);
-    ASSERT(!syntax.predicate->conditions[0]->matchesClause);
+    auto& conditions = syntax.predicate->conditions;
+    if (conditions.size() == 0)
+        return badStmt(compilation, nullptr);
 
-    auto& cond = Expression::bind(*syntax.predicate->conditions[0]->expr, context);
+    if (conditions.size() > 1) {
+        context.addDiag(DiagCode::NotYetSupported, conditions[1]->sourceRange());
+        return badStmt(compilation, nullptr);
+    }
+
+    if (conditions[0]->matchesClause) {
+        context.addDiag(DiagCode::NotYetSupported, conditions[0]->matchesClause->sourceRange());
+        return badStmt(compilation, nullptr);
+    }
+
+    auto& cond = Expression::bind(*conditions[0]->expr, context);
+    if (cond.bad() || !context.requireBooleanConvertible(cond))
+        return badStmt(compilation, nullptr);
+
     auto& ifTrue = Statement::bind(*syntax.statement, context, blocks);
     const Statement* ifFalse = nullptr;
     if (syntax.elseClause) {
@@ -528,7 +541,7 @@ Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
     }
 
     auto result = compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse);
-    if (cond.bad() || ifTrue.bad() || (ifFalse && ifFalse->bad()))
+    if (ifTrue.bad() || (ifFalse && ifFalse->bad()))
         return badStmt(compilation, result);
 
     return *result;
