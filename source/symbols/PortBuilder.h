@@ -787,7 +787,7 @@ private:
             // based on the actual path of the instance we're elaborating.
             for (ptrdiff_t i = 0; i < instance.arrayPath.size(); i++) {
                 auto& array = symbol->as<InstanceArraySymbol>();
-                int32_t index = instanceDims[i].translateIndex(instance.arrayPath[i]);
+                int32_t index = instanceDims[size_t(i)].translateIndex(instance.arrayPath[i]);
                 if (!array.range.isLittleEndian())
                     index = array.range.upper() - index;
 
