@@ -853,13 +853,17 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
     span<Token const> tokens = buffer.copy(alloc);
     while (true) {
-        // Start by recursively expanding out all valid macro usages.
+        // Start by recursively expanding out all valid macro usages. We keep track of
+        // the token pointer here so that we can detect if expandReplacementList actually
+        // did any work; if it did we want to ensure that we come back around for another
+        // pass. This ensures that we don't miss expanding a constructed macro.
+        const Token* ptr = tokens.data();
         if (!expandReplacementList(tokens, alreadyExpanded))
             return actualArgs;
 
         // Now that all macros have been expanded, handle token concatenation and stringification.
         expandedTokens.clear();
-        if (!applyMacroOps(tokens, expandedTokens))
+        if (!applyMacroOps(tokens, expandedTokens) && ptr == tokens.data())
             break;
 
         tokens = expandedTokens;
@@ -1191,78 +1195,63 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location) 
 
 bool Preprocessor::expandReplacementList(span<Token const>& tokens,
                                          SmallSet<DefineDirectiveSyntax*, 8>& alreadyExpanded) {
-    // keep expanding macros in the replacement list until we've got them all
-    // use two alternating buffers to hold the tokens
-    SmallVectorSized<Token, 64> buffer1;
-    SmallVectorSized<Token, 64> buffer2;
+    SmallVectorSized<Token, 64> outBuffer;
     SmallVectorSized<Token, 64> expansionBuffer;
 
-    SmallVector<Token>* currentBuffer = &buffer1;
-    SmallVector<Token>* nextBuffer = &buffer2;
+    bool expandedSomething = false;
+    MacroParser parser(*this);
+    parser.setBuffer(tokens);
 
-    bool expandedSomething;
-    do {
-        expandedSomething = false;
-        MacroParser parser(*this);
-        parser.setBuffer(tokens);
-
-        // loop through each token in the replacement list and expand it if it's a nested macro
-        Token token;
-        while ((token = parser.next())) {
-            if (token.kind != TokenKind::Directive ||
-                token.directiveKind() != SyntaxKind::MacroUsage) {
-                currentBuffer->append(token);
-            }
-            else {
-                // lookup the macro definition
-                auto macro = findMacro(token);
-                if (!macro.valid()) {
-                    // If we couldn't find the macro, just keep trucking.
-                    // It's possible that a future expansion will make this valid.
-                    currentBuffer->append(token);
-                    continue;
-                }
-
-                if (!macro.isIntrinsic() && alreadyExpanded.count(macro.syntax)) {
-                    addDiag(DiagCode::RecursiveMacro, token.location()) << token.valueText();
-                    return false;
-                }
-
-                // parse arguments if necessary
-                MacroActualArgumentListSyntax* actualArgs = nullptr;
-                if (macro.needsArgs()) {
-                    actualArgs = parser.parseActualArgumentList();
-                    if (!actualArgs)
-                        return false;
-                }
-
-                expansionBuffer.clear();
-                MacroExpansion expansion{ alloc, expansionBuffer, token, false };
-                if (!expandMacro(macro, expansion, actualArgs))
-                    return false;
-
-                // Recursively expand out nested macros; this ensures that we detect
-                // any potentially recursive macros.
-                alreadyExpanded.insert(macro.syntax);
-                span<const Token> expanded = expansionBuffer;
-                if (!expandReplacementList(expanded, alreadyExpanded))
-                    return false;
-
-                alreadyExpanded.erase(macro.syntax);
-                currentBuffer->appendRange(expanded);
-                expandedSomething = true;
-            }
+    // loop through each token in the replacement list and expand it if it's a nested macro
+    Token token;
+    while ((token = parser.next())) {
+        if (token.kind != TokenKind::Directive || token.directiveKind() != SyntaxKind::MacroUsage) {
+            outBuffer.append(token);
+            continue;
         }
 
-        // keep shaking until there's no more noise!
-        tokens = span<Token const>(currentBuffer->begin(), currentBuffer->end());
-        std::swap(currentBuffer, nextBuffer);
-        currentBuffer->clear();
+        // lookup the macro definition
+        auto macro = findMacro(token);
+        if (!macro.valid()) {
+            // If we couldn't find the macro, just keep trucking.
+            // It's possible that a future expansion will make this valid.
+            outBuffer.append(token);
+            continue;
+        }
 
-    } while (expandedSomething);
+        if (!macro.isIntrinsic() && alreadyExpanded.count(macro.syntax)) {
+            addDiag(DiagCode::RecursiveMacro, token.location()) << token.valueText();
+            return false;
+        }
 
-    // Make a heap copy of the tokens before we leave
-    tokens = nextBuffer->copy(alloc);
+        // parse arguments if necessary
+        MacroActualArgumentListSyntax* actualArgs = nullptr;
+        if (macro.needsArgs()) {
+            actualArgs = parser.parseActualArgumentList();
+            if (!actualArgs)
+                return false;
+        }
+
+        expansionBuffer.clear();
+        MacroExpansion expansion{ alloc, expansionBuffer, token, false };
+        if (!expandMacro(macro, expansion, actualArgs))
+            return false;
+
+        // Recursively expand out nested macros; this ensures that we detect
+        // any potentially recursive macros.
+        alreadyExpanded.insert(macro.syntax);
+        span<const Token> expanded = expansionBuffer;
+        if (!expandReplacementList(expanded, alreadyExpanded))
+            return false;
+
+        alreadyExpanded.erase(macro.syntax);
+        outBuffer.appendRange(expanded);
+        expandedSomething = true;
+    }
+
+    // Make a heap copy of the tokens before we leave, if we actually expanded something.
+    if (expandedSomething)
+        tokens = outBuffer.copy(alloc);
     return true;
 }
 
