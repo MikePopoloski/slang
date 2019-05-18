@@ -411,7 +411,8 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
         reportUndeclared(name, nameToken.range(), flags, false, result);
 
     // There should only be selectors if we found a value symbol.
-    ASSERT(!result.found || result.selectors.empty() || result.found->isValue());
+    ASSERT(!result.found || result.selectors.empty() || result.found->isValue() ||
+           result.found->isType());
 }
 
 const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
