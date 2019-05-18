@@ -363,12 +363,17 @@ span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symb
 }
 
 const NameSyntax& Compilation::parseName(string_view name) {
+    Diagnostics localDiags;
     SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
-    Preprocessor preprocessor(sourceMan, *this, diags);
+    Preprocessor preprocessor(sourceMan, *this, localDiags);
     preprocessor.pushSource(sourceMan.assignText(name));
 
     Parser parser(preprocessor);
-    return parser.parseName();
+    auto& result = parser.parseName();
+
+    // TODO: throw error if diags is non-empty
+
+    return result;
 }
 
 CompilationUnitSymbol& Compilation::createScriptScope() {

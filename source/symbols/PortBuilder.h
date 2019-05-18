@@ -739,14 +739,19 @@ private:
         if (!port.interfaceDef)
             return;
 
+        // If the symbol is another port, unwrap it now.
+        if (symbol->kind == SymbolKind::InterfacePort) {
+            symbol = symbol->as<InterfacePortSymbol>().connection;
+            if (!symbol)
+                return;
+        }
+
         // Make sure the thing we're connecting to is an interface or array of interfaces.
         SmallVectorSized<ConstantRange, 4> dims;
         const Symbol* child = symbol;
         while (child->kind == SymbolKind::InstanceArray) {
-            // The array shouldn't be empty unless an error ocurred earlier in elaboration.
             auto& array = child->as<InstanceArraySymbol>();
-            if (array.elements.empty())
-                return;
+            ASSERT(!array.elements.empty());
 
             dims.append(array.range);
             child = array.elements[0];

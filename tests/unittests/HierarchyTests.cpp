@@ -644,9 +644,24 @@ TEST_CASE("Module port connections") {
 module m(input logic a, b, c);
 endmodule
 
-interface I; endinterface
+interface I #(parameter int foo = 1);
+endinterface
+
+interface J;
+endinterface
 
 module n(I i);
+endmodule
+
+module o(K.foo k);
+endmodule
+
+module p(I i[4]);
+    localparam bar = i[0].foo;
+endmodule
+
+module q(I i[3][4]);
+    p p1[3] (.*);
 endmodule
 
 module test;
@@ -663,6 +678,7 @@ module test;
     m m8(.a(1+0), .b, .c);
 
     I i();
+    J j();
 
     n n1();                 // error: iface not assigned
     n n2(1);                // error: expression assigned to iface
@@ -672,6 +688,15 @@ module test;
     n n6(.i(i));
     n n7(.i(foobar));       // error: unknown
     n n8(.i(m1));           // error: not an interface
+    n n9(.i(j));            // wrong interface type
+
+    o o1(.k(i));            // early out, K is unknown
+
+    I #(.foo(42)) i2[3][4] ();
+    q q1(.i(i2));
+
+    I i3[4][3] ();
+    q q2(.i(i3));
 
 endmodule
 )");
@@ -682,6 +707,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
 
     auto it = diags.begin();
+    CHECK((it++)->code == DiagCode::UnknownInterface);
     CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
     CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
     CHECK((it++)->code == DiagCode::MixingOrderedAndNamedPorts);
@@ -693,7 +719,12 @@ endmodule
     CHECK((it++)->code == DiagCode::InterfacePortInvalidExpression);
     CHECK((it++)->code == DiagCode::UndeclaredIdentifier);
     CHECK((it++)->code == DiagCode::NotAnInterface);
+    CHECK((it++)->code == DiagCode::InterfacePortTypeMismatch);
+    CHECK((it++)->code == DiagCode::PortConnDimensionsMismatch);
     CHECK(it == diags.end());
+
+    auto& bar = compilation.getRoot().lookupName<ParameterSymbol>("test.q1.p1[1].bar");
+    CHECK(bar.getValue().integer() == 42);
 }
 
 TEST_CASE("Interface port param") {

@@ -91,6 +91,7 @@ public:
 
     /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
     /// This is mostly for testing and API purposes; normal compilation never does this.
+    /// Throws an exception if there are errors parsing the name.
     const NameSyntax& parseName(string_view name);
 
     /// Creates a new compilation unit within the design that can be modified dynamically,
