@@ -70,7 +70,9 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     string_view combined{ mem, newLength };
 
     Diagnostics unused;
-    Lexer lexer{ BufferID(), combined, combined.data(), alloc, unused, LexerOptions{} };
+    Lexer lexer{
+        BufferID::getPlaceholder(), combined, combined.data(), alloc, unused, LexerOptions{}
+    };
 
     auto token = lexer.lex();
     if (token.kind == TokenKind::Unknown || token.rawText().empty())

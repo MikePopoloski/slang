@@ -32,6 +32,8 @@ struct BufferID {
 
     explicit operator bool() const { return valid(); }
 
+    static BufferID getPlaceholder() { return get(UINT32_MAX); }
+
 private:
     uint32_t id = 0;
 
@@ -73,7 +75,7 @@ public:
         return SourceLocation(bufferID, (uint32_t)((T)charOffset - delta));
     }
 
-   int64_t operator-(SourceLocation loc) const {
+    int64_t operator-(SourceLocation loc) const {
         ASSERT(loc.buffer() == bufferID);
         return (int64_t)charOffset - (int64_t)loc.charOffset;
     }

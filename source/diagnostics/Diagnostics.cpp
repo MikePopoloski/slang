@@ -19,6 +19,7 @@ Diagnostic::Diagnostic(const Symbol& source, DiagCode code, SourceLocation locat
 }
 
 Diagnostic& Diagnostic::addNote(DiagCode noteCode, SourceLocation noteLocation) {
+    ASSERT(noteLocation);
     notes.emplace_back(noteCode, noteLocation);
     return notes.back();
 }
@@ -57,6 +58,8 @@ Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {
 }
 
 Diagnostic& operator<<(Diagnostic& diag, SourceRange range) {
+    ASSERT(range.start());
+    ASSERT(range.end());
     diag.ranges.push_back(range);
     return diag;
 }
@@ -67,6 +70,7 @@ Diagnostic& operator<<(Diagnostic& diag, const ConstantValue& arg) {
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
+    ASSERT(location);
     emplace(code, location);
     return back();
 }
@@ -76,6 +80,7 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceRange range) {
 }
 
 Diagnostic& Diagnostics::add(const Symbol& source, DiagCode code, SourceLocation location) {
+    ASSERT(location);
     emplace(source, code, location);
     return back();
 }
