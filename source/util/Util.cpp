@@ -8,19 +8,23 @@
 
 #include <fmt/format.h>
 
-namespace slang {
+#if defined(_MSC_VER)
+#    include <Windows.h>
+#endif
 
-namespace assert {
+namespace slang::assert {
 
 [[noreturn]] void assertFailed(const char* expr, const char* file, int line, const char* func) {
     throw AssertionException(fmt::format("Assertion '{}' failed\n  in file {}, line {}\n"
                                          "  function: {}\n",
                                          expr, file, line, func));
 }
-}
+
+} // namespace slang::assert
+
+namespace slang {
 
 #if defined(_MSC_VER)
-#    include <Windows.h>
 
 std::wstring widen(string_view str) {
     if (str.empty())

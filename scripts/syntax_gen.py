@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-# This script generates C++ source for parse tree syntax nodes from a data
-# file.
+# This script generates C++ source for parse tree syntax nodes from a data file.
 import argparse
 import os
 
@@ -438,7 +437,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
         space = m.index(' ')
         argNames.append(m[space + 1:])
 
-        if m.startswith('SyntaxList<') or m.startswith('SeparatedSyntaxList<'):
+        if m.startswith('SyntaxList<') or m.startswith('SeparatedSyntaxList<') or m.startswith('TokenList'):
             argMembers.append('const {}&{}'.format(m[:space], m[space:]))
         else:
             argMembers.append(m)
