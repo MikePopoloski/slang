@@ -7,6 +7,7 @@
 #include "slang/diagnostics/Diagnostics.h"
 
 #include "slang/symbols/HierarchySymbols.h"
+#include "slang/symbols/TypeSymbols.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {
@@ -53,6 +54,7 @@ Diagnostic& operator<<(Diagnostic& diag, string_view arg) {
 }
 
 Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {
+    ASSERT(!arg.isError());
     diag.args.emplace_back(&arg);
     return diag;
 }

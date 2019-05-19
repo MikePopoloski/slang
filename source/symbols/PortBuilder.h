@@ -677,21 +677,25 @@ private:
             return;
         }
 
+        auto& portType = port.getType();
+        if (portType.isError())
+            return;
+
         auto expr = &NamedValueExpression::fromSymbol(scope, *symbol, false, range);
         if (expr->bad())
             return;
 
-        if (!expr->type->isEquivalent(port.getType())) {
+        if (!expr->type->isEquivalent(portType)) {
             auto& diag = scope.addDiag(DiagCode::ImplicitNamedPortTypeMismatch, range);
             diag << port.name;
-            diag << port.getType();
+            diag << portType;
             diag << *expr->type;
             return;
         }
 
         // TODO: direction of assignment
         port.setConnection(&Expression::convertAssignment(BindContext(scope, LookupLocation::max),
-                                                          port.getType(), *expr, range.start()));
+                                                          portType, *expr, range.start()));
     }
 
     void setInterfaceExpr(InterfacePortSymbol& port, const ExpressionSyntax& syntax) {

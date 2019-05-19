@@ -538,7 +538,7 @@ void Scope::reportNameConflict(const Symbol& member, const Symbol& existing) con
         const Type& memberType = member.as<ValueSymbol>().getType();
         const Type& existingType = existing.as<ValueSymbol>().getType();
 
-        if (memberType.isMatching(existingType)) {
+        if (memberType.isError() || existingType.isError() || memberType.isMatching(existingType)) {
             diag = &addDiag(DiagCode::Redefinition, member.location);
             (*diag) << member.name;
         }
