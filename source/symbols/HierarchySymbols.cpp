@@ -102,6 +102,9 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
     result->setSyntax(syntax);
     compilation.addAttributes(*result, syntax.attributes);
 
+    for (auto import : syntax.header->imports)
+        result->addMembers(*import);
+
     SmallVectorSized<const ParameterSymbol*, 8> parameters;
     bool hasPortParams = syntax.header->parameters;
     if (hasPortParams) {
@@ -372,9 +375,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     BindContext context(scope, location);
     for (auto instanceSyntax : syntax.instances) {
         SmallVectorSized<int32_t, 4> path;
-        auto symbol = recurseInstanceArray(compilation, *definition, *instanceSyntax, overrides,
-                                           context, instanceSyntax->dimensions.begin(),
-                                           instanceSyntax->dimensions.end(), path, syntax.attributes);
+        auto symbol =
+            recurseInstanceArray(compilation, *definition, *instanceSyntax, overrides, context,
+                                 instanceSyntax->dimensions.begin(),
+                                 instanceSyntax->dimensions.end(), path, syntax.attributes);
         if (symbol)
             results.append(symbol);
     }
@@ -403,11 +407,17 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
 
 void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
                               span<const Expression* const> parameterOverides) {
-    // Add all port parameters as members first.
+    // TODO: getSyntax dependency
+    auto& declSyntax = definition.getSyntax()->as<ModuleDeclarationSyntax>();
     Compilation& comp = getCompilation();
+
+    // Package imports from the header always come first.
+    for (auto import : declSyntax.header->imports)
+        addMembers(*import);
+
+    // Now add in all parameter ports.
     auto paramIt = definition.parameters.begin();
     auto overrideIt = parameterOverides.begin();
-
     while (paramIt != definition.parameters.end()) {
         auto original = *paramIt;
         if (!original->isPortParam())
@@ -420,16 +430,16 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
         overrideIt++;
     }
 
-    // It's important that the port syntax is added before any members, so that port
+    // It's important that the port syntax is added before any body members, so that port
     // connections are elaborated before anything tries to depend on any interface port params.
-    auto& declSyntax =
-        definition.getSyntax()->as<ModuleDeclarationSyntax>(); // TODO: getSyntax dependency
     if (declSyntax.header->ports)
         addMembers(*declSyntax.header->ports);
 
+    // Connect all ports to external sources.
     if (instanceSyntax)
         setPortConnections(instanceSyntax->connections);
 
+    // Finally add members from the body.
     for (auto member : declSyntax.members) {
         // If this is a parameter declaration, we should already have metadata for it in our
         // parameters list. The list is given in declaration order, so we should be be able to move

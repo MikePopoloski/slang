@@ -1057,3 +1057,35 @@ endmodule
     auto& j = compilation.getRoot().lookupName<ParameterSymbol>("N.m.j");
     CHECK(j.getValue().integer() == 9);
 }
+
+TEST_CASE("Package import in module header") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    localparam real foo = 3.14;
+endpackage
+
+package q;
+    typedef enum { FOO, BAR } baz_t;
+endpackage
+
+module M import p::foo, q::*;
+    #(parameter real blah = foo)
+    (output baz_t b);
+
+    always_comb b = BAR;
+
+endmodule
+
+module N;
+    q::baz_t b;
+    M m(.*);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& blah = compilation.getRoot().lookupName<ParameterSymbol>("N.m.blah");
+    CHECK(blah.getValue().real() == 3.14);
+}
