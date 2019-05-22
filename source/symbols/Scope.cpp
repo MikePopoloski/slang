@@ -1205,7 +1205,10 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
                               flags);
     };
 
-    bool inConstantEval = (flags & LookupFlags::Constant) != 0 || compilation.isFinalizing();
+    if (compilation.isFinalizing())
+        flags |= LookupFlags::Constant;
+
+    bool inConstantEval = (flags & LookupFlags::Constant) != 0;
 
     switch (scoped->left->kind) {
         case SyntaxKind::IdentifierName:
@@ -1284,8 +1287,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             return;
 
         if (inConstantEval) {
-            result.clear();
-            result.addDiag(*this, DiagCode::HierarchicalNotAllowedInConstant, nameToken.range());
+            // An appropriate error was already issued in lookupDownward()
             return;
         }
 
