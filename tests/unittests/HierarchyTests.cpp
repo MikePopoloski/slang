@@ -846,8 +846,8 @@ endmodule
     CHECK((it++)->code == DiagCode::ExpectedGenvarIterVar);
     CHECK((it++)->code == DiagCode::UndeclaredIdentifier);
     CHECK((it++)->code == DiagCode::NotAGenvar);
-    CHECK((it++)->code == DiagCode::ExpressionNotConstant);
-    CHECK((it++)->code == DiagCode::ExpressionNotConstant);
+    CHECK((it++)->code == DiagCode::HierarchicalNotAllowedInConstant);
+    CHECK((it++)->code == DiagCode::HierarchicalNotAllowedInConstant);
     CHECK((it++)->code == DiagCode::NotBooleanConvertible);
     CHECK((it++)->code == DiagCode::GenvarUnknownBits);
     CHECK((it++)->code == DiagCode::GenvarUnknownBits);

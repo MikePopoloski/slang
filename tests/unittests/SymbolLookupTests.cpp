@@ -981,9 +981,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:9:16: error: hierarchical names are not allowed in constant expressions
+source:9:20: error: hierarchical names are not allowed in constant expressions
         return gen1.bar;
-               ^~~~
+               ~~~~^
 source:13:16: error: hierarchical names are not allowed in constant expressions
         return $root.M.asdf;
                ^~~~~
