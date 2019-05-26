@@ -6,53 +6,11 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/DiagnosticWriter.h"
 
-#include <fmt/ostream.h>
+#include "FmtlibWrapper.h"
 
-#include "slang/symbols/TypePrinter.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/StackContainer.h"
-
-template<>
-struct fmt::formatter<slang::Type> {
-    template<typename ParseContext>
-    constexpr auto parse(ParseContext& ctx) {
-        return ctx.begin();
-    }
-
-    template<typename FormatContext>
-    auto format(const slang::Type& type, FormatContext& ctx) {
-        slang::TypePrinter printer;
-        printer.append(type);
-
-        std::string result = printer.toString();
-        return std::copy(result.begin(), result.end(), ctx.out());
-    }
-};
-
-template<>
-struct fmt::formatter<std::monostate> {
-    template<typename ParseContext>
-    constexpr auto parse(ParseContext& ctx) {
-        return ctx.begin();
-    }
-
-    template<typename FormatContext>
-    auto format(const std::monostate&, FormatContext& ctx) {
-        auto result = "<error>"sv;
-        return std::copy(result.begin(), result.end(), ctx.out());
-    }
-};
-
-template<>
-struct fmt::formatter<slang::ConstantValue> : dynamic_formatter<> {
-    template<typename FormatContext>
-    auto format(const slang::ConstantValue& cv, FormatContext& ctx) {
-        return std::visit([&](auto&& arg) {
-            return dynamic_formatter<>::format(std::forward<decltype(arg)>(arg), ctx);
-        }, cv.getVariant());
-    }
-};
 
 namespace slang {
 
@@ -64,7 +22,11 @@ static const char* severityToString[] = { "note", "warning", "error" };
 
 DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     sourceManager(sourceManager) {
+
+    typePrintingOptions = std::make_unique<TypePrintingOptions>();
 }
+
+DiagnosticWriter::~DiagnosticWriter() = default;
 
 static void getMacroArgExpansions(const SourceManager& sm, SourceLocation loc, bool isStart,
                                   SmallVector<BufferID>& results) {
@@ -212,37 +174,13 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
             ignoreUntil = expansionLocs.size();
     }
 
-    // build the error message from arguments, if we have any
-    FormatBuffer buffer;
-    string_view format = getMessage(diagnostic.code);
-    DiagnosticSeverity severity = getSeverity(diagnostic.code);
-    std::string message;
-
-    if (diagnostic.args.empty()) {
-        message = format;
-    }
-    else {
-        // The fmtlib API for arg lists isn't very pretty, but it gets the job done
-        using ctx = fmt::format_context;
-        std::vector<fmt::basic_format_arg<ctx>> args;
-        for (auto& arg : diagnostic.args) {
-            std::visit(
-                [&](auto&& t) {
-                    using T = std::decay_t<decltype(t)>;
-                    if constexpr (std::is_pointer_v<T>)
-                        args.push_back(fmt::internal::make_arg<ctx>(*t));
-                    else
-                        args.push_back(fmt::internal::make_arg<ctx>(t));
-                },
-                arg);
-        }
-
-        message =
-            fmt::vformat(format, fmt::basic_format_args<ctx>(args.data(), (unsigned)args.size()));
-    }
-
     SmallVectorSized<SourceRange, 8> mappedRanges;
     mapDiagnosticRanges(sourceManager, location, diagnostic.ranges, mappedRanges);
+
+    DiagnosticSeverity severity = getSeverity(diagnostic.code);
+    std::string message = formatDiagArgs(diagnostic);
+
+    FormatBuffer buffer;
     formatDiag(buffer, location, mappedRanges, severityToString[(int)severity], message);
 
     // write out macro expansions, if we have any
@@ -294,6 +232,52 @@ std::string DiagnosticWriter::report(const Diagnostics& diagnostics) {
         buffer.append(report(diag));
     }
     return buffer.str();
+}
+
+std::string DiagnosticWriter::formatDiagArgs(const Diagnostic& diag) const {
+    // If we have no argument, the format string is the entire message.
+    if (diag.args.empty())
+        return std::string(getMessage(diag.code));
+
+    // For formatting types we want to know the full set of all types we'll be
+    // including in the message (to see if we need to disambiguate them) so keep
+    // track of them while building the arugment list.
+    SmallVectorSized<const Type*, 8> allTypes;
+
+    // Dynamically build up the list of arguments to pass to the formatting routines.
+    using ctx = FormatContext;
+    std::vector<fmt::basic_format_arg<ctx>> args;
+    for (auto& arg : diag.args) {
+        // Unwrap the argument type (stored as a variant).
+        std::visit(
+            [&](auto&& t) {
+                // If the argument is a pointer, the fmtlib API needs it unwrapped into a reference.
+                using T = std::decay_t<decltype(t)>;
+                if constexpr (std::is_pointer_v<T>)
+                    args.push_back(fmt::internal::make_arg<ctx>(*t));
+                else
+                    args.push_back(fmt::internal::make_arg<ctx>(t));
+
+                if constexpr (std::is_same_v<T, const Type*>)
+                    allTypes.append(t);
+            },
+            arg);
+    }
+
+    using Range = fmt::back_insert_range<fmt::internal::basic_buffer<char>>;
+
+    auto&& formatStr = fmt::to_string_view(getMessage(diag.code));
+    fmt::memory_buffer out;
+    fmt::format_handler<ArgFormatter<Range>, char, ctx> handler(
+        out, formatStr, fmt::basic_format_args(args.data(), (unsigned)args.size()),
+        fmt::internal::locale_ref());
+
+    typePrintingOptions->disambiguateTypes = allTypes;
+    handler.context.typeOptions = typePrintingOptions.get();
+
+    fmt::internal::parse_format_string<false>(formatStr, handler);
+
+    return std::string(out.data(), out.size());
 }
 
 string_view DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col) {

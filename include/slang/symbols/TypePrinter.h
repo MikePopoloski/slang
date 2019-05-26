@@ -12,8 +12,15 @@
 
 namespace slang {
 
+struct TypePrintingOptions {
+    bool shouldUnwrap;
+    span<const Type* const> disambiguateTypes;
+};
+
 class TypePrinter : public ASTVisitor<TypePrinter> {
 public:
+    void setOptions(const TypePrintingOptions&) {}
+
     void append(const Type& type);
 
     std::string toString() const;
