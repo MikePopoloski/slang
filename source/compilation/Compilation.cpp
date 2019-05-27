@@ -230,9 +230,6 @@ const RootSymbol& Compilation::getRoot() {
         auto& instance = ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def);
         root->addMember(instance);
         topList.append(&instance);
-
-        // TODO: do we need this?
-        instance.visit(elaborationVisitor);
     }
 
     root->topInstances = topList.copy(*this);

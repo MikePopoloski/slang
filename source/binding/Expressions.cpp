@@ -623,7 +623,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     bitmask<LookupFlags> flags = LookupFlags::AllowSystemSubroutine;
     if (invocation && invocation->arguments)
         flags |= LookupFlags::AllowDeclaredAfter;
-    if (context.flags & BindFlags::Constant)
+    if ((context.flags & BindFlags::Constant) || (context.flags & BindFlags::NoHierarchicalNames))
         flags |= LookupFlags::Constant;
 
     LookupResult result;

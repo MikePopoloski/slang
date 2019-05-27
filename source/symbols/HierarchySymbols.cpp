@@ -799,7 +799,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    BindContext iterContext(iterScope, LookupLocation::max);
+    BindContext iterContext(iterScope, LookupLocation::max, BindFlags::NoHierarchicalNames);
     const auto& stopExpr = Expression::bind(*syntax.stopExpr, iterContext);
     const auto& iterExpr = Expression::bind(*syntax.iterationExpr, iterContext);
     if (stopExpr.bad() || iterExpr.bad())

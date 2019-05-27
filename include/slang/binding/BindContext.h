@@ -11,12 +11,30 @@
 
 namespace slang {
 
-enum class BindFlags : uint8_t {
+/// Specifies flags that control expression and statement binding.
+enum class BindFlags {
+    /// No special binding behavior specified.
     None = 0,
+
+    /// The binding is for a constant expression, so report an error if
+    /// it's not constant for some reason.
     Constant = 1,
-    InsideConcatenation = 2,
-    AllowDataType = 4,
-    EnumInitializer = 8
+
+    /// No hierarchical references are allowed to symbols. This is implied by
+    /// @a Constant but can be specified on its own if the expression doesn't
+    /// need to be fully constant.
+    NoHierarchicalNames = 2,
+
+    /// The expression is inside a concatenation; this enables slightly
+    /// different binding rules.
+    InsideConcatenation = 4,
+
+    /// Allow the expression to also be a data type; used in a few places like
+    /// the first argument to system methods like $bits
+    AllowDataType = 8,
+
+    /// The expression being bound is an enum value initializer.
+    EnumInitializer = 16
 };
 BITMASK_DEFINE_MAX_ELEMENT(BindFlags, EnumInitializer);
 
