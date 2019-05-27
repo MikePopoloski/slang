@@ -709,8 +709,7 @@ TokenKind Lexer::lexDirective(Token::Info* info) {
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
         addDiag(DiagCode::MisplacedDirectiveChar, startingOffset);
-        info->extra = SyntaxKind::Unknown;
-        return TokenKind::Directive;
+        return TokenKind::Unknown;
     }
 
     info->extra = getDirectiveKind(lexeme().substr(1));

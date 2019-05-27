@@ -597,8 +597,7 @@ TEST_CASE("Misplaced directive char") {
     auto& text = "`";
     Token token = lexRawToken(text);
 
-    CHECK(token.kind == TokenKind::Directive);
-    CHECK(token.directiveKind() == SyntaxKind::Unknown);
+    CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString() == text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::MisplacedDirectiveChar);

@@ -111,6 +111,10 @@ error ParseTreeTooDeep "language constructs are too deeply nested"
 error MissingModportPortDirection "modport port declaration is missing direction specifier"
 error CaseStatementEmpty "{} statement has no items"
 error MultipleDefaultCases "{} statement has multiple default cases"
+error DirectionOnInterfacePort "direction specifier on interface port is not allowed"
+error NonStandardGenBlock "standalone generate block without loop or condition is not allowed"
+error UnexpectedQualifiers "unexpected qualifiers on class member"
+error ExpectedSampleKeyword "expected 'sample' keyword"
 
 // declarations
 note NotePreviousDefinition "previous definition here"

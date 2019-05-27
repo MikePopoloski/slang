@@ -22,20 +22,40 @@ namespace detail {
 
 /// Various options for parsing expressions.
 enum class ExpressionOptions {
+    /// No special options specified.
     None = 0,
 
-    // Allow pattern matching expressions; these are not allowed recursively so
-    // they're turned off after finding the first one
+    /// Allow pattern matching expressions; these are not allowed recursively so
+    /// they're turned off after finding the first one
     AllowPatternMatch = 1,
 
-    // In a procedural assignment context, <= is a non-blocking assignment, not the less than or
-    // equal to operator.
+    /// In a procedural assignment context, <= is a non-blocking assignment, not the less
+    /// than or equal to operator.
     ProceduralAssignmentContext = 2,
 
-    // In an event expression context, the "or" operator has special meaning
+    /// In an event expression context, the "or" operator has special meaning
     EventExpressionContext = 4
 };
 BITMASK_DEFINE_MAX_ELEMENT(ExpressionOptions, EventExpressionContext);
+
+/// Various options for parsing names.
+enum class NameOptions {
+    /// No special options specified.
+    None = 0,
+
+    /// Parsing the name of a foreach variable.
+    InForEach = 1,
+
+    /// This is the first element of a potentially dotted name path.
+    IsFirst = 2,
+
+    /// The previous element in the name path was the 'this' keyword.
+    PreviousWasThis = 4,
+
+    /// We are expecting an expression while parsing this name.
+    ExpectingExpression = 8
+};
+BITMASK_DEFINE_MAX_ELEMENT(NameOptions, ExpectingExpression);
 
 } // namespace detail
 
@@ -88,6 +108,11 @@ public:
     MetadataMap&& getMetadataMap() { return std::move(metadataMap); }
 
 private:
+    using ExpressionOptions = detail::ExpressionOptions;
+    using NameOptions = detail::NameOptions;
+
+    // ---- Recursive-descent parsing routines, by syntax type ----
+
     ExpressionSyntax& parseMinTypMaxExpression();
     ExpressionSyntax& parsePrimaryExpression();
     ExpressionSyntax& parseIntegerExpression();
@@ -101,8 +126,8 @@ private:
     ExpressionSyntax& parseOpenRangeElement();
     ElementSelectSyntax& parseElementSelect();
     SelectorSyntax* parseElementSelector();
-    NameSyntax& parseName(bool isForEach);
-    NameSyntax& parseNamePart(bool isForEach, bool isFirst, bool previousWasThis);
+    NameSyntax& parseName(bitmask<NameOptions> options);
+    NameSyntax& parseNamePart(bitmask<NameOptions> options);
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
     ArgumentListSyntax& parseArgumentList();
     ArgumentSyntax& parseArgument();
@@ -243,6 +268,17 @@ private:
     TransRangeSyntax& parseTransRange();
     TransSetSyntax& parseTransSet();
     TransListCoverageBinInitializerSyntax& parseTransListInitializer();
+    ExpressionSyntax& parseSubExpression(bitmask<ExpressionOptions> options, int precedence);
+    ExpressionSyntax& parsePrefixExpression(bitmask<ExpressionOptions> options, SyntaxKind opKind);
+
+    template<bool (*IsEnd)(TokenKind)>
+    span<TokenOrSyntax> parseDeclarators(TokenKind endKind, Token& end);
+    span<TokenOrSyntax> parseDeclarators(Token& semi);
+
+    template<typename TMember, typename TParseFunc>
+    span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);
+
+    // ---- Lookahead routines, for determining which kind of syntax to parse ----
 
     bool isPortDeclaration();
     bool isNetDeclaration();
@@ -253,7 +289,10 @@ private:
     bool scanDimensionList(uint32_t& index);
     bool scanQualifiedName(uint32_t& index);
 
-    void errorIfAttributes(span<AttributeInstanceSyntax*> attributes, DiagCode code);
+    template<bool (*IsEnd)(TokenKind)>
+    bool scanTypePart(uint32_t& index, TokenKind start, TokenKind end);
+
+    // ---- Stack recursion error detection ----
 
     class DepthGuard {
     public:
@@ -273,31 +312,32 @@ private:
         using std::runtime_error::runtime_error;
     };
 
-    using ExpressionOptions = detail::ExpressionOptions;
+    // ---- Various helper methods ----
 
-    ExpressionSyntax& parseSubExpression(bitmask<ExpressionOptions> options, int precedence);
-    ExpressionSyntax& parsePrefixExpression(bitmask<ExpressionOptions> options, SyntaxKind opKind);
+    // Reports an error if there are attributes in the given span.
+    void errorIfAttributes(span<AttributeInstanceSyntax*> attributes, DiagCode code);
 
-    template<bool (*IsEnd)(TokenKind)>
-    span<TokenOrSyntax> parseDeclarators(TokenKind endKind, Token& end);
-    span<TokenOrSyntax> parseDeclarators(Token& semi);
-
-    template<typename TMember, typename TParseFunc>
-    span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);
-
-    template<bool (*IsEnd)(TokenKind)>
-    bool scanTypePart(uint32_t& index, TokenKind start, TokenKind end);
-
+    // Handle splitting out an exponent from a token that was otherwise miscategorized by the lexer.
     void handleExponentSplit(Token token, size_t offset);
 
+    // ---- Member variables ----
+
+    // The factory used to create new syntax nodes.
     SyntaxFactory factory;
+
+    // Stored parse options.
     ParserOptions parseOptions;
+
+    // Map of metadata for previously parsed nodes.
     MetadataMap metadataMap;
 
     // Scratch space for building up integer vector literals.
     VectorBuilder vectorBuilder;
 
+    // The current depth of recursion in the parser.
     size_t recursionDepth = 0;
+
+    // The held EOF token, if we've encountered it.
     Token eofToken;
 };
 

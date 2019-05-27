@@ -234,15 +234,19 @@ PortHeaderSyntax& Parser::parsePortHeader(Token direction) {
     }
 
     if (kind == TokenKind::InterfaceKeyword) {
-        // TODO: error if direction is given
+        if (direction)
+            addDiag(DiagCode::DirectionOnInterfacePort, direction.location());
+
         auto keyword = consume();
         return factory.interfacePortHeader(keyword, parseDotMemberClause());
     }
 
     if (kind == TokenKind::InterconnectKeyword) {
         auto keyword = consume();
-        // TODO: parse implicit data type only
-        return factory.interconnectPortHeader(direction, keyword, nullptr);
+        auto signing = parseSigning();
+        auto dimensions = parseDimensionList();
+        auto& type = factory.implicitType(signing, dimensions);
+        return factory.interconnectPortHeader(direction, keyword, type);
     }
 
     if (kind == TokenKind::VarKeyword) {
@@ -379,7 +383,8 @@ MemberSyntax* Parser::parseMember() {
             // depends on it. We'll parse it here and then issue a diagnostic about how it's not
             // kosher.
             if (peek(TokenKind::BeginKeyword)) {
-                // TODO: error
+                addDiag(DiagCode::NonStandardGenBlock, peek().location());
+
                 SmallVectorSized<MemberSyntax*, 2> buffer;
                 buffer.append(&parseGenerateBlock());
                 return &factory.generateRegion(attributes, keyword, buffer.copy(alloc),
@@ -521,8 +526,11 @@ MemberSyntax* Parser::parseMember() {
     }
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
-    if (!attributes.empty())
-        return &factory.emptyMember(attributes, nullptr, expect(TokenKind::Semicolon));
+    if (!attributes.empty()) {
+        return &factory.emptyMember(
+            attributes, nullptr,
+            Token::createMissing(alloc, TokenKind::Semicolon, peek().location()));
+    }
 
     // otherwise, we got nothing and should just return null so that our caller will skip and try
     // again.
@@ -1041,10 +1049,12 @@ MemberSyntax* Parser::parseClassMember() {
         return &parseConstraint(attributes, qualifiers);
 
     // qualifiers aren't allowed past this point, so return an empty member to hold them
-    // TODO: specific error code for this
-    // TODO: don't expect semi, just making it missing
-    if (!qualifiers.empty())
-        return &factory.emptyMember(attributes, qualifiers, expect(TokenKind::Semicolon));
+    if (!qualifiers.empty()) {
+        addDiag(DiagCode::UnexpectedQualifiers, qualifiers[0].location());
+        return &factory.emptyMember(
+            attributes, qualifiers,
+            Token::createMissing(alloc, TokenKind::Semicolon, peek().location()));
+    }
 
     switch (kind) {
         case TokenKind::ClassKeyword:
@@ -1059,8 +1069,11 @@ MemberSyntax* Parser::parseClassMember() {
     }
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
-    if (!attributes.empty())
-        return &factory.emptyMember(attributes, qualifiers, expect(TokenKind::Semicolon));
+    if (!attributes.empty()) {
+        return &factory.emptyMember(
+            attributes, qualifiers,
+            Token::createMissing(alloc, TokenKind::Semicolon, peek().location()));
+    }
 
     // otherwise, we got nothing and should just return null so that our caller will skip and try
     // again.
@@ -1149,8 +1162,11 @@ MemberSyntax* Parser::parseCoverageMember() {
     }
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
-    if (!attributes.empty())
-        return &factory.emptyMember(attributes, nullptr, expect(TokenKind::Semicolon));
+    if (!attributes.empty()) {
+        return &factory.emptyMember(
+            attributes, nullptr,
+            Token::createMissing(alloc, TokenKind::Semicolon, peek().location()));
+    }
 
     // otherwise, we got nothing and should just return null so that our caller will skip and try
     // again.
@@ -1338,7 +1354,6 @@ BlockEventExpressionSyntax& Parser::parseBlockEventExpression() {
             keyword = consume();
             break;
         default:
-            // TODO: better error message here? begin or end expected
             keyword = expect(TokenKind::BeginKeyword);
             break;
     }
@@ -1380,6 +1395,9 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(
 
             // TODO: make sure this is "sample" (maybe in the binder?)
             auto sample = expect(TokenKind::Identifier);
+            if (!sample.isMissing() && sample.valueText() != "sample"sv)
+                addDiag(DiagCode::ExpectedSampleKeyword, sample.location());
+
             auto& samplePortList = parseAnsiPortList(expect(TokenKind::OpenParenthesis));
             event = &factory.withFunctionSample(with, function, sample, samplePortList);
             break;

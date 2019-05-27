@@ -245,17 +245,18 @@ Token Preprocessor::handleDirectives(Token token) {
                     case SyntaxKind::EndKeywordsDirective:
                         trivia.append(handleEndKeywordsDirective(token));
                         break;
-                    case SyntaxKind::PragmaDirective:           // TODO, support pragmas
-                    case SyntaxKind::UnconnectedDriveDirective: // Nothing to do for the rest of
-                                                                // these
+                    case SyntaxKind::PragmaDirective:
+                        // TODO: implement pragmas
+                    case SyntaxKind::UnconnectedDriveDirective:
                     case SyntaxKind::NoUnconnectedDriveDirective:
+                        // TODO: implement unconnected drive
                     case SyntaxKind::CellDefineDirective:
                     case SyntaxKind::EndCellDefineDirective:
-                    default:
-                        // TODO:
-                        // default can be reached in certain error cases
+                        // we don't do anything with celldefine directives
                         trivia.append(createSimpleDirective(token));
                         break;
+                    default:
+                        THROW_UNREACHABLE;
                 }
                 break;
             default:

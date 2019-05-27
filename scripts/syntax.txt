@@ -921,7 +921,7 @@ DataType dataType
 InterconnectPortHeader base=PortHeader kind=InterconnectPortHeader
 token direction
 token interconnect
-DataType? type
+ImplicitType type
 
 NetPortHeader base=PortHeader kind=NetPortHeader
 token direction

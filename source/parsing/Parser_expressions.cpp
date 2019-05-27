@@ -261,8 +261,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             }
             else {
                 // parseName() will insert a missing identifier token for the error case
-                // TODO: better error for "expected expression" instead of "expected identifier"
-                auto& name = parseName();
+                auto& name = parseName(NameOptions::ExpectingExpression);
                 if (peek(TokenKind::ApostropheOpenBrace))
                     expr = &parseAssignmentPatternExpression(&factory.namedType(name));
                 else {
@@ -603,11 +602,12 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
 }
 
 NameSyntax& Parser::parseName() {
-    return parseName(false);
+    return parseName(NameOptions::None);
 }
 
-NameSyntax& Parser::parseName(bool isForEach) {
-    NameSyntax* name = &parseNamePart(isForEach, true, false);
+NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
+    NameSyntax* name = &parseNamePart(options | NameOptions::IsFirst);
+    options &= ~NameOptions::ExpectingExpression;
 
     bool usedDot = false;
     bool reportedError = false;
@@ -646,7 +646,11 @@ NameSyntax& Parser::parseName(bool isForEach) {
                 break;
         }
 
-        NameSyntax& rhs = parseNamePart(isForEach, false, previousKind == SyntaxKind::ThisHandle);
+        bitmask<NameOptions> nextOptions = options;
+        if (previousKind == SyntaxKind::ThisHandle)
+            nextOptions |= NameOptions::PreviousWasThis;
+
+        NameSyntax& rhs = parseNamePart(nextOptions);
         previousKind = rhs.kind;
 
         name = &factory.scopedName(*name, separator, rhs);
@@ -670,26 +674,40 @@ NameSyntax& Parser::parseName(bool isForEach) {
 
     if (expectedKind != TokenKind::Unknown) {
         auto separator = expect(expectedKind);
-        name = &factory.scopedName(*name, separator, parseNamePart(isForEach, false, false));
+        name = &factory.scopedName(*name, separator, parseNamePart(options));
     }
 
     return *name;
 }
 
-NameSyntax& Parser::parseNamePart(bool isForEach, bool isFirst, bool previousWasThis) {
+NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
     auto kind = getKeywordNameExpression(peek().kind);
     if (kind != SyntaxKind::Unknown) {
-        if ((isFirst && !isSpecialMethodName(kind)) || (!isFirst && isSpecialMethodName(kind)) ||
-            (kind == SyntaxKind::SuperHandle && previousWasThis)) {
+        bool isFirst = (options & NameOptions::IsFirst) != 0;
+        if ((isFirst != isSpecialMethodName(kind)) ||
+            (kind == SyntaxKind::SuperHandle && (options & NameOptions::PreviousWasThis))) {
             return factory.keywordName(kind, consume());
         }
     }
 
     TokenKind next = peek().kind;
-    if (isForEach && (next == TokenKind::Comma || next == TokenKind::CloseBracket))
+    bool inForEach = (options & NameOptions::InForEach) != 0;
+    if (inForEach && (next == TokenKind::Comma || next == TokenKind::CloseBracket))
         return factory.emptyIdentifierName();
 
-    auto identifier = expect(TokenKind::Identifier);
+    Token identifier;
+    if (next == TokenKind::Identifier) {
+        identifier = consume();
+    }
+    else if (next != TokenKind::Dot && next != TokenKind::DoubleColon &&
+             (options & NameOptions::ExpectingExpression)) {
+        addDiag(DiagCode::ExpectedExpression, peek().location());
+        identifier = Token::createMissing(alloc, TokenKind::Identifier, peek().location());
+    }
+    else {
+        identifier = expect(TokenKind::Identifier);
+    }
+
     switch (peek().kind) {
         case TokenKind::Hash: {
             auto parameterValues = parseParameterValueAssignment();
@@ -699,7 +717,7 @@ NameSyntax& Parser::parseNamePart(bool isForEach, bool isFirst, bool previousWas
         case TokenKind::OpenBracket: {
             uint32_t index = 1;
             scanTypePart<isSemicolon>(index, TokenKind::OpenBracket, TokenKind::CloseBracket);
-            if (!isForEach || peek(index).kind != TokenKind::CloseParenthesis) {
+            if (!inForEach || peek(index).kind != TokenKind::CloseParenthesis) {
                 SmallVectorSized<ElementSelectSyntax*, 4> buffer;
                 do {
                     buffer.append(&parseElementSelect());

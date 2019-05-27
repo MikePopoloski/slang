@@ -351,13 +351,14 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
 
 ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     auto openParen = expect(TokenKind::OpenParenthesis);
-    auto& arrayName = parseName(true);
+    auto& arrayName = parseName(NameOptions::InForEach);
     span<TokenOrSyntax> list;
     Token openBracket;
     Token closeBracket;
     parseSeparatedList<isIdentifierOrComma, isEndOfBracketedList>(
         TokenKind::OpenBracket, TokenKind::CloseBracket, TokenKind::Comma, openBracket, list,
-        closeBracket, DiagCode::ExpectedIdentifier, [this] { return &parseName(true); });
+        closeBracket, DiagCode::ExpectedIdentifier,
+        [this] { return &parseName(NameOptions::InForEach); });
 
     auto closeParen = expect(TokenKind::CloseParenthesis);
     return factory.foreachLoopList(openParen, arrayName, openBracket, list, closeBracket,

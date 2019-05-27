@@ -188,9 +188,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:6:20: error: expected identifier
+source:6:21: error: expected expression
     int i = `BAR(++);
-                   ^
+                    ^
 )");
 }
 

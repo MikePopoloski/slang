@@ -150,8 +150,6 @@ bool SourceManager::isBeforeInCompilationUnit(SourceLocation left, SourceLocatio
     if (left.buffer() == right.buffer())
         return left.offset() < right.offset();
 
-    // TODO: add a cache for this?
-
     auto moveUp = [this](SourceLocation& sl) {
         if (sl && !isFileLoc(sl))
             sl = getExpansionLoc(sl);

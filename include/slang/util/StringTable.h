@@ -12,8 +12,6 @@ namespace slang {
 
 /// This class is a lookup table from string to value. It's optimized for
 /// a known fixed set of keywords.
-///
-/// TODO: use an offline tool to make this a minimal perfect hash.
 template<typename T>
 class StringTable {
 public:
