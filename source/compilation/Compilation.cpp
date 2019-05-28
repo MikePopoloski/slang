@@ -9,6 +9,7 @@
 #include "BuiltInSubroutines.h"
 #include <nlohmann/json.hpp>
 
+#include "slang/diagnostics/DiagnosticWriter.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -368,7 +369,11 @@ const NameSyntax& Compilation::parseName(string_view name) {
     Parser parser(preprocessor);
     auto& result = parser.parseName();
 
-    // TODO: throw error if diags is non-empty
+    if (!localDiags.empty()) {
+        localDiags.sort(sourceMan);
+        DiagnosticWriter writer(sourceMan);
+        throw std::runtime_error(writer.report(localDiags));
+    }
 
     return result;
 }
