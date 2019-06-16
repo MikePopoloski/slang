@@ -153,7 +153,7 @@ struct fmt::formatter<slang::Type> {
     template<typename FormatContext>
     auto format(const slang::Type& type, FormatContext& ctx) {
         bool unique = ctx.seenTypes.insert(&type).second;
-        ctx.typeOptions->shouldUnwrap = unique;
+        ctx.typeOptions->printAKA = unique;
 
         TypePrinter printer;
         printer.setOptions(*ctx.typeOptions);

@@ -111,6 +111,10 @@ public:
     /// If the symbol has a declared type, returns a pointer to it. Otherwise returns nullptr.
     const DeclaredType* getDeclaredType() const;
 
+    /// Gets the symbol's hierarchical path by walking up to the root node and appending
+    /// each parent's name.
+    void getHierarchicalPath(std::string& buffer) const;
+
     template<typename T>
     decltype(auto) as() {
         if constexpr (std::is_same_v<T, Scope>) {

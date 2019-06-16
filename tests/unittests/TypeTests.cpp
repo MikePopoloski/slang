@@ -341,7 +341,6 @@ endmodule
     CHECK(diags[3].code == DiagCode::ValueMustBePositive);
     CHECK(diags[4].code == DiagCode::PackedMemberNotIntegral);
 
-    // TODO: report type names correctly
     CHECK(report(diags) ==
           R"(source:2:20: error: value must not have any unknown bits
 module Top(logic f[3'b1x0],
@@ -355,7 +354,7 @@ source:4:14: error: 72'hffffffffffffffffff is out of allowed range (-2147483648 
 source:5:14: error: value must be positive
            i[0]);
              ^
-source:7:27: error: packed members must be of integral type (type is logic$[0:2])
+source:7:27: error: packed members must be of integral type (type is 'unpacked array [3] of 'logic'')
     struct packed { logic j[3]; } foo;
                           ^~~~
 )");

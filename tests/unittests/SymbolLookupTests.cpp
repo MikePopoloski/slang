@@ -918,7 +918,7 @@ source:74:14: error: unknown class or package 'p3'
 source:75:19: error: no member named 'bar' in compilation unit
     wire j = $unit::bar;        // unknown unit member
                   ^ ~~~
-source:77:19: error: no member named 'bar' in struct{logic[1:0] a;}type_t
+source:77:19: error: no member named 'bar' in 'type_t'
     wire l = gen3.bar;          // doesn't find top.gen3.bar because of local variable
              ~~~~~^~~
 source:79:20: error: hierarchical scope 'array1' is not indexable

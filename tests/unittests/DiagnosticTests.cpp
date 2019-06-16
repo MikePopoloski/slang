@@ -96,7 +96,7 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:7:23: error: no member named 'bar' in struct{}
+source:7:23: error: no member named 'bar' in '<unnamed unpacked struct>'
     int i = `BAR(asdf.bar);
                  ~~~~~^~~
 source:3:24: note: expanded from macro 'BAR'
@@ -127,7 +127,7 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:7:13: error: no member named 'bar' in struct{}
+source:7:13: error: no member named 'bar' in '<unnamed unpacked struct>'
     int i = `BAR(asdf);
             ^~~~~~~~~~
 source:3:19: note: expanded from macro 'BAR'
@@ -158,7 +158,7 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:7:13: error: invalid operand type struct{} to unary expression
+source:7:13: error: invalid operand type '<unnamed unpacked struct>' to unary expression
     int i = `BAR(asdf);
             ^    ~~~~
 source:3:19: note: expanded from macro 'BAR'
@@ -215,7 +215,7 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:9:13: error: invalid operands to binary expression (struct{} and struct{})
+source:9:13: error: invalid operands to binary expression ('<unnamed unpacked struct>' and '<unnamed unpacked struct>')
     int i = `BAR(asdf, bar);
             ^    ~~~~  ~~~
 source:4:26: note: expanded from macro 'BAR'
@@ -247,7 +247,7 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:8:13: error: invalid operands to binary expression (struct{} and struct{})
+source:8:13: error: invalid operands to binary expression ('<unnamed unpacked struct>' and '<unnamed unpacked struct>')
     int i = `BAR(asdf, bar);
             ^    ~~~~  ~~~
 source:3:36: note: expanded from macro 'BAR'

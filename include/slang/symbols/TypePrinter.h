@@ -6,48 +6,54 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypeSymbols.h"
 #include "slang/text/FormatBuffer.h"
 
 namespace slang {
 
 struct TypePrintingOptions {
-    bool shouldUnwrap;
+    bool printAKA = false;
+    bool addSingleQuotes = false;
+    bool elideScopeNames = false;
+
+    enum AnonymousTypeStyle { SystemName, FriendlyName } anonymousTypeStyle = SystemName;
+
     span<const Type* const> disambiguateTypes;
 };
 
-class TypePrinter : public ASTVisitor<TypePrinter> {
+class TypePrinter {
 public:
-    void setOptions(const TypePrintingOptions&) {}
+    void setOptions(const TypePrintingOptions& options_) { options = options_; }
 
     void append(const Type& type);
 
     std::string toString() const;
 
-    void handle(const ScalarType& type);
-    void handle(const PredefinedIntegerType& type);
-    void handle(const FloatingType& type);
-    void handle(const EnumType& type);
-    void handle(const PackedArrayType& type);
-    void handle(const PackedStructType& type);
-    void handle(const UnpackedArrayType& type);
-    void handle(const UnpackedStructType& type);
-    void handle(const VoidType& type);
-    void handle(const NullType& type);
-    void handle(const CHandleType& type);
-    void handle(const StringType& type);
-    void handle(const EventType& type);
-    void handle(const TypeAliasType& type);
-    void handle(const ErrorType& type);
+    void visit(const ScalarType& type, string_view overrideName);
+    void visit(const PredefinedIntegerType& type, string_view overrideName);
+    void visit(const FloatingType& type, string_view overrideName);
+    void visit(const EnumType& type, string_view overrideName);
+    void visit(const PackedArrayType& type, string_view overrideName);
+    void visit(const PackedStructType& type, string_view overrideName);
+    void visit(const UnpackedArrayType& type, string_view overrideName);
+    void visit(const UnpackedStructType& type, string_view overrideName);
+    void visit(const VoidType& type, string_view overrideName);
+    void visit(const NullType& type, string_view overrideName);
+    void visit(const CHandleType& type, string_view overrideName);
+    void visit(const StringType& type, string_view overrideName);
+    void visit(const EventType& type, string_view overrideName);
+    void visit(const TypeAliasType& type, string_view overrideName);
+    void visit(const ErrorType& type, string_view overrideName);
 
-    // Catch-all method that should never be called.
-    void handle(const Type&) { THROW_UNREACHABLE; }
+    template<typename T>
+    void visit(const T&, string_view) {}
 
 private:
     void appendStructMembers(const Scope& scope);
+    void printScope(const Scope* scope);
 
     FormatBuffer buffer;
+    TypePrintingOptions options;
 };
 
 } // namespace slang

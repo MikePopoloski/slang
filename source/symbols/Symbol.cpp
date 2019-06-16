@@ -104,6 +104,23 @@ const DeclaredType* Symbol::getDeclaredType() const {
     }
 }
 
+void Symbol::getHierarchicalPath(std::string& buffer) const {
+    if (parentScope) {
+        auto& parent = parentScope->asSymbol();
+        parent.getHierarchicalPath(buffer);
+
+        if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType)
+            buffer.append("::");
+        else
+            buffer.append(".");
+    }
+
+    if (name.empty())
+        buffer.append("<unnamed>");
+    else
+        buffer.append(name);
+}
+
 const Scope* Symbol::scopeOrNull() const {
     AsScopeVisitor visitor;
     return visit(visitor);

@@ -24,6 +24,9 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     sourceManager(sourceManager) {
 
     typePrintingOptions = std::make_unique<TypePrintingOptions>();
+    typePrintingOptions->addSingleQuotes = true;
+    typePrintingOptions->elideScopeNames = true;
+    typePrintingOptions->anonymousTypeStyle = TypePrintingOptions::FriendlyName;
 }
 
 DiagnosticWriter::~DiagnosticWriter() = default;
