@@ -7,6 +7,8 @@ option(SLANG_MSVC_STATIC_RUNTIME "Enable linking to the MSVC static runtime" ON)
 option(SLANG_COVERAGE "Enable code coverage" OFF)
 option(CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(FUZZ_TARGET "Enables changes to make binaries easier to fuzz test" OFF)
+# disable the tests if set
+option(SLANG_EXCLUDE_TESTS OFF)
 set(SLANG_SANITIZERS "" CACHE STRING "List of Clang sanitizers to include in build")
 
 set(SLANG_VERSION_MAJOR 0)
@@ -136,7 +138,9 @@ conan_cmake_run(CONANFILE conanfile.txt BASIC_SETUP CMAKE_TARGETS BUILD missing)
 add_subdirectory(source)
 add_subdirectory(tools)
 
-include(CTest)
+if(NOT SLANG_EXCLUDE_TESTS)
+    include(CTest)
 
-add_subdirectory(tests/regression)
-add_subdirectory(tests/unittests)
+    add_subdirectory(tests/regression)
+    add_subdirectory(tests/unittests)
+endif()
