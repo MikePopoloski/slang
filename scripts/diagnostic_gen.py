@@ -5,8 +5,11 @@ import os
 import shlex
 
 def writefile(path, contents):
-    with open(path, 'r') as f:
-        existing = f.read()
+    try:
+        with open(path, 'r') as f:
+            existing = f.read()
+    except:
+        existing = ''
 
     if existing != contents:
         with open(path, 'w') as f:
