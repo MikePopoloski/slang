@@ -7,6 +7,8 @@
 #include "slang/symbols/Scope.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ConstEvalDiags.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/util/StackContainer.h"
 
@@ -839,8 +841,7 @@ void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
 
     if (!imports.empty()) {
         if (imports.size() > 1) {
-            auto& diag = result.addDiag(*this, diag::AmbiguousWildcardImport, sourceRange)
-                         << name;
+            auto& diag = result.addDiag(*this, diag::AmbiguousWildcardImport, sourceRange) << name;
             for (const auto& pair : imports) {
                 diag.addNote(diag::NoteImportedFrom, pair.import->location);
                 diag.addNote(diag::NoteDeclarationHere, pair.imported->location);
@@ -919,8 +920,7 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
 
     for (const ElementSelectSyntax* syntax : selectors) {
         if (!syntax->selector || syntax->selector->kind != SyntaxKind::BitSelect) {
-            result.addDiag(context.scope, diag::InvalidScopeIndexExpression,
-                           syntax->sourceRange());
+            result.addDiag(context.scope, diag::InvalidScopeIndexExpression, syntax->sourceRange());
             return nullptr;
         }
 
@@ -965,8 +965,8 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
             default: {
                 // I think it's safe to assume that the symbol name here will not be empty
                 // because if it was, it'd be an instance array or generate array.
-                auto& diag = result.addDiag(context.scope, diag::ScopeNotIndexable,
-                                            syntax->sourceRange());
+                auto& diag =
+                    result.addDiag(context.scope, diag::ScopeNotIndexable, syntax->sourceRange());
                 diag << symbol->name;
                 diag.addNote(diag::NoteDeclarationHere, symbol->location);
                 return nullptr;
@@ -1222,8 +1222,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             // Be careful to avoid calling getRoot() if we're in a constant context (there's a
             // chance we could already be in the middle of calling getRoot in that case).
             if (inConstantEval) {
-                result.addDiag(*this, diag::HierarchicalNotAllowedInConstant,
-                               nameToken.range());
+                result.addDiag(*this, diag::HierarchicalNotAllowedInConstant, nameToken.range());
                 return;
             }
 

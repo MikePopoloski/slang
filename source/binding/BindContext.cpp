@@ -7,6 +7,9 @@
 #include "slang/binding/BindContext.h"
 
 #include "slang/binding/Expressions.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/NumericDiags.h"
 
 namespace slang {
 

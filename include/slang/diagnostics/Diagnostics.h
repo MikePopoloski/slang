@@ -144,4 +144,5 @@ struct hash<slang::DiagCode> {
 
 } // namespace std
 
-#include "slang/diagnostics/AllDiags.h"
+// General diagnostics are used all over, so just include them globally here.
+#include "slang/diagnostics/GeneralDiags.h"

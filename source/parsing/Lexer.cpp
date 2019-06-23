@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "slang/diagnostics/LexerDiags.h"
+#include "slang/diagnostics/NumericDiags.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"

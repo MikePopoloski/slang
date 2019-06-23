@@ -45,8 +45,6 @@ public:
     /// an infinite stream of EndOfFile tokens will be generated
     Token lex(KeywordVersion keywordVersion = getDefaultKeywordVersion());
 
-    
-
     /// Concatenates two tokens together; used for macro pasting.
     static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
 

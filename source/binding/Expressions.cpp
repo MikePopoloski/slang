@@ -9,6 +9,8 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypeSymbols.h"
 

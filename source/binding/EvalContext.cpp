@@ -7,6 +7,7 @@
 #include "slang/binding/EvalContext.h"
 
 #include "slang/binding/BindContext.h"
+#include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
 #include "slang/text/FormatBuffer.h"

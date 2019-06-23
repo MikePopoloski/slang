@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/Parser.h"
 
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Preprocessor.h"
 
 namespace slang {

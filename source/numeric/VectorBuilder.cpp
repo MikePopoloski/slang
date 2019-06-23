@@ -8,7 +8,8 @@
 
 #include "../text/CharInfo.h"
 
-#include "slang/diagnostics/Diagnostics.h"
+#include "slang/diagnostics/LexerDiags.h"
+#include "slang/diagnostics/NumericDiags.h"
 
 namespace slang {
 

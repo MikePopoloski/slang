@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/Preprocessor.h"
 
+#include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"

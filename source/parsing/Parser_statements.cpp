@@ -4,6 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Parser.h"
 
 namespace slang {
@@ -257,8 +258,8 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
                     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
                     parseSeparatedList<isPossibleExpressionOrComma, isEndOfCaseItem>(
-                        buffer, TokenKind::Colon, TokenKind::Comma, colon,
-                        diag::ExpectedExpression, [this] { return &parseExpression(); });
+                        buffer, TokenKind::Colon, TokenKind::Comma, colon, diag::ExpectedExpression,
+                        [this] { return &parseExpression(); });
                     itemBuffer.append(
                         &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
                 }
@@ -332,8 +333,8 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
     Token semi1;
     SmallVectorSized<TokenOrSyntax, 4> initializers;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
-        initializers, TokenKind::Semicolon, TokenKind::Comma, semi1,
-        diag::ExpectedForInitializer, [this] { return &parseForInitializer(); });
+        initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, diag::ExpectedForInitializer,
+        [this] { return &parseForInitializer(); });
 
     auto& stopExpr = parseExpression();
     auto semi2 = expect(TokenKind::Semicolon);
@@ -341,8 +342,8 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
     Token closeParen;
     SmallVectorSized<TokenOrSyntax, 4> steps;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
-        steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-        diag::ExpectedExpression, [this] { return &parseExpression(); });
+        steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, diag::ExpectedExpression,
+        [this] { return &parseExpression(); });
 
     return factory.forLoopStatement(label, attributes, forKeyword, openParen,
                                     initializers.copy(alloc), semi1, stopExpr, semi2,
@@ -650,8 +651,8 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(
 
     Token closeParen;
     parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
-        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-        diag::ExpectedIdentifier, [this] { return &parseName(); });
+        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, diag::ExpectedIdentifier,
+        [this] { return &parseName(); });
 
     return factory.waitOrderStatement(label, attributes, keyword, openParen, buffer.copy(alloc),
                                       closeParen, parseActionBlock());

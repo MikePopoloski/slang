@@ -9,7 +9,6 @@
 #include <deque>
 #include <unordered_map>
 
-#include "slang/diagnostics/Diagnostics.h"
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxNode.h"

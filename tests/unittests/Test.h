@@ -13,7 +13,7 @@
 #include "slang/binding/Statements.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DiagnosticWriter.h"
-#include "slang/diagnostics/Diagnostics.h"
+#include "slang/diagnostics/AllDiags.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxTree.h"

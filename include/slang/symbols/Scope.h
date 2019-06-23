@@ -8,6 +8,7 @@
 
 #include <flat_hash_map.hpp>
 
+#include "slang/diagnostics/Diagnostics.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/Iterator.h"

@@ -9,7 +9,6 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
-#include "slang/diagnostics/Diagnostics.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/HierarchySymbols.h"
 #include "slang/symbols/MemberSymbols.h"

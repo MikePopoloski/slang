@@ -7,6 +7,7 @@
 #include "BuiltInSubroutines.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/SysFuncsDiags.h"
 
 namespace slang::Builtins {
 

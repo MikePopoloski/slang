@@ -5,6 +5,8 @@
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #include "slang/parsing/Lexer.h"
+#include "slang/diagnostics/NumericDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 

@@ -10,6 +10,8 @@
 
 #include "slang/binding/ConstantValue.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypePrinter.h"
 #include "slang/util/StackContainer.h"
