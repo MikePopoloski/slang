@@ -24,7 +24,7 @@ steps:
     sudo apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main" -y
     sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
     sudo apt-get update
-    sudo apt-get install -y gcc-9 g++-8 clang-8 clang-tidy-8
+    sudo apt-get install -y gcc-9 g++-9 clang-8 clang-tidy-8
   displayName: 'Install GCC and Clang'
   condition: eq(variables['Agent.OS'], 'Linux')
 
