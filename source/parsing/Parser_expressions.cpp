@@ -173,12 +173,12 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             auto literal = consume();
             if (literal.numericFlags().outOfRange()) {
                 if (literal.realValue() == 0) {
-                    addDiag(DiagCode::RealLiteralUnderflow, literal.location())
+                    addDiag(diag::RealLiteralUnderflow, literal.location())
                         << real_t(std::numeric_limits<double>::denorm_min());
                 }
                 else {
                     ASSERT(!std::isfinite(literal.realValue()));
-                    addDiag(DiagCode::RealLiteralOverflow, literal.location())
+                    addDiag(diag::RealLiteralOverflow, literal.location())
                         << real_t(std::numeric_limits<double>::max());
                 }
             }
@@ -286,7 +286,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
         const SVInt& tokenValue = token.intValue();
         if (!peek(TokenKind::IntegerBase)) {
             if (tokenValue > INT32_MAX)
-                addDiag(DiagCode::SignedIntegerOverflow, token.location());
+                addDiag(diag::SignedIntegerOverflow, token.location());
             return factory.literalExpression(SyntaxKind::IntegerLiteralExpression, token);
         }
 
@@ -294,11 +294,11 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
         baseToken = consume();
 
         if (tokenValue == 0) {
-            addDiag(DiagCode::LiteralSizeIsZero, token.location());
+            addDiag(diag::LiteralSizeIsZero, token.location());
         }
         else if (tokenValue > SVInt::MAX_BITS) {
             sizeBits = SVInt::MAX_BITS;
-            addDiag(DiagCode::LiteralSizeTooLarge, token.location()) << (int)SVInt::MAX_BITS;
+            addDiag(diag::LiteralSizeTooLarge, token.location()) << (int)SVInt::MAX_BITS;
         }
         else {
             sizeBits = tokenValue.as<bitwidth_t>().value();
@@ -309,7 +309,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
     // types because of hex literals
     auto first = peek();
     if (!isPossibleVectorDigit(first.kind)) {
-        addDiag(DiagCode::ExpectedVectorDigits, first.location());
+        addDiag(diag::ExpectedVectorDigits, first.location());
         return factory.integerVectorExpression(
             sizeToken, baseToken, missingToken(TokenKind::IntegerLiteral, first.location()));
     }
@@ -368,7 +368,7 @@ OpenRangeListSyntax& Parser::parseOpenRangeList() {
 
     parseSeparatedList<isPossibleOpenRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, list, closeBrace,
-        DiagCode::ExpectedOpenRangeElement, [this] { return &parseOpenRangeElement(); });
+        diag::ExpectedOpenRangeElement, [this] { return &parseOpenRangeElement(); });
 
     return factory.openRangeList(openBrace, list, closeBrace);
 }
@@ -394,7 +394,7 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
 
     Token closeBrace;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
-        buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, DiagCode::ExpectedExpression,
+        buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, diag::ExpectedExpression,
         [this] { return &parseExpression(); });
     return factory.concatenationExpression(openBrace, buffer.copy(alloc), closeBrace);
 }
@@ -411,7 +411,7 @@ StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token o
 
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBraceInner, list,
-        closeBraceInner, DiagCode::ExpectedStreamExpression,
+        closeBraceInner, diag::ExpectedStreamExpression,
         [this] { return &parseStreamExpression(); });
 
     auto closeBrace = expect(TokenKind::CloseBrace);
@@ -450,7 +450,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             buffer.append(&parseAssignmentPatternItem(firstExpr));
             parseSeparatedList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
-                DiagCode::ExpectedAssignmentKey,
+                diag::ExpectedAssignmentKey,
                 [this] { return &parseAssignmentPatternItem(nullptr); });
             pattern =
                 &factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
@@ -459,7 +459,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             auto innerOpenBrace = consume();
             parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
-                DiagCode::ExpectedExpression, [this] { return &parseExpression(); });
+                diag::ExpectedExpression, [this] { return &parseExpression(); });
             pattern = &factory.replicatedAssignmentPattern(openBrace, *firstExpr, innerOpenBrace,
                                                            buffer.copy(alloc), closeBrace,
                                                            expect(TokenKind::CloseBrace));
@@ -470,14 +470,14 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             buffer.append(consume());
             parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
-                DiagCode::ExpectedExpression, [this] { return &parseExpression(); });
+                diag::ExpectedExpression, [this] { return &parseExpression(); });
             pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
         default:
             buffer.append(firstExpr);
             parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
-                DiagCode::ExpectedExpression, [this] { return &parseExpression(); });
+                diag::ExpectedExpression, [this] { return &parseExpression(); });
             pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
     }
@@ -620,7 +620,7 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
             usedDot = true;
         else if (usedDot && !reportedError) {
             reportedError = true;
-            addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "::"sv
+            addDiag(diag::InvalidAccessDotColon, separator.location()) << "::"sv
                                                                            << "."sv;
         }
         else if (peek().kind == TokenKind::NewKeyword)
@@ -630,7 +630,7 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
             case SyntaxKind::UnitScope:
             case SyntaxKind::LocalScope:
                 if (kind != TokenKind::DoubleColon) {
-                    addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "."sv
+                    addDiag(diag::InvalidAccessDotColon, separator.location()) << "."sv
                                                                                    << "::"sv;
                 }
                 break;
@@ -638,7 +638,7 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
             case SyntaxKind::ThisHandle:
             case SyntaxKind::SuperHandle:
                 if (kind != TokenKind::Dot) {
-                    addDiag(DiagCode::InvalidAccessDotColon, separator.location()) << "::"sv
+                    addDiag(diag::InvalidAccessDotColon, separator.location()) << "::"sv
                                                                                    << "."sv;
                 }
                 break;
@@ -701,7 +701,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
     }
     else if (next != TokenKind::Dot && next != TokenKind::DoubleColon &&
              (options & NameOptions::ExpectingExpression)) {
-        addDiag(DiagCode::ExpectedExpression, peek().location());
+        addDiag(diag::ExpectedExpression, peek().location());
         identifier = Token::createMissing(alloc, TokenKind::Identifier, peek().location());
     }
     else {
@@ -749,7 +749,7 @@ ArgumentListSyntax& Parser::parseArgumentList() {
 
     parseSeparatedList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
-        closeParen, DiagCode::ExpectedArgument, [this] { return &parseArgument(); });
+        closeParen, diag::ExpectedArgument, [this] { return &parseArgument(); });
 
     return factory.argumentList(openParen, list, closeParen);
 }
@@ -813,7 +813,7 @@ ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& 
         buffer.append(consume());
 
     parseSeparatedList<isPossibleExpressionOrTripleAnd, isEndOfConditionalPredicate>(
-        buffer, endKind, TokenKind::TripleAnd, end, DiagCode::ExpectedConditionalPattern,
+        buffer, endKind, TokenKind::TripleAnd, end, diag::ExpectedConditionalPattern,
         [this] { return &parseConditionalPattern(); });
 
     return factory.conditionalPredicate(buffer.copy(alloc));
@@ -863,7 +863,7 @@ EventExpressionSyntax& Parser::parseEventExpression() {
 ExpressionSyntax& Parser::parseNewExpression(ExpressionSyntax* scope) {
     if (scope && scope->kind != SyntaxKind::ClassScope) {
         // TODO: verify this error message makes sense
-        addDiag(DiagCode::ExpectedClassScope, scope->getFirstToken().location());
+        addDiag(diag::ExpectedClassScope, scope->getFirstToken().location());
         return *scope;
     }
     auto newKeyword = expect(TokenKind::NewKeyword);
@@ -986,7 +986,7 @@ ExpressionSyntax& Parser::parseArrayOrRandomizeWithClause() {
     SmallVectorSized<TokenOrSyntax, 4> buffer;
     parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
         buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-        DiagCode::ExpectedIdentifier, [this] { return &factory.identifierName(consume()); });
+        diag::ExpectedIdentifier, [this] { return &factory.identifierName(consume()); });
 
     auto& idList = factory.identifierList(openParen, buffer.copy(alloc), closeParen);
     return factory.randomizeMethodWithClause(with, &idList, parseConstraintBlock());

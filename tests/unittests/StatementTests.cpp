@@ -23,7 +23,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == DiagCode::DelayNotNumeric);
+    CHECK(diags[0].code == diag::DelayNotNumeric);
 }
 
 TEST_CASE("Event control statements") {
@@ -56,11 +56,11 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == DiagCode::EventExpressionConstant);
-    CHECK(diags[1].code == DiagCode::EventExpressionConstant);
-    CHECK(diags[2].code == DiagCode::ExpectedIdentifier);
-    CHECK(diags[3].code == DiagCode::InvalidEventExpression);
-    CHECK(diags[4].code == DiagCode::InvalidEdgeEventExpression);
+    CHECK(diags[0].code == diag::EventExpressionConstant);
+    CHECK(diags[1].code == diag::EventExpressionConstant);
+    CHECK(diags[2].code == diag::ExpectedIdentifier);
+    CHECK(diags[3].code == diag::InvalidEventExpression);
+    CHECK(diags[4].code == diag::InvalidEdgeEventExpression);
 }
 
 TEST_CASE("Case statements") {
@@ -131,12 +131,12 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 6);
-    CHECK(diags[0].code == DiagCode::InvalidCaseStmtType);
-    CHECK(diags[1].code == DiagCode::InvalidCaseStmtType);
-    CHECK(diags[2].code == DiagCode::NoCommonCaseStmtType);
-    CHECK(diags[3].code == DiagCode::NoCommonCaseStmtType);
-    CHECK(diags[4].code == DiagCode::InvalidCaseStmtType);
-    CHECK(diags[5].code == DiagCode::InvalidCaseStmtType);
+    CHECK(diags[0].code == diag::InvalidCaseStmtType);
+    CHECK(diags[1].code == diag::InvalidCaseStmtType);
+    CHECK(diags[2].code == diag::NoCommonCaseStmtType);
+    CHECK(diags[3].code == diag::NoCommonCaseStmtType);
+    CHECK(diags[4].code == diag::InvalidCaseStmtType);
+    CHECK(diags[5].code == diag::InvalidCaseStmtType);
 }
 
 TEST_CASE("Assertion statements") {
@@ -163,8 +163,8 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == DiagCode::NotBooleanConvertible);
-    CHECK(diags[1].code == DiagCode::CoverStmtNoFail);
+    CHECK(diags[0].code == diag::NotBooleanConvertible);
+    CHECK(diags[1].code == diag::CoverStmtNoFail);
 }
 
 TEST_CASE("Assertion at compile time") {
@@ -191,5 +191,5 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == DiagCode::ExpressionNotConstant);
+    CHECK(diags[0].code == diag::ExpressionNotConstant);
 }

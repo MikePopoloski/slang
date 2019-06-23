@@ -243,7 +243,7 @@ bool checkArrayIndex(EvalContext& context, const Type& type, const ConstantValue
     optional<int32_t> index = cs.integer().as<int32_t>();
     if (index && type.isString()) {
         if (*index < 0 || size_t(*index) >= str.size()) {
-            context.addDiag(DiagCode::NoteStringIndexInvalid, sourceRange) << cs << str.size();
+            context.addDiag(diag::NoteStringIndexInvalid, sourceRange) << cs << str.size();
             return false;
         }
 
@@ -253,7 +253,7 @@ bool checkArrayIndex(EvalContext& context, const Type& type, const ConstantValue
 
     ConstantRange range = type.getArrayRange();
     if (!index || !range.containsPoint(*index)) {
-        context.addDiag(DiagCode::NoteArrayIndexInvalid, sourceRange) << cs << type;
+        context.addDiag(diag::NoteArrayIndexInvalid, sourceRange) << cs << type;
         return false;
     }
 
@@ -380,8 +380,8 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
 
     // If we reach this point, the variable was not found, which should mean that
     // it's not actually constant.
-    context.addDiag(DiagCode::NoteNonConstVariable, sourceRange) << symbol.name;
-    context.addDiag(DiagCode::NoteDeclarationHere, symbol.location);
+    context.addDiag(diag::NoteNonConstVariable, sourceRange) << symbol.name;
+    context.addDiag(diag::NoteDeclarationHere, symbol.location);
     return nullptr;
 }
 
@@ -391,8 +391,8 @@ LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
 
     auto cv = context.findLocal(&symbol);
     if (!cv) {
-        context.addDiag(DiagCode::NoteNonConstVariable, sourceRange) << symbol.name;
-        context.addDiag(DiagCode::NoteDeclarationHere, symbol.location);
+        context.addDiag(diag::NoteNonConstVariable, sourceRange) << symbol.name;
+        context.addDiag(diag::NoteDeclarationHere, symbol.location);
         return nullptr;
     }
 
@@ -405,7 +405,7 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
 
     // Hierarchical names are disallowed in constant expressions and constant functions
     if (isHierarchical) {
-        context.addDiag(DiagCode::NoteHierarchicalNameInCE, sourceRange) << symbol.name;
+        context.addDiag(diag::NoteHierarchicalNameInCE, sourceRange) << symbol.name;
         return false;
     }
 
@@ -425,8 +425,8 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
             scope = scope->getParent();
 
         if (scope != subroutine) {
-            context.addDiag(DiagCode::NoteFunctionIdentifiersMustBeLocal, sourceRange);
-            context.addDiag(DiagCode::NoteDeclarationHere, symbol.location);
+            context.addDiag(diag::NoteFunctionIdentifiersMustBeLocal, sourceRange);
+            context.addDiag(diag::NoteDeclarationHere, symbol.location);
             return false;
         }
     }
@@ -440,8 +440,8 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
         }
 
         if (!(location < frame.lookupLocation)) {
-            context.addDiag(DiagCode::NoteParamUsedInCEBeforeDecl, sourceRange) << symbol.name;
-            context.addDiag(DiagCode::NoteDeclarationHere, symbol.location);
+            context.addDiag(diag::NoteParamUsedInCEBeforeDecl, sourceRange) << symbol.name;
+            context.addDiag(diag::NoteDeclarationHere, symbol.location);
             return false;
         }
     }
@@ -784,7 +784,7 @@ optional<ConstantRange> RangeSelectExpression::getRange(EvalContext& context,
     else {
         optional<int32_t> l = cl.integer().as<int32_t>();
         if (!l) {
-            context.addDiag(DiagCode::NoteArrayIndexInvalid, sourceRange) << cl << valueType;
+            context.addDiag(diag::NoteArrayIndexInvalid, sourceRange) << cl << valueType;
             return std::nullopt;
         }
 
@@ -792,7 +792,7 @@ optional<ConstantRange> RangeSelectExpression::getRange(EvalContext& context,
         result = getIndexedRange(selectionKind, *l, *r, valueRange.isLittleEndian());
 
         if (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right)) {
-            auto& diag = context.addDiag(DiagCode::NotePartSelectInvalid, sourceRange);
+            auto& diag = context.addDiag(diag::NotePartSelectInvalid, sourceRange);
             diag << result.left << result.right;
             diag << valueType;
             return std::nullopt;
@@ -904,7 +904,7 @@ ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
     if (type->isString()) {
         optional<int32_t> optCount = c.integer().as<int32_t>();
         if (!optCount || *optCount < 0) {
-            context.addDiag(DiagCode::NoteReplicationCountInvalid, count().sourceRange) << c;
+            context.addDiag(diag::NoteReplicationCountInvalid, count().sourceRange) << c;
             return nullptr;
         }
 

@@ -355,7 +355,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
             auto& its = node.as<IntegerTypeSyntax>();
             if (!its.dimensions.empty()) {
                 // Error but don't fail out; just remove the dims and keep trucking
-                auto& diag = parent.addDiag(DiagCode::PackedDimsOnPredefinedType,
+                auto& diag = parent.addDiag(diag::PackedDimsOnPredefinedType,
                                             its.dimensions[0]->openBracket.location());
                 diag << getTokenKindText(its.keyword.kind);
             }
@@ -398,7 +398,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::UnionType:
         case SyntaxKind::Untyped:
         case SyntaxKind::VirtualInterfaceType:
-            parent.addDiag(DiagCode::NotYetSupported, node.sourceRange());
+            parent.addDiag(diag::NotYetSupported, node.sourceRange());
             return compilation.getErrorType();
         default:
             THROW_UNREACHABLE;
@@ -458,7 +458,7 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
         return compilation.getErrorType();
 
     if (!symbol->isType()) {
-        parent.addDiag(DiagCode::NotAType, syntax.sourceRange()) << symbol->name;
+        parent.addDiag(diag::NotAType, syntax.sourceRange()) << symbol->name;
         return compilation.getErrorType();
     }
 
@@ -643,7 +643,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             return *cb;
 
         if (!cb->isSimpleBitVector()) {
-            scope.addDiag(DiagCode::InvalidEnumBase, syntax.baseType->getFirstToken().location())
+            scope.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
                 << *base;
             return compilation.getErrorType();
         }
@@ -658,8 +658,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     auto checkValue = [&usedValues, &scope](const SVInt& value, SourceLocation loc) {
         auto pair = usedValues.emplace(value, loc);
         if (!pair.second) {
-            auto& diag = scope.addDiag(DiagCode::EnumValueDuplicate, loc) << value;
-            diag.addNote(DiagCode::NotePreviousDefinition, pair.first->second);
+            auto& diag = scope.addDiag(diag::EnumValueDuplicate, loc) << value;
+            diag.addNote(diag::NotePreviousDefinition, pair.first->second);
             return false;
         }
         return true;
@@ -690,12 +690,12 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 first = false;
             }
             else if (previous.hasUnknown()) {
-                auto& diag = scope.addDiag(DiagCode::EnumIncrementUnknown, loc);
+                auto& diag = scope.addDiag(diag::EnumIncrementUnknown, loc);
                 diag << previous << *base << previousRange;
                 return compilation.getErrorType();
             }
             else if (previous == allOnes) {
-                auto& diag = scope.addDiag(DiagCode::EnumValueOverflow, loc);
+                auto& diag = scope.addDiag(diag::EnumValueOverflow, loc);
                 diag << previous << *base << previousRange;
                 return compilation.getErrorType();
             }
@@ -837,7 +837,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
         bool issuedError = false;
         if (!type.isIntegral() && !type.isError()) {
             issuedError = true;
-            auto& diag = scope.addDiag(DiagCode::PackedMemberNotIntegral,
+            auto& diag = scope.addDiag(diag::PackedMemberNotIntegral,
                                        member->type->getFirstToken().location());
             diag << type;
             diag << member->type->sourceRange();
@@ -855,7 +855,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
             if (const Type& dimType = compilation.getType(type, decl->dimensions, location, scope);
                 dimType.isUnpackedArray() && !issuedError) {
 
-                auto& diag = scope.addDiag(DiagCode::PackedMemberNotIntegral, decl->name.range());
+                auto& diag = scope.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
                 diag << dimType;
                 diag << decl->dimensions.sourceRange();
             }
@@ -863,7 +863,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
             bitWidth += type.getBitWidth();
 
             if (decl->initializer) {
-                auto& diag = scope.addDiag(DiagCode::PackedMemberHasInitializer,
+                auto& diag = scope.addDiag(diag::PackedMemberHasInitializer,
                                            decl->initializer->equals.location());
                 diag << decl->initializer->expr->sourceRange();
             }
@@ -1035,7 +1035,7 @@ void TypeAliasType::checkForwardDecls() const {
     while (forward) {
         if (forward->category != ForwardingTypedefSymbol::None && forward->category != category) {
             auto& diag =
-                getScope()->addDiag(DiagCode::ForwardTypedefDoesNotMatch, forward->location);
+                getScope()->addDiag(diag::ForwardTypedefDoesNotMatch, forward->location);
             switch (forward->category) {
                 case ForwardingTypedefSymbol::Enum:
                     diag << "enum"sv;
@@ -1055,7 +1055,7 @@ void TypeAliasType::checkForwardDecls() const {
                 default:
                     THROW_UNREACHABLE;
             }
-            diag.addNote(DiagCode::NoteDeclarationHere, location);
+            diag.addNote(diag::NoteDeclarationHere, location);
             return;
         }
         forward = forward->getNextForwardDecl();

@@ -78,7 +78,7 @@ Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
 
 void EvalContext::reportDiags(const BindContext& context, SourceRange range) const {
     if (!diags.empty()) {
-        Diagnostic& diag = context.addDiag(DiagCode::ExpressionNotConstant, range);
+        Diagnostic& diag = context.addDiag(diag::ExpressionNotConstant, range);
         for (const Diagnostic& note : diags)
             diag.addNote(note);
     }
@@ -96,7 +96,7 @@ void EvalContext::reportStack() {
             break;
 
         if (isVerifying()) {
-            diags.add(DiagCode::NoteInCallTo, frame.callLocation) << frame.subroutine->name;
+            diags.add(diag::NoteInCallTo, frame.callLocation) << frame.subroutine->name;
         }
         else {
             buffer.clear();
@@ -113,7 +113,7 @@ void EvalContext::reportStack() {
 
             buffer.append(")");
 
-            diags.add(DiagCode::NoteInCallTo, frame.callLocation) << buffer.str();
+            diags.add(diag::NoteInCallTo, frame.callLocation) << buffer.str();
         }
     }
 }

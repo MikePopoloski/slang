@@ -144,7 +144,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
         case SyntaxKind::WaitOrderStatement:
-            context.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badStmt(comp, nullptr);
             break;
         default:
@@ -289,7 +289,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
         case SyntaxKind::WaitOrderStatement:
-            scope.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
             return;
         default:
             THROW_UNREACHABLE;
@@ -333,7 +333,7 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
             case SyntaxKind::ParameterDeclarationStatement:
             case SyntaxKind::LetDeclaration:
             case SyntaxKind::NetTypeDeclaration:
-                scope.addDiag(DiagCode::NotYetSupported, item->sourceRange());
+                scope.addDiag(diag::NotYetSupported, item->sourceRange());
                 break;
             default:
                 findBlocks(scope, item->as<StatementSyntax>(), buffer);
@@ -459,7 +459,7 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
 
     auto stmtLoc = syntax.returnKeyword.location();
     if (scope->asSymbol().kind != SymbolKind::Subroutine) {
-        context.addDiag(DiagCode::ReturnNotInSubroutine, stmtLoc);
+        context.addDiag(diag::ReturnNotInSubroutine, stmtLoc);
         return badStmt(compilation, nullptr);
     }
 
@@ -520,12 +520,12 @@ Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
         return badStmt(compilation, nullptr);
 
     if (conditions.size() > 1) {
-        context.addDiag(DiagCode::NotYetSupported, conditions[1]->sourceRange());
+        context.addDiag(diag::NotYetSupported, conditions[1]->sourceRange());
         return badStmt(compilation, nullptr);
     }
 
     if (conditions[0]->matchesClause) {
-        context.addDiag(DiagCode::NotYetSupported, conditions[0]->matchesClause->sourceRange());
+        context.addDiag(diag::NotYetSupported, conditions[0]->matchesClause->sourceRange());
         return badStmt(compilation, nullptr);
     }
 
@@ -573,7 +573,7 @@ bool ConditionalStatement::verifyConstantImpl(EvalContext& context) const {
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
                                      const BindContext& context, BlockList& blocks) {
     if (syntax.matchesOrInside) {
-        context.addDiag(DiagCode::NotYetSupported, syntax.matchesOrInside.range());
+        context.addDiag(diag::NotYetSupported, syntax.matchesOrInside.range());
         return badStmt(compilation, nullptr);
     }
 
@@ -717,8 +717,8 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
                 // we'd still get here is to check for uniqueness. The presence of
                 // another match means we failed the uniqueness check.
                 if (matchedStmt) {
-                    context.addDiag(DiagCode::NoteCaseItemsNotUnique, item->sourceRange) << val;
-                    context.addDiag(DiagCode::NotePreviousMatch, matchRange);
+                    context.addDiag(diag::NoteCaseItemsNotUnique, item->sourceRange) << val;
+                    context.addDiag(diag::NotePreviousMatch, matchRange);
                     unique = false;
                 }
                 else {
@@ -743,7 +743,7 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
         return matchedStmt->eval(context);
 
     if (check == Check::Priority || check == Check::Unique) {
-        auto& diag = context.addDiag(DiagCode::NoteNoCaseItemsMatched, expr.sourceRange);
+        auto& diag = context.addDiag(diag::NoteNoCaseItemsMatched, expr.sourceRange);
         diag << (check == Check::Priority ? "priority"sv : "unique"sv);
         diag << cv;
     }
@@ -896,7 +896,7 @@ bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
         return true;
 
     ASSERT(timing.syntax);
-    context.addDiag(DiagCode::NoteTimedStmtNotConst, timing.syntax->sourceRange());
+    context.addDiag(diag::NoteTimedStmtNotConst, timing.syntax->sourceRange());
     return false;
 }
 
@@ -924,7 +924,7 @@ Statement& AssertionStatement::fromSyntax(Compilation& compilation,
         isFinal = syntax.delay->finalKeyword.valid();
 
     if (assertKind == AssertionKind::Cover && ifFalse)
-        context.addDiag(DiagCode::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
+        context.addDiag(diag::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
 
     // TODO: add checking for requirements on deferred assertion actions
 
@@ -955,7 +955,7 @@ ER AssertionStatement::evalImpl(EvalContext& context) const {
 
     // TODO: give statements a guaranteed SourceRange member
     ASSERT(cond.syntax);
-    context.addDiag(DiagCode::NoteAssertionFailed, cond.syntax->sourceRange());
+    context.addDiag(diag::NoteAssertionFailed, cond.syntax->sourceRange());
     return ER::Fail;
 }
 
@@ -972,7 +972,7 @@ bool AssertionStatement::verifyConstantImpl(EvalContext& context) const {
     if (isDeferred) {
         // TODO: give statements a guaranteed SourceRange member
         ASSERT(syntax);
-        context.addDiag(DiagCode::NoteTimedStmtNotConst, syntax->sourceRange());
+        context.addDiag(diag::NoteTimedStmtNotConst, syntax->sourceRange());
         return false;
     }
 

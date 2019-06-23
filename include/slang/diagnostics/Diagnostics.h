@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "slang/binding/ConstantValue.h"
-#include "slang/diagnostics/DiagCode.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
 
@@ -19,6 +18,42 @@ namespace slang {
 class SourceManager;
 class Symbol;
 class Type;
+
+enum class DiagSubsystem : uint16_t {
+    General,
+    Lexer,
+    Numeric,
+    Preprocessor,
+    Parser,
+    Declarations,
+    Expressions,
+    Statements,
+    Types,
+    Lookup,
+    SysFuncs,
+    ConstEval
+};
+
+class DiagCode {
+public:
+    constexpr DiagCode(DiagSubsystem subsystem, uint16_t code) : subsystem(subsystem), code(code) {}
+
+    constexpr DiagSubsystem getSubsystem() const { return subsystem; }
+    constexpr uint16_t getCode() const { return code; }
+
+    constexpr bool operator==(DiagCode other) const {
+        return subsystem == other.subsystem && code == other.code;
+    }
+
+    constexpr bool operator!=(DiagCode other) const { return !(*this == other); }
+
+private:
+    DiagSubsystem subsystem;
+    uint16_t code;
+};
+
+std::ostream& operator<<(std::ostream& os, DiagCode code);
+string_view toString(DiagCode code);
 
 /// Wraps up a reported diagnostic along with location in source and any arguments.
 class Diagnostic {
@@ -97,3 +132,16 @@ public:
 };
 
 } // namespace slang
+
+namespace std {
+
+template<>
+struct hash<slang::DiagCode> {
+    size_t operator()(const slang::DiagCode& dc) const {
+        return (((size_t)dc.getSubsystem()) << 16) | dc.getCode();
+    }
+};
+
+} // namespace std
+
+#include "slang/diagnostics/AllDiags.h"

@@ -38,12 +38,12 @@ Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAl
     if (count >= 2) {
         const unsigned char* ubuf = reinterpret_cast<const unsigned char*>(sourceBuffer);
         if ((ubuf[0] == 0xFF && ubuf[1] == 0xFE) || (ubuf[0] == 0xFE && ubuf[1] == 0xFF)) {
-            addDiag(DiagCode::UnicodeBOM, 0);
+            addDiag(diag::UnicodeBOM, 0);
             advance(2);
         }
         else if (count >= 3) {
             if (ubuf[0] == 0xEF && ubuf[1] == 0xBB && ubuf[2] == 0xBF) {
-                addDiag(DiagCode::UnicodeBOM, 0);
+                addDiag(diag::UnicodeBOM, 0);
                 advance(3);
             }
         }
@@ -168,7 +168,7 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
     if (kind != TokenKind::EndOfFile && diagnostics.size() > options.maxErrors) {
         // Stop any further lexing by claiming to be at the end of the buffer.
         // TODO: this check needs work
-        addDiag(DiagCode::TooManyLexerErrors, currentOffset());
+        addDiag(diag::TooManyLexerErrors, currentOffset());
         sourceBuffer = sourceEnd - 1;
         triviaBuffer.append(Trivia(TriviaKind::DisabledText, lexeme()));
         kind = TokenKind::EndOfFile;
@@ -191,7 +191,7 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
             sourceBuffer--;
             if (!reallyAtEnd()) {
                 advance();
-                addDiag(DiagCode::EmbeddedNull, offset);
+                addDiag(diag::EmbeddedNull, offset);
                 return TokenKind::Unknown;
             }
 
@@ -545,12 +545,12 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
             return TokenKind::Tilde;
         default:
             if (isASCII(c))
-                addDiag(DiagCode::NonPrintableChar, offset);
+                addDiag(diag::NonPrintableChar, offset);
             else {
                 // skip over UTF-8 sequences
                 int skip = utf8SeqBytes(c);
                 advance(std::min((int)(sourceEnd - sourceBuffer - 1), skip));
-                addDiag(DiagCode::UTF8Char, offset);
+                addDiag(diag::UTF8Char, offset);
             }
             return TokenKind::Unknown;
     }
@@ -591,7 +591,7 @@ void Lexer::lexStringLiteral(Token::Info* info) {
                             advance();
                             charCode = (charCode * 8) + getDigitValue(c);
                             if (charCode > 255) {
-                                addDiag(DiagCode::OctalEscapeCodeTooBig, offset);
+                                addDiag(diag::OctalEscapeCodeTooBig, offset);
                                 break;
                             }
                         }
@@ -602,7 +602,7 @@ void Lexer::lexStringLiteral(Token::Info* info) {
                     c = peek();
                     advance();
                     if (!isHexDigit(c)) {
-                        addDiag(DiagCode::InvalidHexEscapeCode, offset);
+                        addDiag(diag::InvalidHexEscapeCode, offset);
                         stringBuffer.append(c);
                     }
                     else {
@@ -615,7 +615,7 @@ void Lexer::lexStringLiteral(Token::Info* info) {
                     }
                     break;
                 default:
-                    addDiag(DiagCode::UnknownEscapeCode, offset);
+                    addDiag(diag::UnknownEscapeCode, offset);
                     stringBuffer.append(c);
                     break;
             }
@@ -625,17 +625,17 @@ void Lexer::lexStringLiteral(Token::Info* info) {
             break;
         }
         else if (isNewline(c)) {
-            addDiag(DiagCode::ExpectedClosingQuote, offset);
+            addDiag(diag::ExpectedClosingQuote, offset);
             break;
         }
         else if (c == '\0') {
             if (reallyAtEnd()) {
-                addDiag(DiagCode::ExpectedClosingQuote, offset);
+                addDiag(diag::ExpectedClosingQuote, offset);
                 break;
             }
 
             // otherwise just error and ignore
-            addDiag(DiagCode::EmbeddedNull, offset);
+            addDiag(diag::EmbeddedNull, offset);
             advance();
         }
         else {
@@ -658,7 +658,7 @@ TokenKind Lexer::lexEscapeSequence(Token::Info* info) {
             return TokenKind::LineContinuation;
         }
 
-        addDiag(DiagCode::EscapedWhitespace, currentOffset());
+        addDiag(diag::EscapedWhitespace, currentOffset());
         return TokenKind::Unknown;
     }
 
@@ -708,13 +708,13 @@ TokenKind Lexer::lexDirective(Token::Info* info) {
 
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
-        addDiag(DiagCode::MisplacedDirectiveChar, startingOffset);
+        addDiag(diag::MisplacedDirectiveChar, startingOffset);
         return TokenKind::Unknown;
     }
 
     info->extra = getDirectiveKind(lexeme().substr(1));
     if (!onNewLine && std::get<SyntaxKind>(info->extra) == SyntaxKind::IncludeDirective)
-        addDiag(DiagCode::IncludeNotFirstOnLine, startingOffset);
+        addDiag(diag::IncludeNotFirstOnLine, startingOffset);
 
     return TokenKind::Directive;
 }
@@ -772,7 +772,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         floatChars.append('.');
 
         if (peek() == '_')
-            addDiag(DiagCode::DigitsLeadingUnderscore, currentOffset());
+            addDiag(diag::DigitsLeadingUnderscore, currentOffset());
 
         bool any = false;
         while (true) {
@@ -789,7 +789,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         }
 
         if (!any) {
-            addDiag(DiagCode::MissingFractionalDigits, currentOffset());
+            addDiag(diag::MissingFractionalDigits, currentOffset());
             floatChars.append('0');
         }
     }
@@ -821,7 +821,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         }
 
         if (c == '_' && hasDecimal)
-            addDiag(DiagCode::DigitsLeadingUnderscore, currentOffset());
+            addDiag(diag::DigitsLeadingUnderscore, currentOffset());
 
         bool any = false;
         while (true) {
@@ -839,7 +839,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         if (any || hasDecimal) {
             advance(index);
             if (!any) {
-                addDiag(DiagCode::MissingExponentDigits, currentOffset());
+                addDiag(diag::MissingExponentDigits, currentOffset());
                 floatChars.append('1');
             }
         }
@@ -887,7 +887,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         if (bitsDbl <= SVInt::MAX_BITS)
             bits = (bitwidth_t)bitsDbl;
         else {
-            addDiag(DiagCode::LiteralSizeTooLarge, startOfNum) << (int)SVInt::MAX_BITS;
+            addDiag(diag::LiteralSizeTooLarge, startOfNum) << (int)SVInt::MAX_BITS;
             bits = SVInt::MAX_BITS;
         }
 
@@ -923,7 +923,7 @@ TokenKind Lexer::lexApostrophe(Token::Info* info) {
         case 'S':
             advance();
             if (!lexIntegerBase(info, true)) {
-                addDiag(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
+                addDiag(diag::ExpectedIntegerBaseAfterSigned, currentOffset());
                 info->setNumFlags(LiteralBase::Decimal, true);
             }
             return TokenKind::IntegerBase;
@@ -1059,7 +1059,7 @@ void Lexer::scanLineComment(SmallVector<Trivia>& triviaBuffer) {
                 break;
 
             // otherwise just error and ignore
-            addDiag(DiagCode::EmbeddedNull, currentOffset());
+            addDiag(diag::EmbeddedNull, currentOffset());
         }
         advance();
     }
@@ -1071,12 +1071,12 @@ void Lexer::scanBlockComment(SmallVector<Trivia>& triviaBuffer) {
         char c = peek();
         if (c == '\0') {
             if (reallyAtEnd()) {
-                addDiag(DiagCode::UnterminatedBlockComment, currentOffset());
+                addDiag(diag::UnterminatedBlockComment, currentOffset());
                 break;
             }
 
             // otherwise just error and ignore
-            addDiag(DiagCode::EmbeddedNull, currentOffset());
+            addDiag(diag::EmbeddedNull, currentOffset());
             advance();
         }
         else if (c == '*' && peek(1) == '/') {
@@ -1085,7 +1085,7 @@ void Lexer::scanBlockComment(SmallVector<Trivia>& triviaBuffer) {
         }
         else if (c == '/' && peek(1) == '*') {
             // nested block comments disallowed by the standard; ignore and continue
-            addDiag(DiagCode::NestedBlockComment, currentOffset());
+            addDiag(diag::NestedBlockComment, currentOffset());
             advance(2);
         }
         else {

@@ -20,7 +20,7 @@ const NetType& getDefaultNetType(const Scope& scope, SourceLocation location) {
     if (!netType.isError())
         return netType;
 
-    scope.addDiag(DiagCode::ImplicitNetPortNoDefault, location);
+    scope.addDiag(diag::ImplicitNetPortNoDefault, location);
     return scope.getCompilation().getWireNetType();
 }
 
@@ -68,20 +68,20 @@ public:
 
                 if (definition) {
                     if (definition->definitionKind != DefinitionKind::Interface) {
-                        auto& diag = scope.addDiag(DiagCode::PortTypeNotInterfaceOrData,
+                        auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData,
                                                    header.dataType->sourceRange());
                         diag << definition->name;
-                        diag.addNote(DiagCode::NoteDeclarationHere, definition->location);
+                        diag.addNote(diag::NoteDeclarationHere, definition->location);
                         definition = nullptr;
                     }
                     else {
                         if (header.varKeyword) {
-                            scope.addDiag(DiagCode::VarWithInterfacePort,
+                            scope.addDiag(diag::VarWithInterfacePort,
                                           header.varKeyword.location());
                         }
 
                         if (header.direction) {
-                            scope.addDiag(DiagCode::DirectionWithInterfacePort,
+                            scope.addDiag(diag::DirectionWithInterfacePort,
                                           header.direction.location());
                         }
                     }
@@ -120,13 +120,13 @@ public:
                 const ModportSymbol* modport = nullptr;
 
                 if (!definition) {
-                    scope.addDiag(DiagCode::UnknownInterface, token.range()) << token.valueText();
+                    scope.addDiag(diag::UnknownInterface, token.range()) << token.valueText();
                 }
                 else if (definition->definitionKind != DefinitionKind::Interface) {
-                    auto& diag = scope.addDiag(DiagCode::PortTypeNotInterfaceOrData,
+                    auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData,
                                                header.nameOrKeyword.range());
                     diag << definition->name;
-                    diag.addNote(DiagCode::NoteDeclarationHere, definition->location);
+                    diag.addNote(diag::NoteDeclarationHere, definition->location);
                     definition = nullptr;
                 }
                 else if (header.modport) {
@@ -138,7 +138,7 @@ public:
                 return add(decl, definition, modport);
             }
             case SyntaxKind::InterconnectPortHeader:
-                scope.addDiag(DiagCode::NotYetSupported, syntax.header->sourceRange());
+                scope.addDiag(diag::NotYetSupported, syntax.header->sourceRange());
                 return addInherited(decl);
             default:
                 THROW_UNREACHABLE;
@@ -187,9 +187,9 @@ private:
         port->setDeclaredType(type, decl.dimensions);
 
         if (port->direction == PortDirection::InOut && !netType)
-            scope.addDiag(DiagCode::InOutPortCannotBeVariable, port->location) << port->name;
+            scope.addDiag(diag::InOutPortCannotBeVariable, port->location) << port->name;
         else if (port->direction == PortDirection::Ref && netType)
-            scope.addDiag(DiagCode::RefPortMustBeVariable, port->location) << port->name;
+            scope.addDiag(diag::RefPortMustBeVariable, port->location) << port->name;
 
         // Create a new symbol to represent this port internally to the instance.
         ValueSymbol* symbol;
@@ -264,9 +264,9 @@ public:
                         handleIODecl(*port->header, result.first->second);
                     }
                     else {
-                        auto& diag = scope.addDiag(DiagCode::Redefinition, name.location());
+                        auto& diag = scope.addDiag(diag::Redefinition, name.location());
                         diag << name.valueText();
-                        diag.addNote(DiagCode::NotePreviousDefinition,
+                        diag.addNote(diag::NotePreviousDefinition,
                                      result.first->second.syntax->name.location());
                     }
                 }
@@ -302,7 +302,7 @@ public:
                 return port;
             }
             case SyntaxKind::PortConcatenation:
-                scope.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+                scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
                 return port;
             default:
                 THROW_UNREACHABLE;
@@ -329,7 +329,7 @@ private:
 
         auto it = portInfos.find(name);
         if (it == portInfos.end()) {
-            scope.addDiag(DiagCode::MissingPortIODeclaration, loc) << name;
+            scope.addDiag(diag::MissingPortIODeclaration, loc) << name;
             return nullptr;
         }
 
@@ -379,11 +379,11 @@ private:
 
                 if (info.direction == PortDirection::InOut &&
                     info.internalSymbol->kind != SymbolKind::Net) {
-                    scope.addDiag(DiagCode::InOutPortCannotBeVariable, declLoc) << name;
+                    scope.addDiag(diag::InOutPortCannotBeVariable, declLoc) << name;
                 }
                 else if (info.direction == PortDirection::Ref &&
                          info.internalSymbol->kind == SymbolKind::Net) {
-                    scope.addDiag(DiagCode::RefPortMustBeVariable, declLoc) << name;
+                    scope.addDiag(diag::RefPortMustBeVariable, declLoc) << name;
                 }
                 break;
             }
@@ -391,7 +391,7 @@ private:
                 auto& netHeader = header.as<NetPortHeaderSyntax>();
                 info.direction = SemanticFacts::getPortDirection(netHeader.direction.kind);
                 if (info.direction == PortDirection::Ref)
-                    scope.addDiag(DiagCode::RefPortMustBeVariable, declLoc) << name;
+                    scope.addDiag(diag::RefPortMustBeVariable, declLoc) << name;
 
                 // Create a new symbol to represent this port internally to the instance.
                 auto net = compilation.emplace<NetSymbol>(
@@ -403,7 +403,7 @@ private:
             }
             case SyntaxKind::InterconnectPortHeader:
             case SyntaxKind::InterfacePortHeader:
-                scope.addDiag(DiagCode::NotYetSupported, header.sourceRange());
+                scope.addDiag(diag::NotYetSupported, header.sourceRange());
                 break;
             default:
                 THROW_UNREACHABLE;
@@ -424,7 +424,7 @@ private:
                 type = &type->getCanonicalType().as<UnpackedArrayType>().elementType;
 
             if (!type->isIntegral()) {
-                auto& diag = scope.addDiag(DiagCode::CantDeclarePortSigned, location);
+                auto& diag = scope.addDiag(diag::CantDeclarePortSigned, location);
                 diag << symbol.name << *type;
             }
             else if (implicit.signing.kind == TokenKind::SignedKeyword && !type->isSigned()) {
@@ -465,7 +465,7 @@ public:
                 usingOrdered = isOrdered;
             }
             else if (isOrdered != usingOrdered) {
-                scope.addDiag(DiagCode::MixingOrderedAndNamedPorts,
+                scope.addDiag(diag::MixingOrderedAndNamedPorts,
                               conn->getFirstToken().location());
                 break;
             }
@@ -477,9 +477,9 @@ public:
                 if (!std::exchange(hasWildcard, true))
                     wildcardRange = conn->sourceRange();
                 else {
-                    auto& diag = scope.addDiag(DiagCode::DuplicateWildcardPortConnection,
+                    auto& diag = scope.addDiag(diag::DuplicateWildcardPortConnection,
                                                conn->sourceRange());
-                    diag.addNote(DiagCode::NotePreviousUsage, wildcardRange.start());
+                    diag.addNote(diag::NotePreviousUsage, wildcardRange.start());
                 }
             }
             else {
@@ -489,9 +489,9 @@ public:
                     auto pair = namedConns.emplace(name, std::make_pair(&npc, false));
                     if (!pair.second) {
                         auto& diag =
-                            scope.addDiag(DiagCode::DuplicatePortConnection, npc.name.location());
+                            scope.addDiag(diag::DuplicatePortConnection, npc.name.location());
                         diag << name;
-                        diag.addNote(DiagCode::NotePreviousUsage,
+                        diag.addNote(diag::NotePreviousUsage,
                                      pair.first->second.first->name.location());
                     }
                 }
@@ -518,13 +518,13 @@ public:
                 else if (port.name.empty()) {
                     if (!warnedAboutUnnamed) {
                         auto& diag =
-                            scope.addDiag(DiagCode::UnconnectedUnnamedPort, instance.location);
-                        diag.addNote(DiagCode::NoteDeclarationHere, port.location);
+                            scope.addDiag(diag::UnconnectedUnnamedPort, instance.location);
+                        diag.addNote(diag::NoteDeclarationHere, port.location);
                         warnedAboutUnnamed = true;
                     }
                 }
                 else {
-                    scope.addDiag(DiagCode::UnconnectedNamedPort, instance.location) << port.name;
+                    scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
                 }
 
                 return;
@@ -542,8 +542,8 @@ public:
         if (port.name.empty()) {
             // port is unnamed so can never be connected by name
             if (!warnedAboutUnnamed) {
-                auto& diag = scope.addDiag(DiagCode::UnconnectedUnnamedPort, instance.location);
-                diag.addNote(DiagCode::NoteDeclarationHere, port.location);
+                auto& diag = scope.addDiag(diag::UnconnectedUnnamedPort, instance.location);
+                diag.addNote(diag::NoteDeclarationHere, port.location);
                 warnedAboutUnnamed = true;
             }
             return;
@@ -559,7 +559,7 @@ public:
             if (port.defaultValue)
                 port.setConnection(port.defaultValue);
             else
-                scope.addDiag(DiagCode::UnconnectedNamedPort, instance.location) << port.name;
+                scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
             return;
         }
 
@@ -586,9 +586,9 @@ public:
         ASSERT(!port.name.empty());
 
         auto reportUnconnected = [&]() {
-            auto& diag = scope.addDiag(DiagCode::InterfacePortNotConnected, instance.location);
+            auto& diag = scope.addDiag(diag::InterfacePortNotConnected, instance.location);
             diag << port.name;
-            diag.addNote(DiagCode::NoteDeclarationHere, port.location);
+            diag.addNote(diag::NoteDeclarationHere, port.location);
         };
 
         if (usingOrdered) {
@@ -637,7 +637,7 @@ public:
         if (usingOrdered) {
             if (orderedIndex < orderedConns.size()) {
                 auto loc = orderedConns[orderedIndex]->getFirstToken().location();
-                auto& diag = scope.addDiag(DiagCode::TooManyPortConnections, loc);
+                auto& diag = scope.addDiag(diag::TooManyPortConnections, loc);
                 diag << instance.name;
                 diag << orderedConns.size();
                 diag << orderedIndex;
@@ -648,7 +648,7 @@ public:
                 // We marked all the connections that we used, so anything left over is a connection
                 // for a non-existent port.
                 if (!pair.second.second) {
-                    auto& diag = scope.addDiag(DiagCode::PortDoesNotExist,
+                    auto& diag = scope.addDiag(diag::PortDoesNotExist,
                                                pair.second.first->name.location());
                     diag << pair.second.first->name.valueText();
                     diag << instance.name;
@@ -673,7 +673,7 @@ private:
             if (isWildcard && port.defaultValue)
                 port.setConnection(port.defaultValue);
             else
-                scope.addDiag(DiagCode::ImplicitNamedPortNotFound, range) << port.name;
+                scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
             return;
         }
 
@@ -686,7 +686,7 @@ private:
             return;
 
         if (!expr->type->isEquivalent(portType)) {
-            auto& diag = scope.addDiag(DiagCode::ImplicitNamedPortTypeMismatch, range);
+            auto& diag = scope.addDiag(diag::ImplicitNamedPortTypeMismatch, range);
             diag << port.name;
             diag << portType;
             diag << *expr->type;
@@ -700,7 +700,7 @@ private:
 
     void setInterfaceExpr(InterfacePortSymbol& port, const ExpressionSyntax& syntax) {
         if (!NameSyntax::isKind(syntax.kind)) {
-            scope.addDiag(DiagCode::InterfacePortInvalidExpression, syntax.sourceRange())
+            scope.addDiag(diag::InterfacePortInvalidExpression, syntax.sourceRange())
                 << port.name;
             return;
         }
@@ -720,7 +720,7 @@ private:
     void setImplicitInterface(InterfacePortSymbol& port, SourceRange range) {
         auto symbol = scope.lookupUnqualifiedName(port.name, lookupLocation, range);
         if (!symbol) {
-            scope.addDiag(DiagCode::ImplicitNamedPortNotFound, range) << port.name;
+            scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
             return;
         }
 
@@ -763,16 +763,16 @@ private:
 
         // TODO: handle interface/modport ports as well
         if (child->kind != SymbolKind::InterfaceInstance) {
-            scope.addDiag(DiagCode::NotAnInterface, range) << symbol->name;
+            scope.addDiag(diag::NotAnInterface, range) << symbol->name;
             return;
         }
 
         auto connDef = &child->as<InterfaceInstanceSymbol>().definition;
         if (connDef != port.interfaceDef) {
             // TODO: print the potentially nested name path instead of the simple name
-            auto& diag = scope.addDiag(DiagCode::InterfacePortTypeMismatch, range);
+            auto& diag = scope.addDiag(diag::InterfacePortTypeMismatch, range);
             diag << connDef->name << port.interfaceDef->name;
-            diag.addNote(DiagCode::NoteDeclarationHere, port.location);
+            diag.addNote(diag::NoteDeclarationHere, port.location);
             return;
         }
 
@@ -807,8 +807,8 @@ private:
             return;
         }
 
-        auto& diag = scope.addDiag(DiagCode::PortConnDimensionsMismatch, range);
-        diag.addNote(DiagCode::NoteDeclarationHere, port.location);
+        auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, range);
+        diag.addNote(diag::NoteDeclarationHere, port.location);
     }
 
     const Scope& scope;

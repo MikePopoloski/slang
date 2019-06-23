@@ -17,7 +17,7 @@ const Type& IntegerMathFunction::checkArguments(const BindContext& context, cons
         return comp.getErrorType();
 
     if (!args[0]->type->isIntegral()) {
-        context.addDiag(DiagCode::BadSystemSubroutineArg, args[0]->sourceRange)
+        context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange)
             << *args[0]->type << kindStr();
         return comp.getErrorType();
     }
@@ -32,7 +32,7 @@ const Type& DataQueryFunction::checkArguments(const BindContext& context, const 
         return comp.getErrorType();
 
     if (!args[0]->type->isBitstreamType()) {
-        context.addDiag(DiagCode::BadSystemSubroutineArg, args[0]->sourceRange)
+        context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange)
             << *args[0]->type << kindStr();
         return comp.getErrorType();
     }
@@ -51,7 +51,7 @@ const Type& ArrayQueryFunction::checkArguments(const BindContext& context, const
 
     auto& type = *args[0]->type;
     if (!type.isIntegral() && !type.isUnpackedArray()) {
-        context.addDiag(DiagCode::BadSystemSubroutineArg, args[0]->sourceRange)
+        context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange)
             << type << kindStr();
         return comp.getErrorType();
     }

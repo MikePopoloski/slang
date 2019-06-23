@@ -134,7 +134,7 @@ protected:
             // the provided diagnostic code to report an error.
             auto location = getLastLocation();
 
-            if (diags.empty() || diags.back().code != DiagCode::ExpectedToken ||
+            if (diags.empty() || diags.back().code != diag::ExpectedToken ||
                 (diags.back().location != location &&
                  diags.back().location != current.location())) {
 
@@ -174,7 +174,7 @@ protected:
 
                 // Specific check for misplaced trailing separators here.
                 auto& diag =
-                    addDiag(DiagCode::MisplacedTrailingSeparator, window.lastConsumed.location());
+                    addDiag(diag::MisplacedTrailingSeparator, window.lastConsumed.location());
                 diag << getTokenKindText(window.lastConsumed.kind);
                 break;
             }

@@ -36,7 +36,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
             if (auto syntax = getSyntax(); syntax)
                 loc = syntax->as<PackageImportItemSyntax>().package.location();
 
-            scope->addDiag(DiagCode::UnknownPackage, loc) << packageName;
+            scope->addDiag(diag::UnknownPackage, loc) << packageName;
         }
         else if (importName.empty()) {
             return nullptr;
@@ -48,7 +48,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
                 if (auto syntax = getSyntax())
                     loc = syntax->as<PackageImportItemSyntax>().item.location();
 
-                auto& diag = scope->addDiag(DiagCode::UnknownPackageMember, loc);
+                auto& diag = scope->addDiag(diag::UnknownPackageMember, loc);
                 diag << importName << packageName;
             }
         }
@@ -79,7 +79,7 @@ const PackageSymbol* WildcardImportSymbol::getPackage() const {
                 if (auto syntax = getSyntax(); syntax)
                     loc = syntax->as<PackageImportItemSyntax>().package.location();
 
-                scope->addDiag(DiagCode::UnknownPackage, loc) << packageName;
+                scope->addDiag(diag::UnknownPackage, loc) << packageName;
             }
         }
     }
@@ -109,9 +109,9 @@ void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationS
 
         if (!decl->initializer) {
             if (!isPort)
-                scope.addDiag(DiagCode::BodyParamNoInitializer, loc);
+                scope.addDiag(diag::BodyParamNoInitializer, loc);
             else if (isLocal)
-                scope.addDiag(DiagCode::LocalParamNoInitializer, loc);
+                scope.addDiag(diag::LocalParamNoInitializer, loc);
         }
 
         results.append(param);
@@ -239,7 +239,7 @@ void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
             }
 
             if (!portDeclarations.empty()) {
-                scope.addDiag(DiagCode::PortDeclInANSIModule,
+                scope.addDiag(diag::PortDeclInANSIModule,
                               portDeclarations[0]->getFirstToken().location());
             }
             break;
@@ -252,7 +252,7 @@ void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
                         results.append(builder.createPort(port->as<ImplicitNonAnsiPortSyntax>()));
                         break;
                     case SyntaxKind::ExplicitNonAnsiPort:
-                        scope.addDiag(DiagCode::NotYetSupported, port->sourceRange());
+                        scope.addDiag(diag::NotYetSupported, port->sourceRange());
                         break;
                     default:
                         THROW_UNREACHABLE;
@@ -261,7 +261,7 @@ void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
             break;
         }
         case SyntaxKind::WildcardPortList:
-            scope.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
         default:
             THROW_UNREACHABLE;

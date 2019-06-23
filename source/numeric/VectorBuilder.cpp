@@ -42,7 +42,7 @@ int VectorBuilder::append(Token token) {
     string_view text = token.rawText();
     SourceLocation location = token.location();
     if (first && text.length() && text[0] == '_') {
-        diagnostics.add(DiagCode::DigitsLeadingUnderscore, location);
+        diagnostics.add(diag::DigitsLeadingUnderscore, location);
         return -1;
     }
 
@@ -55,7 +55,7 @@ int VectorBuilder::append(Token token) {
                 else if (isBinaryDigit(c))
                     addDigit(logic_t(getDigitValue(c)), 2);
                 else if (c != '_') {
-                    diagnostics.add(DiagCode::BadBinaryDigit, location + index);
+                    diagnostics.add(diag::BadBinaryDigit, location + index);
                     return -1;
                 }
                 index++;
@@ -68,7 +68,7 @@ int VectorBuilder::append(Token token) {
                 else if (isOctalDigit(c))
                     addDigit(logic_t(getDigitValue(c)), 8);
                 else if (c != '_') {
-                    diagnostics.add(DiagCode::BadOctalDigit, location + index);
+                    diagnostics.add(diag::BadOctalDigit, location + index);
                     return -1;
                 }
                 index++;
@@ -96,14 +96,14 @@ int VectorBuilder::append(Token token) {
             for (char c : text) {
                 if (isLogicDigit(c) || isDecimalDigit(c)) {
                     if (hasUnknown) {
-                        diagnostics.add(DiagCode::DecimalDigitMultipleUnknown, location + index);
+                        diagnostics.add(diag::DecimalDigitMultipleUnknown, location + index);
                         return -1;
                     }
 
                     hasUnknown = isLogicDigit(c);
                 }
                 else if (c != '_') {
-                    diagnostics.add(DiagCode::BadDecimalDigit, location + index);
+                    diagnostics.add(diag::BadDecimalDigit, location + index);
                     return -1;
                 }
                 index++;
@@ -122,7 +122,7 @@ int VectorBuilder::append(Token token) {
                     return index;
                 }
                 else if (c != '_') {
-                    diagnostics.add(DiagCode::BadHexDigit, location + index);
+                    diagnostics.add(diag::BadHexDigit, location + index);
                     return -1;
                 }
                 index++;
@@ -159,7 +159,7 @@ SVInt VectorBuilder::finish() {
             }
             else if (width != sizeBits) {
                 if (width > sizeBits)
-                    diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
+                    diagnostics.add(diag::VectorLiteralOverflow, firstLocation);
 
                 result = decimalValue.resize(sizeBits);
             }
@@ -208,7 +208,7 @@ SVInt VectorBuilder::finish() {
             if (sizeBits == 0) {
                 if (bits > SVInt::MAX_BITS) {
                     bits = SVInt::MAX_BITS;
-                    diagnostics.add(DiagCode::LiteralSizeTooLarge, firstLocation)
+                    diagnostics.add(diag::LiteralSizeTooLarge, firstLocation)
                         << (int)SVInt::MAX_BITS;
                 }
 
@@ -217,7 +217,7 @@ SVInt VectorBuilder::finish() {
             else {
                 // We should warn about overflow here, but the spec says it is valid and
                 // the literal gets truncated. Definitely a warning though.
-                diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
+                diagnostics.add(diag::VectorLiteralOverflow, firstLocation);
             }
         }
     }

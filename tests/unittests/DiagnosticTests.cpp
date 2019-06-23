@@ -42,7 +42,7 @@ TEST_CASE("undef errors") {
     CHECK(token.kind == TokenKind::EndOfFile);
 
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == DiagCode::ExpectedIdentifier);
+    CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
 
     auto& text2 = "`undef __LINE__\n";
     token = lexToken(text2);
@@ -50,7 +50,7 @@ TEST_CASE("undef errors") {
     CHECK(token.kind == TokenKind::EndOfFile);
 
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == DiagCode::UndefineBuiltinDirective);
+    CHECK(diagnostics[0].code == diag::UndefineBuiltinDirective);
 }
 
 TEST_CASE("keywords_errors") {
@@ -60,21 +60,21 @@ TEST_CASE("keywords_errors") {
     Token token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == DiagCode::UnrecognizedKeywordVersion);
+    CHECK(diagnostics[0].code == diag::UnrecognizedKeywordVersion);
 
     auto& text2 = "`begin_keywords\n";
 
     token = lexToken(text2);
     CHECK(token.kind == TokenKind::EndOfFile);
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == DiagCode::ExpectedStringLiteral);
+    CHECK(diagnostics[0].code == diag::ExpectedStringLiteral);
 
     auto& text3 = "`end_keywords\n";
 
     token = lexToken(text3);
     CHECK(token.kind == TokenKind::EndOfFile);
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == DiagCode::MismatchedEndKeywordsDirective);
+    CHECK(diagnostics[0].code == diag::MismatchedEndKeywordsDirective);
 }
 
 TEST_CASE("Diag within macro arg") {

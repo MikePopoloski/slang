@@ -96,13 +96,13 @@ const Type& getIndexedType(Compilation& compilation, const BindContext& context,
         return compilation.getByteType();
     }
     else if (!ct.isIntegral()) {
-        auto& diag = context.addDiag(DiagCode::BadIndexExpression, exprRange);
+        auto& diag = context.addDiag(diag::BadIndexExpression, exprRange);
         diag << valueRange;
         diag << valueType;
         return compilation.getErrorType();
     }
     else if (ct.isScalar()) {
-        auto& diag = context.addDiag(DiagCode::CannotIndexScalar, exprRange);
+        auto& diag = context.addDiag(diag::CannotIndexScalar, exprRange);
         diag << valueRange;
         return compilation.getErrorType();
     }
@@ -184,7 +184,7 @@ bool checkEnumInitializer(const BindContext& context, const Type& lt, const Expr
 
     const Type& rt = *rhs.type;
     if (!rt.isIntegral()) {
-        context.addDiag(DiagCode::EnumValueNotIntegral, rhs.sourceRange);
+        context.addDiag(diag::EnumValueNotIntegral, rhs.sourceRange);
         return false;
     }
 
@@ -192,7 +192,7 @@ bool checkEnumInitializer(const BindContext& context, const Type& lt, const Expr
         return true;
 
     if (!recurseCheckEnum(rhs)) {
-        auto& diag = context.addDiag(DiagCode::EnumValueSizeMismatch, rhs.sourceRange);
+        auto& diag = context.addDiag(diag::EnumValueSizeMismatch, rhs.sourceRange);
         diag << rt.getBitWidth() << lt.getBitWidth();
         return false;
     }
@@ -294,7 +294,7 @@ bool Expression::bindCaseExpressions(const BindContext& context, TokenKind caseK
 
     if ((!wildcard && type->isAggregate()) || (wildcard && !type->isIntegral())) {
         if (!bad) {
-            context.addDiag(DiagCode::InvalidCaseStmtType, valueRes.sourceRange)
+            context.addDiag(diag::InvalidCaseStmtType, valueRes.sourceRange)
                 << *type << getTokenKindText(caseKind);
             bad = true;
         }
@@ -312,7 +312,7 @@ bool Expression::bindCaseExpressions(const BindContext& context, TokenKind caseK
         const Type& bt = *bound->type;
         if (wildcard) {
             if (!bt.isIntegral()) {
-                context.addDiag(DiagCode::InvalidCaseStmtType, bound->sourceRange)
+                context.addDiag(diag::InvalidCaseStmtType, bound->sourceRange)
                     << bt << getTokenKindText(caseKind);
                 bad = true;
             }
@@ -343,13 +343,13 @@ bool Expression::bindCaseExpressions(const BindContext& context, TokenKind caseK
             }
             else if (bt.isAggregate()) {
                 // Aggregates are just never allowed in case expressions.
-                context.addDiag(DiagCode::InvalidCaseStmtType, bound->sourceRange)
+                context.addDiag(diag::InvalidCaseStmtType, bound->sourceRange)
                     << bt << getTokenKindText(caseKind);
                 bad = true;
             }
             else {
                 // Couldn't find a common type.
-                context.addDiag(DiagCode::NoCommonCaseStmtType, bound->sourceRange) << bt << *type;
+                context.addDiag(diag::NoCommonCaseStmtType, bound->sourceRange) << bt << *type;
                 bad = true;
             }
         }
@@ -596,7 +596,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::WildcardLiteralExpression:
         case SyntaxKind::WithClause:
         case SyntaxKind::WithinSequenceExpression:
-            context.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badExpr(compilation, nullptr);
             break;
         default:
@@ -692,7 +692,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
                 default: {
                     auto& diag =
-                        context.addDiag(DiagCode::InvalidMemberAccess, memberSelect->dotLocation);
+                        context.addDiag(diag::InvalidMemberAccess, memberSelect->dotLocation);
                     diag << expr->sourceRange;
                     diag << memberSelect->nameRange;
                     diag << *expr->type;
@@ -713,7 +713,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     if (invocation && !expr->bad()) {
         SourceLocation loc = invocation->arguments ? invocation->arguments->openParen.location()
                                                    : syntax.getFirstToken().location();
-        auto& diag = context.addDiag(DiagCode::ExpressionNotCallable, loc);
+        auto& diag = context.addDiag(diag::ExpressionNotCallable, loc);
         diag << syntax.sourceRange();
         return badExpr(compilation, nullptr);
     }
@@ -733,7 +733,7 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
                                      const BindContext& context) {
     const SelectorSyntax* selector = syntax.selector;
     if (!selector) {
-        context.addDiag(DiagCode::ExpectedExpression, syntax.sourceRange());
+        context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 
@@ -807,7 +807,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
 
         DiagCode code =
-            type.isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
+            type.isCastCompatible(*rt) ? diag::NoImplicitConversion : diag::BadAssignment;
         auto& diag = context.addDiag(code, location);
         diag << *rt << type;
         if (lhsRange)
@@ -977,7 +977,7 @@ Expression& NamedValueExpression::fromSymbol(const Scope& scope, const Symbol& s
                                              bool isHierarchical, SourceRange sourceRange) {
     Compilation& compilation = scope.getCompilation();
     if (!symbol.isValue()) {
-        scope.addDiag(DiagCode::NotAValue, sourceRange) << symbol.name;
+        scope.addDiag(diag::NotAValue, sourceRange) << symbol.name;
         return badExpr(compilation, nullptr);
     }
 
@@ -1051,7 +1051,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     }
 
     if (!good) {
-        auto& diag = context.addDiag(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
+        auto& diag = context.addDiag(diag::BadUnaryExpression, syntax.operatorToken.location());
         diag << *type;
         diag << operand.sourceRange;
         return badExpr(compilation, result);
@@ -1074,7 +1074,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
 
     if (!type->isNumeric()) {
-        auto& diag = context.addDiag(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
+        auto& diag = context.addDiag(diag::BadUnaryExpression, syntax.operatorToken.location());
         diag << *type;
         diag << operand.sourceRange;
         return badExpr(compilation, result);
@@ -1288,7 +1288,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
 
     auto location = syntax.operatorToken.location();
     if (!good) {
-        auto& diag = context.addDiag(DiagCode::BadBinaryExpression, location);
+        auto& diag = context.addDiag(diag::BadBinaryExpression, location);
         diag << *lt << *rt;
         diag << lhs.sourceRange;
         diag << rhs.sourceRange;
@@ -1352,7 +1352,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
                                               const ConditionalExpressionSyntax& syntax,
                                               const BindContext& context) {
     if (syntax.predicate->conditions.size() != 1) {
-        context.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+        context.addDiag(diag::NotYetSupported, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 
@@ -1408,7 +1408,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
 
     if (!good) {
         auto& diag =
-            context.addDiag(DiagCode::BadConditionalExpression, syntax.question.location());
+            context.addDiag(diag::BadConditionalExpression, syntax.question.location());
         diag << lt << rt;
         diag << left.sourceRange;
         diag << right.sourceRange;
@@ -1483,7 +1483,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
         return badExpr(compilation, result);
 
     if (!selector.type->isIntegral()) {
-        context.addDiag(DiagCode::IndexMustBeIntegral, selector.sourceRange);
+        context.addDiag(diag::IndexMustBeIntegral, selector.sourceRange);
         return badExpr(compilation, result);
     }
 
@@ -1491,7 +1491,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     if (selector.constant) {
         optional<int32_t> index = selector.constant->integer().as<int32_t>();
         if (!index || !value.type->getArrayRange().containsPoint(*index)) {
-            auto& diag = context.addDiag(DiagCode::IndexValueInvalid, selector.sourceRange);
+            auto& diag = context.addDiag(diag::IndexValueInvalid, selector.sourceRange);
             diag << *selector.constant;
             diag << *value.type;
             return badExpr(compilation, result);
@@ -1540,11 +1540,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         return badExpr(compilation, result);
 
     if (!left.type->isIntegral()) {
-        context.addDiag(DiagCode::IndexMustBeIntegral, left.sourceRange);
+        context.addDiag(diag::IndexMustBeIntegral, left.sourceRange);
         return badExpr(compilation, result);
     }
     if (!right.type->isIntegral()) {
-        context.addDiag(DiagCode::IndexMustBeIntegral, right.sourceRange);
+        context.addDiag(diag::IndexMustBeIntegral, right.sourceRange);
         return badExpr(compilation, result);
     }
 
@@ -1565,7 +1565,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     // Helper function for validating the bounds of the selection.
     auto validateRange = [&](auto range) {
         if (!valueRange.containsPoint(range.left) || !valueRange.containsPoint(range.right)) {
-            auto& diag = context.addDiag(DiagCode::BadRangeExpression, errorRange);
+            auto& diag = context.addDiag(diag::BadRangeExpression, errorRange);
             diag << range.left << range.right;
             diag << *value.type;
             return false;
@@ -1580,7 +1580,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
 
         selectionRange = { *lv, *rv };
         if (selectionRange.isLittleEndian() != valueRange.isLittleEndian()) {
-            auto& diag = context.addDiag(DiagCode::SelectEndianMismatch, errorRange);
+            auto& diag = context.addDiag(diag::SelectEndianMismatch, errorRange);
             diag << *value.type;
             return badExpr(compilation, result);
         }
@@ -1593,7 +1593,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             return badExpr(compilation, result);
 
         if (bitwidth_t(*rv) > valueRange.width()) {
-            auto& diag = context.addDiag(DiagCode::RangeWidthTooLarge, right.sourceRange);
+            auto& diag = context.addDiag(diag::RangeWidthTooLarge, right.sourceRange);
             diag << *rv;
             diag << *value.type;
             return badExpr(compilation, result);
@@ -1603,7 +1603,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         if (left.constant) {
             optional<int32_t> index = left.constant->integer().as<int32_t>();
             if (!index) {
-                auto& diag = context.addDiag(DiagCode::IndexValueInvalid, left.sourceRange);
+                auto& diag = context.addDiag(diag::IndexValueInvalid, left.sourceRange);
                 diag << *left.constant;
                 diag << *value.type;
                 return badExpr(compilation, result);
@@ -1675,7 +1675,7 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
 
     const Symbol* member = expr.type->getCanonicalType().as<Scope>().find(selector.name);
     if (!member) {
-        auto& diag = context.addDiag(DiagCode::UnknownMember, selector.nameRange.start());
+        auto& diag = context.addDiag(diag::UnknownMember, selector.nameRange.start());
         diag << expr.sourceRange;
         diag << selector.name;
         diag << *expr.type;
@@ -1729,7 +1729,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
 
         if (!type.isIntegral()) {
             errored = true;
-            context.addDiag(DiagCode::BadConcatExpression, arg->sourceRange) << type;
+            context.addDiag(diag::BadConcatExpression, arg->sourceRange) << type;
             break;
         }
 
@@ -1757,7 +1757,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                     contextDetermined(compilation, expr, compilation.getStringType());
                 else {
                     errored = true;
-                    context.addDiag(DiagCode::ConcatWithStringInt, expr->sourceRange);
+                    context.addDiag(diag::ConcatWithStringInt, expr->sourceRange);
                     break;
                 }
                 buffer[i] = expr;
@@ -1801,7 +1801,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
 
     // TODO: unpacked arrays
     if (!left.type->isIntegral() || (!right->type->isIntegral() && !right->type->isString())) {
-        auto& diag = context.addDiag(DiagCode::BadReplicationExpression,
+        auto& diag = context.addDiag(diag::BadReplicationExpression,
                                      syntax.concatenation->getFirstToken().location());
         diag << *left.type << *right->type;
         diag << left.sourceRange;
@@ -1836,7 +1836,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
 
     if (*count == 0) {
         if ((context.flags & BindFlags::InsideConcatenation) == 0) {
-            context.addDiag(DiagCode::ReplicationZeroOutsideConcat, left.sourceRange);
+            context.addDiag(diag::ReplicationZeroOutsideConcat, left.sourceRange);
             return badExpr(compilation, result);
         }
 
@@ -1876,7 +1876,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
     if (!NameSyntax::isKind(syntax.left->kind)) {
         SourceLocation loc = syntax.arguments ? syntax.arguments->openParen.location()
                                               : syntax.left->getFirstToken().location();
-        auto& diag = context.addDiag(DiagCode::ExpressionNotCallable, loc);
+        auto& diag = context.addDiag(diag::ExpressionNotCallable, loc);
         diag << syntax.left->sourceRange();
         return badExpr(compilation, nullptr);
     }
@@ -1902,7 +1902,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         // TODO: handle too few args as well, which requires looking at default values
         auto formalArgs = symbol.arguments;
         if (formalArgs.size() < actualArgs.size()) {
-            auto& diag = context.addDiag(DiagCode::TooManyArguments, syntax->left->sourceRange());
+            auto& diag = context.addDiag(diag::TooManyArguments, syntax->left->sourceRange());
             diag << formalArgs.size();
             diag << actualArgs.size();
             return badExpr(compilation, nullptr);
@@ -1934,10 +1934,10 @@ Expression& CallExpression::fromSystemMethod(Compilation& compilation, const Exp
     auto subroutine = compilation.getSystemMethod(type.kind, selector.name);
     if (!subroutine) {
         if (syntax) {
-            context.addDiag(DiagCode::UnknownSystemMethod, selector.nameRange) << selector.name;
+            context.addDiag(diag::UnknownSystemMethod, selector.nameRange) << selector.name;
         }
         else {
-            auto& diag = context.addDiag(DiagCode::InvalidMemberAccess, selector.dotLocation);
+            auto& diag = context.addDiag(diag::InvalidMemberAccess, selector.dotLocation);
             diag << expr.sourceRange;
             diag << selector.nameRange;
             diag << *expr.type;
@@ -2024,7 +2024,7 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
             return badExpr(compilation, result);
 
         if (!operand.type->isIntegral()) {
-            auto& diag = context.addDiag(DiagCode::BadIntegerCast, syntax.apostrophe.location());
+            auto& diag = context.addDiag(diag::BadIntegerCast, syntax.apostrophe.location());
             diag << *operand.type;
             diag << targetExpr.sourceRange << operand.sourceRange;
             return badExpr(compilation, result);
@@ -2035,7 +2035,7 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 
     const Type& type = *result->type;
     if (!type.isCastCompatible(*operand.type)) {
-        auto& diag = context.addDiag(DiagCode::BadConversion, syntax.apostrophe.location());
+        auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
         diag << *operand.type << type;
         diag << targetExpr.sourceRange << operand.sourceRange;
         return badExpr(compilation, result);
@@ -2051,7 +2051,7 @@ void ConversionExpression::toJson(json& j) const {
 Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                            const BindContext& context) {
     if ((context.flags & BindFlags::AllowDataType) == 0) {
-        context.addDiag(DiagCode::ExpectedExpression, syntax.sourceRange());
+        context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 

@@ -343,7 +343,7 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     if (!diagnostics.empty()) {
         const Diagnostic& diag = diagnostics.back();
         if ((diag.location == location || diag.location == actual.location()) &&
-            (diag.code == DiagCode::ExpectedIdentifier || diag.code == DiagCode::ExpectedToken)) {
+            (diag.code == diag::ExpectedIdentifier || diag.code == diag::ExpectedToken)) {
             report = false;
         }
     }
@@ -351,22 +351,22 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     if (report) {
         switch (expected) {
             case TokenKind::Identifier:
-                diagnostics.add(DiagCode::ExpectedIdentifier, location);
+                diagnostics.add(diag::ExpectedIdentifier, location);
                 break;
             case TokenKind::StringLiteral:
-                diagnostics.add(DiagCode::ExpectedStringLiteral, location);
+                diagnostics.add(diag::ExpectedStringLiteral, location);
                 break;
             case TokenKind::IntegerLiteral:
-                diagnostics.add(DiagCode::ExpectedIntegerLiteral, location);
+                diagnostics.add(diag::ExpectedIntegerLiteral, location);
                 break;
             case TokenKind::TimeLiteral:
-                diagnostics.add(DiagCode::ExpectedTimeLiteral, location);
+                diagnostics.add(diag::ExpectedTimeLiteral, location);
                 break;
             case TokenKind::IncludeFileName:
-                diagnostics.add(DiagCode::ExpectedIncludeFileName, location);
+                diagnostics.add(diag::ExpectedIncludeFileName, location);
                 break;
             default:
-                diagnostics.add(DiagCode::ExpectedToken, location) << getTokenKindText(expected);
+                diagnostics.add(diag::ExpectedToken, location) << getTokenKindText(expected);
                 break;
         }
     }

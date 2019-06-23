@@ -31,7 +31,7 @@ const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
         case SyntaxKind::CycleDelay:
         case SyntaxKind::ImplicitEventControl:
         case SyntaxKind::RepeatedEventControl:
-            context.addDiag(DiagCode::NotYetSupported, syntax.sourceRange());
+            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badCtrl(comp, nullptr);
             break;
         default:
@@ -54,7 +54,7 @@ TimingControl& DelayControl::fromSyntax(Compilation& compilation, const DelaySyn
         return badCtrl(compilation, result);
 
     if (!expr.type->isNumeric()) {
-        context.addDiag(DiagCode::DelayNotNumeric, expr.sourceRange) << *expr.type;
+        context.addDiag(diag::DelayNotNumeric, expr.sourceRange) << *expr.type;
         return badCtrl(compilation, result);
     }
 
@@ -84,18 +84,18 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
 
     if (edge == EdgeKind::None) {
         if (expr.type->isAggregate()) {
-            context.addDiag(DiagCode::InvalidEventExpression, expr.sourceRange) << *expr.type;
+            context.addDiag(diag::InvalidEventExpression, expr.sourceRange) << *expr.type;
             return badCtrl(compilation, result);
         }
     }
     else if (!expr.type->isIntegral()) {
-        context.addDiag(DiagCode::InvalidEdgeEventExpression, expr.sourceRange);
+        context.addDiag(diag::InvalidEdgeEventExpression, expr.sourceRange);
         return badCtrl(compilation, result);
     }
 
     // Warn if the expression is constant, since it'll never change to trigger off.
     if (expr.constant)
-        context.addDiag(DiagCode::EventExpressionConstant, expr.sourceRange);
+        context.addDiag(diag::EventExpressionConstant, expr.sourceRange);
 
     return *result;
 }

@@ -75,16 +75,16 @@ const ModportSymbol* DefinitionSymbol::getModportOrError(string_view modport, co
 
     auto symbol = find(modport);
     if (!symbol) {
-        auto& diag = scope.addDiag(DiagCode::UnknownMember, range);
+        auto& diag = scope.addDiag(diag::UnknownMember, range);
         diag << modport;
         diag << this->name;
         return nullptr;
     }
 
     if (symbol->kind != SymbolKind::Modport) {
-        auto& diag = scope.addDiag(DiagCode::NotAModport, range);
+        auto& diag = scope.addDiag(diag::NotAModport, range);
         diag << modport;
-        diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+        diag.addNote(diag::NoteDeclarationHere, symbol->location);
         return nullptr;
     }
 
@@ -239,7 +239,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 
     auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
     if (!definition) {
-        scope.addDiag(DiagCode::UnknownModule, syntax.type.range()) << syntax.type.valueText();
+        scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
         return;
     }
 
@@ -260,7 +260,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                 orderedAssignments = isOrdered;
             }
             else if (isOrdered != orderedAssignments) {
-                scope.addDiag(DiagCode::MixingOrderedAndNamedParams,
+                scope.addDiag(diag::MixingOrderedAndNamedParams,
                               paramBase->getFirstToken().location());
                 break;
             }
@@ -274,9 +274,9 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                     auto pair = namedParams.emplace(name, std::make_pair(&nas, false));
                     if (!pair.second) {
                         auto& diag =
-                            scope.addDiag(DiagCode::DuplicateParamAssignment, nas.name.location());
+                            scope.addDiag(diag::DuplicateParamAssignment, nas.name.location());
                         diag << name;
-                        diag.addNote(DiagCode::NotePreviousUsage,
+                        diag.addNote(diag::NotePreviousUsage,
                                      pair.first->second.first->name.location());
                     }
                 }
@@ -299,7 +299,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             // Make sure there aren't extra param assignments for non-existent params.
             if (orderedIndex < orderedParams.size()) {
                 auto loc = orderedParams[orderedIndex]->getFirstToken().location();
-                auto& diag = scope.addDiag(DiagCode::TooManyParamAssignments, loc);
+                auto& diag = scope.addDiag(diag::TooManyParamAssignments, loc);
                 diag << definition->name;
                 diag << orderedParams.size();
                 diag << orderedIndex;
@@ -316,11 +316,11 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                 it->second.second = true;
                 if (param->isLocalParam()) {
                     // Can't assign to localparams, so this is an error.
-                    DiagCode code = param->isPortParam() ? DiagCode::AssignedToLocalPortParam
-                                                         : DiagCode::AssignedToLocalBodyParam;
+                    DiagCode code = param->isPortParam() ? diag::AssignedToLocalPortParam
+                                                         : diag::AssignedToLocalBodyParam;
 
                     auto& diag = scope.addDiag(code, arg->name.location());
-                    diag.addNote(DiagCode::NoteDeclarationHere, param->location);
+                    diag.addNote(diag::NoteDeclarationHere, param->location);
                     continue;
                 }
 
@@ -336,7 +336,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                 // We marked all the args that we used, so anything left over is a param assignment
                 // for a non-existent parameter.
                 if (!pair.second.second) {
-                    auto& diag = scope.addDiag(DiagCode::ParameterDoesNotExist,
+                    auto& diag = scope.addDiag(diag::ParameterDoesNotExist,
                                                pair.second.first->name.location());
                     diag << pair.second.first->name.valueText();
                     diag << definition->name;
@@ -362,7 +362,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         }
         else if (!param->isLocalParam() && param->isPortParam() && !param->getInitializer()) {
             auto& diag =
-                scope.addDiag(DiagCode::ParamHasNoValue, syntax.getFirstToken().location());
+                scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
             diag << definition->name;
             diag << param->name;
             overrides.append(nullptr);
@@ -705,9 +705,9 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
         else {
             // If we previously found a block, this block also matched, which we should warn about.
             if (currentFound && !warned) {
-                auto& diag = parent.addDiag(DiagCode::CaseGenerateDup, currentMatchRange);
+                auto& diag = parent.addDiag(diag::CaseGenerateDup, currentMatchRange);
                 diag << *condExpr->constant;
-                diag.addNote(DiagCode::NotePreviousMatch, matchRange.start());
+                diag.addNote(diag::NotePreviousMatch, matchRange.start());
                 warned = true;
             }
 
@@ -723,7 +723,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
                            isInstantiated && !found, syntax.attributes, results);
     }
     else if (!found) {
-        auto& diag = parent.addDiag(DiagCode::CaseGenerateNoBlock, condExpr->sourceRange);
+        auto& diag = parent.addDiag(diag::CaseGenerateNoBlock, condExpr->sourceRange);
         diag << *condExpr->constant;
     }
 }
@@ -757,9 +757,9 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
             return *result;
 
         if (symbol->kind != SymbolKind::Genvar) {
-            auto& diag = parent.addDiag(DiagCode::NotAGenvar, genvar.range());
+            auto& diag = parent.addDiag(diag::NotAGenvar, genvar.range());
             diag << genvar.valueText();
-            diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
         }
     }
 
@@ -825,7 +825,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     auto loopVal = evalContext.createLocal(&local, *initial.constant);
 
     if (loopVal->integer().hasUnknown())
-        iterContext.addDiag(DiagCode::GenvarUnknownBits, genvar.range()) << *loopVal;
+        iterContext.addDiag(diag::GenvarUnknownBits, genvar.range()) << *loopVal;
 
     // Generate blocks!
     SmallSet<SVInt, 8> usedValues;
@@ -837,7 +837,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
         auto pair = usedValues.emplace(loopVal->integer());
         if (!pair.second) {
-            iterContext.addDiag(DiagCode::GenvarDuplicate, genvar.range()) << *loopVal;
+            iterContext.addDiag(diag::GenvarDuplicate, genvar.range()) << *loopVal;
             break;
         }
 
@@ -848,7 +848,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
             break;
 
         if (loopVal->integer().hasUnknown())
-            iterContext.addDiag(DiagCode::GenvarUnknownBits, genvar.range()) << *loopVal;
+            iterContext.addDiag(diag::GenvarUnknownBits, genvar.range()) << *loopVal;
     }
 
     evalContext.reportDiags(iterContext, syntax.sourceRange());
@@ -874,7 +874,7 @@ void TimeScaleSymbolBase::setTimeScale(const Scope& scope, const TimeUnitsDeclar
 
         auto val = TimeScaleValue::fromLiteral(token.realValue(), token.numericFlags().unit());
         if (!val) {
-            scope.addDiag(DiagCode::InvalidTimeScaleSpecifier, token.location());
+            scope.addDiag(diag::InvalidTimeScaleSpecifier, token.location());
             return;
         }
 
@@ -882,15 +882,15 @@ void TimeScaleSymbolBase::setTimeScale(const Scope& scope, const TimeUnitsDeclar
             // If the value was previously set, we need to make sure this new
             // value is exactly the same, otherwise we error.
             if (value != *val && !errored) {
-                auto& diag = scope.addDiag(DiagCode::MismatchedTimeScales, token.range());
-                diag.addNote(DiagCode::NotePreviousDefinition, prevRange->start()) << *prevRange;
+                auto& diag = scope.addDiag(diag::MismatchedTimeScales, token.range());
+                diag.addNote(diag::NotePreviousDefinition, prevRange->start()) << *prevRange;
                 errored = true;
             }
         }
         else {
             // The first time scale declarations must be the first elements in the parent scope.
             if (!isFirst && !errored) {
-                scope.addDiag(DiagCode::TimeScaleFirstInScope, token.range());
+                scope.addDiag(diag::TimeScaleFirstInScope, token.range());
                 errored = true;
             }
 

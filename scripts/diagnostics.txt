@@ -1,9 +1,10 @@
 // This file is an input to the diagnostic_gen.py script, to generate C++ source
 // for built-in compiler diagnostics.
 
+subsystem General
 error NotYetSupported "language feature not yet supported"
 
-// lexer
+subsystem Lexer
 error NonPrintableChar "non-printable character in source text; SystemVerilog only supports ASCII text"
 error UTF8Char "UTF-8 sequence in source text; SystemVerilog only supports ASCII text"
 error UnicodeBOM "Unicode BOM at start of source text; SystemVerilog only supports ASCII text"
@@ -30,7 +31,7 @@ error BadHexDigit "expected hexadecimal digit"
 error IncludeNotFirstOnLine "include directives must begin on their own line"
 error TooManyLexerErrors "lexer has encountered too many errors (input is a binary file?)"
 
-// numeric
+subsystem Numeric
 error LiteralSizeIsZero "size of vector literal cannot be zero"
 error LiteralSizeTooLarge "size of vector literal is too large (> {} bits)"
 error SignedIntegerOverflow "signed integer overflows 32 bits"
@@ -40,7 +41,7 @@ error ValueMustBePositive "value must be positive"
 error ValueExceedsMaxBitWidth "value exceeds maximum vector width ({} bits)"
 error ValueOutOfRange "{} is out of allowed range ({} to {})"
 
-// preprocessor
+subsystem Preprocessor
 error CouldNotOpenIncludeFile "could not find or open include file"
 error ExceededMaxIncludeDepth "exceeded max include depth"
 error UnknownDirective "unknown macro or compiler directive '{}'"
@@ -61,7 +62,7 @@ error InvalidTimeScalePrecision "time precision must be at least as precise as t
 error RecursiveMacro "expansion of macro '{}' is recursive"
 error MacroOpsOutsideDefinition "macro operators may only be used within a macro definition"
 
-// parser
+subsystem Parser
 error ExpectedIdentifier "expected identifier"
 error ExpectedStringLiteral "expected string literal"
 error ExpectedIntegerLiteral "expected integer literal"
@@ -116,7 +117,7 @@ error NonStandardGenBlock "standalone generate block without loop or condition i
 error UnexpectedQualifiers "unexpected qualifiers on class member"
 error ExpectedSampleKeyword "expected 'sample' keyword"
 
-// declarations
+subsystem Declarations
 note NotePreviousDefinition "previous definition here"
 error LocalParamNoInitializer "local parameter is missing an initializer"
 error BodyParamNoInitializer "parameter declaration is missing an initializer"
@@ -170,7 +171,7 @@ warning case-gen-none CaseGenerateNoBlock "no case generate expression matches t
 warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"
 warning unconnected-unnamed-port UnconnectedUnnamedPort "instance does not provide a connection for an unnamed port"
 
-// expressions
+subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
 error BadBinaryExpression "invalid operands to binary expression ({} and {})"
 error BadConditionalExpression "invalid operands to conditional expression ({} and {})"
@@ -200,7 +201,7 @@ error EnumValueSizeMismatch "expression width of {} does not exactly match decla
 error GenvarDuplicate "loop generation value {} repeats more than once"
 error GenvarUnknownBits "value of {} is invalid for loop generation value"
 
-// statements
+subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
 error DelayNotNumeric "delay expression type {} is not numeric"
 error InvalidEventExpression "invalid type {} for event expression"
@@ -210,14 +211,14 @@ error NoCommonCaseStmtType "case expression of type {} is not comparable to comm
 error CoverStmtNoFail "cover statement cannot have a fail statement"
 warning event-const EventExpressionConstant "edge expression is constant"
 
-// types
+subsystem Types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"
 error EnumValueUnknownBits "value of {} is invalid for enum with base type {}"
 error EnumValueOverflow "incrementing previous value {} would overflow enum base type {}"
 error EnumIncrementUnknown "cannot increment previous value {} because it has unknown bits"
 error EnumValueDuplicate "redefinition of enum value {}"
 
-// lookups
+subsystem Lookup
 error AmbiguousWildcardImport "multiple imports found for identifier '{}'"
 note NoteImportedFrom "imported from here"
 error ImportNameCollision "import of '{}' collides with an existing declaration"
@@ -244,7 +245,7 @@ error InvalidScopeIndexExpression "invalid hierarchical index expression"
 error ScopeIndexOutOfRange "hierarchical index {} is out of scope's declared range"
 error CouldNotResolveHierarchicalPath "could not resolve hierarchical path name '{}'"
 
-// system functions
+subsystem SysFuncs
 error BadSystemSubroutineArg "invalid argument type {} to system {}"
 error UnknownFormatSpecifier "unknown format specifier '%{}'"
 error MissingFormatSpecifier "missing format specifier"
@@ -254,7 +255,7 @@ error FormatSpecifierNotFloat "floating point format specifier options used on n
 error FormatUnspecifiedType "cannot format values of type {} without a specification string"
 error FormatMismatchedType "value of type {} is invalid for '%{}' format specifier"
 
-// constant evaluation
+subsystem ConstEval
 error ExpressionNotConstant "expression is not constant"
 note NoteInCallTo "in call to '{}'"
 note NoteNonConstVariable "reference to non-constant variable '{}' is not allowed in a constant expression"

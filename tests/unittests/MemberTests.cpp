@@ -198,10 +198,10 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::ExpectedTimeLiteral);
-    CHECK((it++)->code == DiagCode::TimeScaleFirstInScope);
-    CHECK((it++)->code == DiagCode::MismatchedTimeScales);
-    CHECK((it++)->code == DiagCode::InvalidTimeScaleSpecifier);
+    CHECK((it++)->code == diag::ExpectedTimeLiteral);
+    CHECK((it++)->code == diag::TimeScaleFirstInScope);
+    CHECK((it++)->code == diag::MismatchedTimeScales);
+    CHECK((it++)->code == diag::InvalidTimeScaleSpecifier);
     CHECK(it == diags.end());
 }
 
@@ -217,6 +217,6 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::PortDeclInANSIModule);
+    CHECK((it++)->code == diag::PortDeclInANSIModule);
     CHECK(it == diags.end());
 }

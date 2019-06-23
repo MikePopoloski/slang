@@ -125,7 +125,7 @@ TEST_CASE("Macro usage (undefined)") {
     lexToken(text);
 
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::UnknownDirective);
+    CHECK(diagnostics.back().code == diag::UnknownDirective);
 }
 
 TEST_CASE("Macro usage (simple)") {
@@ -285,7 +285,7 @@ TEST_CASE("Macro define with missing paren") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
 }
 
 TEST_CASE("Macro default with missing paren") {
@@ -294,7 +294,7 @@ TEST_CASE("Macro default with missing paren") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
 }
 
 TEST_CASE("Macro usage with missing paren") {
@@ -303,7 +303,7 @@ TEST_CASE("Macro usage with missing paren") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
 }
 
 TEST_CASE("Macro deferred define") {
@@ -378,11 +378,11 @@ $display(5,,0,,"C");
     std::string result = preprocess(text);
     CHECK(result == expected);
     REQUIRE(diagnostics.size() == 5);
-    CHECK(diagnostics[0].code == DiagCode::NotEnoughMacroArgs);
-    CHECK(diagnostics[1].code == DiagCode::NotEnoughMacroArgs);
-    CHECK(diagnostics[2].code == DiagCode::TooManyActualMacroArgs);
-    CHECK(diagnostics[3].code == DiagCode::NotEnoughMacroArgs);
-    CHECK(diagnostics[4].code == DiagCode::ExpectedMacroArgs);
+    CHECK(diagnostics[0].code == diag::NotEnoughMacroArgs);
+    CHECK(diagnostics[1].code == diag::NotEnoughMacroArgs);
+    CHECK(diagnostics[2].code == diag::TooManyActualMacroArgs);
+    CHECK(diagnostics[3].code == diag::NotEnoughMacroArgs);
+    CHECK(diagnostics[4].code == diag::ExpectedMacroArgs);
 }
 
 TEST_CASE("Macro string expansions 2") {
@@ -556,8 +556,8 @@ TEST_CASE("Recursive macros") {
 
     preprocess(text);
     REQUIRE(diagnostics.size() == 2);
-    CHECK(diagnostics[0].code == DiagCode::RecursiveMacro);
-    CHECK(diagnostics[1].code == DiagCode::RecursiveMacro);
+    CHECK(diagnostics[0].code == diag::RecursiveMacro);
+    CHECK(diagnostics[1].code == diag::RecursiveMacro);
 }
 
 TEST_CASE("Not recursive macros") {
@@ -658,8 +658,8 @@ foobar
     CHECK(result == expected);
 
     REQUIRE(diagnostics.size() == 2);
-    CHECK(diagnostics[0].code == DiagCode::MacroOpsOutsideDefinition);
-    CHECK(diagnostics[1].code == DiagCode::MacroOpsOutsideDefinition);
+    CHECK(diagnostics[0].code == diag::MacroOpsOutsideDefinition);
+    CHECK(diagnostics[1].code == diag::MacroOpsOutsideDefinition);
 }
 
 TEST_CASE("IfDef branch (taken)") {

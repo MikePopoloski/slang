@@ -107,11 +107,11 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == DiagCode::ImportNameCollision);
+    CHECK(diags[0].code == diag::ImportNameCollision);
     REQUIRE(diags[0].notes.size() == 3);
-    CHECK(diags[0].notes[0].code == DiagCode::NoteDeclarationHere);
-    CHECK(diags[0].notes[1].code == DiagCode::NoteImportedFrom);
-    CHECK(diags[0].notes[2].code == DiagCode::NoteDeclarationHere);
+    CHECK(diags[0].notes[0].code == diag::NoteDeclarationHere);
+    CHECK(diags[0].notes[1].code == diag::NoteImportedFrom);
+    CHECK(diags[0].notes[2].code == diag::NoteDeclarationHere);
 }
 
 TEST_CASE("Wildcard import lookup 3") {
@@ -230,8 +230,8 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == DiagCode::UndeclaredIdentifier);
-    CHECK(diags[1].code == DiagCode::UndeclaredIdentifier);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
 }
 
 TEST_CASE("Package references 2") {
@@ -282,10 +282,10 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == DiagCode::AmbiguousWildcardImport);
-    CHECK(diags[1].code == DiagCode::RedefinitionDifferentSymbolKind);
-    CHECK(diags[2].code == DiagCode::Redefinition);
-    CHECK(diags[3].code == DiagCode::ImportNameCollision);
+    CHECK(diags[0].code == diag::AmbiguousWildcardImport);
+    CHECK(diags[1].code == diag::RedefinitionDifferentSymbolKind);
+    CHECK(diags[2].code == diag::Redefinition);
+    CHECK(diags[3].code == diag::ImportNameCollision);
 }
 
 TEST_CASE("Member access") {
@@ -336,10 +336,10 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == DiagCode::HierarchicalNotAllowedInConstant);
-    CHECK(diags[1].code == DiagCode::HierarchicalNotAllowedInConstant);
-    CHECK(diags[2].code == DiagCode::ExpressionNotConstant);
-    CHECK(diags[3].code == DiagCode::HierarchicalNotAllowedInConstant);
+    CHECK(diags[0].code == diag::HierarchicalNotAllowedInConstant);
+    CHECK(diags[1].code == diag::HierarchicalNotAllowedInConstant);
+    CHECK(diags[2].code == diag::ExpressionNotConstant);
+    CHECK(diags[3].code == diag::HierarchicalNotAllowedInConstant);
 }
 
 TEST_CASE("Hierarchical reference in CE across modules") {
@@ -358,7 +358,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == DiagCode::UndeclaredIdentifier);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }
 
 TEST_CASE("Useful error when lookup before declared in parent scope") {
@@ -382,8 +382,8 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::UsedBeforeDeclared);
-    CHECK((it++)->code == DiagCode::UsedBeforeDeclared);
+    CHECK((it++)->code == diag::UsedBeforeDeclared);
+    CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK(it == diags.end());
 }
 
@@ -484,9 +484,9 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::ScopeIndexOutOfRange);
-    CHECK((it++)->code == DiagCode::InvalidScopeIndexExpression);
-    CHECK((it++)->code == DiagCode::ScopeNotIndexable);
+    CHECK((it++)->code == diag::ScopeIndexOutOfRange);
+    CHECK((it++)->code == diag::InvalidScopeIndexExpression);
+    CHECK((it++)->code == diag::ScopeNotIndexable);
     CHECK(it == diags.end());
 }
 
@@ -525,7 +525,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::ScopeIndexOutOfRange);
+    CHECK((it++)->code == diag::ScopeIndexOutOfRange);
     CHECK(it == diags.end());
 }
 
@@ -774,7 +774,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::ExpressionNotConstant);
+    CHECK((it++)->code == diag::ExpressionNotConstant);
     CHECK(it == diags.end());
 }
 
@@ -981,12 +981,12 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:9:20: error: hierarchical names are not allowed in constant expressions
-        return gen1.bar;
-               ~~~~^
 source:9:20: error: could not resolve hierarchical path name 'bar'
         return gen1.bar;
                    ^~~~
+source:9:20: error: hierarchical names are not allowed in constant expressions
+        return gen1.bar;
+               ~~~~^
 source:13:16: error: hierarchical names are not allowed in constant expressions
         return $root.M.asdf;
                ^~~~~

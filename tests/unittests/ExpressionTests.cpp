@@ -267,11 +267,11 @@ TEST_CASE("Expression types") {
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == DiagCode::BadUnaryExpression);
-    CHECK(diags[1].code == DiagCode::BadBinaryExpression);
-    CHECK(diags[2].code == DiagCode::BadBinaryExpression);
-    CHECK(diags[3].code == DiagCode::BadConditionalExpression);
-    CHECK(diags[4].code == DiagCode::NotBooleanConvertible);
+    CHECK(diags[0].code == diag::BadUnaryExpression);
+    CHECK(diags[1].code == diag::BadBinaryExpression);
+    CHECK(diags[2].code == diag::BadBinaryExpression);
+    CHECK(diags[3].code == diag::BadConditionalExpression);
+    CHECK(diags[4].code == diag::NotBooleanConvertible);
 }
 
 TEST_CASE("Expression - bad name references") {
@@ -292,9 +292,9 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == DiagCode::NotAValue);
-    CHECK(diags[1].code == DiagCode::ExpressionNotCallable);
-    CHECK(diags[2].code == DiagCode::ExpressionNotCallable);
+    CHECK(diags[0].code == diag::NotAValue);
+    CHECK(diags[1].code == diag::ExpressionNotCallable);
+    CHECK(diags[2].code == diag::ExpressionNotCallable);
 }
 
 TEST_CASE("Expression - bad use of data type") {
@@ -316,10 +316,10 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == DiagCode::ExpectedExpression);
-    CHECK(diags[1].code == DiagCode::ExpectedExpression);
-    CHECK(diags[2].code == DiagCode::NotAValue);
-    CHECK(diags[3].code == DiagCode::NotAValue);
+    CHECK(diags[0].code == diag::ExpectedExpression);
+    CHECK(diags[1].code == diag::ExpectedExpression);
+    CHECK(diags[2].code == diag::NotAValue);
+    CHECK(diags[3].code == diag::NotAValue);
 }
 
 TEST_CASE("Expression - allowed data type") {
@@ -362,10 +362,10 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == DiagCode::ExpressionNotConstant);
-    CHECK(diags[1].code == DiagCode::ExpressionNotConstant);
-    CHECK(diags[2].code == DiagCode::ExpressionNotConstant);
-    CHECK(diags[3].code == DiagCode::ExpressionNotConstant);
+    CHECK(diags[0].code == diag::ExpressionNotConstant);
+    CHECK(diags[1].code == diag::ExpressionNotConstant);
+    CHECK(diags[2].code == diag::ExpressionNotConstant);
+    CHECK(diags[3].code == diag::ExpressionNotConstant);
 }
 
 TEST_CASE("Invalid string conversions") {
@@ -392,8 +392,8 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == DiagCode::NoImplicitConversion);
-    CHECK(diags[1].code == DiagCode::NoImplicitConversion);
+    CHECK(diags[0].code == diag::NoImplicitConversion);
+    CHECK(diags[1].code == diag::NoImplicitConversion);
 }
 
 TEST_CASE("Integer literal corner cases") {
@@ -505,7 +505,7 @@ TEST_CASE("Crazy long hex literal") {
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == DiagCode::LiteralSizeTooLarge);
+    CHECK(diags[0].code == diag::LiteralSizeTooLarge);
 }
 
 // TODO: optimize and re-enable
@@ -521,5 +521,5 @@ TEST_CASE("Crazy long hex literal") {
 //
 //    auto& diags = compilation.getAllDiagnostics();
 //    REQUIRE(diags.size() == 1);
-//    CHECK(diags[0].code == DiagCode::LiteralSizeTooLarge);
+//    CHECK(diags[0].code == diag::LiteralSizeTooLarge);
 //}

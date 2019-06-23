@@ -1,6 +1,6 @@
 add_custom_command(
 	COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/diagnostic_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
-	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/DiagCode.h ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
 	DEPENDS ../scripts/diagnostic_gen.py ../scripts/diagnostics.txt
 	COMMENT "Generating diagnostics"
 )

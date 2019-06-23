@@ -20,7 +20,7 @@ Diagnostic& BindContext::addDiag(DiagCode code, SourceRange sourceRange) const {
 
 bool BindContext::requireLValue(const Expression& expr, SourceLocation location) const {
     if (!expr.isLValue()) {
-        auto& diag = addDiag(DiagCode::ExpressionNotAssignable, location);
+        auto& diag = addDiag(diag::ExpressionNotAssignable, location);
         diag << expr.sourceRange;
         return false;
     }
@@ -32,7 +32,7 @@ bool BindContext::requireIntegral(const ConstantValue& cv, SourceRange range) co
         return false;
 
     if (!cv.isInteger()) {
-        addDiag(DiagCode::ValueMustBeIntegral, range);
+        addDiag(diag::ValueMustBeIntegral, range);
         return false;
     }
     return true;
@@ -40,7 +40,7 @@ bool BindContext::requireIntegral(const ConstantValue& cv, SourceRange range) co
 
 bool BindContext::requireNoUnknowns(const SVInt& value, SourceRange range) const {
     if (value.hasUnknown()) {
-        addDiag(DiagCode::ValueMustNotBeUnknown, range);
+        addDiag(diag::ValueMustNotBeUnknown, range);
         return false;
     }
     return true;
@@ -48,7 +48,7 @@ bool BindContext::requireNoUnknowns(const SVInt& value, SourceRange range) const
 
 bool BindContext::requirePositive(const SVInt& value, SourceRange range) const {
     if (value.isSigned() && value.isNegative()) {
-        addDiag(DiagCode::ValueMustBePositive, range);
+        addDiag(diag::ValueMustBePositive, range);
         return false;
     }
     return true;
@@ -59,7 +59,7 @@ bool BindContext::requireGtZero(optional<int32_t> value, SourceRange range) cons
         return false;
 
     if (*value <= 0) {
-        addDiag(DiagCode::ValueMustBePositive, range);
+        addDiag(diag::ValueMustBePositive, range);
         return false;
     }
     return true;
@@ -67,7 +67,7 @@ bool BindContext::requireGtZero(optional<int32_t> value, SourceRange range) cons
 
 bool BindContext::requireBooleanConvertible(const Expression& expr) const {
     if (!expr.type->isBooleanConvertible()) {
-        addDiag(DiagCode::NotBooleanConvertible, expr.sourceRange) << *expr.type;
+        addDiag(diag::NotBooleanConvertible, expr.sourceRange) << *expr.type;
         return false;
     }
     return true;
@@ -75,7 +75,7 @@ bool BindContext::requireBooleanConvertible(const Expression& expr) const {
 
 bool BindContext::requireValidBitWidth(bitwidth_t width, SourceRange range) const {
     if (width > SVInt::MAX_BITS) {
-        addDiag(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
+        addDiag(diag::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
         return false;
     }
     return true;
@@ -85,7 +85,7 @@ optional<bitwidth_t> BindContext::requireValidBitWidth(const SVInt& value,
                                                        SourceRange range) const {
     auto result = value.as<bitwidth_t>();
     if (!result)
-        addDiag(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
+        addDiag(diag::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
     else if (!requireValidBitWidth(*result, range))
         return std::nullopt;
     return result;
@@ -105,7 +105,7 @@ optional<int32_t> BindContext::evalInteger(const Expression& expr) const {
 
     auto coerced = value.as<int32_t>();
     if (!coerced) {
-        auto& diag = addDiag(DiagCode::ValueOutOfRange, expr.sourceRange);
+        auto& diag = addDiag(diag::ValueOutOfRange, expr.sourceRange);
         diag << value;
         diag << INT32_MIN;
         diag << INT32_MAX;
@@ -145,7 +145,7 @@ EvaluatedDimension BindContext::evalDimension(const VariableDimensionSyntax& syn
     }
 
     if (requireRange && !result.isRange() && result.kind != DimensionKind::Unknown)
-        addDiag(DiagCode::DimensionRequiresConstRange, syntax.sourceRange());
+        addDiag(diag::DimensionRequiresConstRange, syntax.sourceRange());
 
     return result;
 }
@@ -158,7 +158,7 @@ optional<ConstantRange> BindContext::evalPackedDimension(
         return std::nullopt;
 
     if (result.kind == DimensionKind::AbbreviatedRange)
-        addDiag(DiagCode::PackedDimsRequireFullRange, syntax.sourceRange());
+        addDiag(diag::PackedDimsRequireFullRange, syntax.sourceRange());
 
     return result.range;
 }
@@ -169,9 +169,9 @@ optional<ConstantRange> BindContext::evalPackedDimension(const ElementSelectSynt
         evalRangeDimension(*syntax.selector, result);
 
     if (!syntax.selector || result.kind == DimensionKind::Associative)
-        addDiag(DiagCode::DimensionRequiresConstRange, syntax.sourceRange());
+        addDiag(diag::DimensionRequiresConstRange, syntax.sourceRange());
     else if (result.kind == DimensionKind::AbbreviatedRange)
-        addDiag(DiagCode::PackedDimsRequireFullRange, syntax.sourceRange());
+        addDiag(diag::PackedDimsRequireFullRange, syntax.sourceRange());
 
     if (!result.isRange())
         return std::nullopt;
@@ -215,7 +215,7 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax,
             break;
         }
         default:
-            addDiag(DiagCode::InvalidDimensionRange, syntax.sourceRange());
+            addDiag(diag::InvalidDimensionRange, syntax.sourceRange());
             return;
     }
 }

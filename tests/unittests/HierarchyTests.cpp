@@ -85,23 +85,23 @@ endmodule
 
     auto& diags = compilation.getSemanticDiagnostics();
     REQUIRE(diags.size() == 10);
-    CHECK(diags[0].code == DiagCode::ParamHasNoValue);
-    CHECK(diags[1].code == DiagCode::TooManyParamAssignments);
-    CHECK(diags[2].code == DiagCode::ParamHasNoValue);
-    CHECK(diags[3].code == DiagCode::AssignedToLocalPortParam);
-    CHECK(diags[4].code == DiagCode::ParameterDoesNotExist);
-    CHECK(diags[5].code == DiagCode::AssignedToLocalBodyParam);
-    CHECK(diags[6].code == DiagCode::DuplicateParamAssignment);
-    CHECK(diags[7].code == DiagCode::MixingOrderedAndNamedParams);
-    CHECK(diags[8].code == DiagCode::LocalParamNoInitializer);
-    CHECK(diags[9].code == DiagCode::BodyParamNoInitializer);
+    CHECK(diags[0].code == diag::ParamHasNoValue);
+    CHECK(diags[1].code == diag::TooManyParamAssignments);
+    CHECK(diags[2].code == diag::ParamHasNoValue);
+    CHECK(diags[3].code == diag::AssignedToLocalPortParam);
+    CHECK(diags[4].code == diag::ParameterDoesNotExist);
+    CHECK(diags[5].code == diag::AssignedToLocalBodyParam);
+    CHECK(diags[6].code == diag::DuplicateParamAssignment);
+    CHECK(diags[7].code == diag::MixingOrderedAndNamedParams);
+    CHECK(diags[8].code == diag::LocalParamNoInitializer);
+    CHECK(diags[9].code == diag::BodyParamNoInitializer);
 
     REQUIRE(diags[3].notes.size() == 1);
     REQUIRE(diags[5].notes.size() == 1);
     REQUIRE(diags[6].notes.size() == 1);
-    CHECK(diags[3].notes[0].code == DiagCode::NoteDeclarationHere);
-    CHECK(diags[5].notes[0].code == DiagCode::NoteDeclarationHere);
-    CHECK(diags[6].notes[0].code == DiagCode::NotePreviousUsage);
+    CHECK(diags[3].notes[0].code == diag::NoteDeclarationHere);
+    CHECK(diags[5].notes[0].code == diag::NoteDeclarationHere);
+    CHECK(diags[6].notes[0].code == diag::NotePreviousUsage);
 }
 
 TEST_CASE("Module children (simple)") {
@@ -368,11 +368,11 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == DiagCode::RecursiveDefinition);
-    CHECK(diags[1].code == DiagCode::RecursiveDefinition);
-    CHECK(diags[2].code == DiagCode::ExpressionNotConstant);
-    CHECK(diags[3].code == DiagCode::RecursiveDefinition);
-    CHECK(diags[4].code == DiagCode::ExpressionNotConstant);
+    CHECK(diags[0].code == diag::RecursiveDefinition);
+    CHECK(diags[1].code == diag::RecursiveDefinition);
+    CHECK(diags[2].code == diag::ExpressionNotConstant);
+    CHECK(diags[3].code == diag::RecursiveDefinition);
+    CHECK(diags[4].code == diag::ExpressionNotConstant);
 }
 
 TEST_CASE("Module ANSI ports") {
@@ -453,8 +453,8 @@ module mh22(ref wire x); endmodule
     checkPort("mh21", "y", PortDirection::Ref, nullptr, "logic");
 
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == DiagCode::InOutPortCannotBeVariable);
-    CHECK(diags[1].code == DiagCode::RefPortMustBeVariable);
+    CHECK(diags[0].code == diag::InOutPortCannotBeVariable);
+    CHECK(diags[1].code == diag::RefPortMustBeVariable);
 }
 
 #ifdef _MSC_VER
@@ -514,11 +514,11 @@ module m6(I.bar bar); endmodule
     checkIfacePort("m6", "bar", "I", "bar");
 
     REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == DiagCode::PortTypeNotInterfaceOrData);
-    CHECK(diags[1].code == DiagCode::VarWithInterfacePort);
-    CHECK(diags[2].code == DiagCode::DirectionWithInterfacePort);
-    CHECK(diags[3].code == DiagCode::UnknownMember);
-    CHECK(diags[4].code == DiagCode::NotAModport);
+    CHECK(diags[0].code == diag::PortTypeNotInterfaceOrData);
+    CHECK(diags[1].code == diag::VarWithInterfacePort);
+    CHECK(diags[2].code == diag::DirectionWithInterfacePort);
+    CHECK(diags[3].code == diag::UnknownMember);
+    CHECK(diags[4].code == diag::NotAModport);
 }
 
 TEST_CASE("Module non-ANSI ports") {
@@ -592,14 +592,14 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
 
     auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::Redefinition);
-    CHECK((it++)->code == DiagCode::Redefinition);
-    CHECK((it++)->code == DiagCode::RefPortMustBeVariable);
-    CHECK((it++)->code == DiagCode::InOutPortCannotBeVariable);
-    CHECK((it++)->code == DiagCode::RefPortMustBeVariable);
-    CHECK((it++)->code == DiagCode::Redefinition);
-    CHECK((it++)->code == DiagCode::RedefinitionDifferentType);
-    CHECK((it++)->code == DiagCode::CantDeclarePortSigned);
+    CHECK((it++)->code == diag::Redefinition);
+    CHECK((it++)->code == diag::Redefinition);
+    CHECK((it++)->code == diag::RefPortMustBeVariable);
+    CHECK((it++)->code == diag::InOutPortCannotBeVariable);
+    CHECK((it++)->code == diag::RefPortMustBeVariable);
+    CHECK((it++)->code == diag::Redefinition);
+    CHECK((it++)->code == diag::RedefinitionDifferentType);
+    CHECK((it++)->code == diag::CantDeclarePortSigned);
     CHECK(it == diags.end());
 }
 
@@ -707,20 +707,20 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
 
     auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::UnknownInterface);
-    CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
-    CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
-    CHECK((it++)->code == DiagCode::MixingOrderedAndNamedPorts);
-    CHECK((it++)->code == DiagCode::DuplicateWildcardPortConnection);
-    CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
-    CHECK((it++)->code == DiagCode::UnconnectedNamedPort);
-    CHECK((it++)->code == DiagCode::DuplicatePortConnection);
-    CHECK((it++)->code == DiagCode::InterfacePortNotConnected);
-    CHECK((it++)->code == DiagCode::InterfacePortInvalidExpression);
-    CHECK((it++)->code == DiagCode::UndeclaredIdentifier);
-    CHECK((it++)->code == DiagCode::NotAnInterface);
-    CHECK((it++)->code == DiagCode::InterfacePortTypeMismatch);
-    CHECK((it++)->code == DiagCode::PortConnDimensionsMismatch);
+    CHECK((it++)->code == diag::UnknownInterface);
+    CHECK((it++)->code == diag::UnconnectedNamedPort);
+    CHECK((it++)->code == diag::UnconnectedNamedPort);
+    CHECK((it++)->code == diag::MixingOrderedAndNamedPorts);
+    CHECK((it++)->code == diag::DuplicateWildcardPortConnection);
+    CHECK((it++)->code == diag::UnconnectedNamedPort);
+    CHECK((it++)->code == diag::UnconnectedNamedPort);
+    CHECK((it++)->code == diag::DuplicatePortConnection);
+    CHECK((it++)->code == diag::InterfacePortNotConnected);
+    CHECK((it++)->code == diag::InterfacePortInvalidExpression);
+    CHECK((it++)->code == diag::UndeclaredIdentifier);
+    CHECK((it++)->code == diag::NotAnInterface);
+    CHECK((it++)->code == diag::InterfacePortTypeMismatch);
+    CHECK((it++)->code == diag::PortConnDimensionsMismatch);
     CHECK(it == diags.end());
 
     auto& bar = compilation.getRoot().lookupName<ParameterSymbol>("test.q1.p1[1].bar");
@@ -840,19 +840,19 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::NotAValue);
-    CHECK((it++)->code == DiagCode::InvalidGenvarIterExpression);
-    CHECK((it++)->code == DiagCode::ExpectedIdentifier);
-    CHECK((it++)->code == DiagCode::ExpectedGenvarIterVar);
-    CHECK((it++)->code == DiagCode::UndeclaredIdentifier);
-    CHECK((it++)->code == DiagCode::NotAGenvar);
-    CHECK((it++)->code == DiagCode::HierarchicalNotAllowedInConstant);
-    CHECK((it++)->code == DiagCode::HierarchicalNotAllowedInConstant);
-    CHECK((it++)->code == DiagCode::NotBooleanConvertible);
-    CHECK((it++)->code == DiagCode::GenvarUnknownBits);
-    CHECK((it++)->code == DiagCode::GenvarUnknownBits);
-    CHECK((it++)->code == DiagCode::GenvarDuplicate);
-    CHECK((it++)->code == DiagCode::ExpressionNotConstant);
+    CHECK((it++)->code == diag::NotAValue);
+    CHECK((it++)->code == diag::InvalidGenvarIterExpression);
+    CHECK((it++)->code == diag::ExpectedIdentifier);
+    CHECK((it++)->code == diag::ExpectedGenvarIterVar);
+    CHECK((it++)->code == diag::UndeclaredIdentifier);
+    CHECK((it++)->code == diag::NotAGenvar);
+    CHECK((it++)->code == diag::HierarchicalNotAllowedInConstant);
+    CHECK((it++)->code == diag::HierarchicalNotAllowedInConstant);
+    CHECK((it++)->code == diag::NotBooleanConvertible);
+    CHECK((it++)->code == diag::GenvarUnknownBits);
+    CHECK((it++)->code == diag::GenvarUnknownBits);
+    CHECK((it++)->code == diag::GenvarDuplicate);
+    CHECK((it++)->code == diag::ExpressionNotConstant);
     CHECK(it == diags.end());
 }
 
@@ -886,12 +886,12 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
-    CHECK((it++)->code == DiagCode::CaseGenerateEmpty);
-    CHECK((it++)->code == DiagCode::ExpressionNotConstant);
-    CHECK((it++)->code == DiagCode::UndeclaredIdentifier);
-    CHECK((it++)->code == DiagCode::CaseGenerateDup);
-    CHECK((it++)->code == DiagCode::CaseGenerateNoBlock);
-    CHECK((it++)->code == DiagCode::MultipleGenerateDefaultCases);
+    CHECK((it++)->code == diag::CaseGenerateEmpty);
+    CHECK((it++)->code == diag::ExpressionNotConstant);
+    CHECK((it++)->code == diag::UndeclaredIdentifier);
+    CHECK((it++)->code == diag::CaseGenerateDup);
+    CHECK((it++)->code == diag::CaseGenerateNoBlock);
+    CHECK((it++)->code == diag::MultipleGenerateDefaultCases);
     CHECK(it == diags.end());
 }
 

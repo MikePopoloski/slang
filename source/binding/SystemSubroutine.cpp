@@ -26,12 +26,12 @@ bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, 
     }
 
     if (provided < min) {
-        context.addDiag(DiagCode::TooFewArguments, callRange) << min << provided;
+        context.addDiag(diag::TooFewArguments, callRange) << min << provided;
         return false;
     }
 
     if (provided > max) {
-        context.addDiag(DiagCode::TooManyArguments, args[max]->sourceRange) << max << provided;
+        context.addDiag(diag::TooManyArguments, args[max]->sourceRange) << max << provided;
         return false;
     }
 
@@ -68,7 +68,7 @@ static bool parseFormatString(const BindContext& context, string_view str, Sourc
             hasNeg = true;
             ptr++;
             if (ptr != end && !isDecimalDigit(*ptr)) {
-                error(DiagCode::UnknownFormatSpecifier, start) << '-';
+                error(diag::UnknownFormatSpecifier, start) << '-';
                 return false;
             }
         }
@@ -87,7 +87,7 @@ static bool parseFormatString(const BindContext& context, string_view str, Sourc
             } while (ptr != end && isDecimalDigit(*ptr));
 
             if (width > INT32_MAX || (width == 0 && (ptr - start) > 2)) {
-                error(DiagCode::FormatSpecifierInvalidWidth, start);
+                error(diag::FormatSpecifierInvalidWidth, start);
                 return false;
             }
 
@@ -100,7 +100,7 @@ static bool parseFormatString(const BindContext& context, string_view str, Sourc
         }
 
         if (ptr == end) {
-            error(DiagCode::MissingFormatSpecifier, start);
+            error(diag::MissingFormatSpecifier, start);
             return false;
         }
 
@@ -150,18 +150,18 @@ static bool parseFormatString(const BindContext& context, string_view str, Sourc
                 args.append({ FormatArg::String, c });
                 break;
             default:
-                error(DiagCode::UnknownFormatSpecifier, start) << c;
+                error(diag::UnknownFormatSpecifier, start) << c;
                 return false;
         }
 
         if (hasSize) {
             if (!sizeAllowed) {
-                error(DiagCode::FormatSpecifierWidthNotAllowed, start) << c;
+                error(diag::FormatSpecifierWidthNotAllowed, start) << c;
                 return false;
             }
 
             if (!floatAllowed && (hasNeg || hasDecimal)) {
-                error(DiagCode::FormatSpecifierNotFloat, start);
+                error(diag::FormatSpecifierNotFloat, start);
                 return false;
             }
         }
@@ -217,7 +217,7 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
                 specIt = specs.begin();
             }
             else if (type.isAggregate() && !isByteArray(type)) {
-                context.addDiag(DiagCode::FormatUnspecifiedType, arg->sourceRange) << type;
+                context.addDiag(diag::FormatUnspecifiedType, arg->sourceRange) << type;
                 return false;
             }
         }
@@ -248,7 +248,7 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
             }
 
             if (!ok) {
-                context.addDiag(DiagCode::FormatMismatchedType, arg->sourceRange)
+                context.addDiag(diag::FormatMismatchedType, arg->sourceRange)
                     << type << fmtArg.spec;
                 return false;
             }

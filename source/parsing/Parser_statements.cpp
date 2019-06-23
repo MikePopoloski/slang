@@ -32,7 +32,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
                     return parseCaseStatement(label, attributes, modifier, consume());
                 }
                 default: {
-                    addDiag(DiagCode::ExpectedIfOrCase, peek(1).location())
+                    addDiag(diag::ExpectedIfOrCase, peek(1).location())
                         << getTokenKindText(peek().kind);
                     skipToken(std::nullopt);
                     return factory.emptyStatement(
@@ -108,9 +108,9 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
             return parseRandCaseStatement(label, attributes);
         case TokenKind::Semicolon:
             if (label)
-                addDiag(DiagCode::NoLabelOnSemicolon, peek().location());
+                addDiag(diag::NoLabelOnSemicolon, peek().location());
             else if (!allowEmpty)
-                addDiag(DiagCode::ExpectedStatement, peek().location());
+                addDiag(diag::ExpectedStatement, peek().location());
             return factory.emptyStatement(label, attributes, consume());
         case TokenKind::MinusArrow:
         case TokenKind::MinusDoubleArrow:
@@ -125,7 +125,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
         return factory.expressionStatement(label, attributes, expr, expect(TokenKind::Semicolon));
     }
 
-    addDiag(DiagCode::ExpectedStatement, peek().location());
+    addDiag(diag::ExpectedStatement, peek().location());
     return factory.emptyStatement(label, attributes,
                                   missingToken(TokenKind::Semicolon, peek().location()));
 }
@@ -173,9 +173,9 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
                 auto kind = peek().kind;
                 if (kind == TokenKind::DefaultKeyword) {
                     if (lastDefault && !errored) {
-                        auto& diag = addDiag(DiagCode::MultipleDefaultCases, peek().location());
+                        auto& diag = addDiag(diag::MultipleDefaultCases, peek().location());
                         diag << getTokenKindText(caseKeyword.kind);
-                        diag.addNote(DiagCode::NotePreviousDefinition, lastDefault);
+                        diag.addNote(diag::NotePreviousDefinition, lastDefault);
                         errored = true;
                     }
 
@@ -210,9 +210,9 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
                 auto kind = peek().kind;
                 if (kind == TokenKind::DefaultKeyword) {
                     if (lastDefault && !errored) {
-                        auto& diag = addDiag(DiagCode::MultipleDefaultCases, peek().location());
+                        auto& diag = addDiag(diag::MultipleDefaultCases, peek().location());
                         diag << getTokenKindText(caseKeyword.kind);
-                        diag.addNote(DiagCode::NotePreviousDefinition, lastDefault);
+                        diag.addNote(diag::NotePreviousDefinition, lastDefault);
                         errored = true;
                     }
 
@@ -225,7 +225,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
 
                     parseSeparatedList<isPossibleOpenRangeElement, isEndOfCaseItem>(
                         buffer, TokenKind::Colon, TokenKind::Comma, colon,
-                        DiagCode::ExpectedOpenRangeElement,
+                        diag::ExpectedOpenRangeElement,
                         [this] { return &parseOpenRangeElement(); });
                     itemBuffer.append(
                         &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
@@ -243,9 +243,9 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
                 auto kind = peek().kind;
                 if (kind == TokenKind::DefaultKeyword) {
                     if (lastDefault && !errored) {
-                        auto& diag = addDiag(DiagCode::MultipleDefaultCases, peek().location());
+                        auto& diag = addDiag(diag::MultipleDefaultCases, peek().location());
                         diag << getTokenKindText(caseKeyword.kind);
-                        diag.addNote(DiagCode::NotePreviousDefinition, lastDefault);
+                        diag.addNote(diag::NotePreviousDefinition, lastDefault);
                         errored = true;
                     }
 
@@ -258,7 +258,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
 
                     parseSeparatedList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                         buffer, TokenKind::Colon, TokenKind::Comma, colon,
-                        DiagCode::ExpectedExpression, [this] { return &parseExpression(); });
+                        diag::ExpectedExpression, [this] { return &parseExpression(); });
                     itemBuffer.append(
                         &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
                 }
@@ -271,7 +271,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
     }
 
     if (itemBuffer.empty()) {
-        addDiag(DiagCode::CaseStatementEmpty, caseKeyword.location())
+        addDiag(diag::CaseStatementEmpty, caseKeyword.location())
             << getTokenKindText(caseKeyword.kind);
     }
 
@@ -333,7 +333,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
     SmallVectorSized<TokenOrSyntax, 4> initializers;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
         initializers, TokenKind::Semicolon, TokenKind::Comma, semi1,
-        DiagCode::ExpectedForInitializer, [this] { return &parseForInitializer(); });
+        diag::ExpectedForInitializer, [this] { return &parseForInitializer(); });
 
     auto& stopExpr = parseExpression();
     auto semi2 = expect(TokenKind::Semicolon);
@@ -342,7 +342,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
     SmallVectorSized<TokenOrSyntax, 4> steps;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
         steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-        DiagCode::ExpectedExpression, [this] { return &parseExpression(); });
+        diag::ExpectedExpression, [this] { return &parseExpression(); });
 
     return factory.forLoopStatement(label, attributes, forKeyword, openParen,
                                     initializers.copy(alloc), semi1, stopExpr, semi2,
@@ -357,7 +357,7 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     Token closeBracket;
     parseSeparatedList<isIdentifierOrComma, isEndOfBracketedList>(
         TokenKind::OpenBracket, TokenKind::CloseBracket, TokenKind::Comma, openBracket, list,
-        closeBracket, DiagCode::ExpectedIdentifier,
+        closeBracket, diag::ExpectedIdentifier,
         [this] { return &parseName(NameOptions::InForEach); });
 
     auto closeParen = expect(TokenKind::CloseParenthesis);
@@ -458,7 +458,7 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label,
         auto hash = consume();
         auto zero = expect(TokenKind::IntegerLiteral);
         if (!zero.isMissing() && zero.intValue() != 0)
-            addDiag(DiagCode::DeferredDelayMustBeZero, zero.location());
+            addDiag(diag::DeferredDelayMustBeZero, zero.location());
         deferred = &factory.deferredAssertion(hash, zero, Token());
     }
     else if (peek(TokenKind::FinalKeyword)) {
@@ -583,7 +583,7 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
         else if (isPossibleStatement(kind))
             newNode = &parseStatement();
         else {
-            skipToken(error ? std::nullopt : std::make_optional(DiagCode::ExpectedStatement));
+            skipToken(error ? std::nullopt : std::make_optional(diag::ExpectedStatement));
             error = true;
         }
 
@@ -651,7 +651,7 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(
     Token closeParen;
     parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
         buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-        DiagCode::ExpectedIdentifier, [this] { return &parseName(); });
+        diag::ExpectedIdentifier, [this] { return &parseName(); });
 
     return factory.waitOrderStatement(label, attributes, keyword, openParen, buffer.copy(alloc),
                                       closeParen, parseActionBlock());

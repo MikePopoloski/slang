@@ -58,10 +58,10 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == DiagCode::EnumValueSizeMismatch);
-    CHECK(diags[1].code == DiagCode::EnumValueNotIntegral);
-    CHECK(diags[2].code == DiagCode::EnumValueSizeMismatch);
-    CHECK(diags[3].code == DiagCode::EnumValueSizeMismatch);
+    CHECK(diags[0].code == diag::EnumValueSizeMismatch);
+    CHECK(diags[1].code == diag::EnumValueNotIntegral);
+    CHECK(diags[2].code == diag::EnumValueSizeMismatch);
+    CHECK(diags[3].code == diag::EnumValueSizeMismatch);
 }
 
 TEST_CASE("Enum value errors") {
@@ -81,11 +81,11 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
     // TODO: re-enable once implemented
-    //CHECK(diags[0].code == DiagCode::EnumValueUnknownBits);
-    CHECK(diags[0].code == DiagCode::EnumIncrementUnknown);
-    CHECK(diags[1].code == DiagCode::EnumValueOverflow);
-    CHECK(diags[2].code == DiagCode::EnumValueDuplicate);
-    CHECK(diags[3].code == DiagCode::EnumValueDuplicate);
+    //CHECK(diags[0].code == diag::EnumValueUnknownBits);
+    CHECK(diags[0].code == diag::EnumIncrementUnknown);
+    CHECK(diags[1].code == diag::EnumValueOverflow);
+    CHECK(diags[2].code == diag::EnumValueDuplicate);
+    CHECK(diags[3].code == diag::EnumValueDuplicate);
 }
 
 TEST_CASE("Enum value leakage") {
@@ -256,9 +256,9 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == DiagCode::UnresolvedForwardTypedef);
-    CHECK(diags[1].code == DiagCode::UnresolvedForwardTypedef);
-    CHECK(diags[2].code == DiagCode::ForwardTypedefDoesNotMatch);
+    CHECK(diags[0].code == diag::UnresolvedForwardTypedef);
+    CHECK(diags[1].code == diag::UnresolvedForwardTypedef);
+    CHECK(diags[2].code == diag::ForwardTypedefDoesNotMatch);
 
     CHECK(report(diags) ==
           R"(source:5:18: error: forward typedef 'e1_t' does not resolve to a data type
@@ -335,11 +335,11 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == DiagCode::ValueMustNotBeUnknown);
-    CHECK(diags[1].code == DiagCode::ValueMustBePositive);
-    CHECK(diags[2].code == DiagCode::ValueOutOfRange);
-    CHECK(diags[3].code == DiagCode::ValueMustBePositive);
-    CHECK(diags[4].code == DiagCode::PackedMemberNotIntegral);
+    CHECK(diags[0].code == diag::ValueMustNotBeUnknown);
+    CHECK(diags[1].code == diag::ValueMustBePositive);
+    CHECK(diags[2].code == diag::ValueOutOfRange);
+    CHECK(diags[3].code == diag::ValueMustBePositive);
+    CHECK(diags[4].code == diag::PackedMemberNotIntegral);
 
     CHECK(report(diags) ==
           R"(source:2:20: error: value must not have any unknown bits

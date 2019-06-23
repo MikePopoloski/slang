@@ -9,7 +9,7 @@ TEST_CASE("Invalid chars") {
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString() == text);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::NonPrintableChar);
+    CHECK(diagnostics.back().code == diag::NonPrintableChar);
 }
 
 TEST_CASE("UTF8 chars") {
@@ -19,21 +19,21 @@ TEST_CASE("UTF8 chars") {
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString() == text);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::UTF8Char);
+    CHECK(diagnostics.back().code == diag::UTF8Char);
 }
 
 TEST_CASE("Unicode BOMs") {
     lexToken("\xEF\xBB\xBF ");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::UnicodeBOM);
+    CHECK(diagnostics.back().code == diag::UnicodeBOM);
 
     lexToken("\xFE\xFF ");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::UnicodeBOM);
+    CHECK(diagnostics.back().code == diag::UnicodeBOM);
 
     lexToken("\xFF\xFE ");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::UnicodeBOM);
+    CHECK(diagnostics.back().code == diag::UnicodeBOM);
 }
 
 TEST_CASE("Embedded null") {
@@ -44,7 +44,7 @@ TEST_CASE("Embedded null") {
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString() == str.substr(0, str.length() - 1));
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
+    CHECK(diagnostics.back().code == diag::EmbeddedNull);
 }
 
 TEST_CASE("Embedded null (string literal)") {
@@ -55,7 +55,7 @@ TEST_CASE("Embedded null (string literal)") {
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.toString() == str.substr(0, str.length() - 1));
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
+    CHECK(diagnostics.back().code == diag::EmbeddedNull);
 }
 
 TEST_CASE("Line Comment") {
@@ -92,7 +92,7 @@ TEST_CASE("Line Comment (embedded null)") {
     CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
+    CHECK(diagnostics.back().code == diag::EmbeddedNull);
 }
 
 TEST_CASE("Block Comment (one line)") {
@@ -130,7 +130,7 @@ TEST_CASE("Block Comment (unterminated)") {
     CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::UnterminatedBlockComment);
+    CHECK(diagnostics.back().code == diag::UnterminatedBlockComment);
 }
 
 TEST_CASE("Block comment (embedded null)") {
@@ -143,7 +143,7 @@ TEST_CASE("Block comment (embedded null)") {
     CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
+    CHECK(diagnostics.back().code == diag::EmbeddedNull);
 }
 
 TEST_CASE("Block Comment (nested)") {
@@ -155,7 +155,7 @@ TEST_CASE("Block Comment (nested)") {
     CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::NestedBlockComment);
+    CHECK(diagnostics.back().code == diag::NestedBlockComment);
 }
 
 TEST_CASE("Whitespace") {
@@ -270,19 +270,19 @@ TEST_CASE("Invalid escapes") {
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString() == text);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::EscapedWhitespace);
+    CHECK(diagnostics.back().code == diag::EscapedWhitespace);
 
     Token token2 = lexToken("\\  ");
     CHECK(token2.kind == TokenKind::Unknown);
     CHECK(token2.toString() == "\\");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::EscapedWhitespace);
+    CHECK(diagnostics.back().code == diag::EscapedWhitespace);
 
     Token token3 = lexToken("`\\  ");
     CHECK(token3.kind == TokenKind::Unknown);
     CHECK(token3.toString() == "`\\");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::EscapedWhitespace);
+    CHECK(diagnostics.back().code == diag::EscapedWhitespace);
 }
 
 TEST_CASE("String literal") {
@@ -304,7 +304,7 @@ TEST_CASE("String literal (newline)") {
     CHECK(token.valueText() == "literal");
 
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::ExpectedClosingQuote);
+    CHECK(diagnostics.back().code == diag::ExpectedClosingQuote);
 }
 
 TEST_CASE("String literal (escaped newline)") {
@@ -326,7 +326,7 @@ TEST_CASE("String literal (unterminated)") {
     CHECK(token.valueText() == "literal");
 
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::ExpectedClosingQuote);
+    CHECK(diagnostics.back().code == diag::ExpectedClosingQuote);
 }
 
 TEST_CASE("String literal (escapes)") {
@@ -357,7 +357,7 @@ TEST_CASE("String literal (bad octal escape)") {
     CHECK(token.toString() == text);
     CHECK(token.valueText() == "literal");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::OctalEscapeCodeTooBig);
+    CHECK(diagnostics.back().code == diag::OctalEscapeCodeTooBig);
 }
 
 TEST_CASE("String literal with hex escape") {
@@ -378,7 +378,7 @@ TEST_CASE("String literal (bad hex escape)") {
     CHECK(token.toString() == text);
     CHECK(token.valueText() == "literalz");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::InvalidHexEscapeCode);
+    CHECK(diagnostics.back().code == diag::InvalidHexEscapeCode);
 }
 
 TEST_CASE("String literal (unknown escape)") {
@@ -389,7 +389,7 @@ TEST_CASE("String literal (unknown escape)") {
     CHECK(token.toString() == text);
     CHECK(token.valueText() == "literali");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::UnknownEscapeCode);
+    CHECK(diagnostics.back().code == diag::UnknownEscapeCode);
 }
 
 TEST_CASE("Integer literal") {
@@ -430,7 +430,7 @@ TEST_CASE("Vector base (bad)") {
     CHECK(token.numericFlags().base() == LiteralBase::Decimal);
     CHECK(token.toString() == "'s");
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics.back().code == DiagCode::ExpectedIntegerBaseAfterSigned);
+    CHECK(diagnostics.back().code == diag::ExpectedIntegerBaseAfterSigned);
 }
 
 TEST_CASE("Unbased unsized literal") {
@@ -460,7 +460,7 @@ TEST_CASE("Real literal (missing fraction)") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString() == text);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::MissingFractionalDigits);
+    CHECK(diagnostics.back().code == diag::MissingFractionalDigits);
     CHECK(token.realValue() == 32);
 }
 
@@ -512,8 +512,8 @@ TEST_CASE("Real literal (underscores)") {
     CHECK(token.toString() == text);
     CHECK(withinUlp(token.realValue(), 32.3456e57));
     REQUIRE(diagnostics.size() == 2);
-    CHECK(diagnostics[0].code == DiagCode::DigitsLeadingUnderscore);
-    CHECK(diagnostics[1].code == DiagCode::DigitsLeadingUnderscore);
+    CHECK(diagnostics[0].code == diag::DigitsLeadingUnderscore);
+    CHECK(diagnostics[1].code == diag::DigitsLeadingUnderscore);
 }
 
 TEST_CASE("Real literal (exponent overflow)") {
@@ -545,7 +545,7 @@ TEST_CASE("Real literal (bad exponent)") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString() == "32.234e");
     REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics.back().code == DiagCode::MissingExponentDigits);
+    CHECK(diagnostics.back().code == diag::MissingExponentDigits);
 }
 
 TEST_CASE("Real literal (digit overflow)") {
@@ -600,7 +600,7 @@ TEST_CASE("Misplaced directive char") {
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString() == text);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::MisplacedDirectiveChar);
+    CHECK(diagnostics.back().code == diag::MisplacedDirectiveChar);
 }
 
 TEST_CASE("Directive continuation") {
@@ -634,7 +634,7 @@ TEST_CASE("Directive not on own line") {
     CHECK(token.kind == TokenKind::Directive);
 
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::IncludeNotFirstOnLine);
+    CHECK(diagnostics.back().code == diag::IncludeNotFirstOnLine);
 }
 
 TEST_CASE("Escaped keyword identifiers") {
@@ -662,7 +662,7 @@ TEST_CASE("Too many errors") {
 
     CHECK(diagnostics.size() == buf.size() - 1);
     CHECK(lexer.lex().kind == TokenKind::EndOfFile);
-    CHECK(diagnostics.back().code == DiagCode::TooManyLexerErrors);
+    CHECK(diagnostics.back().code == diag::TooManyLexerErrors);
 }
 
 void testKeyword(TokenKind kind) {
