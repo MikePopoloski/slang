@@ -248,7 +248,7 @@ std::string DiagnosticWriter::formatDiagArgs(const Diagnostic& diag) const {
     SmallVectorSized<const Type*, 8> allTypes;
 
     // Dynamically build up the list of arguments to pass to the formatting routines.
-    using ctx = FormatContext;
+    using ctx = format::detail::FormatContext;
     std::vector<fmt::basic_format_arg<ctx>> args;
     for (auto& arg : diag.args) {
         // Unwrap the argument type (stored as a variant).
@@ -271,7 +271,7 @@ std::string DiagnosticWriter::formatDiagArgs(const Diagnostic& diag) const {
 
     auto&& formatStr = fmt::to_string_view(getMessage(diag.code));
     fmt::memory_buffer out;
-    fmt::format_handler<ArgFormatter<Range>, char, ctx> handler(
+    fmt::format_handler<format::detail::ArgFormatter<Range>, char, ctx> handler(
         out, formatStr, fmt::basic_format_args(args.data(), (unsigned)args.size()),
         fmt::internal::locale_ref());
 

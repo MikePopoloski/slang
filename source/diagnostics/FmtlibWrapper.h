@@ -11,7 +11,7 @@
 
 #include "slang/symbols/TypePrinter.h"
 
-namespace {
+namespace format::detail {
 
 using namespace slang;
 
@@ -155,7 +155,7 @@ struct fmt::formatter<slang::Type> {
         bool unique = ctx.seenTypes.insert(&type).second;
         ctx.typeOptions->printAKA = unique;
 
-        TypePrinter printer;
+        slang::TypePrinter printer;
         printer.setOptions(*ctx.typeOptions);
         printer.append(type);
 
@@ -165,7 +165,7 @@ struct fmt::formatter<slang::Type> {
 };
 
 template<>
-struct fmt::formatter<slang::ConstantValue> : DynamicFormatter {
+struct fmt::formatter<slang::ConstantValue> : format::detail::DynamicFormatter {
     template<typename FormatContext>
     auto format(const slang::ConstantValue& cv, FormatContext& ctx) {
         if (cv.isReal())
