@@ -4,6 +4,14 @@ import argparse
 import os
 import shlex
 
+def writefile(path, contents):
+    with open(path, 'r') as f:
+        existing = f.read()
+
+    if existing != contents:
+        with open(path, 'w') as f:
+            f.write(contents)
+
 def main():
     parser = argparse.ArgumentParser(description='Diagnostic source generator')
     parser.add_argument('--dir', default=os.getcwd(), help='Output directory')
@@ -42,13 +50,13 @@ def main():
                 raise Exception('Invalid entry: {}'.format(line))
 
     for k,v in sorted(diags.items()):
-        createheader(open(os.path.join(headerdir, k + "Diags.h"), 'w'), k, v)
+        createheader(os.path.join(headerdir, k + "Diags.h"), k, v)
 
-    createsource(open(os.path.join(args.dir, "DiagCode.cpp"), 'w'), diags)
-    createallheader(open(os.path.join(headerdir, "AllDiags.h"), 'w'), diags)
+    createsource(os.path.join(args.dir, "DiagCode.cpp"), diags)
+    createallheader(os.path.join(headerdir, "AllDiags.h"), diags)
 
-def createheader(outf, subsys, diags):
-    outf.write('''//------------------------------------------------------------------------------
+def createheader(path, subsys, diags):
+    output = '''//------------------------------------------------------------------------------
 // {}Diags.h
 // Generated diagnostic enums for the {} subsystem.
 //
@@ -60,19 +68,20 @@ def createheader(outf, subsys, diags):
 
 namespace slang::diag {{
 
-'''.format(subsys, subsys))
+'''.format(subsys, subsys)
 
     index = 0
     for d in diags:
-        outf.write('inline constexpr DiagCode {}(DiagSubsystem::{}, {});\n'.format(d[1], subsys, index))
+        output += 'inline constexpr DiagCode {}(DiagSubsystem::{}, {});\n'.format(d[1], subsys, index)
         index += 1
 
-    outf.write('''
+    output += '''
 }
-''')
+'''
+    writefile(path, output)
 
-def createsource(outf, diags):
-    outf.write('''//------------------------------------------------------------------------------
+def createsource(path, diags):
+    output = '''//------------------------------------------------------------------------------
 // DiagCode.cpp
 // Generated diagnostic helpers.
 //
@@ -86,14 +95,14 @@ def createsource(outf, diags):
 namespace slang {
 
 static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, DiagnosticSeverity>> data = {
-''')
+'''
 
     for k,v in sorted(diags.items()):
         for d in v:
-            outf.write('    {{diag::{}, std::make_tuple("{}"sv, "{}"sv, DiagnosticSeverity::{})}},\n'.format(
-                       d[1], d[1], d[2], d[0]))
+            output += '    {{diag::{}, std::make_tuple("{}"sv, "{}"sv, DiagnosticSeverity::{})}},\n'.format(
+                       d[1], d[1], d[2], d[0])
 
-    outf.write('''};
+    output += '''};
 
 std::ostream& operator<<(std::ostream& os, DiagCode code) {
     os << toString(code);
@@ -119,10 +128,11 @@ DiagnosticSeverity getSeverity(DiagCode code) {
 }
 
 }
-''')
+'''
+    writefile(path, output)
 
-def createallheader(outf, diags):
-    outf.write('''//------------------------------------------------------------------------------
+def createallheader(path, diags):
+    output = '''//------------------------------------------------------------------------------
 // AllDiags.h
 // Combined header that includes all subsystem-specific diagnostic headers.
 //
@@ -130,12 +140,13 @@ def createallheader(outf, diags):
 //------------------------------------------------------------------------------
 #pragma once
 
-''')
+'''
 
     for k,v in sorted(diags.items()):
-        outf.write('#include "slang/diagnostics/{}Diags.h"\n'.format(k))
+        output += '#include "slang/diagnostics/{}Diags.h"\n'.format(k)
 
-    outf.write('\n')
+    output += '\n'
+    writefile(path, output)
 
 if __name__ == "__main__":
     main()
