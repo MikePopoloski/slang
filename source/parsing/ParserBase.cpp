@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/ParserBase.h"
 
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/util/BumpAllocator.h"
 
@@ -114,6 +115,27 @@ SourceLocation ParserBase::getLastLocation() {
         return window.lastConsumed.location() + window.lastConsumed.rawText().length();
 
     return peek().location();
+}
+
+void ParserBase::reportMissingList(Token current, TokenKind closeKind, Token& closeToken,
+                                   DiagCode code) {
+    // If there's already an error here don't report another; otherwise use
+    // the provided diagnostic code to report an error.
+    auto location = getLastLocation();
+
+    Diagnostics& diags = getDiagnostics();
+    if (diags.empty() || diags.back().code != diag::ExpectedToken ||
+        (diags.back().location != location && diags.back().location != current.location())) {
+
+        addDiag(code, location);
+    }
+
+    closeToken = missingToken(closeKind, current.location());
+}
+
+void ParserBase::reportMisplacedSeparator() {
+    auto& diag = addDiag(diag::MisplacedTrailingSeparator, window.lastConsumed.location());
+    diag << getTokenKindText(window.lastConsumed.kind);
 }
 
 void ParserBase::Window::addNew() {

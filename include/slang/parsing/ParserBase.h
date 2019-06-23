@@ -128,20 +128,8 @@ protected:
         }
 
         // If the very first token isn't expected just bail out of list parsing.
-        Diagnostics& diags = getDiagnostics();
         if (!IsExpected(current.kind)) {
-            // If there's already an error here don't report another; otherwise use
-            // the provided diagnostic code to report an error.
-            auto location = getLastLocation();
-
-            if (diags.empty() || diags.back().code != diag::ExpectedToken ||
-                (diags.back().location != location &&
-                 diags.back().location != current.location())) {
-
-                addDiag(code, location);
-            }
-
-            closeToken = missingToken(closeKind, current.location());
+            reportMissingList(current, closeKind, closeToken, code);
             return;
         }
 
@@ -173,9 +161,7 @@ protected:
                     continue;
 
                 // Specific check for misplaced trailing separators here.
-                auto& diag =
-                    addDiag(diag::MisplacedTrailingSeparator, window.lastConsumed.location());
-                diag << getTokenKindText(window.lastConsumed.kind);
+                reportMisplacedSeparator();
                 break;
             }
 
@@ -183,6 +169,7 @@ protected:
             // an infinite loop. Detect that here and bail out. If parseItem()
             // did not issue a diagnostic on this token, add one now as well.
             if (current.getInfo() == peek().getInfo()) {
+                Diagnostics& diags = getDiagnostics();
                 auto location = getLastLocation();
                 bool needDiag = diags.empty() || (diags.back().location != location &&
                                                   diags.back().location != current.location());
@@ -214,6 +201,8 @@ protected:
 private:
     SourceLocation getLastLocation();
     void prependSkippedTokens(Token& node);
+    void reportMissingList(Token current, TokenKind closeKind, Token& closeToken, DiagCode code);
+    void reportMisplacedSeparator();
 
     Window window;
     SmallVectorSized<Token, 4> skippedTokens;
