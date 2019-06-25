@@ -491,7 +491,7 @@ module m6(I.bar bar); endmodule
         auto& port = def->getPortMap().at(portName)->as<InterfacePortSymbol>(); \
         REQUIRE(port.interfaceDef);                                             \
         CHECK(port.interfaceDef->name == (ifaceName));                          \
-        if (modportName) {                                                      \
+        if (*modportName) {                                                      \
             REQUIRE(port.modport);                                              \
             CHECK(port.modport->name == (modportName));                         \
         }                                                                       \
@@ -502,15 +502,15 @@ module m6(I.bar bar); endmodule
 
     auto wire = &compilation.getWireNetType();
 
-    checkIfacePort("m0", "a", "I", nullptr);
-    checkIfacePort("m0", "b", "I", nullptr);
+    checkIfacePort("m0", "a", "I", "");
+    checkIfacePort("m0", "b", "I", "");
     checkPort("m0", "c", PortDirection::In, wire, "logic");
     checkPort("m1", "j", PortDirection::InOut, wire, "struct{logic f;}J");
-    checkIfacePort("m3", "k", "K", nullptr);
+    checkIfacePort("m3", "k", "K", "");
     checkPort("m3", "w", PortDirection::InOut, wire, "logic");
     checkPort("m4", "v", PortDirection::Out, nullptr, "logic");
-    checkIfacePort("m5", "a1", "J", nullptr);
-    checkIfacePort("m5", "a2", "K", nullptr);
+    checkIfacePort("m5", "a1", "J", "");
+    checkIfacePort("m5", "a2", "K", "");
     checkIfacePort("m6", "bar", "I", "bar");
 
     REQUIRE(diags.size() == 5);

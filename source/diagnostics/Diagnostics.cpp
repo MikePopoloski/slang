@@ -12,10 +12,11 @@
 
 namespace slang {
 
-Diagnostic::Diagnostic(DiagCode code, SourceLocation location) : code(code), location(location) {
+Diagnostic::Diagnostic(DiagCode code, SourceLocation location) noexcept :
+    code(code), location(location) {
 }
 
-Diagnostic::Diagnostic(const Symbol& source, DiagCode code, SourceLocation location) :
+Diagnostic::Diagnostic(const Symbol& source, DiagCode code, SourceLocation location) noexcept :
     code(code), location(location), symbol(&source) {
 }
 

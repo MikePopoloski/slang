@@ -74,10 +74,10 @@ public:
     const Symbol* symbol = nullptr;
 
     /// Constructs a new Diagnostic entry with the given code and location.
-    Diagnostic(DiagCode code, SourceLocation location);
+    Diagnostic(DiagCode code, SourceLocation location) noexcept;
 
     /// Constructs a new Diagnostic entry with the given symbol, code and location.
-    Diagnostic(const Symbol& source, DiagCode code, SourceLocation location);
+    Diagnostic(const Symbol& source, DiagCode code, SourceLocation location) noexcept;
 
     /// Adds a new note to the diagnostic at the given source location.
     Diagnostic& addNote(DiagCode code, SourceLocation location);
