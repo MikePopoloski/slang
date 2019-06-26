@@ -21,6 +21,8 @@ if(NOT CMAKE_BUILD_TYPE)
       "Build type (Release/Debug/RelWithDebInfo/MinSizeRel)" FORCE)
 endif()
 
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
 find_package (Python COMPONENTS Interpreter)
 
 # Defaults for a bunch of Windows-specific junk
