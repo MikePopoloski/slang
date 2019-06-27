@@ -81,6 +81,8 @@ add_library(slang STATIC
 	util/Util.cpp
 )
 
+add_dependencies(slang gen_version)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 	# Warnings as errors
 	target_compile_options(slang PRIVATE /WX)
