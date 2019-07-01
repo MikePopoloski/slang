@@ -52,14 +52,29 @@ const Type& ArrayQueryFunction::checkArguments(const BindContext& context, const
 
     auto& type = *args[0]->type;
     if (!type.isIntegral() && !type.isUnpackedArray()) {
-        context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange)
-            << type << kindStr();
+        context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange) << type << kindStr();
         return comp.getErrorType();
     }
 
     // TODO: not allowed on some dynamic types
 
     return comp.getIntegerType();
+}
+
+SFormatFunction::SFormatFunction() : SystemSubroutine("$sformatf", SubroutineKind::Function) {
+}
+
+const Type& SFormatFunction::checkArguments(const BindContext& context, const Args& args,
+                                            SourceRange range) const {
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
+        return comp.getErrorType();
+
+    return comp.getStringType();
+}
+
+ConstantValue SFormatFunction::eval(EvalContext&, const Args&) const {
+    return nullptr;
 }
 
 const Type& DisplayTask::checkArguments(const BindContext& context, const Args& args,
@@ -106,7 +121,7 @@ const Type& FatalTask::checkArguments(const BindContext& context, const Args& ar
     return comp.getVoidType();
 }
 
-ConstantValue Clog2Subroutine::eval(EvalContext& context, const Args& args) const {
+ConstantValue Clog2Function::eval(EvalContext& context, const Args& args) const {
     ConstantValue v = args[0]->eval(context);
     if (!v)
         return nullptr;
@@ -114,37 +129,37 @@ ConstantValue Clog2Subroutine::eval(EvalContext& context, const Args& args) cons
     return SVInt(32, clog2(v.integer()), true);
 }
 
-ConstantValue BitsSubroutine::eval(EvalContext&, const Args& args) const {
+ConstantValue BitsFunction::eval(EvalContext&, const Args& args) const {
     // TODO: support for unpacked sizes
     return SVInt(32, args[0]->type->getBitWidth(), true);
 }
 
-ConstantValue LowSubroutine::eval(EvalContext&, const Args& args) const {
+ConstantValue LowFunction::eval(EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.lower(), true);
 }
 
-ConstantValue HighSubroutine::eval(EvalContext&, const Args& args) const {
+ConstantValue HighFunction::eval(EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.upper(), true);
 }
 
-ConstantValue LeftSubroutine::eval(EvalContext&, const Args& args) const {
+ConstantValue LeftFunction::eval(EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.left, true);
 }
 
-ConstantValue RightSubroutine::eval(EvalContext&, const Args& args) const {
+ConstantValue RightFunction::eval(EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.right, true);
 }
 
-ConstantValue SizeSubroutine::eval(EvalContext&, const Args& args) const {
+ConstantValue SizeFunction::eval(EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, range.width(), true);
 }
 
-ConstantValue IncrementSubroutine::eval(EvalContext&, const Args& args) const {
+ConstantValue IncrementFunction::eval(EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)(range.isLittleEndian() ? 1 : -1), true);
 }
@@ -203,7 +218,7 @@ ConstantValue EnumNumMethod::eval(EvalContext&, const Args& args) const {
 }
 
 void registerAll(Compilation& compilation) {
-#define REGISTER(name) compilation.addSystemSubroutine(std::make_unique<name##Subroutine>())
+#define REGISTER(name) compilation.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(Clog2);
     REGISTER(Bits);
     REGISTER(Low);
@@ -212,6 +227,7 @@ void registerAll(Compilation& compilation) {
     REGISTER(Right);
     REGISTER(Size);
     REGISTER(Increment);
+    REGISTER(SFormat);
 #undef REGISTER
 
 #define REGISTER(type, name) compilation.addSystemSubroutine(std::make_unique<type>(name))

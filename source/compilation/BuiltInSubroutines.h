@@ -45,6 +45,15 @@ public:
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
+class SFormatFunction : public SystemSubroutine {
+public:
+    SFormatFunction();
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
+    ConstantValue eval(EvalContext& context, const Args& args) const final;
+    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+};
+
 class DisplayTask : public SystemTaskBase {
 public:
     using SystemTaskBase::SystemTaskBase;
@@ -103,17 +112,17 @@ public:
         ConstantValue eval(EvalContext& context, const Args& args) const final; \
     }
 
-SUBROUTINE(Clog2Subroutine, IntegerMathFunction, "$clog2", FUNC);
+SUBROUTINE(Clog2Function, IntegerMathFunction, "$clog2", FUNC);
 
-SUBROUTINE(BitsSubroutine, DataQueryFunction, "$bits", FUNC,
+SUBROUTINE(BitsFunction, DataQueryFunction, "$bits", FUNC,
            SystemSubroutineFlags::AllowDataTypeArg);
 
-SUBROUTINE(LowSubroutine, ArrayQueryFunction, "$low", FUNC);
-SUBROUTINE(HighSubroutine, ArrayQueryFunction, "$high", FUNC);
-SUBROUTINE(LeftSubroutine, ArrayQueryFunction, "$left", FUNC);
-SUBROUTINE(RightSubroutine, ArrayQueryFunction, "$right", FUNC);
-SUBROUTINE(SizeSubroutine, ArrayQueryFunction, "$size", FUNC);
-SUBROUTINE(IncrementSubroutine, ArrayQueryFunction, "$increment", FUNC);
+SUBROUTINE(LowFunction, ArrayQueryFunction, "$low", FUNC);
+SUBROUTINE(HighFunction, ArrayQueryFunction, "$high", FUNC);
+SUBROUTINE(LeftFunction, ArrayQueryFunction, "$left", FUNC);
+SUBROUTINE(RightFunction, ArrayQueryFunction, "$right", FUNC);
+SUBROUTINE(SizeFunction, ArrayQueryFunction, "$size", FUNC);
+SUBROUTINE(IncrementFunction, ArrayQueryFunction, "$increment", FUNC);
 
 #undef SUBROUTINE
 #undef TASK

@@ -152,6 +152,14 @@ Diagnostic& Scope::addDiag(DiagCode code, SourceRange sourceRange) const {
     return compilation.diags.add(*thisSym, code, sourceRange);
 }
 
+void Scope::addDiags(const Diagnostics& diags) const {
+    for (auto& diag : diags) {
+        Diagnostic copy = diag;
+        copy.symbol = thisSym;
+        compilation.diags.append(copy);
+    }
+}
+
 void Scope::addMember(const Symbol& symbol) {
     // For any symbols that expose a type to the surrounding scope, keep track of it in our
     // deferred data so that we can include enum values in our member list.

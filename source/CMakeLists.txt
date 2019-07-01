@@ -73,6 +73,7 @@ add_library(slang STATIC
 	syntax/SyntaxTree.cpp
 	syntax/SyntaxVisitor.cpp
 
+	text/SFormat.cpp
 	text/SourceManager.cpp
 
 	${CMAKE_CURRENT_BINARY_DIR}/Version.cpp

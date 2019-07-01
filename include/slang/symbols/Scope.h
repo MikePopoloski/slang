@@ -141,6 +141,7 @@ public:
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
+    void addDiags(const Diagnostics& diags) const;
 
     /// Finds a direct child member with the given name. This won't return anything weird like
     /// forwarding typedefs or imported symbols, but will return things like transparent enum
