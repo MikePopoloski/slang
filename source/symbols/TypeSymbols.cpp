@@ -192,6 +192,16 @@ bool Type::isBitstreamType() const {
     return isIntegral() || isUnpackedArray() || isUnpackedStruct();
 }
 
+bool Type::isByteArray() const {
+    const Type& ct = getCanonicalType();
+    if (!ct.isUnpackedArray())
+        return false;
+
+    auto& elem = ct.as<UnpackedArrayType>().elementType.getCanonicalType();
+    return elem.isPredefinedInteger() &&
+           elem.as<PredefinedIntegerType>().integerKind == PredefinedIntegerType::Byte;
+}
+
 bool Type::isMatching(const Type& rhs) const {
     // See [6.22.1] for Matching Types.
     const Type* l = &getCanonicalType();

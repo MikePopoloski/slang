@@ -138,6 +138,85 @@ bool ConstantValue::equivalentTo(const ConstantValue& rhs) const {
         value);
 }
 
+ConstantValue ConstantValue::convertToInt(bitwidth_t width, bool isSigned, bool isFourState) const {
+    if (isReal())
+        return SVInt::fromDouble(width, real(), isSigned);
+
+    if (isShortReal())
+        return SVInt::fromFloat(width, shortReal(), isSigned);
+
+    if (!isInteger())
+        return nullptr;
+
+    SVInt result = integer();
+    if (!isFourState)
+        result.flattenUnknowns();
+
+    // [11.8.3] says that during an assignment we sign extend iff the rhs is signed.
+    // That means we should resize first, and only then change the sign flag if desired.
+    if (width != result.getBitWidth())
+        result = result.resize(width);
+
+    result.setSigned(isSigned);
+    return result;
+}
+
+ConstantValue ConstantValue::convertToReal() const {
+    if (isReal())
+        return *this;
+
+    if (isShortReal())
+        return real_t(shortReal());
+
+    if (isInteger())
+        return real_t(integer().toDouble());
+
+    return nullptr;
+}
+
+ConstantValue ConstantValue::convertToShortReal() const {
+    if (isShortReal())
+        return *this;
+
+    if (isReal())
+        return shortreal_t((float)real());
+
+    if (isInteger())
+        return shortreal_t(integer().toFloat());
+
+    return nullptr;
+}
+
+ConstantValue ConstantValue::convertToStr() const {
+    if (!isInteger())
+        return nullptr;
+
+    // Conversion is described in [6.16]: take each 8 bit chunk,
+    // remove it if it's zero, otherwise add as character to the string.
+    // TODO: unknown bits?
+
+    const SVInt& val = integer();
+    int32_t msb = int32_t(val.getBitWidth() - 1);
+    int32_t extraBits = int32_t(val.getBitWidth() % 8);
+
+    std::string result;
+    if (extraBits) {
+        auto c = val.slice(msb, msb - extraBits + 1).as<uint8_t>();
+        if (c && *c)
+            result.push_back(char(*c));
+        msb -= extraBits;
+    }
+
+    while (msb >= 7) {
+        auto c = val.slice(msb, msb - 7).as<uint8_t>();
+        if (c && *c)
+            result.push_back(char(*c));
+        msb -= 8;
+    }
+
+    return result;
+}
+
 void to_json(json& j, const ConstantValue& cv) {
     j = cv.toString();
 }

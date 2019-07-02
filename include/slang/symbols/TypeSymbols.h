@@ -100,6 +100,10 @@ public:
     /// Indicates whether this type can be packed into a stream of bits.
     bool isBitstreamType() const;
 
+    /// Indicates whether this type is an unpacked array of bytes. Various string-related
+    /// methods in the language check for this to interpret such arguments as strings.
+    bool isByteArray() const;
+
     /// Indicates whether this is a numeric type, which includes all integral and floating types.
     bool isNumeric() const { return isIntegral() || isFloating(); }
 

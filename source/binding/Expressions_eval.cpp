@@ -262,44 +262,6 @@ bool checkArrayIndex(EvalContext& context, const Type& type, const ConstantValue
     return true;
 }
 
-SVInt convertIntToInt(const SVInt& integer, bitwidth_t width, bool isSigned, bool isFourState) {
-    SVInt result = integer;
-    if (!isFourState)
-        result.flattenUnknowns();
-
-    // [11.8.3] says that during an assignment we sign extend iff the rhs is signed.
-    // That means we should resize first, and only then change the sign flag if desired.
-    if (width != result.getBitWidth())
-        result = result.resize(width);
-
-    result.setSigned(isSigned);
-    return result;
-}
-
-std::string convertIntToStr(const SVInt& integer) {
-    // Conversion is described in [6.16]: take each 8 bit chunk,
-    // remove it if it's zero, otherwise add as character to the string.
-    int32_t msb = int32_t(integer.getBitWidth() - 1);
-    int32_t extraBits = int32_t(integer.getBitWidth() % 8);
-
-    std::string result;
-    if (extraBits) {
-        auto c = integer.slice(msb, msb - extraBits + 1).as<uint8_t>();
-        if (c && *c)
-            result.push_back(char(*c));
-        msb -= extraBits;
-    }
-
-    while (msb >= 7) {
-        auto c = integer.slice(msb, msb - 7).as<uint8_t>();
-        if (c && *c)
-            result.push_back(char(*c));
-        msb -= 8;
-    }
-
-    return result;
-}
-
 } // namespace
 
 namespace slang {
@@ -948,10 +910,10 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 
     using ER = Statement::EvalResult;
     ER er = symbol.getBody().eval(context);
-    
+
     ConstantValue result = std::move(*context.findLocal(symbol.returnValVar));
     context.popFrame();
-    
+
     if (er == ER::Fail)
         return nullptr;
 
@@ -967,7 +929,7 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
 
     if (isSystemCall())
         return std::get<1>(subroutine)->verifyConstant(context, arguments());
-    
+
     // TODO: implement all rules here
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     context.pushFrame(symbol, sourceRange.start(), lookupLocation);
@@ -979,36 +941,24 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
     ConstantValue value = operand().eval(context);
-    if (!value)
-        return nullptr;
 
     const Type& to = *type;
-    if (to.isIntegral()) {
-        if (value.isReal())
-            return SVInt::fromDouble(to.getBitWidth(), value.real(), to.isSigned());
-
-        if (value.isShortReal())
-            return SVInt::fromFloat(to.getBitWidth(), value.shortReal(), to.isSigned());
-
-        return convertIntToInt(value.integer(), to.getBitWidth(), to.isSigned(), to.isFourState());
-    }
+    if (to.isIntegral())
+        return value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
 
     if (to.isFloating()) {
-        if (value.isReal())
-            return shortreal_t((float)value.real());
-
-        if (value.isShortReal())
-            return real_t(value.shortReal());
-
-        if (to.getBitWidth() == 64)
-            return real_t(value.integer().toDouble());
-
-        ASSERT(to.getBitWidth() == 32);
-        return shortreal_t(value.integer().toFloat());
+        switch (to.getBitWidth()) {
+            case 32:
+                return value.convertToShortReal();
+            case 64:
+                return value.convertToReal();
+            default:
+                THROW_UNREACHABLE;
+        }
     }
 
     if (to.isString())
-        return convertIntToStr(value.integer());
+        return value.convertToStr();
 
     // TODO: other types
     THROW_UNREACHABLE;

@@ -96,6 +96,11 @@ public:
     bool isFalse() const;
     bool equivalentTo(const ConstantValue& rhs) const;
 
+    ConstantValue convertToInt(bitwidth_t width, bool isSigned, bool isFourState) const;
+    ConstantValue convertToReal() const;
+    ConstantValue convertToShortReal() const;
+    ConstantValue convertToStr() const;
+
     static const ConstantValue Invalid;
 
     friend void to_json(json& j, const ConstantValue& cv);

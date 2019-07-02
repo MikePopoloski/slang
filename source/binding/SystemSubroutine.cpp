@@ -44,15 +44,6 @@ bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, 
     return true;
 }
 
-static bool isByteArray(const Type& type) {
-    if (!type.isUnpackedArray())
-        return false;
-
-    auto& elem = type.getCanonicalType().as<UnpackedArrayType>().elementType.getCanonicalType();
-    return elem.isPredefinedInteger() &&
-           elem.as<PredefinedIntegerType>().integerKind == PredefinedIntegerType::Byte;
-}
-
 static bool isValidForRaw(const Type& type) {
     if (type.isIntegral())
         return true;
@@ -96,7 +87,7 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
                 specs = formatStr->specifiers();
                 specIt = specs.begin();
             }
-            else if (type.isAggregate() && !isByteArray(type)) {
+            else if (type.isAggregate() && !type.isByteArray()) {
                 context.addDiag(diag::FormatUnspecifiedType, arg->sourceRange) << type;
                 return false;
             }
@@ -123,7 +114,7 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
                     ok = true;
                     break;
                 case SFormat::Arg::String:
-                    ok = type.isIntegral() || type.isString() || isByteArray(type);
+                    ok = type.isIntegral() || type.isString() || type.isByteArray();
                     break;
             }
 
