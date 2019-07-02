@@ -83,6 +83,7 @@ public:
     /// Records a diagnostic under the current evaluation context.
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
     Diagnostic& addDiag(DiagCode code, SourceRange range);
+    void addDiags(const Diagnostics& diags);
 
     /// Issues all recorded diagnostics to the given binding context.
     void reportDiags(const BindContext& context, SourceRange range) const;

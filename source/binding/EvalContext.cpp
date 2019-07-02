@@ -77,6 +77,11 @@ Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
     return diag;
 }
 
+void EvalContext::addDiags(const Diagnostics& additional) {
+    reportStack();
+    diags.appendRange(additional);
+}
+
 void EvalContext::reportDiags(const BindContext& context, SourceRange range) const {
     if (!diags.empty()) {
         Diagnostic& diag = context.addDiag(diag::ExpressionNotConstant, range);

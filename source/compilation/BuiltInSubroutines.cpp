@@ -8,6 +8,7 @@
 
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/text/SFormat.h"
 
 namespace slang::Builtins {
 
@@ -70,11 +71,56 @@ const Type& SFormatFunction::checkArguments(const BindContext& context, const Ar
     if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
         return comp.getErrorType();
 
+    const Type& ft = *args[0]->type;
+    if (!ft.isIntegral() && !ft.isString() && !ft.isByteArray()) {
+        context.addDiag(diag::InvalidFormatStringType, args[0]->sourceRange) << *args[0]->type;
+        return comp.getErrorType();
+    }
+
+    // If the format string is known at compile time, check it for correctness now.
+    if (args[0]->constant) {
+        ConstantValue formatStr = args[0]->constant->convertToStr();
+        if (formatStr) {
+            SFormat formatter(formatStr.str(), args[0]->sourceRange.start());
+            if (!formatter.valid()) {
+                context.scope.addDiags(formatter.getDiagnostics());
+                return comp.getErrorType();
+            }
+
+            // TODO: check the rest of the args as well
+        }
+    }
+
     return comp.getStringType();
 }
 
-ConstantValue SFormatFunction::eval(EvalContext&, const Args&) const {
-    return nullptr;
+ConstantValue SFormatFunction::eval(EvalContext& context, const Args& args) const {
+    ConstantValue formatStr = args[0]->eval(context).convertToStr();
+    if (!formatStr)
+        return nullptr;
+
+    SmallVectorSized<ConstantValue, 8> values;
+    for (auto arg : args.subspan(1)) {
+        values.emplace(arg->eval(context));
+        if (!values.back())
+            return nullptr;
+    }
+
+    SFormat formatter(formatStr.str(), args[0]->sourceRange.start());
+    if (!formatter.valid()) {
+        context.addDiags(formatter.getDiagnostics());
+        return nullptr;
+    }
+
+    Diagnostics formatDiags;
+    auto result = formatter.format(values, formatDiags);
+    if (!formatDiags.empty())
+        context.addDiags(formatDiags);
+
+    if (!result)
+        return nullptr;
+
+    return *result;
 }
 
 const Type& DisplayTask::checkArguments(const BindContext& context, const Args& args,

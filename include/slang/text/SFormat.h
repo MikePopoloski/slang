@@ -26,6 +26,8 @@ public:
 
     span<const Arg> specifiers() const { return specs; }
 
+    optional<std::string> format(span<const ConstantValue> values, Diagnostics& diags) const;
+
 private:
     SmallVectorSized<Arg, 8> specs;
     Diagnostics diags;

@@ -261,6 +261,7 @@ error FormatSpecifierInvalidWidth "field width is invalid"
 error FormatSpecifierNotFloat "floating point format specifier options used on non-floating point field"
 error FormatUnspecifiedType "cannot format values of type {} without a specification string"
 error FormatMismatchedType "value of type {} is invalid for '%{}' format specifier"
+error InvalidFormatStringType "value of type {} is not valid as a format string"
 
 subsystem ConstEval
 error ExpressionNotConstant "expression is not constant"

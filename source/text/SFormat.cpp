@@ -131,4 +131,8 @@ SFormat::SFormat(string_view str, SourceLocation loc) {
     }
 }
 
+optional<std::string> SFormat::format(span<const ConstantValue>, Diagnostics&) const {
+    return std::nullopt;
+}
+
 } // namespace slang
