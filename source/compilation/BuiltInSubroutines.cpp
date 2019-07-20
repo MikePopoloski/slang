@@ -99,23 +99,19 @@ ConstantValue SFormatFunction::eval(EvalContext& context, const Args& args) cons
     if (!formatStr)
         return nullptr;
 
-    SmallVectorSized<ConstantValue, 8> values;
+    SmallVectorSized<SFormat::TypedValue, 8> values;
     for (auto arg : args.subspan(1)) {
-        values.emplace(arg->eval(context));
-        if (!values.back())
+        auto&& value = arg->eval(context);
+        if (!value)
             return nullptr;
+
+        values.emplace(std::move(value), arg->type, arg->sourceRange);
     }
 
-    SFormat formatter(formatStr.str(), args[0]->sourceRange.start());
-    if (!formatter.valid()) {
-        context.addDiags(formatter.getDiagnostics());
-        return nullptr;
-    }
-
-    Diagnostics formatDiags;
-    auto result = formatter.format(values, formatDiags);
-    if (!formatDiags.empty())
-        context.addDiags(formatDiags);
+    Diagnostics diags;
+    auto result = SFormat::format(formatStr.str(), args[0]->sourceRange.start(), values, diags);
+    if (!diags.empty())
+        context.addDiags(diags);
 
     if (!result)
         return nullptr;

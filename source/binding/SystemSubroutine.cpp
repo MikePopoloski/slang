@@ -44,22 +44,6 @@ bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, 
     return true;
 }
 
-static bool isValidForRaw(const Type& type) {
-    if (type.isIntegral())
-        return true;
-
-    if (!type.isUnpackedStruct())
-        return false;
-
-    auto& ust = type.getCanonicalType().as<UnpackedStructType>();
-    for (auto& member : ust.members()) {
-        if (!isValidForRaw(member.as<FieldSymbol>().getType()))
-            return false;
-    }
-
-    return true;
-}
-
 bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& args) {
     // TODO: empty args
 
@@ -94,31 +78,7 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
         }
         else {
             SFormat::Arg fmtArg = *specIt++;
-            bool ok = false;
-            switch (fmtArg.kind) {
-                case SFormat::Arg::Integral:
-                case SFormat::Arg::Character:
-                    ok = type.isIntegral();
-                    break;
-                case SFormat::Arg::Float:
-                    ok = type.isNumeric();
-                    break;
-                case SFormat::Arg::Net:
-                    // TODO: support this
-                    ok = false;
-                    break;
-                case SFormat::Arg::Raw:
-                    ok = isValidForRaw(type);
-                    break;
-                case SFormat::Arg::Pattern:
-                    ok = true;
-                    break;
-                case SFormat::Arg::String:
-                    ok = type.isIntegral() || type.isString() || type.isByteArray();
-                    break;
-            }
-
-            if (!ok) {
+            if (!SFormat::isArgTypeValid(fmtArg.type, type)) {
                 context.addDiag(diag::FormatMismatchedType, arg->sourceRange)
                     << type << fmtArg.spec;
                 return false;

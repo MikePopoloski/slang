@@ -20,13 +20,18 @@ public:
     const Diagnostics& getDiagnostics() const { return diags; }
 
     struct Arg {
-        enum { Integral, Raw, Float, Net, Pattern, Character, String } kind;
+        enum Type { Integral, Raw, Float, Net, Pattern, Character, String, None } type;
         char spec;
     };
 
     span<const Arg> specifiers() const { return specs; }
 
-    optional<std::string> format(span<const ConstantValue> values, Diagnostics& diags) const;
+    using TypedValue = std::tuple<ConstantValue, const Type*, SourceRange>;
+
+    static optional<std::string> format(string_view formatString, SourceLocation loc,
+                                        span<const TypedValue> args, Diagnostics& diags);
+
+    static bool isArgTypeValid(Arg::Type required, const Type& type);
 
 private:
     SmallVectorSized<Arg, 8> specs;
