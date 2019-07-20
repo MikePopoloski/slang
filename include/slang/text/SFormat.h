@@ -12,30 +12,23 @@
 
 namespace slang {
 
-class SFormat {
-public:
-    SFormat(string_view formatString, SourceLocation loc);
+namespace SFormat {
 
-    bool valid() const { return diags.empty(); }
-    const Diagnostics& getDiagnostics() const { return diags; }
-
-    struct Arg {
-        enum Type { Integral, Raw, Float, Net, Pattern, Character, String, None } type;
-        char spec;
-    };
-
-    span<const Arg> specifiers() const { return specs; }
-
-    using TypedValue = std::tuple<ConstantValue, const Type*, SourceRange>;
-
-    static optional<std::string> format(string_view formatString, SourceLocation loc,
-                                        span<const TypedValue> args, Diagnostics& diags);
-
-    static bool isArgTypeValid(Arg::Type required, const Type& type);
-
-private:
-    SmallVectorSized<Arg, 8> specs;
-    Diagnostics diags;
+struct Arg {
+    enum Type { Integral, Raw, Float, Net, Pattern, Character, String, None } type;
+    char spec;
 };
+
+using TypedValue = std::tuple<ConstantValue, const Type*, SourceRange>;
+
+bool parseArgs(string_view formatString, SourceLocation loc, SmallVector<Arg>& args,
+               Diagnostics& diags);
+
+optional<std::string> format(string_view formatString, SourceLocation loc,
+                             span<const TypedValue> args, Diagnostics& diags);
+
+bool isArgTypeValid(Arg::Type required, const Type& type);
+
+} // namespace SFormat
 
 } // namespace slang

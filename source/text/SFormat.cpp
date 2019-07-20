@@ -13,6 +13,8 @@
 
 namespace slang {
 
+namespace SFormat {
+
 template<typename OnChar, typename OnArg>
 static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onChar, OnArg&& onArg,
                               Diagnostics& diags) {
@@ -79,7 +81,6 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
             return false;
         }
 
-        using Arg = SFormat::Arg;
         Arg::Type type;
         bool sizeAllowed = false;
         bool floatAllowed = false;
@@ -170,26 +171,6 @@ static bool isValidForRaw(const Type& type) {
     return true;
 }
 
-bool SFormat::isArgTypeValid(Arg::Type required, const Type& type) {
-    switch (required) {
-        case Arg::Integral:
-        case Arg::Character:
-            return type.isIntegral();
-        case Arg::Float:
-            return type.isNumeric();
-        case Arg::Net:
-            // TODO: support this
-            return false;
-        case Arg::Raw:
-            return isValidForRaw(type);
-        case Arg::Pattern:
-            return true;
-        case Arg::String:
-            return type.isIntegral() || type.isString() || type.isByteArray();
-    }
-    return false;
-}
-
 static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
                       optional<int> width) {
     auto str = value.toString(base);
@@ -227,8 +208,8 @@ static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
     result.append(str);
 }
 
-static void formatArg(std::string& result, const ConstantValue& arg, const Type&,
-                      char specifier, optional<int> width, Diagnostics&) {
+static void formatArg(std::string& result, const ConstantValue& arg, const Type&, char specifier,
+                      optional<int> width, Diagnostics&) {
     switch (::tolower(specifier)) {
         case 'l':
             // TODO:
@@ -272,13 +253,14 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
     }
 }
 
-SFormat::SFormat(string_view str, SourceLocation loc) {
-    auto onArg = [this](Arg::Type type, char c, optional<int>) { specs.append({ type, c }); };
-    parseFormatString(str, loc, [](char) {}, onArg, diags);
+bool parseArgs(string_view formatString, SourceLocation loc, SmallVector<Arg>& args,
+               Diagnostics& diags) {
+    auto onArg = [&](Arg::Type type, char c, optional<int>) { args.append({ type, c }); };
+    return parseFormatString(formatString, loc, [](char) {}, onArg, diags);
 }
 
-optional<std::string> SFormat::format(string_view formatString, SourceLocation loc,
-                                      span<const TypedValue> args, Diagnostics& diags) {
+optional<std::string> format(string_view formatString, SourceLocation loc,
+                             span<const TypedValue> args, Diagnostics& diags) {
     std::string result;
     auto argIt = args.begin();
 
@@ -304,5 +286,27 @@ optional<std::string> SFormat::format(string_view formatString, SourceLocation l
 
     return result;
 }
+
+bool isArgTypeValid(Arg::Type required, const Type& type) {
+    switch (required) {
+        case Arg::Integral:
+        case Arg::Character:
+            return type.isIntegral();
+        case Arg::Float:
+            return type.isNumeric();
+        case Arg::Net:
+            // TODO: support this
+            return false;
+        case Arg::Raw:
+            return isValidForRaw(type);
+        case Arg::Pattern:
+            return true;
+        case Arg::String:
+            return type.isIntegral() || type.isString() || type.isByteArray();
+    }
+    return false;
+}
+
+} // namespace SFormat
 
 } // namespace slang

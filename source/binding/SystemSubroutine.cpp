@@ -47,8 +47,7 @@ bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, 
 bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& args) {
     // TODO: empty args
 
-    optional<SFormat> formatStr;
-    span<const SFormat::Arg> specs;
+    SmallVectorSized<SFormat::Arg, 8> specs;
     auto specIt = specs.begin();
 
     auto argIt = args.begin();
@@ -60,15 +59,15 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
         const Type& type = *arg->type;
         if (specIt == specs.end()) {
             if (arg->kind == ExpressionKind::StringLiteral) {
+                specs.clear();
                 auto& lit = arg->as<StringLiteral>();
-                formatStr.emplace(lit.getRawValue(), arg->sourceRange.start());
 
-                if (!formatStr->valid()) {
-                    context.scope.addDiags(formatStr->getDiagnostics());
+                Diagnostics diags;
+                if (!SFormat::parseArgs(lit.getRawValue(), arg->sourceRange.start(), specs, diags)) {
+                    context.scope.addDiags(diags);
                     return false;
                 }
 
-                specs = formatStr->specifiers();
                 specIt = specs.begin();
             }
             else if (type.isAggregate() && !type.isByteArray()) {

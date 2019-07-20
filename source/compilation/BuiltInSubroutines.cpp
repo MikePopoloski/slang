@@ -81,9 +81,10 @@ const Type& SFormatFunction::checkArguments(const BindContext& context, const Ar
     if (args[0]->constant) {
         ConstantValue formatStr = args[0]->constant->convertToStr();
         if (formatStr) {
-            SFormat formatter(formatStr.str(), args[0]->sourceRange.start());
-            if (!formatter.valid()) {
-                context.scope.addDiags(formatter.getDiagnostics());
+            Diagnostics diags;
+            SmallVectorSized<SFormat::Arg, 8> specs;
+            if (!SFormat::parseArgs(formatStr.str(), args[0]->sourceRange.start(), specs, diags)) {
+                context.scope.addDiags(diags);
                 return comp.getErrorType();
             }
 
