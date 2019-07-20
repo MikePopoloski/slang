@@ -96,7 +96,11 @@ void Diagnostics::sort(const SourceManager& sourceManager) {
     auto compare = [&sourceManager](auto& x, auto& y) {
         SourceLocation xl = sourceManager.getFullyExpandedLoc(x.location);
         SourceLocation yl = sourceManager.getFullyExpandedLoc(y.location);
-        return xl < yl;
+        if (xl < yl)
+            return true;
+        if (xl == yl)
+            return x.code < y.code;
+        return false;
     };
 
     std::stable_sort(begin(), end(), compare);

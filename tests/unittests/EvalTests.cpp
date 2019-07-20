@@ -681,3 +681,21 @@ endfunction
 )");
     session.eval("func9()");
 }
+
+TEST_CASE("Eval sformatf") {
+    ScriptSession session;
+    session.eval("logic [125:0] foo = '0;");
+    session.eval("logic signed [125:0] bar = '1;");
+    session.eval("logic signed [125:0] baz = 1;");
+
+    auto sformatf = [&](auto str, auto args) {
+        return session.eval("$sformatf(\""s + str + "\", " + args + ")").str();
+    };
+
+    CHECK(sformatf("", "") == "");
+    CHECK(sformatf("%d", "foo") == "                                     0");
+    CHECK(sformatf("%0d", "foo") == "0");
+    CHECK(sformatf("%2D", "foo") == " 0");
+    CHECK(sformatf("%d", "bar") == "                                     -1");
+    CHECK(sformatf("%D", "baz") == "                                      1");
+}

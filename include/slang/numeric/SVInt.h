@@ -280,8 +280,10 @@ public:
 
     size_t hash(size_t seed = Seed) const;
     void writeTo(SmallVector<char>& buffer, LiteralBase base) const;
+    void writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBase) const;
     std::string toString() const;
     std::string toString(LiteralBase base) const;
+    std::string toString(LiteralBase base, bool includeBase) const;
 
     /// Power function. Note that the result will have the same bitwidth
     /// as this object. The value will be modulo the bit width.

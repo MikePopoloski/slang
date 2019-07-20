@@ -643,7 +643,19 @@ std::string SVInt::toString(LiteralBase base) const {
     return std::string(buffer.begin(), buffer.end());
 }
 
+std::string SVInt::toString(LiteralBase base, bool includeBase) const {
+    SmallVectorSized<char, 32> buffer;
+    writeTo(buffer, base, includeBase);
+    return std::string(buffer.begin(), buffer.end());
+}
+
 void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
+    // Append the base unless we're a signed 32-bit base 10 integer.
+    bool includeBase = base != LiteralBase::Decimal || bitWidth != 32 || !signFlag || unknownFlag;
+    writeTo(buffer, base, includeBase);
+}
+
+void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBase) const {
     // negative sign if necessary
     SVInt tmp(*this);
     if (signFlag && !unknownFlag && isNegative()) {
@@ -652,7 +664,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
     }
 
     // append the bit size, unless we're a signed 32-bit base 10 integer
-    if (base != LiteralBase::Decimal || bitWidth != 32 || !signFlag || unknownFlag) {
+    if (includeBase) {
         buffer.appendRange(std::to_string(bitWidth));
         buffer.append('\'');
         if (signFlag)

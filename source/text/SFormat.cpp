@@ -57,7 +57,7 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
         if (ptr != end && isDecimalDigit(*ptr)) {
             hasSize = true;
             do {
-                width = width * 10 + uint8_t(*ptr);
+                width = width * 10 + uint8_t(*ptr - '0');
                 if (width > INT32_MAX)
                     break;
                 ptr++;
@@ -173,7 +173,7 @@ static bool isValidForRaw(const Type& type) {
 
 static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
                       optional<int> width) {
-    auto str = value.toString(base);
+    auto str = value.toString(base, /* includeBase */ false);
 
     // If no width is specified we need to calculate it ourselves based on the bitwidth
     // of the provided integer.
@@ -194,6 +194,9 @@ static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
                 width = int(ceil(bw / log2_10));
                 break;
         }
+
+        if (value.isSigned())
+            width = *width + 1;
     }
 
     size_t w = *width;

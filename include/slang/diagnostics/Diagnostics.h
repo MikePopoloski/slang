@@ -47,6 +47,8 @@ public:
 
     constexpr bool operator!=(DiagCode other) const { return !(*this == other); }
 
+    constexpr bool operator<(DiagCode other) const { return code < other.code; }
+
 private:
     DiagSubsystem subsystem;
     uint16_t code;
