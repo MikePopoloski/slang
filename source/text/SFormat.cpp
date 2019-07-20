@@ -11,9 +11,7 @@
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/symbols/TypeSymbols.h"
 
-namespace slang {
-
-namespace SFormat {
+namespace slang::SFormat {
 
 template<typename OnChar, typename OnArg>
 static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onChar, OnArg&& onArg,
@@ -207,7 +205,7 @@ static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
         }
     }
 
-    size_t w = *width;
+    size_t w = size_t(*width);
     if (str.size() < w) {
         char pad = '0';
         if (base == LiteralBase::Decimal)
@@ -314,10 +312,10 @@ bool isArgTypeValid(Arg::Type required, const Type& type) {
             return true;
         case Arg::String:
             return type.isIntegral() || type.isString() || type.isByteArray();
+        case Arg::None:
+            return false;
     }
     return false;
 }
 
-} // namespace SFormat
-
-} // namespace slang
+} // namespace slang::SFormat
