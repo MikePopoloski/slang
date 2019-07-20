@@ -710,4 +710,8 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%8b", "foo") == "00000000");
     CHECK(sformatf("%8B", "bar[7:0]") == "11111111");
     CHECK(sformatf("%8b", "baz") == "00000001");
+
+    CHECK(sformatf("%D", "1'bx") == "x");
+    CHECK(sformatf("%X", "14'bx01010") == "xxXa");
+    CHECK(sformatf("%h %o", "12'b001xxx101x01, 12'b001xxx101x01") == "XXX 1x5X");
 }

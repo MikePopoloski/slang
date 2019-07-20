@@ -689,12 +689,45 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
     uint32_t startOffset = buffer.size();
     static const char Digits[] = "0123456789abcdef";
     if (base == LiteralBase::Decimal) {
-        // decimal numbers that have unknown values only print as a single letter
+        // decimal numbers that have unknown values only print as a single letter,
+        // with the following rules:
+        // - If all bits are unknown, print 'x'
+        // - If all bits are high impendance, print 'z'
+        // - If some bits are unknown, print 'X'
+        // - Otherwise, if some bits are high impedance , print 'Z'
         if (unknownFlag) {
-            if (getRawData()[0])
+            uint64_t mask;
+            bitwidth_t bitsInMsw;
+            uint32_t words = getNumWords(bitWidth, false);
+            getTopWordMask(bitsInMsw, mask);
+
+            auto all = [&](uint32_t start, uint64_t v) {
+                for (uint32_t i = 0; i < words - 1; i++) {
+                    if (pVal[start + i] != v)
+                        return false;
+                }
+
+                return pVal[start + words - 1] == (mask & v);
+            };
+
+            auto anyXs = [&]() {
+                for (uint32_t i = 0; i < words - 1; i++) {
+                    if ((~pVal[i] & pVal[i + words]) != 0)
+                        return true;
+                }
+
+                return (~pVal[words - 1] & mask & pVal[words * 2 - 1]) != 0;
+            };
+
+            bool upperOnes = all(words, UINT64_MAX);
+            if (upperOnes && all(0, UINT64_MAX))
                 buffer.append('z');
-            else
+            else if (upperOnes && all(0, 0))
                 buffer.append('x');
+            else if (anyXs())
+                buffer.append('X');
+            else
+                buffer.append('Z');
         }
         else {
             // repeatedly divide by 10 to get each digit
@@ -733,8 +766,12 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
 
         // if we have unknown values here, the comparison will return X
         // we want to keep going so that we print the unknowns
+        int bitsLeft = int(tmp.getBitWidth());
         logic_t x = tmp != 0;
         while (x || x.isUnknown()) {
+            if (bitsLeft < int(shiftAmount))
+                maskAmount = (1 << bitsLeft) - 1;
+
             uint32_t digit = uint32_t(tmp.getRawData()[0]) & maskAmount;
             if (!tmp.unknownFlag)
                 buffer.append(Digits[digit]);
@@ -742,14 +779,19 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
                 uint32_t u = uint32_t(tmp.pVal[getNumWords(bitWidth, false)]) & maskAmount;
                 if (!u)
                     buffer.append(Digits[digit]);
-                else if (digit)
-                    buffer.append('z');
-                else
+                else if (u == maskAmount && (digit & maskAmount) == 0)
                     buffer.append('x');
+                else if (u == maskAmount && digit == maskAmount)
+                    buffer.append('z');
+                else if (~digit & u)
+                    buffer.append('X');
+                else
+                    buffer.append('Z');
             }
             // this shift might shift away the unknown digits, at which point
             // it converts back to being a normal 2-state value
             tmp = tmp.lshr(shiftAmount);
+            bitsLeft -= shiftAmount;
             x = tmp != 0;
         }
     }

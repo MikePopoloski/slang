@@ -215,6 +215,17 @@ TEST_CASE("SVInt to string (and back)") {
 
     // This caught a heap corruption bug in from-string truncation.
     { "54'bxx0111x10xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"_si; }
+
+    CHECK("96'hx00000Z101"_si.toString(LiteralBase::Decimal, false) == "X");
+    CHECK("96'hxxxxxxxxxxxxxxxxxxxxxxxx"_si.toString(LiteralBase::Decimal, false) == "x");
+    CHECK("96'hzzzzzzzzzzzzzzzzzzzzzzzz"_si.toString(LiteralBase::Decimal, false) == "z");
+    CHECK("96'hzzzzzzzzzzzzzzxzzzzzzzzz"_si.toString(LiteralBase::Decimal, false) == "X");
+    CHECK("96'hzzzzzzzzzzzzzz1zzzzzzzzz"_si.toString(LiteralBase::Decimal, false) == "Z");
+
+    CHECK("4'b1xz0"_si.toString(LiteralBase::Hex, false) == "X");
+    CHECK("4'bxxxx"_si.toString(LiteralBase::Hex, false) == "x");
+    CHECK("4'bzzzz"_si.toString(LiteralBase::Hex, false) == "z");
+    CHECK("4'bzz1z"_si.toString(LiteralBase::Hex, false) == "Z");
 }
 
 TEST_CASE("Comparison") {
