@@ -698,4 +698,16 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%2D", "foo") == " 0");
     CHECK(sformatf("%d", "bar") == "                                     -1");
     CHECK(sformatf("%D", "baz") == "                                      1");
+
+    CHECK(sformatf("%h", "foo") == "00000000000000000000000000000000");
+    CHECK(sformatf("%H", "bar") == "3fffffffffffffffffffffffffffffff");
+    CHECK(sformatf("%x", "baz") == "00000000000000000000000000000001");
+
+    CHECK(sformatf("%o", "foo") == "000000000000000000000000000000000000000000");
+    CHECK(sformatf("%O", "bar") == "777777777777777777777777777777777777777777");
+    CHECK(sformatf("%o", "baz") == "000000000000000000000000000000000000000001");
+
+    CHECK(sformatf("%8b", "foo") == "00000000");
+    CHECK(sformatf("%8B", "bar[7:0]") == "11111111");
+    CHECK(sformatf("%8b", "baz") == "00000001");
 }

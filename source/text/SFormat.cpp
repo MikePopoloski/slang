@@ -173,7 +173,16 @@ static bool isValidForRaw(const Type& type) {
 
 static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
                       optional<int> width) {
-    auto str = value.toString(base, /* includeBase */ false);
+    std::string str;
+    if (base != LiteralBase::Decimal && value.isSigned()) {
+        // Non-decimal bases don't print as signed ever.
+        SVInt copy = value;
+        copy.setSigned(false);
+        str = copy.toString(base, /* includeBase */ false);
+    }
+    else {
+        str = value.toString(base, /* includeBase */ false);
+    }
 
     // If no width is specified we need to calculate it ourselves based on the bitwidth
     // of the provided integer.
@@ -192,11 +201,10 @@ static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
                 break;
             case LiteralBase::Decimal:
                 width = int(ceil(bw / log2_10));
+                if (value.isSigned())
+                    width = *width + 1;
                 break;
         }
-
-        if (value.isSigned())
-            width = *width + 1;
     }
 
     size_t w = *width;
