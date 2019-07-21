@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/text/SFormat.h"
 
+#include <ieee1800/vpi_user.h>
+
 #include "../text/CharInfo.h"
 
 #include "slang/diagnostics/SysFuncsDiags.h"
@@ -281,6 +283,54 @@ static void formatString(std::string& result, const std::string& value,
     result.append(value);
 }
 
+static void formatRaw2(std::string& result, const ConstantValue& value) {
+    if (value.isUnpacked()) {
+        for (auto& elem : value.elements())
+            formatRaw2(result, elem);
+        return;
+    }
+
+    SVInt sv = value.integer();
+    sv.flattenUnknowns();
+
+    const uint64_t* ptr = sv.getRawPtr();
+    for (uint32_t i = 0; i < sv.getNumWords(); i++)
+        result.append(reinterpret_cast<const char*>(ptr + i), sizeof(uint64_t));
+}
+
+static void formatRaw4(std::string& result, const ConstantValue& value) {
+    if (value.isUnpacked()) {
+        for (auto& elem : value.elements())
+            formatRaw4(result, elem);
+        return;
+    }
+
+    const SVInt& sv = value.integer();
+    uint32_t words = sv.getNumWords();
+    const uint64_t* ptr = sv.getRawPtr();
+    const uint64_t* unknownPtr = nullptr;
+    if (sv.hasUnknown()) {
+        words /= 2;
+        unknownPtr = ptr + words;
+    }
+
+    auto writeEntry = [&result](uint32_t bits, uint32_t unknowns) {
+        // The encoding for X and Z are reversed from how SVInt stores them.
+        s_vpi_vecval entry;
+        entry.aval = (bits & ~unknowns) | (~bits & unknowns);
+        entry.bval = unknowns;
+        result.append(reinterpret_cast<const char*>(&entry), sizeof(s_vpi_vecval));
+    };
+
+    for (uint32_t i = 0; i < words; i++) {
+        uint64_t bits = ptr[i];
+        uint64_t unknowns = unknownPtr ? unknownPtr[i] : 0;
+
+        writeEntry(uint32_t(bits), uint32_t(unknowns));
+        writeEntry(uint32_t(bits >> 32), uint32_t(unknowns >> 32));
+    }
+}
+
 static void formatArg(std::string& result, const ConstantValue& arg, const Type&, char specifier,
                       const FormatOptions& options, Diagnostics&) {
     switch (::tolower(specifier)) {
@@ -298,7 +348,10 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
             formatInt(result, arg.integer(), LiteralBase::Binary, options);
             return;
         case 'u':
+            formatRaw2(result, arg);
+            return;
         case 'z':
+            formatRaw4(result, arg);
             return;
         case 'e':
         case 'f':

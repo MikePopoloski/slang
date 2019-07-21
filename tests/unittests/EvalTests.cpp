@@ -743,4 +743,6 @@ function string func;
 endfunction
 )");
     CHECK(session.eval("func()").str() == "func.baz");
+
+    //CHECK(sformatf("%u", "14'ha2c") == "\x2c\x0a");
 }
