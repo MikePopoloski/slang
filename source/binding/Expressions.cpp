@@ -137,13 +137,13 @@ void checkBindFlags(const Expression& expr, const BindContext& context) {
     if ((context.flags & BindFlags::Constant) == 0)
         return;
 
-    EvalContext verifyContext(EvalFlags::IsVerifying);
+    EvalContext verifyContext(context.scope, EvalFlags::IsVerifying);
     bool canBeConst = expr.verifyConstant(verifyContext);
     verifyContext.reportDiags(context, expr.sourceRange);
     if (!canBeConst)
         return;
 
-    EvalContext evalContext;
+    EvalContext evalContext(context.scope);
     expr.eval(evalContext);
     evalContext.reportDiags(context, expr.sourceRange);
 }
@@ -213,11 +213,11 @@ namespace slang {
 struct Expression::PropagationVisitor {
     HAS_METHOD_TRAIT(propagateType);
 
-    Compilation& compilation;
+    const BindContext& context;
     const Type& newType;
 
-    PropagationVisitor(Compilation& compilation, const Type& newType) :
-        compilation(compilation), newType(newType) {}
+    PropagationVisitor(const BindContext& context, const Type& newType) :
+        context(context), newType(newType) {}
 
     template<typename T>
     Expression& visit(T& expr) {
@@ -234,26 +234,26 @@ struct Expression::PropagationVisitor {
         // check if the conversion should be pushed further down the tree. Otherwise we
         // should insert the implicit conversion here.
         bool needConversion = !newType.isEquivalent(*expr.type);
-        if constexpr (has_propagateType_v<T, bool, Compilation&, const Type&>) {
+        if constexpr (has_propagateType_v<T, bool, const BindContext&, const Type&>) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
                 (newType.isIntegral() && expr.type->isIntegral()) || newType.isString()) {
 
-                if (expr.propagateType(compilation, newType))
+                if (expr.propagateType(context, newType))
                     needConversion = false;
             }
         }
 
         Expression* result = &expr;
         if (needConversion)
-            result = &Expression::implicitConversion(compilation, newType, expr);
+            result = &Expression::implicitConversion(context, newType, expr);
 
         // Try to fold any constant values. If this results in diagnostics we
         // don't save the value here to force re-evaluation later on.
         ASSERT(!result->constant);
-        EvalContext context;
-        ConstantValue value = result->eval(context);
-        if (value && context.getDiagnostics().empty())
-            result->constant = compilation.allocConstant(std::move(value));
+        EvalContext evalContext(context.scope);
+        ConstantValue value = result->eval(evalContext);
+        if (value && evalContext.getDiagnostics().empty())
+            result->constant = context.scope.getCompilation().allocConstant(std::move(value));
         return *result;
     }
 
@@ -368,9 +368,9 @@ bool Expression::bindCaseExpressions(const BindContext& context, TokenKind caseK
         Expression* expr = const_cast<Expression*>(result);
 
         if (type->isNumeric() || type->isString())
-            contextDetermined(comp, expr, *type);
+            contextDetermined(context, expr, *type);
         else
-            selfDetermined(comp, expr);
+            selfDetermined(context, expr);
 
         checkBindFlags(*expr, context);
         results[index++] = expr;
@@ -756,35 +756,35 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
     }
 }
 
-void Expression::contextDetermined(Compilation& compilation, Expression*& expr,
+void Expression::contextDetermined(const BindContext& context, Expression*& expr,
                                    const Type& newType) {
-    PropagationVisitor visitor(compilation, newType);
+    PropagationVisitor visitor(context, newType);
     expr = &expr->visit(visitor);
 }
 
-void Expression::selfDetermined(Compilation& compilation, Expression*& expr) {
+void Expression::selfDetermined(const BindContext& context, Expression*& expr) {
     ASSERT(expr->type);
-    PropagationVisitor visitor(compilation, *expr->type);
+    PropagationVisitor visitor(context, *expr->type);
     expr = &expr->visit(visitor);
 }
 
 Expression& Expression::selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
                                        const BindContext& context, bitmask<BindFlags> extraFlags) {
     Expression* expr = &create(compilation, syntax, context, extraFlags);
-    selfDetermined(compilation, expr);
+    selfDetermined(context, expr);
     return *expr;
 }
 
-Expression& Expression::implicitConversion(Compilation& compilation, const Type& targetType,
+Expression& Expression::implicitConversion(const BindContext& context, const Type& targetType,
                                            Expression& expr) {
     ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
            (targetType.isString() && expr.isImplicitString()));
     ASSERT(!targetType.isEquivalent(*expr.type));
 
     Expression* result = &expr;
-    selfDetermined(compilation, result);
-    return *compilation.emplace<ConversionExpression>(targetType, true, *result,
-                                                      result->sourceRange);
+    selfDetermined(context, result);
+    return *context.scope.getCompilation().emplace<ConversionExpression>(targetType, true, *result,
+                                                                         result->sourceRange);
 }
 
 Expression& Expression::convertAssignment(const BindContext& context, const Type& type,
@@ -803,8 +803,8 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         // string type.
         if (type.isString() && expr.isImplicitString()) {
             Expression* result = &expr;
-            result = &implicitConversion(compilation, type, *result);
-            selfDetermined(compilation, result);
+            result = &implicitConversion(context, type, *result);
+            selfDetermined(context, result);
             return *result;
         }
 
@@ -821,7 +821,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
 
     Expression* result = &expr;
     if (type.isEquivalent(*rt)) {
-        selfDetermined(compilation, result);
+        selfDetermined(context, result);
         return *result;
     }
 
@@ -833,7 +833,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
 
         rt = binaryOperatorType(compilation, &type, rt, false);
-        contextDetermined(compilation, result, *rt);
+        contextDetermined(context, result, *rt);
 
         if (type.isEquivalent(*rt))
             return *result;
@@ -842,10 +842,10 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             compilation.emplace<ConversionExpression>(type, true, *result, result->sourceRange);
     }
     else {
-        result = &implicitConversion(compilation, type, *result);
+        result = &implicitConversion(context, type, *result);
     }
 
-    selfDetermined(compilation, result);
+    selfDetermined(context, result);
     return *result;
 }
 
@@ -920,7 +920,7 @@ Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
         val, syntax.sourceRange());
 }
 
-bool UnbasedUnsizedIntegerLiteral::propagateType(Compilation&, const Type& newType) {
+bool UnbasedUnsizedIntegerLiteral::propagateType(const BindContext&, const Type& newType) {
     bitwidth_t newWidth = newType.getBitWidth();
     ASSERT(newType.isIntegral());
     ASSERT(newWidth);
@@ -1016,7 +1016,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             good = type->isNumeric();
             result->type =
                 type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
-            selfDetermined(compilation, result->operand_);
+            selfDetermined(context, result->operand_);
             break;
         case SyntaxKind::UnaryBitwiseNotExpression:
             // Supported for integral only. Result type is always a single bit.
@@ -1034,7 +1034,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             good = type->isIntegral();
             result->type =
                 type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
-            selfDetermined(compilation, result->operand_);
+            selfDetermined(context, result->operand_);
             break;
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
@@ -1085,13 +1085,13 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-bool UnaryExpression::propagateType(Compilation& compilation, const Type& newType) {
+bool UnaryExpression::propagateType(const BindContext& context, const Type& newType) {
     switch (op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
         case UnaryOperator::BitwiseNot:
             type = &newType;
-            contextDetermined(compilation, operand_, newType);
+            contextDetermined(context, operand_, newType);
             return true;
         case UnaryOperator::BitwiseAnd:
         case UnaryOperator::BitwiseOr:
@@ -1169,18 +1169,18 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 result->type = forceFourState(compilation, lt);
             else
                 result->type = lt;
-            selfDetermined(compilation, result->right_);
+            selfDetermined(context, result->right_);
             break;
         case SyntaxKind::PowerExpression:
             good = bothNumeric;
             if (lt->isFloating() || rt->isFloating()) {
                 result->type = binaryOperatorType(compilation, lt, rt, false);
-                contextDetermined(compilation, result->right_, *result->type);
+                contextDetermined(context, result->right_, *result->type);
             }
             else {
                 // Result is forced to 4-state because result can be X.
                 result->type = forceFourState(compilation, lt);
-                selfDetermined(compilation, result->right_);
+                selfDetermined(context, result->right_);
             }
             break;
         case SyntaxKind::GreaterThanEqualExpression:
@@ -1195,8 +1195,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
             // other context-determined operators.
             auto nt = (good && !bothNumeric) ? &compilation.getStringType()
                                              : binaryOperatorType(compilation, lt, rt, false);
-            contextDetermined(compilation, result->left_, *nt);
-            contextDetermined(compilation, result->right_, *nt);
+            contextDetermined(context, result->left_, *nt);
+            contextDetermined(context, result->right_, *nt);
             break;
         }
         case SyntaxKind::LogicalAndExpression:
@@ -1206,8 +1206,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
             // Result is always a single bit.
             good = bothNumeric;
             result->type = singleBitType(compilation, lt, rt);
-            selfDetermined(compilation, result->left_);
-            selfDetermined(compilation, result->right_);
+            selfDetermined(context, result->left_);
+            selfDetermined(context, result->right_);
             break;
         case SyntaxKind::EqualityExpression:
         case SyntaxKind::InequalityExpression:
@@ -1244,8 +1244,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 // Result type is fixed but the two operands affect each other as they would
                 // in other context-determined operators.
                 auto nt = binaryOperatorType(compilation, lt, rt, false);
-                contextDetermined(compilation, result->left_, *nt);
-                contextDetermined(compilation, result->right_, *nt);
+                contextDetermined(context, result->left_, *nt);
+                contextDetermined(context, result->right_, *nt);
             }
             else {
                 bool isContext = false;
@@ -1258,8 +1258,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
 
                     // If there is a literal involved, make sure it's converted to string.
                     isContext = true;
-                    contextDetermined(compilation, result->left_, compilation.getStringType());
-                    contextDetermined(compilation, result->right_, compilation.getStringType());
+                    contextDetermined(context, result->left_, compilation.getStringType());
+                    contextDetermined(context, result->right_, compilation.getStringType());
                 }
                 else if (lt->isAggregate() && lt->isEquivalent(*rt)) {
                     good = !isWildcard;
@@ -1279,8 +1279,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 }
 
                 if (!isContext) {
-                    selfDetermined(compilation, result->left_);
-                    selfDetermined(compilation, result->right_);
+                    selfDetermined(context, result->left_);
+                    selfDetermined(context, result->right_);
                 }
             }
             break;
@@ -1300,7 +1300,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-bool BinaryExpression::propagateType(Compilation& compilation, const Type& newType) {
+bool BinaryExpression::propagateType(const BindContext& context, const Type& newType) {
     switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -1312,8 +1312,8 @@ bool BinaryExpression::propagateType(Compilation& compilation, const Type& newTy
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
             type = &newType;
-            contextDetermined(compilation, left_, newType);
-            contextDetermined(compilation, right_, newType);
+            contextDetermined(context, left_, newType);
+            contextDetermined(context, right_, newType);
             return true;
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
@@ -1338,7 +1338,7 @@ bool BinaryExpression::propagateType(Compilation& compilation, const Type& newTy
         case BinaryOperator::Power:
             // Only the left hand side gets propagated; the rhs is self determined.
             type = &newType;
-            contextDetermined(compilation, left_, newType);
+            contextDetermined(context, left_, newType);
             return true;
     }
     THROW_UNREACHABLE;
@@ -1409,8 +1409,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
     }
 
     if (!good) {
-        auto& diag =
-            context.addDiag(diag::BadConditionalExpression, syntax.question.location());
+        auto& diag = context.addDiag(diag::BadConditionalExpression, syntax.question.location());
         diag << lt << rt;
         diag << left.sourceRange;
         diag << right.sourceRange;
@@ -1420,11 +1419,11 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-bool ConditionalExpression::propagateType(Compilation& compilation, const Type& newType) {
+bool ConditionalExpression::propagateType(const BindContext& context, const Type& newType) {
     // The predicate is self determined so no need to handle it here.
     type = &newType;
-    contextDetermined(compilation, left_, newType);
-    contextDetermined(compilation, right_, newType);
+    contextDetermined(context, left_, newType);
+    contextDetermined(context, right_, newType);
     return true;
 }
 
@@ -1750,13 +1749,13 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     if (!errored) {
         for (uint32_t i = 0; i < buffer.size(); i++) {
             if (!anyStrings)
-                selfDetermined(compilation, buffer[i]);
+                selfDetermined(context, buffer[i]);
             else {
                 Expression* expr = buffer[i];
                 if (expr->type->isString())
-                    selfDetermined(compilation, expr);
+                    selfDetermined(context, expr);
                 else if (expr->isImplicitString())
-                    contextDetermined(compilation, expr, compilation.getStringType());
+                    contextDetermined(context, expr, compilation.getStringType());
                 else {
                     errored = true;
                     context.addDiag(diag::ConcatWithStringInt, expr->sourceRange);
@@ -1820,7 +1819,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
             return badExpr(compilation, result);
         }
 
-        contextDetermined(compilation, right, compilation.getStringType());
+        contextDetermined(context, right, compilation.getStringType());
 
         result->concat_ = right;
         result->type = &compilation.getStringType();
@@ -1848,7 +1847,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         return *result;
     }
 
-    selfDetermined(compilation, right);
+    selfDetermined(context, right);
     result->concat_ = right;
 
     if (right->type->isString()) {

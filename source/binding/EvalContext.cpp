@@ -14,7 +14,8 @@
 
 namespace slang {
 
-EvalContext::EvalContext(bitmask<EvalFlags> flags) : flags(flags) {
+EvalContext::EvalContext(const Scope& scope, bitmask<EvalFlags> flags) :
+    rootScope(&scope), flags(flags) {
     stack.emplace_back(Frame{});
 }
 
@@ -52,6 +53,13 @@ void EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation c
 
 void EvalContext::popFrame() {
     stack.pop_back();
+}
+
+const Scope& EvalContext::getCurrentScope() const {
+    const Frame& frame = topFrame();
+    if (frame.subroutine)
+        return *frame.subroutine;
+    return getRootScope();
 }
 
 std::string EvalContext::dumpStack() const {

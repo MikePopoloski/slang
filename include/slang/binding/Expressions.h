@@ -148,9 +148,6 @@ public:
     /// is implicitly convertible to a string.
     bool isImplicitString() const;
 
-    /// Evaluates the expression as a constant value.
-    ConstantValue eval() const;
-
     /// Evaluates the expression under the given evaluation context. Any errors that occur
     /// will be stored in the evaluation context instead of issued to the compilation.
     ConstantValue eval(EvalContext& context) const;
@@ -191,7 +188,7 @@ protected:
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax,
                               const BindContext& context,
                               bitmask<BindFlags> extraFlags = BindFlags::None);
-    static Expression& implicitConversion(Compilation& compilation, const Type& type,
+    static Expression& implicitConversion(const BindContext& context, const Type& type,
                                           Expression& expr);
 
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax,
@@ -206,10 +203,10 @@ protected:
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 
     // Perform type propagation and constant folding of a context-determined subexpression.
-    static void contextDetermined(Compilation& compilation, Expression*& expr, const Type& newType);
+    static void contextDetermined(const BindContext& context, Expression*& expr, const Type& newType);
 
     // Perform type propagation and constant folding of a self-determined subexpression.
-    static void selfDetermined(Compilation& compilation, Expression*& expr);
+    static void selfDetermined(const BindContext& context, Expression*& expr);
     [[nodiscard]] static Expression& selfDetermined(
         Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context,
         bitmask<BindFlags> extraFlags = BindFlags::None);
@@ -290,7 +287,7 @@ public:
     logic_t getValue() const { return value; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(Compilation& compilation, const Type& newType);
+    bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
@@ -381,7 +378,7 @@ public:
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(Compilation& compilation, const Type& newType);
+    bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
@@ -417,7 +414,7 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(Compilation& compilation, const Type& newType);
+    bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
@@ -450,7 +447,7 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(Compilation& compilation, const Type& newType);
+    bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;

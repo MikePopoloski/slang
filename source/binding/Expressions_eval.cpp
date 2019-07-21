@@ -271,11 +271,6 @@ ConstantValue Expression::eval(EvalContext& context) const {
     return visit(visitor, context);
 }
 
-ConstantValue Expression::eval() const {
-    EvalContext context;
-    return eval(context);
-}
-
 LValue Expression::evalLValue(EvalContext& context) const {
     LValueVisitor visitor;
     return visit(visitor, context);

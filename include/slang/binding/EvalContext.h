@@ -47,7 +47,7 @@ public:
         LookupLocation lookupLocation;
     };
 
-    explicit EvalContext(bitmask<EvalFlags> flags = {});
+    explicit EvalContext(const Scope& scope, bitmask<EvalFlags> flags = {});
 
     /// Creates storage for a local variable in the current frame.
     ConstantValue* createLocal(const ValueSymbol* symbol, ConstantValue value = nullptr);
@@ -62,6 +62,12 @@ public:
 
     /// Pop the active frame from the call stack.
     void popFrame();
+
+    /// Gets the root scope in which the evaluation process started.
+    const Scope& getRootScope() const { return *rootScope; }
+
+    /// Gets the currently executing scope (the one at the top of the call stack).
+    const Scope& getCurrentScope() const;
 
     /// Indicates whether this evaluation context is for a script session
     /// (not used during normal compilation flow).
@@ -94,6 +100,7 @@ private:
     std::deque<Frame> stack;
     Diagnostics diags;
     bitmask<EvalFlags> flags;
+    const Scope* rootScope;
     bool reportedCallstack = false;
 };
 
