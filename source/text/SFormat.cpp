@@ -13,6 +13,26 @@
 
 namespace slang::SFormat {
 
+static optional<uint32_t> parseUInt(const char*& ptr) {
+    // TODO: use std::from_chars
+    char* end;
+    errno = 0;
+    unsigned long val = strtoul(ptr, &end, 10);
+
+    if (ptr == end || errno == ERANGE || val > UINT32_MAX)
+        return std::nullopt;
+
+    ptr = end;
+    return uint32_t(val);
+}
+
+struct FormatOptions {
+    optional<uint32_t> width;
+    optional<uint32_t> precision;
+    bool leftJustify = false;
+    bool zeroPad = false;
+};
+
 template<typename OnChar, typename OnArg>
 static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onChar, OnArg&& onArg,
                               Diagnostics& diags) {
@@ -31,46 +51,48 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
             continue;
         }
 
-        // %% collapsed to a single %
+        // %% collapses to a single %
         if (ptr != end && *ptr == '%') {
             ptr++;
             onChar('%');
             continue;
         }
 
-        bool hasNeg = false;
-        if (ptr != end && *ptr == '-') {
-            hasNeg = true;
-            ptr++;
-            if (ptr != end && !isDecimalDigit(*ptr)) {
-                onError(diag::UnknownFormatSpecifier, start) << '-';
+        FormatOptions options;
+        while (ptr != end) {
+            if (*ptr == '-' && !options.leftJustify) {
+                options.leftJustify = true;
+                ptr++;
+            }
+            else if (*ptr == '0' && !options.zeroPad) {
+                options.zeroPad = true;
+                ptr++;
+            }
+            else {
+                break;
+            }
+        }
+
+        if (ptr != end && isDecimalDigit(*ptr)) {
+            options.width = parseUInt(ptr);
+            if (!options.width) {
+                onError(diag::FormatSpecifierInvalidWidth, start);
                 return false;
             }
         }
 
-        bool hasSize = false;
-        bool hasDecimal = false;
-        uint32_t width = 0;
-
-        if (ptr != end && isDecimalDigit(*ptr)) {
-            hasSize = true;
-            do {
-                width = width * 10 + uint8_t(*ptr - '0');
-                if (width > INT32_MAX)
-                    break;
-                ptr++;
-            } while (ptr != end && isDecimalDigit(*ptr));
-
-            if (width > INT32_MAX || (width == 0 && (ptr - start) > 2)) {
-                onError(diag::FormatSpecifierInvalidWidth, start);
-                return false;
+        if (ptr != end && *ptr == '.') {
+            ptr++;
+            if (ptr != end && isDecimalDigit(*ptr)) {
+                options.precision = parseUInt(ptr);
+                if (!options.precision) {
+                    onError(diag::FormatSpecifierInvalidWidth, start);
+                    return false;
+                }
             }
-
-            if (ptr != end && *ptr == '.') {
-                hasDecimal = true;
-                ptr++;
-                while (ptr != end && isDecimalDigit(*ptr))
-                    ptr++;
+            else {
+                // Precision defaults to zero if we just have a decimal point.
+                options.precision = 0;
             }
         }
 
@@ -80,7 +102,7 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
         }
 
         Arg::Type type;
-        bool sizeAllowed = false;
+        bool widthAllowed = false;
         bool floatAllowed = false;
         char c = *ptr++;
         switch (::tolower(c)) {
@@ -93,8 +115,13 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
             case 'd':
             case 'o':
             case 'b':
-                sizeAllowed = true;
+                widthAllowed = true;
                 type = Arg::Integral;
+                if (options.zeroPad) {
+                    options.zeroPad = false;
+                    if (!options.width)
+                        options.width = 0;
+                }
                 break;
             case 'u':
             case 'z':
@@ -103,7 +130,7 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
             case 'e':
             case 'f':
             case 'g':
-                sizeAllowed = true;
+                widthAllowed = true;
                 floatAllowed = true;
                 type = Arg::Float;
                 break;
@@ -117,11 +144,10 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
                 type = Arg::Net;
                 break;
             case 'p':
-                sizeAllowed = width == 0;
                 type = Arg::Pattern;
                 break;
             case 's':
-                sizeAllowed = true;
+                widthAllowed = true;
                 type = Arg::String;
                 break;
             default:
@@ -129,25 +155,22 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
                 return false;
         }
 
-        optional<int> argWidth;
-        if (hasSize) {
-            if (!sizeAllowed) {
-                onError(diag::FormatSpecifierWidthNotAllowed, start) << c;
-                return false;
-            }
-
-            if (!floatAllowed && (hasNeg || hasDecimal)) {
-                onError(diag::FormatSpecifierNotFloat, start);
-                return false;
-            }
-
-            int w = int(width);
-            if (hasNeg)
-                w = -w;
-            argWidth = w;
+        if (options.width && !widthAllowed) {
+            onError(diag::FormatSpecifierWidthNotAllowed, start) << c;
+            return false;
         }
 
-        onArg(type, c, argWidth);
+        if ((options.precision || options.leftJustify) && !floatAllowed) {
+            onError(diag::FormatSpecifierNotFloat, start);
+            return false;
+        }
+
+        if (options.zeroPad && !widthAllowed && type != Arg::Pattern) {
+            onError(diag::FormatSpecifierWidthNotAllowed, start) << c;
+            return false;
+        }
+
+        onArg(type, c, options);
     }
 
     return true;
@@ -170,7 +193,7 @@ static bool isValidForRaw(const Type& type) {
 }
 
 static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
-                      optional<int> width) {
+                      const FormatOptions& options) {
     std::string str;
     if (base != LiteralBase::Decimal && value.isSigned()) {
         // Non-decimal bases don't print as signed ever.
@@ -184,41 +207,43 @@ static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
 
     // If no width is specified we need to calculate it ourselves based on the bitwidth
     // of the provided integer.
-    if (!width.has_value()) {
-        constexpr double log2_10 = 3.32192809489; // TODO: log2(10)
+    uint32_t width = 0;
+    if (options.width)
+        width = *options.width;
+    else {
+        static const double log2_10 = log2(10.0);
         bitwidth_t bw = value.getBitWidth();
         switch (base) {
             case LiteralBase::Binary:
-                width = int(bw);
+                width = bw;
                 break;
             case LiteralBase::Octal:
-                width = int(ceil(bw / 3.0));
+                width = uint32_t(ceil(bw / 3.0));
                 break;
             case LiteralBase::Hex:
-                width = int(ceil(bw / 4.0));
+                width = uint32_t(ceil(bw / 4.0));
                 break;
             case LiteralBase::Decimal:
-                width = int(ceil(bw / log2_10));
+                width = uint32_t(ceil(bw / log2_10));
                 if (value.isSigned())
-                    width = *width + 1;
+                    width++;
                 break;
         }
     }
 
-    size_t w = size_t(*width);
-    if (str.size() < w) {
+    if (str.size() < width) {
         char pad = '0';
         if (base == LiteralBase::Decimal)
             pad = ' ';
 
-        result.append(w - str.size(), pad);
+        result.append(width - str.size(), pad);
     }
 
     result.append(str);
 }
 
 static void formatArg(std::string& result, const ConstantValue& arg, const Type&, char specifier,
-                      optional<int> width, Diagnostics&) {
+                      const FormatOptions& options, Diagnostics&) {
     switch (::tolower(specifier)) {
         case 'l':
             // TODO:
@@ -228,16 +253,16 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
             return;
         case 'h':
         case 'x':
-            formatInt(result, arg.integer(), LiteralBase::Hex, width);
+            formatInt(result, arg.integer(), LiteralBase::Hex, options);
             return;
         case 'd':
-            formatInt(result, arg.integer(), LiteralBase::Decimal, width);
+            formatInt(result, arg.integer(), LiteralBase::Decimal, options);
             return;
         case 'o':
-            formatInt(result, arg.integer(), LiteralBase::Octal, width);
+            formatInt(result, arg.integer(), LiteralBase::Octal, options);
             return;
         case 'b':
-            formatInt(result, arg.integer(), LiteralBase::Binary, width);
+            formatInt(result, arg.integer(), LiteralBase::Binary, options);
             return;
         case 'u':
         case 'z':
@@ -264,7 +289,7 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
 
 bool parseArgs(string_view formatString, SourceLocation loc, SmallVector<Arg>& args,
                Diagnostics& diags) {
-    auto onArg = [&](Arg::Type type, char c, optional<int>) { args.append({ type, c }); };
+    auto onArg = [&](Arg::Type type, char c, const FormatOptions&) { args.append({ type, c }); };
     return parseFormatString(formatString, loc, [](char) {}, onArg, diags);
 }
 
@@ -275,7 +300,7 @@ optional<std::string> format(string_view formatString, SourceLocation loc,
 
     auto onChar = [&](char c) { result += c; };
 
-    auto onArg = [&](Arg::Type requiredType, char c, optional<int> width) {
+    auto onArg = [&](Arg::Type requiredType, char c, const FormatOptions& options) {
         if (argIt == args.end()) {
             // TODO: error for not enough args
             return;
@@ -285,7 +310,7 @@ optional<std::string> format(string_view formatString, SourceLocation loc,
         if (!isArgTypeValid(requiredType, *type))
             diags.add(diag::FormatMismatchedType, range) << *type << c;
         else
-            formatArg(result, value, *type, c, width, diags);
+            formatArg(result, value, *type, c, options, diags);
     };
 
     if (!parseFormatString(formatString, loc, onChar, onArg, diags))
