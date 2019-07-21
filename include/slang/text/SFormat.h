@@ -12,6 +12,8 @@
 
 namespace slang {
 
+class Scope;
+
 namespace SFormat {
 
 struct Arg {
@@ -25,7 +27,7 @@ bool parseArgs(string_view formatString, SourceLocation loc, SmallVector<Arg>& a
                Diagnostics& diags);
 
 optional<std::string> format(string_view formatString, SourceLocation loc,
-                             span<const TypedValue> args, Diagnostics& diags);
+                             span<const TypedValue> args, const Scope& scope, Diagnostics& diags);
 
 bool isArgTypeValid(Arg::Type required, const Type& type);
 

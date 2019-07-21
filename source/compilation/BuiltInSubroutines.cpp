@@ -110,7 +110,8 @@ ConstantValue SFormatFunction::eval(EvalContext& context, const Args& args) cons
     }
 
     Diagnostics diags;
-    auto result = SFormat::format(formatStr.str(), args[0]->sourceRange.start(), values, diags);
+    auto result = SFormat::format(formatStr.str(), args[0]->sourceRange.start(), values,
+                                  context.getCurrentScope(), diags);
     if (!diags.empty())
         context.addDiags(diags);
 

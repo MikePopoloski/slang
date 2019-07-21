@@ -103,21 +103,31 @@ const DeclaredType* Symbol::getDeclaredType() const {
     }
 }
 
-void Symbol::getHierarchicalPath(std::string& buffer) const {
-    if (parentScope) {
-        auto& parent = parentScope->asSymbol();
-        parent.getHierarchicalPath(buffer);
+static void getHierarchicalPathImpl(const Symbol& symbol, std::string& buffer) {
+    if (symbol.getScope()) {
+        auto& parent = symbol.getScope()->asSymbol();
+        if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
+            getHierarchicalPathImpl(parent, buffer);
 
-        if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType)
-            buffer.append("::");
-        else
-            buffer.append(".");
+            if (!symbol.name.empty()) {
+                if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType)
+                    buffer.append("::");
+                else
+                    buffer.append(".");
+            }
+        }
     }
 
-    if (name.empty())
-        buffer.append("<unnamed>");
-    else
-        buffer.append(name);
+    if (!symbol.name.empty())
+        buffer.append(symbol.name);
+}
+
+void Symbol::getHierarchicalPath(std::string& buffer) const {
+    size_t sz = buffer.size();
+    getHierarchicalPathImpl(*this, buffer);
+
+    if (sz == buffer.size())
+        buffer.append("$unit");
 }
 
 const Scope* Symbol::scopeOrNull() const {

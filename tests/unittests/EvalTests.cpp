@@ -732,4 +732,15 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%c", "48") == "0");
     CHECK(sformatf("%c", "18'hx031") == "1");
     CHECK(sformatf("%c", "999") == "\xe7");
+
+    CHECK(sformatf("%m", "") == "$unit");
+
+    session.eval(R"(
+function string func;
+    begin : baz
+        return $sformatf("%m");
+    end
+endfunction
+)");
+    CHECK(session.eval("func()").str() == "func.baz");
 }

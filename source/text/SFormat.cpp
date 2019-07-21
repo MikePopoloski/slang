@@ -284,12 +284,6 @@ static void formatString(std::string& result, const std::string& value,
 static void formatArg(std::string& result, const ConstantValue& arg, const Type&, char specifier,
                       const FormatOptions& options, Diagnostics&) {
     switch (::tolower(specifier)) {
-        case 'l':
-            // TODO:
-            return;
-        case 'm':
-            // TODO:
-            return;
         case 'h':
         case 'x':
             formatInt(result, arg.integer(), LiteralBase::Hex, options);
@@ -329,20 +323,44 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
     }
 }
 
+static void formatNonArg(std::string& result, char specifier, const Scope& scope) {
+    specifier = char(::tolower(specifier));
+    if (specifier == 'l') {
+        // TODO: support libraries
+        return;
+    }
+
+    if (specifier == 'm') {
+        scope.asSymbol().getHierarchicalPath(result);
+        return;
+    }
+
+    THROW_UNREACHABLE;
+}
+
 bool parseArgs(string_view formatString, SourceLocation loc, SmallVector<Arg>& args,
                Diagnostics& diags) {
-    auto onArg = [&](Arg::Type type, char c, const FormatOptions&) { args.append({ type, c }); };
+    auto onArg = [&](Arg::Type type, char c, const FormatOptions&) {
+        if (type == Arg::None)
+            return;
+        args.append({ type, c });
+    };
     return parseFormatString(formatString, loc, [](char) {}, onArg, diags);
 }
 
 optional<std::string> format(string_view formatString, SourceLocation loc,
-                             span<const TypedValue> args, Diagnostics& diags) {
+                             span<const TypedValue> args, const Scope& scope, Diagnostics& diags) {
     std::string result;
     auto argIt = args.begin();
 
     auto onChar = [&](char c) { result += c; };
 
     auto onArg = [&](Arg::Type requiredType, char c, const FormatOptions& options) {
+        if (requiredType == Arg::None) {
+            formatNonArg(result, c, scope);
+            return;
+        }
+
         if (argIt == args.end()) {
             // TODO: error for not enough args
             return;
