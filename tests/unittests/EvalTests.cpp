@@ -723,4 +723,13 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%010.f", "r") == "0000000003");
     CHECK(sformatf("%.f", "r") == "3");
     CHECK(sformatf("%.9f", "r") == "3.210000000");
+
+    CHECK(sformatf("%s", "\"abc\"") == "abc");
+    CHECK(sformatf("%3s", "\"a\"") == "  a");
+    CHECK(sformatf("%3s", "\"abc\"") == "abc");
+    CHECK(sformatf("%3s", "\"abcdef\"") == "abcdef");
+
+    CHECK(sformatf("%c", "48") == "0");
+    CHECK(sformatf("%c", "18'hx031") == "1");
+    CHECK(sformatf("%c", "999") == "\xe7");
 }

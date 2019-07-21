@@ -265,6 +265,22 @@ static void formatFloat(std::string& result, double value, char specifier,
     result.pop_back();
 }
 
+static void formatChar(std::string& result, const SVInt& value) {
+    char c = char(value.getRawPtr()[0] & 0xff);
+    result.push_back(c);
+}
+
+static void formatString(std::string& result, const std::string& value,
+                         const FormatOptions& options) {
+    if (options.width) {
+        uint32_t width = *options.width;
+        if (value.size() < width)
+            result.append(width - value.size(), ' ');
+    }
+
+    result.append(value);
+}
+
 static void formatArg(std::string& result, const ConstantValue& arg, const Type&, char specifier,
                       const FormatOptions& options, Diagnostics&) {
     switch (::tolower(specifier)) {
@@ -298,6 +314,7 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
         case 't':
             return;
         case 'c':
+            formatChar(result, arg.integer());
             return;
         case 'v':
             // TODO:
@@ -305,6 +322,7 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
         case 'p':
             return;
         case 's':
+            formatString(result, arg.convertToStr().str(), options);
             return;
         default:
             THROW_UNREACHABLE;
