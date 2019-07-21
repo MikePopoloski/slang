@@ -714,4 +714,13 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%D", "1'bx") == "x");
     CHECK(sformatf("%X", "14'bx01010") == "xxXa");
     CHECK(sformatf("%h %o", "12'b001xxx101x01, 12'b001xxx101x01") == "XXX 1x5X");
+
+    session.eval("real r = 3.21;");
+    CHECK(sformatf("%F", "r") == "3.210000");
+    CHECK(sformatf("%e", "r") == "3.210000e+00");
+    CHECK(sformatf("%-10.1g", "r") == "3         ");
+    CHECK(sformatf("%-010.f", "r") == "3         ");
+    CHECK(sformatf("%010.f", "r") == "0000000003");
+    CHECK(sformatf("%.f", "r") == "3");
+    CHECK(sformatf("%.9f", "r") == "3.210000000");
 }

@@ -242,6 +242,29 @@ static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
     result.append(str);
 }
 
+static void formatFloat(std::string& result, double value, char specifier,
+                        const FormatOptions& options) {
+    // TODO: use std::to_chars
+    std::string fmt = "%";
+    if (options.leftJustify)
+        fmt.push_back('-');
+    if (options.zeroPad)
+        fmt.push_back('0');
+    if (options.width)
+        fmt.append(std::to_string(*options.width));
+    if (options.precision) {
+        fmt.push_back('.');
+        fmt.append(std::to_string(*options.precision));
+    }
+    fmt.push_back(specifier);
+
+    size_t cur = result.size();
+    int sz = snprintf(nullptr, 0, fmt.c_str(), value);
+    result.resize(cur + sz + 1);
+    snprintf(result.data() + cur, sz + 1, fmt.c_str(), value);
+    result.pop_back();
+}
+
 static void formatArg(std::string& result, const ConstantValue& arg, const Type&, char specifier,
                       const FormatOptions& options, Diagnostics&) {
     switch (::tolower(specifier)) {
@@ -270,6 +293,7 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
         case 'e':
         case 'f':
         case 'g':
+            formatFloat(result, arg.convertToReal().real(), specifier, options);
             return;
         case 't':
             return;
