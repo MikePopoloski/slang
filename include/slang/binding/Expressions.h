@@ -608,6 +608,7 @@ public:
     span<const Expression* const> operands() const { return operands_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    LValue evalLValueImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;

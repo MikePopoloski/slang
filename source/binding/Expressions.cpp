@@ -385,12 +385,19 @@ bool Expression::bad() const {
 
 bool Expression::isLValue() const {
     switch (kind) {
-        // TODO: concatenations
         case ExpressionKind::NamedValue:
         case ExpressionKind::ElementSelect:
         case ExpressionKind::RangeSelect:
         case ExpressionKind::MemberAccess:
             return true;
+        case ExpressionKind::Concatenation: {
+            auto& concat = as<ConcatenationExpression>();
+            for (auto op : concat.operands()) {
+                if (!op->isLValue())
+                    return false;
+            }
+            return true;
+        }
         default:
             return false;
     }

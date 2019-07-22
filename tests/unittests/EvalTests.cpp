@@ -747,3 +747,15 @@ endfunction
     CHECK(sformatf("%u", "14'ha2c") == "\x2c\x0a\0\0"s);
     CHECK(sformatf("%z", "14'hzX2c") == "\x2c\x0f\0\0\0\x3f\0\0"s);
 }
+
+TEST_CASE("Concat assignments") {
+    ScriptSession session;
+    session.eval("logic [2:0] foo;");
+    session.eval("logic bar;");
+
+    session.eval("{bar, foo} = 3'b111 + 2'd3");
+    NO_SESSION_ERRORS;
+
+    CHECK(session.eval("bar").integer() == 1);
+    CHECK(session.eval("foo").integer() == 2);
+}

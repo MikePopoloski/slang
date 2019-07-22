@@ -841,6 +841,19 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
     return SVInt::concat(values);
 }
 
+LValue ConcatenationExpression::evalLValueImpl(EvalContext& context) const {
+    std::vector<LValue> lvals;
+    for (auto operand : operands()) {
+        LValue lval = operand->evalLValue(context);
+        if (!lval)
+            return nullptr;
+
+        lvals.emplace_back(std::move(lval));
+    }
+
+    return LValue(std::move(lvals));
+}
+
 bool ConcatenationExpression::verifyConstantImpl(EvalContext& context) const {
     for (auto operand : operands()) {
         if (!operand->verifyConstant(context))

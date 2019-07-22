@@ -373,6 +373,7 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
             formatFloat(result, arg.convertToReal().real(), specifier, options);
             return;
         case 't':
+            // TODO:
             return;
         case 'c':
             formatChar(result, arg.integer());

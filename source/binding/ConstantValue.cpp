@@ -267,8 +267,12 @@ ConstantValue LValue::load() const {
                                   return *arg;
                               else if constexpr (std::is_same_v<T, CVRange>)
                                   return arg.cv->getSlice(arg.range.upper(), arg.range.lower());
-                              else if constexpr (std::is_same_v<T, Concat>)
-                                  THROW_UNREACHABLE; // TODO: handle this case
+                              else if constexpr (std::is_same_v<T, Concat>) {
+                                  SmallVectorSized<SVInt, 4> vals;
+                                  for (auto& elem : arg)
+                                      vals.append(elem.load().integer());
+                                  return SVInt::concat(vals);
+                              }
                               else
                                   static_assert(always_false<T>::value, "Missing case");
                           },
@@ -280,10 +284,12 @@ void LValue::store(const ConstantValue& newValue) {
         [&newValue](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat> &&
                                          !std::is_same_v<std::decay_t<decltype(arg)>, CVRange>) {
             using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, std::monostate>)
+            if constexpr (std::is_same_v<T, std::monostate>) {
                 return;
-            else if constexpr (std::is_same_v<T, ConstantValue*>)
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue*>) {
                 *arg = newValue;
+            }
             else if constexpr (std::is_same_v<T, CVRange>) {
                 ConstantValue& cv = *arg.cv;
                 ASSERT(cv);
@@ -309,10 +315,19 @@ void LValue::store(const ConstantValue& newValue) {
                     cv.integer().set(u, l, newValue.integer());
                 }
             }
-            else if constexpr (std::is_same_v<T, Concat>)
-                THROW_UNREACHABLE; // TODO: handle this case
-            else
+            else if constexpr (std::is_same_v<T, Concat>) {
+                auto& sv = newValue.integer();
+                int32_t msb = (int32_t)sv.getBitWidth() - 1;
+
+                for (auto& elem : arg) {
+                    int32_t width = (int32_t)elem.load().integer().getBitWidth();
+                    elem.store(sv.slice(msb, msb - width + 1));
+                    msb -= width;
+                }
+            }
+            else {
                 static_assert(always_false<T>::value, "Missing case");
+            }
         },
         value);
 }
