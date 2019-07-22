@@ -6,9 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/text/SFormat.h"
 
-#include <ieee1800/vpi_user.h>
-
 #include "../text/CharInfo.h"
+#include <ieee1800/vpi_user.h>
 
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/symbols/TypeSymbols.h"
@@ -293,9 +292,17 @@ static void formatRaw2(std::string& result, const ConstantValue& value) {
     SVInt sv = value.integer();
     sv.flattenUnknowns();
 
+    uint32_t words = sv.getNumWords();
+    uint32_t lastBits = sv.getBitWidth() % 64;
+    if (lastBits == 0)
+        lastBits = 64;
+
     const uint64_t* ptr = sv.getRawPtr();
-    for (uint32_t i = 0; i < sv.getNumWords(); i++)
-        result.append(reinterpret_cast<const char*>(ptr + i), sizeof(uint64_t));
+    for (uint32_t i = 0; i < words; i++) {
+        // Don't write the upper half of the last word if we don't actually have those bits.
+        size_t bytes = (i == words - 1 && lastBits <= 32) ? sizeof(uint32_t) : sizeof(uint64_t);
+        result.append(reinterpret_cast<const char*>(ptr + i), bytes);
+    }
 }
 
 static void formatRaw4(std::string& result, const ConstantValue& value) {
@@ -314,6 +321,10 @@ static void formatRaw4(std::string& result, const ConstantValue& value) {
         unknownPtr = ptr + words;
     }
 
+    uint32_t lastBits = sv.getBitWidth() % 64;
+    if (lastBits == 0)
+        lastBits = 64;
+
     auto writeEntry = [&result](uint32_t bits, uint32_t unknowns) {
         // The encoding for X and Z are reversed from how SVInt stores them.
         s_vpi_vecval entry;
@@ -327,7 +338,10 @@ static void formatRaw4(std::string& result, const ConstantValue& value) {
         uint64_t unknowns = unknownPtr ? unknownPtr[i] : 0;
 
         writeEntry(uint32_t(bits), uint32_t(unknowns));
-        writeEntry(uint32_t(bits >> 32), uint32_t(unknowns >> 32));
+
+        // Don't write the upper half of the last word if we don't actually have those bits.
+        if (i != words - 1 || lastBits > 32)
+            writeEntry(uint32_t(bits >> 32), uint32_t(unknowns >> 32));
     }
 }
 

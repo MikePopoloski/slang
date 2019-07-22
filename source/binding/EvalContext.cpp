@@ -15,7 +15,7 @@
 namespace slang {
 
 EvalContext::EvalContext(const Scope& scope, bitmask<EvalFlags> flags) :
-    rootScope(&scope), flags(flags) {
+    flags(flags), rootScope(&scope) {
     stack.emplace_back(Frame{});
 }
 
