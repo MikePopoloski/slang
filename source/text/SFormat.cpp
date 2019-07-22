@@ -260,7 +260,7 @@ static void formatFloat(std::string& result, double value, char specifier,
     fmt.push_back(specifier);
 
     size_t cur = result.size();
-    int sz = snprintf(nullptr, 0, fmt.c_str(), value);
+    size_t sz = (size_t)snprintf(nullptr, 0, fmt.c_str(), value);
     result.resize(cur + sz + 1);
     snprintf(result.data() + cur, sz + 1, fmt.c_str(), value);
     result.pop_back();

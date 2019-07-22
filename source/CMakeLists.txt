@@ -113,7 +113,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		-Wduplicate-method-arg
 		-Wembedded-directive
 		-Wfor-loop-analysis
-		-Wformat-nonliteral
 		-Wformat-pedantic
 		-Widiomatic-parentheses
 		-Wimplicit-fallthrough
