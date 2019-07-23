@@ -9,6 +9,7 @@ option(CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(FUZZ_TARGET "Enables changes to make binaries easier to fuzz test" OFF)
 option(SLANG_INCLUDE_TESTS ON)
 option(SLANG_INCLUDE_DOCS OFF)
+option(BUILD_SHARED_LIBS "Generate a shared library instead of static" OFF)
 
 set(SLANG_SANITIZERS "" CACHE STRING "List of Clang sanitizers to include in build")
 

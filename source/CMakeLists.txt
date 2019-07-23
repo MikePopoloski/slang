@@ -25,7 +25,7 @@ add_custom_target(gen_version
 	-P "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/gitversion.cmake"
 )
 
-add_library(slang STATIC
+add_library(slang
 	binding/BindContext.cpp
 	binding/ConstantValue.cpp
 	binding/EvalContext.cpp
