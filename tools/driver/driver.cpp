@@ -82,8 +82,8 @@ int driverMain(int argc, char** argv) try {
 
     std::string astJsonFile;
 
-    bool showVersion;
-    bool onlyPreprocess;
+    bool showVersion = false;
+    bool onlyPreprocess = false;
 
     CLI::App cmd("SystemVerilog compiler");
     cmd.add_option("files", sourceFiles, "Source files to compile");
