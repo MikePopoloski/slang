@@ -42,7 +42,7 @@ endif()
 # Always require C++17 or later, no extensions
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 	# Prefer the latest standard, and enable full conformance
-	add_compile_options(/std:c++latest)
+	add_compile_options(/std:c++17)
 	add_compile_options(/permissive-)
 	add_compile_options(/Zc:inline)
 	add_compile_options(/Gy)		# Function-level linking
