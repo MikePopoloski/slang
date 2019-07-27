@@ -366,92 +366,6 @@ const Symbol* Scope::find(string_view name) const {
     }
 }
 
-void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
-                       bitmask<LookupFlags> flags, LookupResult& result) const {
-    Token nameToken;
-    const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
-    switch (syntax.kind) {
-        case SyntaxKind::IdentifierName:
-            nameToken = syntax.as<IdentifierNameSyntax>().identifier;
-            break;
-        case SyntaxKind::IdentifierSelectName: {
-            const auto& selectSyntax = syntax.as<IdentifierSelectNameSyntax>();
-            nameToken = selectSyntax.identifier;
-            selectors = &selectSyntax.selectors;
-            break;
-        }
-        case SyntaxKind::ScopedName:
-            // Handle qualified names completely separately.
-            lookupQualified(syntax.as<ScopedNameSyntax>(), location, flags, result);
-            return;
-        case SyntaxKind::ThisHandle:
-        case SyntaxKind::ClassName:
-            result.addDiag(*this, diag::NotYetSupported, syntax.sourceRange());
-            result.found = nullptr;
-            return;
-        default:
-            THROW_UNREACHABLE;
-    }
-
-    // If the parser added a missing identifier token, it already issued an appropriate error.
-    auto name = nameToken.valueText();
-    if (name.empty())
-        return;
-
-    // If this is a system name, look up directly in the compilation.
-    if (nameToken.identifierType() == IdentifierType::System) {
-        result.found = nullptr;
-        result.systemSubroutine = compilation.getSystemSubroutine(name);
-        if (!result.systemSubroutine) {
-            result.addDiag(*this, diag::UndeclaredIdentifier, nameToken.range()) << name;
-        }
-        else if ((flags & LookupFlags::AllowSystemSubroutine) == 0) {
-            result.addDiag(*this, diag::UnexpectedSystemName, nameToken.range());
-            result.systemSubroutine = nullptr;
-        }
-        return;
-    }
-
-    // Perform the lookup.
-    lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);
-    if (selectors)
-        result.selectors.appendRange(*selectors);
-
-    if (!result.found && !result.hasError())
-        reportUndeclared(name, nameToken.range(), flags, false, result);
-
-    // There should only be selectors if we found a value symbol.
-    ASSERT(!result.found || result.selectors.empty() || result.found->isValue() ||
-           result.found->isType());
-}
-
-const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
-                                           SourceRange sourceRange, bitmask<LookupFlags> flags,
-                                           bool errorIfNotFound) const {
-    if (name.empty())
-        return nullptr;
-
-    LookupResult result;
-    lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
-    ASSERT(result.selectors.empty());
-
-    if (errorIfNotFound && !result.found && !result.hasError())
-        reportUndeclared(name, sourceRange, flags, false, result);
-
-    if (result.hasError())
-        getCompilation().addDiagnostics(result.getDiagnostics());
-
-    return result.found;
-}
-
-const Symbol* Scope::lookupName(string_view name, LookupLocation location,
-                                bitmask<LookupFlags> flags) const {
-    LookupResult result;
-    lookupName(compilation.parseName(name), location, flags, result);
-    ASSERT(result.selectors.empty());
-    return result.found;
-}
-
 Scope::DeferredMemberData& Scope::getOrAddDeferredData() const {
     return compilation.getOrAddDeferredData(deferredMemberIndex);
 }
@@ -1181,6 +1095,96 @@ const Symbol* getCompilationUnit(const Symbol& symbol) {
 }
 
 } // namespace
+
+void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
+                       bitmask<LookupFlags> flags, LookupResult& result) const {
+    Token nameToken;
+    const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
+    switch (syntax.kind) {
+        case SyntaxKind::IdentifierName:
+            nameToken = syntax.as<IdentifierNameSyntax>().identifier;
+            break;
+        case SyntaxKind::IdentifierSelectName: {
+            const auto& selectSyntax = syntax.as<IdentifierSelectNameSyntax>();
+            nameToken = selectSyntax.identifier;
+            selectors = &selectSyntax.selectors;
+            break;
+        }
+        case SyntaxKind::ScopedName:
+            // Handle qualified names completely separately.
+            lookupQualified(syntax.as<ScopedNameSyntax>(), location, flags, result);
+            return;
+        case SyntaxKind::ThisHandle:
+        case SyntaxKind::ClassName:
+            result.addDiag(*this, diag::NotYetSupported, syntax.sourceRange());
+            result.found = nullptr;
+            return;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    // If the parser added a missing identifier token, it already issued an appropriate error.
+    auto name = nameToken.valueText();
+    if (name.empty())
+        return;
+
+    // If this is a system name, look up directly in the compilation.
+    if (nameToken.identifierType() == IdentifierType::System) {
+        result.found = nullptr;
+        result.systemSubroutine = compilation.getSystemSubroutine(name);
+        if (!result.systemSubroutine) {
+            result.addDiag(*this, diag::UndeclaredIdentifier, nameToken.range()) << name;
+        }
+        else if ((flags & LookupFlags::AllowSystemSubroutine) == 0) {
+            result.addDiag(*this, diag::UnexpectedSystemName, nameToken.range());
+            result.systemSubroutine = nullptr;
+        }
+        return;
+    }
+
+    // Perform the lookup.
+    lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);
+    if (!result.found && !result.hasError())
+        reportUndeclared(name, nameToken.range(), flags, false, result);
+
+    if (selectors) {
+        // If this is a scope, the selectors should be an index into it.
+        if (result.found && result.found->isScope() && !result.found->isType()) {
+            result.found = handleLookupSelectors(result.found, *selectors,
+                                                 BindContext(*this, location), result);
+        }
+        else {
+            result.selectors.appendRange(*selectors);
+        }
+    }
+}
+
+const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
+                                           SourceRange sourceRange, bitmask<LookupFlags> flags,
+                                           bool errorIfNotFound) const {
+    if (name.empty())
+        return nullptr;
+
+    LookupResult result;
+    lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
+    ASSERT(result.selectors.empty());
+
+    if (errorIfNotFound && !result.found && !result.hasError())
+        reportUndeclared(name, sourceRange, flags, false, result);
+
+    if (result.hasError())
+        getCompilation().addDiagnostics(result.getDiagnostics());
+
+    return result.found;
+}
+
+const Symbol* Scope::lookupName(string_view name, LookupLocation location,
+                                bitmask<LookupFlags> flags) const {
+    LookupResult result;
+    lookupName(compilation.parseName(name), location, flags, result);
+    ASSERT(result.selectors.empty());
+    return result.found;
+}
 
 void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
                             bitmask<LookupFlags> flags, LookupResult& result) const {
