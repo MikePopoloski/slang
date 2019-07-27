@@ -356,7 +356,6 @@ const Symbol* Scope::find(string_view name) const {
     const Symbol* symbol = it->second;
     switch (symbol->kind) {
         case SymbolKind::ExplicitImport:
-            return nullptr;
         case SymbolKind::ForwardingTypedef:
             return nullptr;
         case SymbolKind::TransparentMember:

@@ -107,6 +107,7 @@ public:
 
 private:
     Preprocessor(const Preprocessor& other);
+    Preprocessor& operator=(const Preprocessor& other) = delete;
 
     // Internal methods to grab and handle the next token
     Token nextProcessed();
@@ -287,7 +288,7 @@ private:
     /// Various state set by preprocessor directives.
     std::vector<KeywordVersion> keywordVersionStack;
     optional<TimeScale> activeTimeScale;
-    TokenKind defaultNetType;
+    TokenKind defaultNetType = TokenKind::WireKeyword;
 };
 
 } // namespace slang

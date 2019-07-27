@@ -318,7 +318,7 @@ private:
     struct PortInfo {
         const DeclaratorSyntax* syntax = nullptr;
         const Symbol* internalSymbol = nullptr;
-        PortDirection direction;
+        PortDirection direction = PortDirection::In;
         bool used = false;
 
         PortInfo(const DeclaratorSyntax* syntax) : syntax(syntax) {}

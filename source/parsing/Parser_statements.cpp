@@ -98,7 +98,6 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
         case TokenKind::CoverKeyword:
             return parseAssertionStatement(label, attributes);
         case TokenKind::RestrictKeyword:
-            return parseConcurrentAssertion(label, attributes);
         case TokenKind::ExpectKeyword:
             return parseConcurrentAssertion(label, attributes);
         case TokenKind::WaitKeyword:

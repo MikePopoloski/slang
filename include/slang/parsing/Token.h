@@ -221,6 +221,8 @@ private:
     const Info* info;
 };
 
+static_assert(std::is_trivially_copyable_v<Token>);
+
 /// Different restricted sets of keywords that can be set using the
 /// `begin_keywords directive. The values of the enum correspond to indexes to
 /// allKeywords[] in LexerFacts.cpp
