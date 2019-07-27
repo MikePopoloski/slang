@@ -66,6 +66,12 @@ endmodule
     CHECK(get("C9") == 7);
     CHECK(get("C10") == 8);
     CHECK(get("D0") == 1);
+
+    auto& e1 = top.find<VariableSymbol>("e1");
+    CHECK(e1.getType().as<EnumType>().values().size() == 7);
+
+    auto& e2 = top.find<VariableSymbol>("e2");
+    CHECK(e2.getType().as<EnumType>().values().size() == 1);
 }
 
 TEST_CASE("Enum initializer restrictions") {
