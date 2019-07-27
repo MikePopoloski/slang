@@ -182,6 +182,16 @@ optional<ConstantRange> BindContext::evalPackedDimension(const ElementSelectSynt
     return result.range;
 }
 
+optional<ConstantRange> BindContext::evalUnpackedDimension(
+    const VariableDimensionSyntax& syntax) const {
+
+    EvaluatedDimension result = evalDimension(syntax, true);
+    if (!result.isRange())
+        return std::nullopt;
+
+    return result.range;
+}
+
 void BindContext::evalRangeDimension(const SelectorSyntax& syntax,
                                      EvaluatedDimension& result) const {
     switch (syntax.kind) {

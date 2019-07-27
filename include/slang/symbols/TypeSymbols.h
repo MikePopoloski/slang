@@ -312,6 +312,9 @@ public:
 
     void toJson(json& j) const;
 
+    static EnumValueSymbol& fromSyntax(Compilation& compilation, const DeclaratorSyntax& syntax,
+                                       const Type& type, optional<int32_t> index);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumValue; }
 
 private:

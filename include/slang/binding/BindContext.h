@@ -83,6 +83,7 @@ public:
 
     optional<ConstantRange> evalPackedDimension(const VariableDimensionSyntax& syntax) const;
     optional<ConstantRange> evalPackedDimension(const ElementSelectSyntax& syntax) const;
+    optional<ConstantRange> evalUnpackedDimension(const VariableDimensionSyntax& syntax) const;
 
     BindContext resetFlags(bitmask<BindFlags> addedFlags) const;
 

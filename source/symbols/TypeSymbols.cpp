@@ -644,12 +644,12 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     const Type* base;
     const Type* cb;
     if (!syntax.baseType) {
+        // If no explicit base type is specified we default to an int.
         base = &compilation.getIntType();
         cb = base;
     }
     else {
         base = &compilation.getType(*syntax.baseType, location, scope, forceSigned);
-
         cb = &base->getCanonicalType();
         if (cb->isError())
             return *cb;
@@ -661,11 +661,19 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         }
     }
 
+    SVInt allOnes(cb->getBitWidth(), 0, cb->isSigned());
+    allOnes.setAllOnes();
+
+    SVInt one(cb->getBitWidth(), 1, cb->isSigned());
+    SVInt previous;
+    SourceRange previousRange;
+    bool first = true;
+
     auto resultType =
         compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base, location);
     resultType->setSyntax(syntax);
 
-    // Values must be unique; this set and lambda check for that.
+    // Enum values must be unique; this set and lambda are used to check that.
     SmallMap<SVInt, SourceLocation, 8> usedValues;
     auto checkValue = [&usedValues, &scope](const SVInt& value, SourceLocation loc) {
         auto pair = usedValues.emplace(value, loc);
@@ -677,73 +685,147 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         return true;
     };
 
-    SVInt allOnes(cb->getBitWidth(), 0, cb->isSigned());
-    allOnes.setAllOnes();
-
-    SVInt one(cb->getBitWidth(), 1, cb->isSigned());
-    SVInt previous;
-    SourceRange previousRange;
-    bool first = true;
-
-    // TODO: error if no members
-    for (auto member : syntax.members) {
-        auto ev =
-            compilation.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location());
-        ev->setType(*resultType);
-        ev->setSyntax(*member);
-        resultType->addMember(*ev);
-
-        if (!member->initializer) {
-            auto loc = member->getFirstToken().location();
-
-            SVInt value;
-            if (first) {
-                value = SVInt(cb->getBitWidth(), 0, cb->isSigned());
-                first = false;
-            }
-            else if (previous.hasUnknown()) {
-                auto& diag = scope.addDiag(diag::EnumIncrementUnknown, loc);
-                diag << previous << *base << previousRange;
-                return compilation.getErrorType();
-            }
-            else if (previous == allOnes) {
-                auto& diag = scope.addDiag(diag::EnumValueOverflow, loc);
-                diag << previous << *base << previousRange;
-                return compilation.getErrorType();
-            }
-            else {
-                value = previous + one;
-            }
-
-            if (!checkValue(value, loc))
-                return compilation.getErrorType();
-
-            ev->setValue(value);
-            previous = value;
-            previousRange = member->sourceRange();
-            continue;
-        }
-
-        ev->setInitializerSyntax(*member->initializer->expr,
-                                 member->initializer->equals.location());
-
-        auto& cv = ev->getConstantValue();
+    // For enumerands that have an initializer, set it up appropriately.
+    auto setInitializer = [&](EnumValueSymbol& ev, const EqualsValueClauseSyntax& initializer) {
+        ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
+        auto& cv = ev.getConstantValue();
         if (!cv)
-            return compilation.getErrorType();
+            return false;
 
         first = false;
         previous = cv.integer();
-        previousRange = ev->getInitializer()->sourceRange;
+        previousRange = ev.getInitializer()->sourceRange;
 
         if (!checkValue(previous, previousRange.start()))
-            return compilation.getErrorType();
+            return false;
+
+        return true;
+    };
+
+    // For enumerands that have no initializer, infer the value via this function.
+    auto inferValue = [&](EnumValueSymbol& ev, SourceRange range) {
+        auto loc = range.start();
+        SVInt value;
+        if (first) {
+            value = SVInt(cb->getBitWidth(), 0, cb->isSigned());
+            first = false;
+        }
+        else if (previous.hasUnknown()) {
+            auto& diag = scope.addDiag(diag::EnumIncrementUnknown, loc);
+            diag << previous << *base << previousRange;
+            return false;
+        }
+        else if (previous == allOnes) {
+            auto& diag = scope.addDiag(diag::EnumValueOverflow, loc);
+            diag << previous << *base << previousRange;
+            return false;
+        }
+        else {
+            value = previous + one;
+        }
+
+        if (!checkValue(value, loc))
+            return false;
+
+        ev.setValue(value);
+        previous = std::move(value);
+        previousRange = range;
+
+        return true;
+    };
+
+    BindContext context(scope, location);
+
+    for (auto member : syntax.members) {
+        if (member->dimensions.empty()) {
+            auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, std::nullopt);
+            resultType->addMember(ev);
+
+            bool result;
+            if (member->initializer)
+                result = setInitializer(ev, *member->initializer);
+            else
+                result = inferValue(ev, member->sourceRange());
+
+            if (!result)
+                return compilation.getErrorType();
+        }
+        else {
+            if (member->dimensions.size() > 1) {
+                scope.addDiag(diag::EnumRangeMultiDimensional, member->dimensions.sourceRange());
+                return compilation.getErrorType();
+            }
+
+            auto range = context.evalUnpackedDimension(*member->dimensions[0]);
+            if (!range)
+                return compilation.getErrorType();
+
+            // Range must be positive.
+            if (!context.requirePositive(range->left, member->dimensions[0]->sourceRange()) ||
+                !context.requirePositive(range->right, member->dimensions[0]->sourceRange())) {
+                return compilation.getErrorType();
+            }
+
+            // Set up the first element using the initializer. All other elements (if there are any)
+            // don't get the initializer.
+            int32_t index = range->left;
+            {
+                auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
+                resultType->addMember(ev);
+
+                bool result;
+                if (member->initializer)
+                    result = setInitializer(ev, *member->initializer);
+                else
+                    result = inferValue(ev, member->sourceRange());
+
+                if (!result)
+                    return compilation.getErrorType();
+            }
+
+            bool down = range->isLittleEndian();
+            while (index != range->right) {
+                index = down ? index - 1 : index + 1;
+
+                auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
+                resultType->addMember(ev);
+
+                if (!inferValue(ev, member->sourceRange()))
+                    return compilation.getErrorType();
+            }
+        }
     }
+
+    if (first)
+        scope.addDiag(diag::EnumNoMembers, resultType->location);
 
     return *resultType;
 }
 
 EnumValueSymbol::EnumValueSymbol(string_view name, SourceLocation loc) :
     ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::RequireConstant) {
+}
+
+EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
+                                             const DeclaratorSyntax& syntax, const Type& type,
+                                             optional<int32_t> index) {
+    string_view name = syntax.name.valueText();
+    if (index && !name.empty()) {
+        ASSERT(*index >= 0);
+
+        size_t sz = (size_t)snprintf(nullptr, 0, "%d", *index);
+        char* mem = (char*)compilation.allocate(sz + name.size() + 1, 1);
+        memcpy(mem, name.data(), name.size());
+        snprintf(mem + name.size(), sz + 1, "%d", *index);
+
+        name = string_view(mem, sz + name.size());
+    }
+
+    auto ev = compilation.emplace<EnumValueSymbol>(name, syntax.name.location());
+    ev->setType(type);
+    ev->setSyntax(syntax);
+
+    return *ev;
 }
 
 const ConstantValue& EnumValueSymbol::getValue() const {
@@ -1046,8 +1128,7 @@ void TypeAliasType::checkForwardDecls() const {
     const ForwardingTypedefSymbol* forward = firstForward;
     while (forward) {
         if (forward->category != ForwardingTypedefSymbol::None && forward->category != category) {
-            auto& diag =
-                getScope()->addDiag(diag::ForwardTypedefDoesNotMatch, forward->location);
+            auto& diag = getScope()->addDiag(diag::ForwardTypedefDoesNotMatch, forward->location);
             switch (forward->category) {
                 case ForwardingTypedefSymbol::Enum:
                     diag << "enum"sv;

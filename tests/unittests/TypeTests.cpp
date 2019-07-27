@@ -34,6 +34,40 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Enum range declaration") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    enum logic [3:0] {
+        A[2],
+        B[3:1] = 4,
+        C[9:10]
+    } e1;
+
+    enum logic [3:0] {
+        D[1] = 1
+    } e2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& top = compilation.getRoot().find<ModuleInstanceSymbol>("Top");
+    auto get = [&](string_view name) {
+        return top.find<EnumValueSymbol>(name).getValue().integer();
+    };
+
+    CHECK(get("A0") == 0);
+    CHECK(get("A1") == 1);
+    CHECK(get("B3") == 4);
+    CHECK(get("B2") == 5);
+    CHECK(get("B1") == 6);
+    CHECK(get("C9") == 7);
+    CHECK(get("C10") == 8);
+    CHECK(get("D0") == 1);
+}
+
 TEST_CASE("Enum initializer restrictions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -72,6 +106,12 @@ module m;
     enum logic [2:0] { F, G = 3'b111, H } e3;   // overflow
     enum logic [2:0] { I = 2, J = 1, K } e4;    // reuse of value
     enum logic [2:0] { L = 2, M = 2 } e5;       // reuse of value
+    enum logic [2:0] { } e6;                    // no members
+    enum logic [2:0] { N[-1] } e7;              // negative range
+    enum logic [2:0] { O[3:-2] } e8;            // negative range
+    enum logic [2:0] { P[3:2][2] } e9;          // multidimensional
+    enum logic [2:0] { Q[2] = 3'b111 } e10;     // overflow
+    enum logic [2:0] { R = 'x, S[1] } e11;      // incremented 'x not allowed
 endmodule
 )");
 
@@ -79,13 +119,19 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 10);
     // TODO: re-enable once implemented
-    //CHECK(diags[0].code == diag::EnumValueUnknownBits);
+    // CHECK(diags[0].code == diag::EnumValueUnknownBits);
     CHECK(diags[0].code == diag::EnumIncrementUnknown);
     CHECK(diags[1].code == diag::EnumValueOverflow);
     CHECK(diags[2].code == diag::EnumValueDuplicate);
     CHECK(diags[3].code == diag::EnumValueDuplicate);
+    CHECK(diags[4].code == diag::EnumNoMembers);
+    CHECK(diags[5].code == diag::ValueMustBePositive);
+    CHECK(diags[6].code == diag::ValueMustBePositive);
+    CHECK(diags[7].code == diag::EnumRangeMultiDimensional);
+    CHECK(diags[8].code == diag::EnumValueOverflow);
+    CHECK(diags[9].code == diag::EnumIncrementUnknown);
 }
 
 TEST_CASE("Enum value leakage") {
