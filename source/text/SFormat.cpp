@@ -328,7 +328,7 @@ static void formatRaw4(std::string& result, const ConstantValue& value) {
     auto writeEntry = [&result](uint32_t bits, uint32_t unknowns) {
         // The encoding for X and Z are reversed from how SVInt stores them.
         s_vpi_vecval entry;
-        entry.aval = (bits & ~unknowns) | (~bits & unknowns);
+        entry.aval = bits ^ unknowns;
         entry.bval = unknowns;
         result.append(reinterpret_cast<const char*>(&entry), sizeof(s_vpi_vecval));
     };
