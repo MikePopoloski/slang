@@ -229,9 +229,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::DuplicateImport);
 }
 
 TEST_CASE("Package references 2") {

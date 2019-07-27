@@ -394,6 +394,10 @@ private:
     // Reports an error for a name conflict between two symbols.
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
 
+    // Add a wildcard import to this scope.
+    void addWildcardImport(const PackageImportItemSyntax& item,
+                           span<const AttributeInstanceSyntax* const> attributes);
+
     // Gets the index of a new symbol inserted after the given symbol within this scope.
     Symbol::Index getInsertionIndex(const Symbol& at) const;
 

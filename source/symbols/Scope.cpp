@@ -197,13 +197,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             auto& importDecl = syntax.as<PackageImportDeclarationSyntax>();
             for (auto item : importDecl.items) {
                 if (item->item.kind == TokenKind::Star) {
-                    auto import = compilation.emplace<WildcardImportSymbol>(
-                        item->package.valueText(), item->item.location());
-
-                    import->setSyntax(*item);
-                    addMember(*import);
-                    compilation.trackImport(importDataIndex, *import);
-                    compilation.addAttributes(*import, importDecl.attributes);
+                    addWildcardImport(*item, importDecl.attributes);
                 }
                 else {
                     auto import = compilation.emplace<ExplicitImportSymbol>(
@@ -426,8 +420,10 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
     if (existing->kind == SymbolKind::ExplicitImport && member.kind == SymbolKind::ExplicitImport &&
         existing->as<ExplicitImportSymbol>().packageName ==
             member.as<ExplicitImportSymbol>().packageName) {
-        // Duplicate explicit imports are specifically allowed, so just ignore the other
-        // one.
+        // Duplicate explicit imports are specifically allowed,
+        // so just ignore the other one (with a warning).
+        auto& diag = addDiag(diag::DuplicateImport, member.location);
+        diag.addNote(diag::NotePreviousDefinition, existing->location);
         return;
     }
 
@@ -1361,6 +1357,28 @@ void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<Lookup
         diag << name;
         diag.addNote(diag::NoteDeclarationHere, symbol->location);
     }
+}
+
+void Scope::addWildcardImport(const PackageImportItemSyntax& item,
+                              span<const AttributeInstanceSyntax* const> attributes) {
+    // Check for redundant import statements.
+    for (auto import : compilation.queryImports(importDataIndex)) {
+        if (import->packageName == item.package.valueText()) {
+            if (!import->packageName.empty()) {
+                auto& diag = addDiag(diag::DuplicateImport, item.item.location());
+                diag.addNote(diag::NotePreviousDefinition, import->location);
+            }
+            return;
+        }
+    }
+
+    auto import =
+        compilation.emplace<WildcardImportSymbol>(item.package.valueText(), item.item.location());
+
+    import->setSyntax(item);
+    addMember(*import);
+    compilation.trackImport(importDataIndex, *import);
+    compilation.addAttributes(*import, attributes);
 }
 
 void Scope::DeferredMemberData::addMember(Symbol* symbol) {
