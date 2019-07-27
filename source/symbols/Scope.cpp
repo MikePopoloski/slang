@@ -947,11 +947,13 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
         }
 
         if (!symbol->isScope() || symbol->isType()) {
-            auto& diag =
-                result.addDiag(context.scope, diag::NotAHierarchicalScope, it->dotLocation);
-            diag << nameToken.valueText();
+            auto code = symbol->isType() ? diag::DotOnType : diag::NotAHierarchicalScope;
+            auto& diag = result.addDiag(context.scope, code, it->dotLocation);
             diag << nameToken.range();
             diag << it->name->sourceRange();
+
+            if (!symbol->isType())
+                diag << nameToken.valueText();
 
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
             return true;

@@ -906,7 +906,7 @@ source:69:18: error: could not resolve hierarchical path name 'bar'
 source:71:18: error: could not resolve hierarchical path name 'baz'
     wire f = func.baz;          // no upward lookup because of import
                  ^~~~
-source:72:20: error: 'type_t' is not a hierarchical scope name
+source:72:20: error: cannot use dot operator on a type
     wire g = type_t.a;          // can't dot into a typedef
              ~~~~~~^~
 source:59:39: note: declared here
