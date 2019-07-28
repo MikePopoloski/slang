@@ -22,7 +22,7 @@ struct SourceBuffer;
 struct LexerOptions {
     /// The maximum number of errors that can occur before the rest of the source
     /// buffer is skipped.
-    uint32_t maxErrors = 16;
+    uint32_t maxErrors = 64;
 };
 
 /// The Lexer is responsible for taking source text and chopping it up into tokens.

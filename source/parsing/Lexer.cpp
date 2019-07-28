@@ -167,9 +167,8 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
     onNewLine = false;
     info->rawText = lexeme();
 
-    if (kind != TokenKind::EndOfFile && diagnostics.size() > options.maxErrors) {
+    if (kind != TokenKind::EndOfFile && errorCount > options.maxErrors) {
         // Stop any further lexing by claiming to be at the end of the buffer.
-        // TODO: this check needs work
         addDiag(diag::TooManyLexerErrors, currentOffset());
         sourceBuffer = sourceEnd - 1;
         triviaBuffer.append(Trivia(TriviaKind::DisabledText, lexeme()));
