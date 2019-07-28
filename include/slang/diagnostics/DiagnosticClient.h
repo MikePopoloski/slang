@@ -14,6 +14,7 @@ namespace slang {
 
 class DiagnosticClient {
 public:
+    virtual ~DiagnosticClient() = default;
     virtual void report(const ReportedDiagnostic& diagnostic) = 0;
 
     void setEngine(const DiagnosticEngine& engine);

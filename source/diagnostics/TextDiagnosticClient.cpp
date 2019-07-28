@@ -17,7 +17,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
 
         // Show the stack in reverse. TODO: make this a reverse iterator
         for (int i = int(includeStack.size()) - 1; i >= 0; i--) {
-            SourceLocation loc = includeStack[i];
+            SourceLocation loc = includeStack[size_t(i)];
             buffer.format("in file included from {}:{}:\n", sourceManager->getFileName(loc),
                           sourceManager->getLineNumber(loc));
         }

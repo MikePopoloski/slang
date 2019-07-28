@@ -123,7 +123,7 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
     std::string message = formatMessage(diagnostic);
 
     ReportedDiagnostic report(diagnostic);
-    report.expansionLocs = make_span(expansionLocs).subspan(ignoreUntil);
+    report.expansionLocs = make_span(expansionLocs).subspan(ptrdiff_t(ignoreUntil));
     report.ranges = diagnostic.ranges;
     report.location = loc;
     report.severity = severity;
@@ -290,7 +290,7 @@ void DiagnosticEngine::mapSourceRanges(SourceLocation loc, span<const SourceRang
 std::string DiagnosticEngine::reportAll(const SourceManager& sourceManager,
                                         span<const Diagnostic> diags) {
     DiagnosticEngine engine(sourceManager);
-    
+
     auto client = std::make_shared<TextDiagnosticClient>();
     engine.addClient(client);
 
