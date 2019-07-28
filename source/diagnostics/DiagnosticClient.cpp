@@ -1,0 +1,63 @@
+//------------------------------------------------------------------------------
+// DiagnosticClient.cpp
+// Client interface for diagnostic rendering.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
+#include "slang/diagnostics/DiagnosticClient.h"
+
+#include "slang/text/SourceManager.h"
+
+namespace slang {
+
+void DiagnosticClient::setEngine(const DiagnosticEngine& newEngine) {
+    if (engine && engine != &newEngine)
+        throw std::runtime_error("Diagnostic client already has a different engine set");
+
+    engine = &newEngine;
+    sourceManager = &engine->getSourceManager();
+}
+
+void DiagnosticClient::getIncludeStack(BufferID buffer, SmallVector<SourceLocation>& stack) const {
+    stack.clear();
+    while (buffer) {
+        SourceLocation loc = sourceManager->getIncludedFrom(buffer);
+        if (!loc.buffer())
+            break;
+
+        stack.append(loc);
+        buffer = loc.buffer();
+    }
+}
+
+string_view DiagnosticClient::getSourceLine(SourceLocation location, uint32_t col) const {
+    string_view text = sourceManager->getSourceText(location.buffer());
+    if (text.empty())
+        return "";
+
+    const char* start = text.data() + location.offset() - (col - 1);
+    const char* curr = start;
+    while (*curr != '\n' && *curr != '\r' && *curr != '\0')
+        curr++;
+
+    return string_view(start, (uint32_t)(curr - start));
+}
+
+string_view DiagnosticClient::getSeverityString(DiagnosticSeverity severity) {
+    switch (severity) {
+        case DiagnosticSeverity::Ignored:
+            return "ignored";
+        case DiagnosticSeverity::Note:
+            return "note";
+        case DiagnosticSeverity::Warning:
+            return "warning";
+        case DiagnosticSeverity::Error:
+            return "error";
+        case DiagnosticSeverity::Fatal:
+            return "fatal error";
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
+} // namespace slang

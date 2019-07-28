@@ -10,7 +10,7 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
-#include "slang/diagnostics/DiagnosticWriter.h"
+#include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -27,7 +27,6 @@ void writeToFile(string_view fileName, string_view contents);
 bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
                      const std::vector<SourceBuffer>& buffers) {
     BumpAllocator alloc;
-    DiagnosticWriter writer(sourceManager);
 
     bool success = true;
     for (const SourceBuffer& buffer : buffers) {
@@ -46,7 +45,7 @@ bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
         if (diagnostics.empty())
             print("{}:\n", sourceManager.getRawFileName(buffer.id));
         else {
-            print("{}", writer.report(diagnostics));
+            print("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics));
             success = false;
         }
 
@@ -62,8 +61,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
         compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
 
     auto& diagnostics = compilation.getAllDiagnostics();
-    DiagnosticWriter writer(sourceManager);
-    print("{}", writer.report(diagnostics));
+    print("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics));
 
     if (!astJsonFile.empty()) {
         json output = compilation.getRoot();

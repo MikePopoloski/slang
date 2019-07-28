@@ -635,7 +635,7 @@ TEST_CASE("Macro arg location bug") {
     std::string result = preprocess(text);
     CHECK(result == expected);
 
-    result = "\n" + DiagnosticWriter(getSourceManager()).report(diagnostics);
+    result = "\n" + reportGlobalDiags();
     CHECK(result == R"(
 source:4:15: error: unknown macro or compiler directive '`bar'
    `FOO(      `bar      )   asdfasdfasdfasdfasdfasdfsadfasdfasdfasdfasdf

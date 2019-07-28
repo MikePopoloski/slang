@@ -90,7 +90,6 @@ def createsource(path, diags):
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "slang/diagnostics/DiagnosticWriter.h"
 #include "slang/diagnostics/AllDiags.h"
 
 #include <flat_hash_map.hpp>
@@ -118,13 +117,13 @@ string_view toString(DiagCode code) {
     return "<user-diag>"sv;
 }
 
-string_view getMessage(DiagCode code) {
+string_view getDefaultMessage(DiagCode code) {
     if (auto it = data.find(code); it != data.end())
         return std::get<1>(it->second);
     return ""sv;
 }
 
-DiagnosticSeverity getSeverity(DiagCode code) {
+DiagnosticSeverity getDefaultSeverity(DiagCode code) {
     if (auto it = data.find(code); it != data.end())
         return std::get<2>(it->second);
     return DiagnosticSeverity::Error;

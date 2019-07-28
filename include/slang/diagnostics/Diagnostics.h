@@ -34,6 +34,10 @@ enum class DiagSubsystem : uint16_t {
     ConstEval
 };
 
+/// The severity of a given diagnostic. This is not tied to the diagnostic itself;
+/// it can be configured on a per-diagnostic basis at runtime.
+enum class DiagnosticSeverity { Ignored, Note, Warning, Error, Fatal };
+
 class DiagCode {
 public:
     constexpr DiagCode(DiagSubsystem subsystem, uint16_t code) : subsystem(subsystem), code(code) {}

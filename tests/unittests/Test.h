@@ -12,8 +12,8 @@
 #include "slang/binding/Expressions.h"
 #include "slang/binding/Statements.h"
 #include "slang/compilation/Compilation.h"
-#include "slang/diagnostics/DiagnosticWriter.h"
 #include "slang/diagnostics/AllDiags.h"
+#include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -29,11 +29,11 @@ extern Diagnostics diagnostics;
 
 using namespace slang;
 
-#define CHECK_DIAGNOSTICS_EMPTY                                                   \
-    do {                                                                          \
-        diagnostics.sort(getSourceManager());                                     \
-        if (!diagnostics.empty())                                                 \
-            FAIL_CHECK(DiagnosticWriter(getSourceManager()).report(diagnostics)); \
+#define CHECK_DIAGNOSTICS_EMPTY               \
+    do {                                      \
+        diagnostics.sort(getSourceManager()); \
+        if (!diagnostics.empty())             \
+            FAIL_CHECK(reportGlobalDiags());  \
     } while (0)
 
 #define NO_COMPILATION_ERRORS                          \
@@ -51,13 +51,6 @@ using namespace slang;
             FAIL_CHECK(report(diags));         \
         }                                      \
     } while (0)
-
-inline std::string report(const Diagnostics& diags) {
-    if (diags.empty())
-        return "";
-
-    return DiagnosticWriter{ SyntaxTree::getDefaultSourceManager() }.report(diags);
-}
 
 inline std::string findTestDir() {
     auto path = fs::current_path();
@@ -89,8 +82,19 @@ inline bool withinUlp(double a, double b) {
     return std::abs(ia - ib) <= 1;
 }
 
+inline std::string report(const Diagnostics& diags) {
+    if (diags.empty())
+        return "";
+
+    return DiagnosticEngine::reportAll(SyntaxTree::getDefaultSourceManager(), diags);
+}
+
+inline std::string reportGlobalDiags() {
+    return DiagnosticEngine::reportAll(getSourceManager(), diagnostics);
+}
+
 inline std::string to_string(const Diagnostic& diag) {
-    return DiagnosticWriter(getSourceManager()).report(diag);
+    return DiagnosticEngine::reportAll(getSourceManager(), make_span(&diag, 1));
 }
 
 inline Token lexToken(string_view text) {

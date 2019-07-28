@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/ScriptSession.h"
 
-#include "slang/diagnostics/DiagnosticWriter.h"
-
 namespace slang {
 
 ScriptSession::ScriptSession() :

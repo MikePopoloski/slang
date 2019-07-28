@@ -41,8 +41,10 @@ add_library(slang
 	compilation/SemanticModel.cpp
 
 	${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
+	diagnostics/DiagnosticClient.cpp
+	diagnostics/DiagnosticEngine.cpp
 	diagnostics/Diagnostics.cpp
-	diagnostics/DiagnosticWriter.cpp
+	diagnostics/TextDiagnosticClient.cpp
 
 	numeric/SVInt.cpp
 	numeric/Time.cpp
