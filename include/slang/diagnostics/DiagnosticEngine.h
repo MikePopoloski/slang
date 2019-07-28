@@ -72,8 +72,16 @@ public:
 
     std::string formatMessage(const Diagnostic& diag) const;
 
+    /// A helper function that takes a set of source ranges and translates them
+    /// to be relevant to the given context location. For normal file ranges
+    /// this doesn't do anything, but ranges within macro expansions get adjusted
+    /// to their original expansion location in the same buffer as the context location.
+    ///
+    /// If @a mapOriginalLocations is set to true, the returned source ranges will
+    /// be specified in their original textual locations. Otherwise they will
+    /// remain as macro locations.
     void mapSourceRanges(SourceLocation loc, span<const SourceRange> ranges,
-                         SmallVector<SourceRange>& mapped) const;
+                         SmallVector<SourceRange>& mapped, bool mapOriginalLocations = true) const;
 
     static std::string reportAll(const SourceManager& sourceManager, span<const Diagnostic> diags);
 

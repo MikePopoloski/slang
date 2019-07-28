@@ -92,6 +92,8 @@ public:
         return charOffset < rhs.charOffset;
     }
 
+    bool operator>=(const SourceLocation& rhs) const { return !(*this < rhs); }
+
 private:
     BufferID bufferID;
     uint32_t charOffset;

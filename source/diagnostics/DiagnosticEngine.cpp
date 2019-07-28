@@ -70,25 +70,26 @@ void DiagnosticEngine::clearMappings() {
     messageTable.clear();
 }
 
+// Checks that all of the given ranges are in the same macro argument expansion as `loc`
 static bool checkMacroArgRanges(const DiagnosticEngine& engine, SourceLocation loc,
                                 span<const SourceRange> ranges) {
     const SourceManager& sm = engine.getSourceManager();
     if (!sm.isMacroArgLoc(loc))
         return false;
 
+    loc = sm.getExpansionLoc(loc);
+
     SmallVectorSized<SourceRange, 8> mappedRanges;
-    engine.mapSourceRanges(loc, ranges, mappedRanges);
+    engine.mapSourceRanges(loc, ranges, mappedRanges, false);
 
     if (ranges.size() > mappedRanges.size())
         return false;
 
-    loc = sm.getExpansionLoc(loc);
-
     for (auto& range : mappedRanges) {
-        if (!sm.isMacroArgLoc(range.start()) || !sm.isMacroArgLoc(range.end()))
-            return false;
+        ASSERT(range.start().buffer() == loc.buffer());
+        ASSERT(range.end().buffer() == loc.buffer());
 
-        if (sm.getExpansionLoc(range.start()) != loc || sm.getExpansionLoc(range.end()) != loc)
+        if (loc < range.start() || loc >= range.end())
             return false;
     }
 
@@ -183,6 +184,7 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
     return std::string(out.data(), out.size());
 }
 
+// Walks up a chain of macro argument expansions and collects their buffer IDs.
 static void getMacroArgExpansions(const SourceManager& sm, SourceLocation loc, bool isStart,
                                   SmallVector<BufferID>& results) {
     while (sm.isMacroLoc(loc)) {
@@ -197,6 +199,7 @@ static void getMacroArgExpansions(const SourceManager& sm, SourceLocation loc, b
     }
 }
 
+// Finds all macro argument expansions that are common in both start and end.
 static void getCommonMacroArgExpansions(const SourceManager& sm, SourceLocation start,
                                         SourceLocation end, std::vector<BufferID>& results) {
     SmallVectorSized<BufferID, 8> startArgExpansions;
@@ -211,6 +214,8 @@ static void getCommonMacroArgExpansions(const SourceManager& sm, SourceLocation 
                           std::back_inserter(results));
 }
 
+// Recursively tries to find an expansion location of `loc` that is in the
+// same buffer as `contextLoc`, taking into account macros and macro arguments.
 static SourceLocation getMatchingMacroLoc(const SourceManager& sm, SourceLocation loc,
                                           SourceLocation contextLoc, bool isStart,
                                           span<const BufferID> commonArgs) {
@@ -250,7 +255,8 @@ static SourceLocation getMatchingMacroLoc(const SourceManager& sm, SourceLocatio
 }
 
 void DiagnosticEngine::mapSourceRanges(SourceLocation loc, span<const SourceRange> ranges,
-                                       SmallVector<SourceRange>& mapped) const {
+                                       SmallVector<SourceRange>& mapped,
+                                       bool mapOriginalLocations) const {
     const SourceManager& sm = sourceManager;
 
     mapped.clear();
@@ -258,12 +264,16 @@ void DiagnosticEngine::mapSourceRanges(SourceLocation loc, span<const SourceRang
         SourceLocation start = range.start();
         SourceLocation end = range.end();
 
+        // Find a common parent for start and end. Start with `start` and
+        // walk upwards until we find `end`s buffer or run out of expansions.
         SmallMap<BufferID, SourceLocation, 8> startMap;
         while (sm.isMacroLoc(start) && start.buffer() != end.buffer()) {
             startMap[start.buffer()] = start;
             start = sm.getExpansionLoc(start);
         }
 
+        // If `end` wasn't in a direct parent of any of `start`s expansions,
+        // repeat the process walking up `end`s expansions.
         if (start.buffer() != end.buffer()) {
             while (sm.isMacroLoc(end) && !startMap.count(end.buffer()))
                 end = sm.getExpansionRange(end).end();
@@ -276,13 +286,18 @@ void DiagnosticEngine::mapSourceRanges(SourceLocation loc, span<const SourceRang
         std::vector<BufferID> commonArgs;
         getCommonMacroArgExpansions(sm, start, end, commonArgs);
 
+        // Backtrack on both start and end until we find a location common with
+        // the given context location.
         start = getMatchingMacroLoc(sm, start, loc, true, commonArgs);
         end = getMatchingMacroLoc(sm, end, loc, false, commonArgs);
         if (!start || !end)
             continue;
 
-        start = sm.getFullyOriginalLoc(start);
-        end = sm.getFullyOriginalLoc(end);
+        // We found common locations, return their actual textual locations.
+        if (mapOriginalLocations) {
+            start = sm.getFullyOriginalLoc(start);
+            end = sm.getFullyOriginalLoc(end);
+        }
         mapped.emplace(start, end);
     }
 }

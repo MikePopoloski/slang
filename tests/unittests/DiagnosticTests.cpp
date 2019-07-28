@@ -86,7 +86,6 @@ module m;
     struct { } asdf;
     int i = `BAR(asdf.bar);
 endmodule
-
 )",
                                      "source");
 
@@ -99,12 +98,6 @@ endmodule
 source:7:23: error: no member named 'bar' in '<unnamed unpacked struct>'
     int i = `BAR(asdf.bar);
                  ~~~~~^~~
-source:3:24: note: expanded from macro 'BAR'
-`define BAR(blah) `FOO(blah)
-                       ^~~~
-source:2:19: note: expanded from macro 'FOO'
-`define FOO(blah) blah
-                  ^~~~
 )");
 }
 
@@ -117,7 +110,6 @@ module m;
     struct { } asdf;
     int i = `BAR(asdf);
 endmodule
-
 )",
                                      "source");
 
@@ -148,7 +140,6 @@ module m;
     struct { } asdf;
     int i = `BAR(asdf);
 endmodule
-
 )",
                                      "source");
 
@@ -178,7 +169,6 @@ TEST_CASE("Diag caret within macro arg only") {
 module m;
     int i = `BAR(++);
 endmodule
-
 )",
                                      "source");
 
@@ -205,7 +195,6 @@ module m;
     struct { } bar;
     int i = `BAR(asdf, bar);
 endmodule
-
 )",
                                      "source");
 
@@ -237,7 +226,6 @@ module m;
     struct { } bar;
     int i = `BAR(asdf, bar);
 endmodule
-
 )",
                                      "source");
 
@@ -253,8 +241,59 @@ source:8:13: error: invalid operands to binary expression ('<unnamed unpacked st
 source:3:36: note: expanded from macro 'BAR'
 `define BAR(blah, flurb) `FOO(blah + flurb)
                               ~~~~ ^ ~~~~~
-source:2:18: note: expanded from macro 'FOO'
-`define FOO(abc) abc
-                 ^~~
+)");
+}
+
+TEST_CASE("Diag macro single range split across macros") {
+    auto tree = SyntaxTree::fromText(R"(
+`define FOO (i
+`define BAR 1)
+`define TOP `FOO + `BAR ()
+
+module m;
+    int i;
+    int j = `TOP;
+endmodule
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:8:13: error: expression is not callable
+    int j = `TOP;
+            ^~~~
+source:4:25: note: expanded from macro 'TOP'
+`define TOP `FOO + `BAR ()
+            ~~~~~~~~~~~ ^
+)");
+}
+
+TEST_CASE("Diag range within macro arg") {
+    auto tree = SyntaxTree::fromText(R"(
+`define PASS(asdf, barr) asdf barr
+
+module m;
+    int i;
+    int j = `PASS(i + 1, ());
+endmodule
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:6:26: error: expression is not callable
+    int j = `PASS(i + 1, ());
+                      ~  ^
+source:2:31: note: expanded from macro 'PASS'
+`define PASS(asdf, barr) asdf barr
+                         ~~~~ ^
 )");
 }
