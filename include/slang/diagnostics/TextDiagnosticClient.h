@@ -12,6 +12,8 @@ namespace slang {
 
 class TextDiagnosticClient : public DiagnosticClient {
 public:
+    TextDiagnosticClient() {}
+
     void report(const ReportedDiagnostic& diagnostic) override;
 
     void clear();
