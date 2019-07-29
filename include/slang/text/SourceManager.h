@@ -8,9 +8,9 @@
 
 #include <deque>
 #include <filesystem>
+#include <flat_hash_map.hpp>
 #include <memory>
 #include <set>
-#include <unordered_map>
 
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
@@ -222,6 +222,9 @@ private:
 
     // extra file data that came from programmatic buffers instead of a real file on disk
     std::deque<FileData> userFileBuffers;
+
+    // map to lookup user programmatic buffers
+    flat_hash_map<std::string, FileData*> userFileLookup;
 
     // directories for system and user includes
     std::vector<fs::path> systemDirectories;

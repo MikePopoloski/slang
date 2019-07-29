@@ -297,3 +297,36 @@ source:2:31: note: expanded from macro 'PASS'
                          ~~~~ ^
 )");
 }
+
+TEST_CASE("Diag include stack") {
+    auto& sm = SyntaxTree::getDefaultSourceManager();
+    sm.assignText("fake-include1.svh", R"(
+`include "fake-include2.svh"
+)");
+    sm.assignText("fake-include2.svh", R"(
+i + 1 ()
+)");
+
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    int j = 
+`include "fake-include1.svh"
+    ;
+endmodule
+)",
+"source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+in file included from source:5:
+in file included from fake-include1.svh:2:
+fake-include2.svh:2:7: error: expression is not callable
+i + 1 ()
+    ~ ^
+)");
+}

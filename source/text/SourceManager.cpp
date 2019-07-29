@@ -277,7 +277,10 @@ SourceBuffer SourceManager::assignText(string_view path, string_view text,
 SourceBuffer SourceManager::assignBuffer(string_view path, std::vector<char>&& buffer,
                                          SourceLocation includedFrom) {
     userFileBuffers.emplace_back(FileData(nullptr, std::string(path), std::move(buffer)));
-    return createBufferEntry(&userFileBuffers.back(), includedFrom);
+
+    FileData* fd = &userFileBuffers.back();
+    userFileLookup[std::string(path)] = fd;
+    return createBufferEntry(fd, includedFrom);
 }
 
 SourceBuffer SourceManager::readSource(string_view path) {
@@ -316,6 +319,11 @@ SourceBuffer SourceManager::readHeader(string_view path, SourceLocation included
         SourceBuffer result = openCached(d / p, includedFrom);
         if (result.id)
             return result;
+    }
+
+    // As a last resort, check for user specified in-memory buffers.
+    if (auto it = userFileLookup.find(std::string(path)); it != userFileLookup.end()) {
+        return createBufferEntry(it->second, includedFrom);
     }
 
     return SourceBuffer();
