@@ -126,7 +126,7 @@ string_view getDefaultMessage(DiagCode code) {
 DiagnosticSeverity getDefaultSeverity(DiagCode code) {
     if (auto it = data.find(code); it != data.end())
         return std::get<2>(it->second);
-    return DiagnosticSeverity::Error;
+    return DiagnosticSeverity::Ignored;
 }
 
 }

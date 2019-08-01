@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include "slang/diagnostics/DiagnosticClient.h"
+
 TEST_CASE("Diagnostic Line Number") {
     auto& text = "`include \"foofile\"\nident";
 
@@ -315,7 +317,7 @@ module m;
     ;
 endmodule
 )",
-"source");
+                                     "source");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -329,4 +331,99 @@ fake-include2.svh:2:7: error: expression is not callable
 i + 1 ()
     ~ ^
 )");
+}
+
+TEST_CASE("DiagnosticEngine stuff") {
+    class TestClient : public DiagnosticClient {
+    public:
+        int count = 0;
+        std::string lastMessage;
+        DiagnosticSeverity lastSeverity;
+
+        void report(const ReportedDiagnostic& diag) final {
+            count++;
+            lastMessage = diag.formattedMessage;
+            lastSeverity = diag.severity;
+        }
+    };
+
+    DiagnosticEngine engine(getSourceManager());
+    auto client = std::make_shared<TestClient>();
+    engine.addClient(client);
+
+    Diagnostic diag(diag::ExpectedClosingQuote, SourceLocation());
+    engine.issue(diag);
+
+    CHECK(client->count == 1);
+    CHECK(client->lastMessage == "missing closing quote");
+    CHECK(engine.getNumErrors() == 1);
+    CHECK(engine.getNumWarnings() == 0);
+
+    engine.setSeverity(diag::ExpectedClosingQuote, DiagnosticSeverity::Warning);
+    engine.issue(diag);
+
+    CHECK(client->count == 2);
+    CHECK(client->lastMessage == "missing closing quote");
+    CHECK(engine.getNumErrors() == 1);
+    CHECK(engine.getNumWarnings() == 1);
+
+    engine.setMessage(diag::ExpectedClosingQuote, "foobar");
+    engine.issue(diag);
+
+    CHECK(client->count == 3);
+    CHECK(client->lastMessage == "foobar");
+    CHECK(engine.getNumErrors() == 1);
+    CHECK(engine.getNumWarnings() == 2);
+    CHECK(engine.getMessage(diag::ExpectedClosingQuote) == "foobar");
+    
+    engine.clearMappings();
+    CHECK(engine.getMessage(diag::ExpectedClosingQuote) == "missing closing quote");
+    CHECK(engine.getSeverity(diag::ExpectedClosingQuote) == DiagnosticSeverity::Error);
+
+    engine.clearCounts();
+    CHECK(client->count == 3);
+    CHECK(engine.getNumErrors() == 0);
+    CHECK(engine.getNumWarnings() == 0);
+
+    engine.clearClients();
+    engine.issue(diag);
+    CHECK(client->count == 3);
+
+    engine.addClient(client);
+    engine.issue(diag);
+    CHECK(client->count == 4);
+
+    engine.setSeverity(diag::ExpectedClosingQuote, DiagnosticSeverity::Ignored);
+    engine.issue(diag);
+    CHECK(client->count == 4);
+
+    engine.setIgnoreAllNotes(true);
+    engine.setIgnoreAllWarnings(true);
+    engine.setWarningsAsErrors(true);
+    engine.setErrorsAsFatal(true);
+    engine.setFatalsAsErrors(true);
+
+    diag.code = diag::RealLiteralUnderflow;
+    engine.issue(diag);
+    CHECK(client->count == 4);
+
+    diag.code = diag::NoteImportedFrom;
+    engine.issue(diag);
+    CHECK(client->count == 4);
+
+    engine.setIgnoreAllWarnings(false);
+    diag.code = diag::RealLiteralUnderflow;
+    engine.issue(diag);
+    CHECK(client->count == 5);
+    CHECK(client->lastSeverity == DiagnosticSeverity::Error);
+
+    diag.code = diag::DotOnType;
+    engine.issue(diag);
+    CHECK(client->count == 6);
+    CHECK(client->lastSeverity == DiagnosticSeverity::Fatal);
+
+    engine.setErrorLimit(7);
+    for (int i = 0; i < 10; i++)
+        engine.issue(diag);
+    CHECK(client->count == 9); // includes 2 warnings
 }

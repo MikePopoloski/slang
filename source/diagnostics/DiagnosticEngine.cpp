@@ -52,7 +52,31 @@ void DiagnosticEngine::setSeverity(DiagCode code, DiagnosticSeverity severity) {
 DiagnosticSeverity DiagnosticEngine::getSeverity(DiagCode code) const {
     if (auto it = severityTable.find(code); it != severityTable.end())
         return it->second;
-    return getDefaultSeverity(code);
+
+    auto result = getDefaultSeverity(code);
+    switch (result) {
+        case DiagnosticSeverity::Ignored:
+            break;
+        case DiagnosticSeverity::Note:
+            if (ignoreAllNotes)
+                return DiagnosticSeverity::Ignored;
+            break;
+        case DiagnosticSeverity::Warning:
+            if (ignoreAllWarnings)
+                return DiagnosticSeverity::Ignored;
+            if (warningsAsErrors)
+                return DiagnosticSeverity::Error;
+            break;
+        case DiagnosticSeverity::Error:
+            if (errorsAsFatal)
+                return DiagnosticSeverity::Fatal;
+            break;
+        case DiagnosticSeverity::Fatal:
+            if (fatalsAsErrors)
+                return DiagnosticSeverity::Error;
+            break;
+    }
+    return result;
 }
 
 void DiagnosticEngine::setMessage(DiagCode code, const std::string& message) {
@@ -97,6 +121,24 @@ static bool checkMacroArgRanges(const DiagnosticEngine& engine, SourceLocation l
 }
 
 void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
+    DiagnosticSeverity severity = getSeverity(diagnostic.code);
+    switch (severity) {
+        case DiagnosticSeverity::Ignored:
+            return;
+        case DiagnosticSeverity::Note:
+            break;
+        case DiagnosticSeverity::Warning:
+            numWarnings++;
+            break;
+        case DiagnosticSeverity::Error:
+        case DiagnosticSeverity::Fatal:
+            if (errorLimit && numErrors >= errorLimit)
+                return;
+
+            numErrors++;
+            break;
+    }
+
     // Walk out until we find a location for this diagnostic that isn't inside a macro.
     SmallVectorSized<SourceLocation, 8> expansionLocs;
     SourceLocation loc = diagnostic.location;
@@ -120,7 +162,6 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
     // Keep track of whether we should show the include stack for this diagnostic.
     bool showIncludeStack = reportedIncludeStack.emplace(loc.buffer()).second;
 
-    DiagnosticSeverity severity = getSeverity(diagnostic.code);
     std::string message = formatMessage(diagnostic);
 
     ReportedDiagnostic report(diagnostic);
