@@ -20,6 +20,7 @@ class Symbol;
 class Type;
 
 enum class DiagSubsystem : uint16_t {
+    Invalid,
     General,
     Lexer,
     Numeric,
@@ -40,10 +41,15 @@ enum class DiagnosticSeverity { Ignored, Note, Warning, Error, Fatal };
 
 class DiagCode {
 public:
+    constexpr DiagCode() : subsystem(DiagSubsystem::Invalid), code(0) {}
     constexpr DiagCode(DiagSubsystem subsystem, uint16_t code) : subsystem(subsystem), code(code) {}
 
     constexpr DiagSubsystem getSubsystem() const { return subsystem; }
     constexpr uint16_t getCode() const { return code; }
+
+    constexpr bool valid() const { return subsystem != DiagSubsystem::Invalid; }
+
+    constexpr explicit operator bool() const { return valid(); }
 
     constexpr bool operator==(DiagCode other) const {
         return subsystem == other.subsystem && code == other.code;

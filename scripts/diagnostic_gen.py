@@ -96,14 +96,24 @@ def createsource(path, diags):
 
 namespace slang {
 
-static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, DiagnosticSeverity>> data = {
+static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, DiagnosticSeverity, string_view>> data = {
 '''
 
     for k,v in sorted(diags.items()):
         for d in v:
-            output += '    {{diag::{}, std::make_tuple("{}"sv, "{}"sv, DiagnosticSeverity::{})}},\n'.format(
-                       d[1], d[1], d[2], d[0])
+            output += '    {{diag::{}, std::make_tuple("{}"sv, "{}"sv, DiagnosticSeverity::{}, "{}"sv)}},\n'.format(
+                       d[1], d[1], d[2], d[0], d[3] if len(d) > 2 else '')
 
+    output += '''};
+
+static const flat_hash_map<string_view, DiagCode> optionMap = {
+'''
+
+    for k,v in sorted(diags.items()):
+        for d in v:
+            if len(d) < 3:
+                continue
+            output += '    {{"{}"sv, diag::{}}},\n'.format(d[3], d[1])
     output += '''};
 
 std::ostream& operator<<(std::ostream& os, DiagCode code) {
@@ -127,6 +137,18 @@ DiagnosticSeverity getDefaultSeverity(DiagCode code) {
     if (auto it = data.find(code); it != data.end())
         return std::get<2>(it->second);
     return DiagnosticSeverity::Ignored;
+}
+
+string_view getDefaultOptionName(DiagCode code) {
+    if (auto it = data.find(code); it != data.end())
+        return std::get<3>(it->second);
+    return ""sv;
+}
+
+DiagCode findDiagFromOptionName(string_view name) {
+    if (auto it = optionMap.find(name); it != optionMap.end())
+        return it->second;
+    return DiagCode();
 }
 
 }

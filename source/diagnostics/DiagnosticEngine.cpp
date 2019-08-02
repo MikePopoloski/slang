@@ -18,6 +18,8 @@ namespace slang {
 // These are defined in the generated DiagCode.cpp file.
 string_view getDefaultMessage(DiagCode code);
 DiagnosticSeverity getDefaultSeverity(DiagCode code);
+string_view getDefaultOptionName(DiagCode code);
+DiagCode findDiagFromOptionName(string_view name);
 
 DiagnosticEngine::DiagnosticEngine(const SourceManager& sourceManager) :
     sourceManager(sourceManager) {
@@ -87,6 +89,14 @@ string_view DiagnosticEngine::getMessage(DiagCode code) const {
     if (auto it = messageTable.find(code); it != messageTable.end())
         return it->second;
     return getDefaultMessage(code);
+}
+
+string_view DiagnosticEngine::getOptionName(DiagCode code) const {
+    return getDefaultOptionName(code);
+}
+
+DiagCode DiagnosticEngine::findFromOptionName(string_view optionName) const {
+    return findDiagFromOptionName(optionName);
 }
 
 void DiagnosticEngine::clearMappings() {

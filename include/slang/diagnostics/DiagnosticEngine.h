@@ -122,6 +122,14 @@ public:
     /// Gets the message currently mapped for the given diagnostic.
     string_view getMessage(DiagCode code) const;
 
+    /// Gets the option string that can be used to refer to a particular diagnostic.
+    /// If the diagnostic has no option string provided, this returns an empty string.
+    string_view getOptionName(DiagCode code) const;
+
+    /// Finds a diagnostic given an option name. If no matching diagnostic is found,
+    /// returns an empty diagnostic code.
+    DiagCode findFromOptionName(string_view optionName) const;
+
     /// Returns true if the given diagnostic has a custom severity mapping specified
     /// by a previous call to setSeverity(). Otherwise returns false.
     bool hasCustomSeverity(DiagCode code) const;
