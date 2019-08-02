@@ -300,6 +300,32 @@ source:2:31: note: expanded from macro 'PASS'
 )");
 }
 
+TEST_CASE("Multiple ranges split between macro and not") {
+    auto tree = SyntaxTree::fromText(R"(
+`define PASS(asdf) asdf
+
+module m;
+    bit b;
+    int j = (b) `PASS([1]);
+endmodule
+)",
+"source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:6:24: error: scalar type cannot be indexed
+    int j = (b) `PASS([1]);
+             ~         ^
+source:2:20: note: expanded from macro 'PASS'
+`define PASS(asdf) asdf
+                   ^~~~
+)");
+}
+
 TEST_CASE("Diag include stack") {
     auto& sm = SyntaxTree::getDefaultSourceManager();
     sm.assignText("fake-include1.svh", R"(
