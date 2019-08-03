@@ -11,6 +11,7 @@
 
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -60,15 +61,27 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
     for (const SourceBuffer& buffer : buffers)
         compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
 
-    auto& diagnostics = compilation.getAllDiagnostics();
-    print("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics));
+    DiagnosticEngine diagEngine(sourceManager);
+    diagEngine.setIgnoreAllWarnings(true);
+
+    auto client = std::make_shared<TextDiagnosticClient>();
+    diagEngine.addClient(client);
+
+    auto group = diagEngine.findDiagGroup("default"sv);
+    ASSERT(group);
+    diagEngine.setSeverity(*group, DiagnosticSeverity::Warning);
+
+    for (auto& diag : compilation.getAllDiagnostics())
+        diagEngine.issue(diag);
+
+    print("{}", client->getString());
 
     if (!astJsonFile.empty()) {
         json output = compilation.getRoot();
         writeToFile(astJsonFile, output.dump(2));
     }
 
-    return diagnostics.empty();
+    return diagEngine.getNumErrors() == 0;
 }
 
 int driverMain(int argc, char** argv) try {
