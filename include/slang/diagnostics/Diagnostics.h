@@ -143,6 +143,19 @@ public:
     void sort(const SourceManager& sourceManager);
 };
 
+class DiagGroup {
+public:
+    explicit DiagGroup(const std::string& name, const std::vector<DiagCode>& diags) :
+        name(name), diags(diags) {}
+
+    string_view getName() const { return name; }
+    span<const DiagCode> getDiags() const { return diags; }
+
+private:
+    std::string name;
+    std::vector<DiagCode> diags;
+};
+
 } // namespace slang
 
 namespace std {

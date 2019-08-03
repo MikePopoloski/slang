@@ -282,3 +282,11 @@ note NoteNoCaseItemsMatched "no items in {} case statement matched value {}"
 note NoteCaseItemsNotUnique "more than one match found in unique case statement for value {}"
 note NoteTimedStmtNotConst "constant functions cannot schedule events"
 note NoteAssertionFailed "assertion failed"
+
+
+// Following are groups of diagnostics, to make it easy to control them from the command line.
+// The default group is the set of warnings that are enabled by default.
+
+group default = { real-underflow real-overflow literal-overflow ignored-macro-paste case-gen-dup
+				  case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
+				  dup-import }

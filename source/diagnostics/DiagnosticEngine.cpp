@@ -20,6 +20,7 @@ string_view getDefaultMessage(DiagCode code);
 DiagnosticSeverity getDefaultSeverity(DiagCode code);
 string_view getDefaultOptionName(DiagCode code);
 DiagCode findDiagFromOptionName(string_view name);
+const DiagGroup* findDefaultDiagGroup(string_view name);
 
 DiagnosticEngine::DiagnosticEngine(const SourceManager& sourceManager) :
     sourceManager(sourceManager) {
@@ -49,6 +50,11 @@ void DiagnosticEngine::clearCounts() {
 
 void DiagnosticEngine::setSeverity(DiagCode code, DiagnosticSeverity severity) {
     severityTable[code] = severity;
+}
+
+void DiagnosticEngine::setSeverity(const DiagGroup& group, DiagnosticSeverity severity) {
+    for (auto diag : group.getDiags())
+        setSeverity(diag, severity);
 }
 
 DiagnosticSeverity DiagnosticEngine::getSeverity(DiagCode code) const {
@@ -97,6 +103,10 @@ string_view DiagnosticEngine::getOptionName(DiagCode code) const {
 
 DiagCode DiagnosticEngine::findFromOptionName(string_view optionName) const {
     return findDiagFromOptionName(optionName);
+}
+
+const DiagGroup* DiagnosticEngine::findDiagGroup(string_view name) const {
+    return findDefaultDiagGroup(name);
 }
 
 void DiagnosticEngine::clearMappings() {

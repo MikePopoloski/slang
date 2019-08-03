@@ -30,17 +30,35 @@ def main():
         pass
 
     diags = {}
+    groups = []
     subsystem = 'General'
+    curgroup = None
+
+    def parsegroup(elems):
+        nonlocal curgroup
+        for e in elems:
+            if e == '}':
+                groups.append(curgroup)
+                curgroup = None
+                break
+            curgroup[1].append(e)
 
     for line in [x.strip('\n') for x in inf]:
         if not line or line.startswith('//'):
             continue
 
         parts = shlex.split(line)
-        if parts[0] == 'subsystem':
+        if curgroup:
+            parsegroup(parts)
+        elif parts[0] == 'subsystem':
             subsystem = parts[1]
             if subsystem not in diags:
                 diags[subsystem] = []
+        elif parts[0] == 'group':
+            curgroup = (parts[1], [])
+            assert(parts[2] == '=')
+            assert(parts[3] == '{')
+            parsegroup(parts[4:])
         else:
             sev = parts[0]
             if sev == 'warning':
@@ -55,7 +73,7 @@ def main():
     for k,v in sorted(diags.items()):
         createheader(os.path.join(headerdir, k + "Diags.h"), k, v)
 
-    createsource(os.path.join(args.dir, "DiagCode.cpp"), diags)
+    createsource(os.path.join(args.dir, "DiagCode.cpp"), diags, groups)
     createallheader(os.path.join(headerdir, "AllDiags.h"), diags)
 
 def createheader(path, subsys, diags):
@@ -83,7 +101,7 @@ namespace slang::diag {{
 '''
     writefile(path, output)
 
-def createsource(path, diags):
+def createsource(path, diags, groups):
     output = '''//------------------------------------------------------------------------------
 // DiagCode.cpp
 // Generated diagnostic helpers.
@@ -109,11 +127,22 @@ static const flat_hash_map<DiagCode, std::tuple<string_view, string_view, Diagno
 static const flat_hash_map<string_view, DiagCode> optionMap = {
 '''
 
+    optionMap = {}
     for k,v in sorted(diags.items()):
         for d in v:
-            if len(d) < 3:
+            if not d[3]:
                 continue
             output += '    {{"{}"sv, diag::{}}},\n'.format(d[3], d[1])
+            optionMap[d[3]] = d[1]
+    output += '''};
+
+static const flat_hash_map<string_view, DiagGroup> groupMap = {
+'''
+
+    for g in sorted(groups):
+        elems = ', '.join('diag::{}'.format(optionMap[e]) for e in g[1])
+        output += '    {{"{}"sv, DiagGroup("{}", {{ {} }})}},\n'.format(g[0], g[0], elems)
+
     output += '''};
 
 std::ostream& operator<<(std::ostream& os, DiagCode code) {
@@ -149,6 +178,12 @@ DiagCode findDiagFromOptionName(string_view name) {
     if (auto it = optionMap.find(name); it != optionMap.end())
         return it->second;
     return DiagCode();
+}
+
+const DiagGroup* findDefaultDiagGroup(string_view name) {
+    if (auto it = groupMap.find(name); it != groupMap.end())
+        return &it->second;
+    return nullptr;
 }
 
 }

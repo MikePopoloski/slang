@@ -111,6 +111,9 @@ public:
     /// be used to define a new user-specified diagnostic.
     void setSeverity(DiagCode code, DiagnosticSeverity severity);
 
+    /// Sets the severity for all of diagnostics in the given group.
+    void setSeverity(const DiagGroup& group, DiagnosticSeverity severity);
+
     /// Gets the severity currently mapped for the given diagnostic.
     DiagnosticSeverity getSeverity(DiagCode code) const;
 
@@ -129,6 +132,9 @@ public:
     /// Finds a diagnostic given an option name. If no matching diagnostic is found,
     /// returns an empty diagnostic code.
     DiagCode findFromOptionName(string_view optionName) const;
+
+    /// Finds the diagnostic group with the given name, if it exists. Otherwise returns nullptr.
+    const DiagGroup* findDiagGroup(string_view name) const;
 
     /// Returns true if the given diagnostic has a custom severity mapping specified
     /// by a previous call to setSeverity(). Otherwise returns false.
