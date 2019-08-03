@@ -430,7 +430,7 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:7:17: warning: vector literal too large for the given number of bits
+source:7:17: warning: vector literal too large for the given number of bits [-Wliteral-overflow]
     int i = 35'd123498234978234;
                 ^
 source:8:13: error: size of vector literal cannot be zero
@@ -460,7 +460,7 @@ source:19:16: error: expected decimal digit
 source:20:16: error: expected hexadecimal digit
     int v = 'h g;
                ^
-source:21:17: warning: vector literal too large for the given number of bits
+source:21:17: warning: vector literal too large for the given number of bits [-Wliteral-overflow]
     int w = 3'h f;
                 ^
 source:22:15: error: expected vector literal digits
@@ -484,10 +484,10 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:3:14: warning: value of real literal is too large; maximum is 1.79769e+308
+source:3:14: warning: value of real literal is too large; maximum is 1.79769e+308 [-Wreal-overflow]
     real a = 9999e99999;
              ^
-source:4:14: warning: value of real literal is too small; minimum is 4.94066e-324
+source:4:14: warning: value of real literal is too small; minimum is 4.94066e-324 [-Wreal-underflow]
     real b = 9999e-99999;
              ^
 )");

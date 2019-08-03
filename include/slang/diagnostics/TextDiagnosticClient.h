@@ -23,7 +23,7 @@ private:
     FormatBuffer buffer;
 
     void formatDiag(SourceLocation loc, span<const SourceRange> ranges, string_view severity,
-                    string_view message);
+                    string_view message, string_view optionName);
 };
 
 } // namespace slang

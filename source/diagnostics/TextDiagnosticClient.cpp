@@ -28,8 +28,8 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     engine->mapSourceRanges(diag.location, diag.ranges, mappedRanges);
 
     // Write the diagnostic.
-    formatDiag(diag.location, mappedRanges, getSeverityString(diag.severity),
-               diag.formattedMessage);
+    formatDiag(diag.location, mappedRanges, getSeverityString(diag.severity), diag.formattedMessage,
+               engine->getOptionName(diag.originalDiagnostic.code));
 
     // Write out macro expansions, if we have any, in reverse order.
     for (auto it = diag.expansionLocs.rbegin(); it != diag.expansionLocs.rend(); it++) {
@@ -42,7 +42,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
 
         SmallVectorSized<SourceRange, 8> macroRanges;
         engine->mapSourceRanges(loc, diag.ranges, macroRanges);
-        formatDiag(sourceManager->getFullyOriginalLoc(loc), macroRanges, "note"sv, name);
+        formatDiag(sourceManager->getFullyOriginalLoc(loc), macroRanges, "note"sv, name, "");
     }
 }
 
@@ -89,10 +89,14 @@ static void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t 
 }
 
 void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange> ranges,
-                                      string_view severity, string_view message) {
+                                      string_view severity, string_view message,
+                                      string_view optionName) {
     uint32_t col = sourceManager->getColumnNumber(loc);
     buffer.format("{}:{}:{}: {}: {}", sourceManager->getFileName(loc),
                   sourceManager->getLineNumber(loc), col, severity, message);
+
+    if (!optionName.empty())
+        buffer.format(" [-W{}]", optionName);
 
     string_view line = getSourceLine(loc, col);
     if (!line.empty()) {
