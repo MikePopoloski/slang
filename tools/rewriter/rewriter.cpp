@@ -12,6 +12,8 @@
 #    include <io.h>
 #endif
 
+#include <filesystem>
+
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 
@@ -27,6 +29,16 @@ int main(int argc, char** argv) try {
 #if defined(_WIN32)
     _setmode(_fileno(stdout), _O_BINARY);
 #endif
+
+    if (!std::filesystem::exists(argv[1])) {
+        fprintf(stderr, "File does not exist: %s\n", argv[1]);
+        return 1;
+    }
+
+    if (!std::filesystem::is_regular_file(argv[1])) {
+        fprintf(stderr, "%s is not a file\n", argv[1]);
+        return 1;
+    }
 
     auto tree = SyntaxTree::fromFile(argv[1]);
     printf("%s", SyntaxPrinter::printFile(*tree).c_str());
