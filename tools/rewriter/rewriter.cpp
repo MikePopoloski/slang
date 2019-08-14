@@ -21,7 +21,7 @@ using namespace slang;
 
 int main(int argc, char** argv) try {
     if (argc != 2) {
-        fprintf(stderr, "usage: rewriter file");
+        fprintf(stderr, "usage: rewriter file\n");
         return 1;
     }
 
