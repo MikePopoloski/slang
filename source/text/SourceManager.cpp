@@ -432,7 +432,7 @@ bool SourceManager::readFile(const fs::path& path, std::vector<char>& buffer) {
         return false;
 
     // + 1 for null terminator
-    buffer.resize((uint32_t)size + 1);
+    buffer.resize((size_t)size + 1);
     std::ifstream stream(path, std::ios::binary);
     if (!stream.read(buffer.data(), (std::streamsize)size))
         return false;
