@@ -1073,61 +1073,11 @@ void Lexer::scanBlockComment() {
     addTrivia(TriviaKind::BlockComment);
 }
 
-Token::Info* Lexer::create() {
-    auto info = alloc.emplace<Token::Info>();
-    info->location = SourceLocation(bufferId, uint32_t(marker - originalBegin));
-    info->rawText = lexeme();
-    info->trivia = triviaBuffer.copy(alloc);
-    return info;
-}
-
-Token Lexer::create(TokenKind kind) {
-    auto info = create();
-    return Token(kind, info);
-}
-
-Token Lexer::create(TokenKind kind, string_view strText) {
-    auto info = create();
-    info->extra = strText;
-    return Token(kind, info);
-}
-
-Token Lexer::create(TokenKind kind, IdentifierType idType) {
-    auto info = create();
-    info->extra = idType;
-    return Token(kind, info);
-}
-
-Token Lexer::create(TokenKind kind, SyntaxKind directive) {
-    auto info = create();
-    info->extra = directive;
-    return Token(kind, info);
-}
-
-Token Lexer::create(TokenKind kind, logic_t bit) {
-    auto info = create();
-    info->setBit(bit);
-    return Token(kind, info);
-}
-
-Token Lexer::create(TokenKind kind, const SVInt& value) {
-    auto info = create();
-    info->setInt(alloc, value);
-    return Token(kind, info);
-}
-
-Token Lexer::create(TokenKind kind, double value, bool outOfRange, optional<TimeUnit> timeUnit) {
-    auto info = create();
-    info->setReal(value, outOfRange);
-    if (timeUnit)
-        info->setTimeUnit(*timeUnit);
-    return Token(kind, info);
-}
-
-Token Lexer::create(TokenKind kind, LiteralBase base, bool isSigned) {
-    auto info = create();
-    info->setNumFlags(base, isSigned);
-    return Token(kind, info);
+template<typename... Args>
+Token Lexer::create(TokenKind kind, Args&&... args) {
+    SourceLocation location(bufferId, uint32_t(marker - originalBegin));
+    return Token::create(alloc, kind, triviaBuffer.copy(alloc), lexeme(), location,
+                         std::forward<Args>(args)...);
 }
 
 void Lexer::addTrivia(TriviaKind kind) {

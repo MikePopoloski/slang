@@ -301,6 +301,73 @@ Token Token::clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view 
     return Token(kind, newInfo);
 }
 
+Token::Info* Token::createInfo(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
+                               SourceLocation location) {
+    auto info = alloc.emplace<Info>();
+    info->location = location;
+    info->rawText = rawText;
+    info->trivia = trivia;
+    return info;
+}
+
+Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                    string_view rawText, SourceLocation location) {
+    auto info = createInfo(alloc, trivia, rawText, location);
+    return Token(kind, info);
+}
+
+Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                    string_view rawText, SourceLocation location, string_view strText) {
+    auto info = createInfo(alloc, trivia, rawText, location);
+    info->extra = strText;
+    return Token(kind, info);
+}
+
+Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                    string_view rawText, SourceLocation location, IdentifierType idType) {
+    auto info = createInfo(alloc, trivia, rawText, location);
+    info->extra = idType;
+    return Token(kind, info);
+}
+
+Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                    string_view rawText, SourceLocation location, SyntaxKind directive) {
+    auto info = createInfo(alloc, trivia, rawText, location);
+    info->extra = directive;
+    return Token(kind, info);
+}
+
+Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                    string_view rawText, SourceLocation location, logic_t bit) {
+    auto info = createInfo(alloc, trivia, rawText, location);
+    info->setBit(bit);
+    return Token(kind, info);
+}
+
+Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                    string_view rawText, SourceLocation location, const SVInt& value) {
+    auto info = createInfo(alloc, trivia, rawText, location);
+    info->setInt(alloc, value);
+    return Token(kind, info);
+}
+
+Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                    string_view rawText, SourceLocation location, double value, bool outOfRange,
+                    optional<TimeUnit> timeUnit) {
+    auto info = createInfo(alloc, trivia, rawText, location);
+    info->setReal(value, outOfRange);
+    if (timeUnit)
+        info->setTimeUnit(*timeUnit);
+    return Token(kind, info);
+}
+
+Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                    string_view rawText, SourceLocation location, LiteralBase base, bool isSigned) {
+    auto info = createInfo(alloc, trivia, rawText, location);
+    info->setNumFlags(base, isSigned);
+    return Token(kind, info);
+}
+
 Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location) {
     auto info = alloc.emplace<Info>();
     info->location = location;

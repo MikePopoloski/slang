@@ -218,12 +218,34 @@ public:
     [[nodiscard]] Token clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
                               SourceLocation location) const;
 
+    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                        string_view rawText, SourceLocation location);
+    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                        string_view rawText, SourceLocation location, string_view strText);
+    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                        string_view rawText, SourceLocation location, IdentifierType idType);
+    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                        string_view rawText, SourceLocation location, SyntaxKind directive);
+    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                        string_view rawText, SourceLocation location, logic_t bit);
+    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                        string_view rawText, SourceLocation location, const SVInt& value);
+    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                        string_view rawText, SourceLocation location, double value, bool outOfRange,
+                        optional<TimeUnit> timeUnit);
+    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
+                        string_view rawText, SourceLocation location, LiteralBase base,
+                        bool isSigned);
+
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
     static Token createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual,
                                 TokenKind expected, Token lastConsumed);
 
 private:
     const Info* info;
+
+    static Token::Info* createInfo(BumpAllocator& alloc, span<Trivia const> trivia,
+                                   string_view rawText, SourceLocation location);
 };
 
 static_assert(sizeof(Token) == 16);

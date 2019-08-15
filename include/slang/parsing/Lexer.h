@@ -82,15 +82,8 @@ private:
     void scanWhitespace();
     void scanIdentifier();
 
-    Token::Info* create();
-    Token create(TokenKind kind);
-    Token create(TokenKind kind, string_view strText);
-    Token create(TokenKind kind, IdentifierType idType);
-    Token create(TokenKind kind, SyntaxKind directive);
-    Token create(TokenKind kind, logic_t bit);
-    Token create(TokenKind kind, const SVInt& value);
-    Token create(TokenKind kind, double value, bool outOfRange, optional<TimeUnit> timeUnit);
-    Token create(TokenKind kind, LiteralBase base, bool isSigned);
+    template<typename... Args>
+    Token create(TokenKind kind, Args&&... args);
 
     void addTrivia(TriviaKind kind);
     Diagnostic& addDiag(DiagCode code, uint32_t offset);
