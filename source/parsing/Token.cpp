@@ -101,12 +101,6 @@ span<Token const> Trivia::getSkippedTokens() const {
     return { tokens.ptr, tokens.len };
 }
 
-Token::Info::Info(span<Trivia const> trivia, string_view rawText, SourceLocation location,
-                  bitmask<TokenFlags> flags) :
-    trivia(trivia),
-    rawText(rawText), location(location), flags(flags) {
-}
-
 void Token::Info::setBit(logic_t value) {
     NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);
     if (target)
@@ -130,6 +124,8 @@ void Token::Info::setReal(double value, bool outOfRange) {
 }
 
 void Token::Info::setInt(BumpAllocator& alloc, const SVInt& value) {
+    static_assert(sizeof(Token::Info) == 80);
+
     SVIntStorage storage(value.getBitWidth(), value.isSigned(), value.hasUnknown());
     if (value.isSingleWord())
         storage.val = *value.getRawPtr();
@@ -171,10 +167,12 @@ void Token::Info::setTimeUnit(TimeUnit unit) {
     }
 }
 
-Token::Token() : kind(TokenKind::Unknown), info(nullptr) {
+Token::Token() :
+    kind(TokenKind::Unknown), missing(false), hasTrivia(false), reserved(false), info(nullptr) {
 }
 
-Token::Token(TokenKind kind, const Info* info) : kind(kind), info(info) {
+Token::Token(TokenKind kind, const Info* info) :
+    kind(kind), missing(false), hasTrivia(false), reserved(false), info(info) {
     ASSERT(info);
 }
 
@@ -275,21 +273,15 @@ SyntaxKind Token::directiveKind() const {
 }
 
 Token Token::withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const {
-    auto newInfo = alloc.emplace<Info>(*info);
-    newInfo->trivia = trivia;
-    return Token(kind, newInfo);
+    return clone(alloc, trivia, rawText(), location());
 }
 
 Token Token::withLocation(BumpAllocator& alloc, SourceLocation location) const {
-    auto newInfo = alloc.emplace<Info>(*info);
-    newInfo->location = location;
-    return Token(kind, newInfo);
+    return clone(alloc, trivia(), rawText(), location);
 }
 
 Token Token::withRawText(BumpAllocator& alloc, string_view rawText) const {
-    auto newInfo = alloc.emplace<Info>(*info);
-    newInfo->rawText = rawText;
-    return Token(kind, newInfo);
+    return clone(alloc, trivia(), rawText, location());
 }
 
 Token Token::clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
@@ -298,7 +290,10 @@ Token Token::clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view 
     newInfo->location = location;
     newInfo->trivia = trivia;
     newInfo->rawText = rawText;
-    return Token(kind, newInfo);
+    
+    Token result(kind, newInfo);
+    result.missing = missing;
+    return result;
 }
 
 Token::Info* Token::createInfo(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
@@ -369,42 +364,41 @@ Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> tri
 }
 
 Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location) {
-    auto info = alloc.emplace<Info>();
-    info->location = location;
-    info->flags = TokenFlags::Missing;
-
+    Token result;
     switch (kind) {
         case TokenKind::Identifier:
-            info->extra = IdentifierType::Unknown;
+            result = create(alloc, kind, {}, "", location, IdentifierType::Unknown);
             break;
         case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
-            info->extra = string_view("");
+            result = create(alloc, kind, {}, "", location, "");
             break;
         case TokenKind::Directive:
         case TokenKind::MacroUsage:
-            info->extra = SyntaxKind::Unknown;
+            result = create(alloc, kind, {}, "", location, SyntaxKind::Unknown);
             break;
         case TokenKind::IntegerLiteral:
-            info->setInt(alloc, 0);
+            result = create(alloc, kind, {}, "", location, SVInt::Zero);
             break;
         case TokenKind::IntegerBase:
-            info->setNumFlags(LiteralBase::Decimal, false);
+            result = create(alloc, kind, {}, "", location, LiteralBase::Decimal, false);
             break;
         case TokenKind::UnbasedUnsizedLiteral:
-            info->setBit(logic_t::x);
+            result = create(alloc, kind, {}, "", location, logic_t::x);
             break;
         case TokenKind::RealLiteral:
-            info->setReal(0.0, false);
+            result = create(alloc, kind, {}, "", location, 0.0, false, std::nullopt);
             break;
         case TokenKind::TimeLiteral:
-            info->setTimeUnit(TimeUnit::Seconds);
+            result = create(alloc, kind, {}, "", location, 0.0, false, TimeUnit::Seconds);
             break;
         default:
+            result = create(alloc, kind, {}, "", location);
             break;
     }
 
-    return Token(kind, info);
+    result.missing = true;
+    return result;
 }
 
 Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual,

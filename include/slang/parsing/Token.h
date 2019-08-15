@@ -22,10 +22,6 @@ class Diagnostics;
 class SyntaxNode;
 class Token;
 
-/// Various flags that we track on the token.
-enum class TokenFlags : uint8_t { None = 0, Missing = 1 };
-BITMASK_DEFINE_MAX_ELEMENT(TokenFlags, Missing);
-
 /// Various flags for numeric tokens.
 struct NumericTokenFlags {
     uint8_t raw = 0;
@@ -152,12 +148,7 @@ class Token {
         /// NumericLiteralInfo: Info for numeric tokens.
         std::variant<string_view, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
 
-        /// Various token flags.
-        bitmask<TokenFlags> flags;
-
         Info() = default;
-        Info(span<Trivia const> trivia, string_view rawText, SourceLocation location,
-             bitmask<TokenFlags> flags = TokenFlags::None);
 
         void setBit(logic_t value);
         void setReal(double value, bool outOfRange);
@@ -179,7 +170,7 @@ public:
     Token();
 
     /// A missing token was expected and inserted by the parser at a given point.
-    bool isMissing() const { return (info->flags & TokenFlags::Missing) != 0; }
+    bool isMissing() const { return missing; }
 
     SourceRange range() const;
     SourceLocation location() const { return info->location; }
@@ -246,6 +237,11 @@ private:
     static Token::Info* createInfo(BumpAllocator& alloc, span<Trivia const> trivia,
                                    string_view rawText, SourceLocation location);
 
+    bool missing : 1;
+    bool hasTrivia : 1;
+    bool reserved : 6;
+    NumericTokenFlags numFlags;
+    uint32_t rawLen = 0;
     const Info* info;
 };
 
