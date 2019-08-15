@@ -286,6 +286,12 @@ Token Token::withLocation(BumpAllocator& alloc, SourceLocation location) const {
     return Token(kind, newInfo);
 }
 
+Token Token::withRawText(BumpAllocator& alloc, string_view rawText) const {
+    auto newInfo = alloc.emplace<Info>(*info);
+    newInfo->rawText = rawText;
+    return Token(kind, newInfo);
+}
+
 Token Token::clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
                    SourceLocation location) const {
     auto newInfo = alloc.emplace<Info>(*info);

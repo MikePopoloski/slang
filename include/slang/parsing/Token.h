@@ -214,6 +214,7 @@ public:
     /// Modification methods to make it easier to deal with immutable tokens.
     [[nodiscard]] Token withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const;
     [[nodiscard]] Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
+    [[nodiscard]] Token withRawText(BumpAllocator& alloc, string_view rawText) const;
     [[nodiscard]] Token clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
                               SourceLocation location) const;
 
