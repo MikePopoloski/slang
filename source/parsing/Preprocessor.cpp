@@ -379,7 +379,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     }
     else if (fileName.kind == TokenKind::StringLiteral) {
         consume();
-        fileName = Token(TokenKind::IncludeFileName, fileName.getInfo());
+        fileName.kind = TokenKind::IncludeFileName;
     }
     else {
         fileName = expect(TokenKind::IncludeFileName);
@@ -976,9 +976,11 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
             size_t offset = newToken.rawText().find("`\"");
             if (offset != std::string_view::npos) {
                 // Split the token, finish the stringification.
-                auto splitInfo = alloc.emplace<Token::Info>(*newToken.getInfo());
-                splitInfo->rawText = splitInfo->rawText.substr(0, offset);
-                stringifyBuffer.append(Token(TokenKind::Identifier, splitInfo));
+                auto split =
+                    newToken.clone(alloc, newToken.trivia(), newToken.rawText().substr(0, offset),
+                                   newToken.location());
+                split.kind = TokenKind::Identifier;
+                stringifyBuffer.append(split);
 
                 dest.append(Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
                                              stringifyBuffer.begin(), stringifyBuffer.end()));

@@ -168,7 +168,7 @@ protected:
             // If parseItem() failed to consume any tokens we will be stuck in
             // an infinite loop. Detect that here and bail out. If parseItem()
             // did not issue a diagnostic on this token, add one now as well.
-            if (current.getInfo() == peek().getInfo()) {
+            if (current == peek()) {
                 Diagnostics& diags = getDiagnostics();
                 auto location = getLastLocation();
                 bool needDiag = diags.empty() || (diags.back().location != location &&

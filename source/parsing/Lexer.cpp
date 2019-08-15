@@ -85,10 +85,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     if (lexer.lex().kind != TokenKind::EndOfFile)
         return Token();
 
-    auto info = alloc.emplace<Token::Info>(*token.getInfo());
-    info->location = location;
-    info->trivia = trivia;
-    return Token(token.kind, info);
+    return token.clone(alloc, trivia, token.rawText(), location);
 }
 
 Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
@@ -125,11 +122,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     ASSERT(token.kind == TokenKind::StringLiteral);
     ASSERT(lexer.lex().kind == TokenKind::EndOfFile);
 
-    auto info = alloc.emplace<Token::Info>(*token.getInfo());
-    info->location = location;
-    info->trivia = trivia;
-    info->rawText = raw.substr(0, raw.length() - 1);
-    return Token(token.kind, info);
+    return token.clone(alloc, trivia, raw.substr(0, raw.length() - 1), location);
 }
 
 void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,

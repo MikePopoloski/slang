@@ -185,7 +185,6 @@ public:
     SourceRange range() const;
     SourceLocation location() const { return info->location; }
     span<Trivia const> trivia() const { return info->trivia; }
-    const Info* getInfo() const { return info; }
 
     /// Value text is the "nice" lexed version of certain tokens;
     /// for example, in string literals, escape sequences are converted appropriately.
@@ -209,9 +208,14 @@ public:
     bool valid() const { return info != nullptr; }
     explicit operator bool() const { return valid(); }
 
+    bool operator==(const Token& other) const { return kind == other.kind && info == other.info; }
+    bool operator!=(const Token& other) const { return !(*this == other); }
+
     /// Modification methods to make it easier to deal with immutable tokens.
     [[nodiscard]] Token withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const;
     [[nodiscard]] Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
+    [[nodiscard]] Token clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
+                              SourceLocation location) const;
 
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
     static Token createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual,
@@ -221,6 +225,7 @@ private:
     const Info* info;
 };
 
+static_assert(sizeof(Token) == 16);
 static_assert(std::is_trivially_copyable_v<Token>);
 
 /// Different restricted sets of keywords that can be set using the
