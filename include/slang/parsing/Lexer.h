@@ -65,25 +65,34 @@ private:
     Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAllocator& alloc,
           Diagnostics& diagnostics, LexerOptions options);
 
-    TokenKind lexToken(Token::Info* info, KeywordVersion keywordVersion);
-    TokenKind lexNumericLiteral(Token::Info* info);
-    TokenKind lexEscapeSequence(Token::Info* info);
-    TokenKind lexDollarSign(Token::Info* info);
-    TokenKind lexDirective(Token::Info* info);
-    TokenKind lexApostrophe(Token::Info* info);
+    Token lexToken(KeywordVersion keywordVersion);
+    Token lexEscapeSequence(bool isMacroName);
+    Token lexNumericLiteral();
+    Token lexDollarSign();
+    Token lexDirective();
+    Token lexApostrophe();
 
-    void lexStringLiteral(Token::Info* info);
-    bool lexIntegerBase(Token::Info* info, bool isSigned);
-    bool lexTimeLiteral(Token::Info* info);
+    Token lexStringLiteral();
+    optional<TimeUnit> lexTimeLiteral();
 
-    void lexTrivia(SmallVector<Trivia>& triviaBuffer);
+    void lexTrivia();
 
-    void scanBlockComment(SmallVector<Trivia>& triviaBuffer);
-    void scanLineComment(SmallVector<Trivia>& triviaBuffer);
-    void scanWhitespace(SmallVector<Trivia>& triviaBuffer);
+    void scanBlockComment();
+    void scanLineComment();
+    void scanWhitespace();
     void scanIdentifier();
 
-    void addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer);
+    Token::Info* create();
+    Token create(TokenKind kind);
+    Token create(TokenKind kind, string_view strText);
+    Token create(TokenKind kind, IdentifierType idType);
+    Token create(TokenKind kind, SyntaxKind directive);
+    Token create(TokenKind kind, logic_t bit);
+    Token create(TokenKind kind, const SVInt& value);
+    Token create(TokenKind kind, double value, bool outOfRange, optional<TimeUnit> timeUnit);
+    Token create(TokenKind kind, LiteralBase base, bool isSigned);
+
+    void addTrivia(TriviaKind kind);
     Diagnostic& addDiag(DiagCode code, uint32_t offset);
 
     // source pointer manipulation
@@ -128,6 +137,9 @@ private:
     // Keeps track of whether we just entered a new line, to enforce tokens
     // that must start on their own line
     bool onNewLine = true;
+
+    // temporary storage for building arrays of trivia
+    SmallVectorSized<Trivia, 32> triviaBuffer;
 };
 
 } // namespace slang

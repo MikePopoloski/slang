@@ -7,6 +7,7 @@
 #pragma once
 
 #include <deque>
+#include <memory>
 #include <unordered_map>
 
 #include "slang/parsing/Lexer.h"
@@ -259,7 +260,7 @@ private:
     LexerOptions lexerOptions;
 
     // stack of active lexers; each `include pushes a new lexer
-    std::deque<Lexer*> lexerStack;
+    std::deque<std::unique_ptr<Lexer>> lexerStack;
 
     // keep track of nested processor branches (ifdef, ifndef, else, elsif, endif)
     std::deque<BranchEntry> branchStack;

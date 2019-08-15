@@ -74,8 +74,7 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
     ASSERT(lexerStack.size() < options.maxIncludeDepth);
     ASSERT(buffer.id);
 
-    auto lexer = alloc.emplace<Lexer>(buffer, alloc, diagnostics, lexerOptions);
-    lexerStack.push_back(lexer);
+    lexerStack.emplace_back(std::make_unique<Lexer>(buffer, alloc, diagnostics, lexerOptions));
 }
 
 void Preprocessor::predefine(const std::string& definition, string_view fileName) {

@@ -150,31 +150,28 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
 }
 
 Token Lexer::lex(KeywordVersion keywordVersion) {
-    auto info = alloc.emplace<Token::Info>();
-    SmallVectorSized<Trivia, 32> triviaBuffer;
-    lexTrivia(triviaBuffer);
+    triviaBuffer.clear();
+    lexTrivia();
 
     // lex the next token
     mark();
-    TokenKind kind = lexToken(info, keywordVersion);
+    Token token = lexToken(keywordVersion);
     onNewLine = false;
-    info->rawText = lexeme();
 
-    if (kind != TokenKind::EndOfFile && errorCount > options.maxErrors) {
+    if (token.kind != TokenKind::EndOfFile && errorCount > options.maxErrors) {
         // Stop any further lexing by claiming to be at the end of the buffer.
         addDiag(diag::TooManyLexerErrors, currentOffset());
         sourceBuffer = sourceEnd - 1;
+
+        token.kind = TokenKind::EndOfFile;
         triviaBuffer.append(Trivia(TriviaKind::DisabledText, lexeme()));
-        kind = TokenKind::EndOfFile;
+        return token.withTrivia(alloc, triviaBuffer.copy(alloc));
     }
-    info->trivia = triviaBuffer.copy(alloc);
-    return Token(kind, info);
+
+    return token;
 }
 
-TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
-    uint32_t offset = currentOffset();
-    info->location = SourceLocation(bufferId, offset);
-
+Token Lexer::lexToken(KeywordVersion keywordVersion) {
     char c = peek();
     advance();
     switch (c) {
@@ -184,148 +181,147 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
             // he'll just keep getting back EndOfFile tokens over and over
             sourceBuffer--;
             if (!reallyAtEnd()) {
+                addDiag(diag::EmbeddedNull, currentOffset());
                 advance();
-                addDiag(diag::EmbeddedNull, offset);
-                return TokenKind::Unknown;
+                return create(TokenKind::Unknown);
             }
 
             // otherwise, end of file
-            return TokenKind::EndOfFile;
+            return create(TokenKind::EndOfFile);
         case '!':
             if (consume('=')) {
                 switch (peek()) {
                     case '=':
                         advance();
-                        return TokenKind::ExclamationDoubleEquals;
+                        return create(TokenKind::ExclamationDoubleEquals);
                     case '?':
                         advance();
-                        return TokenKind::ExclamationEqualsQuestion;
+                        return create(TokenKind::ExclamationEqualsQuestion);
                     default:
-                        return TokenKind::ExclamationEquals;
+                        return create(TokenKind::ExclamationEquals);
                 }
             }
-            return TokenKind::Exclamation;
+            return create(TokenKind::Exclamation);
         case '"':
-            lexStringLiteral(info);
-            return TokenKind::StringLiteral;
+            return lexStringLiteral();
         case '#':
             switch (peek()) {
                 case '#':
                     advance();
-                    return TokenKind::DoubleHash;
+                    return create(TokenKind::DoubleHash);
                 case '-':
                     if (peek(1) == '#') {
                         advance(2);
-                        return TokenKind::HashMinusHash;
+                        return create(TokenKind::HashMinusHash);
                     }
                     // #- isn't a token, so just return a hash
-                    return TokenKind::Hash;
+                    return create(TokenKind::Hash);
                 case '=':
                     if (peek(1) == '#') {
                         advance(2);
-                        return TokenKind::HashEqualsHash;
+                        return create(TokenKind::HashEqualsHash);
                     }
                     // #= isn't a token, so just return a hash
-                    return TokenKind::Hash;
+                    return create(TokenKind::Hash);
             }
-            return TokenKind::Hash;
+            return create(TokenKind::Hash);
         case '$':
-            return lexDollarSign(info);
+            return lexDollarSign();
         case '%':
             if (consume('='))
-                return TokenKind::PercentEqual;
-            return TokenKind::Percent;
+                return create(TokenKind::PercentEqual);
+            return create(TokenKind::Percent);
         case '&':
             switch (peek()) {
                 case '&':
                     advance();
                     if (consume('&'))
-                        return TokenKind::TripleAnd;
+                        return create(TokenKind::TripleAnd);
                     else
-                        return TokenKind::DoubleAnd;
+                        return create(TokenKind::DoubleAnd);
                 case '=':
                     advance();
-                    return TokenKind::AndEqual;
+                    return create(TokenKind::AndEqual);
             }
-            return TokenKind::And;
+            return create(TokenKind::And);
         case '\'':
             if (consume('{'))
-                return TokenKind::ApostropheOpenBrace;
+                return create(TokenKind::ApostropheOpenBrace);
             else
-                return lexApostrophe(info);
+                return lexApostrophe();
         case '(':
             if (!consume('*'))
-                return TokenKind::OpenParenthesis;
+                return create(TokenKind::OpenParenthesis);
             else
-                return TokenKind::OpenParenthesisStar;
+                return create(TokenKind::OpenParenthesisStar);
         case ')':
-            return TokenKind::CloseParenthesis;
+            return create(TokenKind::CloseParenthesis);
         case '*':
             switch (peek()) {
                 case '*':
                     advance();
-                    return TokenKind::DoubleStar;
+                    return create(TokenKind::DoubleStar);
                 case '=':
                     advance();
-                    return TokenKind::StarEqual;
+                    return create(TokenKind::StarEqual);
                 case '>':
                     advance();
-                    return TokenKind::StarArrow;
+                    return create(TokenKind::StarArrow);
                 case ')':
                     advance();
-                    return TokenKind::StarCloseParenthesis;
+                    return create(TokenKind::StarCloseParenthesis);
                 case ':':
                     if (peek(1) == ':' && peek(2) == '*') {
                         advance(3);
-                        return TokenKind::StarDoubleColonStar;
+                        return create(TokenKind::StarDoubleColonStar);
                     }
-                    return TokenKind::Star;
+                    return create(TokenKind::Star);
             }
-            return TokenKind::Star;
+            return create(TokenKind::Star);
         case '+':
             switch (peek()) {
                 case '+':
                     advance();
-                    return TokenKind::DoublePlus;
+                    return create(TokenKind::DoublePlus);
                 case '=':
                     advance();
-                    return TokenKind::PlusEqual;
+                    return create(TokenKind::PlusEqual);
                 case ':':
                     advance();
-                    return TokenKind::PlusColon;
+                    return create(TokenKind::PlusColon);
             }
-            return TokenKind::Plus;
+            return create(TokenKind::Plus);
         case ',':
-            return TokenKind::Comma;
+            return create(TokenKind::Comma);
         case '-':
             switch (peek()) {
                 case '-':
                     advance();
-                    return TokenKind::DoubleMinus;
+                    return create(TokenKind::DoubleMinus);
                 case '=':
                     advance();
-                    return TokenKind::MinusEqual;
+                    return create(TokenKind::MinusEqual);
                 case ':':
                     advance();
-                    return TokenKind::MinusColon;
+                    return create(TokenKind::MinusColon);
                 case '>':
                     advance();
                     if (consume('>'))
-                        return TokenKind::MinusDoubleArrow;
+                        return create(TokenKind::MinusDoubleArrow);
                     else
-                        return TokenKind::MinusArrow;
+                        return create(TokenKind::MinusArrow);
             }
-            return TokenKind::Minus;
+            return create(TokenKind::Minus);
         case '.':
             if (consume('*'))
-                return TokenKind::DotStar;
+                return create(TokenKind::DotStar);
             else
-                return TokenKind::Dot;
+                return create(TokenKind::Dot);
         case '/':
             if (consume('='))
-                return TokenKind::SlashEqual;
+                return create(TokenKind::SlashEqual);
             else
-                return TokenKind::Slash;
+                return create(TokenKind::Slash);
         case '0':
         case '1':
         case '2':
@@ -338,52 +334,52 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
         case '9':
             // back up so that lexNumericLiteral can look at this digit again
             sourceBuffer--;
-            return lexNumericLiteral(info);
+            return lexNumericLiteral();
         case ':':
             switch (peek()) {
                 case '=':
                     advance();
-                    return TokenKind::ColonEquals;
+                    return create(TokenKind::ColonEquals);
                 case '/':
                     advance();
-                    return TokenKind::ColonSlash;
+                    return create(TokenKind::ColonSlash);
                 case ':':
                     advance();
-                    return TokenKind::DoubleColon;
+                    return create(TokenKind::DoubleColon);
             }
-            return TokenKind::Colon;
+            return create(TokenKind::Colon);
         case ';':
-            return TokenKind::Semicolon;
+            return create(TokenKind::Semicolon);
         case '<':
             switch (peek()) {
                 case '=':
                     advance();
-                    return TokenKind::LessThanEquals;
+                    return create(TokenKind::LessThanEquals);
                 case '-':
                     if (peek(1) == '>') {
                         advance(2);
-                        return TokenKind::LessThanMinusArrow;
+                        return create(TokenKind::LessThanMinusArrow);
                     }
-                    return TokenKind::LessThan;
+                    return create(TokenKind::LessThan);
                 case '<':
                     advance();
                     switch (peek()) {
                         case '<':
                             if (peek(1) == '=') {
                                 advance(2);
-                                return TokenKind::TripleLeftShiftEqual;
+                                return create(TokenKind::TripleLeftShiftEqual);
                             }
                             else {
                                 advance();
-                                return TokenKind::TripleLeftShift;
+                                return create(TokenKind::TripleLeftShift);
                             }
                         case '=':
                             advance();
-                            return TokenKind::LeftShiftEqual;
+                            return create(TokenKind::LeftShiftEqual);
                     }
-                    return TokenKind::LeftShift;
+                    return create(TokenKind::LeftShift);
             }
-            return TokenKind::LessThan;
+            return create(TokenKind::LessThan);
         case '=':
             switch (peek()) {
                 case '=':
@@ -391,50 +387,50 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
                     switch (peek()) {
                         case '=':
                             advance();
-                            return TokenKind::TripleEquals;
+                            return create(TokenKind::TripleEquals);
                         case '?':
                             advance();
-                            return TokenKind::DoubleEqualsQuestion;
+                            return create(TokenKind::DoubleEqualsQuestion);
                     }
-                    return TokenKind::DoubleEquals;
+                    return create(TokenKind::DoubleEquals);
                 case '>':
                     advance();
-                    return TokenKind::EqualsArrow;
+                    return create(TokenKind::EqualsArrow);
             }
-            return TokenKind::Equals;
+            return create(TokenKind::Equals);
         case '>':
             switch (peek()) {
                 case '=':
                     advance();
-                    return TokenKind::GreaterThanEquals;
+                    return create(TokenKind::GreaterThanEquals);
                 case '>':
                     advance();
                     switch (peek()) {
                         case '>':
                             if (peek(1) == '=') {
                                 advance(2);
-                                return TokenKind::TripleRightShiftEqual;
+                                return create(TokenKind::TripleRightShiftEqual);
                             }
                             else {
                                 advance();
-                                return TokenKind::TripleRightShift;
+                                return create(TokenKind::TripleRightShift);
                             }
                         case '=':
                             advance();
-                            return TokenKind::RightShiftEqual;
+                            return create(TokenKind::RightShiftEqual);
                     }
-                    return TokenKind::RightShift;
+                    return create(TokenKind::RightShift);
             }
-            return TokenKind::GreaterThan;
+            return create(TokenKind::GreaterThan);
         case '?':
-            return TokenKind::Question;
+            return create(TokenKind::Question);
         case '@':
             switch (peek()) {
                 case '@':
                     advance();
-                    return TokenKind::DoubleAt;
+                    return create(TokenKind::DoubleAt);
                 default:
-                    return TokenKind::At;
+                    return create(TokenKind::At);
             }
             // clang-format off
         case 'A': case 'B': case 'C': case 'D':
@@ -458,99 +454,99 @@ TokenKind Lexer::lexToken(Token::Info* info, KeywordVersion keywordVersion) {
             // might be a keyword
             TokenKind kind;
             if (getKeywordTable(keywordVersion)->lookup(lexeme(), kind))
-                return kind;
+                return create(kind);
 
-            info->extra = IdentifierType::Normal;
-            return TokenKind::Identifier;
+            return create(TokenKind::Identifier, IdentifierType::Normal);
         }
         case '[':
-            return TokenKind::OpenBracket;
+            return create(TokenKind::OpenBracket);
         case '\\':
-            return lexEscapeSequence(info);
+            return lexEscapeSequence(false);
         case ']':
-            return TokenKind::CloseBracket;
+            return create(TokenKind::CloseBracket);
         case '^':
             switch (peek()) {
                 case '~':
                     advance();
-                    return TokenKind::XorTilde;
+                    return create(TokenKind::XorTilde);
                 case '=':
                     advance();
-                    return TokenKind::XorEqual;
+                    return create(TokenKind::XorEqual);
             }
-            return TokenKind::Xor;
+            return create(TokenKind::Xor);
         case '`':
             switch (peek()) {
                 case '"':
                     advance();
-                    return TokenKind::MacroQuote;
+                    return create(TokenKind::MacroQuote);
                 case '`':
                     advance();
-                    return TokenKind::MacroPaste;
+                    return create(TokenKind::MacroPaste);
                 case '\\':
                     if (peek(1) == '`' && peek(2) == '"') {
                         advance(3);
-                        return TokenKind::MacroEscapedQuote;
+                        return create(TokenKind::MacroEscapedQuote);
                     }
-                    return lexDirective(info);
+                    return lexDirective();
             }
-            return lexDirective(info);
+            return lexDirective();
         case '{':
-            return TokenKind::OpenBrace;
+            return create(TokenKind::OpenBrace);
         case '|':
             switch (peek()) {
                 case '|':
                     advance();
-                    return TokenKind::DoubleOr;
+                    return create(TokenKind::DoubleOr);
                 case '-':
                     if (peek(1) == '>') {
                         advance(2);
                         if (consume('>'))
-                            return TokenKind::OrMinusDoubleArrow;
+                            return create(TokenKind::OrMinusDoubleArrow);
                         else
-                            return TokenKind::OrMinusArrow;
+                            return create(TokenKind::OrMinusArrow);
                     }
-                    return TokenKind::Or;
+                    return create(TokenKind::Or);
                 case '=':
                     if (peek(1) == '>') {
                         advance(2);
-                        return TokenKind::OrEqualsArrow;
+                        return create(TokenKind::OrEqualsArrow);
                     }
                     else {
                         advance();
-                        return TokenKind::OrEqual;
+                        return create(TokenKind::OrEqual);
                     }
             }
-            return TokenKind::Or;
+            return create(TokenKind::Or);
         case '}':
-            return TokenKind::CloseBrace;
+            return create(TokenKind::CloseBrace);
         case '~':
             switch (peek()) {
                 case '&':
                     advance();
-                    return TokenKind::TildeAnd;
+                    return create(TokenKind::TildeAnd);
                 case '|':
                     advance();
-                    return TokenKind::TildeOr;
+                    return create(TokenKind::TildeOr);
                 case '^':
                     advance();
-                    return TokenKind::TildeXor;
+                    return create(TokenKind::TildeXor);
             }
-            return TokenKind::Tilde;
+            return create(TokenKind::Tilde);
         default:
             if (isASCII(c))
-                addDiag(diag::NonPrintableChar, offset);
+                addDiag(diag::NonPrintableChar, currentOffset() - 1);
             else {
+                addDiag(diag::UTF8Char, currentOffset() - 1);
+
                 // skip over UTF-8 sequences
                 int skip = utf8SeqBytes(c);
                 advance(std::min((int)(sourceEnd - sourceBuffer - 1), skip));
-                addDiag(diag::UTF8Char, offset);
             }
-            return TokenKind::Unknown;
+            return create(TokenKind::Unknown);
     }
 }
 
-void Lexer::lexStringLiteral(Token::Info* info) {
+Token Lexer::lexStringLiteral() {
     SmallVectorSized<char, 128> stringBuffer;
     while (true) {
         uint32_t offset = currentOffset();
@@ -638,10 +634,10 @@ void Lexer::lexStringLiteral(Token::Info* info) {
         }
     }
 
-    info->extra = to_string_view(stringBuffer.copy(alloc));
+    return create(TokenKind::StringLiteral, to_string_view(stringBuffer.copy(alloc)));
 }
 
-TokenKind Lexer::lexEscapeSequence(Token::Info* info) {
+Token Lexer::lexEscapeSequence(bool isMacroName) {
     char c = peek();
     if (isWhitespace(c) || c == '\0') {
         // Check for a line continuation sequence.
@@ -649,11 +645,11 @@ TokenKind Lexer::lexEscapeSequence(Token::Info* info) {
             advance();
             if (c == '\r' && peek() == '\n')
                 advance();
-            return TokenKind::LineContinuation;
+            return create(TokenKind::LineContinuation);
         }
 
         addDiag(diag::EscapedWhitespace, currentOffset());
-        return TokenKind::Unknown;
+        return create(TokenKind::Unknown);
     }
 
     while (isPrintable(c)) {
@@ -663,37 +659,33 @@ TokenKind Lexer::lexEscapeSequence(Token::Info* info) {
             break;
     }
 
-    info->extra = IdentifierType::Escaped;
-    return TokenKind::Identifier;
+    if (isMacroName)
+        return create(TokenKind::Directive, SyntaxKind::MacroUsage);
+
+    return create(TokenKind::Identifier, IdentifierType::Escaped);
 }
 
-TokenKind Lexer::lexDollarSign(Token::Info* info) {
+Token Lexer::lexDollarSign() {
     scanIdentifier();
 
     // if length is 1, we just have a dollar sign operator
     if (lexemeLength() == 1)
-        return TokenKind::Dollar;
+        return create(TokenKind::Dollar);
 
     // otherwise, we have a system identifier
     // check for system keywords
     TokenKind kind = getSystemKeywordKind(lexeme());
     if (kind != TokenKind::Unknown)
-        return kind;
+        return create(kind);
 
-    info->extra = IdentifierType::System;
-    return TokenKind::Identifier;
+    return create(TokenKind::Identifier, IdentifierType::System);
 }
 
-TokenKind Lexer::lexDirective(Token::Info* info) {
+Token Lexer::lexDirective() {
     if (peek() == '\\') {
         // Handle escaped macro names as well.
         advance();
-        TokenKind kind = lexEscapeSequence(info);
-        if (kind == TokenKind::Identifier) {
-            info->extra = SyntaxKind::MacroUsage;
-            return TokenKind::Directive;
-        }
-        return TokenKind::Unknown;
+        return lexEscapeSequence(true);
     }
 
     // store the offset before scanning in order to easily report error locations
@@ -703,17 +695,17 @@ TokenKind Lexer::lexDirective(Token::Info* info) {
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
         addDiag(diag::MisplacedDirectiveChar, startingOffset);
-        return TokenKind::Unknown;
+        return create(TokenKind::Unknown);
     }
 
-    info->extra = getDirectiveKind(lexeme().substr(1));
-    if (!onNewLine && std::get<SyntaxKind>(info->extra) == SyntaxKind::IncludeDirective)
+    SyntaxKind directive = getDirectiveKind(lexeme().substr(1));
+    if (!onNewLine && directive == SyntaxKind::IncludeDirective)
         addDiag(diag::IncludeNotFirstOnLine, startingOffset);
 
-    return TokenKind::Directive;
+    return create(TokenKind::Directive, directive);
 }
 
-TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
+Token Lexer::lexNumericLiteral() {
     // have to check for the "1step" magic keyword
     static const char OneStepText[] = "1step";
     for (int i = 0; i < (int)sizeof(OneStepText) - 1; i++) {
@@ -721,7 +713,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             break;
         if (i == sizeof(OneStepText) - 2) {
             advance(sizeof(OneStepText) - 1);
-            return TokenKind::OneStep;
+            return create(TokenKind::OneStep);
         }
     }
 
@@ -730,7 +722,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         advance();
 
     // Keep track of digits as we iterate through them; convert them
-    // into logic_t to pass into SVInt parsing method. If it turns out
+    // into logic_t to pass into the SVInt parsing method. If it turns out
     // that this is actually a float, we'll go back and populate `floatChars`
     // instead. Since we expect many more ints than floats, it makes sense to
     // not waste time populating that array up front.
@@ -797,7 +789,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
     // If `FOO is defined to be 'h this represents an expression: 62 + 2
     // Otherwise, this represents a real literal: 300.0
 
-    bool hasTimeSuffix = false;
+    optional<TimeUnit> timeSuffix;
     char c = peek();
     if (c == 'e' || c == 'E') {
         bool hasDecimal = !floatChars.empty();
@@ -843,11 +835,11 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             floatChars.clear();
         }
     }
-    // Check for a time literal suffix directly adjacent. Time literal
-    // values are always interpreted as doubles.
-    else if (lexTimeLiteral(info)) {
-        hasTimeSuffix = true;
-        if (floatChars.empty())
+    else {
+        // Check for a time literal suffix directly adjacent. Time literal
+        // values are always interpreted as doubles.
+        timeSuffix = lexTimeLiteral();
+        if (timeSuffix && floatChars.empty())
             populateChars();
     }
 
@@ -865,15 +857,15 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         // If we had an overflow or underflow, errno is now ERANGE. We can't warn here in case
         // this turns out to actually be a hex literal. Have the token carry this info so someone
         // can check it later if they care.
-        info->setReal(value, errno == ERANGE);
+        bool outOfRange = errno == ERANGE;
 
-        return hasTimeSuffix ? TokenKind::TimeLiteral : TokenKind::RealLiteral;
+        return create(timeSuffix ? TokenKind::TimeLiteral : TokenKind::RealLiteral, value,
+                      outOfRange, timeSuffix);
     }
 
     // normal numeric literal
-    if (digits.empty())
-        info->setInt(alloc, SVInt::Zero);
-    else {
+    SVInt intVal;
+    if (!digits.empty()) {
         static const double BitsPerDecimal = log2(10.0);
 
         double bitsDbl = ceil(BitsPerDecimal * digits.size());
@@ -885,78 +877,69 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             bits = SVInt::MAX_BITS;
         }
 
-        SVInt intVal = SVInt::fromDigits(bits, LiteralBase::Decimal, false, false, digits);
+        intVal = SVInt::fromDigits(bits, LiteralBase::Decimal, false, false, digits);
         intVal.shrinkToFit();
-        info->setInt(alloc, intVal);
     }
 
-    return TokenKind::IntegerLiteral;
+    return create(TokenKind::IntegerLiteral, intVal);
 }
 
-TokenKind Lexer::lexApostrophe(Token::Info* info) {
+Token Lexer::lexApostrophe() {
     char c = peek();
     switch (c) {
         case '0':
         case '1':
             advance();
-            info->setBit((logic_t)getDigitValue(c));
-            return TokenKind::UnbasedUnsizedLiteral;
+            return create(TokenKind::UnbasedUnsizedLiteral, (logic_t)getDigitValue(c));
         case 'x':
         case 'X':
             advance();
-            info->setBit(logic_t::x);
-            return TokenKind::UnbasedUnsizedLiteral;
+            return create(TokenKind::UnbasedUnsizedLiteral, logic_t::x);
         case 'Z':
         case 'z':
         case '?':
             advance();
-            info->setBit(logic_t::z);
-            return TokenKind::UnbasedUnsizedLiteral;
-
+            return create(TokenKind::UnbasedUnsizedLiteral, logic_t::z);
         case 's':
-        case 'S':
+        case 'S': {
             advance();
-            if (!lexIntegerBase(info, true)) {
+            LiteralBase base;
+            if (!literalBaseFromChar(peek(), base)) {
                 addDiag(diag::ExpectedIntegerBaseAfterSigned, currentOffset());
-                info->setNumFlags(LiteralBase::Decimal, true);
+                base = LiteralBase::Decimal;
             }
-            return TokenKind::IntegerBase;
-
-        default:
-            if (lexIntegerBase(info, false))
-                return TokenKind::IntegerBase;
+            else {
+                advance();
+            }
+            return create(TokenKind::IntegerBase, base, true);
+        }
+        default: {
+            LiteralBase base;
+            if (literalBaseFromChar(peek(), base)) {
+                advance();
+                return create(TokenKind::IntegerBase, base, false);
+            }
 
             // otherwise just an apostrophe token
-            return TokenKind::Apostrophe;
+            return create(TokenKind::Apostrophe);
+        }
     }
 }
 
-bool Lexer::lexIntegerBase(Token::Info* info, bool isSigned) {
-    LiteralBase base;
-    if (literalBaseFromChar(peek(), base)) {
-        advance();
-        info->setNumFlags(base, isSigned);
-        return true;
-    }
-    return false;
-}
-
-bool Lexer::lexTimeLiteral(Token::Info* info) {
-#define CASE(c, flag)                          \
-    case c:                                    \
-        if (peek(1) == 's') {                  \
-            advance(2);                        \
-            info->setTimeUnit(TimeUnit::flag); \
-            return true;                       \
-        }                                      \
+optional<TimeUnit> Lexer::lexTimeLiteral() {
+#define CASE(c, flag)              \
+    case c:                        \
+        if (peek(1) == 's') {      \
+            advance(2);            \
+            return TimeUnit::flag; \
+        }                          \
         break;
 
     // clang-format off
     switch (peek()) {
         case 's':
             advance();
-            info->setTimeUnit(TimeUnit::Seconds);
-            return true;
+            return TimeUnit::Seconds;
         CASE('m', Milliseconds);
         CASE('u', Microseconds);
         CASE('n', Nanoseconds);
@@ -967,10 +950,10 @@ bool Lexer::lexTimeLiteral(Token::Info* info) {
     }
 #undef CASE
     // clang-format on
-    return false;
+    return std::nullopt;
 }
 
-void Lexer::lexTrivia(SmallVector<Trivia>& triviaBuffer) {
+void Lexer::lexTrivia() {
     while (true) {
         mark();
 
@@ -980,17 +963,17 @@ void Lexer::lexTrivia(SmallVector<Trivia>& triviaBuffer) {
             case '\v':
             case '\f':
                 advance();
-                scanWhitespace(triviaBuffer);
+                scanWhitespace();
                 break;
             case '/':
                 switch (peek(1)) {
                     case '/':
                         advance(2);
-                        scanLineComment(triviaBuffer);
+                        scanLineComment();
                         break;
                     case '*': {
                         advance(2);
-                        scanBlockComment(triviaBuffer);
+                        scanBlockComment();
                         break;
                     }
                     default:
@@ -1001,12 +984,12 @@ void Lexer::lexTrivia(SmallVector<Trivia>& triviaBuffer) {
                 advance();
                 consume('\n');
                 onNewLine = true;
-                addTrivia(TriviaKind::EndOfLine, triviaBuffer);
+                addTrivia(TriviaKind::EndOfLine);
                 break;
             case '\n':
                 advance();
                 onNewLine = true;
-                addTrivia(TriviaKind::EndOfLine, triviaBuffer);
+                addTrivia(TriviaKind::EndOfLine);
                 break;
             default:
                 return;
@@ -1024,7 +1007,7 @@ void Lexer::scanIdentifier() {
     }
 }
 
-void Lexer::scanWhitespace(SmallVector<Trivia>& triviaBuffer) {
+void Lexer::scanWhitespace() {
     bool done = false;
     while (!done) {
         switch (peek()) {
@@ -1039,10 +1022,10 @@ void Lexer::scanWhitespace(SmallVector<Trivia>& triviaBuffer) {
                 break;
         }
     }
-    addTrivia(TriviaKind::Whitespace, triviaBuffer);
+    addTrivia(TriviaKind::Whitespace);
 }
 
-void Lexer::scanLineComment(SmallVector<Trivia>& triviaBuffer) {
+void Lexer::scanLineComment() {
     while (true) {
         char c = peek();
         if (isNewline(c))
@@ -1057,10 +1040,10 @@ void Lexer::scanLineComment(SmallVector<Trivia>& triviaBuffer) {
         }
         advance();
     }
-    addTrivia(TriviaKind::LineComment, triviaBuffer);
+    addTrivia(TriviaKind::LineComment);
 }
 
-void Lexer::scanBlockComment(SmallVector<Trivia>& triviaBuffer) {
+void Lexer::scanBlockComment() {
     while (true) {
         char c = peek();
         if (c == '\0') {
@@ -1087,10 +1070,67 @@ void Lexer::scanBlockComment(SmallVector<Trivia>& triviaBuffer) {
         }
     }
 
-    addTrivia(TriviaKind::BlockComment, triviaBuffer);
+    addTrivia(TriviaKind::BlockComment);
 }
 
-void Lexer::addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer) {
+Token::Info* Lexer::create() {
+    auto info = alloc.emplace<Token::Info>();
+    info->location = SourceLocation(bufferId, uint32_t(marker - originalBegin));
+    info->rawText = lexeme();
+    info->trivia = triviaBuffer.copy(alloc);
+    return info;
+}
+
+Token Lexer::create(TokenKind kind) {
+    auto info = create();
+    return Token(kind, info);
+}
+
+Token Lexer::create(TokenKind kind, string_view strText) {
+    auto info = create();
+    info->extra = strText;
+    return Token(kind, info);
+}
+
+Token Lexer::create(TokenKind kind, IdentifierType idType) {
+    auto info = create();
+    info->extra = idType;
+    return Token(kind, info);
+}
+
+Token Lexer::create(TokenKind kind, SyntaxKind directive) {
+    auto info = create();
+    info->extra = directive;
+    return Token(kind, info);
+}
+
+Token Lexer::create(TokenKind kind, logic_t bit) {
+    auto info = create();
+    info->setBit(bit);
+    return Token(kind, info);
+}
+
+Token Lexer::create(TokenKind kind, const SVInt& value) {
+    auto info = create();
+    info->setInt(alloc, value);
+    return Token(kind, info);
+}
+
+Token Lexer::create(TokenKind kind, double value, bool outOfRange, optional<TimeUnit> timeUnit) {
+    auto info = create();
+    info->setReal(value, outOfRange);
+    if (timeUnit)
+        info->setTimeUnit(*timeUnit);
+    return Token(kind, info);
+}
+
+Token Lexer::create(TokenKind kind, LiteralBase base, bool isSigned) {
+    auto info = create();
+    info->setNumFlags(base, isSigned);
+    return Token(kind, info);
+}
+
+void Lexer::addTrivia(TriviaKind kind) {
     triviaBuffer.emplace(kind, lexeme());
 }
 
