@@ -4,9 +4,9 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "slang/parsing/Lexer.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 
@@ -342,11 +342,10 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
 
     string_view rawText = count == 1 ? first.rawText() : to_string_view(text.copy(alloc));
 
-    auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location());
-    info->setInt(alloc, vectorBuilder.finish());
+    Token valToken = Token::create(alloc, TokenKind::IntegerLiteral, first.trivia(), rawText,
+                                   first.location(), vectorBuilder.finish());
 
-    return factory.integerVectorExpression(sizeToken, baseToken,
-                                           Token(TokenKind::IntegerLiteral, info));
+    return factory.integerVectorExpression(sizeToken, baseToken, valToken);
 }
 
 void Parser::handleExponentSplit(Token token, size_t offset) {
@@ -623,7 +622,7 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
         else if (usedDot && !reportedError) {
             reportedError = true;
             addDiag(diag::InvalidAccessDotColon, separator.location()) << "::"sv
-                                                                           << "."sv;
+                                                                       << "."sv;
         }
         else if (peek().kind == TokenKind::NewKeyword)
             return factory.classScope(*name, separator);
@@ -633,7 +632,7 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
             case SyntaxKind::LocalScope:
                 if (kind != TokenKind::DoubleColon) {
                     addDiag(diag::InvalidAccessDotColon, separator.location()) << "."sv
-                                                                                   << "::"sv;
+                                                                               << "::"sv;
                 }
                 break;
             case SyntaxKind::RootScope:
@@ -641,7 +640,7 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
             case SyntaxKind::SuperHandle:
                 if (kind != TokenKind::Dot) {
                     addDiag(diag::InvalidAccessDotColon, separator.location()) << "::"sv
-                                                                                   << "."sv;
+                                                                               << "."sv;
                 }
                 break;
             default:
@@ -987,8 +986,8 @@ ExpressionSyntax& Parser::parseArrayOrRandomizeWithClause() {
     Token closeParen;
     SmallVectorSized<TokenOrSyntax, 4> buffer;
     parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
-        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-        diag::ExpectedIdentifier, [this] { return &factory.identifierName(consume()); });
+        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, diag::ExpectedIdentifier,
+        [this] { return &factory.identifierName(consume()); });
 
     auto& idList = factory.identifierList(openParen, buffer.copy(alloc), closeParen);
     return factory.randomizeMethodWithClause(with, &idList, parseConstraintBlock());

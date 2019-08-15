@@ -642,11 +642,9 @@ bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value)
         auto start = token.rawText().data();
         auto end = suffix.rawText().data() + suffix.rawText().size();
         auto text = string_view(start, size_t(end - start));
-        auto info = alloc.emplace<Token::Info>(token.trivia(), text, token.location());
-        info->setReal(token.intValue().toDouble(), false);
-        info->setTimeUnit(unit);
 
-        token = Token(TokenKind::TimeLiteral, info);
+        token = Token::create(alloc, TokenKind::TimeLiteral, token.trivia(), text, token.location(),
+                              token.intValue().toDouble(), false, unit);
     }
     else {
         token = expect(TokenKind::TimeLiteral);
@@ -1185,8 +1183,8 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location) 
         newTrivia.appendRange(token.trivia());
         newTrivia.append(Trivia(TriviaKind::EndOfLine, token.rawText().substr(1)));
 
-        auto info = alloc.emplace<Token::Info>(newTrivia.copy(alloc), "", location);
-        dest.append(Token(TokenKind::EmptyMacroArgument, info));
+        dest.append(Token::create(alloc, TokenKind::EmptyMacroArgument, newTrivia.copy(alloc), "",
+                                  location));
     }
     else {
         dest.append(token.withLocation(alloc, location));
@@ -1256,27 +1254,27 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
 }
 
 bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion) {
-    auto info = alloc.emplace<Token::Info>();
     auto loc = expansion.getRange().start();
-
     SmallVectorSized<char, 64> text;
     switch (intrinsic) {
         case MacroIntrinsic::File: {
             string_view fileName = sourceManager.getFileName(loc);
             text.appendRange(fileName);
-            info->extra = fileName;
-            info->rawText = to_string_view(text.copy(alloc));
 
-            expansion.append(Token(TokenKind::StringLiteral, info), loc);
+            string_view rawText = to_string_view(text.copy(alloc));
+            Token token =
+                Token::create(alloc, TokenKind::StringLiteral, {}, rawText, loc, fileName);
+            expansion.append(token, loc);
             break;
         }
         case MacroIntrinsic::Line: {
             uint32_t lineNum = sourceManager.getLineNumber(loc);
             text.appendRange(std::to_string(lineNum)); // not the most efficient, but whatever
-            info->setInt(alloc, lineNum);
-            info->rawText = to_string_view(text.copy(alloc));
 
-            expansion.append(Token(TokenKind::IntegerLiteral, info), loc);
+            string_view rawText = to_string_view(text.copy(alloc));
+            Token token =
+                Token::create(alloc, TokenKind::IntegerLiteral, {}, rawText, loc, lineNum);
+            expansion.append(token, loc);
             break;
         }
         case MacroIntrinsic::None:

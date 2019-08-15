@@ -127,7 +127,6 @@ static_assert(sizeof(Trivia) == 16);
 /// wherever. The bulk of the token's data is stored in a heap allocated block. Most of the
 /// hot path only cares about the token's kind, so that's given priority.
 class Token {
-public:
     /// Heap-allocated info block.
     struct Info {
         /// Numeric-related information.
@@ -172,12 +171,12 @@ public:
         const NumericLiteralInfo& numInfo() const { return std::get<NumericLiteralInfo>(extra); }
     };
 
+public:
     /// The kind of the token; this is not in the info block because
     /// we almost always want to look at it (perf).
     TokenKind kind;
 
     Token();
-    Token(TokenKind kind, const Info* info);
 
     /// A missing token was expected and inserted by the parser at a given point.
     bool isMissing() const { return (info->flags & TokenFlags::Missing) != 0; }
@@ -242,10 +241,12 @@ public:
                                 TokenKind expected, Token lastConsumed);
 
 private:
-    const Info* info;
+    Token(TokenKind kind, const Info* info);
 
     static Token::Info* createInfo(BumpAllocator& alloc, span<Trivia const> trivia,
                                    string_view rawText, SourceLocation location);
+
+    const Info* info;
 };
 
 static_assert(sizeof(Token) == 16);
