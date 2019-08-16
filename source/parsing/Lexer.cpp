@@ -168,6 +168,7 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
         return token.withTrivia(alloc, triviaBuffer.copy(alloc));
     }
 
+    tokenCount++;
     return token;
 }
 

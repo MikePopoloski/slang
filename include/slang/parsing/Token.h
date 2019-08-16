@@ -123,45 +123,6 @@ static_assert(sizeof(Trivia) == 16);
 /// wherever. The bulk of the token's data is stored in a heap allocated block. Most of the
 /// hot path only cares about the token's kind, so that's given priority.
 class Token {
-    /// Heap-allocated info block.
-    struct Info {
-        /// Numeric-related information.
-        struct NumericLiteralInfo {
-            std::variant<logic_t, double, SVIntStorage> value;
-            NumericTokenFlags numericFlags;
-        };
-
-        /// Leading trivia.
-        span<slang::Trivia const> trivia;
-
-        /// The raw source span.
-        string_view rawText;
-
-        /// The original location in the source text (or a macro location
-        /// if the token was generated during macro expansion).
-        SourceLocation location;
-
-        /// Extra kind-specific data associated with the token.
-        /// string_view: The nice text of a string literal.
-        /// SyntaxKind: The kind of a directive token.
-        /// IdentifierType: The kind of an identifer token.
-        /// NumericLiteralInfo: Info for numeric tokens.
-        std::variant<string_view, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
-
-        Info() = default;
-
-        void setBit(logic_t value);
-        void setReal(double value, bool outOfRange);
-        void setInt(BumpAllocator& alloc, const SVInt& value);
-        void setNumFlags(LiteralBase base, bool isSigned);
-        void setTimeUnit(TimeUnit unit);
-
-        const string_view& stringText() const { return std::get<string_view>(extra); }
-        const SyntaxKind& directiveKind() const { return std::get<SyntaxKind>(extra); }
-        const IdentifierType& idType() const { return std::get<IdentifierType>(extra); }
-        const NumericLiteralInfo& numInfo() const { return std::get<NumericLiteralInfo>(extra); }
-    };
-
 public:
     /// The kind of the token; this is not in the info block because
     /// we almost always want to look at it (perf).
@@ -173,8 +134,8 @@ public:
     bool isMissing() const { return missing; }
 
     SourceRange range() const;
-    SourceLocation location() const { return info->location; }
-    span<Trivia const> trivia() const { return info->trivia; }
+    SourceLocation location() const;
+    span<Trivia const> trivia() const;
 
     /// Value text is the "nice" lexed version of certain tokens;
     /// for example, in string literals, escape sequences are converted appropriately.
@@ -232,17 +193,30 @@ public:
                                 TokenKind expected, Token lastConsumed);
 
 private:
-    Token(TokenKind kind, const Info* info);
+    struct Info;
 
-    static Token::Info* createInfo(BumpAllocator& alloc, span<Trivia const> trivia,
+    Token(TokenKind kind, const Info* info, string_view rawText, size_t triviaCount);
+
+    static Token::Info* createInfo(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
                                    string_view rawText, SourceLocation location);
 
+    // Some data is stored directly in the token here because we have 6 bytes of padding that
+    // would otherwise go unused. The rest is stored in the info block.
     bool missing : 1;
-    bool hasTrivia : 1;
-    bool reserved : 6;
-    NumericTokenFlags numFlags;
+    uint8_t triviaCountSmall : 4;
+    uint8_t reserved : 3;
+    union {
+        NumericTokenFlags numFlags;
+        IdentifierType idType;
+    };
     uint32_t rawLen = 0;
-    const Info* info;
+    const Info* info = nullptr;
+
+    // We use some free bits in the token structure to count how many trivia elements
+    // this token has. This is enough space for the vast majority of tokens, but for
+    // cases with more, triviaCountSmall gets set to all 1's and the real count is
+    // included in the info structure.
+    static constexpr int MaxTriviaSmallCount = (1 << 4) - 2;
 };
 
 static_assert(sizeof(Token) == 16);

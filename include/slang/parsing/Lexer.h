@@ -131,6 +131,8 @@ private:
     // that must start on their own line
     bool onNewLine = true;
 
+    uint32_t tokenCount = 0;
+
     // temporary storage for building arrays of trivia
     SmallVectorSized<Trivia, 32> triviaBuffer;
 };
