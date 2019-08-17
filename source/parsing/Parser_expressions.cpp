@@ -342,8 +342,8 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
 
     string_view rawText = count == 1 ? first.rawText() : to_string_view(text.copy(alloc));
 
-    Token valToken = Token::create(alloc, TokenKind::IntegerLiteral, first.trivia(), rawText,
-                                   first.location(), vectorBuilder.finish());
+    Token valToken(alloc, TokenKind::IntegerLiteral, first.trivia(), rawText, first.location(),
+                   vectorBuilder.finish());
 
     return factory.integerVectorExpression(sizeToken, baseToken, valToken);
 }

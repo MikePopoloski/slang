@@ -1077,8 +1077,8 @@ void Lexer::scanBlockComment() {
 template<typename... Args>
 Token Lexer::create(TokenKind kind, Args&&... args) {
     SourceLocation location(bufferId, uint32_t(marker - originalBegin));
-    return Token::create(alloc, kind, triviaBuffer.copy(alloc), lexeme(), location,
-                         std::forward<Args>(args)...);
+    return Token(alloc, kind, triviaBuffer.copy(alloc), lexeme(), location,
+                 std::forward<Args>(args)...);
 }
 
 void Lexer::addTrivia(TriviaKind kind) {

@@ -129,6 +129,22 @@ public:
     TokenKind kind;
 
     Token();
+    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+          SourceLocation location);
+    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+          SourceLocation location, string_view strText);
+    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+          SourceLocation location, IdentifierType idType);
+    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+          SourceLocation location, SyntaxKind directive);
+    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+          SourceLocation location, logic_t bit);
+    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+          SourceLocation location, const SVInt& value);
+    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+          SourceLocation location, double value, bool outOfRange, optional<TimeUnit> timeUnit);
+    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+          SourceLocation location, LiteralBase base, bool isSigned);
 
     /// A missing token was expected and inserted by the parser at a given point.
     bool isMissing() const { return missing; }
@@ -169,25 +185,6 @@ public:
     [[nodiscard]] Token clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
                               SourceLocation location) const;
 
-    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                        string_view rawText, SourceLocation location);
-    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                        string_view rawText, SourceLocation location, string_view strText);
-    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                        string_view rawText, SourceLocation location, IdentifierType idType);
-    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                        string_view rawText, SourceLocation location, SyntaxKind directive);
-    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                        string_view rawText, SourceLocation location, logic_t bit);
-    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                        string_view rawText, SourceLocation location, const SVInt& value);
-    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                        string_view rawText, SourceLocation location, double value, bool outOfRange,
-                        optional<TimeUnit> timeUnit);
-    static Token create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                        string_view rawText, SourceLocation location, LiteralBase base,
-                        bool isSigned);
-
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
     static Token createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual,
                                 TokenKind expected, Token lastConsumed);
@@ -195,10 +192,8 @@ public:
 private:
     struct Info;
 
-    Token(TokenKind kind, const Info* info, string_view rawText, size_t triviaCount);
-
-    static Token::Info* createInfo(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                                   string_view rawText, SourceLocation location);
+    void init(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+              SourceLocation location);
 
     // Some data is stored directly in the token here because we have 6 bytes of padding that
     // would otherwise go unused. The rest is stored in the info block.
@@ -210,7 +205,7 @@ private:
         IdentifierType idType;
     };
     uint32_t rawLen = 0;
-    const Info* info = nullptr;
+    Info* info = nullptr;
 
     // We use some free bits in the token structure to count how many trivia elements
     // this token has. This is enough space for the vast majority of tokens, but for

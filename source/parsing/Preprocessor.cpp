@@ -643,8 +643,8 @@ bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value)
         auto end = suffix.rawText().data() + suffix.rawText().size();
         auto text = string_view(start, size_t(end - start));
 
-        token = Token::create(alloc, TokenKind::TimeLiteral, token.trivia(), text, token.location(),
-                              token.intValue().toDouble(), false, unit);
+        token = Token(alloc, TokenKind::TimeLiteral, token.trivia(), text, token.location(),
+                      token.intValue().toDouble(), false, unit);
     }
     else {
         token = expect(TokenKind::TimeLiteral);
@@ -1183,8 +1183,8 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location) 
         newTrivia.appendRange(token.trivia());
         newTrivia.append(Trivia(TriviaKind::EndOfLine, token.rawText().substr(1)));
 
-        dest.append(Token::create(alloc, TokenKind::EmptyMacroArgument, newTrivia.copy(alloc), "",
-                                  location));
+        dest.append(
+            Token(alloc, TokenKind::EmptyMacroArgument, newTrivia.copy(alloc), "", location));
     }
     else {
         dest.append(token.withLocation(alloc, location));
@@ -1262,8 +1262,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
             text.appendRange(fileName);
 
             string_view rawText = to_string_view(text.copy(alloc));
-            Token token =
-                Token::create(alloc, TokenKind::StringLiteral, {}, rawText, loc, fileName);
+            Token token(alloc, TokenKind::StringLiteral, {}, rawText, loc, fileName);
             expansion.append(token, loc);
             break;
         }
@@ -1272,8 +1271,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
             text.appendRange(std::to_string(lineNum)); // not the most efficient, but whatever
 
             string_view rawText = to_string_view(text.copy(alloc));
-            Token token =
-                Token::create(alloc, TokenKind::IntegerLiteral, {}, rawText, loc, lineNum);
+            Token token(alloc, TokenKind::IntegerLiteral, {}, rawText, loc, lineNum);
             expansion.append(token, loc);
             break;
         }

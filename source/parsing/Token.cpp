@@ -162,12 +162,65 @@ Token::Token() :
     kind(TokenKind::Unknown), missing(false), triviaCountSmall(0), reserved(0), numFlags() {
 }
 
-Token::Token(TokenKind kind, const Info* info, string_view rawText, size_t triviaCount) :
-    kind(kind), missing(false),
-    triviaCountSmall(triviaCount > MaxTriviaSmallCount ? MaxTriviaSmallCount + 1
-                                                       : uint8_t(triviaCount)),
-    reserved(0), numFlags(), rawLen(uint32_t(rawText.size())), info(info) {
-    ASSERT(info);
+Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+             SourceLocation location) {
+    init(alloc, kind, trivia, rawText, location);
+}
+
+Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+             SourceLocation location, string_view strText) {
+    init(alloc, kind, trivia, rawText, location);
+    info->stringText() = strText;
+}
+
+Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+             SourceLocation location, IdentifierType idType_) {
+    init(alloc, kind, trivia, rawText, location);
+    idType = idType_;
+}
+
+Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+             SourceLocation location, SyntaxKind directive) {
+    init(alloc, kind, trivia, rawText, location);
+    info->directiveKind() = directive;
+}
+
+Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+             SourceLocation location, logic_t bit) {
+    init(alloc, kind, trivia, rawText, location);
+    info->bit() = bit;
+}
+
+Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+             SourceLocation location, const SVInt& value) {
+    init(alloc, kind, trivia, rawText, location);
+
+    SVIntStorage storage(value.getBitWidth(), value.isSigned(), value.hasUnknown());
+    if (value.isSingleWord())
+        storage.val = *value.getRawPtr();
+    else {
+        storage.pVal =
+            (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
+        memcpy(storage.pVal, value.getRawPtr(), sizeof(uint64_t) * value.getNumWords());
+    }
+
+    info->integer() = storage;
+}
+
+Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+             SourceLocation location, double value, bool outOfRange, optional<TimeUnit> timeUnit) {
+    init(alloc, kind, trivia, rawText, location);
+    info->real() = value;
+
+    numFlags.setOutOfRange(outOfRange);
+    if (timeUnit)
+        numFlags.set(*timeUnit);
+}
+
+Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
+             SourceLocation location, LiteralBase base, bool isSigned) {
+    init(alloc, kind, trivia, rawText, location);
+    numFlags.set(base, isSigned);
 }
 
 string_view Token::valueText() const {
@@ -290,31 +343,40 @@ Token Token::withRawText(BumpAllocator& alloc, string_view rawText) const {
 
 Token Token::clone(BumpAllocator& alloc, span<Trivia const> trivia, string_view rawText,
                    SourceLocation location) const {
-    auto newInfo = createInfo(alloc, kind, trivia, rawText, location);
-    memcpy(newInfo->extra(), info->extra(), getExtraSize(kind));
-
-    Token result(kind, newInfo, rawText, trivia.size());
+    Token result(alloc, kind, trivia, rawText, location);
     result.missing = missing;
-    result.info = newInfo;
 
+    memcpy(result.info->extra(), info->extra(), getExtraSize(kind));
     memcpy(&result.numFlags, &numFlags, 1);
 
     return result;
 }
 
-Token::Info* Token::createInfo(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                               string_view rawText, SourceLocation location) {
+void Token::init(BumpAllocator& alloc, TokenKind kind_, span<Trivia const> trivia,
+                 string_view rawText, SourceLocation location) {
+    kind = kind_;
+    missing = false;
+    triviaCountSmall = 0;
+    reserved = 0;
+    numFlags.raw = 0;
+    rawLen = uint32_t(rawText.size());
+
     size_t extra = getExtraSize(kind);
     ASSERT(extra % alignof(void*) == 0);
 
     size_t size = sizeof(Info) + extra;
     if (!trivia.empty()) {
         size += sizeof(Trivia*);
-        if (trivia.size() > MaxTriviaSmallCount)
+        if (trivia.size() > MaxTriviaSmallCount) {
             size += sizeof(size_t);
+            triviaCountSmall = MaxTriviaSmallCount + 1;
+        }
+        else {
+            triviaCountSmall = uint8_t(trivia.size());
+        }
     }
 
-    auto info = (Info*)alloc.allocate(size, alignof(Info));
+    info = (Info*)alloc.allocate(size, alignof(Info));
     info->location = location;
     info->rawTextPtr = rawText.data();
 
@@ -324,117 +386,39 @@ Token::Info* Token::createInfo(BumpAllocator& alloc, TokenKind kind, span<Trivia
         if (trivia.size() > MaxTriviaSmallCount)
             *reinterpret_cast<size_t*>(triviaPtr + 1) = trivia.size();
     }
-
-    return info;
-}
-
-Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                    string_view rawText, SourceLocation location) {
-    auto info = createInfo(alloc, kind, trivia, rawText, location);
-    return Token(kind, info, rawText, trivia.size());
-}
-
-Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                    string_view rawText, SourceLocation location, string_view strText) {
-    auto info = createInfo(alloc, kind, trivia, rawText, location);
-    info->stringText() = strText;
-    return Token(kind, info, rawText, trivia.size());
-}
-
-Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                    string_view rawText, SourceLocation location, IdentifierType idType) {
-    auto info = createInfo(alloc, kind, trivia, rawText, location);
-
-    Token result(kind, info, rawText, trivia.size());
-    result.idType = idType;
-    return result;
-}
-
-Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                    string_view rawText, SourceLocation location, SyntaxKind directive) {
-    auto info = createInfo(alloc, kind, trivia, rawText, location);
-    info->directiveKind() = directive;
-    return Token(kind, info, rawText, trivia.size());
-}
-
-Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                    string_view rawText, SourceLocation location, logic_t bit) {
-    auto info = createInfo(alloc, kind, trivia, rawText, location);
-    info->bit() = bit;
-    return Token(kind, info, rawText, trivia.size());
-}
-
-Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                    string_view rawText, SourceLocation location, const SVInt& value) {
-    auto info = createInfo(alloc, kind, trivia, rawText, location);
-
-    SVIntStorage storage(value.getBitWidth(), value.isSigned(), value.hasUnknown());
-    if (value.isSingleWord())
-        storage.val = *value.getRawPtr();
-    else {
-        storage.pVal =
-            (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
-        memcpy(storage.pVal, value.getRawPtr(), sizeof(uint64_t) * value.getNumWords());
-    }
-
-    info->integer() = storage;
-    return Token(kind, info, rawText, trivia.size());
-}
-
-Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                    string_view rawText, SourceLocation location, double value, bool outOfRange,
-                    optional<TimeUnit> timeUnit) {
-    auto info = createInfo(alloc, kind, trivia, rawText, location);
-    info->real() = value;
-
-    Token result(kind, info, rawText, trivia.size());
-    result.numFlags.setOutOfRange(outOfRange);
-    if (timeUnit)
-        result.numFlags.set(*timeUnit);
-
-    return result;
-}
-
-Token Token::create(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia,
-                    string_view rawText, SourceLocation location, LiteralBase base, bool isSigned) {
-    auto info = createInfo(alloc, kind, trivia, rawText, location);
-
-    Token result(kind, info, rawText, trivia.size());
-    result.numFlags.set(base, isSigned);
-    return result;
 }
 
 Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location) {
     Token result;
     switch (kind) {
         case TokenKind::Identifier:
-            result = create(alloc, kind, {}, "", location, IdentifierType::Unknown);
+            result = Token(alloc, kind, {}, "", location, IdentifierType::Unknown);
             break;
         case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
-            result = create(alloc, kind, {}, "", location, "");
+            result = Token(alloc, kind, {}, "", location, "");
             break;
         case TokenKind::Directive:
         case TokenKind::MacroUsage:
-            result = create(alloc, kind, {}, "", location, SyntaxKind::Unknown);
+            result = Token(alloc, kind, {}, "", location, SyntaxKind::Unknown);
             break;
         case TokenKind::IntegerLiteral:
-            result = create(alloc, kind, {}, "", location, SVInt::Zero);
+            result = Token(alloc, kind, {}, "", location, SVInt::Zero);
             break;
         case TokenKind::IntegerBase:
-            result = create(alloc, kind, {}, "", location, LiteralBase::Decimal, false);
+            result = Token(alloc, kind, {}, "", location, LiteralBase::Decimal, false);
             break;
         case TokenKind::UnbasedUnsizedLiteral:
-            result = create(alloc, kind, {}, "", location, logic_t::x);
+            result = Token(alloc, kind, {}, "", location, logic_t::x);
             break;
         case TokenKind::RealLiteral:
-            result = create(alloc, kind, {}, "", location, 0.0, false, std::nullopt);
+            result = Token(alloc, kind, {}, "", location, 0.0, false, std::nullopt);
             break;
         case TokenKind::TimeLiteral:
-            result = create(alloc, kind, {}, "", location, 0.0, false, TimeUnit::Seconds);
+            result = Token(alloc, kind, {}, "", location, 0.0, false, TimeUnit::Seconds);
             break;
         default:
-            result = create(alloc, kind, {}, "", location);
+            result = Token(alloc, kind, {}, "", location);
             break;
     }
 
