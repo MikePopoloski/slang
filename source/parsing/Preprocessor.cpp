@@ -367,8 +367,8 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
                     text.appendRange(t.getRawText());
                 text.append('>');
 
-                fileName = fileName.withRawText(alloc, to_string_view(text.copy(alloc)));
-                fileName.kind = TokenKind::IncludeFileName;
+                fileName = Token(alloc, TokenKind::IncludeFileName, fileName.trivia(),
+                                 to_string_view(text.copy(alloc)), fileName.location());
                 break;
             }
 
@@ -377,7 +377,8 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     }
     else if (fileName.kind == TokenKind::StringLiteral) {
         consume();
-        fileName.kind = TokenKind::IncludeFileName;
+        fileName = Token(alloc, TokenKind::IncludeFileName, fileName.trivia(), fileName.rawText(),
+                         fileName.location());
     }
     else {
         fileName = expect(TokenKind::IncludeFileName);
@@ -972,8 +973,9 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
             size_t offset = newToken.rawText().find("`\"");
             if (offset != std::string_view::npos) {
                 // Split the token, finish the stringification.
-                auto split = newToken.withRawText(alloc, newToken.rawText().substr(0, offset));
-                split.kind = TokenKind::Identifier;
+                Token split(alloc, TokenKind::Identifier, newToken.trivia(),
+                            newToken.rawText().substr(0, offset), newToken.location(),
+                            IdentifierType::Normal);
                 stringifyBuffer.append(split);
 
                 dest.append(Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
@@ -1120,8 +1122,8 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         if (begin == end) {
             // The macro argument contained no tokens. We still need to supply an empty token
             // here to ensure that the trivia of the formal parameter is passed on.
-            Token empty = token.withRawText(alloc, "");
-            empty.kind = TokenKind::EmptyMacroArgument;
+            Token empty(alloc, TokenKind::EmptyMacroArgument, token.trivia(), ""sv,
+                        token.location());
             expansion.append(empty, location);
             continue;
         }
@@ -1141,8 +1143,8 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         // See note above about weird macro usage being argument replaced.
         // In that case we want to fabricate the correct directive token here.
         if (token.kind == TokenKind::Directive) {
-            Token grave = first.withRawText(alloc, "`");
-            grave.kind = TokenKind::Directive;
+            Token grave(alloc, TokenKind::Directive, first.trivia(), "`"sv, first.location(),
+                        SyntaxKind::Unknown);
             first = Lexer::concatenateTokens(alloc, grave, first);
         }
 

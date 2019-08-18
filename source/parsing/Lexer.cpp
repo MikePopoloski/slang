@@ -163,9 +163,8 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
         addDiag(diag::TooManyLexerErrors, currentOffset());
         sourceBuffer = sourceEnd - 1;
 
-        token.kind = TokenKind::EndOfFile;
         triviaBuffer.append(Trivia(TriviaKind::DisabledText, lexeme()));
-        return token.withTrivia(alloc, triviaBuffer.copy(alloc));
+        return Token(alloc, TokenKind::EndOfFile, triviaBuffer.copy(alloc), token.rawText(), token.location());
     }
 
     tokenCount++;
