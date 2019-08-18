@@ -26,21 +26,12 @@ struct Token::Info {
     SourceLocation location;
 
     byte* extra() { return reinterpret_cast<byte*>(this + 1); }
-    const byte* extra() const { return reinterpret_cast<const byte*>(this + 1); }
 
     logic_t& bit() { return *reinterpret_cast<logic_t*>(extra()); }
     double& real() { return *reinterpret_cast<double*>(extra()); }
     SVIntStorage& integer() { return *reinterpret_cast<SVIntStorage*>(extra()); }
     string_view& stringText() { return *reinterpret_cast<string_view*>(extra()); }
     SyntaxKind& directiveKind() { return *reinterpret_cast<SyntaxKind*>(extra()); }
-
-    const logic_t& bit() const { return *reinterpret_cast<const logic_t*>(extra()); }
-    const double& real() const { return *reinterpret_cast<const double*>(extra()); }
-    const SVIntStorage& integer() const { return *reinterpret_cast<const SVIntStorage*>(extra()); }
-    const string_view& stringText() const { return *reinterpret_cast<const string_view*>(extra()); }
-    const SyntaxKind& directiveKind() const {
-        return *reinterpret_cast<const SyntaxKind*>(extra());
-    }
 };
 
 static constexpr size_t getExtraSize(TokenKind kind) {
@@ -286,11 +277,15 @@ span<Trivia const> Token::trivia() const {
     if (triviaCountSmall == 0)
         return {};
 
-    auto ptr = reinterpret_cast<const Trivia* const*>(info->extra() + getExtraSize(kind));
-    if (triviaCountSmall == MaxTriviaSmallCount + 1)
-        return { *ptr, ptrdiff_t(*reinterpret_cast<const size_t*>(ptr + 1)) };
+    byte* ptr = info->extra() + getExtraSize(kind);
+    const Trivia* trivia = *reinterpret_cast<const Trivia* const*>(ptr);
+    if (triviaCountSmall == MaxTriviaSmallCount + 1){
+        size_t size;
+        memcpy(&size, ptr + sizeof(trivia), sizeof(size_t));
+        return { trivia, ptrdiff_t(size) };
+    }
 
-    return { *ptr, triviaCountSmall };
+    return { trivia, triviaCountSmall };
 }
 
 std::string Token::toString() const {
@@ -383,8 +378,10 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, span<Trivia const> trivi
     if (!trivia.empty()) {
         const Trivia** triviaPtr = reinterpret_cast<const Trivia**>(info->extra() + extra);
         (*triviaPtr) = trivia.data();
-        if (trivia.size() > MaxTriviaSmallCount)
-            *reinterpret_cast<size_t*>(triviaPtr + 1) = trivia.size();
+        if (trivia.size() > MaxTriviaSmallCount) {
+            size = size_t(trivia.size());
+            memcpy(triviaPtr + 1, &size, sizeof(size_t));
+        }
     }
 }
 
