@@ -480,7 +480,7 @@ size_t SourceManager::getRawLineNumber(SourceLocation location) const {
 
     // We want to ensure the line we return is strictly greater than the given location offset.
     // So if it is equal, add one to the lower bound we got.
-    size_t line = it - fd->lineOffsets.begin();
+    size_t line = size_t(it - fd->lineOffsets.begin());
     if (it != fd->lineOffsets.end() && *it == location.offset())
         line++;
     return line;
