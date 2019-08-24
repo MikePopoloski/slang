@@ -62,12 +62,12 @@ public:
     /// still points to a valid place in the source.
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
     SourceLocation operator+(T delta) const {
-        return SourceLocation(buffer(), size_t(charOffset + delta));
+        return SourceLocation(buffer(), size_t((T)charOffset + delta));
     }
 
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
     SourceLocation operator-(T delta) const {
-        return SourceLocation(buffer(), size_t(charOffset - delta));
+        return SourceLocation(buffer(), size_t((T)charOffset - delta));
     }
 
     ptrdiff_t operator-(SourceLocation loc) const {
