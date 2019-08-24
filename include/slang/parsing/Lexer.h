@@ -86,7 +86,7 @@ private:
     Token create(TokenKind kind, Args&&... args);
 
     void addTrivia(TriviaKind kind);
-    Diagnostic& addDiag(DiagCode code, uint32_t offset);
+    Diagnostic& addDiag(DiagCode code, size_t offset);
 
     // source pointer manipulation
     void mark() { marker = sourceBuffer; }
@@ -94,7 +94,7 @@ private:
     void advance(int count) { sourceBuffer += count; }
     char peek() { return *sourceBuffer; }
     char peek(int offset) { return sourceBuffer[offset]; }
-    uint32_t currentOffset();
+    size_t currentOffset();
 
     // in order to detect embedded nulls gracefully, we call this whenever we
     // encounter a null to check whether we really are at the end of the buffer
@@ -130,8 +130,6 @@ private:
     // Keeps track of whether we just entered a new line, to enforce tokens
     // that must start on their own line
     bool onNewLine = true;
-
-    uint32_t tokenCount = 0;
 
     // temporary storage for building arrays of trivia
     SmallVectorSized<Trivia, 32> triviaBuffer;

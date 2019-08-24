@@ -696,7 +696,7 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
 
     if (!lineNumber.isMissing() && !fileName.isMissing() && !level.isMissing()) {
         optional<uint8_t> levNum = level.intValue().as<uint8_t>();
-        optional<uint32_t> lineNum = lineNumber.intValue().as<uint32_t>();
+        optional<size_t> lineNum = lineNumber.intValue().as<size_t>();
 
         if (!levNum || (levNum != 0 && levNum != 1 && levNum != 2)) {
             // We don't actually use the level for anything, but the spec allows
@@ -1269,7 +1269,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
             break;
         }
         case MacroIntrinsic::Line: {
-            uint32_t lineNum = sourceManager.getLineNumber(loc);
+            size_t lineNum = sourceManager.getLineNumber(loc);
             text.appendRange(std::to_string(lineNum)); // not the most efficient, but whatever
 
             string_view rawText = to_string_view(text.copy(alloc));

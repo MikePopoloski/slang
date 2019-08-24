@@ -30,7 +30,7 @@ void DiagnosticClient::getIncludeStack(BufferID buffer, SmallVector<SourceLocati
     }
 }
 
-string_view DiagnosticClient::getSourceLine(SourceLocation location, uint32_t col) const {
+string_view DiagnosticClient::getSourceLine(SourceLocation location, size_t col) const {
     string_view text = sourceManager->getSourceText(location.buffer());
     if (text.empty())
         return "";
@@ -40,7 +40,7 @@ string_view DiagnosticClient::getSourceLine(SourceLocation location, uint32_t co
     while (*curr != '\n' && *curr != '\r' && *curr != '\0')
         curr++;
 
-    return string_view(start, (uint32_t)(curr - start));
+    return string_view(start, (size_t)(curr - start));
 }
 
 string_view DiagnosticClient::getSeverityString(DiagnosticSeverity severity) {

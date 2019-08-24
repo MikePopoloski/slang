@@ -52,7 +52,7 @@ public:
     void addUserDirectory(string_view path);
 
     /// Gets the source line number for a given source location.
-    uint32_t getLineNumber(SourceLocation location) const;
+    size_t getLineNumber(SourceLocation location) const;
 
     /// Gets the source file name for a given source location.
     string_view getFileName(SourceLocation location) const;
@@ -63,7 +63,7 @@ public:
 
     /// Gets the column line number for a given source location.
     /// @a location must be a file location.
-    uint32_t getColumnNumber(SourceLocation location) const;
+    size_t getColumnNumber(SourceLocation location) const;
 
     /// Gets a location that indicates from where the given buffer was included.
     /// @a location must be a file location.
@@ -141,8 +141,7 @@ public:
     SourceBuffer readHeader(string_view path, SourceLocation includedFrom, bool isSystemPath);
 
     /// Adds a line directive at the given location.
-    void addLineDirective(SourceLocation location, uint32_t lineNum, string_view name,
-                          uint8_t level);
+    void addLineDirective(SourceLocation location, size_t lineNum, string_view name, uint8_t level);
 
 private:
     uint32_t unnamedBufferCount = 0;
@@ -150,12 +149,12 @@ private:
     // Stores information specified in a `line directive, which alters the
     // line number and file name that we report in diagnostics.
     struct LineDirectiveInfo {
-        std::string name;         // File name set by directive
-        uint32_t lineInFile;      // Actual file line where directive occurred
-        uint32_t lineOfDirective; // Line number set by directive
-        uint8_t level;            // Level of directive. Either 0, 1, or 2.
+        std::string name;       // File name set by directive
+        size_t lineInFile;      // Actual file line where directive occurred
+        size_t lineOfDirective; // Line number set by directive
+        uint8_t level;          // Level of directive. Either 0, 1, or 2.
 
-        LineDirectiveInfo(std::string&& fname, uint32_t lif, uint32_t lod, uint8_t level) noexcept :
+        LineDirectiveInfo(std::string&& fname, size_t lif, size_t lod, uint8_t level) noexcept :
             name(std::move(fname)), lineInFile(lif), lineOfDirective(lod), level(level) {}
     };
 
@@ -164,7 +163,7 @@ private:
     public:
         std::string name;                              // name of the file
         std::vector<char> mem;                         // file contents
-        std::vector<uint32_t> lineOffsets;             // cache of compute line offsets
+        std::vector<size_t> lineOffsets;               // cache of compute line offsets
         std::vector<LineDirectiveInfo> lineDirectives; // cache of line directives
         const fs::path* directory;                     // directory in which the file exists
 
@@ -173,7 +172,7 @@ private:
 
         // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
         // line directive of the given raw line number, or nullptr if there is none
-        const LineDirectiveInfo* getPreviousLineDirective(uint32_t rawLineNumber) const;
+        const LineDirectiveInfo* getPreviousLineDirective(size_t rawLineNumber) const;
     };
 
     // Stores a pointer to file data along with information about where we included it.
@@ -241,9 +240,9 @@ private:
                              std::vector<char>&& buffer);
 
     // Get raw line number of a file location, ignoring any line directives
-    uint32_t getRawLineNumber(SourceLocation location) const;
+    size_t getRawLineNumber(SourceLocation location) const;
 
-    static void computeLineOffsets(const std::vector<char>& buffer, std::vector<uint32_t>& offsets);
+    static void computeLineOffsets(const std::vector<char>& buffer, std::vector<size_t>& offsets);
 
     static bool readFile(const fs::path& path, std::vector<char>& buffer);
 };

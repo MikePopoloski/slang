@@ -30,9 +30,9 @@ void SourceManager::addUserDirectory(string_view path) {
     userDirectories.push_back(fs::canonical(widen(path)));
 }
 
-uint32_t SourceManager::getLineNumber(SourceLocation location) const {
+size_t SourceManager::getLineNumber(SourceLocation location) const {
     SourceLocation fileLocation = getFullyExpandedLoc(location);
-    uint32_t rawLineNumber = getRawLineNumber(fileLocation);
+    size_t rawLineNumber = getRawLineNumber(fileLocation);
     if (rawLineNumber == 0)
         return 0;
 
@@ -45,13 +45,13 @@ uint32_t SourceManager::getLineNumber(SourceLocation location) const {
         return lineDirective->lineOfDirective + (rawLineNumber - lineDirective->lineInFile) - 1;
 }
 
-uint32_t SourceManager::getColumnNumber(SourceLocation location) const {
+size_t SourceManager::getColumnNumber(SourceLocation location) const {
     FileData* fd = getFileData(location.buffer());
     if (!fd)
         return 0;
 
     // walk backward to find start of line
-    uint32_t lineStart = location.offset();
+    size_t lineStart = location.offset();
     ASSERT(lineStart < fd->mem.size());
     while (lineStart > 0 && fd->mem[lineStart - 1] != '\n' && fd->mem[lineStart - 1] != '\r')
         lineStart--;
@@ -88,8 +88,8 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
     if (!buffer)
         return SourceLocation();
 
-    ASSERT(buffer.id < bufferEntries.size());
-    const FileInfo* info = std::get_if<FileInfo>(&bufferEntries[buffer.id]);
+    ASSERT(buffer.getId() < bufferEntries.size());
+    const FileInfo* info = std::get_if<FileInfo>(&bufferEntries[buffer.getId()]);
     return info ? info->includedFrom : SourceLocation();
 }
 
@@ -101,8 +101,8 @@ string_view SourceManager::getMacroName(SourceLocation location) const {
     if (!buffer)
         return {};
 
-    ASSERT(buffer.id < bufferEntries.size());
-    auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.id]);
+    ASSERT(buffer.getId() < bufferEntries.size());
+    auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]);
     if (!info)
         return {};
 
@@ -114,8 +114,8 @@ bool SourceManager::isFileLoc(SourceLocation location) const {
     if (!buffer)
         return false;
 
-    ASSERT(buffer.id < bufferEntries.size());
-    return std::get_if<FileInfo>(&bufferEntries[buffer.id]) != nullptr;
+    ASSERT(buffer.getId() < bufferEntries.size());
+    return std::get_if<FileInfo>(&bufferEntries[buffer.getId()]) != nullptr;
 }
 
 bool SourceManager::isMacroLoc(SourceLocation location) const {
@@ -123,8 +123,8 @@ bool SourceManager::isMacroLoc(SourceLocation location) const {
     if (!buffer)
         return false;
 
-    ASSERT(buffer.id < bufferEntries.size());
-    return std::get_if<ExpansionInfo>(&bufferEntries[buffer.id]) != nullptr;
+    ASSERT(buffer.getId() < bufferEntries.size());
+    return std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]) != nullptr;
 }
 
 bool SourceManager::isMacroArgLoc(SourceLocation location) const {
@@ -132,8 +132,8 @@ bool SourceManager::isMacroArgLoc(SourceLocation location) const {
     if (!buffer)
         return false;
 
-    ASSERT(buffer.id < bufferEntries.size());
-    auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.id]);
+    ASSERT(buffer.getId() < bufferEntries.size());
+    auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]);
     return info && info->isMacroArg;
 }
 
@@ -163,12 +163,12 @@ bool SourceManager::isBeforeInCompilationUnit(SourceLocation left, SourceLocatio
     };
 
     // Otherwise we have to build the full include / expansion chain and compare.
-    SmallMap<BufferID, uint32_t, 16> leftChain;
+    SmallMap<BufferID, size_t, 16> leftChain;
     do {
         leftChain.emplace(left.buffer(), left.offset());
     } while (left.buffer() != right.buffer() && !moveUp(left));
 
-    SmallMap<BufferID, uint32_t, 16>::iterator it;
+    SmallMap<BufferID, size_t, 16>::iterator it;
     while ((it = leftChain.find(right.buffer())) == leftChain.end()) {
         if (moveUp(right))
             break;
@@ -188,8 +188,8 @@ SourceLocation SourceManager::getExpansionLoc(SourceLocation location) const {
     if (!buffer)
         return SourceLocation();
 
-    ASSERT(buffer.id < bufferEntries.size());
-    return std::get<ExpansionInfo>(bufferEntries[buffer.id]).expansionStart;
+    ASSERT(buffer.getId() < bufferEntries.size());
+    return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).expansionStart;
 }
 
 SourceRange SourceManager::getExpansionRange(SourceLocation location) const {
@@ -197,8 +197,8 @@ SourceRange SourceManager::getExpansionRange(SourceLocation location) const {
     if (!buffer)
         return SourceRange();
 
-    ASSERT(buffer.id < bufferEntries.size());
-    const ExpansionInfo& info = std::get<ExpansionInfo>(bufferEntries[buffer.id]);
+    ASSERT(buffer.getId() < bufferEntries.size());
+    const ExpansionInfo& info = std::get<ExpansionInfo>(bufferEntries[buffer.getId()]);
     return SourceRange(info.expansionStart, info.expansionEnd);
 }
 
@@ -207,9 +207,8 @@ SourceLocation SourceManager::getOriginalLoc(SourceLocation location) const {
     if (!buffer)
         return SourceLocation();
 
-    ASSERT(buffer.id < bufferEntries.size());
-    return std::get<ExpansionInfo>(bufferEntries[buffer.id]).originalLoc +
-           (size_t)location.offset();
+    ASSERT(buffer.getId() < bufferEntries.size());
+    return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).originalLoc + location.offset();
 }
 
 SourceLocation SourceManager::getFullyOriginalLoc(SourceLocation location) const {
@@ -241,7 +240,7 @@ SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
                                                  SourceLocation expansionEnd, bool isMacroArg) {
     bufferEntries.emplace_back(
         ExpansionInfo(originalLoc, expansionStart, expansionEnd, isMacroArg));
-    return SourceLocation(BufferID::get((uint32_t)(bufferEntries.size() - 1)), 0);
+    return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1)), 0);
 }
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
@@ -250,7 +249,7 @@ SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
                                                  string_view macroName) {
 
     bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionStart, expansionEnd, macroName));
-    return SourceLocation(BufferID::get((uint32_t)(bufferEntries.size() - 1)), 0);
+    return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1)), 0);
 }
 
 SourceBuffer SourceManager::assignText(string_view text, SourceLocation includedFrom) {
@@ -329,7 +328,7 @@ SourceBuffer SourceManager::readHeader(string_view path, SourceLocation included
     return SourceBuffer();
 }
 
-void SourceManager::addLineDirective(SourceLocation location, uint32_t lineNum, string_view name,
+void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, string_view name,
                                      uint8_t level) {
     SourceLocation fileLocation = getFullyExpandedLoc(location);
     FileData* fd = getFileData(fileLocation.buffer());
@@ -343,7 +342,7 @@ void SourceManager::addLineDirective(SourceLocation location, uint32_t lineNum, 
     else
         full = fs::path(widen(fd->name)).replace_filename(linePath);
 
-    uint32_t sourceLineNum = getRawLineNumber(fileLocation);
+    size_t sourceLineNum = getRawLineNumber(fileLocation);
     fd->lineDirectives.emplace_back(full.u8string(), sourceLineNum, lineNum, level);
 }
 
@@ -351,15 +350,15 @@ SourceManager::FileData* SourceManager::getFileData(BufferID buffer) const {
     if (!buffer)
         return nullptr;
 
-    ASSERT(buffer.id < bufferEntries.size());
-    return std::get<FileInfo>(bufferEntries[buffer.id]).data;
+    ASSERT(buffer.getId() < bufferEntries.size());
+    return std::get<FileInfo>(bufferEntries[buffer.getId()]).data;
 }
 
 SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom) {
     ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
     return SourceBuffer{ string_view(fd->mem.data(), fd->mem.size()),
-                         BufferID::get((uint32_t)(bufferEntries.size() - 1)) };
+                         BufferID((uint32_t)(bufferEntries.size() - 1)) };
 }
 
 SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation includedFrom) {
@@ -405,7 +404,7 @@ SourceBuffer SourceManager::cacheBuffer(const fs::path& path, SourceLocation inc
 }
 
 void SourceManager::computeLineOffsets(const std::vector<char>& buffer,
-                                       std::vector<uint32_t>& offsets) {
+                                       std::vector<size_t>& offsets) {
     // first line always starts at offset 0
     offsets.push_back(0);
 
@@ -417,7 +416,7 @@ void SourceManager::computeLineOffsets(const std::vector<char>& buffer,
             if ((ptr[1] == '\n' || ptr[1] == '\r') && ptr[0] != ptr[1])
                 ptr++;
             ptr++;
-            offsets.push_back((uint32_t)(ptr - buffer.data()));
+            offsets.push_back((size_t)(ptr - buffer.data()));
         }
         else {
             ptr++;
@@ -446,7 +445,7 @@ bool SourceManager::readFile(const fs::path& path, std::vector<char>& buffer) {
 }
 
 const SourceManager::LineDirectiveInfo* SourceManager::FileData::getPreviousLineDirective(
-    uint32_t rawLineNumber) const {
+    size_t rawLineNumber) const {
     auto it = std::lower_bound(
         lineDirectives.begin(), lineDirectives.end(), LineDirectiveInfo("", rawLineNumber, 0, 0),
         [](const auto& a, const auto& b) { return a.lineInFile < b.lineInFile; });
@@ -466,7 +465,7 @@ const SourceManager::LineDirectiveInfo* SourceManager::FileData::getPreviousLine
     return nullptr;
 }
 
-uint32_t SourceManager::getRawLineNumber(SourceLocation location) const {
+size_t SourceManager::getRawLineNumber(SourceLocation location) const {
     FileData* fd = getFileData(location.buffer());
     if (!fd)
         return 0;
@@ -481,7 +480,7 @@ uint32_t SourceManager::getRawLineNumber(SourceLocation location) const {
 
     // We want to ensure the line we return is strictly greater than the given location offset.
     // So if it is equal, add one to the lower bound we got.
-    uint32_t line = uint32_t(it - fd->lineOffsets.begin());
+    size_t line = it - fd->lineOffsets.begin();
     if (it != fd->lineOffsets.end() && *it == location.offset())
         line++;
     return line;

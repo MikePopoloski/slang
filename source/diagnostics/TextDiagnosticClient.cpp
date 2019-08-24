@@ -54,13 +54,13 @@ std::string TextDiagnosticClient::getString() const {
     return buffer.str();
 }
 
-static void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col,
+static void highlightRange(SourceRange range, SourceLocation caretLoc, size_t col,
                            string_view sourceLine, std::string& buffer) {
     // Trim the range so that it only falls on the same line as the cursor
-    uint32_t start = range.start().offset();
-    uint32_t end = range.end().offset();
-    uint32_t startOfLine = caretLoc.offset() - (col - 1);
-    uint32_t endOfLine = startOfLine + (uint32_t)sourceLine.length();
+    size_t start = range.start().offset();
+    size_t end = range.end().offset();
+    size_t startOfLine = caretLoc.offset() - (col - 1);
+    size_t endOfLine = startOfLine + sourceLine.length();
     if (start < startOfLine)
         start = startOfLine;
     if (end > endOfLine)
@@ -91,7 +91,7 @@ static void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t 
 void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange> ranges,
                                       string_view severity, string_view message,
                                       string_view optionName) {
-    uint32_t col = sourceManager->getColumnNumber(loc);
+    size_t col = sourceManager->getColumnNumber(loc);
     buffer.format("{}:{}:{}: {}: {}", sourceManager->getFileName(loc),
                   sourceManager->getLineNumber(loc), col, severity, message);
 
@@ -103,7 +103,7 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange
         buffer.format("\n{}\n", line);
 
         // Highlight any ranges and print the caret location.
-        std::string highlight(std::max(line.length(), (size_t)col), ' ');
+        std::string highlight(std::max(line.length(), col), ' ');
 
         // handle tabs to get proper alignment on a terminal
         for (size_t i = 0; i < line.length(); ++i) {

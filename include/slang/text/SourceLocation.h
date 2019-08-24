@@ -19,6 +19,9 @@ class SourceManager;
 /// Each time a macro is expanded a new BufferID is allocated to track
 /// the expansion location and original definition location.
 struct BufferID {
+    BufferID() = default;
+    explicit BufferID(uint32_t value) : id(value) {}
+
     bool valid() const { return id != 0; }
 
     bool operator==(const BufferID& rhs) const { return id == rhs.id; }
@@ -32,19 +35,10 @@ struct BufferID {
 
     explicit operator bool() const { return valid(); }
 
-    static BufferID getPlaceholder() { return get(UINT32_MAX); }
+    static BufferID getPlaceholder() { return BufferID(UINT32_MAX); }
 
 private:
     uint32_t id = 0;
-
-    static BufferID get(uint32_t value) {
-        BufferID result;
-        result.id = value;
-        return result;
-    }
-    uint32_t getValue() const { return id; }
-
-    friend class SourceManager;
 };
 
 /// This class represents a location in source code (or within a macro expansion).
@@ -53,12 +47,13 @@ private:
 /// macro location.
 class SourceLocation {
 public:
-    SourceLocation() : charOffset(0) {}
-    SourceLocation(BufferID buffer, uint32_t offset) : bufferID(buffer), charOffset(offset) {}
+    SourceLocation() : bufferID(0), charOffset(0) {}
+    SourceLocation(BufferID buffer, size_t offset) :
+        bufferID(buffer.getId()), charOffset(offset) {}
 
-    BufferID buffer() const { return bufferID; }
-    uint32_t offset() const { return charOffset; }
-    bool valid() const { return bufferID.valid(); }
+    BufferID buffer() const { return BufferID(bufferID); }
+    size_t offset() const { return charOffset; }
+    bool valid() const { return buffer().valid(); }
 
     explicit operator bool() const { return valid(); }
 
@@ -67,17 +62,17 @@ public:
     /// still points to a valid place in the source.
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
     SourceLocation operator+(T delta) const {
-        return SourceLocation(bufferID, (uint32_t)((T)charOffset + delta));
+        return SourceLocation(buffer(), size_t(charOffset + delta));
     }
 
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
     SourceLocation operator-(T delta) const {
-        return SourceLocation(bufferID, (uint32_t)((T)charOffset - delta));
+        return SourceLocation(buffer(), size_t(charOffset - delta));
     }
 
-    int64_t operator-(SourceLocation loc) const {
-        ASSERT(loc.buffer() == bufferID);
-        return (int64_t)charOffset - (int64_t)loc.charOffset;
+    ptrdiff_t operator-(SourceLocation loc) const {
+        ASSERT(loc.buffer() == buffer());
+        return (ptrdiff_t)charOffset - (ptrdiff_t)loc.charOffset;
     }
 
     bool operator==(const SourceLocation& rhs) const {
@@ -95,9 +90,11 @@ public:
     bool operator>=(const SourceLocation& rhs) const { return !(*this < rhs); }
 
 private:
-    BufferID bufferID;
-    uint32_t charOffset;
+    uint64_t bufferID : 28;
+    uint64_t charOffset : 36;
 };
+
+static_assert(sizeof(SourceLocation) == 8);
 
 /// Combines a pair of source locations that denote a range of source text.
 /// This is mostly used for diagnostic reporting purposes.

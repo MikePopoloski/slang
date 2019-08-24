@@ -64,7 +64,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
         return Token();
 
     // combine the text for both sides; make sure to include room for a null
-    uint32_t newLength = (uint32_t)(leftText.length() + rightText.length() + 1);
+    size_t newLength = leftText.length() + rightText.length() + 1;
     char* mem = (char*)alloc.allocate(newLength, 1);
     leftText.copy(mem, leftText.length());
     rightText.copy(mem + leftText.length(), rightText.length());
@@ -167,7 +167,6 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
         return Token(alloc, TokenKind::EndOfFile, triviaBuffer.copy(alloc), token.rawText(), token.location());
     }
 
-    tokenCount++;
     return token;
 }
 
@@ -549,7 +548,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
 Token Lexer::lexStringLiteral() {
     SmallVectorSized<char, 128> stringBuffer;
     while (true) {
-        uint32_t offset = currentOffset();
+        size_t offset = currentOffset();
         char c = peek();
 
         if (c == '\\') {
@@ -689,7 +688,7 @@ Token Lexer::lexDirective() {
     }
 
     // store the offset before scanning in order to easily report error locations
-    uint32_t startingOffset = currentOffset();
+    size_t startingOffset = currentOffset();
     scanIdentifier();
 
     // if length is 1, we just have a grave character on its own, which is an error
@@ -726,7 +725,7 @@ Token Lexer::lexNumericLiteral() {
     // that this is actually a float, we'll go back and populate `floatChars`
     // instead. Since we expect many more ints than floats, it makes sense to
     // not waste time populating that array up front.
-    uint32_t startOfNum = currentOffset();
+    size_t startOfNum = currentOffset();
     SmallVectorSized<logic_t, 32> digits;
     SmallVectorSized<char, 32> floatChars;
 
@@ -1075,7 +1074,7 @@ void Lexer::scanBlockComment() {
 
 template<typename... Args>
 Token Lexer::create(TokenKind kind, Args&&... args) {
-    SourceLocation location(bufferId, uint32_t(marker - originalBegin));
+    SourceLocation location(bufferId, marker - originalBegin);
     return Token(alloc, kind, triviaBuffer.copy(alloc), lexeme(), location,
                  std::forward<Args>(args)...);
 }
@@ -1084,13 +1083,13 @@ void Lexer::addTrivia(TriviaKind kind) {
     triviaBuffer.emplace(kind, lexeme());
 }
 
-Diagnostic& Lexer::addDiag(DiagCode code, uint32_t offset) {
+Diagnostic& Lexer::addDiag(DiagCode code, size_t offset) {
     errorCount++;
     return diagnostics.add(code, SourceLocation(bufferId, offset));
 }
 
-uint32_t Lexer::currentOffset() {
-    return (uint32_t)(sourceBuffer - originalBegin);
+size_t Lexer::currentOffset() {
+    return (size_t)(sourceBuffer - originalBegin);
 }
 
 } // namespace slang
