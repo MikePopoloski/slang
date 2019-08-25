@@ -88,8 +88,13 @@ public:
     /// for reporting errors.
     SourceLocation location;
 
-    /// Gets the lexical scope that contains this symbol.
+    /// Gets the logical scope that contains this symbol.
     const Scope* getScope() const { return parentScope; }
+
+    /// Gets the lexical scope that contains this symbol, from a lookup perspective.
+    /// For example, inside of a module instance the lexical scope is the definition
+    /// but the logical scope is the parent module in the hierarchy.
+    const Scope* getLexicalScope() const;
 
     /// Gets the syntax node that was used to create this symbol, if any. Symbols can
     /// be created without any originating syntax; in those cases, this returns nullptr.
@@ -113,6 +118,12 @@ public:
     /// Gets the symbol's hierarchical path by walking up to the root node and appending
     /// each parent's name.
     void getHierarchicalPath(std::string& buffer) const;
+
+    /// Determines whether this symbol is considered to be declared before the
+    /// given symbol, in the same compilation unit. If it is, this method returns true.
+    /// Otherwise it returns false. If the given symbol is not even in the same
+    /// compilation unit as this one, returns std::nullopt.
+    optional<bool> isBeforeInCompilationUnit(const Symbol& symbol) const;
 
     template<typename T>
     decltype(auto) as() {

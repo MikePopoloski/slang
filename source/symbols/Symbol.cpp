@@ -14,6 +14,7 @@
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/StackContainer.h"
 
 namespace {
 
@@ -88,6 +89,13 @@ bool Symbol::isInstance() const {
     return InstanceSymbol::isKind(kind);
 }
 
+const Scope* Symbol::getLexicalScope() const {
+    if (InstanceSymbol::isKind(kind))
+        return as<InstanceSymbol>().definition.getScope();
+    else
+        return getScope();
+}
+
 const DeclaredType* Symbol::getDeclaredType() const {
     switch (kind) {
         case SymbolKind::TypeAlias:
@@ -128,6 +136,35 @@ void Symbol::getHierarchicalPath(std::string& buffer) const {
 
     if (sz == buffer.size())
         buffer.append("$unit");
+}
+
+optional<bool> Symbol::isBeforeInCompilationUnit(const Symbol& target) const {
+    // Find a common parent scope for the two symbols. Start with our parent and
+    // walk upwards until we find `target`s scope or run into a compilation unit.
+    SmallMap<const Scope*, LookupLocation, 8> locMap;
+    const Symbol* sym = this;
+    const Scope* scope;
+    while ((scope = sym->getLexicalScope()) != nullptr &&
+           sym->kind != SymbolKind::CompilationUnit && scope != target.getScope()) {
+        locMap[scope] = LookupLocation::before(*sym);
+        sym = &scope->asSymbol();
+    }
+
+    if (scope == target.getLexicalScope())
+        return LookupLocation::before(*sym) < LookupLocation::before(target);
+
+    // If `target` wasn't in a direct scope of any of our own parents,
+    // repeat the process walking up `target`s scopes.
+    sym = &target;
+    while ((scope = sym->getLexicalScope()) != nullptr &&
+           sym->kind != SymbolKind::CompilationUnit) {
+        if (auto it = locMap.find(scope); it != locMap.end())
+            return it->second < LookupLocation::before(*sym);
+
+        sym = &scope->asSymbol();
+    }
+
+    return std::nullopt;
 }
 
 const Scope* Symbol::scopeOrNull() const {

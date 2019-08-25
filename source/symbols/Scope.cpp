@@ -28,13 +28,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::DeferredMember; }
 };
 
-const Scope* getLookupParent(const Symbol& symbol) {
-    if (InstanceSymbol::isKind(symbol.kind))
-        return symbol.as<InstanceSymbol>().definition.getScope();
-    else
-        return symbol.getScope();
-}
-
 } // namespace
 
 namespace slang {
@@ -780,7 +773,7 @@ void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
 
     // Continue up the scope chain via our parent. If we hit an instance, we need to instead
     // search within the context of the definition's parent scope.
-    auto nextScope = getLookupParent(asSymbol());
+    auto nextScope = asSymbol().getLexicalScope();
     if (!nextScope)
         return;
 
@@ -1084,7 +1077,7 @@ const Symbol* getCompilationUnit(const Symbol& symbol) {
         if (current->kind == SymbolKind::CompilationUnit)
             return current;
 
-        auto scope = getLookupParent(*current);
+        auto scope = current->getLexicalScope();
         ASSERT(scope);
 
         current = &scope->asSymbol();

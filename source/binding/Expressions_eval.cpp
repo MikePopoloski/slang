@@ -389,15 +389,17 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
         }
     }
     else {
-        LookupLocation location = LookupLocation::after(symbol);
-        const Scope* commonParent = subroutine->getParent();
-        const Scope* scope = symbol.getScope();
-        while (scope && scope != commonParent) {
-            location = LookupLocation::before(scope->asSymbol());
-            scope = scope->getParent();
+        bool isBefore;
+        auto frameScope = frame.lookupLocation.getScope();
+        if (!frameScope || symbol.getScope() == frameScope)
+            isBefore = LookupLocation::after(symbol) < frame.lookupLocation;
+        else {
+            // If the two locations are not in the same compilation unit, assume that it's ok.
+            auto compare = symbol.isBeforeInCompilationUnit(frameScope->asSymbol());
+            isBefore = compare.value_or(true);
         }
 
-        if (!(location < frame.lookupLocation)) {
+        if (!isBefore) {
             context.addDiag(diag::NoteParamUsedInCEBeforeDecl, sourceRange) << symbol.name;
             context.addDiag(diag::NoteDeclarationHere, symbol.location);
             return false;
