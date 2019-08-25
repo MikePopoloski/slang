@@ -275,7 +275,7 @@ const DefinitionSymbol* Compilation::getDefinition(string_view lookupName) const
 void Compilation::addDefinition(const DefinitionSymbol& definition) {
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
-    const Scope* scope = definition.getScope();
+    const Scope* scope = definition.getParentScope();
     ASSERT(scope);
 
     if (scope->asSymbol().kind == SymbolKind::CompilationUnit) {

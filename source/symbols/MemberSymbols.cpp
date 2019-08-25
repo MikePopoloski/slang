@@ -24,7 +24,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
     if (!initialized) {
         initialized = true;
 
-        const Scope* scope = getScope();
+        const Scope* scope = getParentScope();
         ASSERT(scope);
 
         if (packageName.empty())
@@ -66,7 +66,7 @@ void ExplicitImportSymbol::toJson(json& j) const {
 
 const PackageSymbol* WildcardImportSymbol::getPackage() const {
     if (!package) {
-        const Scope* scope = getScope();
+        const Scope* scope = getParentScope();
         ASSERT(scope);
 
         if (packageName.empty()) {
@@ -157,7 +157,7 @@ const ConstantValue& ParameterSymbol::getValue() const {
 }
 
 void ParameterSymbol::setValue(ConstantValue value) {
-    auto scope = getScope();
+    auto scope = getParentScope();
     ASSERT(scope);
     overriden = scope->getCompilation().allocConstant(std::move(value));
 }
@@ -178,13 +178,12 @@ const Expression* PortSymbol::getConnection() const {
         if (!connSyntax)
             conn = nullptr;
         else {
-            BindContext context(*getScope(), LookupLocation::before(*this));
+            BindContext context(*getParentScope(), LookupLocation::before(*this));
             auto loc = connSyntax->getFirstToken().location();
 
             switch (direction) {
                 case PortDirection::In:
-                    conn = &Expression::bind(getType(), *connSyntax,
-                                             loc, context);
+                    conn = &Expression::bind(getType(), *connSyntax, loc, context);
                     break;
                 case PortDirection::Out:
                     // TODO: require assignable
@@ -304,7 +303,7 @@ span<const ConstantRange> InterfacePortSymbol::getDeclaredRange() const {
     auto syntax = getSyntax();
     ASSERT(syntax);
 
-    auto scope = getScope();
+    auto scope = getParentScope();
     ASSERT(scope);
 
     BindContext context(*scope, LookupLocation::before(*this));
@@ -546,7 +545,7 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     if (assign)
         return *assign;
 
-    auto scope = getScope();
+    auto scope = getParentScope();
     ASSERT(scope);
 
     auto syntax = getSyntax();

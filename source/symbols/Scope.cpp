@@ -36,11 +36,11 @@ const LookupLocation LookupLocation::max{ nullptr, UINT_MAX };
 const LookupLocation LookupLocation::min{ nullptr, 0 };
 
 LookupLocation LookupLocation::before(const Symbol& symbol) {
-    return LookupLocation(symbol.getScope(), (uint32_t)symbol.getIndex());
+    return LookupLocation(symbol.getLexicalScope(), (uint32_t)symbol.getIndex());
 }
 
 LookupLocation LookupLocation::after(const Symbol& symbol) {
-    return LookupLocation(symbol.getScope(), (uint32_t)symbol.getIndex() + 1);
+    return LookupLocation(symbol.getLexicalScope(), (uint32_t)symbol.getIndex() + 1);
 }
 
 bool LookupLocation::operator<(const LookupLocation& other) const {
@@ -92,7 +92,7 @@ Scope::iterator& Scope::iterator::operator++() {
 }
 
 const Scope* Scope::getParent() const {
-    return thisSym->getScope();
+    return thisSym->getParentScope();
 }
 
 const NetType& Scope::getDefaultNetType() const {
@@ -546,7 +546,8 @@ void Scope::elaborate() const {
 
                     if (port->kind == SymbolKind::Port) {
                         auto& valuePort = port->as<PortSymbol>();
-                        if (valuePort.internalSymbol && !valuePort.internalSymbol->getScope()) {
+                        if (valuePort.internalSymbol &&
+                            !valuePort.internalSymbol->getParentScope()) {
                             insertMember(valuePort.internalSymbol, last, true);
                             last = valuePort.internalSymbol;
                         }
@@ -1055,11 +1056,11 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
                 case SymbolKind::ModuleInstance:
                 case SymbolKind::InterfaceInstance:
                 case SymbolKind::Program:
-                    nextInstance = symbol->getScope();
-                    scope = symbol->as<InstanceSymbol>().definition.getScope();
+                    nextInstance = symbol->getParentScope();
+                    scope = symbol->getLexicalScope();
                     break;
                 default:
-                    scope = symbol->getScope();
+                    scope = symbol->getLexicalScope();
                     break;
             }
         }

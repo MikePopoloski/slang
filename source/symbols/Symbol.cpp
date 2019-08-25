@@ -44,7 +44,7 @@ struct ToJsonVisitor {
             j["kind"] = toString(symbol.kind);
             j["addr"] = uintptr_t(&symbol);
 
-            auto scope = symbol.getScope();
+            auto scope = symbol.getParentScope();
             if (scope) {
                 for (auto attr : scope->getCompilation().getAttributes(symbol))
                     j["attributes"].push_back(*attr);
@@ -91,9 +91,9 @@ bool Symbol::isInstance() const {
 
 const Scope* Symbol::getLexicalScope() const {
     if (InstanceSymbol::isKind(kind))
-        return as<InstanceSymbol>().definition.getScope();
+        return as<InstanceSymbol>().definition.getParentScope();
     else
-        return getScope();
+        return getParentScope();
 }
 
 const DeclaredType* Symbol::getDeclaredType() const {
@@ -112,8 +112,8 @@ const DeclaredType* Symbol::getDeclaredType() const {
 }
 
 static void getHierarchicalPathImpl(const Symbol& symbol, std::string& buffer) {
-    if (symbol.getScope()) {
-        auto& parent = symbol.getScope()->asSymbol();
+    if (symbol.getParentScope()) {
+        auto& parent = symbol.getParentScope()->asSymbol();
         if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
             getHierarchicalPathImpl(parent, buffer);
 
@@ -145,7 +145,7 @@ optional<bool> Symbol::isBeforeInCompilationUnit(const Symbol& target) const {
     const Symbol* sym = this;
     const Scope* scope;
     while ((scope = sym->getLexicalScope()) != nullptr &&
-           sym->kind != SymbolKind::CompilationUnit && scope != target.getScope()) {
+           sym->kind != SymbolKind::CompilationUnit && scope != target.getLexicalScope()) {
         locMap[scope] = LookupLocation::before(*sym);
         sym = &scope->asSymbol();
     }

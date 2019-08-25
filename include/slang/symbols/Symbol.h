@@ -88,8 +88,8 @@ public:
     /// for reporting errors.
     SourceLocation location;
 
-    /// Gets the logical scope that contains this symbol.
-    const Scope* getScope() const { return parentScope; }
+    /// Gets the logical parent scope that contains this symbol.
+    const Scope* getParentScope() const { return parentScope; }
 
     /// Gets the lexical scope that contains this symbol, from a lookup perspective.
     /// For example, inside of a module instance the lexical scope is the definition

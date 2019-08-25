@@ -94,7 +94,7 @@ const Expression& DeclaredType::resolveInitializer(
 }
 
 const Scope& DeclaredType::getScope() const {
-    const Scope* scope = parent.getScope();
+    const Scope* scope = parent.getParentScope();
     ASSERT(scope);
     return *scope;
 }

@@ -66,7 +66,7 @@ void TypePrinter::visit(const FloatingType& type, string_view) {
 
 void TypePrinter::visit(const EnumType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        printScope(type.getScope());
+        printScope(type.getParentScope());
 
         if (overrideName.empty())
             buffer.append("<unnamed enum>");
@@ -89,7 +89,7 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
         }
         buffer.append("}");
 
-        printScope(type.getScope());
+        printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())
@@ -115,7 +115,7 @@ void TypePrinter::visit(const PackedArrayType& type, string_view) {
 
 void TypePrinter::visit(const PackedStructType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        printScope(type.getScope());
+        printScope(type.getParentScope());
 
         if (overrideName.empty())
             buffer.append("<unnamed packed struct>");
@@ -128,7 +128,7 @@ void TypePrinter::visit(const PackedStructType& type, string_view overrideName) 
             buffer.append(" signed");
 
         appendStructMembers(type);
-        printScope(type.getScope());
+        printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())
@@ -170,7 +170,7 @@ void TypePrinter::visit(const UnpackedArrayType& type, string_view) {
 
 void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        printScope(type.getScope());
+        printScope(type.getParentScope());
         if (overrideName.empty())
             buffer.append("<unnamed unpacked struct>");
         else
@@ -179,7 +179,7 @@ void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName
     else {
         buffer.append("struct");
         appendStructMembers(type);
-        printScope(type.getScope());
+        printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())

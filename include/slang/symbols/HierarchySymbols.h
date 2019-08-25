@@ -201,7 +201,7 @@ public:
         Symbol(SymbolKind::ProceduralBlock, "", loc), procedureKind(procedureKind) {}
 
     const Statement& getBody() const {
-        return binder.getStatement(*getScope(), LookupLocation::after(*this));
+        return binder.getStatement(*getParentScope(), LookupLocation::after(*this));
     }
 
     void toJson(json& j) const;

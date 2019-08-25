@@ -378,7 +378,7 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     // - All identifiers that are not parameters or functions shall be declared locally to
     //   the current function.
     if (symbol.kind != SymbolKind::Parameter) {
-        const Scope* scope = symbol.getScope();
+        const Scope* scope = symbol.getParentScope();
         while (scope && scope != subroutine)
             scope = scope->getParent();
 
@@ -391,7 +391,7 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     else {
         bool isBefore;
         auto frameScope = frame.lookupLocation.getScope();
-        if (!frameScope || symbol.getScope() == frameScope)
+        if (!frameScope || symbol.getParentScope() == frameScope)
             isBefore = LookupLocation::after(symbol) < frame.lookupLocation;
         else {
             // If the two locations are not in the same compilation unit, assume that it's ok.

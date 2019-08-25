@@ -38,7 +38,7 @@ bool Diagnostic::isSuppressed() const {
             !sym->as<GenerateBlockSymbol>().isInstantiated)
             return true;
 
-        auto scope = sym->getScope();
+        auto scope = sym->getParentScope();
         sym = scope ? &scope->asSymbol() : nullptr;
     }
     return false;

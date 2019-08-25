@@ -833,7 +833,7 @@ const ConstantValue& EnumValueSymbol::getValue() const {
 }
 
 void EnumValueSymbol::setValue(ConstantValue newValue) {
-    auto scope = getScope();
+    auto scope = getParentScope();
     ASSERT(scope);
     value = scope->getCompilation().allocConstant(std::move(newValue));
 }
@@ -895,7 +895,7 @@ ConstantValue UnpackedArrayType::getDefaultValueImpl() const {
 }
 
 bool FieldSymbol::isPacked() const {
-    const Scope* scope = getScope();
+    const Scope* scope = getParentScope();
     ASSERT(scope);
     return scope->asSymbol().kind == SymbolKind::PackedStructType;
 }
@@ -1128,7 +1128,8 @@ void TypeAliasType::checkForwardDecls() const {
     const ForwardingTypedefSymbol* forward = firstForward;
     while (forward) {
         if (forward->category != ForwardingTypedefSymbol::None && forward->category != category) {
-            auto& diag = getScope()->addDiag(diag::ForwardTypedefDoesNotMatch, forward->location);
+            auto& diag =
+                getParentScope()->addDiag(diag::ForwardTypedefDoesNotMatch, forward->location);
             switch (forward->category) {
                 case ForwardingTypedefSymbol::Enum:
                     diag << "enum"sv;
@@ -1226,7 +1227,7 @@ void NetType::resolve() const {
     auto syntaxNode = getSyntax();
     ASSERT(syntaxNode);
 
-    auto scope = getScope();
+    auto scope = getParentScope();
     ASSERT(scope);
 
     auto& declSyntax = syntaxNode->as<NetTypeDeclarationSyntax>();
