@@ -458,6 +458,13 @@ TEST_CASE("Unpacked array eval") {
     CHECK(cv.elements()[1].integer() == 0);
     CHECK(cv.elements()[0].integer() == 19);
 
+    session.eval("arr2[0] = 142;");
+    CHECK(session.eval("arr2.xor").integer() == 157);
+
+    session.eval("arr2[1] = 63;");
+    CHECK(session.eval("arr2.or").integer() == 191);
+    CHECK(session.eval("arr2.and").integer() == 14);
+
     NO_SESSION_ERRORS;
 }
 

@@ -103,6 +103,15 @@ public:
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
+class ArrayReductionMethod : public SystemSubroutine {
+public:
+    ArrayReductionMethod(const std::string& name) :
+        SystemSubroutine(name, SubroutineKind::Function) {}
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
+    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+};
+
 #define FUNC SubroutineKind::Function
 #define TASK SubroutineKind::Task
 #define SUBROUTINE(className, base, ...)                                        \
@@ -114,8 +123,7 @@ public:
 
 SUBROUTINE(Clog2Function, IntegerMathFunction, "$clog2", FUNC);
 
-SUBROUTINE(BitsFunction, DataQueryFunction, "$bits", FUNC,
-           SystemSubroutineFlags::AllowDataTypeArg);
+SUBROUTINE(BitsFunction, DataQueryFunction, "$bits", FUNC, SystemSubroutineFlags::AllowDataTypeArg);
 
 SUBROUTINE(LowFunction, ArrayQueryFunction, "$low", FUNC);
 SUBROUTINE(HighFunction, ArrayQueryFunction, "$high", FUNC);

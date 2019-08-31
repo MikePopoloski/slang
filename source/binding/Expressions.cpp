@@ -694,6 +694,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                     break;
 
                 case SymbolKind::EnumType:
+                case SymbolKind::UnpackedArrayType:
                     expr = &CallExpression::fromSystemMethod(compilation, *expr, *memberSelect,
                                                              invocation, context);
                     invocation = nullptr;

@@ -266,6 +266,7 @@ error FormatSpecifierNotFloat "floating point format specifier options used on n
 error FormatUnspecifiedType "cannot format values of type {} without a specification string"
 error FormatMismatchedType "value of type {} is invalid for '%{}' format specifier"
 error InvalidFormatStringType "value of type {} is not valid as a format string"
+error ArrayReductionIntegral "array reduction methods can only be called on unpacked arrays of integral values"
 
 subsystem ConstEval
 error ExpressionNotConstant "expression is not constant"

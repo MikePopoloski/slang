@@ -261,6 +261,48 @@ ConstantValue EnumNumMethod::eval(EvalContext&, const Args& args) const {
     return SVInt(32, (uint64_t)type.values().size(), true);
 }
 
+const Type& ArrayReductionMethod::checkArguments(const BindContext& context, const Args& args,
+                                                 SourceRange range) const {
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, true, args, range, 0, 0))
+        return comp.getErrorType();
+
+    auto& type = *args[0]->type;
+    ASSERT(type.isUnpackedArray());
+
+    auto& elemType = type.getCanonicalType().as<UnpackedArrayType>().elementType;
+    if (!elemType.isIntegral()) {
+        context.addDiag(diag::ArrayReductionIntegral, args[0]->sourceRange);
+        return comp.getErrorType();
+    }
+
+    return elemType;
+}
+
+#define MAKE_REDUCTION_METHOD(typeName, sourceName, op)                          \
+    class Array##typeName##Method : public ArrayReductionMethod {                \
+    public:                                                                      \
+        Array##typeName##Method() : ArrayReductionMethod(sourceName) {}          \
+                                                                                 \
+        ConstantValue eval(EvalContext& context, const Args& args) const final { \
+            ConstantValue arr = args[0]->eval(context);                          \
+            if (!arr)                                                            \
+                return nullptr;                                                  \
+                                                                                 \
+            SVInt result = arr.elements()[0].integer();                          \
+            for (auto& elem : arr.elements().subspan(1))                         \
+                result op elem.integer();                                        \
+                                                                                 \
+            return result;                                                       \
+        }                                                                        \
+    };
+
+MAKE_REDUCTION_METHOD(Or, "or", |=)
+MAKE_REDUCTION_METHOD(And, "and", &=)
+MAKE_REDUCTION_METHOD(Xor, "xor", ^=)
+
+#undef MAKE_REDUCTION_METHOD
+
 void registerAll(Compilation& compilation) {
 #define REGISTER(name) compilation.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(Clog2);
@@ -311,6 +353,9 @@ void registerAll(Compilation& compilation) {
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "first", true);
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
     REGISTER(SymbolKind::EnumType, EnumNum, );
+    REGISTER(SymbolKind::UnpackedArrayType, ArrayOr, );
+    REGISTER(SymbolKind::UnpackedArrayType, ArrayAnd, );
+    REGISTER(SymbolKind::UnpackedArrayType, ArrayXor, );
 #undef REGISTER
 }
 
