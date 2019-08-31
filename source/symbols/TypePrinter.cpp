@@ -108,7 +108,7 @@ void TypePrinter::visit(const PackedArrayType& type, string_view) {
         curr = &curr->elementType.getCanonicalType().as<PackedArrayType>();
     }
 
-    append(curr->elementType);
+    curr->elementType.visit(*this, "");
     for (auto& range : dims)
         buffer.format("[{}:{}]", range.left, range.right);
 }
