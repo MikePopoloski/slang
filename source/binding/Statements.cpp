@@ -101,7 +101,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         case SyntaxKind::SequentialBlockStatement:
             // A block statement may or may not match up with a hierarchy node. Handle both cases
-            // here. We traverse statements in the same order as the findScopes call below, so this
+            // here. We traverse statements in the same order as the findBlocks call below, so this
             // should always sync up exactly.
             if (!blocks.empty() && blocks[0]->getSyntax() == &syntax) {
                 result = comp.emplace<SequentialBlockStatement>(*blocks[0]);
@@ -368,7 +368,7 @@ const Statement& StatementBinder::bindStatement(const Scope& scope, LookupLocati
             if (member.kind != SymbolKind::Variable)
                 continue;
 
-            // Filter out implicitly generate function return type variables,
+            // Filter out implicitly generated function return type variables,
             // they are initialized elsewhere.
             auto& var = member.as<VariableSymbol>();
             if (!var.isCompilerGenerated)
@@ -376,22 +376,27 @@ const Statement& StatementBinder::bindStatement(const Scope& scope, LookupLocati
         }
     }
 
+    bool anyBad = false;
     auto blocksCopy = blocks;
     if (auto stmtSyntax = std::get_if<const StatementSyntax*>(&syntax)) {
-        if (auto ptr = *stmtSyntax)
+        if (auto ptr = *stmtSyntax) {
             buffer.append(&Statement::bind(*ptr, context, blocksCopy));
+            anyBad |= buffer.back()->bad();
+        }
     }
     else {
         auto& items = *std::get<const SyntaxList<SyntaxNode>*>(syntax);
         for (auto item : items) {
-            if (StatementSyntax::isKind(item->kind))
+            if (StatementSyntax::isKind(item->kind)) {
                 buffer.append(&Statement::bind(item->as<StatementSyntax>(), context, blocksCopy));
+                anyBad |= buffer.back()->bad();
+            }
         }
     }
 
-    ASSERT(blocksCopy.empty());
+    ASSERT(anyBad || blocksCopy.empty());
 
-    if (buffer.empty())
+    if (buffer.empty() || anyBad)
         return InvalidStatement::Instance;
 
     if (buffer.size() == 1)
