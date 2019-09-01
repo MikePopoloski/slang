@@ -410,13 +410,23 @@ bool Expression::isImplicitString() const {
     switch (kind) {
         case ExpressionKind::StringLiteral:
             return true;
+        case ExpressionKind::UnaryOp:
+            return as<UnaryExpression>().operand().isImplicitString();
+        case ExpressionKind::BinaryOp: {
+            auto& op = as<BinaryExpression>();
+            return op.left().isImplicitString() || op.right().isImplicitString();
+        }
+        case ExpressionKind::ConditionalOp: {
+            auto& op = as<ConditionalExpression>();
+            return op.left().isImplicitString() || op.right().isImplicitString();
+        }
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
             for (auto op : concat.operands()) {
-                if (!op->isImplicitString())
-                    return false;
+                if (op->isImplicitString())
+                    return true;
             }
-            return true;
+            return false;
         }
         case ExpressionKind::Replication: {
             auto& repl = as<ReplicationExpression>();

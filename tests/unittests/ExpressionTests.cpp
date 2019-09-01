@@ -265,6 +265,12 @@ TEST_CASE("Expression types") {
     CHECK(typeof("int'(b1)") == "int");
     CHECK(typeof("5'(sp)") == "logic[4:0]");
 
+    // Strings
+    declare("string s1 = \"asdf\";");
+    declare("string s2 = \"asdf\" | 1;");
+    declare("string s3 = 1 ? \"asdf\" : \"bar\";");
+    declare("string s4 = {\"asdf\", 8'd42};");
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::BadUnaryExpression);
