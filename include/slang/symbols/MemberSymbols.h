@@ -93,8 +93,7 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
-    ParameterSymbol& createOverride(Compilation& compilation,
-                                    const Expression* newInitializer) const;
+    ParameterSymbol& clone(Compilation& compilation) const;
 
     const ConstantValue& getValue() const;
     void setValue(ConstantValue value);

@@ -18,6 +18,12 @@ DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flag
     ASSERT(parent.getDeclaredType() == this);
 }
 
+const Type& DeclaredType::getType() const {
+    if (!type)
+        resolveType(getBindContext());
+    return *type;
+}
+
 void DeclaredType::copyTypeFrom(const DeclaredType& source) {
     if (auto ts = source.getTypeSyntax()) {
         setTypeSyntax(*ts);
@@ -29,79 +35,18 @@ void DeclaredType::copyTypeFrom(const DeclaredType& source) {
         setType(source.getType());
 }
 
-std::tuple<const Type*, const Expression*> DeclaredType::resolveType(
-    const DataTypeSyntax& typeSyntax, const SyntaxList<VariableDimensionSyntax>* dimensions,
-    const ExpressionSyntax* initializerSyntax, const BindContext& context,
-    bitmask<DeclaredTypeFlags> flags) {
-
-    auto& scope = context.scope;
-    auto& comp = scope.getCompilation();
-
-    const Type* type = nullptr;
-    const Expression* initializer = nullptr;
-
-    if (typeSyntax.kind == SyntaxKind::ImplicitType &&
-        (flags & DeclaredTypeFlags::InferImplicit) != 0) {
-        // TODO: handle unpacked dimensions here?
-        // TODO: make sure errors are issued elsewhere for when implicit is not allowed
-        if (!initializerSyntax)
-            type = &comp.getErrorType();
-        else {
-            initializer = &Expression::bind(*initializerSyntax, context);
-            type = initializer->type;
-        }
-    }
-    else {
-        type = &comp.getType(typeSyntax, context.lookupLocation, scope,
-                             (flags & DeclaredTypeFlags::ForceSigned) != 0);
-        if (dimensions)
-            type = &comp.getType(*type, *dimensions, context.lookupLocation, scope);
-    }
-
-    return { type, initializer };
-}
-
-const Expression& DeclaredType::resolveInitializer(const Type& type,
-                                                   const ExpressionSyntax& initializerSyntax,
-                                                   SourceLocation initializerLocation,
-                                                   const BindContext& context) {
-    // Enums are special in that their initializers target the base type of the enum
-    // instead of the actual enum type (which doesn't allow implicit conversions from
-    // normal integral values).
-    auto& scope = context.scope;
-    bitmask<BindFlags> flags = context.flags;
-    const Type* targetType = &type;
-    if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType) {
-        targetType = &targetType->as<EnumType>().baseType;
-        flags |= BindFlags::EnumInitializer;
-    }
-
-    return Expression::bind(*targetType, initializerSyntax, initializerLocation,
-                            context.resetFlags(flags));
-}
-
-const Expression& DeclaredType::resolveInitializer(
-    const DataTypeSyntax& typeSyntax, const SyntaxList<VariableDimensionSyntax>* dimensions,
-    const ExpressionSyntax& initializerSyntax, SourceLocation initializerLocation,
-    const BindContext& context, bitmask<DeclaredTypeFlags> flags) {
-
-    auto [type, initializer] =
-        resolveType(typeSyntax, dimensions, &initializerSyntax, context, flags);
-    if (initializer)
-        return *initializer;
-
-    return resolveInitializer(*type, initializerSyntax, initializerLocation, context);
-}
-
 const Scope& DeclaredType::getScope() const {
     const Scope* scope = parent.getParentScope();
     ASSERT(scope);
     return *scope;
 }
 
-void DeclaredType::resolveType() const {
+void DeclaredType::resolveType(const BindContext& initializerContext) const {
+    auto& scope = getScope();
+    auto& comp = scope.getCompilation();
+
     if (!typeSyntax) {
-        type = &getScope().getCompilation().getErrorType();
+        type = &comp.getErrorType();
         return;
     }
 
@@ -109,28 +54,66 @@ void DeclaredType::resolveType() const {
     evaluating = true;
     auto guard = finally([this] { evaluating = false; });
 
-    auto [t, i] = resolveType(*typeSyntax, dimensions, initializerSyntax, getBindContext(), flags);
-    type = t;
-    initializer = i;
+    if (typeSyntax->kind == SyntaxKind::ImplicitType &&
+        (flags & DeclaredTypeFlags::InferImplicit) != 0) {
+        // TODO: handle unpacked dimensions here?
+        // TODO: make sure errors are issued elsewhere for when implicit is not allowed
+        if (!initializerSyntax)
+            type = &comp.getErrorType();
+        else {
+            initializer = &Expression::bind(*initializerSyntax, initializerContext);
+            type = initializer->type;
+        }
+        return;
+    }
+
+    BindContext typeContext = getBindContext();
+    type = &comp.getType(*typeSyntax, typeContext.lookupLocation, scope,
+                         (flags & DeclaredTypeFlags::ForceSigned) != 0);
+    if (dimensions)
+        type = &comp.getType(*type, *dimensions, typeContext.lookupLocation, scope);
 }
 
-const Expression* DeclaredType::getInitializer() const {
-    if (initializer || !initializerSyntax)
-        return initializer;
+void DeclaredType::resolveAt(const BindContext& context) const {
+    if (!initializerSyntax)
+        return;
 
     if (!type) {
-        resolveType();
+        resolveType(context);
         if (initializer)
-            return initializer;
+            return;
     }
 
     ASSERT(!evaluating);
     evaluating = true;
     auto guard = finally([this] { evaluating = false; });
 
-    initializer =
-        &resolveInitializer(*type, *initializerSyntax, initializerLocation, getBindContext());
+    // Enums are special in that their initializers target the base type of the enum
+    // instead of the actual enum type (which doesn't allow implicit conversions from
+    // normal integral values).
+    auto& scope = context.scope;
+    bitmask<BindFlags> bindFlags = context.flags;
+    const Type* targetType = type;
+    if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType) {
+        targetType = &targetType->as<EnumType>().baseType;
+        bindFlags |= BindFlags::EnumInitializer;
+    }
+
+    initializer = &Expression::bind(*targetType, *initializerSyntax, initializerLocation,
+                                    context.resetFlags(bindFlags));
+}
+
+const Expression* DeclaredType::getInitializer() const {
+    if (initializer)
+        return initializer;
+
+    resolveAt(getBindContext());
     return initializer;
+}
+
+void DeclaredType::clearResolved() const {
+    type = nullptr;
+    initializer = nullptr;
 }
 
 void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {

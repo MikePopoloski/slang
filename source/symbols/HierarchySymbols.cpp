@@ -171,16 +171,16 @@ namespace {
 
 Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definition,
                        const HierarchicalInstanceSyntax& syntax,
-                       span<const Expression* const> overrides, SmallVector<int32_t>& path,
+                       span<const ParameterSymbol* const> parameters, SmallVector<int32_t>& path,
                        span<const AttributeInstanceSyntax* const> attributes) {
     InstanceSymbol* inst;
     switch (definition.definitionKind) {
         case DefinitionKind::Module:
-            inst = &ModuleInstanceSymbol::instantiate(compilation, syntax, definition, overrides);
+            inst = &ModuleInstanceSymbol::instantiate(compilation, syntax, definition, parameters);
             break;
         case DefinitionKind::Interface:
             inst =
-                &InterfaceInstanceSymbol::instantiate(compilation, syntax, definition, overrides);
+                &InterfaceInstanceSymbol::instantiate(compilation, syntax, definition, parameters);
             break;
         case DefinitionKind::Program: // TODO: handle this
         default:
@@ -197,11 +197,14 @@ using DimIterator = span<VariableDimensionSyntax*>::iterator;
 
 Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& definition,
                              const HierarchicalInstanceSyntax& instanceSyntax,
-                             span<const Expression* const> overrides, const BindContext& context,
-                             DimIterator it, DimIterator end, SmallVector<int32_t>& path,
+                             span<const ParameterSymbol* const> parameters,
+                             const BindContext& context, DimIterator it, DimIterator end,
+                             SmallVector<int32_t>& path,
                              span<const AttributeInstanceSyntax* const> attributes) {
-    if (it == end)
-        return createInstance(compilation, definition, instanceSyntax, overrides, path, attributes);
+    if (it == end) {
+        return createInstance(compilation, definition, instanceSyntax, parameters, path,
+                              attributes);
+    }
 
     EvaluatedDimension dim = context.evalDimension(**it, true);
     if (!dim.isRange())
@@ -213,7 +216,7 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
     SmallVectorSized<const Symbol*, 8> elements;
     for (int32_t i = range.lower(); i <= range.upper(); i++) {
         path.append(i);
-        auto symbol = recurseInstanceArray(compilation, definition, instanceSyntax, overrides,
+        auto symbol = recurseInstanceArray(compilation, definition, instanceSyntax, parameters,
                                            context, it, end, path, attributes);
         path.pop();
 
@@ -348,40 +351,55 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
-    // Determine values for all parameters now so that they can be shared between instances.
-    SmallVectorSized<const Expression*, 8> overrides;
-    for (auto param : definition->parameters) {
-        if (auto it = paramOverrides.find(param->name); it != paramOverrides.end()) {
-            auto declared = param->getDeclaredType();
-            auto typeSyntax = declared->getTypeSyntax();
-            ASSERT(typeSyntax);
+    // As an optimization, determine values for all parameters now so that they can be
+    // shared between instances. That way an instance array with hundreds of entries
+    // doesn't recompute the same param values over and over again.
+    //
+    // To do this we need to construct a temporary scope that has the right parent
+    // to house the parameters as we're evaluating them. We hold on to the initializer
+    // expressions and give them to the instances later when we create them.
+    struct TempDefSymbol : public DefinitionSymbol {
+        using DefinitionSymbol::DefinitionSymbol;
+        void setParent(const Scope& scope) { DefinitionSymbol::setParent(scope); }
+    };
 
-            auto& expr = DeclaredType::resolveInitializer(
-                *typeSyntax, declared->getDimensionSyntax(), *it->second,
-                it->second->getFirstToken().location(),
-                BindContext(scope, location, BindFlags::Constant),
-                DeclaredTypeFlags::InferImplicit);
-            overrides.append(&expr);
+    auto& tempDef =
+        *compilation.emplace<TempDefSymbol>(compilation, definition->name, definition->location,
+                                            definition->definitionKind, definition->defaultNetType);
+    tempDef.setParent(*definition->getParentScope());
+
+    BindContext context(scope, location, BindFlags::Constant);
+    SmallVectorSized<const ParameterSymbol*, 8> parameters;
+
+    for (auto param : definition->parameters) {
+        ParameterSymbol& newParam = param->clone(compilation);
+        tempDef.addMember(newParam);
+        parameters.append(&newParam);
+
+        if (auto it = paramOverrides.find(param->name); it != paramOverrides.end()) {
+            auto& expr = *it->second;
+            newParam.setInitializerSyntax(expr, expr.getFirstToken().location());
+
+            auto declared = newParam.getDeclaredType();
+            declared->clearResolved();
+            declared->resolveAt(context);
         }
         else if (!param->isLocalParam() && param->isPortParam() && !param->getInitializer()) {
-            auto& diag =
-                scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
+            auto& diag = scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
             diag << definition->name;
             diag << param->name;
-            overrides.append(nullptr);
         }
         else {
-            overrides.append(nullptr);
+            newParam.getDeclaredType()->clearResolved();
         }
     }
 
-    BindContext context(scope, location);
     for (auto instanceSyntax : syntax.instances) {
         SmallVectorSized<int32_t, 4> path;
+        auto dims = instanceSyntax->dimensions;
         auto symbol =
-            recurseInstanceArray(compilation, *definition, *instanceSyntax, overrides, context,
-                                 instanceSyntax->dimensions.begin(),
-                                 instanceSyntax->dimensions.end(), path, syntax.attributes);
+            recurseInstanceArray(compilation, *definition, *instanceSyntax, parameters, context,
+                                 dims.begin(), dims.end(), path, syntax.attributes);
         if (symbol)
             results.append(symbol);
     }
@@ -409,7 +427,7 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
 }
 
 void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
-                              span<const Expression* const> parameterOverides) {
+                              span<const ParameterSymbol* const> parameters) {
     // TODO: getSyntax dependency
     auto& declSyntax = definition.getSyntax()->as<ModuleDeclarationSyntax>();
     Compilation& comp = getCompilation();
@@ -419,18 +437,14 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
         addMembers(*import);
 
     // Now add in all parameter ports.
-    auto paramIt = definition.parameters.begin();
-    auto overrideIt = parameterOverides.begin();
-    while (paramIt != definition.parameters.end()) {
+    auto paramIt = parameters.begin();
+    while (paramIt != parameters.end()) {
         auto original = *paramIt;
         if (!original->isPortParam())
             break;
 
-        ASSERT(overrideIt != parameterOverides.end());
-        addMember(original->createOverride(comp, *overrideIt));
-
+        addMember(original->clone(comp));
         paramIt++;
-        overrideIt++;
     }
 
     // It's important that the port syntax is added before any body members, so that port
@@ -453,14 +467,11 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
             for (auto declarator :
                  member->as<ParameterDeclarationStatementSyntax>().parameter->declarators) {
 
-                ASSERT(paramIt != definition.parameters.end());
-                ASSERT(overrideIt != parameterOverides.end());
+                ASSERT(paramIt != parameters.end());
                 ASSERT(declarator->name.valueText() == (*paramIt)->name);
 
-                addMember((*paramIt)->createOverride(comp, *overrideIt));
-
+                addMember((*paramIt)->clone(comp));
                 paramIt++;
-                overrideIt++;
             }
         }
     }
@@ -469,35 +480,29 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
                                                         SourceLocation loc,
                                                         const DefinitionSymbol& definition) {
-    SmallVectorSized<const Expression*, 8> overrides;
-    for (auto param : definition.parameters) {
-        (void)param;
-        overrides.emplace(nullptr);
-    }
-
     auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc, definition);
-    instance->populate(nullptr, overrides);
+    instance->populate(nullptr, definition.parameters);
     return *instance;
 }
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const Expression* const> parameterOverrides) {
+    const DefinitionSymbol& definition, span<const ParameterSymbol* const> parameters) {
 
     auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, syntax.name.valueText(),
                                                               syntax.name.location(), definition);
-    instance->populate(&syntax, parameterOverrides);
+    instance->populate(&syntax, parameters);
     return *instance;
 }
 
 InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const Expression* const> parameterOverrides) {
+    const DefinitionSymbol& definition, span<const ParameterSymbol* const> parameters) {
 
     auto instance = compilation.emplace<InterfaceInstanceSymbol>(
         compilation, syntax.name.valueText(), syntax.name.location(), definition);
 
-    instance->populate(&syntax, parameterOverrides);
+    instance->populate(&syntax, parameters);
     return *instance;
 }
 

@@ -866,7 +866,8 @@ module M;
     wire s = gen2.varArray[1];  // ok
 
 endmodule
-)", "source");
+)",
+                                     "source");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -974,7 +975,8 @@ module M;
     always_comb legit = foo2;
 
 endmodule
-)", "source");
+)",
+                                     "source");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -991,15 +993,6 @@ source:9:20: error: could not resolve hierarchical path name 'bar'
 source:13:16: error: hierarchical names are not allowed in constant expressions
         return $root.M.asdf;
                ^~~~~
-source:17:26: error: expression is not constant
-    localparam int baz = foo2;
-                         ^~~~
-source:13:16: note: reference to 'asdf' by hierarchical name is not allowed in a constant expression
-        return $root.M.asdf;
-               ^~~~~~~~~~~~
-source:17:26: note: in call to 'foo2'
-    localparam int baz = foo2;
-                         ^
 )");
 }
 
@@ -1101,4 +1094,29 @@ endmodule
 
     auto& blah = compilation.getRoot().lookupName<ParameterSymbol>("N.m.blah");
     CHECK(blah.getValue().real() == 3.14);
+}
+
+TEST_CASE("Parameter override type lookup") {
+    auto tree1 = SyntaxTree::fromText(R"(
+parameter int blah = 42;
+module foo #(parameter int width = 1, parameter logic[width - 1 : 0] bar, parameter int baz = blah);
+endmodule
+)");
+    auto tree2 = SyntaxTree::fromText(R"(
+parameter int bar = 255;
+module top;
+    foo #(.width(8), .bar(bar)) f();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    NO_COMPILATION_ERRORS;
+
+    auto& bar = compilation.getRoot().lookupName<ParameterSymbol>("top.f.bar");
+    CHECK(bar.getValue().integer() == 255);
+
+    auto& baz = compilation.getRoot().lookupName<ParameterSymbol>("top.f.baz");
+    CHECK(baz.getValue().integer() == 42);
 }

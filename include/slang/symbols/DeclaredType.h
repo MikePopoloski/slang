@@ -38,11 +38,7 @@ public:
                           bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
     DeclaredType(const DeclaredType&) = delete;
 
-    const Type& getType() const {
-        if (!type)
-            resolveType();
-        return *type;
-    }
+    const Type& getType() const;
 
     void setType(const Type& newType) { type = &newType; }
 
@@ -77,6 +73,7 @@ public:
 
     bool isEvaluating() const { return evaluating; }
     bool isTypeResolved() const { return type != nullptr; }
+    bool hasInitializer() const { return initializer != nullptr; }
     bitmask<DeclaredTypeFlags> getFlags() const { return flags; }
 
     void setForceSigned() {
@@ -86,24 +83,12 @@ public:
 
     void copyTypeFrom(const DeclaredType& source);
 
-    static std::tuple<const Type*, const Expression*> resolveType(
-        const DataTypeSyntax& typeSyntax, const SyntaxList<VariableDimensionSyntax>* dimensions,
-        const ExpressionSyntax* initializerSyntax, const BindContext& context,
-        bitmask<DeclaredTypeFlags> flags);
-
-    static const Expression& resolveInitializer(const Type& type,
-                                                const ExpressionSyntax& initializerSyntax,
-                                                SourceLocation initializerLocation,
-                                                const BindContext& context);
-
-    static const Expression& resolveInitializer(
-        const DataTypeSyntax& typeSyntax, const SyntaxList<VariableDimensionSyntax>* dimensions,
-        const ExpressionSyntax& initializerSyntax, SourceLocation initializerLocation,
-        const BindContext& context, bitmask<DeclaredTypeFlags> flags);
+    void clearResolved() const;
+    void resolveAt(const BindContext& context) const;
 
 private:
     const Scope& getScope() const;
-    void resolveType() const;
+    void resolveType(const BindContext& initializerContext) const;
 
     template<typename T = BindContext> // templated to avoid having to include BindContext.h
     T getBindContext() const;

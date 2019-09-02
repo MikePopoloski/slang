@@ -119,7 +119,7 @@ protected:
                    const DefinitionSymbol& definition);
 
     void populate(const HierarchicalInstanceSyntax* syntax,
-                  span<const Expression* const> parameterOverrides);
+                  span<const ParameterSymbol* const> parameters);
 
 private:
     SymbolMap* portMap;
@@ -138,7 +138,7 @@ public:
     static ModuleInstanceSymbol& instantiate(Compilation& compilation,
                                              const HierarchicalInstanceSyntax& syntax,
                                              const DefinitionSymbol& definition,
-                                             span<const Expression* const> parameterOverrides);
+                                             span<const ParameterSymbol* const> parameters);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
 };
@@ -152,7 +152,7 @@ public:
     static InterfaceInstanceSymbol& instantiate(Compilation& compilation,
                                                 const HierarchicalInstanceSyntax& syntax,
                                                 const DefinitionSymbol& definition,
-                                                span<const Expression* const> parameterOverrides);
+                                                span<const ParameterSymbol* const> parameters);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfaceInstance; }
 };

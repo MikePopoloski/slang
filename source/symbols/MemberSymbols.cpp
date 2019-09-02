@@ -127,28 +127,21 @@ void ParameterSymbol::fromSyntax(const Scope& scope,
         compilation.addAttributes(*symbol, syntax.attributes);
 }
 
-ParameterSymbol& ParameterSymbol::createOverride(Compilation& compilation,
-                                                 const Expression* newInitializer) const {
+ParameterSymbol& ParameterSymbol::clone(Compilation& compilation) const {
     auto result = compilation.emplace<ParameterSymbol>(name, location, isLocal, isPort);
     if (auto syntax = getSyntax())
         result->setSyntax(*syntax);
 
     auto declared = getDeclaredType();
-    if (auto typeSyntax = declared->getTypeSyntax()) {
-        if (auto dimensions = declared->getDimensionSyntax())
-            result->setDeclaredType(*typeSyntax, *dimensions);
-        else
-            result->setDeclaredType(*typeSyntax);
-    }
+    result->getDeclaredType()->copyTypeFrom(*declared);
 
-    if (newInitializer) {
-        result->setType(*newInitializer->type);
-        result->setInitializer(*newInitializer);
-    }
-    else if (auto init = declared->getInitializerSyntax()) {
+    if (auto init = declared->getInitializerSyntax())
         result->setInitializerSyntax(*init, declared->getInitializerLocation());
-    }
 
+    if (declared->hasInitializer())
+        result->setInitializer(*declared->getInitializer());
+
+    result->overriden = overriden;
     return *result;
 }
 
