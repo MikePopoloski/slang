@@ -919,7 +919,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     context.createLocal(symbol.returnValVar);
 
     using ER = Statement::EvalResult;
-    ER er = symbol.getBody().eval(context);
+    ER er = symbol.getBody(&context).eval(context);
 
     ConstantValue result = std::move(*context.findLocal(symbol.returnValVar));
     context.popFrame();

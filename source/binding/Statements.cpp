@@ -348,15 +348,15 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
         scope.addMember(*block);
 }
 
-const Statement& StatementBinder::getStatement(const Scope& scope, LookupLocation location) const {
+const Statement& StatementBinder::getStatement(const BindContext& context) const {
     if (!stmt)
-        stmt = &bindStatement(scope, location);
+        stmt = &bindStatement(context);
     return *stmt;
 }
 
-const Statement& StatementBinder::bindStatement(const Scope& scope, LookupLocation location) const {
+const Statement& StatementBinder::bindStatement(const BindContext& context) const {
+    auto& scope = context.scope;
     auto& comp = scope.getCompilation();
-    BindContext context(scope, location);
     SmallVectorSized<const Statement*, 8> buffer;
 
     auto scopeKind = scope.asSymbol().kind;

@@ -94,6 +94,8 @@ public:
     /// Issues all recorded diagnostics to the given binding context.
     void reportDiags(const BindContext& context, SourceRange range) const;
 
+    void reportStack(Diagnostics& diags) const;
+
 private:
     void reportStack();
 

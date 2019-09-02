@@ -510,6 +510,10 @@ void InstanceArraySymbol::toJson(json& j) const {
     j["range"] = range.toString();
 }
 
+const Statement& SequentialBlockSymbol::getBody() const {
+    return binder.getStatement(BindContext(*this, LookupLocation::max));
+}
+
 SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilation,
                                                          const BlockStatementSyntax& syntax) {
     string_view name;
@@ -548,6 +552,10 @@ SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilatio
         result->addMember(*block);
 
     return *result;
+}
+
+const Statement& ProceduralBlockSymbol::getBody() const {
+    return binder.getStatement(BindContext(*getParentScope(), LookupLocation::after(*this)));
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(

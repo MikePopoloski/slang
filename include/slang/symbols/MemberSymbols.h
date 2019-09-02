@@ -266,7 +266,7 @@ public:
         Scope(compilation, this), declaredReturnType(*this), defaultLifetime(defaultLifetime),
         subroutineKind(subroutineKind) {}
 
-    const Statement& getBody() const { return binder.getStatement(*this, LookupLocation::max); }
+    const Statement& getBody(EvalContext* evalContext = nullptr) const;
     const Type& getReturnType() const { return declaredReturnType.getType(); }
 
     void toJson(json& j) const;

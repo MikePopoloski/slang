@@ -648,8 +648,27 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     LookupResult result;
     context.scope.lookupName(syntax, context.lookupLocation, flags, result);
 
-    if (result.hasError())
-        compilation.addDiagnostics(result.getDiagnostics());
+    if (result.hasError()) {
+        // If we failed to find the symbol because of restrictions on hierarchical names
+        // inside constant expressions (which we know if evalContext is set) then issue
+        // a backtrace to give the user a bit more context.
+        if (!result.found && result.isHierarchical && context.evalContext) {
+            Diagnostics stack;
+            context.evalContext->reportStack(stack);
+
+            Diagnostics diagnostics;
+            diagnostics.appendRange(result.getDiagnostics());
+
+            Diagnostic& first = diagnostics.front();
+            for (auto& diag : stack)
+                first.addNote(diag);
+
+            compilation.addDiagnostics(diagnostics);
+        }
+        else {
+            compilation.addDiagnostics(result.getDiagnostics());
+        }
+    }
 
     SourceRange callRange = invocation ? invocation->sourceRange() : syntax.sourceRange();
     if (result.systemSubroutine) {

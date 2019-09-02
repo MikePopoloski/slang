@@ -400,6 +400,12 @@ void FormalArgumentSymbol::toJson(json& j) const {
     j["direction"] = toString(direction);
 }
 
+const Statement& SubroutineSymbol::getBody(EvalContext* evalContext) const {
+    BindContext context(*this, LookupLocation::max);
+    context.evalContext = evalContext;
+    return binder.getStatement(context);
+}
+
 SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                                                const FunctionDeclarationSyntax& syntax,
                                                const Scope& parent) {

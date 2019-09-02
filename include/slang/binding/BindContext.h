@@ -11,6 +11,8 @@
 
 namespace slang {
 
+class EvalContext;
+
 /// Specifies flags that control expression and statement binding.
 enum class BindFlags {
     /// No special binding behavior specified.
@@ -56,6 +58,11 @@ public:
     const Scope& scope;
     LookupLocation lookupLocation;
     bitmask<BindFlags> flags;
+
+    /// An optional pointer to the context used by an active expression evaluation.
+    /// If this is set, it means that the binding was forced by the evaluation and
+    /// we can use that information for more informative error messages.
+    EvalContext* evalContext = nullptr;
 
     BindContext(const Scope& scope, LookupLocation lookupLocation,
                 bitmask<BindFlags> flags = BindFlags::None) :

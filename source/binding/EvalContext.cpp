@@ -104,13 +104,17 @@ void EvalContext::reportStack() {
     if (std::exchange(reportedCallstack, true))
         return;
 
+    reportStack(diags);
+}
+
+void EvalContext::reportStack(Diagnostics& stackDiags) const {
     FormatBuffer buffer;
     for (const Frame& frame : make_reverse_range(stack)) {
         if (!frame.subroutine)
             break;
 
         if (isVerifying()) {
-            diags.add(diag::NoteInCallTo, frame.callLocation) << frame.subroutine->name;
+            stackDiags.add(diag::NoteInCallTo, frame.callLocation) << frame.subroutine->name;
         }
         else {
             buffer.clear();
@@ -127,7 +131,7 @@ void EvalContext::reportStack() {
 
             buffer.append(")");
 
-            diags.add(diag::NoteInCallTo, frame.callLocation) << buffer.str();
+            stackDiags.add(diag::NoteInCallTo, frame.callLocation) << buffer.str();
         }
     }
 }

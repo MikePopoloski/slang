@@ -106,11 +106,11 @@ public:
     void setSyntax(const SequentialBlockSymbol& scope, const ForLoopStatementSyntax& syntax);
     void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax);
 
-    const Statement& getStatement(const Scope& scope, LookupLocation location) const;
+    const Statement& getStatement(const BindContext& context) const;
     span<const SequentialBlockSymbol* const> getBlocks() const { return blocks; }
 
 private:
-    const Statement& bindStatement(const Scope& scope, LookupLocation location) const;
+    const Statement& bindStatement(const BindContext& context) const;
 
     std::variant<const StatementSyntax*, const SyntaxList<SyntaxNode>*> syntax;
     mutable const Statement* stmt = nullptr;

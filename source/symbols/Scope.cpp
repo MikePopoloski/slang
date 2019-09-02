@@ -1225,6 +1225,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             // Be careful to avoid calling getRoot() if we're in a constant context (there's a
             // chance we could already be in the middle of calling getRoot in that case).
             if (inConstantEval) {
+                result.isHierarchical = true;
                 result.addDiag(*this, diag::HierarchicalNotAllowedInConstant, nameToken.range());
                 return;
             }

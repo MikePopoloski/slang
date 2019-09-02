@@ -178,7 +178,7 @@ public:
         Symbol(SymbolKind::SequentialBlock, name, loc), Scope(compilation, this) {}
 
     void setTemporaryParent(const Scope& scope, Index index) { setParent(scope, index); }
-    const Statement& getBody() const { return binder.getStatement(*this, LookupLocation::max); }
+    const Statement& getBody() const;
 
     void toJson(json&) const {}
 
@@ -200,10 +200,7 @@ public:
     ProceduralBlockSymbol(SourceLocation loc, ProceduralBlockKind procedureKind) :
         Symbol(SymbolKind::ProceduralBlock, "", loc), procedureKind(procedureKind) {}
 
-    const Statement& getBody() const {
-        return binder.getStatement(*getParentScope(), LookupLocation::after(*this));
-    }
-
+    const Statement& getBody() const;
     void toJson(json& j) const;
 
     static ProceduralBlockSymbol& fromSyntax(
