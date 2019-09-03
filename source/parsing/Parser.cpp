@@ -121,13 +121,10 @@ Token Parser::parseLifetime() {
 }
 
 AnsiPortListSyntax& Parser::parseAnsiPortList(Token openParen) {
-    if (peek(TokenKind::CloseParenthesis))
-        return factory.ansiPortList(openParen, nullptr, consume());
-
     Token closeParen;
     SmallVectorSized<TokenOrSyntax, 8> buffer;
-    parseSeparatedList<isPossibleAnsiPort, isEndOfParenList>(
-        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
+    parseList<isPossibleAnsiPort, isEndOfParenList>(
+        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
         diag::ExpectedAnsiPort, [this] { return &parseAnsiPort(); });
     return factory.ansiPortList(openParen, buffer.copy(alloc), closeParen);
 }
@@ -150,10 +147,10 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
         else if (isNonAnsiPort()) {
             Token closeParen;
             SmallVectorSized<TokenOrSyntax, 8> buffer;
-            parseSeparatedList<isPossibleNonAnsiPort, isEndOfParenList>(
+            parseList<isPossibleNonAnsiPort, isEndOfParenList>(
                 buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-                diag::ExpectedNonAnsiPort, [this] { return &parseNonAnsiPort(); },
-                AllowEmpty::True);
+                RequireItems::True, diag::ExpectedNonAnsiPort,
+                [this] { return &parseNonAnsiPort(); }, AllowEmpty::True);
             ports = &factory.nonAnsiPortList(openParen, buffer.copy(alloc), closeParen);
         }
         else {
@@ -175,9 +172,9 @@ ParameterPortListSyntax* Parser::parseParameterPortList() {
     Token openParen;
     Token closeParen;
     span<TokenOrSyntax> parameters;
-    parseSeparatedList<isPossibleParameter, isEndOfParameterList>(
+    parseList<isPossibleParameter, isEndOfParameterList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen,
-        parameters, closeParen, diag::ExpectedParameterPort,
+        parameters, closeParen, RequireItems::False, diag::ExpectedParameterPort,
         [this] { return &parseParameterPort(); });
 
     return &factory.parameterPortList(hash, openParen, parameters, closeParen);
@@ -198,9 +195,10 @@ PortExpressionSyntax& Parser::parsePortExpression() {
         Token openBrace, closeBrace;
         span<TokenOrSyntax> items;
 
-        parseSeparatedList<isIdentifierOrComma, isEndOfBracedList>(
+        parseList<isIdentifierOrComma, isEndOfBracedList>(
             TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, items,
-            closeBrace, diag::ExpectedExpression, [this] { return &parsePortReference(); });
+            closeBrace, RequireItems::True, diag::ExpectedExpression,
+            [this] { return &parsePortReference(); });
 
         return factory.portConcatenation(openBrace, items, closeBrace);
     }
@@ -668,9 +666,10 @@ ModportItemSyntax& Parser::parseModportItem() {
 
     Token openParen, closeParen;
     span<TokenOrSyntax> items;
-    parseSeparatedList<isPossibleModportPort, isEndOfParenList>(
+    parseList<isPossibleModportPort, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, items,
-        closeParen, diag::ExpectedModportPort, [this] { return &parseModportPort(); });
+        closeParen, RequireItems::True, diag::ExpectedModportPort,
+        [this] { return &parseModportPort(); });
 
     auto& ports = factory.ansiPortList(openParen, items, closeParen);
     return factory.modportItem(name, ports);
@@ -682,9 +681,9 @@ ModportDeclarationSyntax& Parser::parseModportDeclaration(
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 8> buffer;
-    parseSeparatedList<isIdentifierOrComma, isSemicolon>(
-        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, diag::ExpectedIdentifier,
-        [this] { return &parseModportItem(); });
+    parseList<isIdentifierOrComma, isSemicolon>(buffer, TokenKind::Semicolon, TokenKind::Comma,
+                                                semi, RequireItems::True, diag::ExpectedIdentifier,
+                                                [this] { return &parseModportItem(); });
 
     return factory.modportDeclaration(attributes, keyword, buffer.copy(alloc), semi);
 }
@@ -741,16 +740,13 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
     FunctionPortListSyntax* portList = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
         auto openParen = consume();
-        if (peek(TokenKind::CloseParenthesis))
-            portList = &factory.functionPortList(openParen, nullptr, consume());
-        else {
-            Token closeParen;
-            SmallVectorSized<TokenOrSyntax, 8> buffer;
-            parseSeparatedList<isPossibleFunctionPort, isEndOfParenList>(
-                buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
-                diag::ExpectedFunctionPort, [this] { return &parseFunctionPort(); });
-            portList = &factory.functionPortList(openParen, buffer.copy(alloc), closeParen);
-        }
+        Token closeParen;
+        SmallVectorSized<TokenOrSyntax, 8> buffer;
+        parseList<isPossibleFunctionPort, isEndOfParenList>(
+            buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
+            diag::ExpectedFunctionPort, [this] { return &parseFunctionPort(); });
+
+        portList = &factory.functionPortList(openParen, buffer.copy(alloc), closeParen);
     }
 
     return factory.functionPrototype(keyword, lifetime, returnType, name, portList);
@@ -773,9 +769,10 @@ GenvarDeclarationSyntax& Parser::parseGenvarDeclaration(span<AttributeInstanceSy
     Token semi;
     span<TokenOrSyntax> identifiers;
 
-    parseSeparatedList<isIdentifierOrComma, isSemicolon>(
+    parseList<isIdentifierOrComma, isSemicolon>(
         TokenKind::GenVarKeyword, TokenKind::Semicolon, TokenKind::Comma, keyword, identifiers,
-        semi, diag::ExpectedIdentifier, [this] { return &factory.identifierName(consume()); });
+        semi, RequireItems::True, diag::ExpectedIdentifier,
+        [this] { return &factory.identifierName(consume()); });
 
     return factory.genvarDeclaration(attributes, keyword, identifiers, semi);
 }
@@ -824,8 +821,7 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(span<AttributeInstanceSyn
             iterVarCheck = iterationExpr->as<PostfixUnaryExpressionSyntax>().operand;
             break;
         default:
-            addDiag(diag::InvalidGenvarIterExpression,
-                    iterationExpr->getFirstToken().location())
+            addDiag(diag::InvalidGenvarIterExpression, iterationExpr->getFirstToken().location())
                 << iterationExpr->sourceRange();
             iterationExpr = &factory.badExpression(*iterationExpr);
             break;
@@ -892,9 +888,9 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(span<AttributeInstanceSyn
         else if (isPossibleExpression(kind)) {
             Token colon;
             SmallVectorSized<TokenOrSyntax, 8> buffer;
-            parseSeparatedList<isPossibleExpressionOrComma, isEndOfCaseItem>(
-                buffer, TokenKind::Colon, TokenKind::Comma, colon, diag::ExpectedExpression,
-                [this] { return &parseExpression(); });
+            parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
+                buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
+                diag::ExpectedExpression, [this] { return &parseExpression(); });
             itemBuffer.append(
                 &factory.standardCaseItem(buffer.copy(alloc), colon, parseGenerateBlock()));
         }
@@ -951,9 +947,9 @@ ImplementsClauseSyntax* Parser::parseImplementsClause(TokenKind keywordKind, Tok
 
     auto implements = consume();
     SmallVectorSized<TokenOrSyntax, 8> buffer;
-    parseSeparatedList<isPossibleExpressionOrComma, isSemicolon>(
-        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, diag::ExpectedInterfaceClassName,
-        [this] { return &parseName(); });
+    parseList<isPossibleExpressionOrComma, isSemicolon>(
+        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+        diag::ExpectedInterfaceClassName, [this] { return &parseName(); });
 
     return &factory.implementsClause(implements, buffer.copy(alloc));
 }
@@ -1087,9 +1083,9 @@ ContinuousAssignSyntax& Parser::parseContinuousAssign(span<AttributeInstanceSynt
     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
     Token semi;
-    parseSeparatedList<isPossibleExpressionOrComma, isSemicolon>(
-        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, diag::ExpectedVariableAssignment,
-        [this] { return &parseExpression(); });
+    parseList<isPossibleExpressionOrComma, isSemicolon>(
+        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+        diag::ExpectedVariableAssignment, [this] { return &parseExpression(); });
 
     return factory.continuousAssign(attributes, assign, buffer.copy(alloc), semi);
 }
@@ -1110,9 +1106,9 @@ DefParamSyntax& Parser::parseDefParam(span<AttributeInstanceSyntax*> attributes)
     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
     Token semi;
-    parseSeparatedList<isPossibleExpressionOrComma, isSemicolon>(
-        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, diag::ExpectedVariableAssignment,
-        [this] { return &parseDefParamAssignment(); });
+    parseList<isPossibleExpressionOrComma, isSemicolon>(
+        buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+        diag::ExpectedVariableAssignment, [this] { return &parseDefParamAssignment(); });
 
     return factory.defParam(attributes, defparam, buffer.copy(alloc), semi);
 }
@@ -1327,9 +1323,10 @@ TransSetSyntax& Parser::parseTransSet() {
     Token closeParen;
     span<TokenOrSyntax> list;
 
-    parseSeparatedList<isPossibleTransSet, isEndOfTransSet>(
+    parseList<isPossibleTransSet, isEndOfTransSet>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::EqualsArrow, openParen,
-        list, closeParen, diag::ExpectedExpression, [this] { return &parseTransRange(); });
+        list, closeParen, RequireItems::True, diag::ExpectedExpression,
+        [this] { return &parseTransRange(); });
 
     return factory.transSet(openParen, list, closeParen);
 }
@@ -1452,13 +1449,15 @@ ConstraintItemSyntax& Parser::parseConstraintItem(bool allowBlock) {
             auto solve = consume();
             Token before;
             SmallVectorSized<TokenOrSyntax, 4> beforeBuffer;
-            parseSeparatedList<isPossibleExpression, isBeforeOrSemicolon>(
+            parseList<isPossibleExpression, isBeforeOrSemicolon>(
                 beforeBuffer, TokenKind::BeforeKeyword, TokenKind::Comma, before,
-                diag::ExpectedExpression, [this] { return &parsePrimaryExpression(); });
+                RequireItems::True, diag::ExpectedExpression,
+                [this] { return &parsePrimaryExpression(); });
+
             Token semi;
             SmallVectorSized<TokenOrSyntax, 4> afterBuffer;
-            parseSeparatedList<isPossibleExpression, isSemicolon>(
-                afterBuffer, TokenKind::Semicolon, TokenKind::Comma, semi,
+            parseList<isPossibleExpression, isSemicolon>(
+                afterBuffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
                 diag::ExpectedExpression, [this] { return &parsePrimaryExpression(); });
             return factory.solveBeforeConstraint(solve, beforeBuffer.copy(alloc), before,
                                                  afterBuffer.copy(alloc), semi);
@@ -1538,9 +1537,9 @@ DistConstraintListSyntax& Parser::parseDistConstraintList() {
     Token closeBrace;
     span<TokenOrSyntax> list;
 
-    parseSeparatedList<isPossibleOpenRangeElement, isEndOfBracedList>(
+    parseList<isPossibleOpenRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, list, closeBrace,
-        diag::ExpectedDistItem, [this] { return &parseDistItem(); });
+        RequireItems::True, diag::ExpectedDistItem, [this] { return &parseDistItem(); });
 
     return factory.distConstraintList(dist, openBrace, list, closeBrace);
 }
@@ -1883,9 +1882,9 @@ span<TokenOrSyntax> Parser::parseOneDeclarator() {
 template<bool (*IsEnd)(TokenKind)>
 span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end) {
     SmallVectorSized<TokenOrSyntax, 4> buffer;
-    parseSeparatedList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end,
-                                                   diag::ExpectedDeclarator,
-                                                   [this] { return &parseDeclarator(); });
+    parseList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end,
+                                          RequireItems::True, diag::ExpectedDeclarator,
+                                          [this] { return &parseDeclarator(); });
 
     return buffer.copy(alloc);
 }
@@ -1901,9 +1900,9 @@ span<AttributeInstanceSyntax*> Parser::parseAttributes() {
         Token closeParen;
         span<TokenOrSyntax> list;
 
-        parseSeparatedList<isIdentifierOrComma, isEndOfAttribute>(
+        parseList<isIdentifierOrComma, isEndOfAttribute>(
             TokenKind::OpenParenthesisStar, TokenKind::StarCloseParenthesis, TokenKind::Comma,
-            openParen, list, closeParen, diag::ExpectedAttribute,
+            openParen, list, closeParen, RequireItems::True, diag::ExpectedAttribute,
             [this] { return &parseAttributeSpec(); });
 
         buffer.append(&factory.attributeInstance(openParen, list, closeParen));
@@ -1936,9 +1935,9 @@ PackageImportDeclarationSyntax& Parser::parseImportDeclaration(
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 4> items;
-    parseSeparatedList<isIdentifierOrComma, isSemicolon>(
-        items, TokenKind::Semicolon, TokenKind::Comma, semi, diag::ExpectedPackageImport,
-        [this] { return &parsePackageImportItem(); });
+    parseList<isIdentifierOrComma, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi,
+                                                RequireItems::True, diag::ExpectedPackageImport,
+                                                [this] { return &parsePackageImportItem(); });
 
     return factory.packageImportDeclaration(attributes, keyword, items.copy(alloc), semi);
 }
@@ -2006,8 +2005,8 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
     SmallVectorSized<TokenOrSyntax, 4> buffer;
     Token closeParen;
 
-    parseSeparatedList<isPossiblePropertyPortItem, isEndOfParenList>(
-        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen,
+    parseList<isPossiblePropertyPortItem, isEndOfParenList>(
+        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
         diag::ExpectedAssertionItemPort, [this, declarationKind] {
             auto attributes = parseAttributes();
             Token local;
@@ -2022,6 +2021,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
                     direction = consume();
                 }
             }
+
             DataTypeSyntax* type;
             switch (peek().kind) {
                 case TokenKind::PropertyKeyword:
@@ -2201,9 +2201,10 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(
             Token innerSemi;
             SmallVectorSized<TokenOrSyntax, 4> assignments;
             if (!declaration && !defaultKeyword) {
-                parseSeparatedList<isIdentifierOrComma, isSemicolon>(
+                parseList<isIdentifierOrComma, isSemicolon>(
                     assignments, TokenKind::Semicolon, TokenKind::Comma, innerSemi,
-                    diag::ExpectedIdentifier, [this] { return &parseAttributeSpec(); });
+                    RequireItems::True, diag::ExpectedIdentifier,
+                    [this] { return &parseAttributeSpec(); });
             }
             else if (!declaration) {
                 innerSemi = expect(TokenKind::Semicolon);
@@ -2230,10 +2231,9 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 8> items;
-    parseSeparatedList<isIdentifierOrComma, isSemicolon>(
-        items, TokenKind::Semicolon, TokenKind::Comma, semi,
-        diag::ExpectedHierarchicalInstantiation,
-        [this] { return &parseHierarchicalInstance(); });
+    parseList<isIdentifierOrComma, isSemicolon>(
+        items, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+        diag::ExpectedHierarchicalInstantiation, [this] { return &parseHierarchicalInstance(); });
 
     return factory.hierarchyInstantiation(attributes, type, parameters, items.copy(alloc), semi);
 }
@@ -2246,9 +2246,10 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
     Token closeParen;
     span<TokenOrSyntax> items;
 
-    parseSeparatedList<isPossiblePortConnection, isEndOfParenList>(
+    parseList<isPossiblePortConnection, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, items,
-        closeParen, diag::ExpectedPortConnection, [this] { return &parsePortConnection(); });
+        closeParen, RequireItems::False, diag::ExpectedPortConnection,
+        [this] { return &parsePortConnection(); });
 
     return factory.hierarchicalInstance(name, dimensions, openParen, items, closeParen);
 }

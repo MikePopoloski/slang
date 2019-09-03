@@ -132,7 +132,7 @@ endmodule
     CHECK(diags[1].code == diag::EnumValueOverflow);
     CHECK(diags[2].code == diag::EnumValueDuplicate);
     CHECK(diags[3].code == diag::EnumValueDuplicate);
-    CHECK(diags[4].code == diag::EnumNoMembers);
+    CHECK(diags[4].code == diag::ExpectedDeclarator);
     CHECK(diags[5].code == diag::ValueMustBePositive);
     CHECK(diags[6].code == diag::ValueMustBePositive);
     CHECK(diags[7].code == diag::EnumRangeMultiDimensional);

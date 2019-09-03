@@ -13,6 +13,21 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Bad signed specifier") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    bit signed;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedDeclarator);
+}
+
 TEST_CASE("Continuous Assignments") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
@@ -73,7 +88,7 @@ endpackage
 TEST_CASE("JSON dump") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
-    modport m();
+    modport m(input f);
 endinterface
 
 package p1;

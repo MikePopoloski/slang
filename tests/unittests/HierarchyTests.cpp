@@ -515,7 +515,7 @@ module mh22(ref wire x); endmodule
 
 TEST_CASE("Module ANSI interface ports") {
     auto tree = SyntaxTree::fromText(R"(
-interface I; modport bar(); endinterface
+interface I; modport bar(input f); endinterface
 interface J; endinterface
 interface K; logic f; endinterface
 module L; endmodule

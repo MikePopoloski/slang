@@ -96,13 +96,15 @@ protected:
     }
 
     enum class AllowEmpty { False, True };
+    enum class RequireItems { False, True };
 
     /// This is a generalized method for parsing a delimiter separated list of things
     /// with bookend tokens in a way that robustly handles bad tokens.
     template<bool (*IsExpected)(TokenKind), bool (*IsEnd)(TokenKind), typename TParserFunc>
-    void parseSeparatedList(TokenKind openKind, TokenKind closeKind, TokenKind separatorKind,
-                            Token& openToken, span<TokenOrSyntax>& list, Token& closeToken,
-                            DiagCode code, TParserFunc&& parseItem, AllowEmpty allowEmpty = {}) {
+    void parseList(TokenKind openKind, TokenKind closeKind, TokenKind separatorKind,
+                   Token& openToken, span<TokenOrSyntax>& list, Token& closeToken,
+                   RequireItems requireItems, DiagCode code, TParserFunc&& parseItem,
+                   AllowEmpty allowEmpty = {}) {
         openToken = expect(openKind);
         if (openToken.isMissing()) {
             closeToken = missingToken(closeKind, openToken.location());
@@ -111,18 +113,21 @@ protected:
         }
 
         SmallVectorSized<TokenOrSyntax, 32> buffer;
-        parseSeparatedList<IsExpected, IsEnd, TParserFunc>(
-            buffer, closeKind, separatorKind, closeToken, code,
-            std::forward<TParserFunc>(parseItem), allowEmpty);
+        parseList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken,
+                                                  requireItems, code,
+                                                  std::forward<TParserFunc>(parseItem), allowEmpty);
         list = buffer.copy(alloc);
     }
 
     template<bool (*IsExpected)(TokenKind), bool (*IsEnd)(TokenKind), typename TParserFunc>
-    void parseSeparatedList(SmallVector<TokenOrSyntax>& buffer, TokenKind closeKind,
-                            TokenKind separatorKind, Token& closeToken, DiagCode code,
-                            TParserFunc&& parseItem, AllowEmpty allowEmpty = {}) {
+    void parseList(SmallVector<TokenOrSyntax>& buffer, TokenKind closeKind, TokenKind separatorKind,
+                   Token& closeToken, RequireItems requireItems, DiagCode code,
+                   TParserFunc&& parseItem, AllowEmpty allowEmpty = {}) {
         auto current = peek();
         if (IsEnd(current.kind)) {
+            if (requireItems == RequireItems::True)
+                addDiag(code, current.location());
+
             closeToken = expect(closeKind);
             return;
         }

@@ -796,9 +796,6 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         }
     }
 
-    if (first)
-        scope.addDiag(diag::EnumNoMembers, resultType->location);
-
     return *resultType;
 }
 

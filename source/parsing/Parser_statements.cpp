@@ -223,8 +223,8 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
                     Token colon;
                     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
-                    parseSeparatedList<isPossibleOpenRangeElement, isEndOfCaseItem>(
-                        buffer, TokenKind::Colon, TokenKind::Comma, colon,
+                    parseList<isPossibleOpenRangeElement, isEndOfCaseItem>(
+                        buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
                         diag::ExpectedOpenRangeElement,
                         [this] { return &parseOpenRangeElement(); });
                     itemBuffer.append(
@@ -256,9 +256,9 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
                     Token colon;
                     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
-                    parseSeparatedList<isPossibleExpressionOrComma, isEndOfCaseItem>(
-                        buffer, TokenKind::Colon, TokenKind::Comma, colon, diag::ExpectedExpression,
-                        [this] { return &parseExpression(); });
+                    parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
+                        buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
+                        diag::ExpectedExpression, [this] { return &parseExpression(); });
                     itemBuffer.append(
                         &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
                 }
@@ -331,18 +331,18 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
 
     Token semi1;
     SmallVectorSized<TokenOrSyntax, 4> initializers;
-    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
-        initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, diag::ExpectedForInitializer,
-        [this] { return &parseForInitializer(); });
+    parseList<isPossibleExpressionOrComma, isEndOfParenList>(
+        initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, RequireItems::False,
+        diag::ExpectedForInitializer, [this] { return &parseForInitializer(); });
 
     auto& stopExpr = parseExpression();
     auto semi2 = expect(TokenKind::Semicolon);
 
     Token closeParen;
     SmallVectorSized<TokenOrSyntax, 4> steps;
-    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
-        steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, diag::ExpectedExpression,
-        [this] { return &parseExpression(); });
+    parseList<isPossibleExpressionOrComma, isEndOfParenList>(
+        steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
+        diag::ExpectedExpression, [this] { return &parseExpression(); });
 
     return factory.forLoopStatement(label, attributes, forKeyword, openParen,
                                     initializers.copy(alloc), semi1, stopExpr, semi2,
@@ -355,9 +355,9 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     span<TokenOrSyntax> list;
     Token openBracket;
     Token closeBracket;
-    parseSeparatedList<isIdentifierOrComma, isEndOfBracketedList>(
+    parseList<isIdentifierOrComma, isEndOfBracketedList>(
         TokenKind::OpenBracket, TokenKind::CloseBracket, TokenKind::Comma, openBracket, list,
-        closeBracket, diag::ExpectedIdentifier,
+        closeBracket, RequireItems::False, diag::ExpectedIdentifier,
         [this] { return &parseName(NameOptions::InForEach); });
 
     auto closeParen = expect(TokenKind::CloseParenthesis);
@@ -649,9 +649,9 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(
     SmallVectorSized<TokenOrSyntax, 4> buffer;
 
     Token closeParen;
-    parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
-        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, diag::ExpectedIdentifier,
-        [this] { return &parseName(); });
+    parseList<isIdentifierOrComma, isEndOfParenList>(
+        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
+        diag::ExpectedIdentifier, [this] { return &parseName(); });
 
     return factory.waitOrderStatement(label, attributes, keyword, openParen, buffer.copy(alloc),
                                       closeParen, parseActionBlock());
