@@ -380,7 +380,7 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     if (symbol.kind != SymbolKind::Parameter) {
         const Scope* scope = symbol.getParentScope();
         while (scope && scope != subroutine)
-            scope = scope->getParent();
+            scope = scope->asSymbol().getParentScope();
 
         if (scope != subroutine) {
             context.addDiag(diag::NoteFunctionIdentifiersMustBeLocal, sourceRange);

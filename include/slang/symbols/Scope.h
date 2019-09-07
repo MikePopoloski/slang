@@ -126,8 +126,6 @@ public:
     /// Creates and adds one or more member symbols to the scope from the given syntax node.
     void addMembers(const SyntaxNode& syntax);
 
-    /// Gets the parent scope of this scope.
-    const Scope* getParent() const;
     const Symbol& asSymbol() const { return *thisSym; }
 
     /// Gets the compilation that contains this scope.

@@ -262,7 +262,7 @@ void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
 
 void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> ports,
                                  const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) {
-    const Scope* instanceScope = childScope.getParent();
+    const Scope* instanceScope = childScope.asSymbol().getParentScope();
     ASSERT(instanceScope);
 
     PortConnectionBuilder builder(childScope, *instanceScope, portConnections);

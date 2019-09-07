@@ -91,23 +91,20 @@ Scope::iterator& Scope::iterator::operator++() {
     return *this;
 }
 
-const Scope* Scope::getParent() const {
-    return thisSym->getParentScope();
-}
-
 const NetType& Scope::getDefaultNetType() const {
     const Scope* current = this;
     while (current) {
-        switch (current->asSymbol().kind) {
+        auto& sym = current->asSymbol();
+        switch (sym.kind) {
             case SymbolKind::Definition:
-                return current->asSymbol().as<DefinitionSymbol>().defaultNetType;
+                return sym.as<DefinitionSymbol>().defaultNetType;
             case SymbolKind::Package:
-                return current->asSymbol().as<PackageSymbol>().defaultNetType;
+                return sym.as<PackageSymbol>().defaultNetType;
             default:
-                if (InstanceSymbol::isKind(current->asSymbol().kind))
-                    current = &current->asSymbol().as<InstanceSymbol>().definition;
+                if (InstanceSymbol::isKind(sym.kind))
+                    current = &sym.as<InstanceSymbol>().definition;
                 else
-                    current = current->getParent();
+                    current = sym.getParentScope();
                 break;
         }
     }
@@ -118,18 +115,19 @@ const NetType& Scope::getDefaultNetType() const {
 TimeScale Scope::getTimeScale() const {
     const Scope* current = this;
     while (current) {
-        switch (current->asSymbol().kind) {
+        auto& sym = current->asSymbol();
+        switch (sym.kind) {
             case SymbolKind::CompilationUnit:
-                return current->asSymbol().as<CompilationUnitSymbol>().getTimeScale();
+                return sym.as<CompilationUnitSymbol>().getTimeScale();
             case SymbolKind::Definition:
-                return current->asSymbol().as<DefinitionSymbol>().getTimeScale();
+                return sym.as<DefinitionSymbol>().getTimeScale();
             case SymbolKind::Package:
-                return current->asSymbol().as<PackageSymbol>().getTimeScale();
+                return sym.as<PackageSymbol>().getTimeScale();
             default:
-                if (InstanceSymbol::isKind(current->asSymbol().kind))
-                    current = &current->asSymbol().as<InstanceSymbol>().definition;
+                if (InstanceSymbol::isKind(sym.kind))
+                    current = &sym.as<InstanceSymbol>().definition;
                 else
-                    current = current->getParent();
+                    current = sym.getParentScope();
                 break;
         }
     }
@@ -1338,7 +1336,7 @@ void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<Lookup
                 break;
             }
 
-            scope = scope->getParent();
+            scope = scope->asSymbol().getLexicalScope();
         } while (scope);
     }
 

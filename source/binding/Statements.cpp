@@ -462,7 +462,7 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
     // Find the parent subroutine.
     const Scope* scope = &context.scope;
     while (scope->asSymbol().kind == SymbolKind::SequentialBlock)
-        scope = scope->getParent();
+        scope = scope->asSymbol().getParentScope();
 
     auto stmtLoc = syntax.returnKeyword.location();
     if (scope->asSymbol().kind != SymbolKind::Subroutine) {

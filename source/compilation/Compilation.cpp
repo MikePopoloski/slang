@@ -259,10 +259,11 @@ const DefinitionSymbol* Compilation::getDefinition(string_view lookupName,
             return std::get<0>(it->second);
         }
 
-        if (searchScope->asSymbol().kind == SymbolKind::Root)
+        auto& sym = searchScope->asSymbol();
+        if (sym.kind == SymbolKind::Root)
             return nullptr;
 
-        searchScope = searchScope->getParent();
+        searchScope = sym.getLexicalScope();
     }
 
     return nullptr;

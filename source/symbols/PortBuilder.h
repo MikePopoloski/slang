@@ -502,11 +502,11 @@ public:
 
         // Build up the set of dimensions for the instantiating instance's array parent, if any.
         // This builds up the dimensions in reverse order, so we have to reverse them back.
-        auto parent = instance.getParent();
+        auto parent = instance.getParentScope();
         while (parent && parent->asSymbol().kind == SymbolKind::InstanceArray) {
             auto& sym = parent->asSymbol().as<InstanceArraySymbol>();
             instanceDims.append(sym.range);
-            parent = sym.getParent();
+            parent = sym.getParentScope();
         }
         std::reverse(instanceDims.begin(), instanceDims.end());
     }
