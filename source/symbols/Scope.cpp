@@ -840,6 +840,9 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
         switch (symbol->kind) {
             case SymbolKind::InstanceArray: {
                 auto& array = symbol->as<InstanceArraySymbol>();
+                if (array.elements.empty())
+                    return nullptr;
+
                 if (!array.range.containsPoint(*index)) {
                     auto& diag = result.addDiag(context.scope, diag::ScopeIndexOutOfRange,
                                                 syntax->sourceRange());

@@ -973,3 +973,40 @@ endmodule
     auto& foo = compilation.getRoot().lookupName<ParameterSymbol>("m.u1.foo");
     CHECK(foo.getValue().integer() == 3);
 }
+
+TEST_CASE("Cross-CU definition lookup") {
+    auto tree1 = SyntaxTree::fromText(R"(
+module m #(parameter int count = 0);
+
+    /*enum {
+        A,
+        B,
+        C
+    } foo;
+
+    localparam int count = foo.num;*/
+
+    Iface ifaces[count] ();
+    Blah blah(.ifaces(ifaces));
+
+endmodule
+
+module Blah(Iface ifaces[3]);
+endmodule
+)");
+    auto tree2 = SyntaxTree::fromText(R"(
+interface Iface;
+endinterface
+)");
+    auto tree3 = SyntaxTree::fromText(R"(
+module top;
+    m #(3) inst ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    compilation.addSyntaxTree(tree3);
+    NO_COMPILATION_ERRORS;
+}

@@ -326,6 +326,15 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
 
     switch (symbol.kind) {
         case SymbolKind::Parameter:
+            // Special case for parameters: if this parameter is the child of a
+            // definition symbol, the value it has isn't real (because it's not
+            // part of a real instance). Just return nullptr here so that we don't
+            // end up reporting a spurious error for a definition that is never
+            // instantiated. If it does ever get instantiated, we'll catch any real
+            // errors in the instance itself.
+            if (symbol.getParentScope()->asSymbol().kind == SymbolKind::Definition)
+                return nullptr;
+
             return symbol.as<ParameterSymbol>().getValue();
         case SymbolKind::EnumValue:
             return symbol.as<EnumValueSymbol>().getValue();

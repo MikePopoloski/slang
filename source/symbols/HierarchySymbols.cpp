@@ -206,9 +206,16 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
                               attributes);
     }
 
+    // Evaluate the dimensions of the array. If this fails for some reason,
+    // make up an empty array so that we don't get further errors when
+    // things try to reference this symbol.
+    auto nameToken = instanceSyntax.name;
     EvaluatedDimension dim = context.evalDimension(**it, true);
-    if (!dim.isRange())
-        return nullptr;
+    if (!dim.isRange()) {
+        return compilation.emplace<InstanceArraySymbol>(
+            compilation, nameToken.valueText(), nameToken.location(), span<const Symbol* const>{},
+            ConstantRange());
+    }
 
     ++it;
 
@@ -227,9 +234,9 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
         elements.append(symbol);
     }
 
-    auto result = compilation.emplace<InstanceArraySymbol>(
-        compilation, instanceSyntax.name.valueText(), instanceSyntax.name.location(),
-        elements.copy(compilation), range);
+    auto result = compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
+                                                           nameToken.location(),
+                                                           elements.copy(compilation), range);
 
     for (auto element : elements)
         result->addMember(*element);
@@ -358,14 +365,13 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     // To do this we need to construct a temporary scope that has the right parent
     // to house the parameters as we're evaluating them. We hold on to the initializer
     // expressions and give them to the instances later when we create them.
-    struct TempDefSymbol : public DefinitionSymbol {
-        using DefinitionSymbol::DefinitionSymbol;
-        void setParent(const Scope& scope) { DefinitionSymbol::setParent(scope); }
+    struct TempInstance : public ModuleInstanceSymbol {
+        using ModuleInstanceSymbol::ModuleInstanceSymbol;
+        void setParent(const Scope& scope) { ModuleInstanceSymbol::setParent(scope); }
     };
 
-    auto& tempDef =
-        *compilation.emplace<TempDefSymbol>(compilation, definition->name, definition->location,
-                                            definition->definitionKind, definition->defaultNetType);
+    auto& tempDef = *compilation.emplace<TempInstance>(compilation, definition->name,
+                                                       definition->location, *definition);
     tempDef.setParent(*definition->getParentScope());
 
     BindContext context(scope, location, BindFlags::Constant);

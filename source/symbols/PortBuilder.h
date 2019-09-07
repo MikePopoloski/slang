@@ -78,8 +78,7 @@ public:
                     }
                     else {
                         if (header.varKeyword) {
-                            scope.addDiag(diag::VarWithInterfacePort,
-                                          header.varKeyword.location());
+                            scope.addDiag(diag::VarWithInterfacePort, header.varKeyword.location());
                         }
 
                         if (header.direction) {
@@ -467,8 +466,7 @@ public:
                 usingOrdered = isOrdered;
             }
             else if (isOrdered != usingOrdered) {
-                scope.addDiag(diag::MixingOrderedAndNamedPorts,
-                              conn->getFirstToken().location());
+                scope.addDiag(diag::MixingOrderedAndNamedPorts, conn->getFirstToken().location());
                 break;
             }
 
@@ -479,8 +477,8 @@ public:
                 if (!std::exchange(hasWildcard, true))
                     wildcardRange = conn->sourceRange();
                 else {
-                    auto& diag = scope.addDiag(diag::DuplicateWildcardPortConnection,
-                                               conn->sourceRange());
+                    auto& diag =
+                        scope.addDiag(diag::DuplicateWildcardPortConnection, conn->sourceRange());
                     diag.addNote(diag::NotePreviousUsage, wildcardRange.start());
                 }
             }
@@ -519,8 +517,7 @@ public:
                     port.setConnection(port.defaultValue);
                 else if (port.name.empty()) {
                     if (!warnedAboutUnnamed) {
-                        auto& diag =
-                            scope.addDiag(diag::UnconnectedUnnamedPort, instance.location);
+                        auto& diag = scope.addDiag(diag::UnconnectedUnnamedPort, instance.location);
                         diag.addNote(diag::NoteDeclarationHere, port.location);
                         warnedAboutUnnamed = true;
                     }
@@ -650,8 +647,8 @@ public:
                 // We marked all the connections that we used, so anything left over is a connection
                 // for a non-existent port.
                 if (!pair.second.second) {
-                    auto& diag = scope.addDiag(diag::PortDoesNotExist,
-                                               pair.second.first->name.location());
+                    auto& diag =
+                        scope.addDiag(diag::PortDoesNotExist, pair.second.first->name.location());
                     diag << pair.second.first->name.valueText();
                     diag << instance.name;
                 }
@@ -702,8 +699,7 @@ private:
 
     void setInterfaceExpr(InterfacePortSymbol& port, const ExpressionSyntax& syntax) {
         if (!NameSyntax::isKind(syntax.kind)) {
-            scope.addDiag(diag::InterfacePortInvalidExpression, syntax.sourceRange())
-                << port.name;
+            scope.addDiag(diag::InterfacePortInvalidExpression, syntax.sourceRange()) << port.name;
             return;
         }
 
@@ -757,7 +753,8 @@ private:
         const Symbol* child = symbol;
         while (child->kind == SymbolKind::InstanceArray) {
             auto& array = child->as<InstanceArraySymbol>();
-            ASSERT(!array.elements.empty());
+            if (array.elements.empty())
+                return;
 
             dims.append(array.range);
             child = array.elements[0];
