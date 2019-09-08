@@ -114,12 +114,12 @@ public:
     string_view getSourceText(BufferID buffer) const;
 
     /// Creates a macro expansion location; used by the preprocessor.
-    SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart,
-                                      SourceLocation expansionEnd, bool isMacroArg);
+    SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceRange expansionRange,
+                                      bool isMacroArg);
 
     /// Creates a macro expansion location; used by the preprocessor.
-    SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart,
-                                      SourceLocation expansionEnd, string_view macroName);
+    SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceRange expansionRange,
+                                      string_view macroName);
 
     /// Instead of loading source from a file, copy it from text already in memory.
     SourceBuffer assignText(string_view text, SourceLocation includedFrom = SourceLocation());
@@ -195,22 +195,19 @@ private:
     // expansionLocation will point to the parameter inside the macro body.
     struct ExpansionInfo {
         SourceLocation originalLoc;
-        SourceLocation expansionStart;
-        SourceLocation expansionEnd;
+        SourceRange expansionRange;
         bool isMacroArg = false;
 
         string_view macroName;
 
         ExpansionInfo() {}
-        ExpansionInfo(SourceLocation originalLoc, SourceLocation expansionStart,
-                      SourceLocation expansionEnd, bool isMacroArg) :
-            originalLoc(originalLoc),
-            expansionStart(expansionStart), expansionEnd(expansionEnd), isMacroArg(isMacroArg) {}
+        ExpansionInfo(SourceLocation originalLoc, SourceRange expansionRange, bool isMacroArg) :
+            originalLoc(originalLoc), expansionRange(expansionRange), isMacroArg(isMacroArg) {}
 
-        ExpansionInfo(SourceLocation originalLoc, SourceLocation expansionStart,
-                      SourceLocation expansionEnd, string_view macroName) :
+        ExpansionInfo(SourceLocation originalLoc, SourceRange expansionRange,
+                      string_view macroName) :
             originalLoc(originalLoc),
-            expansionStart(expansionStart), expansionEnd(expansionEnd), macroName(macroName) {}
+            expansionRange(expansionRange), macroName(macroName) {}
     };
 
     // index from BufferID to buffer metadata

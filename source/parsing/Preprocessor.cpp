@@ -837,7 +837,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
     // Expand out the macro
     SmallVectorSized<Token, 32> buffer;
-    MacroExpansion expansion{ alloc, buffer, directive, true };
+    MacroExpansion expansion{ sourceManager, alloc, buffer, directive, true };
     if (!expandMacro(macro, expansion, actualArgs))
         return actualArgs;
 
@@ -1020,12 +1020,12 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     if (!directive->formalArguments) {
         // each macro expansion gets its own location entry
         SourceLocation start = body[0].location();
-        SourceLocation expansionLoc = sourceManager.createExpansionLoc(
-            start, expansion.getRange().start(), expansion.getRange().end(), macroName);
+        SourceLocation expansionLoc =
+            sourceManager.createExpansionLoc(start, expansion.getRange(), macroName);
 
         // simple macro; just take body tokens
         for (auto token : body)
-            expansion.append(token, expansionLoc + (token.location() - start));
+            expansion.append(token, expansionLoc, start, expansion.getRange());
 
         return true;
     }
@@ -1073,20 +1073,20 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     }
 
     Token endOfArgs = actualArgs->getLastToken();
+    SourceRange expansionRange(expansion.getRange().start(),
+                               endOfArgs.location() + endOfArgs.rawText().length());
+
     SourceLocation start = body[0].location();
-    SourceLocation expansionLoc = sourceManager.createExpansionLoc(
-        start, expansion.getRange().start(), endOfArgs.location() + endOfArgs.rawText().length(),
-        macroName);
+    SourceLocation expansionLoc =
+        sourceManager.createExpansionLoc(start, expansionRange, macroName);
 
     // now add each body token, substituting arguments as necessary
     for (auto& token : body) {
-        SourceLocation location = expansionLoc + (token.location() - start);
-
         if (token.kind != TokenKind::Identifier && !isKeyword(token.kind) &&
             (token.kind != TokenKind::Directive ||
              token.directiveKind() != SyntaxKind::MacroUsage)) {
 
-            expansion.append(token, location);
+            expansion.append(token, expansionLoc, start, expansionRange);
             continue;
         }
 
@@ -1101,7 +1101,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         // check for formal param
         auto it = argumentMap.find(text);
         if (it == argumentMap.end()) {
-            expansion.append(token, location);
+            expansion.append(token, expansionLoc, start, expansionRange);
             continue;
         }
 
@@ -1124,7 +1124,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
             // here to ensure that the trivia of the formal parameter is passed on.
             Token empty(alloc, TokenKind::EmptyMacroArgument, token.trivia(), ""sv,
                         token.location());
-            expansion.append(empty, location);
+            expansion.append(empty, expansionLoc, start, expansionRange);
             continue;
         }
 
@@ -1137,30 +1137,21 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         // Arguments need their own expansion location created; the original
         // location comes from the source file itself, and the expansion location
         // points into the macro body where the formal argument was used.
-        SourceLocation argLoc = sourceManager.createExpansionLoc(
-            firstLoc, location, location + token.rawText().length(), true);
+        SourceLocation tokenLoc = expansion.adjustLoc(token, expansionLoc, start, expansionRange);
+        SourceRange argRange(tokenLoc, tokenLoc + token.rawText().length());
+        SourceLocation argLoc = sourceManager.createExpansionLoc(firstLoc, argRange, true);
 
         // See note above about weird macro usage being argument replaced.
         // In that case we want to fabricate the correct directive token here.
         if (token.kind == TokenKind::Directive) {
-            Token grave(alloc, TokenKind::Directive, first.trivia(), "`"sv, first.location(),
+            Token grave(alloc, TokenKind::Directive, first.trivia(), "`"sv, firstLoc,
                         SyntaxKind::Unknown);
             first = Lexer::concatenateTokens(alloc, grave, first);
         }
 
-        expansion.append(first, argLoc);
-
-        for (++begin; begin != end; begin++) {
-            // If this token is in the same buffer as the previous one we can keep using the
-            // same expansion location; otherwise we need to create a new one that points into
-            // the new buffer as its original location.
-            if (begin->location().buffer() != firstLoc.buffer()) {
-                firstLoc = begin->location();
-                argLoc = sourceManager.createExpansionLoc(
-                    firstLoc, location, location + token.rawText().length(), true);
-            }
-            expansion.append(*begin, argLoc + (begin->location() - firstLoc));
-        }
+        expansion.append(first, argLoc, firstLoc, argRange);
+        for (++begin; begin != end; begin++)
+            expansion.append(*begin, argLoc, firstLoc, argRange);
     }
 
     return true;
@@ -1168,6 +1159,26 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
 
 SourceRange Preprocessor::MacroExpansion::getRange() const {
     return { usageSite.location(), usageSite.location() + usageSite.rawText().length() };
+}
+
+SourceLocation Preprocessor::MacroExpansion::adjustLoc(Token token, SourceLocation& macroLoc,
+                                                       SourceLocation& firstLoc,
+                                                       SourceRange expansionRange) const {
+    // If this token is in the same buffer as the previous one we can keep using the
+    // same expansion location; otherwise we need to create a new one that points into
+    // the new buffer as its original location.
+    if (token.location().buffer() != firstLoc.buffer()) {
+        firstLoc = token.location();
+        macroLoc = sourceManager.createExpansionLoc(firstLoc, expansionRange, true);
+    }
+
+    return macroLoc + (token.location() - firstLoc);
+}
+
+void Preprocessor::MacroExpansion::append(Token token, SourceLocation& macroLoc,
+                                          SourceLocation& firstLoc, SourceRange expansionRange) {
+    SourceLocation location = adjustLoc(token, macroLoc, firstLoc, expansionRange);
+    append(token, location);
 }
 
 void Preprocessor::MacroExpansion::append(Token token, SourceLocation location) {
@@ -1179,7 +1190,7 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location) 
         any = true;
     }
 
-    // Line continuations gets stripped out when we expand macros and become newline trivia instead.
+    // Line continuations get stripped out when we expand macros and become newline trivia instead.
     if (token.kind == TokenKind::LineContinuation) {
         SmallVectorSized<Trivia, 8> newTrivia;
         newTrivia.appendRange(token.trivia());
@@ -1233,7 +1244,7 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
         }
 
         expansionBuffer.clear();
-        MacroExpansion expansion{ alloc, expansionBuffer, token, false };
+        MacroExpansion expansion{ sourceManager, alloc, expansionBuffer, token, false };
         if (!expandMacro(macro, expansion, actualArgs))
             return false;
 

@@ -163,16 +163,22 @@ private:
     // Helper class for tracking state used during expansion of a macro.
     class MacroExpansion {
     public:
-        MacroExpansion(BumpAllocator& alloc, SmallVector<Token>& dest, Token usageSite,
-                       bool isTopLevel) :
-            alloc(alloc),
-            dest(dest), usageSite(usageSite), isTopLevel(isTopLevel) {}
+        MacroExpansion(SourceManager& sourceManager, BumpAllocator& alloc, SmallVector<Token>& dest,
+                       Token usageSite, bool isTopLevel) :
+            sourceManager(sourceManager),
+            alloc(alloc), dest(dest), usageSite(usageSite), isTopLevel(isTopLevel) {}
 
         SourceRange getRange() const;
 
+        SourceLocation adjustLoc(Token token, SourceLocation& macroLoc, SourceLocation& firstLoc,
+                                 SourceRange expansionRange) const;
+
         void append(Token token, SourceLocation location);
+        void append(Token token, SourceLocation& macroLoc, SourceLocation& firstLoc,
+                    SourceRange expansionRange);
 
     private:
+        SourceManager& sourceManager;
         BumpAllocator& alloc;
         SmallVector<Token>& dest;
         Token usageSite;

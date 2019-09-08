@@ -622,6 +622,29 @@ foo
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Nested macro with different body locations") {
+    auto& text = R"(
+`define DEFINER(name, value) \
+    `ifndef name \
+        `define name (value) \
+    `endif
+
+`DEFINER(NESTED_DEFINE, 32 * 4)
+
+`NESTED_DEFINE
+)";
+    auto& expected = R"(
+
+
+
+ (32 * 4)
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Macro arg location bug") {
     auto& text = R"(
 `define FOO(name) name \

@@ -189,7 +189,7 @@ SourceLocation SourceManager::getExpansionLoc(SourceLocation location) const {
         return SourceLocation();
 
     ASSERT(buffer.getId() < bufferEntries.size());
-    return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).expansionStart;
+    return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).expansionRange.start();
 }
 
 SourceRange SourceManager::getExpansionRange(SourceLocation location) const {
@@ -199,7 +199,7 @@ SourceRange SourceManager::getExpansionRange(SourceLocation location) const {
 
     ASSERT(buffer.getId() < bufferEntries.size());
     const ExpansionInfo& info = std::get<ExpansionInfo>(bufferEntries[buffer.getId()]);
-    return SourceRange(info.expansionStart, info.expansionEnd);
+    return info.expansionRange;
 }
 
 SourceLocation SourceManager::getOriginalLoc(SourceLocation location) const {
@@ -236,19 +236,15 @@ string_view SourceManager::getSourceText(BufferID buffer) const {
 }
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
-                                                 SourceLocation expansionStart,
-                                                 SourceLocation expansionEnd, bool isMacroArg) {
-    bufferEntries.emplace_back(
-        ExpansionInfo(originalLoc, expansionStart, expansionEnd, isMacroArg));
+                                                 SourceRange expansionRange, bool isMacroArg) {
+    bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionRange, isMacroArg));
     return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1)), 0);
 }
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
-                                                 SourceLocation expansionStart,
-                                                 SourceLocation expansionEnd,
+                                                 SourceRange expansionRange,
                                                  string_view macroName) {
-
-    bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionStart, expansionEnd, macroName));
+    bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionRange, macroName));
     return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1)), 0);
 }
 
