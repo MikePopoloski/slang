@@ -477,6 +477,9 @@ void SVInt::flattenUnknowns() {
 
 void SVInt::shrinkToFit() {
     bitwidth_t minBits = getMinRepresentedBits();
+    if (minBits == 0)
+        minBits = 1;
+
     if (minBits != bitWidth)
         *this = resize(minBits);
 }

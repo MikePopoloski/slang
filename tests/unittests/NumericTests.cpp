@@ -135,6 +135,12 @@ TEST_CASE("Construction") {
 
     char mem2[128] = "asdfkljhaw4rkjb234890uKLJNSDF  K@#*)U?:hjn";
     CHECK(SVInt(128 * 8, make_span((byte*)mem2, 128), false).slice(263, 256).as<char>() == '@');
+
+    // Regression test for shrinkToFit with value of 0
+    auto value13 = "27'd0"_si;
+    value13.shrinkToFit();
+    CHECK(value13 == 0);
+    CHECK(value13.getBitWidth() == 1);
 }
 
 TEST_CASE("logic_t operators") {
