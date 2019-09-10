@@ -633,12 +633,7 @@ TEST_CASE("Nested macro with different body locations") {
 
 `NESTED_DEFINE
 )";
-    auto& expected = R"(
-
-
-
- (32 * 4)
-)";
+    auto& expected = "\n     \n         \n    \n(32 * 4)\n";
 
     std::string result = preprocess(text);
     CHECK(result == expected);
