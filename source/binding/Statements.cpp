@@ -782,14 +782,13 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
                                         const BindContext& context, BlockList& blocks) {
     // If the initializers were variable declarations, they've already been hoisted
     // out into a parent block and will be initialized there.
-    SmallVectorSized<const Statement*, 4> initializers;
+    SmallVectorSized<const Expression*, 4> initializers;
     bool anyBad = false;
-    if (syntax.initializers.empty() ||
+    if (!syntax.initializers.empty() &&
         syntax.initializers[0]->kind != SyntaxKind::ForVariableDeclaration) {
 
-        BlockList emptySpan;
         for (auto initializer : syntax.initializers) {
-            auto& init = Statement::bind(initializer->as<StatementSyntax>(), context, emptySpan);
+            auto& init = Expression::bind(initializer->as<ExpressionSyntax>(), context);
             initializers.append(&init);
             anyBad |= init.bad();
         }
@@ -804,8 +803,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
     }
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
-    auto initList = compilation.emplace<StatementList>(initializers.copy(compilation));
-    auto result = compilation.emplace<ForLoopStatement>(*initList, &stopExpr,
+    auto result = compilation.emplace<ForLoopStatement>(initializers.copy(compilation), &stopExpr,
                                                         steps.copy(compilation), bodyStmt);
 
     if (anyBad || stopExpr.bad() || bodyStmt.bad())
@@ -814,8 +812,10 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
 }
 
 ER ForLoopStatement::evalImpl(EvalContext& context) const {
-    if (ER result = initializers.eval(context); result != ER::Success)
-        return result;
+    for (auto init : initializers) {
+        if (!init->eval(context))
+            return ER::Fail;
+    }
 
     while (true) {
         if (stopExpr) {
@@ -845,8 +845,10 @@ ER ForLoopStatement::evalImpl(EvalContext& context) const {
 }
 
 bool ForLoopStatement::verifyConstantImpl(EvalContext& context) const {
-    if (!initializers.verifyConstant(context))
-        return false;
+    for (auto init : initializers) {
+        if (!init->verifyConstant(context))
+            return false;
+    }
 
     if (stopExpr && !stopExpr->verifyConstant(context))
         return false;

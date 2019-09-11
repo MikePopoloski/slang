@@ -4,8 +4,12 @@ TEST_CASE("For loop statements") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
 
+    int j, k;
     initial begin
         for (var logic f = 1, g = 0, int i = 3; i != 4; i++) begin
+        end
+
+        for (j = 2, k = 3; j != 4; j++) begin
         end
     end
 
