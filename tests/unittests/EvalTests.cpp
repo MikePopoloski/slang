@@ -157,6 +157,26 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Eval nested for loop") {
+    ScriptSession session;
+    session.eval(R"(
+function logic [15:0] foo(int a);
+    logic [15:0] result = 1;
+    int temp = 0;
+    for (int i = 0; i < a; i+=1) begin
+        temp = i * 2;
+        for (int j = temp + 1; j < 10; j++)
+            result += j;
+    end
+    return result;
+endfunction
+)");
+
+    auto value1 = session.eval("foo(2)");
+    CHECK(value1.integer() == 88);
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Integer operators") {
     ScriptSession session;
 

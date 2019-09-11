@@ -21,8 +21,6 @@ EvalContext::EvalContext(const Scope& scope, bitmask<EvalFlags> flags) :
 
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
     ConstantValue& result = stack.back().temporaries[symbol];
-    ASSERT(!result);
-
     if (!value)
         result = symbol->getType().getDefaultValue();
     else {
