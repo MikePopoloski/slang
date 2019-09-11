@@ -751,7 +751,7 @@ token semi
 
 ForVariableDeclaration kind=ForVariableDeclaration
 token varKeyword
-DataType type
+DataType? type
 Declarator declarator
 
 ForLoopStatement base=Statement kind=ForLoopStatement

@@ -319,9 +319,12 @@ SyntaxNode& Parser::parseForInitializer() {
     if (isVariableDeclaration()) {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto& type = parseDataType(/* allowImplicit */ false);
-        return factory.forVariableDeclaration(varKeyword, type, parseDeclarator());
+
+        // TODO: require initializer
+        return factory.forVariableDeclaration(varKeyword, &type, parseDeclarator());
     }
-    return parseExpression();
+
+    return factory.forVariableDeclaration(Token(), nullptr, parseDeclarator());
 }
 
 ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
@@ -331,9 +334,18 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
 
     Token semi1;
     SmallVectorSized<TokenOrSyntax, 4> initializers;
-    parseList<isPossibleExpressionOrComma, isEndOfParenList>(
-        initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, RequireItems::False,
-        diag::ExpectedForInitializer, [this] { return &parseForInitializer(); });
+
+    if (isVariableDeclaration()) {
+        parseList<isPossibleForInitializer, isEndOfParenList>(
+            initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, RequireItems::False,
+            diag::ExpectedForInitializer, [this] { return &parseForInitializer(); });
+    }
+    else {
+        // TODO: require variable assignment
+        parseList<isPossibleExpressionOrComma, isEndOfParenList>(
+            initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, RequireItems::False,
+            diag::ExpectedForInitializer, [this] { return &parseExpression(); });
+    }
 
     auto& stopExpr = parseExpression();
     auto semi2 = expect(TokenKind::Semicolon);

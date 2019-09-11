@@ -52,6 +52,7 @@ bool isIdentifierOrComma(TokenKind kind);
 bool isPossibleExpressionOrComma(TokenKind kind);
 bool isPossibleExpressionOrCommaOrDefault(TokenKind kind);
 bool isPossibleExpressionOrTripleAnd(TokenKind kind);
+bool isPossibleForInitializer(TokenKind kind);
 bool isPossibleOpenRangeElement(TokenKind kind);
 bool isPossiblePattern(TokenKind kind);
 bool isPossibleDelayOrEventControl(TokenKind kind);

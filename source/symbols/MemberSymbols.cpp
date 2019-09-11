@@ -382,10 +382,18 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
 }
 
 VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
-                                           const ForVariableDeclarationSyntax& syntax) {
+                                           const ForVariableDeclarationSyntax& syntax,
+                                           const VariableSymbol* lastVar) {
     auto var = compilation.emplace<VariableSymbol>(syntax.declarator->name.valueText(),
                                                    syntax.declarator->name.location());
-    var->setDeclaredType(*syntax.type);
+
+    if (syntax.type)
+        var->setDeclaredType(*syntax.type);
+    else {
+        ASSERT(lastVar);
+        var->getDeclaredType()->copyTypeFrom(*lastVar->getDeclaredType());
+    }
+
     var->setFromDeclarator(*syntax.declarator);
     return *var;
 }

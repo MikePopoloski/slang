@@ -216,7 +216,8 @@ public:
                            const Scope& scope, SmallVector<const ValueSymbol*>& results);
 
     static VariableSymbol& fromSyntax(Compilation& compilation,
-                                      const ForVariableDeclarationSyntax& syntax);
+                                      const ForVariableDeclarationSyntax& syntax,
+                                      const VariableSymbol* lastVar);
 
     static bool isKind(SymbolKind kind) {
         return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument ||

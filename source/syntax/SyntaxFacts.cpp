@@ -667,6 +667,10 @@ bool isPossibleExpressionOrTripleAnd(TokenKind kind) {
     return kind == TokenKind::TripleAnd || isPossibleExpression(kind);
 }
 
+bool isPossibleForInitializer(TokenKind kind) {
+    return kind == TokenKind::Comma || kind == TokenKind::VarKeyword || isPossibleExpression(kind);
+}
+
 bool isPossibleOpenRangeElement(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenBracket:

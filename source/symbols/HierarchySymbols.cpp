@@ -547,10 +547,14 @@ SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilatio
         compilation.emplace<SequentialBlockSymbol>(compilation, "", syntax.forKeyword.location());
     result->setSyntax(syntax);
 
-    // If one entry is a variable declaration, they should all be. Checked by the parser.
-    for (auto initializer : syntax.initializers) {
-        result->addMember(VariableSymbol::fromSyntax(
-            compilation, initializer->as<ForVariableDeclarationSyntax>()));
+    // If one entry is a variable declaration, they should all be.
+    const VariableSymbol* lastVar = nullptr;
+    for (auto init : syntax.initializers) {
+        auto& var = VariableSymbol::fromSyntax(compilation,
+                                               init->as<ForVariableDeclarationSyntax>(), lastVar);
+
+        lastVar = &var;
+        result->addMember(var);
     }
 
     result->binder.setSyntax(*result, syntax);

@@ -1,5 +1,22 @@
 #include "Test.h"
 
+TEST_CASE("For loop statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    initial begin
+        for (var logic f = 1, g = 0, int i = 3; i != 4; i++) begin
+        end
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Delay statements") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
