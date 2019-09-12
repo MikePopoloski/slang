@@ -978,14 +978,6 @@ TEST_CASE("Cross-CU definition lookup") {
     auto tree1 = SyntaxTree::fromText(R"(
 module m #(parameter int count = 0);
 
-    /*enum {
-        A,
-        B,
-        C
-    } foo;
-
-    localparam int count = foo.num;*/
-
     Iface ifaces[count] ();
     Blah blah(.ifaces(ifaces));
 
@@ -997,6 +989,29 @@ endmodule
     auto tree2 = SyntaxTree::fromText(R"(
 interface Iface;
 endinterface
+)");
+    auto tree3 = SyntaxTree::fromText(R"(
+module top;
+    m #(3) inst ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    compilation.addSyntaxTree(tree3);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Cross-CU package import") {
+    auto tree1 = SyntaxTree::fromText(R"(
+module m import pkg::*; #(parameter foo_t count = 0);
+endmodule
+)");
+    auto tree2 = SyntaxTree::fromText(R"(
+package pkg;
+    typedef int foo_t;
+endpackage
 )");
     auto tree3 = SyntaxTree::fromText(R"(
 module top;

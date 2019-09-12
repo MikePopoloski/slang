@@ -93,6 +93,7 @@ struct LookupResult {
     const SystemSubroutine* systemSubroutine = nullptr;
     bool wasImported = false;
     bool isHierarchical = false;
+    bool sawBadImport = false;
 
     struct MemberSelector {
         string_view name;

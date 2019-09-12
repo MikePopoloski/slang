@@ -65,6 +65,7 @@ void LookupResult::clear() {
     systemSubroutine = nullptr;
     wasImported = false;
     isHierarchical = false;
+    sawBadImport = false;
     selectors.clear();
     diagnostics.clear();
 }
@@ -74,6 +75,7 @@ void LookupResult::copyFrom(const LookupResult& other) {
     systemSubroutine = other.systemSubroutine;
     wasImported = other.wasImported;
     isHierarchical = other.isHierarchical;
+    sawBadImport = other.sawBadImport;
 
     selectors.clear();
     selectors.appendRange(other.selectors);
@@ -740,8 +742,10 @@ void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
             break;
 
         auto package = import->getPackage();
-        if (!package)
+        if (!package) {
+            result.sawBadImport = true;
             continue;
+        }
 
         const Symbol* imported = package->find(name);
         if (imported)
@@ -1323,6 +1327,13 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
 
 void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<LookupFlags> flags,
                              bool isHierarchical, LookupResult& result) const {
+    // If we observed a wildcard import we couldn't resolve, we shouldn't report an
+    // error for undeclared identifier because maybe it's supposed to come from that package.
+    // In particular it's important that we do this because when we first look at a
+    // definition it's possible we haven't seen the file containing the package yet.
+    if (result.sawBadImport)
+        return;
+
     // Attempt to give a more helpful error if the symbol exists in scope but is declared after
     // the lookup location. Only do this if the symbol is of the kind we were expecting to find.
     const Symbol* symbol = nullptr;

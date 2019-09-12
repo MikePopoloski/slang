@@ -244,6 +244,25 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
     return result;
 }
 
+Scope& createTempInstance(Compilation& compilation, const DefinitionSymbol& def) {
+    // Construct a temporary scope that has the right parent to house instance parameters
+    // as we're evaluating them. We hold on to the initializer expressions and give them
+    // to the instances later when we create them.
+    struct TempInstance : public ModuleInstanceSymbol {
+        using ModuleInstanceSymbol::ModuleInstanceSymbol;
+        void setParent(const Scope& scope) { ModuleInstanceSymbol::setParent(scope); }
+    };
+
+    auto& tempDef = *compilation.emplace<TempInstance>(compilation, def.name, def.location, def);
+    tempDef.setParent(*def.getParentScope());
+
+    // Need the imports here as well, since parameters may depend on them.
+    for (auto import : def.getSyntax()->as<ModuleDeclarationSyntax>().header->imports)
+        tempDef.addMembers(*import);
+
+    return tempDef;
+}
+
 } // namespace
 
 void InstanceSymbol::fromSyntax(Compilation& compilation,
@@ -361,18 +380,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     // As an optimization, determine values for all parameters now so that they can be
     // shared between instances. That way an instance array with hundreds of entries
     // doesn't recompute the same param values over and over again.
-    //
-    // To do this we need to construct a temporary scope that has the right parent
-    // to house the parameters as we're evaluating them. We hold on to the initializer
-    // expressions and give them to the instances later when we create them.
-    struct TempInstance : public ModuleInstanceSymbol {
-        using ModuleInstanceSymbol::ModuleInstanceSymbol;
-        void setParent(const Scope& scope) { ModuleInstanceSymbol::setParent(scope); }
-    };
-
-    auto& tempDef = *compilation.emplace<TempInstance>(compilation, definition->name,
-                                                       definition->location, *definition);
-    tempDef.setParent(*definition->getParentScope());
+    Scope& tempDef = createTempInstance(compilation, *definition);
 
     BindContext context(scope, location, BindFlags::Constant);
     SmallVectorSized<const ParameterSymbol*, 8> parameters;
