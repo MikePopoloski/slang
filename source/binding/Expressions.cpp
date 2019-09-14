@@ -587,6 +587,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &ConversionExpression::fromSyntax(compilation,
                                                        syntax.as<CastExpressionSyntax>(), context);
             break;
+        case SyntaxKind::SignedCastExpression:
+            result = &ConversionExpression::fromSyntax(
+                compilation, syntax.as<SignedCastExpressionSyntax>(), context);
+            break;
         case SyntaxKind::AcceptOnPropertyExpression:
         case SyntaxKind::AlwaysPropertyExpression:
         case SyntaxKind::AndSequenceExpression:
@@ -620,7 +624,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::SNextTimePropertyExpression:
         case SyntaxKind::SUntilPropertyExpression:
         case SyntaxKind::SUntilWithPropertyExpression:
-        case SyntaxKind::SignedCastExpression:
         case SyntaxKind::StreamingConcatenationExpression:
         case SyntaxKind::SyncAcceptOnPropertyExpression:
         case SyntaxKind::SyncRejectOnPropertyExpression:
@@ -2104,6 +2107,30 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
+    return *result;
+}
+
+Expression& ConversionExpression::fromSyntax(Compilation& compilation,
+                                             const SignedCastExpressionSyntax& syntax,
+                                             const BindContext& context) {
+    auto& operand = selfDetermined(compilation, *syntax.inner, context);
+    auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(), false,
+                                                            operand, syntax.sourceRange());
+    if (operand.bad())
+        return badExpr(compilation, result);
+
+    if (!operand.type->isIntegral()) {
+        auto& diag = context.addDiag(diag::BadIntegerCast, syntax.apostrophe.location());
+        diag << *operand.type;
+        diag << operand.sourceRange;
+        return badExpr(compilation, result);
+    }
+
+    auto flags = operand.type->getIntegralFlags() & ~IntegralFlags::Signed;
+    if (syntax.signing.kind == TokenKind::SignedKeyword)
+        flags |= IntegralFlags::Signed;
+
+    result->type = &compilation.getType(operand.type->getBitWidth(), flags);
     return *result;
 }
 

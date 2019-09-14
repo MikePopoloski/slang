@@ -203,7 +203,8 @@ protected:
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 
     // Perform type propagation and constant folding of a context-determined subexpression.
-    static void contextDetermined(const BindContext& context, Expression*& expr, const Type& newType);
+    static void contextDetermined(const BindContext& context, Expression*& expr,
+                                  const Type& newType);
 
     // Perform type propagation and constant folding of a self-determined subexpression.
     static void selfDetermined(const BindContext& context, Expression*& expr);
@@ -719,6 +720,9 @@ public:
     void toJson(json& j) const;
 
     static Expression& fromSyntax(Compilation& compilation, const CastExpressionSyntax& syntax,
+                                  const BindContext& context);
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const SignedCastExpressionSyntax& syntax,
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }

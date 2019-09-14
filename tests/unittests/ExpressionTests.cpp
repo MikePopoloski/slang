@@ -270,6 +270,10 @@ TEST_CASE("Expression types") {
     CHECK(typeof("(FOO + 2)'(b1)") == "bit[2:0]");
     CHECK(typeof("int'(b1)") == "int");
     CHECK(typeof("5'(sp)") == "logic[4:0]");
+    CHECK(typeof("signed'(b1)") == "bit signed[8:0]");
+    CHECK(typeof("unsigned'(b1)") == "bit[8:0]");
+    CHECK(typeof("signed'(sl)") == "logic signed[7:0]");
+    CHECK(typeof("unsigned'(sl)") == "logic[7:0]");
 
     // Strings
     declare("string s1 = \"asdf\";");
