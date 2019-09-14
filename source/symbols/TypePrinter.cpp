@@ -78,19 +78,17 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
 
         bool first = true;
         for (const auto& member : type.values()) {
-            if (!first) {
+            if (!first)
                 buffer.append(",");
-                first = false;
-            }
 
             // TODO: write value with correct prefix
-            buffer.format("{}={},", member.name,
+            buffer.format("{}={}", member.name,
                           member.getValue().integer().toString(LiteralBase::Decimal));
+            first = false;
         }
         buffer.append("}");
 
-        printScope(type.getParentScope());
-
+        // TODO: print scope name
         // TODO: print system name
         if (!overrideName.empty())
             buffer.append(overrideName);

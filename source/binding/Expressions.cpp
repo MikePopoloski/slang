@@ -63,10 +63,17 @@ const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const T
     }
 
     // Attempt to preserve any type aliases passed in when selecting the result.
-    if (lt->isMatching(*result))
+    auto check = [result](auto type) {
+        if (type->isEnum())
+            type = &type->getCanonicalType().as<EnumType>().baseType;
+        return type->isMatching(*result);
+    };
+
+    if (check(lt))
         return lt;
-    if (rt->isMatching(*result))
+    if (check(rt))
         return rt;
+
     return result;
 }
 
@@ -200,6 +207,21 @@ bool checkEnumInitializer(const BindContext& context, const Type& lt, const Expr
     }
 
     return true;
+}
+
+// This function exists to handle a case like:
+//      integer i;
+//      enum { A, B } foo;
+//      initial foo = i ? A : B;
+// This would otherwise be disallowed because using a 4-state predicate
+// means the result of the conditional operator would be 4-state, and
+// the enum base type is not 4-state.
+bool isSameEnum(const Expression& expr, const Type& enumType) {
+    if (expr.kind == ExpressionKind::ConditionalOp) {
+        auto& cond = expr.as<ConditionalExpression>();
+        return isSameEnum(cond.left(), enumType) && isSameEnum(cond.right(), enumType);
+    }
+    return expr.type->isMatching(enumType);
 }
 
 } // namespace
@@ -815,7 +837,8 @@ Expression& Expression::selfDetermined(Compilation& compilation, const Expressio
 Expression& Expression::implicitConversion(const BindContext& context, const Type& targetType,
                                            Expression& expr) {
     ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
-           (targetType.isString() && expr.isImplicitString()));
+           (targetType.isString() && expr.isImplicitString()) ||
+           (targetType.isEnum() && isSameEnum(expr, targetType)));
     ASSERT(!targetType.isEquivalent(*expr.type));
 
     Expression* result = &expr;
@@ -837,8 +860,10 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     const Type* rt = expr.type;
     if (!type.isAssignmentCompatible(*rt)) {
         // String literals have a type of integer, but are allowed to implicitly convert to the
-        // string type.
-        if (type.isString() && expr.isImplicitString()) {
+        // string type. See comments on isSameEnum for why that's here as well.
+        if ((type.isString() && expr.isImplicitString()) ||
+            (type.isEnum() && isSameEnum(expr, type))) {
+
             Expression* result = &expr;
             result = &implicitConversion(context, type, *result);
             selfDetermined(context, result);

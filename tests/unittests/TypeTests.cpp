@@ -140,6 +140,23 @@ endmodule
     CHECK(diags[9].code == diag::EnumIncrementUnknown);
 }
 
+TEST_CASE("Enum assignment exception") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    integer i;
+    enum {A, B} foo;
+
+    // Would be disallowed because 4-state 'i' forces a 4-state result.
+    // We carve out an exception for this.
+    initial foo = i ? A : B;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Enum value leakage") {
     auto tree = SyntaxTree::fromText(R"(
 module Top #(enum { FOO, BAR } asdf = BAR) ();

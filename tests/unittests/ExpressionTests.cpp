@@ -190,16 +190,19 @@ TEST_CASE("Expression types") {
     declare("logic [7:0][3:2] pa;");
     declare("bit [2:10] b1;");
     declare("int i;");
+    declare("integer ig4;");
     declare("real r;");
     declare("shortreal sr;");
     declare("struct packed { logic a; bit b; } sp;");
     declare("struct { logic a; bit b; } su;");
     declare("struct { bit a; bit b; } su2;");
     declare("reg reg1, reg2;");
+    declare("enum {EVAL1, EVAL2} e1;");
 
     // Literals / misc
     CHECK(typeof("\"asdfg\"") == "bit[39:0]");
     CHECK(typeof("reg1 + reg2") == "reg");
+    CHECK(typeof("e1") == "enum{EVAL1=0,EVAL2=1}");
 
     // Unary operators
     CHECK(typeof("+i") == "int");
@@ -251,6 +254,9 @@ TEST_CASE("Expression types") {
     CHECK(typeof("i ? arr2 : arr3") == "bit[7:0]$[2:0]");
     CHECK(typeof("i ? arr1: arr2") == "<error>");
     CHECK(typeof("arr2 ? 1 : 0") == "<error>");
+    CHECK(typeof("i ? EVAL1 : EVAL2") == "enum{EVAL1=0,EVAL2=1}");
+    CHECK(typeof("b1 ? e1 : e1") == "enum{EVAL1=0,EVAL2=1}");
+    CHECK(typeof("ig4 ? e1 : EVAL1") == "logic signed[31:0]");
 
     // Member access
     declare("struct packed { logic [13:0] a; bit b; } foo;");
