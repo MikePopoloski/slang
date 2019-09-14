@@ -737,7 +737,7 @@ module test;
     n n3(i);
     n n4(.*);
     n n5(.i);
-    n n6(.i(i));
+    n n6(.i(((i))));
     n n7(.i(foobar));       // error: unknown
     n n8(.i(m1));           // error: not an interface
     n n9(.i(j));            // wrong interface type

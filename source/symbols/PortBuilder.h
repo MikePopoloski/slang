@@ -698,13 +698,17 @@ private:
     }
 
     void setInterfaceExpr(InterfacePortSymbol& port, const ExpressionSyntax& syntax) {
-        if (!NameSyntax::isKind(syntax.kind)) {
-            scope.addDiag(diag::InterfacePortInvalidExpression, syntax.sourceRange()) << port.name;
+        const ExpressionSyntax* expr = &syntax;
+        while (expr->kind == SyntaxKind::ParenthesizedExpression)
+            expr = expr->as<ParenthesizedExpressionSyntax>().expression;
+
+        if (!NameSyntax::isKind(expr->kind)) {
+            scope.addDiag(diag::InterfacePortInvalidExpression, expr->sourceRange()) << port.name;
             return;
         }
 
         LookupResult result;
-        scope.lookupName(syntax.as<NameSyntax>(), lookupLocation, LookupFlags::None, result);
+        scope.lookupName(expr->as<NameSyntax>(), lookupLocation, LookupFlags::None, result);
         if (result.hasError())
             scope.getCompilation().addDiagnostics(result.getDiagnostics());
 
@@ -712,7 +716,7 @@ private:
         if (!symbol)
             return;
 
-        setInterface(port, symbol, syntax.sourceRange());
+        setInterface(port, symbol, expr->sourceRange());
     }
 
     void setImplicitInterface(InterfacePortSymbol& port, SourceRange range) {
