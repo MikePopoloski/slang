@@ -27,6 +27,10 @@ class VariableSymbol;
     x(Conditional) \
     x(Case) \
     x(ForLoop) \
+    x(RepeatLoop) \
+    x(WhileLoop) \
+    x(DoWhileLoop) \
+    x(ForeverLoop) \
     x(Timed) \
     x(Assertion)
 ENUM(StatementKind, STATEMENT);
@@ -279,6 +283,73 @@ public:
                                  const BindContext& context, BlockList& blocks);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForLoop; }
+};
+
+class RepeatLoopStatement : public Statement {
+public:
+    const Expression& count;
+    const Statement& body;
+
+    RepeatLoopStatement(const Expression& count, const Statement& body) :
+        Statement(StatementKind::RepeatLoop), count(count), body(body) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
+                                 const BindContext& context, BlockList& blocks);
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::RepeatLoop; }
+};
+
+class WhileLoopStatement : public Statement {
+public:
+    const Expression& cond;
+    const Statement& body;
+
+    WhileLoopStatement(const Expression& cond, const Statement& body) :
+        Statement(StatementKind::WhileLoop), cond(cond), body(body) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
+                                 const BindContext& context, BlockList& blocks);
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::WhileLoop; }
+};
+
+class DoWhileLoopStatement : public Statement {
+public:
+    const Expression& cond;
+    const Statement& body;
+
+    DoWhileLoopStatement(const Expression& cond, const Statement& body) :
+        Statement(StatementKind::DoWhileLoop), cond(cond), body(body) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const DoWhileStatementSyntax& syntax,
+                                 const BindContext& context, BlockList& blocks);
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::DoWhileLoop; }
+};
+
+class ForeverLoopStatement : public Statement {
+public:
+    const Statement& body;
+
+    explicit ForeverLoopStatement(const Statement& body) :
+        Statement(StatementKind::ForeverLoop), body(body) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const ForeverStatementSyntax& syntax,
+                                 const BindContext& context, BlockList& blocks);
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::ForeverLoop; }
 };
 
 class ExpressionStatement : public Statement {

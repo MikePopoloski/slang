@@ -69,6 +69,9 @@ bool BindContext::requireGtZero(optional<int32_t> value, SourceRange range) cons
 }
 
 bool BindContext::requireBooleanConvertible(const Expression& expr) const {
+    if (expr.bad())
+        return false;
+
     if (!expr.type->isBooleanConvertible()) {
         addDiag(diag::NotBooleanConvertible, expr.sourceRange) << *expr.type;
         return false;

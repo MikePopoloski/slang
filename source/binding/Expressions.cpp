@@ -11,6 +11,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/NumericDiags.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypeSymbols.h"
 
@@ -195,7 +196,7 @@ bool checkEnumInitializer(const BindContext& context, const Type& lt, const Expr
 
     const Type& rt = *rhs.type;
     if (!rt.isIntegral()) {
-        context.addDiag(diag::EnumValueNotIntegral, rhs.sourceRange);
+        context.addDiag(diag::ValueMustBeIntegral, rhs.sourceRange);
         return false;
     }
 
@@ -1551,7 +1552,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
         return badExpr(compilation, result);
 
     if (!selector.type->isIntegral()) {
-        context.addDiag(diag::IndexMustBeIntegral, selector.sourceRange);
+        context.addDiag(diag::ExprMustBeIntegral, selector.sourceRange);
         return badExpr(compilation, result);
     }
 
@@ -1608,11 +1609,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         return badExpr(compilation, result);
 
     if (!left.type->isIntegral()) {
-        context.addDiag(diag::IndexMustBeIntegral, left.sourceRange);
+        context.addDiag(diag::ExprMustBeIntegral, left.sourceRange);
         return badExpr(compilation, result);
     }
     if (!right.type->isIntegral()) {
-        context.addDiag(diag::IndexMustBeIntegral, right.sourceRange);
+        context.addDiag(diag::ExprMustBeIntegral, right.sourceRange);
         return badExpr(compilation, result);
     }
 

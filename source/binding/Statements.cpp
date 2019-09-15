@@ -10,6 +10,8 @@
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/symbols/ASTVisitor.h"
 
@@ -95,6 +97,22 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                                                        context, blocks);
             }
             break;
+        case SyntaxKind::LoopStatement: {
+            auto& loop = syntax.as<LoopStatementSyntax>();
+            if (loop.repeatOrWhile.kind == TokenKind::RepeatKeyword)
+                result = &RepeatLoopStatement::fromSyntax(comp, loop, context, blocks);
+            else
+                result = &WhileLoopStatement::fromSyntax(comp, loop, context, blocks);
+            break;
+        }
+        case SyntaxKind::DoWhileStatement:
+            result = &DoWhileLoopStatement::fromSyntax(comp, syntax.as<DoWhileStatementSyntax>(),
+                                                       context, blocks);
+            break;
+        case SyntaxKind::ForeverStatement:
+            result = &ForeverLoopStatement::fromSyntax(comp, syntax.as<ForeverStatementSyntax>(),
+                                                       context, blocks);
+            break;
         case SyntaxKind::ExpressionStatement:
             result = &ExpressionStatement::fromSyntax(comp, syntax.as<ExpressionStatementSyntax>(),
                                                       context);
@@ -133,9 +151,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::NonblockingEventTriggerStatement:
         case SyntaxKind::WaitForkStatement:
         case SyntaxKind::ParallelBlockStatement:
-        case SyntaxKind::ForeverStatement:
-        case SyntaxKind::LoopStatement:
-        case SyntaxKind::DoWhileStatement:
         case SyntaxKind::ForeachLoopStatement:
         case SyntaxKind::WaitStatement:
         case SyntaxKind::RandCaseStatement:
@@ -858,6 +873,166 @@ bool ForLoopStatement::verifyConstantImpl(EvalContext& context) const {
             return false;
     }
 
+    return body.verifyConstant(context);
+}
+
+Statement& RepeatLoopStatement::fromSyntax(Compilation& compilation,
+                                           const LoopStatementSyntax& syntax,
+                                           const BindContext& context, BlockList& blocks) {
+    auto& countExpr = Expression::bind(*syntax.expr, context);
+    if (!countExpr.bad() && !countExpr.type->isIntegral())
+        context.addDiag(diag::ExprMustBeIntegral, countExpr.sourceRange);
+
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
+    auto result = compilation.emplace<RepeatLoopStatement>(countExpr, bodyStmt);
+
+    if (countExpr.bad() || bodyStmt.bad())
+        return badStmt(compilation, result);
+    return *result;
+}
+
+ER RepeatLoopStatement::evalImpl(EvalContext& context) const {
+    auto cv = count.eval(context);
+    if (cv.bad())
+        return ER::Fail;
+
+    optional<int64_t> oc = cv.integer().as<int64_t>();
+    if (!oc || oc < 0) {
+        if (cv.integer().hasUnknown())
+            oc = 0;
+        else {
+            auto& diag = context.addDiag(diag::ValueOutOfRange, count.sourceRange);
+            diag << cv << 0 << INT64_MAX;
+            return ER::Fail;
+        }
+    }
+
+    int64_t c = *oc;
+    for (int64_t i = 0; i < c; i++) {
+        ER result = body.eval(context);
+        if (result != ER::Success) {
+            if (result == ER::Break)
+                break;
+            else if (result == ER::Fail || result == ER::Return)
+                return result;
+        }
+    }
+
+    return ER::Success;
+}
+
+bool RepeatLoopStatement::verifyConstantImpl(EvalContext& context) const {
+    return count.verifyConstant(context) && body.verifyConstant(context);
+}
+
+Statement& WhileLoopStatement::fromSyntax(Compilation& compilation,
+                                          const LoopStatementSyntax& syntax,
+                                          const BindContext& context, BlockList& blocks) {
+    bool bad = false;
+    auto& condExpr = Expression::bind(*syntax.expr, context);
+    if (!context.requireBooleanConvertible(condExpr))
+        bad = true;
+
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
+    auto result = compilation.emplace<WhileLoopStatement>(condExpr, bodyStmt);
+
+    if (bad || bodyStmt.bad())
+        return badStmt(compilation, result);
+    return *result;
+}
+
+ER WhileLoopStatement::evalImpl(EvalContext& context) const {
+    while (true) {
+        auto cv = cond.eval(context);
+        if (cv.bad())
+            return ER::Fail;
+
+        if (!cv.isTrue())
+            break;
+
+        ER result = body.eval(context);
+        if (result != ER::Success) {
+            if (result == ER::Break)
+                break;
+            else if (result == ER::Fail || result == ER::Return)
+                return result;
+        }
+    }
+
+    return ER::Success;
+}
+
+bool WhileLoopStatement::verifyConstantImpl(EvalContext& context) const {
+    return cond.verifyConstant(context) && body.verifyConstant(context);
+}
+
+Statement& DoWhileLoopStatement::fromSyntax(Compilation& compilation,
+                                            const DoWhileStatementSyntax& syntax,
+                                            const BindContext& context, BlockList& blocks) {
+    bool bad = false;
+    auto& condExpr = Expression::bind(*syntax.expr, context);
+    if (!context.requireBooleanConvertible(condExpr))
+        bad = true;
+
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
+    auto result = compilation.emplace<DoWhileLoopStatement>(condExpr, bodyStmt);
+
+    if (bad || bodyStmt.bad())
+        return badStmt(compilation, result);
+    return *result;
+}
+
+ER DoWhileLoopStatement::evalImpl(EvalContext& context) const {
+    while (true) {
+        ER result = body.eval(context);
+        if (result != ER::Success) {
+            if (result == ER::Break)
+                break;
+            else if (result == ER::Fail || result == ER::Return)
+                return result;
+        }
+
+        auto cv = cond.eval(context);
+        if (cv.bad())
+            return ER::Fail;
+
+        if (!cv.isTrue())
+            break;
+    }
+
+    return ER::Success;
+}
+
+bool DoWhileLoopStatement::verifyConstantImpl(EvalContext& context) const {
+    return cond.verifyConstant(context) && body.verifyConstant(context);
+}
+
+Statement& ForeverLoopStatement::fromSyntax(Compilation& compilation,
+                                            const ForeverStatementSyntax& syntax,
+                                            const BindContext& context, BlockList& blocks) {
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
+    auto result = compilation.emplace<ForeverLoopStatement>(bodyStmt);
+    if (bodyStmt.bad())
+        return badStmt(compilation, result);
+
+    return *result;
+}
+
+ER ForeverLoopStatement::evalImpl(EvalContext& context) const {
+    while (true) {
+        ER result = body.eval(context);
+        if (result != ER::Success) {
+            if (result == ER::Break)
+                break;
+            else if (result == ER::Fail || result == ER::Return)
+                return result;
+        }
+    }
+
+    return ER::Success;
+}
+
+bool ForeverLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return body.verifyConstant(context);
 }
 

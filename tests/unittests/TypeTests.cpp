@@ -99,7 +99,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::EnumValueSizeMismatch);
-    CHECK(diags[1].code == diag::EnumValueNotIntegral);
+    CHECK(diags[1].code == diag::ValueMustBeIntegral);
     CHECK(diags[2].code == diag::EnumValueSizeMismatch);
     CHECK(diags[3].code == diag::EnumValueSizeMismatch);
 }

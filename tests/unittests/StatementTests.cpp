@@ -81,7 +81,7 @@ endmodule
     CHECK(diags[1].code == diag::EventExpressionConstant);
     CHECK(diags[2].code == diag::ExpectedIdentifier);
     CHECK(diags[3].code == diag::InvalidEventExpression);
-    CHECK(diags[4].code == diag::InvalidEdgeEventExpression);
+    CHECK(diags[4].code == diag::ExprMustBeIntegral);
 }
 
 TEST_CASE("Case statements") {

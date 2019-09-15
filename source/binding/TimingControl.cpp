@@ -8,6 +8,7 @@
 
 #include "slang/binding/Expressions.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 
 namespace slang {
@@ -90,7 +91,7 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
         }
     }
     else if (!expr.type->isIntegral()) {
-        context.addDiag(diag::InvalidEdgeEventExpression, expr.sourceRange);
+        context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange);
         return badCtrl(compilation, result);
     }
 
