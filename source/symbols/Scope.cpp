@@ -1345,8 +1345,11 @@ void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<Lookup
             if (symbol) {
                 if (flags & LookupFlags::Type)
                     usedBeforeDeclared = symbol->isType();
-                else
-                    usedBeforeDeclared = symbol->isValue();
+                else {
+                    usedBeforeDeclared = symbol->isValue() ||
+                                         symbol->kind == SymbolKind::InstanceArray ||
+                                         symbol->kind == SymbolKind::InterfaceInstance;
+                }
                 break;
             }
 
