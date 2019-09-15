@@ -64,8 +64,10 @@ const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const T
 
     // Attempt to preserve any type aliases passed in when selecting the result.
     auto check = [result](auto type) {
-        if (type->isEnum())
-            type = &type->getCanonicalType().as<EnumType>().baseType;
+        if (type->isEnum()) {
+            const Type& ct = type->getCanonicalType();
+            type = &ct.as<EnumType>().baseType;
+        }
         return type->isMatching(*result);
     };
 
