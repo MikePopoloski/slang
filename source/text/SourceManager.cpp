@@ -238,14 +238,14 @@ string_view SourceManager::getSourceText(BufferID buffer) const {
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
                                                  SourceRange expansionRange, bool isMacroArg) {
     bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionRange, isMacroArg));
-    return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1)), 0);
+    return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1), ""sv), 0);
 }
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
                                                  SourceRange expansionRange,
                                                  string_view macroName) {
     bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionRange, macroName));
-    return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1)), 0);
+    return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1), macroName), 0);
 }
 
 SourceBuffer SourceManager::assignText(string_view text, SourceLocation includedFrom) {
@@ -354,7 +354,7 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
     ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
     return SourceBuffer{ string_view(fd->mem.data(), fd->mem.size()),
-                         BufferID((uint32_t)(bufferEntries.size() - 1)) };
+                         BufferID((uint32_t)(bufferEntries.size() - 1), fd->name) };
 }
 
 SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation includedFrom) {

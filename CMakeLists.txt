@@ -54,6 +54,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 		# Use fast linking
 		string(REGEX REPLACE "/debug" "/DEBUG:FASTLINK" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
 		string(REGEX REPLACE "/debug" "/DEBUG:FASTLINK" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+		add_compile_options(/DDEBUG)
 	else()
 		add_compile_options(/GS-)	# Disable buffer overrun checks
 		add_compile_options(/GL)	# Whole program optimization
@@ -105,6 +106,10 @@ else()
 		else()
 			add_compile_options(-fdiagnostics-color)
 		endif()
+	endif()
+
+	if(CMAKE_BUILD_TYPE MATCHES "Debug")
+		add_compile_options(-DDEBUG)
 	endif()
 
 	if(SLANG_COVERAGE)

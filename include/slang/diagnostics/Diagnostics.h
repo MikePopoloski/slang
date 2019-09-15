@@ -121,11 +121,11 @@ public:
 };
 
 /// A collection of diagnostics.
-class Diagnostics : public SmallVectorSized<Diagnostic, 8> {
+class Diagnostics : public SmallVectorSized<Diagnostic, 4> {
 public:
     Diagnostics() = default;
 
-    Diagnostics(Diagnostics&& other) noexcept : SmallVectorSized<Diagnostic, 8>(std::move(other)) {}
+    Diagnostics(Diagnostics&& other) noexcept : SmallVectorSized(std::move(other)) {}
 
     /// Adds a new diagnostic to the collection, pointing to the given source location.
     Diagnostic& add(DiagCode code, SourceLocation location);

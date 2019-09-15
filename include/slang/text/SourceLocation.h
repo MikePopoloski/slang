@@ -20,7 +20,15 @@ class SourceManager;
 /// the expansion location and original definition location.
 struct BufferID {
     BufferID() = default;
-    explicit BufferID(uint32_t value) : id(value) {}
+    explicit BufferID(uint32_t value, string_view name) :
+        id(value)
+#ifdef DEBUG
+        ,
+        name(name)
+#endif
+    {
+        (void)name;
+    }
 
     bool valid() const { return id != 0; }
 
@@ -35,7 +43,11 @@ struct BufferID {
 
     explicit operator bool() const { return valid(); }
 
-    static BufferID getPlaceholder() { return BufferID(UINT32_MAX); }
+    static BufferID getPlaceholder() { return BufferID(UINT32_MAX, ""sv); }
+
+#ifdef DEBUG
+    string_view name;
+#endif
 
 private:
     uint32_t id = 0;
@@ -49,9 +61,22 @@ class SourceLocation {
 public:
     SourceLocation() : bufferID(0), charOffset(0) {}
     SourceLocation(BufferID buffer, size_t offset) :
-        bufferID(buffer.getId()), charOffset(offset) {}
+        bufferID(buffer.getId()), charOffset(offset)
+#ifdef DEBUG
+        ,
+        bufferName(buffer.name)
+#endif
+    {
+    }
 
-    BufferID buffer() const { return BufferID(bufferID); }
+    BufferID buffer() const {
+#ifdef DEBUG
+        return BufferID(bufferID, bufferName);
+#else
+        return BufferID(bufferID, ""sv);
+#endif
+    }
+
     size_t offset() const { return charOffset; }
     bool valid() const { return buffer().valid(); }
 
@@ -89,12 +114,18 @@ public:
 
     bool operator>=(const SourceLocation& rhs) const { return !(*this < rhs); }
 
+#ifdef DEBUG
+    string_view bufferName;
+#endif
+
 private:
     uint64_t bufferID : 28;
     uint64_t charOffset : 36;
 };
 
+#ifndef DEBUG
 static_assert(sizeof(SourceLocation) == 8);
+#endif
 
 /// Combines a pair of source locations that denote a range of source text.
 /// This is mostly used for diagnostic reporting purposes.
