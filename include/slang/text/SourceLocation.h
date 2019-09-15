@@ -21,12 +21,10 @@ class SourceManager;
 struct BufferID {
     BufferID() = default;
     explicit BufferID(uint32_t value, string_view name) :
-        id(value)
 #ifdef DEBUG
-        ,
-        name(name)
+        name(name),
 #endif
-    {
+        id(value) {
         (void)name;
     }
 
@@ -61,12 +59,10 @@ class SourceLocation {
 public:
     SourceLocation() : bufferID(0), charOffset(0) {}
     SourceLocation(BufferID buffer, size_t offset) :
-        bufferID(buffer.getId()), charOffset(offset)
 #ifdef DEBUG
-        ,
-        bufferName(buffer.name)
+        bufferName(buffer.name),
 #endif
-    {
+        bufferID(buffer.getId()), charOffset(offset) {
     }
 
     BufferID buffer() const {
