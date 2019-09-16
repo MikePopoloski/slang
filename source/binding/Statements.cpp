@@ -60,8 +60,18 @@ bool Statement::verifyConstant(EvalContext& context) const {
     return visit(visitor, context);
 }
 
+SequentialBlockStatement* Statement::StatementContext::tryGetBlock(Compilation& compilation,
+                                                                   const SyntaxNode& syntax) {
+    if (!blocks.empty() && blocks[0]->getSyntax() == &syntax) {
+        auto result = compilation.emplace<SequentialBlockStatement>(*blocks[0]);
+        blocks = blocks.subspan(1);
+        return result;
+    }
+    return nullptr;
+}
+
 const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
-                                 span<const SequentialBlockSymbol* const>& blocks) {
+                                 StatementContext& stmtCtx) {
     // TODO:
     /*if (syntax.label) {
         results.append(SequentialBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
@@ -78,40 +88,45 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             result =
                 &ReturnStatement::fromSyntax(comp, syntax.as<ReturnStatementSyntax>(), context);
             break;
+        case SyntaxKind::JumpStatement: {
+            auto& jump = syntax.as<JumpStatementSyntax>();
+            if (jump.breakOrContinue.kind == TokenKind::BreakKeyword)
+                result = &BreakStatement::fromSyntax(comp, jump, context, stmtCtx);
+            else
+                result = &ContinueStatement::fromSyntax(comp, jump, context, stmtCtx);
+            break;
+        }
         case SyntaxKind::ConditionalStatement:
             result = &ConditionalStatement::fromSyntax(
-                comp, syntax.as<ConditionalStatementSyntax>(), context, blocks);
+                comp, syntax.as<ConditionalStatementSyntax>(), context, stmtCtx);
             break;
         case SyntaxKind::CaseStatement:
-            result =
-                &CaseStatement::fromSyntax(comp, syntax.as<CaseStatementSyntax>(), context, blocks);
+            result = &CaseStatement::fromSyntax(comp, syntax.as<CaseStatementSyntax>(), context,
+                                                stmtCtx);
             break;
         case SyntaxKind::ForLoopStatement:
             // We might have an implicit block here; check for that first.
-            if (!blocks.empty() && blocks[0]->getSyntax() == &syntax) {
-                result = comp.emplace<SequentialBlockStatement>(*blocks[0]);
-                blocks = blocks.subspan(1);
-            }
-            else {
+            result = stmtCtx.tryGetBlock(comp, syntax);
+            if (!result) {
                 result = &ForLoopStatement::fromSyntax(comp, syntax.as<ForLoopStatementSyntax>(),
-                                                       context, blocks);
+                                                       context, stmtCtx);
             }
             break;
         case SyntaxKind::LoopStatement: {
             auto& loop = syntax.as<LoopStatementSyntax>();
             if (loop.repeatOrWhile.kind == TokenKind::RepeatKeyword)
-                result = &RepeatLoopStatement::fromSyntax(comp, loop, context, blocks);
+                result = &RepeatLoopStatement::fromSyntax(comp, loop, context, stmtCtx);
             else
-                result = &WhileLoopStatement::fromSyntax(comp, loop, context, blocks);
+                result = &WhileLoopStatement::fromSyntax(comp, loop, context, stmtCtx);
             break;
         }
         case SyntaxKind::DoWhileStatement:
             result = &DoWhileLoopStatement::fromSyntax(comp, syntax.as<DoWhileStatementSyntax>(),
-                                                       context, blocks);
+                                                       context, stmtCtx);
             break;
         case SyntaxKind::ForeverStatement:
             result = &ForeverLoopStatement::fromSyntax(comp, syntax.as<ForeverStatementSyntax>(),
-                                                       context, blocks);
+                                                       context, stmtCtx);
             break;
         case SyntaxKind::ExpressionStatement:
             result = &ExpressionStatement::fromSyntax(comp, syntax.as<ExpressionStatementSyntax>(),
@@ -121,26 +136,22 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             // A block statement may or may not match up with a hierarchy node. Handle both cases
             // here. We traverse statements in the same order as the findBlocks call below, so this
             // should always sync up exactly.
-            if (!blocks.empty() && blocks[0]->getSyntax() == &syntax) {
-                result = comp.emplace<SequentialBlockStatement>(*blocks[0]);
-                blocks = blocks.subspan(1);
-            }
-            else {
+            result = stmtCtx.tryGetBlock(comp, syntax);
+            if (!result) {
                 result = &SequentialBlockStatement::fromSyntax(
-                    comp, syntax.as<BlockStatementSyntax>(), context, blocks);
+                    comp, syntax.as<BlockStatementSyntax>(), context, stmtCtx);
             }
             break;
         case SyntaxKind::TimingControlStatement:
             result = &TimedStatement::fromSyntax(comp, syntax.as<TimingControlStatementSyntax>(),
-                                                 context, blocks);
+                                                 context, stmtCtx);
             break;
         case SyntaxKind::ImmediateAssertStatement:
         case SyntaxKind::ImmediateAssumeStatement:
         case SyntaxKind::ImmediateCoverStatement:
             result = &AssertionStatement::fromSyntax(
-                comp, syntax.as<ImmediateAssertionStatementSyntax>(), context, blocks);
+                comp, syntax.as<ImmediateAssertionStatementSyntax>(), context, stmtCtx);
             break;
-        case SyntaxKind::JumpStatement:
         case SyntaxKind::ProceduralAssignStatement:
         case SyntaxKind::ProceduralForceStatement:
         case SyntaxKind::ProceduralDeassignStatement:
@@ -392,10 +403,12 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
     }
 
     bool anyBad = false;
-    auto blocksCopy = blocks;
+    Statement::StatementContext stmtCtx;
+    stmtCtx.blocks = blocks;
+
     if (auto stmtSyntax = std::get_if<const StatementSyntax*>(&syntax)) {
         if (auto ptr = *stmtSyntax) {
-            buffer.append(&Statement::bind(*ptr, context, blocksCopy));
+            buffer.append(&Statement::bind(*ptr, context, stmtCtx));
             anyBad |= buffer.back()->bad();
         }
     }
@@ -403,13 +416,13 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
         auto& items = *std::get<const SyntaxList<SyntaxNode>*>(syntax);
         for (auto item : items) {
             if (StatementSyntax::isKind(item->kind)) {
-                buffer.append(&Statement::bind(item->as<StatementSyntax>(), context, blocksCopy));
+                buffer.append(&Statement::bind(item->as<StatementSyntax>(), context, stmtCtx));
                 anyBad |= buffer.back()->bad();
             }
         }
     }
 
-    ASSERT(anyBad || blocksCopy.empty());
+    ASSERT(anyBad || stmtCtx.blocks.empty());
 
     if (buffer.empty() || anyBad)
         return InvalidStatement::Instance;
@@ -440,11 +453,12 @@ bool StatementList::verifyConstantImpl(EvalContext& context) const {
 
 Statement& SequentialBlockStatement::fromSyntax(Compilation& compilation,
                                                 const BlockStatementSyntax& syntax,
-                                                const BindContext& context, BlockList& blocks) {
+                                                const BindContext& context,
+                                                StatementContext& stmtCtx) {
     bool anyBad = false;
     SmallVectorSized<const Statement*, 8> buffer;
     for (auto item : syntax.items) {
-        auto& stmt = Statement::bind(item->as<StatementSyntax>(), context, blocks);
+        auto& stmt = Statement::bind(item->as<StatementSyntax>(), context, stmtCtx);
         buffer.append(&stmt);
         anyBad |= stmt.bad();
     }
@@ -513,6 +527,43 @@ bool ReturnStatement::verifyConstantImpl(EvalContext& context) const {
     return expr->verifyConstant(context);
 }
 
+Statement& BreakStatement::fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
+                                      const BindContext& context, StatementContext& stmtCtx) {
+    auto result = compilation.emplace<BreakStatement>();
+    if (!stmtCtx.inLoop) {
+        context.addDiag(diag::StatementNotInLoop, syntax.sourceRange());
+        return badStmt(compilation, result);
+    }
+    return *result;
+}
+
+ER BreakStatement::evalImpl(EvalContext&) const {
+    return ER::Break;
+}
+
+bool BreakStatement::verifyConstantImpl(EvalContext&) const {
+    return true;
+}
+
+Statement& ContinueStatement::fromSyntax(Compilation& compilation,
+                                         const JumpStatementSyntax& syntax,
+                                         const BindContext& context, StatementContext& stmtCtx) {
+    auto result = compilation.emplace<ContinueStatement>();
+    if (!stmtCtx.inLoop) {
+        context.addDiag(diag::StatementNotInLoop, syntax.sourceRange());
+        return badStmt(compilation, result);
+    }
+    return *result;
+}
+
+ER ContinueStatement::evalImpl(EvalContext&) const {
+    return ER::Continue;
+}
+
+bool ContinueStatement::verifyConstantImpl(EvalContext&) const {
+    return true;
+}
+
 ER VariableDeclStatement::evalImpl(EvalContext& context) const {
     // Create storage for the variable
     ConstantValue initial;
@@ -536,7 +587,7 @@ bool VariableDeclStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
                                             const ConditionalStatementSyntax& syntax,
-                                            const BindContext& context, BlockList& blocks) {
+                                            const BindContext& context, StatementContext& stmtCtx) {
     auto& conditions = syntax.predicate->conditions;
     if (conditions.size() == 0)
         return badStmt(compilation, nullptr);
@@ -555,11 +606,11 @@ Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
     if (cond.bad() || !context.requireBooleanConvertible(cond))
         return badStmt(compilation, nullptr);
 
-    auto& ifTrue = Statement::bind(*syntax.statement, context, blocks);
+    auto& ifTrue = Statement::bind(*syntax.statement, context, stmtCtx);
     const Statement* ifFalse = nullptr;
     if (syntax.elseClause) {
         ifFalse =
-            &Statement::bind(syntax.elseClause->clause->as<StatementSyntax>(), context, blocks);
+            &Statement::bind(syntax.elseClause->clause->as<StatementSyntax>(), context, stmtCtx);
     }
 
     auto result = compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse);
@@ -593,7 +644,7 @@ bool ConditionalStatement::verifyConstantImpl(EvalContext& context) const {
 }
 
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
-                                     const BindContext& context, BlockList& blocks) {
+                                     const BindContext& context, StatementContext& stmtCtx) {
     if (syntax.matchesOrInside) {
         context.addDiag(diag::NotYetSupported, syntax.matchesOrInside.range());
         return badStmt(compilation, nullptr);
@@ -642,7 +693,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
         switch (item->kind) {
             case SyntaxKind::StandardCaseItem: {
                 auto& sci = item->as<StandardCaseItemSyntax>();
-                auto& stmt = Statement::bind(sci.clause->as<StatementSyntax>(), context, blocks);
+                auto& stmt = Statement::bind(sci.clause->as<StatementSyntax>(), context, stmtCtx);
                 for (auto es : sci.expressions) {
                     expressions.append(es);
                     statements.append(&stmt);
@@ -657,7 +708,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                 if (!defStmt) {
                     defStmt = &Statement::bind(
                         item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>(), context,
-                        blocks);
+                        stmtCtx);
                     bad |= defStmt->bad();
                 }
                 break;
@@ -794,7 +845,9 @@ bool CaseStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
                                         const ForLoopStatementSyntax& syntax,
-                                        const BindContext& context, BlockList& blocks) {
+                                        const BindContext& context, StatementContext& stmtCtx) {
+    auto guard = stmtCtx.enterLoop();
+
     // If the initializers were variable declarations, they've already been hoisted
     // out into a parent block and will be initialized there.
     SmallVectorSized<const Expression*, 4> initializers;
@@ -817,7 +870,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
         anyBad |= expr.bad();
     }
 
-    auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<ForLoopStatement>(initializers.copy(compilation), &stopExpr,
                                                         steps.copy(compilation), bodyStmt);
 
@@ -878,12 +931,14 @@ bool ForLoopStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& RepeatLoopStatement::fromSyntax(Compilation& compilation,
                                            const LoopStatementSyntax& syntax,
-                                           const BindContext& context, BlockList& blocks) {
+                                           const BindContext& context, StatementContext& stmtCtx) {
+    auto guard = stmtCtx.enterLoop();
+
     auto& countExpr = Expression::bind(*syntax.expr, context);
     if (!countExpr.bad() && !countExpr.type->isIntegral())
         context.addDiag(diag::ExprMustBeIntegral, countExpr.sourceRange);
 
-    auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<RepeatLoopStatement>(countExpr, bodyStmt);
 
     if (countExpr.bad() || bodyStmt.bad())
@@ -927,13 +982,15 @@ bool RepeatLoopStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& WhileLoopStatement::fromSyntax(Compilation& compilation,
                                           const LoopStatementSyntax& syntax,
-                                          const BindContext& context, BlockList& blocks) {
+                                          const BindContext& context, StatementContext& stmtCtx) {
+    auto guard = stmtCtx.enterLoop();
+
     bool bad = false;
     auto& condExpr = Expression::bind(*syntax.expr, context);
     if (!context.requireBooleanConvertible(condExpr))
         bad = true;
 
-    auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<WhileLoopStatement>(condExpr, bodyStmt);
 
     if (bad || bodyStmt.bad())
@@ -968,13 +1025,15 @@ bool WhileLoopStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& DoWhileLoopStatement::fromSyntax(Compilation& compilation,
                                             const DoWhileStatementSyntax& syntax,
-                                            const BindContext& context, BlockList& blocks) {
+                                            const BindContext& context, StatementContext& stmtCtx) {
+    auto guard = stmtCtx.enterLoop();
+
     bool bad = false;
     auto& condExpr = Expression::bind(*syntax.expr, context);
     if (!context.requireBooleanConvertible(condExpr))
         bad = true;
 
-    auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<DoWhileLoopStatement>(condExpr, bodyStmt);
 
     if (bad || bodyStmt.bad())
@@ -1009,8 +1068,10 @@ bool DoWhileLoopStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& ForeverLoopStatement::fromSyntax(Compilation& compilation,
                                             const ForeverStatementSyntax& syntax,
-                                            const BindContext& context, BlockList& blocks) {
-    auto& bodyStmt = Statement::bind(*syntax.statement, context, blocks);
+                                            const BindContext& context, StatementContext& stmtCtx) {
+    auto guard = stmtCtx.enterLoop();
+
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<ForeverLoopStatement>(bodyStmt);
     if (bodyStmt.bad())
         return badStmt(compilation, result);
@@ -1057,9 +1118,9 @@ bool ExpressionStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& TimedStatement::fromSyntax(Compilation& compilation,
                                       const TimingControlStatementSyntax& syntax,
-                                      const BindContext& context, BlockList& blocks) {
+                                      const BindContext& context, StatementContext& stmtCtx) {
     auto& timing = TimingControl::bind(*syntax.timingControl, context);
-    auto& stmt = Statement::bind(*syntax.statement, context, blocks);
+    auto& stmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<TimedStatement>(timing, stmt);
 
     if (timing.bad() || stmt.bad())
@@ -1086,7 +1147,7 @@ bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& AssertionStatement::fromSyntax(Compilation& compilation,
                                           const ImmediateAssertionStatementSyntax& syntax,
-                                          const BindContext& context, BlockList& blocks) {
+                                          const BindContext& context, StatementContext& stmtCtx) {
     AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
     auto& cond = Expression::bind(*syntax.expr->expression, context);
     if (cond.bad() || !context.requireBooleanConvertible(cond))
@@ -1095,11 +1156,11 @@ Statement& AssertionStatement::fromSyntax(Compilation& compilation,
     const Statement* ifTrue = nullptr;
     const Statement* ifFalse = nullptr;
     if (syntax.action->statement)
-        ifTrue = &Statement::bind(*syntax.action->statement, context, blocks);
+        ifTrue = &Statement::bind(*syntax.action->statement, context, stmtCtx);
 
     if (syntax.action->elseClause) {
         ifFalse = &Statement::bind(syntax.action->elseClause->clause->as<StatementSyntax>(),
-                                   context, blocks);
+                                   context, stmtCtx);
     }
 
     bool isDeferred = syntax.delay != nullptr;

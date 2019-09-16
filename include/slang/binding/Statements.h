@@ -11,6 +11,7 @@
 
 namespace slang {
 
+class SequentialBlockStatement;
 class SequentialBlockSymbol;
 class TimingControl;
 class VariableSymbol;
@@ -24,6 +25,8 @@ class VariableSymbol;
     x(ExpressionStatement) \
     x(VariableDeclaration) \
     x(Return) \
+    x(Continue) \
+    x(Break) \
     x(Conditional) \
     x(Case) \
     x(ForLoop) \
@@ -74,11 +77,35 @@ public:
     /// If it's not, appropriate diagnostics will be issued.
     bool verifyConstant(EvalContext& context) const;
 
-    using BlockList = span<const SequentialBlockSymbol* const>;
+    /// Additional information passed along during statement binding.
+    struct StatementContext {
+        /// A series of block symbols that are expected to be bound, in order,
+        /// during the creation of the statement tree. Each statement created
+        /// can pop blocks off the beginning of this list.
+        span<const SequentialBlockSymbol* const> blocks;
+
+        /// Tracks whether we're currently within a loop (which can control,
+        /// for example, whether a break or continue statement is allowed).
+        bool inLoop = false;
+
+        /// Attempts to match up the head of the block list with the given
+        /// statement syntax node. If they match, the block symbol is popped
+        /// and returned wrapped inside a SequentialBlockStatement.
+        /// Otherwise nullptr is returned.
+        SequentialBlockStatement* tryGetBlock(Compilation& compilation, const SyntaxNode& syntax);
+
+        /// Records that we've entered a loop, and returns a guard that will
+        /// revert back to the previous inLoop state on destruction.
+        [[nodiscard]] auto enterLoop() {
+            auto guard = finally([this, saved = inLoop] { inLoop = saved; });
+            inLoop = true;
+            return guard;
+        }
+    };
 
     /// Binds a statement tree from the given syntax nodes.
     static const Statement& bind(const StatementSyntax& syntax, const BindContext& context,
-                                 BlockList& blocks);
+                                 StatementContext& stmtCtx);
 
     template<typename T>
     T& as() {
@@ -176,7 +203,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
-                                 const BindContext& context, BlockList& blocks);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::SequentialBlock; }
 
@@ -199,6 +226,32 @@ public:
                                  const BindContext& context);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Return; }
+};
+
+class BreakStatement : public Statement {
+public:
+    BreakStatement() : Statement(StatementKind::Break) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Break; }
+};
+
+class ContinueStatement : public Statement {
+public:
+    ContinueStatement() : Statement(StatementKind::Continue) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Continue; }
 };
 
 class VariableDeclStatement : public Statement {
@@ -229,7 +282,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ConditionalStatementSyntax& syntax,
-                                 const BindContext& context, BlockList& blocks);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Conditional; }
 };
@@ -259,7 +312,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
-                                 const BindContext& context, BlockList& blocks);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Case; }
 };
@@ -280,7 +333,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ForLoopStatementSyntax& syntax,
-                                 const BindContext& context, BlockList& blocks);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForLoop; }
 };
@@ -297,7 +350,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
-                                 const BindContext& context, BlockList& blocks);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::RepeatLoop; }
 };
@@ -314,7 +367,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
-                                 const BindContext& context, BlockList& blocks);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::WhileLoop; }
 };
@@ -331,7 +384,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const DoWhileStatementSyntax& syntax,
-                                 const BindContext& context, BlockList& blocks);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::DoWhileLoop; }
 };
@@ -347,7 +400,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ForeverStatementSyntax& syntax,
-                                 const BindContext& context, BlockList& blocks);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeverLoop; }
 };
@@ -381,7 +434,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const TimingControlStatementSyntax& syntax,
-                                 const BindContext& context, BlockList& blocks);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Timed; }
 };
@@ -406,7 +459,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const ImmediateAssertionStatementSyntax& syntax,
-                                 const BindContext& context, BlockList& blocks);
+                                 const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Assertion; }
 };
