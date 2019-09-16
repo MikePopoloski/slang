@@ -214,3 +214,86 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpressionNotConstant);
 }
+
+TEST_CASE("Loop statement errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo[3];
+    initial begin
+        repeat (foo) begin end
+        repeat (-1) begin end
+        while (foo) begin end
+        do begin end while (foo);
+        forever begin return; end
+        continue;
+        break;
+
+        while (1) begin
+            while (1) begin
+                break;
+            end
+            break;
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::ExprMustBeIntegral);
+    CHECK(diags[1].code == diag::NotBooleanConvertible);
+    CHECK(diags[2].code == diag::NotBooleanConvertible);
+    CHECK(diags[3].code == diag::ReturnNotInSubroutine);
+    CHECK(diags[4].code == diag::StatementNotInLoop);
+    CHECK(diags[5].code == diag::StatementNotInLoop);
+}
+
+TEST_CASE("Loop statement constexpr errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    int foo;
+    function int func1();
+        repeat (-1) begin
+        end
+        return 1;
+    endfunction
+
+    function int func2();
+        repeat (foo) begin
+        end
+        return 1;
+    endfunction
+
+    function int func3();
+        while (foo) begin
+        end
+        return 1;
+    endfunction
+
+    function int func4();
+        do begin end while (foo);
+        return 1;
+    endfunction
+
+    localparam int p1 = func1();
+    localparam int p2 = func2();
+    localparam int p3 = func3();
+    localparam int p4 = func4();
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ExpressionNotConstant);
+    CHECK(diags[1].code == diag::ExpressionNotConstant);
+    CHECK(diags[2].code == diag::ExpressionNotConstant);
+    CHECK(diags[3].code == diag::ExpressionNotConstant);
+}

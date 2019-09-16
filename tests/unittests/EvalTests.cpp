@@ -786,3 +786,96 @@ TEST_CASE("Concat assignments") {
     CHECK(session.eval("bar").integer() == 1);
     CHECK(session.eval("foo").integer() == 2);
 }
+
+TEST_CASE("Eval repeat loop") {
+    ScriptSession session;
+    session.eval(R"(
+function int foo(integer a);
+    int result = 0;
+    repeat (a) begin
+        if (a == 8) return 8;
+        if (result == 4) break;
+        result++;
+    end
+
+    return result;
+endfunction
+)");
+
+    CHECK(session.eval("foo('x)").integer() == 0);
+    CHECK(session.eval("foo(1)").integer() == 1);
+    CHECK(session.eval("foo(4)").integer() == 4);
+    CHECK(session.eval("foo(9)").integer() == 4);
+    CHECK(session.eval("foo(8)").integer() == 8);
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Eval while loop") {
+    ScriptSession session;
+    session.eval(R"(
+function int foo(integer a);
+    int result = 0;
+    while (result < a) begin
+        if (a == 8) return 8;
+        if (result == 4) break;
+        result++;
+    end
+
+    return result;
+endfunction
+)");
+
+    CHECK(session.eval("foo(0)").integer() == 0);
+    CHECK(session.eval("foo(1)").integer() == 1);
+    CHECK(session.eval("foo(5)").integer() == 4);
+    CHECK(session.eval("foo(2)").integer() == 2);
+    CHECK(session.eval("foo(8)").integer() == 8);
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Eval do-while loop") {
+    ScriptSession session;
+    session.eval(R"(
+function int foo(integer a);
+    int result = 0;
+    do begin
+        if (a == 8) return 8;
+        if (result == 4) break;
+        result++;
+    end
+    while (result < a);
+
+    return result;
+endfunction
+)");
+
+    CHECK(session.eval("foo(0)").integer() == 1);
+    CHECK(session.eval("foo(1)").integer() == 1);
+    CHECK(session.eval("foo(5)").integer() == 4);
+    CHECK(session.eval("foo(2)").integer() == 2);
+    CHECK(session.eval("foo(8)").integer() == 8);
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Eval forever loop") {
+    ScriptSession session;
+    session.eval(R"(
+function int foo(integer a);
+    int result = 0;
+    forever begin
+        if (a == 8) return 8;
+        if (result == 4) break;
+        result++;
+    end
+
+    return result;
+endfunction
+)");
+
+    CHECK(session.eval("foo(0)").integer() == 4);
+    CHECK(session.eval("foo(1)").integer() == 4);
+    CHECK(session.eval("foo(5)").integer() == 4);
+    CHECK(session.eval("foo(2)").integer() == 4);
+    CHECK(session.eval("foo(8)").integer() == 8);
+    NO_SESSION_ERRORS;
+}

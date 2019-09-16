@@ -933,15 +933,18 @@ Statement& RepeatLoopStatement::fromSyntax(Compilation& compilation,
                                            const LoopStatementSyntax& syntax,
                                            const BindContext& context, StatementContext& stmtCtx) {
     auto guard = stmtCtx.enterLoop();
-
     auto& countExpr = Expression::bind(*syntax.expr, context);
-    if (!countExpr.bad() && !countExpr.type->isIntegral())
+
+    bool bad = countExpr.bad();
+    if (!bad && !countExpr.type->isIntegral()) {
         context.addDiag(diag::ExprMustBeIntegral, countExpr.sourceRange);
+        bad = true;
+    }
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<RepeatLoopStatement>(countExpr, bodyStmt);
 
-    if (countExpr.bad() || bodyStmt.bad())
+    if (bad || bodyStmt.bad())
         return badStmt(compilation, result);
     return *result;
 }
