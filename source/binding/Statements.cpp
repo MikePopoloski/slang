@@ -61,8 +61,8 @@ bool Statement::verifyConstant(EvalContext& context) const {
 }
 
 SequentialBlockStatement* Statement::StatementContext::tryGetBlock(Compilation& compilation,
-                                                                   const SyntaxNode& syntax) {
-    if (!blocks.empty() && blocks[0]->getSyntax() == &syntax) {
+                                                                   const SyntaxNode& node) {
+    if (!blocks.empty() && blocks[0]->getSyntax() == &node) {
         auto result = compilation.emplace<SequentialBlockStatement>(*blocks[0]);
         blocks = blocks.subspan(1);
         return result;
