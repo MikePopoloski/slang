@@ -165,12 +165,6 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, st
 }
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-             SourceLocation location, IdentifierType idType_) {
-    init(alloc, kind, trivia, rawText, location);
-    idType = idType_;
-}
-
-Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
              SourceLocation location, SyntaxKind directive) {
     init(alloc, kind, trivia, rawText, location);
     info->directiveKind() = directive;
@@ -218,23 +212,15 @@ string_view Token::valueText() const {
     switch (kind) {
         case TokenKind::StringLiteral:
             return info->stringText();
-        case TokenKind::Identifier:
-            switch (identifierType()) {
-                case IdentifierType::Normal:
-                case IdentifierType::System:
-                    return rawText();
-                case IdentifierType::Escaped:
-                    // strip off leading backslash
-                    return rawText().substr(1);
-                case IdentifierType::Unknown:
-                    // unknown tokens don't have value text
-                    return "";
-            }
-            break;
+        case TokenKind::Identifier: {
+            string_view result = rawText();
+            if (!result.empty() && result[0] == '\\')
+                result = result.substr(1);
+            return result;
+        }
         default:
             return rawText();
     }
-    THROW_UNREACHABLE;
 }
 
 string_view Token::rawText() const {
@@ -246,6 +232,7 @@ string_view Token::rawText() const {
     switch (kind) {
         case TokenKind::Unknown:
         case TokenKind::Identifier:
+        case TokenKind::SystemIdentifier:
         case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
         case TokenKind::IntegerLiteral:
@@ -281,7 +268,7 @@ span<Trivia const> Token::trivia() const {
     byte* ptr = info->extra() + getExtraSize(kind);
     memcpy(&trivia, ptr, sizeof(trivia));
 
-    if (triviaCountSmall == MaxTriviaSmallCount + 1){
+    if (triviaCountSmall == MaxTriviaSmallCount + 1) {
         size_t size;
         memcpy(&size, ptr + sizeof(trivia), sizeof(size_t));
         return { trivia, ptrdiff_t(size) };
@@ -313,12 +300,6 @@ NumericTokenFlags Token::numericFlags() const {
     ASSERT(kind == TokenKind::IntegerBase || kind == TokenKind::TimeLiteral ||
            kind == TokenKind::RealLiteral);
     return numFlags;
-}
-
-IdentifierType Token::identifierType() const {
-    if (kind == TokenKind::Identifier)
-        return idType;
-    return IdentifierType::Unknown;
 }
 
 SyntaxKind Token::directiveKind() const {
@@ -392,9 +373,6 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, span<Trivia const> trivi
 Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location) {
     Token result;
     switch (kind) {
-        case TokenKind::Identifier:
-            result = Token(alloc, kind, {}, "", location, IdentifierType::Unknown);
-            break;
         case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
             result = Token(alloc, kind, {}, "", location, "");

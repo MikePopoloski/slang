@@ -205,7 +205,6 @@ TEST_CASE("Simple Identifiers") {
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toString() == text);
     CHECK(token.valueText() == text);
-    CHECK(token.identifierType() == IdentifierType::Normal);
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
@@ -215,7 +214,6 @@ TEST_CASE("Mixed Identifiers") {
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toString() == text);
     CHECK(token.valueText() == text);
-    CHECK(token.identifierType() == IdentifierType::Normal);
     CHECK_DIAGNOSTICS_EMPTY;
 
     auto& text2 = "__a$$asdf213$";
@@ -223,7 +221,6 @@ TEST_CASE("Mixed Identifiers") {
     CHECK(token2.kind == TokenKind::Identifier);
     CHECK(token2.toString() == text2);
     CHECK(token2.valueText() == text2);
-    CHECK(token2.identifierType() == IdentifierType::Normal);
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
@@ -234,7 +231,6 @@ TEST_CASE("Escaped Identifiers") {
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toString() == text);
     CHECK(token.valueText() == "98\\#$%)(*lkjsd__09...asdf345");
-    CHECK(token.identifierType() == IdentifierType::Escaped);
     CHECK_DIAGNOSTICS_EMPTY;
 
     auto& text2 = "\\98\\#$%)(*lkjsd__09...a sdf345";
@@ -242,25 +238,22 @@ TEST_CASE("Escaped Identifiers") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "98\\#$%)(*lkjsd__09...a");
-    CHECK(token.identifierType() == IdentifierType::Escaped);
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("System Identifiers") {
     auto& text = "$hello";
     Token token = lexToken(text);
-    CHECK(token.kind == TokenKind::Identifier);
+    CHECK(token.kind == TokenKind::SystemIdentifier);
     CHECK(token.toString() == text);
     CHECK(token.valueText() == text);
-    CHECK(token.identifierType() == IdentifierType::System);
     CHECK_DIAGNOSTICS_EMPTY;
 
     auto& text2 = "$45__hello";
     Token token2 = lexToken(text2);
-    CHECK(token2.kind == TokenKind::Identifier);
+    CHECK(token2.kind == TokenKind::SystemIdentifier);
     CHECK(token2.toString() == text2);
     CHECK(token2.valueText() == text2);
-    CHECK(token2.identifierType() == IdentifierType::System);
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
@@ -643,7 +636,6 @@ TEST_CASE("Escaped keyword identifiers") {
     auto token = lexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "wire");
-    CHECK(token.identifierType() == IdentifierType::Escaped);
     CHECK_DIAGNOSTICS_EMPTY;
 }
 

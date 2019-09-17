@@ -244,6 +244,9 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             expr = &factory.signedCastExpression(signing, apostrophe, parenExpr);
             break;
         }
+        case TokenKind::SystemIdentifier:
+            expr = &factory.systemName(consume());
+            break;
         default:
             // possibilities here:
             // 1. data type

@@ -36,9 +36,6 @@ struct NumericTokenFlags {
     void setOutOfRange(bool value);
 };
 
-/// The original kind of identifier represented by a token.
-enum class IdentifierType : uint8_t { Unknown, Normal, Escaped, System };
-
 /// The kind of trivia we've stored.
 enum class TriviaKind : uint8_t {
     Unknown,
@@ -134,8 +131,6 @@ public:
     Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
           SourceLocation location, string_view strText);
     Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
-          SourceLocation location, IdentifierType idType);
-    Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
           SourceLocation location, SyntaxKind directive);
     Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
           SourceLocation location, logic_t bit);
@@ -169,7 +164,6 @@ public:
     double realValue() const;
     logic_t bitValue() const;
     NumericTokenFlags numericFlags() const;
-    IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
 
     bool valid() const { return info != nullptr; }
@@ -200,10 +194,7 @@ private:
     bool missing : 1;
     uint8_t triviaCountSmall : 4;
     uint8_t reserved : 3;
-    union {
-        NumericTokenFlags numFlags;
-        IdentifierType idType;
-    };
+    NumericTokenFlags numFlags;
     uint32_t rawLen = 0;
     Info* info = nullptr;
 
@@ -247,6 +238,7 @@ enum class TokenKind : uint16_t {
     Unknown,
     EndOfFile,
     Identifier,
+    SystemIdentifier,
     StringLiteral,
     IntegerLiteral,
     IntegerBase,

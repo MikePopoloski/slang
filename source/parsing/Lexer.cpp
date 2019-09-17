@@ -455,7 +455,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             if (getKeywordTable(keywordVersion)->lookup(lexeme(), kind))
                 return create(kind);
 
-            return create(TokenKind::Identifier, IdentifierType::Normal);
+            return create(TokenKind::Identifier);
         }
         case '[':
             return create(TokenKind::OpenBracket);
@@ -661,7 +661,7 @@ Token Lexer::lexEscapeSequence(bool isMacroName) {
     if (isMacroName)
         return create(TokenKind::Directive, SyntaxKind::MacroUsage);
 
-    return create(TokenKind::Identifier, IdentifierType::Escaped);
+    return create(TokenKind::Identifier);
 }
 
 Token Lexer::lexDollarSign() {
@@ -677,7 +677,7 @@ Token Lexer::lexDollarSign() {
     if (kind != TokenKind::Unknown)
         return create(kind);
 
-    return create(TokenKind::Identifier, IdentifierType::System);
+    return create(TokenKind::SystemIdentifier);
 }
 
 Token Lexer::lexDirective() {

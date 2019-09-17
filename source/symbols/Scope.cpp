@@ -799,6 +799,8 @@ NameComponent decomposeName(const NameSyntax& name) {
     switch (name.kind) {
         case SyntaxKind::IdentifierName:
             return { name.as<IdentifierNameSyntax>().identifier, nullptr };
+        case SyntaxKind::SystemName:
+            return { name.as<SystemNameSyntax>().systemIdentifier, nullptr };
         case SyntaxKind::IdentifierSelectName: {
             auto& idSelect = name.as<IdentifierSelectNameSyntax>();
             return { idSelect.identifier, &idSelect.selectors };
@@ -1115,6 +1117,17 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
             result.addDiag(*this, diag::NotYetSupported, syntax.sourceRange());
             result.found = nullptr;
             return;
+        case SyntaxKind::SystemName: {
+            // If this is a system name, look up directly in the compilation.
+            nameToken = syntax.as<SystemNameSyntax>().systemIdentifier;
+            result.found = nullptr;
+            result.systemSubroutine = compilation.getSystemSubroutine(nameToken.valueText());
+            if (!result.systemSubroutine) {
+                result.addDiag(*this, diag::UndeclaredIdentifier, nameToken.range())
+                    << nameToken.valueText();
+            }
+            return;
+        }
         default:
             THROW_UNREACHABLE;
     }
@@ -1123,20 +1136,6 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
     auto name = nameToken.valueText();
     if (name.empty())
         return;
-
-    // If this is a system name, look up directly in the compilation.
-    if (nameToken.identifierType() == IdentifierType::System) {
-        result.found = nullptr;
-        result.systemSubroutine = compilation.getSystemSubroutine(name);
-        if (!result.systemSubroutine) {
-            result.addDiag(*this, diag::UndeclaredIdentifier, nameToken.range()) << name;
-        }
-        else if ((flags & LookupFlags::AllowSystemSubroutine) == 0) {
-            result.addDiag(*this, diag::UnexpectedSystemName, nameToken.range());
-            result.systemSubroutine = nullptr;
-        }
-        return;
-    }
 
     // Perform the lookup.
     lookupUnqualifiedImpl(name, location, nameToken.range(), flags, result);

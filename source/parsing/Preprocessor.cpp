@@ -967,15 +967,14 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
 
         // If this is an escaped identifier that includes a `" within it, we need to split the
         // token up to match the behavior of other simulators.
-        if (newToken.kind == TokenKind::Identifier &&
-            newToken.identifierType() == IdentifierType::Escaped) {
+        if (newToken.kind == TokenKind::Identifier && !newToken.rawText().empty() &&
+            newToken.rawText()[0] == '\\') {
 
             size_t offset = newToken.rawText().find("`\"");
             if (offset != std::string_view::npos) {
                 // Split the token, finish the stringification.
                 Token split(alloc, TokenKind::Identifier, newToken.trivia(),
-                            newToken.rawText().substr(0, offset), newToken.location(),
-                            IdentifierType::Normal);
+                            newToken.rawText().substr(0, offset), newToken.location());
                 stringifyBuffer.append(split);
 
                 dest.append(Lexer::stringify(alloc, stringify.location(), stringify.trivia(),

@@ -361,6 +361,7 @@ bool isPossibleExpression(TokenKind kind) {
         case TokenKind::ThisKeyword:
         case TokenKind::SuperKeyword:
         case TokenKind::Identifier:
+        case TokenKind::SystemIdentifier:
         case TokenKind::RootSystemName:
         case TokenKind::Hash:
         case TokenKind::DoubleHash:
@@ -402,6 +403,7 @@ bool isPossibleExpression(TokenKind kind) {
 bool isPossibleStatement(TokenKind kind) {
     switch (kind) {
         case TokenKind::Identifier:
+        case TokenKind::SystemIdentifier:
         case TokenKind::ThisKeyword:
         case TokenKind::SuperKeyword:
         case TokenKind::UnitSystemName:

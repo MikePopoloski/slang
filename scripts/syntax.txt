@@ -253,6 +253,9 @@ empty
 IdentifierName base=Name kind=IdentifierName
 token identifier
 
+SystemName base=Name kind=SystemName
+token systemIdentifier
+
 IdentifierSelectName base=Name kind=IdentifierSelectName
 token identifier
 list<ElementSelect> selectors
@@ -265,7 +268,7 @@ token keyword
 
 kindmap<KeywordName>
 LocalScope UnitScope RootScope ThisHandle SuperHandle ArrayUniqueMethod
-ArrayAndMethod ArrayOrMethod ArrayXorMethod ConstructorName SystemName
+ArrayAndMethod ArrayOrMethod ArrayXorMethod ConstructorName
 
 ClassName base=Name kind=ClassName
 token identifier

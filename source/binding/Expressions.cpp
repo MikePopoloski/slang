@@ -666,8 +666,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
 Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax,
                                  const InvocationExpressionSyntax* invocation,
                                  const BindContext& context) {
-
-    bitmask<LookupFlags> flags = LookupFlags::AllowSystemSubroutine;
+    bitmask<LookupFlags> flags = LookupFlags::None;
     if (invocation && invocation->arguments)
         flags |= LookupFlags::AllowDeclaredAfter;
     if ((context.flags & BindFlags::Constant) || (context.flags & BindFlags::NoHierarchicalNames))
