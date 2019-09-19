@@ -1144,3 +1144,13 @@ TEST_CASE("Preprocessor API") {
     CHECK(pp.undefine("FOO"));
     CHECK(!pp.isDefined("FOO"));
 }
+
+TEST_CASE("Undef builtin") {
+    auto& text = R"(
+`undef __slang__
+)";
+
+    std::string result = preprocess(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::UndefineBuiltinDirective);
+}

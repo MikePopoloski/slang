@@ -111,6 +111,17 @@ void Preprocessor::undefineAll() {
     macros["__FILE__"] = MacroIntrinsic::File;
     macros["__LINE__"] = MacroIntrinsic::Line;
 
+    predefine("__slang__ 1"s, options.predefineSource);
+    predefine("__slang_major__ "s + std::to_string(VersionInfo::getMajor()),
+              options.predefineSource);
+    predefine("__slang_minor__ "s + std::to_string(VersionInfo::getMinor()),
+              options.predefineSource);
+    predefine("__slang_rev__ "s + std::string(VersionInfo::getRevision()), options.predefineSource);
+
+    // All macros we've defined thus far should be marked as built-ins so they can't be undefined.
+    for (auto& [name, macro] : macros)
+        macro.builtIn = true;
+
     for (std::string predef : options.predefines) {
         // Find location of equals sign to indicate start of body.
         // If there is no equals sign, predefine to a value of 1.
@@ -124,13 +135,6 @@ void Preprocessor::undefineAll() {
 
     for (const std::string& undef : options.undefines)
         undefine(string_view(undef));
-
-    predefine("__slang__ 1"s, options.predefineSource);
-    predefine("__slang_major__ "s + std::to_string(VersionInfo::getMajor()),
-              options.predefineSource);
-    predefine("__slang_minor__ "s + std::to_string(VersionInfo::getMinor()),
-              options.predefineSource);
-    predefine("__slang_rev__ "s + std::string(VersionInfo::getRevision()), options.predefineSource);
 }
 
 bool Preprocessor::isDefined(string_view name) {
@@ -763,12 +767,11 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
 Trivia Preprocessor::handleUndefDirective(Token directive) {
     Token nameToken = expect(TokenKind::Identifier);
 
-    // TODO: additional checks for undefining other builtin directives
     if (!nameToken.isMissing()) {
         string_view name = nameToken.valueText();
         auto it = macros.find(name);
         if (it != macros.end()) {
-            if (name != "__LINE__" && name != "__FILE__")
+            if (!it->second.builtIn)
                 macros.erase(it);
             else
                 addDiag(diag::UndefineBuiltinDirective, nameToken.location());

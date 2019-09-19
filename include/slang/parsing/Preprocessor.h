@@ -150,10 +150,11 @@ private:
     struct MacroDef {
         DefineDirectiveSyntax* syntax = nullptr;
         MacroIntrinsic intrinsic = MacroIntrinsic::None;
+        bool builtIn = false;
 
         MacroDef() = default;
         MacroDef(DefineDirectiveSyntax* syntax) : syntax(syntax) {}
-        MacroDef(MacroIntrinsic intrinsic) : intrinsic(intrinsic) {}
+        MacroDef(MacroIntrinsic intrinsic) : intrinsic(intrinsic), builtIn(true) {}
 
         bool valid() const { return syntax || intrinsic != MacroIntrinsic::None; }
         bool isIntrinsic() const { return intrinsic != MacroIntrinsic::None; }
