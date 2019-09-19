@@ -1154,3 +1154,13 @@ TEST_CASE("Undef builtin") {
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::UndefineBuiltinDirective);
 }
+
+TEST_CASE("Trying to redefine built-in macro") {
+    auto& text = R"(
+`define timescale
+)";
+
+    std::string result = preprocess(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::InvalidMacroName);
+}
