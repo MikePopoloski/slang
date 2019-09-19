@@ -12,39 +12,10 @@
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/Version.h"
 
-namespace {
-
-using namespace slang;
-
-bool isOnSameLine(Token token) {
-    for (auto& t : token.trivia()) {
-        switch (t.kind) {
-            case TriviaKind::LineComment:
-            case TriviaKind::EndOfLine:
-            case TriviaKind::SkippedSyntax:
-            case TriviaKind::SkippedTokens:
-            case TriviaKind::DisabledText:
-                return false;
-            case TriviaKind::Directive:
-                if (t.syntax()->kind != SyntaxKind::MacroUsage)
-                    return false;
-                break;
-            case TriviaKind::BlockComment:
-                if (size_t offset = t.getRawText().find_first_of("\r\n");
-                    offset != std::string_view::npos) {
-                    return false;
-                }
-                break;
-            default:
-                break;
-        }
-    }
-    return true;
-}
-
-} // namespace
-
 namespace slang {
+
+static bool isOnSameLine(Token token);
+static bool isSameMacro(const DefineDirectiveSyntax& left, const DefineDirectiveSyntax& right);
 
 SyntaxKind getDirectiveKind(string_view directive);
 
@@ -418,23 +389,25 @@ Trivia Preprocessor::handleResetAllDirective(Token directive) {
 
 Trivia Preprocessor::handleDefineDirective(Token directive) {
     MacroFormalArgumentListSyntax* formalArguments = nullptr;
-    bool noErrors = false;
+    bool bad = false;
 
     // next token should be the macro name
     auto name = expect(TokenKind::Identifier);
     inMacroBody = true;
 
-    if (!name.isMissing()) {
-        if (getDirectiveKind(name.valueText()) != SyntaxKind::MacroUsage)
+    if (name.isMissing())
+        bad = true;
+    else {
+        if (getDirectiveKind(name.valueText()) != SyntaxKind::MacroUsage) {
             addDiag(diag::InvalidMacroName, name.location());
-        else {
-            // check if this is a function-like macro, which requires an opening paren with no
-            // leading space
-            if (peek(TokenKind::OpenParenthesis) && peek().trivia().empty()) {
-                MacroParser parser(*this);
-                formalArguments = parser.parseFormalArgumentList();
-            }
-            noErrors = true;
+            bad = true;
+        }
+
+        // check if this is a function-like macro, which requires an opening paren with no
+        // leading space
+        if (peek(TokenKind::OpenParenthesis) && peek().trivia().empty()) {
+            MacroParser parser(*this);
+            formalArguments = parser.parseFormalArgumentList();
         }
     }
 
@@ -506,7 +479,19 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     auto result = alloc.emplace<DefineDirectiveSyntax>(directive, name, formalArguments,
                                                        scratchTokenBuffer.copy(alloc));
 
-    if (noErrors)
+    if (auto it = macros.find(name.valueText()); it != macros.end()) {
+        if (it->second.builtIn) {
+            addDiag(diag::InvalidMacroName, name.location());
+            bad = true;
+        }
+        else if (!bad && it->second.valid() && !isSameMacro(*result, *it->second.syntax)) {
+            auto& diag = addDiag(diag::RedefiningMacro, name.location());
+            diag << name.valueText();
+            diag.addNote(diag::NotePreviousDefinition, it->second.syntax->name.location());
+        }
+    }
+
+    if (!bad)
         macros[name.valueText()] = result;
     return Trivia(TriviaKind::Directive, result);
 }
@@ -1476,6 +1461,89 @@ Token Preprocessor::MacroParser::expect(TokenKind kind) {
         return Token::createExpected(pp.alloc, pp.diagnostics, buffer[currentIndex], kind, last);
     }
     return next();
+}
+
+static bool isOnSameLine(Token token) {
+    for (auto& t : token.trivia()) {
+        switch (t.kind) {
+            case TriviaKind::LineComment:
+            case TriviaKind::EndOfLine:
+            case TriviaKind::SkippedSyntax:
+            case TriviaKind::SkippedTokens:
+            case TriviaKind::DisabledText:
+                return false;
+            case TriviaKind::Directive:
+                if (t.syntax()->kind != SyntaxKind::MacroUsage)
+                    return false;
+                break;
+            case TriviaKind::BlockComment:
+                if (size_t offset = t.getRawText().find_first_of("\r\n");
+                    offset != std::string_view::npos) {
+                    return false;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return true;
+}
+
+static bool isSameToken(Token left, Token right) {
+    if (left.kind != right.kind || left.rawText() != right.rawText())
+        return false;
+
+    auto lt = left.trivia();
+    auto rt = right.trivia();
+    if (lt.size() != rt.size())
+        return false;
+
+    for (auto lit = lt.begin(), rit = rt.begin(); lit != lt.end(); lit++, rit++) {
+        if (lit->kind != rit->kind || lit->getRawText() != rit->getRawText())
+            return false;
+    }
+    return true;
+}
+
+static bool isSameTokenList(const TokenList& left, const TokenList& right) {
+    if (left.size() != right.size())
+        return false;
+
+    for (auto lit = left.begin(), rit = right.begin(); lit != left.end(); lit++, rit++) {
+        if (!isSameToken(*lit, *rit))
+            return false;
+    }
+    return true;
+}
+
+static bool isSameMacro(const DefineDirectiveSyntax& left, const DefineDirectiveSyntax& right) {
+    // Names are assumed to match already.
+    if (bool(left.formalArguments) != bool(right.formalArguments))
+        return false;
+
+    if (left.formalArguments) {
+        auto& la = left.formalArguments->args;
+        auto& ra = right.formalArguments->args;
+        if (la.size() != ra.size())
+            return false;
+
+        for (auto laIt = la.begin(), raIt = ra.begin(); laIt != la.end(); laIt++, raIt++) {
+            auto leftArg = *laIt;
+            auto rightArg = *raIt;
+            if (!isSameToken(leftArg->name, rightArg->name))
+                return false;
+
+            if (bool(leftArg->defaultValue) != bool(rightArg->defaultValue))
+                return false;
+
+            if (leftArg->defaultValue) {
+                if (!isSameTokenList(leftArg->defaultValue->tokens, rightArg->defaultValue->tokens))
+                    return false;
+            }
+        }
+    }
+
+    return isSameTokenList(left.body, right.body);
 }
 
 } // namespace slang

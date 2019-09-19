@@ -1155,7 +1155,7 @@ TEST_CASE("Undef builtin") {
     CHECK(diagnostics[0].code == diag::UndefineBuiltinDirective);
 }
 
-TEST_CASE("Trying to redefine built-in macro") {
+TEST_CASE("Trying to redefine directive") {
     auto& text = R"(
 `define timescale
 )";
@@ -1163,4 +1163,45 @@ TEST_CASE("Trying to redefine built-in macro") {
     std::string result = preprocess(text);
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::InvalidMacroName);
+}
+
+TEST_CASE("Trying to redefine built-in macro") {
+    auto& text = R"(
+`define __slang__
+)";
+
+    std::string result = preprocess(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::InvalidMacroName);
+}
+
+TEST_CASE("Redefine macro -- same body") {
+    auto& text = R"(
+`define FOO(x, y     = 1+1) asdf bar   baz
+`define FOO(x, y     = 1+1) asdf bar   baz
+)";
+
+    std::string result = preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Redefine macro -- different bodies") {
+    auto& text = R"(
+`define FOO(x, y     = 1+1) asdf bar   baz
+`define FOO(x, y     = 1   +1) asdf bar   baz
+`define FOO(x, y     = 1   +1) asdf bar baz
+`define FOO(x, y     = 1   +1) asdf bzr baz
+`define FOO(x, y     = 1   +1) asdf baz
+`define FOO(x, z, y     = 1   +1) asdf baz
+`define FOO(x, z, y) asdf baz
+`define FOO(x, z, y) asdf /**/ baz
+`define FOO(x, z, b) asdf /**/ baz
+`define FOO asdf /**/ baz
+)";
+
+    std::string result = preprocess(text);
+    REQUIRE(diagnostics.size() == 9);
+    for (int i = 0; i < 9; i++) {
+        CHECK(diagnostics[i].code == diag::RedefiningMacro);
+    }
 }

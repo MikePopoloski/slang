@@ -71,6 +71,7 @@ error SplitBlockCommentInDirective "block comments on the same line as a directi
 error ExpectedIncludeFileName "expected an include file name"
 error ExpectedTimeLiteral "expected time literal"
 warning ignored-macro-paste IgnoredMacroPaste "paste token is pointless because it is adjacent to whitespace"
+warning redef-macro RedefiningMacro "macro '{}' redefined"
 
 subsystem Parser
 error ExpectedIdentifier "expected identifier"
@@ -287,4 +288,4 @@ note NoteAssertionFailed "assertion failed"
 
 group default = { real-underflow real-overflow literal-overflow ignored-macro-paste case-gen-dup
 				  case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
-				  dup-import }
+				  dup-import redef-macro }
