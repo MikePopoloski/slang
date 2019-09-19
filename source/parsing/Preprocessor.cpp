@@ -450,7 +450,9 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 
         bool hasContinuation = false;
         bool done = false;
-        for (const Trivia& trivia : t.trivia()) {
+        auto triviaList = t.trivia();
+
+        for (const Trivia& trivia : triviaList) {
             switch (trivia.kind) {
                 case TriviaKind::EndOfLine:
                     if (hasContinuation)
@@ -469,7 +471,16 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
                     if (size_t offset = trivia.getRawText().find_first_of("\r\n");
                         offset != std::string_view::npos) {
 
-                        SourceLocation loc; // TODO: set location!
+                        // Getting the location here is annoying; we need to walk
+                        // backward from the token's location.
+                        size_t diff = trivia.getRawText().length() - offset;
+                        for (auto it = triviaList.rbegin(); it != triviaList.rend(); it++) {
+                            if (&(*it) == &trivia)
+                                break;
+                            diff += it->getRawText().length();
+                        }
+
+                        SourceLocation loc = t.location() - diff;
                         addDiag(diag::SplitBlockCommentInDirective, loc);
                         done = true;
                     }

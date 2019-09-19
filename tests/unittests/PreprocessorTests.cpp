@@ -680,6 +680,73 @@ foobar
     CHECK(diagnostics[1].code == diag::MacroOpsOutsideDefinition);
 }
 
+TEST_CASE("Macro with line comment") {
+    auto& text = R"(
+`define FOO bar // hello
+asdf
+
+`FOO
+)";
+    auto& expected = R"(
+ // hello
+asdf
+bar
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro with line comment with continuation") {
+    auto& text = R"(
+`define FOO bar // hello \
+asdf
+
+`FOO
+)";
+    auto& expected = R"(
+bar // hello \
+asdf
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro with block comment") {
+    auto& text = R"(
+`define FOO baz /* hello */ bar
+`FOO
+)";
+    auto& expected = R"(
+baz /* hello */ bar
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro with split block comment") {
+    auto& text = R"(
+`define FOO baz /* hel
+lo */ bar
+`FOO
+)";
+    auto& expected = R"(
+ /* hel
+lo */ bar
+baz
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::SplitBlockCommentInDirective);
+}
+
 TEST_CASE("IfDef branch (taken)") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     Token token = lexToken(text);
