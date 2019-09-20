@@ -298,7 +298,7 @@ const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindCon
 const Expression& Expression::bind(const Type& lhs, const ExpressionSyntax& rhs,
                                    SourceLocation location, const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
-    Expression& expr = create(comp, rhs, context);
+    Expression& expr = create(comp, rhs, context, BindFlags::None, &lhs);
 
     const Expression& result = convertAssignment(context, lhs, expr, location);
     checkBindFlags(result, context);
@@ -468,7 +468,8 @@ void to_json(json& j, const Expression& expr) {
 }
 
 Expression& Expression::create(Compilation& compilation, const ExpressionSyntax& syntax,
-                               const BindContext& ctx, bitmask<BindFlags> extraFlags) {
+                               const BindContext& ctx, bitmask<BindFlags> extraFlags,
+                               const Type* assignmentTarget) {
     BindContext context = ctx.resetFlags(extraFlags);
     Expression* result;
     switch (syntax.kind) {
@@ -497,7 +498,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         case SyntaxKind::ParenthesizedExpression:
             result = &create(compilation, *syntax.as<ParenthesizedExpressionSyntax>().expression,
-                             context, extraFlags);
+                             context, extraFlags, assignmentTarget);
             break;
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
@@ -572,7 +573,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         case SyntaxKind::ConditionalExpression:
             result = &ConditionalExpression::fromSyntax(
-                compilation, syntax.as<ConditionalExpressionSyntax>(), context);
+                compilation, syntax.as<ConditionalExpressionSyntax>(), context, assignmentTarget);
             break;
         case SyntaxKind::ConcatenationExpression:
             result = &ConcatenationExpression::fromSyntax(
@@ -1419,15 +1420,16 @@ void BinaryExpression::toJson(json& j) const {
 
 Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
                                               const ConditionalExpressionSyntax& syntax,
-                                              const BindContext& context) {
+                                              const BindContext& context,
+                                              const Type* assignmentTarget) {
     if (syntax.predicate->conditions.size() != 1) {
         context.addDiag(diag::NotYetSupported, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 
-    Expression& pred = selfDetermined(compilation, *syntax.predicate->conditions[0]->expr, context);
-    Expression& left = create(compilation, *syntax.left, context);
-    Expression& right = create(compilation, *syntax.right, context);
+    auto& pred = selfDetermined(compilation, *syntax.predicate->conditions[0]->expr, context);
+    auto& left = create(compilation, *syntax.left, context, BindFlags::None, assignmentTarget);
+    auto& right = create(compilation, *syntax.right, context, BindFlags::None, assignmentTarget);
 
     // Force four-state return type for ambiguous condition case.
     const Type* resultType =
@@ -1503,14 +1505,40 @@ void ConditionalExpression::toJson(json& j) const {
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                                              const BinaryExpressionSyntax& syntax,
                                              const BindContext& context) {
-    Expression& lhs = selfDetermined(compilation, *syntax.left, context);
-    Expression& rhs = create(compilation, *syntax.right, context);
-
+    // TODO: verify that assignment is allowed in this expression context
     auto op = syntax.kind == SyntaxKind::AssignmentExpression
                   ? std::nullopt
                   : std::make_optional(getBinaryOperator(syntax.kind));
 
-    // TODO: verify that assignment is allowed in this expression context
+    // The right hand side of an assignment expression is typically an
+    // "assignment-like context", except if the left hand side does not
+    // have a self-determined type. That can only be true if the lhs is
+    // an assignment pattern without an explicit type.
+    if (syntax.left->kind == SyntaxKind::AssignmentPatternExpression) {
+        auto& pattern = syntax.left->as<AssignmentPatternExpressionSyntax>();
+        if (!pattern.type) {
+            // In this case we have to bind the rhs first to determine the
+            // correct type to use as the context for the lhs.
+            Expression* rhs = &selfDetermined(compilation, *syntax.right, context);
+            if (rhs->bad())
+                return badExpr(compilation, rhs);
+
+            Expression* lhs =
+                &create(compilation, *syntax.left, context, BindFlags::None, rhs->type);
+            selfDetermined(context, lhs);
+
+            auto result = compilation.emplace<AssignmentExpression>(op, *lhs->type, *lhs, *rhs,
+                                                                    syntax.sourceRange());
+            if (rhs->bad())
+                return badExpr(compilation, result);
+
+            return *result;
+        }
+    }
+
+    Expression& lhs = selfDetermined(compilation, *syntax.left, context);
+    Expression& rhs = create(compilation, *syntax.right, context);
+
     auto result =
         compilation.emplace<AssignmentExpression>(op, *lhs.type, lhs, rhs, syntax.sourceRange());
     if (lhs.bad() || rhs.bad())

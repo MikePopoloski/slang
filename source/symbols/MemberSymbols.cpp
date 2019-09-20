@@ -180,6 +180,7 @@ const Expression* PortSymbol::getConnection() const {
                     break;
                 case PortDirection::Out:
                     // TODO: require assignable
+                    // TODO: assignment-like context
                     conn = &Expression::bind(*connSyntax, context);
                     context.requireLValue(*conn.value(), loc);
                     break;

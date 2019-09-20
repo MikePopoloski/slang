@@ -187,7 +187,8 @@ protected:
 
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax,
                               const BindContext& context,
-                              bitmask<BindFlags> extraFlags = BindFlags::None);
+                              bitmask<BindFlags> extraFlags = BindFlags::None,
+                              const Type* assignmentTarget = nullptr);
     static Expression& implicitConversion(const BindContext& context, const Type& type,
                                           Expression& expr);
 
@@ -455,7 +456,7 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const ConditionalExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const BindContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ConditionalOp; }
 
