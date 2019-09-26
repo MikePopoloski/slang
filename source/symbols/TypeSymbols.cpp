@@ -174,6 +174,28 @@ bool Type::isBooleanConvertible() const {
     }
 }
 
+bool Type::isArray() const {
+    const Type& ct = getCanonicalType();
+    switch (ct.kind) {
+        case SymbolKind::PackedArrayType:
+        case SymbolKind::UnpackedArrayType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool Type::isStruct() const {
+    const Type& ct = getCanonicalType();
+    switch (ct.kind) {
+        case SymbolKind::PackedStructType:
+        case SymbolKind::UnpackedStructType:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool Type::isStructUnion() const {
     const Type& ct = getCanonicalType();
     switch (ct.kind) {

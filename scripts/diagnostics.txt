@@ -203,6 +203,17 @@ error NotBooleanConvertible "value of type {} is not convertible to a boolean pr
 error EnumValueSizeMismatch "expression width of {} does not exactly match declared enum type width of {}"
 error InvalidCaseStmtType "invalid expression type {} for {} statement"
 error NoCommonCaseStmtType "case expression of type {} is not comparable to common type {}"
+error AssignmentPatternNoContext "assignment pattern target type cannot be deduced in this context"
+error BadAssignmentPatternType "invalid target type {} for assignment pattern"
+error WrongNumberAssignmentPatterns "assignment pattern for type {} requires {} elements but {} were provided"
+error StructAssignmentPatternKey "expression is not a valid struct assignment pattern member name or type"
+error AssignmentPatternKeyDupDefault "assignment pattern has multiple default keys"
+error AssignmentPatternKeyDupType "assignment pattern has multiple {} keys"
+error AssignmentPatternKeyDupValue "assignment pattern has multiple keys for value {}"
+error AssignmentPatternKeyDupName "assignment pattern has multiple keys for member '{}'"
+error AssignmentPatternDefaultConvert "assignment pattern default of type {} cannot be assigned to member '{}' of type {}"
+error AssignmentPatternNoMember "member '{}' is not covered by any assignment pattern key"
+error AssignmentPatternNestedNoMember "member '{}' has nested elements that are not covered by any assignment pattern key"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

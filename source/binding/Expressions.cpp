@@ -14,6 +14,7 @@
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypeSymbols.h"
+#include "slang/util/StackContainer.h"
 
 namespace {
 
@@ -595,10 +596,14 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &ConversionExpression::fromSyntax(
                 compilation, syntax.as<SignedCastExpressionSyntax>(), context);
             break;
+        case SyntaxKind::AssignmentPatternExpression:
+            result =
+                &bindAssignmentPattern(compilation, syntax.as<AssignmentPatternExpressionSyntax>(),
+                                       context, assignmentTarget);
+            break;
         case SyntaxKind::AcceptOnPropertyExpression:
         case SyntaxKind::AlwaysPropertyExpression:
         case SyntaxKind::AndSequenceExpression:
-        case SyntaxKind::AssignmentPatternExpression:
         case SyntaxKind::BinarySequenceDelayExpression:
         case SyntaxKind::DefaultPatternKeyExpression:
         case SyntaxKind::ElementSelect:
@@ -818,6 +823,83 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
                 compilation, value, selector->as<RangeSelectSyntax>(), fullRange, context);
         default:
             THROW_UNREACHABLE;
+    }
+}
+
+Expression& Expression::bindAssignmentPattern(Compilation& comp,
+                                              const AssignmentPatternExpressionSyntax& syntax,
+                                              const BindContext& context,
+                                              const Type* assignmentTarget) {
+    if (syntax.type)
+        assignmentTarget = &comp.getType(*syntax.type, context.lookupLocation, context.scope);
+
+    if (!assignmentTarget || assignmentTarget->isError()) {
+        if (!assignmentTarget)
+            context.addDiag(diag::AssignmentPatternNoContext, syntax.sourceRange());
+        return badExpr(comp, nullptr);
+    }
+
+    SourceRange range = syntax.sourceRange();
+    const Type& type = *assignmentTarget;
+    const Scope* structScope = nullptr;
+    const Type* elementType = nullptr;
+    bitwidth_t numElements = 0;
+
+    auto& ct = type.getCanonicalType();
+    if (ct.kind == SymbolKind::PackedStructType)
+        structScope = &ct.as<PackedStructType>();
+    else if (ct.kind == SymbolKind::UnpackedStructType)
+        structScope = &ct.as<PackedStructType>();
+    else if (ct.kind == SymbolKind::UnpackedArrayType) {
+        auto& ua = ct.as<UnpackedArrayType>();
+        elementType = &ua.elementType;
+        numElements = ua.range.width();
+    }
+    else if (ct.isIntegral() && ct.kind != SymbolKind::ScalarType) {
+        elementType = ct.isFourState() ? &comp.getLogicType() : &comp.getBitType();
+        numElements = ct.getBitWidth();
+    }
+    else {
+        context.addDiag(diag::BadAssignmentPatternType, range) << type;
+        return badExpr(comp, nullptr);
+    }
+
+    AssignmentPatternSyntax& p = *syntax.pattern;
+    if (structScope) {
+        switch (p.kind) {
+            case SyntaxKind::SimpleAssignmentPattern:
+                return SimpleAssignmentPatternExpression::forStruct(
+                    comp, p.as<SimpleAssignmentPatternSyntax>(), context, type, *structScope,
+                    range);
+            case SyntaxKind::StructuredAssignmentPattern:
+                return StructuredAssignmentPatternExpression::forStruct(
+                    comp, p.as<StructuredAssignmentPatternSyntax>(), context, type, *structScope,
+                    range);
+            case SyntaxKind::ReplicatedAssignmentPattern:
+                return ReplicatedAssignmentPatternExpression::forStruct(
+                    comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *structScope,
+                    range);
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+    else {
+        switch (p.kind) {
+            case SyntaxKind::SimpleAssignmentPattern:
+                return SimpleAssignmentPatternExpression::forArray(
+                    comp, p.as<SimpleAssignmentPatternSyntax>(), context, type, *elementType,
+                    numElements, range);
+            case SyntaxKind::StructuredAssignmentPattern:
+                return StructuredAssignmentPatternExpression::forArray(
+                    comp, p.as<StructuredAssignmentPatternSyntax>(), context, type, *elementType,
+                    numElements, range);
+            case SyntaxKind::ReplicatedAssignmentPattern:
+                return ReplicatedAssignmentPatternExpression::forArray(
+                    comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *elementType,
+                    numElements, range);
+            default:
+                THROW_UNREACHABLE;
+        }
     }
 }
 
@@ -2177,6 +2259,241 @@ Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataT
 
     const Type& type = compilation.getType(syntax, context.lookupLocation, context.scope);
     return *compilation.emplace<DataTypeExpression>(type, syntax.sourceRange());
+}
+
+Expression& SimpleAssignmentPatternExpression::forStruct(
+    Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const BindContext& context,
+    const Type& type, const Scope& structScope, SourceRange sourceRange) {
+
+    SmallVectorSized<const Type*, 8> types;
+    for (auto& field : structScope.membersOfType<FieldSymbol>())
+        types.append(&field.getType());
+
+    if (types.size() != syntax.items.size()) {
+        auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
+        diag << type << types.size() << syntax.items.size();
+        return badExpr(comp, nullptr);
+    }
+
+    bool bad = false;
+    uint32_t index = 0;
+    SmallVectorSized<const Expression*, 8> elems;
+    for (auto item : syntax.items) {
+        auto& expr =
+            Expression::bind(*types[index++], *item, item->getFirstToken().location(), context);
+        elems.append(&expr);
+        bad |= expr.bad();
+    }
+
+    auto result =
+        comp.emplace<SimpleAssignmentPatternExpression>(type, elems.copy(comp), sourceRange);
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
+}
+
+Expression& SimpleAssignmentPatternExpression::forArray(
+    Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const BindContext& context,
+    const Type& type, const Type& elementType, bitwidth_t numElements, SourceRange sourceRange) {
+
+    bool bad = false;
+    SmallVectorSized<const Expression*, 8> elems;
+    for (auto item : syntax.items) {
+        auto& expr =
+            Expression::bind(elementType, *item, item->getFirstToken().location(), context);
+        elems.append(&expr);
+        bad |= expr.bad();
+    }
+
+    if (numElements != syntax.items.size()) {
+        auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
+        diag << type << numElements << elems.size();
+        bad = true;
+    }
+
+    auto result =
+        comp.emplace<SimpleAssignmentPatternExpression>(type, elems.copy(comp), sourceRange);
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
+}
+
+void SimpleAssignmentPatternExpression::toJson(json& j) const {
+    for (auto elem : elements())
+        j["elements"].push_back(*elem);
+}
+
+// TODO:
+/*static*/ bool matchMembers(
+    const BindContext& context, const Scope& structScope,
+    SmallMap<const Symbol*, const Expression*, 8>& memberMap,
+    SmallVector<StructuredAssignmentPatternExpression::MemberSetter>&,
+    span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
+    const Expression* defaultSetter) {
+
+    // Every member of the structure must be covered by one of:
+    // member:value     -- recorded in the memberMap
+    // type:value       -- recorded in typeSetters, last one takes precedence
+    // default:value    -- recorded in defaultSetter, types must be assignable
+    // struct member    -- recursively descend into the struct
+    // array member     -- recursively descend into the array
+    bool bad = false;
+    for (auto& field : structScope.membersOfType<FieldSymbol>()) {
+        // If we already have a setter for this field we don't have to do anything else.
+        if (memberMap.find(&field) != memberMap.end())
+            continue;
+
+        const Type& type = field.getType();
+        if (type.isError()) {
+            bad = true;
+            continue;
+        }
+
+        // Otherwise try all type setters for a match. Last one that matches wins.
+        const Expression* found = nullptr;
+        for (auto& setter : typeSetters) {
+            if (setter.type && type.isMatching(*setter.type))
+                found = setter.expr;
+        }
+
+        if (!found) {
+            if (defaultSetter && type.isMatching(*defaultSetter->type)) {
+                found = defaultSetter;
+            }
+            else if (type.isStruct()) {
+                // TODO:
+            }
+            else if (type.isArray()) {
+                // TODO:
+            }
+            else if (defaultSetter && type.isAssignmentCompatible(*defaultSetter->type)) {
+                found = defaultSetter;
+            }
+            else if (defaultSetter) {
+                auto& diag = context.addDiag(diag::AssignmentPatternDefaultConvert, field.location);
+                diag << defaultSetter->sourceRange;
+                diag << *defaultSetter->type;
+                diag << field.name;
+                diag << type;
+                bad = true;
+                continue;
+            }
+        }
+
+        if (found) {
+            // TODO:
+        }
+        else {
+            // TODO:
+        }
+    }
+
+    return !bad;
+}
+
+Expression& StructuredAssignmentPatternExpression::forStruct(
+    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
+    const Type& type, const Scope& structScope, SourceRange sourceRange) {
+
+    bool bad = false;
+    const Expression* defaultSetter = nullptr;
+    SmallMap<const Symbol*, const Expression*, 8> memberMap;
+    SmallVectorSized<MemberSetter, 4> memberSetters;
+    SmallVectorSized<TypeSetter, 4> typeSetters;
+
+    for (auto item : syntax.items) {
+        if (item->key->kind == SyntaxKind::DefaultPatternKeyExpression) {
+            if (defaultSetter) {
+                context.addDiag(diag::AssignmentPatternKeyDupDefault, item->key->sourceRange());
+                bad = true;
+            }
+            defaultSetter = &selfDetermined(comp, *item->expr, context);
+            bad |= defaultSetter->bad();
+        }
+        else if (item->key->kind == SyntaxKind::IdentifierName) {
+            auto nameToken = item->key->as<IdentifierNameSyntax>().identifier;
+            auto name = nameToken.valueText();
+            const Symbol* member = structScope.find(name);
+            if (member) {
+                auto& expr = bind(member->as<FieldSymbol>().getType(), *item->expr,
+                                  nameToken.location(), context);
+                bad |= expr.bad();
+
+                memberMap.emplace(member, &expr);
+                memberSetters.emplace(MemberSetter{ member, &expr });
+            }
+            else {
+                auto found = context.scope.lookupUnqualifiedName(
+                    name, context.lookupLocation, item->key->sourceRange(), LookupFlags::Type);
+
+                if (found && found->isType()) {
+                    auto& expr =
+                        bind(found->as<Type>(), *item->expr, nameToken.location(), context);
+                    bad |= expr.bad();
+
+                    typeSetters.emplace(TypeSetter{ &found->as<Type>(), &expr });
+                }
+                else {
+                    auto& diag = context.addDiag(diag::UnknownMember, item->key->sourceRange());
+                    diag << name;
+                    diag << type;
+                    bad = true;
+                }
+            }
+        }
+        else if (DataTypeSyntax::isKind(item->key->kind)) {
+            const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
+                                               context.lookupLocation, context.scope);
+            auto& expr = bind(typeKey, *item->expr, item->key->getFirstToken().location(), context);
+
+            typeSetters.emplace(TypeSetter{ &typeKey, &expr });
+            bad |= expr.bad();
+        }
+        else {
+            context.addDiag(diag::StructAssignmentPatternKey, item->key->sourceRange());
+            bad = true;
+        }
+    }
+
+    if (bad)
+        return badExpr(comp, nullptr);
+
+    auto result = comp.emplace<StructuredAssignmentPatternExpression>(
+        type, memberSetters.copy(comp), typeSetters.copy(comp), defaultSetter, sourceRange);
+
+    // TODO:
+    return *result;
+}
+
+Expression& StructuredAssignmentPatternExpression::forArray(
+    Compilation& comp, const StructuredAssignmentPatternSyntax&, const BindContext&, const Type&,
+    const Type&, bitwidth_t, SourceRange) {
+    // TODO:
+    return badExpr(comp, nullptr);
+}
+
+void StructuredAssignmentPatternExpression::toJson(json&) const {
+    // TODO:
+}
+
+Expression& ReplicatedAssignmentPatternExpression::forStruct(
+    Compilation& comp, const ReplicatedAssignmentPatternSyntax&, const BindContext&, const Type&,
+    const Scope&, SourceRange) {
+    // TODO:
+    return badExpr(comp, nullptr);
+}
+
+Expression& ReplicatedAssignmentPatternExpression::forArray(
+    Compilation& comp, const ReplicatedAssignmentPatternSyntax&, const BindContext&, const Type&,
+    const Type&, bitwidth_t, SourceRange) {
+    // TODO:
+    return badExpr(comp, nullptr);
+}
+
+void ReplicatedAssignmentPatternExpression::toJson(json&) const {
+    // TODO:
 }
 
 UnaryOperator getUnaryOperator(SyntaxKind kind) {

@@ -991,4 +991,34 @@ ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {
     return nullptr;
 }
 
+ConstantValue SimpleAssignmentPatternExpression::evalImpl(EvalContext&) const {
+    // TODO:
+    return nullptr;
+}
+
+bool SimpleAssignmentPatternExpression::verifyConstantImpl(EvalContext&) const {
+    // TODO:
+    return true;
+}
+
+ConstantValue StructuredAssignmentPatternExpression::evalImpl(EvalContext&) const {
+    // TODO:
+    return nullptr;
+}
+
+bool StructuredAssignmentPatternExpression::verifyConstantImpl(EvalContext&) const {
+    // TODO:
+    return true;
+}
+
+ConstantValue ReplicatedAssignmentPatternExpression::evalImpl(EvalContext&) const {
+    // TODO:
+    return nullptr;
+}
+
+bool ReplicatedAssignmentPatternExpression::verifyConstantImpl(EvalContext&) const {
+    // TODO:
+    return true;
+}
+
 } // namespace slang

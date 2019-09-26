@@ -94,6 +94,12 @@ public:
     /// a conditional expression.
     bool isBooleanConvertible() const;
 
+    /// Indicates whether this is a packed or unpacked array.
+    bool isArray() const;
+
+    /// Indicates whether this is a packed or unpacked struct.
+    bool isStruct() const;
+
     /// Indicates whether this is any form of structure or union type.
     bool isStructUnion() const;
 

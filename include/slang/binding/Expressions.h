@@ -36,7 +36,10 @@ struct ExpressionSyntax;
     x(MemberAccess) \
     x(Call) \
     x(Conversion) \
-    x(DataType)
+    x(DataType) \
+    x(SimpleAssignmentPattern) \
+    x(StructuredAssignmentPattern) \
+    x(ReplicatedAssignmentPattern)
 ENUM(ExpressionKind, EXPRESSION);
 #undef EXPRESION
 
@@ -200,6 +203,11 @@ protected:
                                             const BindContext& context);
     static Expression& bindSelector(Compilation& compilation, Expression& value,
                                     const ElementSelectSyntax& syntax, const BindContext& context);
+
+    static Expression& bindAssignmentPattern(Compilation& compilation,
+                                             const AssignmentPatternExpressionSyntax& syntax,
+                                             const BindContext& context,
+                                             const Type* assignmentTarget);
 
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 
@@ -749,6 +757,112 @@ public:
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::DataType; }
+};
+
+/// Represents an assignment pattern expression.
+class SimpleAssignmentPatternExpression : public Expression {
+public:
+    SimpleAssignmentPatternExpression(const Type& type, span<const Expression* const> elements,
+                                      SourceRange sourceRange) :
+        Expression(ExpressionKind::SimpleAssignmentPattern, type, sourceRange),
+        elements_(elements) {}
+
+    span<const Expression* const> elements() const { return elements_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const;
+
+    void toJson(json&) const;
+
+    static Expression& forStruct(Compilation& compilation,
+                                 const SimpleAssignmentPatternSyntax& syntax,
+                                 const BindContext& context, const Type& type,
+                                 const Scope& structScope, SourceRange sourceRange);
+
+    static Expression& forArray(Compilation& compilation,
+                                const SimpleAssignmentPatternSyntax& syntax,
+                                const BindContext& context, const Type& type,
+                                const Type& elementType, bitwidth_t numElements,
+                                SourceRange sourceRange);
+
+    static bool isKind(ExpressionKind kind) {
+        return kind == ExpressionKind::SimpleAssignmentPattern;
+    }
+
+private:
+    span<const Expression* const> elements_;
+};
+
+/// Represents an assignment pattern expression.
+class StructuredAssignmentPatternExpression : public Expression {
+public:
+    struct MemberSetter {
+        const Symbol* member = nullptr;
+        const Expression* expr = nullptr;
+    };
+
+    struct TypeSetter {
+        const Type* type = nullptr;
+        const Expression* expr = nullptr;
+    };
+
+    span<const MemberSetter> memberSetters;
+    span<const TypeSetter> typeSetters;
+    const Expression* defaultSetter;
+
+    StructuredAssignmentPatternExpression(const Type& type, span<const MemberSetter> memberSetters,
+                                          span<const TypeSetter> typeSetters,
+                                          const Expression* defaultSetter,
+                                          SourceRange sourceRange) :
+        Expression(ExpressionKind::StructuredAssignmentPattern, type, sourceRange),
+        memberSetters(memberSetters), typeSetters(typeSetters), defaultSetter(defaultSetter) {}
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const;
+
+    void toJson(json&) const;
+
+    static Expression& forStruct(Compilation& compilation,
+                                 const StructuredAssignmentPatternSyntax& syntax,
+                                 const BindContext& context, const Type& type,
+                                 const Scope& structScope, SourceRange sourceRange);
+
+    static Expression& forArray(Compilation& compilation,
+                                const StructuredAssignmentPatternSyntax& syntax,
+                                const BindContext& context, const Type& type,
+                                const Type& elementType, bitwidth_t numElements,
+                                SourceRange sourceRange);
+
+    static bool isKind(ExpressionKind kind) {
+        return kind == ExpressionKind::StructuredAssignmentPattern;
+    }
+};
+
+/// Represents a replicated assignment pattern expression.
+class ReplicatedAssignmentPatternExpression : public Expression {
+public:
+    ReplicatedAssignmentPatternExpression(const Type& type, SourceRange sourceRange) :
+        Expression(ExpressionKind::ReplicatedAssignmentPattern, type, sourceRange) {}
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const;
+
+    void toJson(json&) const;
+
+    static Expression& forStruct(Compilation& compilation,
+                                 const ReplicatedAssignmentPatternSyntax& syntax,
+                                 const BindContext& context, const Type& type,
+                                 const Scope& structScope, SourceRange sourceRange);
+
+    static Expression& forArray(Compilation& compilation,
+                                const ReplicatedAssignmentPatternSyntax& syntax,
+                                const BindContext& context, const Type& type,
+                                const Type& elementType, bitwidth_t numElements,
+                                SourceRange sourceRange);
+
+    static bool isKind(ExpressionKind kind) {
+        return kind == ExpressionKind::ReplicatedAssignmentPattern;
+    }
 };
 
 } // namespace slang
