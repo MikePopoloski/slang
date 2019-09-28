@@ -2261,6 +2261,11 @@ Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataT
     return *compilation.emplace<DataTypeExpression>(type, syntax.sourceRange());
 }
 
+void AssignmentPatternExpressionBase::toJson(json& j) const {
+    for (auto elem : elements())
+        j["elements"].push_back(*elem);
+}
+
 Expression& SimpleAssignmentPatternExpression::forStruct(
     Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Scope& structScope, SourceRange sourceRange) {
@@ -2318,11 +2323,6 @@ Expression& SimpleAssignmentPatternExpression::forArray(
         return badExpr(comp, result);
 
     return *result;
-}
-
-void SimpleAssignmentPatternExpression::toJson(json& j) const {
-    for (auto elem : elements())
-        j["elements"].push_back(*elem);
 }
 
 // TODO:
@@ -2460,8 +2460,11 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
     if (bad)
         return badExpr(comp, nullptr);
 
+    SmallVectorSized<const Expression*, 8> elements;
+
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
-        type, memberSetters.copy(comp), typeSetters.copy(comp), defaultSetter, sourceRange);
+        type, memberSetters.copy(comp), typeSetters.copy(comp), defaultSetter, elements.copy(comp),
+        sourceRange);
 
     // TODO:
     return *result;
@@ -2565,8 +2568,7 @@ Expression& ReplicatedAssignmentPatternExpression::forArray(
 
 void ReplicatedAssignmentPatternExpression::toJson(json& j) const {
     j["count"] = count();
-    for (auto elem : elements())
-        j["elements"].push_back(*elem);
+    AssignmentPatternExpressionBase::toJson(j);
 }
 
 UnaryOperator getUnaryOperator(SyntaxKind kind) {

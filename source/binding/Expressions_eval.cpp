@@ -991,11 +991,10 @@ ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {
     return nullptr;
 }
 
-template<typename T>
-static ConstantValue evalPositionalAssignmentPattern(T& expr, EvalContext& context) {
-    if (expr.type->isIntegral()) {
+ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) const {
+    if (type->isIntegral()) {
         SmallVectorSized<SVInt, 8> values;
-        for (auto elem : expr.elements()) {
+        for (auto elem : elements()) {
             ConstantValue v = elem->eval(context);
             if (!v)
                 return nullptr;
@@ -1007,7 +1006,7 @@ static ConstantValue evalPositionalAssignmentPattern(T& expr, EvalContext& conte
     }
     else {
         std::vector<ConstantValue> values;
-        for (auto elem : expr.elements()) {
+        for (auto elem : elements()) {
             values.emplace_back(elem->eval(context));
             if (values.back().bad())
                 return nullptr;
@@ -1017,33 +1016,7 @@ static ConstantValue evalPositionalAssignmentPattern(T& expr, EvalContext& conte
     }
 }
 
-ConstantValue SimpleAssignmentPatternExpression::evalImpl(EvalContext& context) const {
-    return evalPositionalAssignmentPattern(*this, context);
-}
-
-bool SimpleAssignmentPatternExpression::verifyConstantImpl(EvalContext& context) const {
-    for (auto elem : elements()) {
-        if (!elem->verifyConstant(context))
-            return false;
-    }
-    return true;
-}
-
-ConstantValue StructuredAssignmentPatternExpression::evalImpl(EvalContext&) const {
-    // TODO:
-    return nullptr;
-}
-
-bool StructuredAssignmentPatternExpression::verifyConstantImpl(EvalContext&) const {
-    // TODO:
-    return true;
-}
-
-ConstantValue ReplicatedAssignmentPatternExpression::evalImpl(EvalContext& context) const {
-    return evalPositionalAssignmentPattern(*this, context);
-}
-
-bool ReplicatedAssignmentPatternExpression::verifyConstantImpl(EvalContext& context) const {
+bool AssignmentPatternExpressionBase::verifyConstantImpl(EvalContext& context) const {
     for (auto elem : elements()) {
         if (!elem->verifyConstant(context))
             return false;
