@@ -991,13 +991,36 @@ ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {
     return nullptr;
 }
 
-ConstantValue SimpleAssignmentPatternExpression::evalImpl(EvalContext&) const {
-    // TODO:
-    return nullptr;
+ConstantValue SimpleAssignmentPatternExpression::evalImpl(EvalContext& context) const {
+    if (type->isIntegral()) {
+        SmallVectorSized<SVInt, 8> values;
+        for (auto elem : elements()) {
+            ConstantValue v = elem->eval(context);
+            if (!v)
+                return nullptr;
+
+            values.append(v.integer());
+        }
+
+        return SVInt::concat(values);
+    }
+    else {
+        std::vector<ConstantValue> values;
+        for (auto elem : elements()) {
+            values.emplace_back(elem->eval(context));
+            if (values.back().bad())
+                return nullptr;
+        }
+
+        return values;
+    }
 }
 
-bool SimpleAssignmentPatternExpression::verifyConstantImpl(EvalContext&) const {
-    // TODO:
+bool SimpleAssignmentPatternExpression::verifyConstantImpl(EvalContext& context) const {
+    for (auto elem : elements()) {
+        if (!elem->verifyConstant(context))
+            return false;
+    }
     return true;
 }
 

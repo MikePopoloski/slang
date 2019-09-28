@@ -539,3 +539,40 @@ TEST_CASE("Crazy long hex literal") {
 //    REQUIRE(diags.size() == 1);
 //    CHECK(diags[0].code == diag::LiteralSizeTooLarge);
 //}
+
+TEST_CASE("Simple assignment patterns") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    parameter int foo[2] = '{42, -39};
+    parameter struct { int a; logic [1:0] b; } asdf = '{999, '{1, 0}};
+
+    typedef struct { int a; int b; int c; } type_t;
+    parameter bar = type_t '{1, 2, 3};
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& foo = compilation.getRoot().lookupName<ParameterSymbol>("m.foo");
+    auto elems = foo.getValue().elements();
+    REQUIRE(elems.size() == 2);
+    CHECK(elems[0].integer() == 42);
+    CHECK(elems[1].integer() == -39);
+
+    auto& asdf = compilation.getRoot().lookupName<ParameterSymbol>("m.asdf");
+    elems = asdf.getValue().elements();
+    REQUIRE(elems.size() == 2);
+    CHECK(elems[0].integer() == 999);
+    CHECK(elems[1].integer() == 2);
+
+    auto& bar = compilation.getRoot().lookupName<ParameterSymbol>("m.bar");
+    elems = bar.getValue().elements();
+    REQUIRE(elems.size() == 3);
+    CHECK(elems[0].integer() == 1);
+    CHECK(elems[1].integer() == 2);
+    CHECK(elems[2].integer() == 3);
+}

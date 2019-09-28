@@ -849,7 +849,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
     if (ct.kind == SymbolKind::PackedStructType)
         structScope = &ct.as<PackedStructType>();
     else if (ct.kind == SymbolKind::UnpackedStructType)
-        structScope = &ct.as<PackedStructType>();
+        structScope = &ct.as<UnpackedStructType>();
     else if (ct.kind == SymbolKind::UnpackedArrayType) {
         auto& ua = ct.as<UnpackedArrayType>();
         elementType = &ua.elementType;
