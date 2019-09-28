@@ -841,8 +841,14 @@ public:
 /// Represents a replicated assignment pattern expression.
 class ReplicatedAssignmentPatternExpression : public Expression {
 public:
-    ReplicatedAssignmentPatternExpression(const Type& type, SourceRange sourceRange) :
-        Expression(ExpressionKind::ReplicatedAssignmentPattern, type, sourceRange) {}
+    ReplicatedAssignmentPatternExpression(const Type& type, const Expression& count,
+                                          span<const Expression* const> elements,
+                                          SourceRange sourceRange) :
+        Expression(ExpressionKind::ReplicatedAssignmentPattern, type, sourceRange),
+        count_(&count), elements_(elements) {}
+
+    const Expression& count() const { return *count_; }
+    span<const Expression* const> elements() const { return elements_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const;
@@ -863,6 +869,13 @@ public:
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::ReplicatedAssignmentPattern;
     }
+
+private:
+    static const Expression& bindReplCount(Compilation& comp, const ExpressionSyntax& syntax,
+                                           const BindContext& context, int32_t& count);
+
+    const Expression* count_;
+    span<const Expression* const> elements_;
 };
 
 } // namespace slang

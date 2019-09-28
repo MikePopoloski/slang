@@ -2478,22 +2478,95 @@ void StructuredAssignmentPatternExpression::toJson(json&) const {
     // TODO:
 }
 
+const Expression& ReplicatedAssignmentPatternExpression::bindReplCount(
+    Compilation& comp, const ExpressionSyntax& syntax, const BindContext& context, int32_t& count) {
+
+    const Expression& expr = bind(syntax, context, BindFlags::Constant);
+    optional<int32_t> c = context.evalInteger(expr);
+    if (!context.requireGtZero(c, expr.sourceRange))
+        return badExpr(comp, &expr);
+
+    count = *c;
+    return expr;
+}
+
 Expression& ReplicatedAssignmentPatternExpression::forStruct(
-    Compilation& comp, const ReplicatedAssignmentPatternSyntax&, const BindContext&, const Type&,
-    const Scope&, SourceRange) {
-    // TODO:
-    return badExpr(comp, nullptr);
+    Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const BindContext& context,
+    const Type& type, const Scope& structScope, SourceRange sourceRange) {
+
+    int32_t count;
+    auto& countExpr = bindReplCount(comp, *syntax.countExpr, context, count);
+    if (countExpr.bad())
+        return badExpr(comp, nullptr);
+
+    SmallVectorSized<const Type*, 8> types;
+    for (auto& field : structScope.membersOfType<FieldSymbol>())
+        types.append(&field.getType());
+
+    if (types.size() != syntax.items.size() * count) {
+        auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
+        diag << type << types.size() << syntax.items.size() * count;
+        return badExpr(comp, nullptr);
+    }
+
+    bool bad = false;
+    uint32_t index = 0;
+    SmallVectorSized<const Expression*, 8> elems;
+    for (int32_t i = 0; i < count; i++) {
+        for (auto item : syntax.items) {
+            auto& expr =
+                Expression::bind(*types[index++], *item, item->getFirstToken().location(), context);
+            elems.append(&expr);
+            bad |= expr.bad();
+        }
+    }
+
+    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(
+        type, countExpr, elems.copy(comp), sourceRange);
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
 }
 
 Expression& ReplicatedAssignmentPatternExpression::forArray(
-    Compilation& comp, const ReplicatedAssignmentPatternSyntax&, const BindContext&, const Type&,
-    const Type&, bitwidth_t, SourceRange) {
-    // TODO:
-    return badExpr(comp, nullptr);
+    Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const BindContext& context,
+    const Type& type, const Type& elementType, bitwidth_t numElements, SourceRange sourceRange) {
+
+    int32_t count;
+    auto& countExpr = bindReplCount(comp, *syntax.countExpr, context, count);
+    if (countExpr.bad())
+        return badExpr(comp, nullptr);
+
+    bool bad = false;
+    SmallVectorSized<const Expression*, 8> elems;
+    for (int32_t i = 0; i < count; i++) {
+        for (auto item : syntax.items) {
+            auto& expr =
+                Expression::bind(elementType, *item, item->getFirstToken().location(), context);
+            elems.append(&expr);
+            bad |= expr.bad();
+        }
+    }
+
+    if (numElements != elems.size()) {
+        auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
+        diag << type << numElements << elems.size();
+        bad = true;
+    }
+
+    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(
+        type, countExpr, elems.copy(comp), sourceRange);
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
 }
 
-void ReplicatedAssignmentPatternExpression::toJson(json&) const {
-    // TODO:
+void ReplicatedAssignmentPatternExpression::toJson(json& j) const {
+    j["count"] = count();
+    for (auto elem : elements())
+        j["elements"].push_back(*elem);
 }
 
 UnaryOperator getUnaryOperator(SyntaxKind kind) {

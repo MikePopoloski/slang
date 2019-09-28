@@ -576,3 +576,41 @@ endmodule
     CHECK(elems[1].integer() == 2);
     CHECK(elems[2].integer() == 3);
 }
+
+TEST_CASE("Replicated assignment patterns") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    parameter int foo[2] = '{2 {42}};
+    parameter struct { int a; logic [1:0] b; } asdf = '{2 {2}};
+
+    typedef struct { int a; shortint b; integer c; longint d; } type_t;
+    parameter bar = type_t '{2 {1, 2}};
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& foo = compilation.getRoot().lookupName<ParameterSymbol>("m.foo");
+    auto elems = foo.getValue().elements();
+    REQUIRE(elems.size() == 2);
+    CHECK(elems[0].integer() == 42);
+    CHECK(elems[1].integer() == 42);
+
+    auto& asdf = compilation.getRoot().lookupName<ParameterSymbol>("m.asdf");
+    elems = asdf.getValue().elements();
+    REQUIRE(elems.size() == 2);
+    CHECK(elems[0].integer() == 2);
+    CHECK(elems[1].integer() == 2);
+
+    auto& bar = compilation.getRoot().lookupName<ParameterSymbol>("m.bar");
+    elems = bar.getValue().elements();
+    REQUIRE(elems.size() == 4);
+    CHECK(elems[0].integer() == 1);
+    CHECK(elems[1].integer() == 2);
+    CHECK(elems[2].integer() == 1);
+    CHECK(elems[3].integer() == 2);
+}

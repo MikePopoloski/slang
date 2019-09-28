@@ -991,10 +991,11 @@ ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {
     return nullptr;
 }
 
-ConstantValue SimpleAssignmentPatternExpression::evalImpl(EvalContext& context) const {
-    if (type->isIntegral()) {
+template<typename T>
+static ConstantValue evalPositionalAssignmentPattern(T& expr, EvalContext& context) {
+    if (expr.type->isIntegral()) {
         SmallVectorSized<SVInt, 8> values;
-        for (auto elem : elements()) {
+        for (auto elem : expr.elements()) {
             ConstantValue v = elem->eval(context);
             if (!v)
                 return nullptr;
@@ -1006,7 +1007,7 @@ ConstantValue SimpleAssignmentPatternExpression::evalImpl(EvalContext& context) 
     }
     else {
         std::vector<ConstantValue> values;
-        for (auto elem : elements()) {
+        for (auto elem : expr.elements()) {
             values.emplace_back(elem->eval(context));
             if (values.back().bad())
                 return nullptr;
@@ -1014,6 +1015,10 @@ ConstantValue SimpleAssignmentPatternExpression::evalImpl(EvalContext& context) 
 
         return values;
     }
+}
+
+ConstantValue SimpleAssignmentPatternExpression::evalImpl(EvalContext& context) const {
+    return evalPositionalAssignmentPattern(*this, context);
 }
 
 bool SimpleAssignmentPatternExpression::verifyConstantImpl(EvalContext& context) const {
@@ -1034,13 +1039,15 @@ bool StructuredAssignmentPatternExpression::verifyConstantImpl(EvalContext&) con
     return true;
 }
 
-ConstantValue ReplicatedAssignmentPatternExpression::evalImpl(EvalContext&) const {
-    // TODO:
-    return nullptr;
+ConstantValue ReplicatedAssignmentPatternExpression::evalImpl(EvalContext& context) const {
+    return evalPositionalAssignmentPattern(*this, context);
 }
 
-bool ReplicatedAssignmentPatternExpression::verifyConstantImpl(EvalContext&) const {
-    // TODO:
+bool ReplicatedAssignmentPatternExpression::verifyConstantImpl(EvalContext& context) const {
+    for (auto elem : elements()) {
+        if (!elem->verifyConstant(context))
+            return false;
+    }
     return true;
 }
 
