@@ -453,15 +453,25 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
     switch (peek().kind) {
         case TokenKind::Colon:
             buffer.append(&parseAssignmentPatternItem(firstExpr));
-            parseList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
-                buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
-                diag::ExpectedAssignmentKey,
-                [this] { return &parseAssignmentPatternItem(nullptr); });
+            if (peek(TokenKind::Comma)) {
+                buffer.append(consume());
+
+                parseList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
+                    buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace,
+                    RequireItems::False, diag::ExpectedAssignmentKey,
+                    [this] { return &parseAssignmentPatternItem(nullptr); });
+            }
+            else {
+                closeBrace = expect(TokenKind::CloseBrace);
+            }
+
             pattern =
                 &factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
+
         case TokenKind::OpenBrace: {
             auto innerOpenBrace = consume();
+
             parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::True,
                 diag::ExpectedExpression, [this] { return &parseExpression(); });
@@ -473,13 +483,16 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
         case TokenKind::Comma:
             buffer.append(firstExpr);
             buffer.append(consume());
+
             parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::True,
                 diag::ExpectedExpression, [this] { return &parseExpression(); });
             pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
+
         default:
             buffer.append(firstExpr);
+
             parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
                 diag::ExpectedExpression, [this] { return &parseExpression(); });
@@ -491,8 +504,12 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
 }
 
 AssignmentPatternItemSyntax& Parser::parseAssignmentPatternItem(ExpressionSyntax* key) {
-    if (!key)
-        key = &parseExpression();
+    if (!key) {
+        if (peek(TokenKind::DefaultKeyword))
+            key = &factory.literalExpression(SyntaxKind::DefaultPatternKeyExpression, consume());
+        else
+            key = &parseExpression();
+    }
 
     auto colon = expect(TokenKind::Colon);
     return factory.assignmentPatternItem(*key, colon, parseExpression());
