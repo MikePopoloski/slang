@@ -614,3 +614,27 @@ endmodule
     CHECK(elems[2].integer() == 1);
     CHECK(elems[3].integer() == 2);
 }
+
+TEST_CASE("Structured assignment patterns") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    typedef struct { int a; shortint b; integer c; longint d; logic [1:0] e; } type_t;
+    parameter type_t bar = '{ c:9, default:2, int:42, int:37, d:-1 };
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& bar = compilation.getRoot().lookupName<ParameterSymbol>("m.bar");
+    auto elems = bar.getValue().elements();
+    REQUIRE(elems.size() == 5);
+    CHECK(elems[0].integer() == 37);
+    CHECK(elems[1].integer() == 2);
+    CHECK(elems[2].integer() == 9);
+    CHECK(elems[3].integer() == -1);
+    CHECK(elems[4].integer() == 2);
+}

@@ -211,7 +211,6 @@ error AssignmentPatternKeyDupDefault "assignment pattern has multiple default ke
 error AssignmentPatternKeyDupType "assignment pattern has multiple {} keys"
 error AssignmentPatternKeyDupValue "assignment pattern has multiple keys for value {}"
 error AssignmentPatternKeyDupName "assignment pattern has multiple keys for member '{}'"
-error AssignmentPatternDefaultConvert "assignment pattern default of type {} cannot be assigned to member '{}' of type {}"
 error AssignmentPatternNoMember "member '{}' is not covered by any assignment pattern key"
 error AssignmentPatternNestedNoMember "member '{}' has nested elements that are not covered by any assignment pattern key"
 

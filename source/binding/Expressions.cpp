@@ -2325,13 +2325,17 @@ Expression& SimpleAssignmentPatternExpression::forArray(
     return *result;
 }
 
-// TODO:
-/*static*/ bool matchMembers(
-    const BindContext& context, const Scope& structScope,
-    SmallMap<const Symbol*, const Expression*, 8>& memberMap,
-    SmallVector<StructuredAssignmentPatternExpression::MemberSetter>&,
-    span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
-    const Expression* defaultSetter) {
+static bool matchMembers(const BindContext& context, const Scope& structScope,
+                         SourceRange sourceRange,
+                         SmallMap<const Symbol*, const Expression*, 8>& memberMap,
+                         span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
+                         const Expression* defaultSetter, SmallVector<const Expression*>& results) {
+
+    const ExpressionSyntax* defaultSyntax = nullptr;
+    if (defaultSetter) {
+        defaultSyntax = defaultSetter->syntax;
+        ASSERT(defaultSyntax);
+    }
 
     // Every member of the structure must be covered by one of:
     // member:value     -- recorded in the memberMap
@@ -2342,11 +2346,13 @@ Expression& SimpleAssignmentPatternExpression::forArray(
     bool bad = false;
     for (auto& field : structScope.membersOfType<FieldSymbol>()) {
         // If we already have a setter for this field we don't have to do anything else.
-        if (memberMap.find(&field) != memberMap.end())
+        if (auto it = memberMap.find(&field); it != memberMap.end()) {
+            results.append(it->second);
             continue;
+        }
 
         const Type& type = field.getType();
-        if (type.isError()) {
+        if (type.isError() || field.name.empty()) {
             bad = true;
             continue;
         }
@@ -2358,39 +2364,52 @@ Expression& SimpleAssignmentPatternExpression::forArray(
                 found = setter.expr;
         }
 
-        if (!found) {
-            if (defaultSetter && type.isMatching(*defaultSetter->type)) {
-                found = defaultSetter;
+        if (found) {
+            results.append(found);
+            continue;
+        }
+
+        // Otherwise, see if we have a default value that can be applied.
+        // The default applies if:
+        // - The field type matches exactly
+        // - The field type is a simple bit vector and the type is assignment compatible
+        if (defaultSetter) {
+            if (type.isMatching(*defaultSetter->type)) {
+                results.append(defaultSetter);
+                continue;
             }
-            else if (type.isStruct()) {
-                // TODO:
-            }
-            else if (type.isArray()) {
-                // TODO:
-            }
-            else if (defaultSetter && type.isAssignmentCompatible(*defaultSetter->type)) {
-                found = defaultSetter;
-            }
-            else if (defaultSetter) {
-                auto& diag = context.addDiag(diag::AssignmentPatternDefaultConvert, field.location);
-                diag << defaultSetter->sourceRange;
-                diag << *defaultSetter->type;
-                diag << field.name;
-                diag << type;
-                bad = true;
+
+            if (type.isSimpleBitVector() && type.isAssignmentCompatible(*defaultSetter->type)) {
+                results.append(&Expression::bind(
+                    type, *defaultSyntax, defaultSyntax->getFirstToken().location(), context));
                 continue;
             }
         }
 
-        if (found) {
+        // Otherwise, we check first if the type is a struct or array, in which
+        // case we descend recursively into its members before continuing on with the default.
+        if (type.isStruct()) {
             // TODO:
+            continue;
         }
-        else {
+        if (type.isArray()) {
             // TODO:
+            continue;
         }
+
+        // Finally, if we have a default then it must now be assignment compatible.
+        if (defaultSetter) {
+            results.append(&Expression::bind(type, *defaultSyntax,
+                                             defaultSyntax->getFirstToken().location(), context));
+            continue;
+        }
+
+        // Otherwise there's no setter for this member, which is an error.
+        context.addDiag(diag::AssignmentPatternNoMember, sourceRange) << field.name;
+        bad = true;
     }
 
-    return !bad;
+    return bad;
 }
 
 Expression& StructuredAssignmentPatternExpression::forStruct(
@@ -2415,6 +2434,11 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
         else if (item->key->kind == SyntaxKind::IdentifierName) {
             auto nameToken = item->key->as<IdentifierNameSyntax>().identifier;
             auto name = nameToken.valueText();
+            if (name.empty()) {
+                bad = true;
+                continue;
+            }
+
             const Symbol* member = structScope.find(name);
             if (member) {
                 auto& expr = bind(member->as<FieldSymbol>().getType(), *item->expr,
@@ -2457,16 +2481,17 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
         }
     }
 
-    if (bad)
-        return badExpr(comp, nullptr);
-
     SmallVectorSized<const Expression*, 8> elements;
+    bad |= matchMembers(context, structScope, syntax.sourceRange(), memberMap, typeSetters,
+                        defaultSetter, elements);
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
         type, memberSetters.copy(comp), typeSetters.copy(comp), defaultSetter, elements.copy(comp),
         sourceRange);
 
-    // TODO:
+    if (bad)
+        return badExpr(comp, result);
+
     return *result;
 }
 
