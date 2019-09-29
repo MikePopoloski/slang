@@ -75,6 +75,7 @@ public:
     std::vector<Arg> args;
     std::vector<SourceRange> ranges;
     std::vector<Diagnostic> notes;
+    optional<size_t> coalesceCount;
 
     /// The specific kind of diagnostic that was issued.
     DiagCode code;

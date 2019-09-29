@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/TextDiagnosticClient.h"
 
+#include "slang/symbols/Symbol.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {
@@ -23,13 +25,27 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
         }
     }
 
+    // Print out the hierarchy where the diagnostic occurred, if we know it.
+    auto& od = diag.originalDiagnostic;
+    if (od.coalesceCount && od.symbol) {
+        if (od.coalesceCount == 1)
+            buffer.append("  in instance: "sv);
+        else
+            buffer.format("  in {} instances, e.g. ", *od.coalesceCount);
+
+        std::string str;
+        od.symbol->getHierarchicalPath(str);
+        buffer.append(str);
+        buffer.append("\n"sv);
+    }
+
     // Get all highlight ranges mapped into the reported location of the diagnostic.
     SmallVectorSized<SourceRange, 8> mappedRanges;
     engine->mapSourceRanges(diag.location, diag.ranges, mappedRanges);
 
     // Write the diagnostic.
     formatDiag(diag.location, mappedRanges, getSeverityString(diag.severity), diag.formattedMessage,
-               engine->getOptionName(diag.originalDiagnostic.code));
+        engine->getOptionName(diag.originalDiagnostic.code));
 
     // Write out macro expansions, if we have any, in reverse order.
     for (auto it = diag.expansionLocs.rbegin(); it != diag.expansionLocs.rend(); it++) {
@@ -118,7 +134,7 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange
         highlight.erase(highlight.find_last_not_of(' ') + 1);
         buffer.append(highlight);
     }
-    buffer.append("\n");
+    buffer.append("\n"sv);
 }
 
 } // namespace slang

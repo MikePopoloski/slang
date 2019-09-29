@@ -543,7 +543,7 @@ module m6(I.bar bar); endmodule
         auto& port = def->getPortMap().at(portName)->as<InterfacePortSymbol>(); \
         REQUIRE(port.interfaceDef);                                             \
         CHECK(port.interfaceDef->name == (ifaceName));                          \
-        if (*modportName) {                                                      \
+        if (*modportName) {                                                     \
             REQUIRE(port.modport);                                              \
             CHECK(port.modport->name == (modportName));                         \
         }                                                                       \
@@ -1024,4 +1024,39 @@ endmodule
     compilation.addSyntaxTree(tree2);
     compilation.addSyntaxTree(tree3);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Module/instance paths in errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module foo;
+    if (1) begin : gen
+        bar b();
+    end
+endmodule
+
+module bar;
+    baz #(1) z1();
+    baz #(2) z2();
+    baz #(3) z3();
+endmodule
+
+module baz #(parameter int i)();
+    if (i == 1 || i == 3) begin
+        always asdf = 1;
+    end
+endmodule
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+  in 2 instances, e.g. foo.gen.b.z3
+source:16:16: error: use of undeclared identifier 'asdf'
+        always asdf = 1;
+               ^~~~
+)");
 }

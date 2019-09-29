@@ -50,6 +50,27 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
     void handle(const ExplicitImportSymbol& symbol) { symbol.importedSymbol(); }
     void handle(const WildcardImportSymbol& symbol) { symbol.getPackage(); }
     void handle(const ContinuousAssignSymbol& symbol) { symbol.getAssignment(); }
+
+    void handle(const DefinitionSymbol& symbol) {
+        auto guard = finally([saved = inDef, this] { inDef = saved; });
+        inDef = true;
+        visitDefault(symbol);
+    }
+
+    void handle(const ModuleInstanceSymbol& symbol) {
+        if (!inDef)
+            instanceCount[&symbol.definition]++;
+        visitDefault(symbol);
+    }
+
+    void handle(const InterfaceInstanceSymbol& symbol) {
+        if (!inDef)
+            instanceCount[&symbol.definition]++;
+        visitDefault(symbol);
+    }
+
+    bool inDef = false;
+    flat_hash_map<const Symbol*, size_t> instanceCount;
 };
 
 } // namespace
@@ -425,22 +446,46 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         return false;
     };
 
+    auto getInstanceOrDef = [](const Symbol* symbol) {
+        while (symbol && symbol->kind != SymbolKind::Definition &&
+               !InstanceSymbol::isKind(symbol->kind)) {
+            auto scope = symbol->getParentScope();
+            symbol = scope ? &scope->asSymbol() : nullptr;
+        }
+        return symbol;
+    };
+
+    auto isInsideDef = [](const Symbol* symbol) {
+        while (true) {
+            if (symbol->kind == SymbolKind::Definition)
+                return true;
+
+            auto scope = symbol->getParentScope();
+            if (!scope)
+                return false;
+
+            symbol = &scope->asSymbol();
+        }
+    };
+
     for (auto& diag : diags) {
         // Filter out diagnostics that came from inside an uninstantiated generate block.
         ASSERT(diag.symbol);
         if (isSuppressed(diag.symbol))
             continue;
 
-        // Coallesce diagnostics that are at the same source location and have the same code.
+        auto inst = getInstanceOrDef(diag.symbol);
+
+        // Coalesce diagnostics that are at the same source location and have the same code.
         if (auto it = diagMap.find({ diag.code, diag.location }); it != diagMap.end()) {
             it->second.second.push_back(&diag);
-            if (diag.symbol->kind == SymbolKind::Definition)
+            if (inst && inst->kind == SymbolKind::Definition)
                 it->second.first = &diag;
         }
         else {
             std::pair<const Diagnostic*, std::vector<const Diagnostic*>> newEntry;
             newEntry.second.push_back(&diag);
-            if (diag.symbol->kind == SymbolKind::Definition)
+            if (inst && inst->kind == SymbolKind::Definition)
                 newEntry.first = &diag;
 
             diagMap.emplace(std::make_tuple(diag.code, diag.location), std::move(newEntry));
@@ -449,19 +494,49 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
     Diagnostics results;
     for (auto& pair : diagMap) {
+        // Figure out which diagnostic from this group to issue.
+        // If any of them are inside a definition (as opposed to one or more instances), issue
+        // the one for the definition without embellishment. Otherwise, pick the first instance
+        // and include a note about where the diagnostic occurred in the hierarchy.
         auto& [definition, diagList] = pair.second;
-        if (diagList.size() == 1)
-            results.append(*diagList.front());
+        if (definition) {
+            results.append(*definition);
+            continue;
+        }
+
+        // Try to find a diagnostic in an instance that isn't at the top-level
+        // (printing such a path seems silly).
+        const Diagnostic* found = nullptr;
+        const Symbol* inst = nullptr;
+        size_t count = 0;
+
+        for (auto d : diagList) {
+            auto symbol = getInstanceOrDef(d->symbol);
+            if (!symbol || !symbol->getParentScope())
+                continue;
+
+            // Don't count the diagnostic if it's inside a definition instead of an instance.
+            if (isInsideDef(symbol))
+                continue;
+
+            count++;
+            auto& parent = symbol->getParentScope()->asSymbol();
+            if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
+                found = d;
+                inst = symbol;
+            }
+        }
+
+        // If the diagnostic is present in all instances, don't bother
+        // providing specific instantiation info.
+        if (found && visitor.instanceCount[&inst->as<InstanceSymbol>().definition] > count) {
+            Diagnostic diag = *found;
+            diag.symbol = getInstanceOrDef(inst);
+            diag.coalesceCount = count;
+            results.emplace(std::move(diag));
+        }
         else {
-            // If we get here there are multiple duplicate diagnostics issued. Pick the one that
-            // came from a Definition, if there is one. Otherwise just pick whatever the first one
-            // is.
-            // TODO: in the future this could print out the hierarchical paths or parameter values
-            // involves with the instantiations to provide more insight as to what caused the error.
-            if (definition)
-                results.append(*definition);
-            else
-                results.append(*diagList.front());
+            results.append(*diagList.front());
         }
     }
 
