@@ -817,18 +817,26 @@ public:
         const Expression* expr = nullptr;
     };
 
+    struct IndexSetter {
+        const Expression* index = nullptr;
+        const Expression* expr = nullptr;
+    };
+
     span<const MemberSetter> memberSetters;
     span<const TypeSetter> typeSetters;
+    span<const IndexSetter> indexSetters;
     const Expression* defaultSetter;
 
     StructuredAssignmentPatternExpression(const Type& type, span<const MemberSetter> memberSetters,
                                           span<const TypeSetter> typeSetters,
+                                          span<const IndexSetter> indexSetters,
                                           const Expression* defaultSetter,
                                           span<const Expression* const> elements,
                                           SourceRange sourceRange) :
         AssignmentPatternExpressionBase(ExpressionKind::StructuredAssignmentPattern, type, elements,
                                         sourceRange),
-        memberSetters(memberSetters), typeSetters(typeSetters), defaultSetter(defaultSetter) {}
+        memberSetters(memberSetters), typeSetters(typeSetters), indexSetters(indexSetters),
+        defaultSetter(defaultSetter) {}
 
     void toJson(json& j) const;
 
@@ -840,8 +848,7 @@ public:
     static Expression& forArray(Compilation& compilation,
                                 const StructuredAssignmentPatternSyntax& syntax,
                                 const BindContext& context, const Type& type,
-                                const Type& elementType, bitwidth_t numElements,
-                                SourceRange sourceRange);
+                                const Type& elementType, SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::StructuredAssignmentPattern;

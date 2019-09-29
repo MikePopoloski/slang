@@ -892,7 +892,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
             case SyntaxKind::StructuredAssignmentPattern:
                 return StructuredAssignmentPatternExpression::forArray(
                     comp, p.as<StructuredAssignmentPatternSyntax>(), context, type, *elementType,
-                    numElements, range);
+                    range);
             case SyntaxKind::ReplicatedAssignmentPattern:
                 return ReplicatedAssignmentPatternExpression::forArray(
                     comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *elementType,
@@ -2412,6 +2412,96 @@ static bool matchMembers(const BindContext& context, const Scope& structScope,
     return bad;
 }
 
+static bool matchElements(const BindContext& context, const Type& elementType,
+                          ConstantRange arrayRange, SourceRange sourceRange,
+                          SmallMap<int32_t, const Expression*, 8>& indexMap,
+                          span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
+                          const Expression* defaultSetter,
+                          SmallVector<const Expression*>& results) {
+    if (elementType.isError())
+        return true;
+
+    const ExpressionSyntax* defaultSyntax = nullptr;
+    if (defaultSetter) {
+        defaultSyntax = defaultSetter->syntax;
+        ASSERT(defaultSyntax);
+    }
+
+    // Every element in the array must be covered by one of:
+    // index:value      -- recorded in the indexMap
+    // type:value       -- recorded in typeSetters, last one takes precedence
+    // default:value    -- recorded in defaultSetter, types must be assignable
+    // struct element   -- recursively descend into the struct
+    // array element    -- recursively descend into the array
+
+    auto determineVal = [&]() -> const Expression* {
+        // Otherwise try all type setters for a match. Last one that matches wins.
+        const Expression* found = nullptr;
+        for (auto& setter : typeSetters) {
+            if (setter.type && elementType.isMatching(*setter.type))
+                found = setter.expr;
+        }
+
+        if (found)
+            return found;
+
+        // Otherwise, see if we have a default value that can be applied.
+        // The default applies if:
+        // - The element type matches exactly
+        // - The element type is a simple bit vector and the type is assignment compatible
+        if (defaultSetter) {
+            if (elementType.isMatching(*defaultSetter->type))
+                return defaultSetter;
+
+            if (elementType.isSimpleBitVector() &&
+                elementType.isAssignmentCompatible(*defaultSetter->type)) {
+                return &Expression::bind(elementType, *defaultSyntax,
+                                         defaultSyntax->getFirstToken().location(), context);
+            }
+        }
+
+        // Otherwise, we check first if the type is a struct or array, in which
+        // case we descend recursively into its members before continuing on with the default.
+        if (elementType.isStruct()) {
+            // TODO:
+            return nullptr;
+        }
+        if (elementType.isArray()) {
+            // TODO:
+            return nullptr;
+        }
+
+        // Finally, if we have a default then it must now be assignment compatible.
+        if (defaultSetter) {
+            return &Expression::bind(elementType, *defaultSyntax,
+                                     defaultSyntax->getFirstToken().location(), context);
+        }
+
+        // Otherwise there's no setter for this element, which is an error.
+        context.addDiag(diag::AssignmentPatternMissingElements, sourceRange);
+        return nullptr;
+    };
+
+    optional<const Expression*> cachedVal;
+    for (int32_t i = arrayRange.lower(); i <= arrayRange.upper(); i++) {
+        // If we already have a setter for this index we don't have to do anything else.
+        if (auto it = indexMap.find(i); it != indexMap.end()) {
+            results.append(it->second);
+            continue;
+        }
+
+        if (!cachedVal) {
+            cachedVal = determineVal();
+            if (!cachedVal.value())
+                return true;
+        }
+
+        results.append(*cachedVal);
+    }
+
+    return false;
+}
+
 Expression& StructuredAssignmentPatternExpression::forStruct(
     Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Scope& structScope, SourceRange sourceRange) {
@@ -2470,7 +2560,8 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
         else if (DataTypeSyntax::isKind(item->key->kind)) {
             const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
                                                context.lookupLocation, context.scope);
-            auto& expr = bind(typeKey, *item->expr, item->key->getFirstToken().location(), context);
+            auto& expr =
+                bind(typeKey, *item->expr, item->expr->getFirstToken().location(), context);
 
             typeSetters.emplace(TypeSetter{ &typeKey, &expr });
             bad |= expr.bad();
@@ -2486,8 +2577,8 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                         defaultSetter, elements);
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
-        type, memberSetters.copy(comp), typeSetters.copy(comp), defaultSetter, elements.copy(comp),
-        sourceRange);
+        type, memberSetters.copy(comp), typeSetters.copy(comp), span<const IndexSetter>{},
+        defaultSetter, elements.copy(comp), sourceRange);
 
     if (bad)
         return badExpr(comp, result);
@@ -2496,10 +2587,72 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
 }
 
 Expression& StructuredAssignmentPatternExpression::forArray(
-    Compilation& comp, const StructuredAssignmentPatternSyntax&, const BindContext&, const Type&,
-    const Type&, bitwidth_t, SourceRange) {
-    // TODO:
-    return badExpr(comp, nullptr);
+    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
+    const Type& type, const Type& elementType, SourceRange sourceRange) {
+
+    bool bad = false;
+    const Expression* defaultSetter = nullptr;
+    SmallMap<int32_t, const Expression*, 8> indexMap;
+    SmallVectorSized<IndexSetter, 4> indexSetters;
+    SmallVectorSized<TypeSetter, 4> typeSetters;
+
+    for (auto item : syntax.items) {
+        if (item->key->kind == SyntaxKind::DefaultPatternKeyExpression) {
+            if (defaultSetter) {
+                context.addDiag(diag::AssignmentPatternKeyDupDefault, item->key->sourceRange());
+                bad = true;
+            }
+            defaultSetter = &selfDetermined(comp, *item->expr, context);
+            bad |= defaultSetter->bad();
+        }
+        else if (DataTypeSyntax::isKind(item->key->kind)) {
+            const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
+                                               context.lookupLocation, context.scope);
+            auto& expr =
+                bind(typeKey, *item->expr, item->expr->getFirstToken().location(), context);
+
+            typeSetters.emplace(TypeSetter{ &typeKey, &expr });
+            bad |= expr.bad();
+        }
+        else {
+            // TODO: check for type name here
+
+            auto& indexExpr = Expression::bind(*item->key, context, BindFlags::Constant);
+            optional<int32_t> index = context.evalInteger(indexExpr);
+            if (!index) {
+                bad = true;
+                continue;
+            }
+
+            if (!type.getArrayRange().containsPoint(*index)) {
+                auto& diag = context.addDiag(diag::IndexValueInvalid, indexExpr.sourceRange);
+                diag << *index;
+                diag << type;
+                bad = true;
+                continue;
+            }
+
+            auto& expr =
+                bind(elementType, *item->expr, item->expr->getFirstToken().location(), context);
+            bad |= expr.bad();
+
+            indexMap.emplace(*index, &expr);
+            indexSetters.append(IndexSetter{ &indexExpr, &expr });
+        }
+    }
+
+    SmallVectorSized<const Expression*, 8> elements;
+    bad |= matchElements(context, elementType, type.getArrayRange(), syntax.sourceRange(), indexMap,
+                         typeSetters, defaultSetter, elements);
+
+    auto result = comp.emplace<StructuredAssignmentPatternExpression>(
+        type, span<const MemberSetter>{}, typeSetters.copy(comp), indexSetters.copy(comp),
+        defaultSetter, elements.copy(comp), sourceRange);
+
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
 }
 
 void StructuredAssignmentPatternExpression::toJson(json&) const {

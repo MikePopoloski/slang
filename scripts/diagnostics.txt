@@ -208,11 +208,11 @@ error BadAssignmentPatternType "invalid target type {} for assignment pattern"
 error WrongNumberAssignmentPatterns "assignment pattern for type {} requires {} elements but {} were provided"
 error StructAssignmentPatternKey "expression is not a valid struct assignment pattern member name or type"
 error AssignmentPatternKeyDupDefault "assignment pattern has multiple default keys"
-error AssignmentPatternKeyDupType "assignment pattern has multiple {} keys"
 error AssignmentPatternKeyDupValue "assignment pattern has multiple keys for value {}"
 error AssignmentPatternKeyDupName "assignment pattern has multiple keys for member '{}'"
 error AssignmentPatternNoMember "member '{}' is not covered by any assignment pattern key"
 error AssignmentPatternNestedNoMember "member '{}' has nested elements that are not covered by any assignment pattern key"
+error AssignmentPatternMissingElements "not all elements of array are covered by an assignment pattern key"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

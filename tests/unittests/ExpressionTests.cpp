@@ -622,6 +622,9 @@ module m;
     typedef struct { int a; shortint b; integer c; longint d; logic [1:0] e; } type_t;
     parameter type_t bar = '{ c:9, default:2, int:42, int:37, d:-1 };
 
+    parameter int index = 1 * 2 - 1;
+    parameter int foo[3] = '{ default:0, int:1, index - 1 + 1:-42 };
+
 endmodule
 )");
 
@@ -637,4 +640,11 @@ endmodule
     CHECK(elems[2].integer() == 9);
     CHECK(elems[3].integer() == -1);
     CHECK(elems[4].integer() == 2);
+
+    auto& foo = compilation.getRoot().lookupName<ParameterSymbol>("m.foo");
+    elems = foo.getValue().elements();
+    REQUIRE(elems.size() == 3);
+    CHECK(elems[0].integer() == 1);
+    CHECK(elems[1].integer() == -42);
+    CHECK(elems[2].integer() == 1);
 }
