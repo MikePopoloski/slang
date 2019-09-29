@@ -413,11 +413,25 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                   std::pair<const Diagnostic*, std::vector<const Diagnostic*>>>
         diagMap;
 
+    auto isSuppressed = [](const Symbol* symbol) {
+        while (symbol) {
+            if (symbol->kind == SymbolKind::GenerateBlock &&
+                !symbol->as<GenerateBlockSymbol>().isInstantiated)
+                return true;
+
+            auto scope = symbol->getParentScope();
+            symbol = scope ? &scope->asSymbol() : nullptr;
+        }
+        return false;
+    };
+
     for (auto& diag : diags) {
+        // Filter out diagnostics that came from inside an uninstantiated generate block.
         ASSERT(diag.symbol);
-        if (diag.isSuppressed())
+        if (isSuppressed(diag.symbol))
             continue;
 
+        // Coallesce diagnostics that are at the same source location and have the same code.
         if (auto it = diagMap.find({ diag.code, diag.location }); it != diagMap.end()) {
             it->second.second.push_back(&diag);
             if (diag.symbol->kind == SymbolKind::Definition)

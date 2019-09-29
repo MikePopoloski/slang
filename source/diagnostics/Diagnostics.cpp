@@ -31,19 +31,6 @@ Diagnostic& Diagnostic::addNote(const Diagnostic& diag) {
     return notes.back();
 }
 
-bool Diagnostic::isSuppressed() const {
-    const Symbol* sym = symbol;
-    while (sym) {
-        if (sym->kind == SymbolKind::GenerateBlock &&
-            !sym->as<GenerateBlockSymbol>().isInstantiated)
-            return true;
-
-        auto scope = sym->getParentScope();
-        sym = scope ? &scope->asSymbol() : nullptr;
-    }
-    return false;
-}
-
 Diagnostic& operator<<(Diagnostic& diag, const std::string& arg) {
     diag.args.emplace_back(arg);
     return diag;
