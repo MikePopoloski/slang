@@ -297,3 +297,24 @@ endmodule
     CHECK(diags[2].code == diag::ExpressionNotConstant);
     CHECK(diags[3].code == diag::ExpressionNotConstant);
 }
+
+TEST_CASE("Local statement parameter") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    always begin: asdf
+        localparam i = 1;
+        parameter j = 2;
+        logic [i+3:j] foo = '1;
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& foo = compilation.getRoot().lookupName<VariableSymbol>("m.asdf.foo");
+    CHECK(foo.getType().getArrayRange() == ConstantRange{4, 2});
+}

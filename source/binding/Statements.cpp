@@ -355,10 +355,10 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
             case SyntaxKind::ForwardTypedefDeclaration:
             case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
             case SyntaxKind::PackageImportDeclaration:
+            case SyntaxKind::ParameterDeclarationStatement:
                 scope.addMembers(*item);
                 break;
             case SyntaxKind::PortDeclaration:
-            case SyntaxKind::ParameterDeclarationStatement:
             case SyntaxKind::LetDeclaration:
             case SyntaxKind::NetTypeDeclaration:
                 scope.addDiag(diag::NotYetSupported, item->sourceRange());
