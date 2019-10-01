@@ -9,6 +9,7 @@
 #include "BuiltInSubroutines.h"
 #include <nlohmann/json.hpp>
 
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
@@ -349,6 +350,7 @@ void Compilation::addAttributes(const Symbol& symbol,
         return;
 
     BindContext context(*emptyUnit, LookupLocation::max, BindFlags::Constant);
+    SmallSet<string_view, 4> nameMap;
 
     auto& attrs = symbolAttributes[&symbol];
     for (auto inst : syntax) {
@@ -370,6 +372,9 @@ void Compilation::addAttributes(const Symbol& symbol,
                                                  *allocConstant(std::move(value)));
             attr->setSyntax(*spec);
             attrs.push_back(attr);
+
+            if (!nameMap.insert(name).second)
+                diags.add(diag::DuplicateAttribute, attr->location) << name;
         }
     }
 }
