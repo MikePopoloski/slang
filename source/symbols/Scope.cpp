@@ -281,6 +281,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::EmptyMember:
+            addMember(EmptyMemberSymbol::fromSyntax(compilation, syntax.as<EmptyMemberSyntax>()));
             break;
         case SyntaxKind::TypedefDeclaration:
             addMember(

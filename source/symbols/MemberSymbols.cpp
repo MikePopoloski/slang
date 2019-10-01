@@ -15,6 +15,14 @@
 
 namespace slang {
 
+EmptyMemberSymbol& EmptyMemberSymbol::fromSyntax(Compilation& compilation,
+                                                 const EmptyMemberSyntax& syntax) {
+    auto result = compilation.emplace<EmptyMemberSymbol>(syntax.semi.location());
+    compilation.addAttributes(*result, syntax.attributes);
+
+    return *result;
+}
+
 const PackageSymbol* ExplicitImportSymbol::package() const {
     importedSymbol();
     return package_;
@@ -582,6 +590,7 @@ void GenvarSymbol::fromSyntax(Compilation& compilation, const GenvarDeclarationS
 
         auto genvar = compilation.emplace<GenvarSymbol>(name.valueText(), name.location());
         genvar->setSyntax(*id);
+        compilation.addAttributes(*genvar, syntax.attributes);
         results.append(genvar);
     }
 }

@@ -22,6 +22,7 @@ class Type;
     x(CompilationUnit) \
     x(DeferredMember) \
     x(TransparentMember) \
+    x(EmptyMember) \
     x(PredefinedIntegerType) \
     x(ScalarType) \
     x(FloatingType) \

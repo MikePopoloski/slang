@@ -20,6 +20,20 @@ class InterfaceInstanceSymbol;
 class ModportSymbol;
 class PackageSymbol;
 
+/// Represents an empty member, i.e. a standalone semicolon.
+/// This exists as a symbol mostly to provide a place to attach attributes.
+class EmptyMemberSymbol : public Symbol {
+public:
+    explicit EmptyMemberSymbol(SourceLocation location) :
+        Symbol(SymbolKind::EmptyMember, "", location) {}
+
+    void toJson(json&) const {}
+
+    static EmptyMemberSymbol& fromSyntax(Compilation& compilation, const EmptyMemberSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::EmptyMember; }
+};
+
 /// A class that wraps a hoisted transparent type member (such as an enum value)
 /// into a parent scope. Whenever lookup finds one of these symbols, it will be
 /// unwrapped into the underlying symbol instead.

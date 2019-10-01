@@ -52,7 +52,7 @@ public:
                 // because then it would be a non-ansi port list.
                 auto& header = syntax.header->as<VariablePortHeaderSyntax>();
                 if (!header.direction && !header.varKeyword && typeSyntaxEmpty(*header.dataType))
-                    return addInherited(decl);
+                    return addInherited(decl, syntax.attributes);
 
                 // It's possible that this is actually an interface port if the data type is just an
                 // identifier. The only way to know is to do a lookup and see what comes back.
@@ -87,7 +87,7 @@ public:
                         }
                     }
 
-                    return add(decl, definition, nullptr);
+                    return add(decl, definition, nullptr, syntax.attributes);
                 }
 
                 // Rules from [23.2.2.3]:
@@ -106,12 +106,12 @@ public:
                 }
 
                 // TODO: user-defined nettypes
-                return add(decl, direction, *header.dataType, netType);
+                return add(decl, direction, *header.dataType, netType, syntax.attributes);
             }
             case SyntaxKind::NetPortHeader: {
                 auto& header = syntax.header->as<NetPortHeaderSyntax>();
                 return add(decl, getDirection(header.direction), *header.dataType,
-                           &compilation.getNetType(header.netType.kind));
+                           &compilation.getNetType(header.netType.kind), syntax.attributes);
             }
             case SyntaxKind::InterfacePortHeader: {
                 // TODO: handle generic interface header
@@ -136,11 +136,11 @@ public:
                         definition->getModportOrError(member.valueText(), scope, member.range());
                 }
 
-                return add(decl, definition, modport);
+                return add(decl, definition, modport, syntax.attributes);
             }
             case SyntaxKind::InterconnectPortHeader:
                 scope.addDiag(diag::NotYetSupported, syntax.header->sourceRange());
-                return addInherited(decl);
+                return addInherited(decl, syntax.attributes);
             default:
                 THROW_UNREACHABLE;
         }
@@ -153,6 +153,7 @@ public:
         port->direction = getDirection(syntax.direction);
         port->setSyntax(syntax);
         port->setDeclaredType(UnsetType);
+        compilation.addAttributes(*port, syntax.attributes);
 
         if (syntax.expr)
             port->setInitializerSyntax(*syntax.expr, syntax.expr->getFirstToken().location());
@@ -170,22 +171,24 @@ private:
         return token ? SemanticFacts::getPortDirection(token.kind) : lastDirection;
     }
 
-    Symbol* addInherited(const DeclaratorSyntax& decl) {
+    Symbol* addInherited(const DeclaratorSyntax& decl,
+                         span<const AttributeInstanceSyntax* const> attrs) {
         if (lastInterface) {
             // TODO: inherit modport
-            return add(decl, lastInterface, nullptr);
+            return add(decl, lastInterface, nullptr, attrs);
         }
 
-        return add(decl, lastDirection, *lastType, lastNetType);
+        return add(decl, lastDirection, *lastType, lastNetType, attrs);
     }
 
     Symbol* add(const DeclaratorSyntax& decl, PortDirection direction, const DataTypeSyntax& type,
-                const NetType* netType) {
+                const NetType* netType, span<const AttributeInstanceSyntax* const> attrs) {
 
         auto port = compilation.emplace<PortSymbol>(decl.name.valueText(), decl.name.location());
         port->direction = direction;
         port->setSyntax(decl);
         port->setDeclaredType(type, decl.dimensions);
+        compilation.addAttributes(*port, attrs);
 
         if (port->direction == PortDirection::InOut && !netType)
             scope.addDiag(diag::InOutPortCannotBeVariable, port->location) << port->name;
@@ -208,6 +211,7 @@ private:
         // TODO: handle initializers
         symbol->setSyntax(decl);
         symbol->getDeclaredType()->copyTypeFrom(*port->getDeclaredType());
+        compilation.addAttributes(*symbol, attrs);
         port->internalSymbol = symbol;
 
         // Remember the properties of this port in case the next port wants to inherit from it.
@@ -220,13 +224,14 @@ private:
     }
 
     Symbol* add(const DeclaratorSyntax& decl, const DefinitionSymbol* iface,
-                const ModportSymbol* modport) {
+                const ModportSymbol* modport, span<const AttributeInstanceSyntax* const> attrs) {
         auto port =
             compilation.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
 
         port->interfaceDef = iface;
         port->modport = modport;
         port->setSyntax(decl);
+        compilation.addAttributes(*port, attrs);
 
         lastDirection = PortDirection::InOut;
         lastType = &UnsetType;
@@ -260,7 +265,9 @@ public:
         for (auto port : portDeclarations) {
             for (auto decl : port->declarators) {
                 if (auto name = decl->name; !name.isMissing()) {
-                    auto result = portInfos.emplace(name.valueText(), PortInfo{ decl });
+                    auto result =
+                        portInfos.emplace(name.valueText(), PortInfo{ decl, port->attributes });
+
                     if (result.second) {
                         handleIODecl(*port->header, result.first->second);
                     }
@@ -300,6 +307,7 @@ public:
                 port->direction = info->direction;
                 port->internalSymbol = info->internalSymbol;
                 port->getDeclaredType()->copyTypeFrom(*info->internalSymbol->getDeclaredType());
+                compilation.addAttributes(*port, info->attrs);
                 return port;
             }
             case SyntaxKind::PortConcatenation:
@@ -316,11 +324,13 @@ private:
 
     struct PortInfo {
         const DeclaratorSyntax* syntax = nullptr;
+        span<const AttributeInstanceSyntax* const> attrs;
         const Symbol* internalSymbol = nullptr;
         PortDirection direction = PortDirection::In;
         bool used = false;
 
-        PortInfo(const DeclaratorSyntax* syntax) : syntax(syntax) {}
+        PortInfo(const DeclaratorSyntax* syntax, span<const AttributeInstanceSyntax* const> attrs) :
+            syntax(syntax), attrs(attrs) {}
     };
     SmallMap<string_view, PortInfo, 8> portInfos;
 
@@ -357,6 +367,7 @@ private:
                     auto variable = compilation.emplace<VariableSymbol>(name, declLoc);
                     variable->setSyntax(decl);
                     variable->setDeclaredType(*varHeader.dataType, decl.dimensions);
+                    compilation.addAttributes(*variable, info.attrs);
                     info.internalSymbol = variable;
                 }
                 else if (auto symbol = scope.find(name);
@@ -375,6 +386,7 @@ private:
                                                               getDefaultNetType(scope, declLoc));
                     net->setSyntax(decl);
                     net->setDeclaredType(*varHeader.dataType, decl.dimensions);
+                    compilation.addAttributes(*net, info.attrs);
                     info.internalSymbol = net;
                 }
 
@@ -399,6 +411,7 @@ private:
                     name, declLoc, compilation.getNetType(netHeader.netType.kind));
                 net->setSyntax(decl);
                 net->setDeclaredType(*netHeader.dataType, decl.dimensions);
+                compilation.addAttributes(*net, info.attrs);
                 info.internalSymbol = net;
                 break;
             }

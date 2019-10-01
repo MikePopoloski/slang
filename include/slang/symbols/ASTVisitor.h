@@ -64,6 +64,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         SYMBOL(CompilationUnit);
         SYMBOL(Attribute);
         SYMBOL(TransparentMember);
+        SYMBOL(EmptyMember);
         SYMBOL(EnumValue);
         SYMBOL(ForwardingTypedef);
         SYMBOL(Parameter);
