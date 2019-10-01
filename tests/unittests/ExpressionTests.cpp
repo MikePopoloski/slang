@@ -648,3 +648,33 @@ endmodule
     CHECK(elems[1].integer() == -42);
     CHECK(elems[2].integer() == 1);
 }
+
+TEST_CASE("Utility system functions") {
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
+
+    auto declare = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        scope.getCompilation().addSyntaxTree(tree);
+        scope.addMembers(tree->root());
+    };
+
+    auto typeof = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        BindContext context(scope, LookupLocation::max);
+        return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
+    };
+
+    // [20.3] Simulation time functions
+    CHECK(typeof("$time") == "time");
+    CHECK(typeof("$stime") == "bit[31:0]");
+    CHECK(typeof("$realtime") == "realtime");
+
+    // [20.15] Probabilistic distribution functions
+    CHECK(typeof("$random") == "int");
+
+    // [18.13] Constrained pseudo-random value generation
+    CHECK(typeof("$urandom") == "bit[31:0]");
+
+    NO_COMPILATION_ERRORS;
+}

@@ -165,6 +165,15 @@ const Type& FatalTask::checkArguments(const BindContext& context, const Args& ar
     return comp.getVoidType();
 }
 
+const Type& NonConstantFunction::checkArguments(const BindContext& context, const Args& args,
+                                                SourceRange range) const {
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, false, args, range, 0, 0))
+        return comp.getErrorType();
+
+    return returnType;
+}
+
 ConstantValue Clog2Function::eval(EvalContext& context, const Args& args) const {
     ConstantValue v = args[0]->eval(context);
     if (!v)
@@ -303,8 +312,8 @@ MAKE_REDUCTION_METHOD(Xor, "xor", ^=)
 
 #undef MAKE_REDUCTION_METHOD
 
-void registerAll(Compilation& compilation) {
-#define REGISTER(name) compilation.addSystemSubroutine(std::make_unique<name##Function>())
+void registerAll(Compilation& c) {
+#define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(Clog2);
     REGISTER(Bits);
     REGISTER(Low);
@@ -316,7 +325,7 @@ void registerAll(Compilation& compilation) {
     REGISTER(SFormat);
 #undef REGISTER
 
-#define REGISTER(type, name) compilation.addSystemSubroutine(std::make_unique<type>(name))
+#define REGISTER(type, name) c.addSystemSubroutine(std::make_unique<type>(name))
     REGISTER(DisplayTask, "$display");
     REGISTER(DisplayTask, "$displayb");
     REGISTER(DisplayTask, "$displayo");
@@ -348,8 +357,22 @@ void registerAll(Compilation& compilation) {
     REGISTER(SimpleControlTask, "$monitoroff");
 #undef REGISTER
 
+#define REGISTER(name, returnType) \
+    c.addSystemSubroutine(std::make_unique<NonConstantFunction>(name, returnType))
+
+    auto& uintType = c.getType(32, IntegralFlags::Unsigned);
+    REGISTER("$time", c.getTimeType());
+    REGISTER("$stime", uintType);
+    REGISTER("$realtime", c.getRealTimeType());
+
+    // TODO: optional argument to random functions
+    REGISTER("$random", c.getIntType());
+    REGISTER("$urandom", uintType);
+
+#undef REGISTER
+
 #define REGISTER(kind, name, ...) \
-    compilation.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
+    c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "first", true);
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
     REGISTER(SymbolKind::EnumType, EnumNum, );

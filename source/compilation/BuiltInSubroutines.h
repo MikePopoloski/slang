@@ -82,6 +82,20 @@ public:
                                SourceRange range) const final;
 };
 
+class NonConstantFunction : public SystemSubroutine {
+public:
+    NonConstantFunction(const std::string& name, const Type& returnType) :
+        SystemSubroutine(name, SubroutineKind::Function), returnType(returnType) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
+    ConstantValue eval(EvalContext&, const Args&) const final { return nullptr; }
+    bool verifyConstant(EvalContext&, const Args&) const final { return false; }
+
+private:
+    const Type& returnType;
+};
+
 class EnumFirstLastMethod : public SystemSubroutine {
 public:
     EnumFirstLastMethod(const std::string& name, bool first);
