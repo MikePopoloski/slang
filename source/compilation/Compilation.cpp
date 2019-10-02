@@ -354,6 +354,11 @@ void Compilation::addAttributes(const Statement& stmt,
     addAttributes(static_cast<const void*>(&stmt), syntax);
 }
 
+void Compilation::addAttributes(const Expression& expr,
+                                span<const AttributeInstanceSyntax* const> syntax) {
+    addAttributes(static_cast<const void*>(&expr), syntax);
+}
+
 void Compilation::addAttributes(const void* ptr,
                                 span<const AttributeInstanceSyntax* const> syntax) {
     if (syntax.empty())
@@ -394,6 +399,10 @@ span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symb
 
 span<const AttributeSymbol* const> Compilation::getAttributes(const Statement& stmt) const {
     return getAttributes(static_cast<const void*>(&stmt));
+}
+
+span<const AttributeSymbol* const> Compilation::getAttributes(const Expression& expr) const {
+    return getAttributes(static_cast<const void*>(&expr));
 }
 
 span<const AttributeSymbol* const> Compilation::getAttributes(const void* ptr) const {

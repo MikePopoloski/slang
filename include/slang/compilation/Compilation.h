@@ -89,11 +89,17 @@ public:
     /// Sets the attributes associated with the given statement.
     void addAttributes(const Statement& stmt, span<const AttributeInstanceSyntax* const> syntax);
 
+    /// Sets the attributes associated with the given expression.
+    void addAttributes(const Expression& expr, span<const AttributeInstanceSyntax* const> syntax);
+
     /// Gets the attributes associated with the given symbol.
     span<const AttributeSymbol* const> getAttributes(const Symbol& symbol) const;
 
     /// Gets the attributes associated with the given statement.
     span<const AttributeSymbol* const> getAttributes(const Statement& stmt) const;
+
+    /// Gets the attributes associated with the given expression.
+    span<const AttributeSymbol* const> getAttributes(const Expression& expr) const;
 
     /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
     /// This is mostly for testing and API purposes; normal compilation never does this.

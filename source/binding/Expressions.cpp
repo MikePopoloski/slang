@@ -1153,6 +1153,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     if (operand.bad())
         return badExpr(compilation, result);
 
+    compilation.addAttributes(*result, syntax.attributes);
+
     bool good;
     switch (syntax.kind) {
         case SyntaxKind::UnaryPlusExpression:
@@ -1232,6 +1234,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
+    compilation.addAttributes(*result, syntax.attributes);
     return *result;
 }
 
@@ -1447,6 +1450,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
+    compilation.addAttributes(*result, syntax.attributes);
     return *result;
 }
 
@@ -1567,6 +1571,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
+    compilation.addAttributes(*result, syntax.attributes);
     return *result;
 }
 
@@ -2101,6 +2106,10 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         if (arg->bad())
             return badExpr(compilation, result);
     }
+
+    if (syntax)
+        compilation.addAttributes(*result, syntax->attributes);
+
     return *result;
 }
 
@@ -2160,6 +2169,9 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
         if (arg->bad())
             return badExpr(compilation, expr);
     }
+
+    if (syntax)
+        compilation.addAttributes(*expr, syntax->attributes);
 
     return *expr;
 }
