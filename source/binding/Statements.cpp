@@ -180,6 +180,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
     }
 
     result->syntax = &syntax;
+    comp.addAttributes(*result, syntax.attributes);
     return *result;
 }
 

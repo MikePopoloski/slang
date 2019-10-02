@@ -86,8 +86,14 @@ public:
     /// Sets the attributes associated with the given symbol.
     void addAttributes(const Symbol& symbol, span<const AttributeInstanceSyntax* const> syntax);
 
+    /// Sets the attributes associated with the given statement.
+    void addAttributes(const Statement& stmt, span<const AttributeInstanceSyntax* const> syntax);
+
     /// Gets the attributes associated with the given symbol.
     span<const AttributeSymbol* const> getAttributes(const Symbol& symbol) const;
+
+    /// Gets the attributes associated with the given statement.
+    span<const AttributeSymbol* const> getAttributes(const Statement& stmt) const;
 
     /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
     /// This is mostly for testing and API purposes; normal compilation never does this.
@@ -184,6 +190,9 @@ private:
 
     bool isFinalizing() const { return finalizing; }
 
+    void addAttributes(const void* ptr, span<const AttributeInstanceSyntax* const> syntax);
+    span<const AttributeSymbol* const> getAttributes(const void* ptr) const;
+
     Diagnostics diags;
     std::unique_ptr<RootSymbol> root;
     CompilationUnitSymbol* emptyUnit = nullptr;
@@ -245,8 +254,8 @@ private:
     // Map from syntax nodes to parse-time metadata about time scale directives.
     flat_hash_map<const ModuleDeclarationSyntax*, TimeScale> timeScaleDirectiveMap;
 
-    // Map from symbols to their associated attributes.
-    flat_hash_map<const Symbol*, std::vector<const AttributeSymbol*>> symbolAttributes;
+    // Map from pointers (to symbols, statements, expressions) to their associated attributes.
+    flat_hash_map<const void*, std::vector<const AttributeSymbol*>> attributeMap;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg Two of the entries are not valid and will be nullptr (!fourstate & reg).

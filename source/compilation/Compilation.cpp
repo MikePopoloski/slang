@@ -346,16 +346,25 @@ const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind, string
 
 void Compilation::addAttributes(const Symbol& symbol,
                                 span<const AttributeInstanceSyntax* const> syntax) {
+    addAttributes(static_cast<const void*>(&symbol), syntax);
+}
+
+void Compilation::addAttributes(const Statement& stmt,
+                                span<const AttributeInstanceSyntax* const> syntax) {
+    addAttributes(static_cast<const void*>(&stmt), syntax);
+}
+
+void Compilation::addAttributes(const void* ptr,
+                                span<const AttributeInstanceSyntax* const> syntax) {
     if (syntax.empty())
         return;
 
     BindContext context(*emptyUnit, LookupLocation::max, BindFlags::Constant);
     SmallSet<string_view, 4> nameMap;
 
-    auto& attrs = symbolAttributes[&symbol];
+    auto& attrs = attributeMap[ptr];
     for (auto inst : syntax) {
         for (auto spec : inst->specs) {
-            // TODO: warn about duplicates
             auto name = spec->name.valueText();
             if (name.empty())
                 continue;
@@ -380,8 +389,16 @@ void Compilation::addAttributes(const Symbol& symbol,
 }
 
 span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symbol) const {
-    auto it = symbolAttributes.find(&symbol);
-    if (it == symbolAttributes.end())
+    return getAttributes(static_cast<const void*>(&symbol));
+}
+
+span<const AttributeSymbol* const> Compilation::getAttributes(const Statement& stmt) const {
+    return getAttributes(static_cast<const void*>(&stmt));
+}
+
+span<const AttributeSymbol* const> Compilation::getAttributes(const void* ptr) const {
+    auto it = attributeMap.find(ptr);
+    if (it == attributeMap.end())
         return {};
 
     return it->second;

@@ -546,6 +546,8 @@ SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilatio
     result->binder.setItems(*result, syntax.items);
     result->setSyntax(syntax);
 
+    compilation.addAttributes(*result, syntax.attributes);
+
     return *result;
 }
 
@@ -568,6 +570,8 @@ SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilatio
     result->binder.setSyntax(*result, syntax);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
+
+    compilation.addAttributes(*result, syntax.attributes);
 
     return *result;
 }
