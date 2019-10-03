@@ -112,6 +112,10 @@ public:
     /// script scope won't affect which modules are determined to be top-level instances.
     CompilationUnitSymbol& createScriptScope();
 
+    /// Gets a reference to an empty compilation unit, which can be useful for binding
+    /// in cases where you don't care about the context.
+    const CompilationUnitSymbol& getEmptyUnit() const { return *emptyUnit; }
+
     /// Gets the source manager associated with the compilation. If no syntax trees have
     /// been added to the design this method will return null.
     const SourceManager* getSourceManager() const { return sourceManager; }
@@ -261,7 +265,7 @@ private:
     flat_hash_map<const ModuleDeclarationSyntax*, TimeScale> timeScaleDirectiveMap;
 
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
-    flat_hash_map<const void*, std::vector<const AttributeSymbol*>> attributeMap;
+    flat_hash_map<const void*, span<const AttributeSymbol* const>> attributeMap;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg Two of the entries are not valid and will be nullptr (!fourstate & reg).

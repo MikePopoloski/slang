@@ -484,11 +484,14 @@ public:
             }
 
             if (isOrdered) {
-                orderedConns.append(conn->as<OrderedPortConnectionSyntax>().expr);
+                orderedConns.append(&conn->as<OrderedPortConnectionSyntax>());
             }
             else if (conn->kind == SyntaxKind::WildcardPortConnection) {
-                if (!std::exchange(hasWildcard, true))
+                if (!std::exchange(hasWildcard, true)) {
                     wildcardRange = conn->sourceRange();
+                    wildcardAttrs =
+                        AttributeSymbol::fromSyntax(scope.getCompilation(), conn->attributes);
+                }
                 else {
                     auto& diag =
                         scope.addDiag(diag::DuplicateWildcardPortConnection, conn->sourceRange());
@@ -527,7 +530,7 @@ public:
             if (orderedIndex >= orderedConns.size()) {
                 orderedIndex++;
                 if (port.defaultValue)
-                    port.setConnection(port.defaultValue);
+                    port.setConnection(port.defaultValue, {});
                 else if (port.name.empty()) {
                     if (!warnedAboutUnnamed) {
                         auto& diag = scope.addDiag(diag::UnconnectedUnnamedPort, instance.location);
@@ -542,11 +545,12 @@ public:
                 return;
             }
 
-            const ExpressionSyntax* expr = orderedConns[orderedIndex++];
-            if (expr)
-                port.setConnection(*expr);
+            const OrderedPortConnectionSyntax& opc = *orderedConns[orderedIndex++];
+            auto attrs = AttributeSymbol::fromSyntax(scope.getCompilation(), opc.attributes);
+            if (opc.expr)
+                port.setConnection(*opc.expr, attrs);
             else
-                port.setConnection(port.defaultValue);
+                port.setConnection(port.defaultValue, attrs);
 
             return;
         }
@@ -564,12 +568,12 @@ public:
         auto it = namedConns.find(port.name);
         if (it == namedConns.end()) {
             if (hasWildcard) {
-                implicitNamedPort(port, wildcardRange, true);
+                implicitNamedPort(port, wildcardAttrs, wildcardRange, true);
                 return;
             }
 
             if (port.defaultValue)
-                port.setConnection(port.defaultValue);
+                port.setConnection(port.defaultValue, {});
             else
                 scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
             return;
@@ -581,16 +585,17 @@ public:
         const NamedPortConnectionSyntax& conn = *it->second.first;
         it->second.second = true;
 
+        auto attrs = AttributeSymbol::fromSyntax(scope.getCompilation(), conn.attributes);
         if (conn.openParen) {
             // For explicit named port connections, having an empty expression means no connection,
             // so we never take the default value here.
             if (conn.expr)
-                port.setConnection(*conn.expr);
+                port.setConnection(*conn.expr, attrs);
 
             return;
         }
 
-        implicitNamedPort(port, conn.name.range(), false);
+        implicitNamedPort(port, attrs, conn.name.range(), false);
     }
 
     void setConnection(InterfacePortSymbol& port) {
@@ -605,8 +610,12 @@ public:
 
         if (usingOrdered) {
             const ExpressionSyntax* expr = nullptr;
-            if (orderedIndex < orderedConns.size())
-                expr = orderedConns[orderedIndex];
+            if (orderedIndex < orderedConns.size()) {
+                const OrderedPortConnectionSyntax& opc = *orderedConns[orderedIndex];
+                expr = opc.expr;
+                port.connectionAttributes =
+                    AttributeSymbol::fromSyntax(scope.getCompilation(), opc.attributes);
+            }
 
             orderedIndex++;
             if (!expr) {
@@ -620,6 +629,7 @@ public:
 
         auto it = namedConns.find(port.name);
         if (it == namedConns.end()) {
+            port.connectionAttributes = wildcardAttrs;
             if (hasWildcard)
                 setImplicitInterface(port, wildcardRange);
             else
@@ -632,6 +642,9 @@ public:
         // - An implicit connection, where we have to look up the name ourselves
         const NamedPortConnectionSyntax& conn = *it->second.first;
         it->second.second = true;
+
+        port.connectionAttributes =
+            AttributeSymbol::fromSyntax(scope.getCompilation(), conn.attributes);
 
         if (conn.openParen) {
             // For explicit named port connections, having an empty expression means no connection.
@@ -670,7 +683,8 @@ public:
     }
 
 private:
-    void implicitNamedPort(PortSymbol& port, SourceRange range, bool isWildcard) {
+    void implicitNamedPort(PortSymbol& port, span<const AttributeSymbol* const> attributes,
+                           SourceRange range, bool isWildcard) {
         // An implicit named port connection is semantically equivalent to `.port(port)` except:
         // - Can't create implicit net declarations this way
         // - Port types need to be equivalent, not just assignment compatible
@@ -683,7 +697,7 @@ private:
             // If this is a wildcard connection, we're allowed to use the port's default value,
             // if it has one.
             if (isWildcard && port.defaultValue)
-                port.setConnection(port.defaultValue);
+                port.setConnection(port.defaultValue, attributes);
             else
                 scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
             return;
@@ -706,8 +720,9 @@ private:
         }
 
         // TODO: direction of assignment
-        port.setConnection(&Expression::convertAssignment(BindContext(scope, LookupLocation::max),
-                                                          portType, *expr, range.start()));
+        auto& assign = Expression::convertAssignment(BindContext(scope, LookupLocation::max),
+                                                     portType, *expr, range.start());
+        port.setConnection(&assign, attributes);
     }
 
     void setInterfaceExpr(InterfacePortSymbol& port, const ExpressionSyntax& syntax) {
@@ -830,8 +845,9 @@ private:
     const Scope& scope;
     const InstanceSymbol& instance;
     SmallVectorSized<ConstantRange, 4> instanceDims;
-    SmallVectorSized<const ExpressionSyntax*, 8> orderedConns;
+    SmallVectorSized<const OrderedPortConnectionSyntax*, 8> orderedConns;
     SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
+    span<const AttributeSymbol* const> wildcardAttrs;
     LookupLocation lookupLocation;
     SourceRange wildcardRange;
     size_t orderedIndex = 0;

@@ -9,7 +9,6 @@
 #include "BuiltInSubroutines.h"
 #include <nlohmann/json.hpp>
 
-#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
@@ -361,36 +360,11 @@ void Compilation::addAttributes(const Expression& expr,
 
 void Compilation::addAttributes(const void* ptr,
                                 span<const AttributeInstanceSyntax* const> syntax) {
-    if (syntax.empty())
+    auto symbols = AttributeSymbol::fromSyntax(*this, syntax);
+    if (symbols.empty())
         return;
 
-    BindContext context(*emptyUnit, LookupLocation::max, BindFlags::Constant);
-    SmallSet<string_view, 4> nameMap;
-
-    auto& attrs = attributeMap[ptr];
-    for (auto inst : syntax) {
-        for (auto spec : inst->specs) {
-            auto name = spec->name.valueText();
-            if (name.empty())
-                continue;
-
-            ConstantValue value;
-            if (!spec->value)
-                value = SVInt(1, 1, false);
-            else {
-                auto constant = Expression::bind(*spec->value->expr, context).constant;
-                value = constant ? *constant : nullptr;
-            }
-
-            auto attr = emplace<AttributeSymbol>(name, spec->name.location(),
-                                                 *allocConstant(std::move(value)));
-            attr->setSyntax(*spec);
-            attrs.push_back(attr);
-
-            if (!nameMap.insert(name).second)
-                diags.add(diag::DuplicateAttribute, attr->location) << name;
-        }
-    }
+    attributeMap[ptr] = symbols;
 }
 
 span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symbol) const {

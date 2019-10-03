@@ -147,8 +147,11 @@ public:
     /// indicates how it connects to the outside world. Otherwise returns nullptr.
     const Expression* getConnection() const;
 
-    void setConnection(const Expression* expr);
-    void setConnection(const ExpressionSyntax& syntax);
+    void setConnection(const Expression* expr, span<const AttributeSymbol* const> attributes);
+    void setConnection(const ExpressionSyntax& syntax,
+                       span<const AttributeSymbol* const> attributes);
+
+    span<const AttributeSymbol* const> getConnectionAttributes() const { return connAttrs; }
 
     void toJson(json& j) const;
 
@@ -164,6 +167,7 @@ public:
 private:
     mutable optional<const Expression*> conn;
     const ExpressionSyntax* connSyntax = nullptr;
+    span<const AttributeSymbol* const> connAttrs;
 };
 
 /// Represents the public-facing side of a module / program / interface port
@@ -179,6 +183,9 @@ public:
     /// If the port is connected during instantiation, this is the external instance to which it
     /// connects.
     const Symbol* connection = nullptr;
+
+    /// Attributes attached to the connection, if any.
+    span<const AttributeSymbol* const> connectionAttributes;
 
     /// Gets the set of dimensions for specifying interface arrays, if applicable.
     span<const ConstantRange> getDeclaredRange() const;

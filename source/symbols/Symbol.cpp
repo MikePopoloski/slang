@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/HierarchySymbols.h"
 #include "slang/symbols/MemberSymbols.h"
@@ -179,6 +180,43 @@ std::string Symbol::jsonLink(const Symbol& target) {
 
 void AttributeSymbol::toJson(json& j) const {
     j["value"] = value;
+}
+
+span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
+    Compilation& compilation, span<const AttributeInstanceSyntax* const> syntax) {
+
+    if (syntax.empty())
+        return {};
+
+    BindContext context(compilation.getEmptyUnit(), LookupLocation::max, BindFlags::Constant);
+    SmallSet<string_view, 4> nameMap;
+    SmallVectorSized<const AttributeSymbol*, 8> attrs;
+
+    for (auto inst : syntax) {
+        for (auto spec : inst->specs) {
+            auto name = spec->name.valueText();
+            if (name.empty())
+                continue;
+
+            ConstantValue value;
+            if (!spec->value)
+                value = SVInt(1, 1, false);
+            else {
+                auto constant = Expression::bind(*spec->value->expr, context).constant;
+                value = constant ? *constant : nullptr;
+            }
+
+            auto attr = compilation.emplace<AttributeSymbol>(
+                name, spec->name.location(), *compilation.allocConstant(std::move(value)));
+            attr->setSyntax(*spec);
+            attrs.append(attr);
+
+            if (!nameMap.insert(name).second)
+                context.addDiag(diag::DuplicateAttribute, attr->location) << name;
+        }
+    }
+
+    return attrs.copy(compilation);
 }
 
 ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,

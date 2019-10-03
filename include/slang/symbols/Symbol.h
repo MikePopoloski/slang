@@ -12,8 +12,10 @@
 
 namespace slang {
 
+class Compilation;
 class Scope;
 class Type;
+struct AttributeInstanceSyntax;
 
 // clang-format off
 #define SYMBOLKIND(x) \
@@ -246,6 +248,9 @@ public:
         Symbol(SymbolKind::Attribute, name, location), value(value) {}
 
     void toJson(json& j) const;
+
+    static span<const AttributeSymbol* const> fromSyntax(
+        Compilation& compilation, span<const AttributeInstanceSyntax* const> syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Attribute; }
 };

@@ -210,14 +210,18 @@ const Expression* PortSymbol::getConnection() const {
     return *conn;
 }
 
-void PortSymbol::setConnection(const Expression* expr) {
+void PortSymbol::setConnection(const Expression* expr,
+                               span<const AttributeSymbol* const> attributes) {
     conn = expr;
     connSyntax = nullptr;
+    connAttrs = attributes;
 }
 
-void PortSymbol::setConnection(const ExpressionSyntax& syntax) {
+void PortSymbol::setConnection(const ExpressionSyntax& syntax,
+                               span<const AttributeSymbol* const> attributes) {
     conn = nullptr;
     connSyntax = &syntax;
+    connAttrs = attributes;
 }
 
 void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
