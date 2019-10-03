@@ -425,7 +425,7 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
 
     ASSERT(anyBad || stmtCtx.blocks.empty());
 
-    if (buffer.empty() || anyBad)
+    if (anyBad)
         return InvalidStatement::Instance;
 
     if (buffer.size() == 1)

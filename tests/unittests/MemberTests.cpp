@@ -136,10 +136,28 @@ endmodule
     output.dump();
 }
 
-TEST_CASE("Simple attributes") {
+TEST_CASE("Attributes") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     (* foo, bar = 1 *) (* baz = 1 + 2 * 3 *) wire foo, bar;
+
+    (* blah *) n n1((* blah2 *) 0);
+
+    (* blah3 *);
+
+    function logic func;
+        return 0;
+    endfunction
+
+    int j;
+    always_comb begin : block
+        (* blah4 *) func (* blah5 *) ();
+        j = 3 + (* blah6 *) 4;
+    end
+
+endmodule
+
+module n((* asdf *) input foo);
 endmodule
 )");
 
@@ -148,11 +166,75 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& root = compilation.getRoot();
-    auto attrs = compilation.getAttributes(root.lookupName<NetSymbol>("m.bar"));
+    auto attrs = compilation.getAttributes(*root.lookupName("m.bar"));
     REQUIRE(attrs.size() == 3);
     CHECK(attrs[0]->value.integer() == SVInt(1));
     CHECK(attrs[1]->value.integer() == SVInt(1));
     CHECK(attrs[2]->value.integer() == SVInt(7));
+
+    auto& n1 = root.lookupName<InstanceSymbol>("m.n1");
+    attrs = compilation.getAttributes(n1);
+    REQUIRE(attrs.size() == 1);
+    CHECK(attrs[0]->name == "blah");
+
+    auto ports = n1.membersOfType<PortSymbol>();
+    REQUIRE(ports.size() == 1);
+
+    auto& fooPort = *ports.begin();
+    attrs = compilation.getAttributes(fooPort);
+    REQUIRE(attrs.size() == 1);
+    CHECK(attrs[0]->name == "asdf");
+
+    attrs = fooPort.getConnectionAttributes();
+    REQUIRE(attrs.size() == 1);
+    CHECK(attrs[0]->name == "blah2");
+
+    auto& m = root.lookupName<InstanceSymbol>("m");
+    attrs = compilation.getAttributes(*m.membersOfType<EmptyMemberSymbol>().begin());
+    REQUIRE(attrs.size() == 1);
+    CHECK(attrs[0]->name == "blah3");
+
+    auto& block = root.lookupName<SequentialBlockSymbol>("m.block");
+    auto stmtList = block.getBody().as<StatementList>().list;
+    REQUIRE(stmtList.size() == 2);
+
+    attrs = compilation.getAttributes(*stmtList[0]);
+    REQUIRE(attrs.size() == 1);
+    CHECK(attrs[0]->name == "blah4");
+
+    auto& call = stmtList[0]->as<ExpressionStatement>().expr.as<CallExpression>();
+    attrs = compilation.getAttributes(call);
+    REQUIRE(attrs.size() == 1);
+    CHECK(attrs[0]->name == "blah5");
+
+    auto& assign = stmtList[1]->as<ExpressionStatement>().expr.as<AssignmentExpression>();
+    attrs = compilation.getAttributes(assign.right().as<BinaryExpression>());
+    REQUIRE(attrs.size() == 1);
+    CHECK(attrs[0]->name == "blah6");
+}
+
+TEST_CASE("Attribute diagnostics") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    (* foo, foo = 2 *) wire foo;
+    (* foo,, *) wire bar;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    auto it = diags.begin();
+    CHECK((it++)->code == diag::DuplicateAttribute);
+    CHECK((it++)->code == diag::ExpectedIdentifier);
+    CHECK((it++)->code == diag::MisplacedTrailingSeparator);
+    CHECK(it == diags.end());
+
+    auto& root = compilation.getRoot();
+    auto attrs = compilation.getAttributes(*root.lookupName("m.foo"));
+    REQUIRE(attrs.size() == 1);
+    CHECK(attrs[0]->value.integer() == SVInt(2));
 }
 
 TEST_CASE("Time units declarations") {

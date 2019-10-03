@@ -189,7 +189,7 @@ span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
         return {};
 
     BindContext context(compilation.getEmptyUnit(), LookupLocation::max, BindFlags::Constant);
-    SmallSet<string_view, 4> nameMap;
+    SmallMap<string_view, size_t, 4> nameMap;
     SmallVectorSized<const AttributeSymbol*, 8> attrs;
 
     for (auto inst : syntax) {
@@ -209,10 +209,15 @@ span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
             auto attr = compilation.emplace<AttributeSymbol>(
                 name, spec->name.location(), *compilation.allocConstant(std::move(value)));
             attr->setSyntax(*spec);
-            attrs.append(attr);
 
-            if (!nameMap.insert(name).second)
+            if (auto it = nameMap.find(name); it != nameMap.end()) {
                 context.addDiag(diag::DuplicateAttribute, attr->location) << name;
+                attrs[it->second] = attr;
+            }
+            else {
+                attrs.append(attr);
+                nameMap.emplace(name, attrs.size() - 1);
+            }
         }
     }
 
