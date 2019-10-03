@@ -36,9 +36,12 @@ enum class BindFlags {
     AllowDataType = 8,
 
     /// The expression being bound is an enum value initializer.
-    EnumInitializer = 16
+    EnumInitializer = 16,
+
+    /// Attributes are disallowed on expressions in this context.
+    NoAttributes = 32
 };
-BITMASK_DEFINE_MAX_ELEMENT(BindFlags, EnumInitializer);
+BITMASK_DEFINE_MAX_ELEMENT(BindFlags, NoAttributes);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 
@@ -70,6 +73,9 @@ public:
         lookupLocation(lookupLocation), flags(flags) {}
 
     Compilation& getCompilation() const { return scope.getCompilation(); }
+
+    void addAttributes(const Expression& expr,
+                       span<const AttributeInstanceSyntax* const> syntax) const;
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;

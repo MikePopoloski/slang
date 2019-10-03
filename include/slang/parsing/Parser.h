@@ -315,7 +315,7 @@ private:
     // ---- Various helper methods ----
 
     // Reports an error if there are attributes in the given span.
-    void errorIfAttributes(span<AttributeInstanceSyntax*> attributes, DiagCode code);
+    void errorIfAttributes(span<AttributeInstanceSyntax*> attributes);
 
     // Handle splitting out an exponent from a token that was otherwise miscategorized by the lexer.
     void handleExponentSplit(Token token, size_t offset);

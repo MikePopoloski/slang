@@ -188,7 +188,8 @@ span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
     if (syntax.empty())
         return {};
 
-    BindContext context(compilation.getEmptyUnit(), LookupLocation::max, BindFlags::Constant);
+    BindContext context(compilation.getEmptyUnit(), LookupLocation::max,
+                        BindFlags::Constant | BindFlags::NoAttributes);
     SmallMap<string_view, size_t, 4> nameMap;
     SmallVectorSized<const AttributeSymbol*, 8> attrs;
 

@@ -218,6 +218,7 @@ TEST_CASE("Attribute diagnostics") {
 module m;
     (* foo, foo = 2 *) wire foo;
     (* foo,, *) wire bar;
+    (* foo = 1 + (* nested *) 3 *) wire baz;
 endmodule
 )");
 
@@ -229,6 +230,7 @@ endmodule
     CHECK((it++)->code == diag::DuplicateAttribute);
     CHECK((it++)->code == diag::ExpectedIdentifier);
     CHECK((it++)->code == diag::MisplacedTrailingSeparator);
+    CHECK((it++)->code == diag::AttributesNotAllowed);
     CHECK(it == diags.end());
 
     auto& root = compilation.getRoot();

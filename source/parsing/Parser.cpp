@@ -374,7 +374,7 @@ MemberSyntax* Parser::parseMember() {
 
     switch (peek().kind) {
         case TokenKind::GenerateKeyword: {
-            errorIfAttributes(attributes, diag::AttributesOnGenerateRegion);
+            errorIfAttributes(attributes);
             auto keyword = consume();
 
             // It's definitely not legal to have a generate block here on its own (without an if or
@@ -397,7 +397,7 @@ MemberSyntax* Parser::parseMember() {
         }
         case TokenKind::TimeUnitKeyword:
         case TokenKind::TimePrecisionKeyword:
-            errorIfAttributes(attributes, diag::AttributesOnTimeDecl);
+            errorIfAttributes(attributes);
             return &parseTimeUnitsDeclaration(attributes);
         case TokenKind::ModuleKeyword:
         case TokenKind::MacromoduleKeyword:
@@ -1022,7 +1022,7 @@ MemberSyntax* Parser::parseClassMember() {
     if (isVariableDeclaration()) {
         auto& decl = parseVariableDeclaration({});
         if (decl.kind == SyntaxKind::ParameterDeclarationStatement)
-            errorIfAttributes(attributes, diag::AttributesOnClassParam);
+            errorIfAttributes(attributes);
         return &factory.classPropertyDeclaration(attributes, qualifiers, decl);
     }
 
@@ -1059,7 +1059,7 @@ MemberSyntax* Parser::parseClassMember() {
         case TokenKind::CoverGroupKeyword:
             return &parseCovergroupDeclaration(attributes);
         case TokenKind::Semicolon:
-            errorIfAttributes(attributes, diag::AttributesOnEmpty);
+            errorIfAttributes(attributes);
             return &factory.emptyMember(attributes, qualifiers, consume());
         default:
             break;
@@ -1226,7 +1226,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
     }
 
     if (peek(TokenKind::Semicolon)) {
-        errorIfAttributes(attributes, diag::AttributesOnEmpty);
+        errorIfAttributes(attributes);
         return &factory.emptyMember(attributes, nullptr, consume());
     }
 
@@ -2431,9 +2431,9 @@ bool Parser::scanQualifiedName(uint32_t& index) {
     return true;
 }
 
-void Parser::errorIfAttributes(span<AttributeInstanceSyntax*> attributes, DiagCode code) {
+void Parser::errorIfAttributes(span<AttributeInstanceSyntax*> attributes) {
     if (!attributes.empty())
-        addDiag(code, peek().location());
+        addDiag(diag::AttributesNotAllowed, peek().location());
 }
 
 void Parser::handleTooDeep() {

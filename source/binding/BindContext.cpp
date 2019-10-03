@@ -7,11 +7,25 @@
 #include "slang/binding/BindContext.h"
 
 #include "slang/binding/Expressions.h"
+#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 
 namespace slang {
+
+void BindContext::addAttributes(const Expression& expr,
+                                span<const AttributeInstanceSyntax* const> syntax) const {
+    if (syntax.empty())
+        return;
+
+    if (flags & BindFlags::NoAttributes) {
+        addDiag(diag::AttributesNotAllowed, expr.sourceRange);
+        return;
+    }
+
+    getCompilation().addAttributes(expr, syntax);
+}
 
 Diagnostic& BindContext::addDiag(DiagCode code, SourceLocation location) const {
     return scope.addDiag(code, location);
