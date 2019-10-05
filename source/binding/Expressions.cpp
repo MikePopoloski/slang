@@ -604,6 +604,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::AcceptOnPropertyExpression:
         case SyntaxKind::AlwaysPropertyExpression:
         case SyntaxKind::AndSequenceExpression:
+        case SyntaxKind::ArrayOrRandomizeMethodExpression:
         case SyntaxKind::BinarySequenceDelayExpression:
         case SyntaxKind::DefaultPatternKeyExpression:
         case SyntaxKind::ElementSelect:
@@ -626,7 +627,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::OrSequenceExpression:
         case SyntaxKind::OverlappedFollowedByPropertyExpression:
         case SyntaxKind::OverlappedImplicationPropertyExpression:
-        case SyntaxKind::RandomizeMethodWithClause:
         case SyntaxKind::RejectOnPropertyExpression:
         case SyntaxKind::SAlwaysPropertyExpression:
         case SyntaxKind::SEventuallyPropertyExpression:

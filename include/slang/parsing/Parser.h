@@ -261,7 +261,7 @@ private:
     ConstraintItemSyntax& parseConstraintItem(bool allowBlock);
     DistConstraintListSyntax& parseDistConstraintList();
     DistItemSyntax& parseDistItem();
-    ExpressionSyntax& parseArrayOrRandomizeWithClause();
+    ExpressionSyntax& parseArrayOrRandomizeMethod(ExpressionSyntax& expr);
     DefParamAssignmentSyntax& parseDefParamAssignment();
     DefParamSyntax& parseDefParam(span<AttributeInstanceSyntax*> attributes);
     ExpressionSyntax& parseExpressionOrDist();

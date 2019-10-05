@@ -602,10 +602,10 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
             }
             case TokenKind::WithKeyword:
                 // If we see bracket right after the with keyword, this is actually part of a stream
-                // expression return and let the call further up the stack handle it.
+                // expression -- return and let the call further up the stack handle it.
                 if (peek(1).kind == TokenKind::OpenBracket)
                     return *expr;
-                expr = &parseArrayOrRandomizeWithClause();
+                expr = &parseArrayOrRandomizeMethod(*expr);
                 break;
             case TokenKind::NewKeyword:
                 expr = &parseNewExpression(expr);
@@ -990,33 +990,26 @@ TimingControlSyntax* Parser::parseTimingControl() {
     }
 }
 
-ExpressionSyntax& Parser::parseArrayOrRandomizeWithClause() {
+ExpressionSyntax& Parser::parseArrayOrRandomizeMethod(ExpressionSyntax& expr) {
     auto with = consume();
-    if (!peek(TokenKind::OpenParenthesis))
-        return factory.randomizeMethodWithClause(with, nullptr, parseConstraintBlock());
 
-    auto openParen = consume();
-    if (peek(TokenKind::CloseParenthesis)) {
-        auto idList = &factory.identifierList(openParen, nullptr, consume());
-        return factory.randomizeMethodWithClause(with, idList, parseConstraintBlock());
+    ParenExpressionListSyntax* args = nullptr;
+    if (peek(TokenKind::OpenParenthesis)) {
+        Token openParen, closeParen;
+        span<TokenOrSyntax> items;
+        parseList<isPossibleExpressionOrComma, isEndOfParenList>(
+            TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen,
+            items, closeParen, RequireItems::False, diag::ExpectedExpression,
+            [this] { return &parseExpression(); });
+
+        args = &factory.parenExpressionList(openParen, items, closeParen);
     }
 
-    if (!peek(TokenKind::Identifier) ||
-        (peek(1).kind == TokenKind::CloseParenthesis && peek(2).kind != TokenKind::OpenBrace)) {
+    ConstraintBlockSyntax* constraints = nullptr;
+    if (peek(TokenKind::OpenBrace))
+        constraints = &parseConstraintBlock();
 
-        auto& expr = parseExpression();
-        return factory.withClause(with, openParen, expr, expect(TokenKind::CloseParenthesis));
-    }
-
-    // otherwise we have an identifier list here
-    Token closeParen;
-    SmallVectorSized<TokenOrSyntax, 4> buffer;
-    parseList<isIdentifierOrComma, isEndOfParenList>(
-        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
-        diag::ExpectedIdentifier, [this] { return &factory.identifierName(consume()); });
-
-    auto& idList = factory.identifierList(openParen, buffer.copy(alloc), closeParen);
-    return factory.randomizeMethodWithClause(with, &idList, parseConstraintBlock());
+    return factory.arrayOrRandomizeMethodExpression(expr, with, args, constraints);
 }
 
 } // namespace slang

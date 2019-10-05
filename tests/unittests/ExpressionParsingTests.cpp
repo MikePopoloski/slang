@@ -529,3 +529,33 @@ TEST_CASE("List parsing recovery") {
     auto& text = "assign foo = if";
     parseCompilationUnit(text);
 }
+
+void testExpr(string_view text, SyntaxKind kind) {
+    auto& expr = parseExpression(std::string(text));
+
+    REQUIRE(expr.kind == kind);
+    CHECK(expr.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+void testMethodExpr(string_view text) {
+    testExpr(text, SyntaxKind::ArrayOrRandomizeMethodExpression);
+}
+
+TEST_CASE("Array method expressions") {
+    testExpr("asdf.foo (a, b)", SyntaxKind::InvocationExpression);
+    testExpr("asdf.foo (* asdf *)", SyntaxKind::InvocationExpression);
+    testExpr("asdf.foo (* asdf *) (a, b)", SyntaxKind::InvocationExpression);
+
+    testMethodExpr("asdf.foo with (a > 0)");
+    testMethodExpr("asdf.foo (a) with (a > 0)");
+    testMethodExpr("asdf.foo (* asdf *) with (a > 0)");
+    testMethodExpr("asdf.foo (* asdf *) (a) with (a > 0)");
+}
+
+TEST_CASE("Randomize method expressions") {
+    testMethodExpr("asdf.randomize with {}");
+    testMethodExpr("asdf.randomize with () {}");
+    testMethodExpr("asdf.randomize with (a) {}");
+    testMethodExpr("asdf.randomize with (a, b) {}");
+}

@@ -1361,21 +1361,16 @@ token keyword
 token name
 ConstraintBlock block
 
-WithClause base=Expression kind=WithClause
-token with
+ParenExpressionList kind=ParenExpressionList
 token openParen
-Expression expr
+separated_list<Expression> expressions
 token closeParen
 
-IdentifierList kind=IdentifierList
-token openParen
-separated_list<IdentifierName> identifiers
-token closeParen
-
-RandomizeMethodWithClause base=Expression kind=RandomizeMethodWithClause
+ArrayOrRandomizeMethodExpression base=Expression kind=ArrayOrRandomizeMethodExpression
+Expression method
 token with
-IdentifierList? names
-ConstraintBlock constraints
+ParenExpressionList? args
+ConstraintBlock? constraints
 
 // ----- COVER GROUPS -----
 
@@ -1437,6 +1432,12 @@ empty
 DefaultCoverageBinInitializer base=CoverageBinInitializer kind=DefaultCoverageBinInitializer
 token defaultKeyword
 token sequenceKeyword
+
+WithClause kind=WithClause
+token with
+token openParen
+Expression expr
+token closeParen
 
 ExpressionCoverageBinInitializer base=CoverageBinInitializer kind=ExpressionCoverageBinInitializer
 Expression expr
