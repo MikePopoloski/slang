@@ -469,9 +469,11 @@ public:
         scope(instanceScope),
         instance(childScope.asSymbol().as<InstanceSymbol>()) {
 
-        bool hasConnections = false;
-        lookupLocation = LookupLocation::before(instance);
+        // This needs to be a lookup for the instance's parent in the hierarchy, not its lexical location.
+        // Usually all lookups want the lexical location, so we have to specifically ask for the parent here.
+        lookupLocation = LookupLocation(instance.getParentScope(), (uint32_t)instance.getIndex());
 
+        bool hasConnections = false;
         for (auto conn : portConnections) {
             bool isOrdered = conn->kind == SyntaxKind::OrderedPortConnection;
             if (!hasConnections) {

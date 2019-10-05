@@ -359,7 +359,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[0].code == diag::HierarchicalNotAllowedInConstant);
 }
 
 TEST_CASE("Useful error when lookup before declared in parent scope") {

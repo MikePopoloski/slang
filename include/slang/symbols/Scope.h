@@ -53,6 +53,7 @@ BITMASK_DEFINE_MAX_ELEMENT(LookupFlags, DisallowWildcardImport);
 class LookupLocation {
 public:
     LookupLocation() = default;
+    LookupLocation(const Scope* scope_, uint32_t index) : scope(scope_), index(index) {}
 
     const Scope* getScope() const { return scope; }
     Symbol::Index getIndex() const { return Symbol::Index(index); }
@@ -77,10 +78,6 @@ public:
     bool operator<(const LookupLocation& other) const;
 
 private:
-    friend class Scope;
-
-    LookupLocation(const Scope* scope_, uint32_t index) : scope(scope_), index(index) {}
-
     const Scope* scope = nullptr;
     uint32_t index = 0;
 };

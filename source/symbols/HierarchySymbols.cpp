@@ -390,7 +390,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         tempDef.addMember(newParam);
         parameters.append(&newParam);
 
-        if (auto it = paramOverrides.find(param->name); it != paramOverrides.end()) {
+        if (auto it = paramOverrides.find(newParam.name); it != paramOverrides.end()) {
             auto& expr = *it->second;
             newParam.setInitializerSyntax(expr, expr.getFirstToken().location());
 
@@ -398,10 +398,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             declared->clearResolved();
             declared->resolveAt(context);
         }
-        else if (!param->isLocalParam() && param->isPortParam() && !param->getInitializer()) {
+        else if (!newParam.isLocalParam() && newParam.isPortParam() && !newParam.getInitializer()) {
             auto& diag = scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
             diag << definition->name;
-            diag << param->name;
+            diag << newParam.name;
         }
         else {
             newParam.getDeclaredType()->clearResolved();

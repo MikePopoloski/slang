@@ -1085,3 +1085,37 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Parameter with type imported from package") {
+    auto tree1 = SyntaxTree::fromText(R"(
+module m #(parameter p::foo f = "SDF") ();
+    if (f == "BAR") begin: block1
+        l #(.f(f)) l1();
+    end
+    else begin: block2
+        l #(.f(f)) l1();
+    end 
+endmodule
+)");
+    auto tree2 = SyntaxTree::fromText(R"(
+package p;
+    typedef string foo;
+endpackage
+)");
+    auto tree3 = SyntaxTree::fromText(R"(
+module l #(p::foo f) ();
+endmodule
+)");
+    auto tree4 = SyntaxTree::fromText(R"(
+module top;
+    m m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree4);
+    compilation.addSyntaxTree(tree2);
+    compilation.addSyntaxTree(tree3);
+    compilation.addSyntaxTree(tree1);
+    NO_COMPILATION_ERRORS;
+}

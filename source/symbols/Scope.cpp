@@ -36,11 +36,23 @@ const LookupLocation LookupLocation::max{ nullptr, UINT_MAX };
 const LookupLocation LookupLocation::min{ nullptr, 0 };
 
 LookupLocation LookupLocation::before(const Symbol& symbol) {
-    return LookupLocation(symbol.getLexicalScope(), (uint32_t)symbol.getIndex());
+    if (InstanceSymbol::isKind(symbol.kind)) {
+        auto& def = symbol.as<InstanceSymbol>().definition;
+        return LookupLocation(def.getParentScope(), (uint32_t)def.getIndex());
+    }
+    else {
+        return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex());
+    }
 }
 
 LookupLocation LookupLocation::after(const Symbol& symbol) {
-    return LookupLocation(symbol.getLexicalScope(), (uint32_t)symbol.getIndex() + 1);
+    if (InstanceSymbol::isKind(symbol.kind)) {
+        auto& def = symbol.as<InstanceSymbol>().definition;
+        return LookupLocation(def.getParentScope(), (uint32_t)def.getIndex() + 1);
+    }
+    else {
+        return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex() + 1);
+    }
 }
 
 bool LookupLocation::operator<(const LookupLocation& other) const {
