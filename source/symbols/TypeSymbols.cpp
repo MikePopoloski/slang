@@ -673,13 +673,10 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     else {
         base = &compilation.getType(*syntax.baseType, location, scope, forceSigned);
         cb = &base->getCanonicalType();
-        if (cb->isError())
-            return *cb;
-
-        if (!cb->isSimpleBitVector()) {
+        if (!cb->isError() && !cb->isSimpleBitVector()) {
             scope.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
                 << *base;
-            return compilation.getErrorType();
+            cb = &compilation.getErrorType();
         }
     }
 
@@ -712,16 +709,13 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
         auto& cv = ev.getConstantValue();
         if (!cv)
-            return false;
+            return;
 
         first = false;
         previous = cv.integer();
         previousRange = ev.getInitializer()->sourceRange;
 
-        if (!checkValue(previous, previousRange.start()))
-            return false;
-
-        return true;
+        checkValue(previous, previousRange.start());
     };
 
     // For enumerands that have no initializer, infer the value via this function.
@@ -735,25 +729,23 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         else if (previous.hasUnknown()) {
             auto& diag = scope.addDiag(diag::EnumIncrementUnknown, loc);
             diag << previous << *base << previousRange;
-            return false;
+            return;
         }
         else if (previous == allOnes) {
             auto& diag = scope.addDiag(diag::EnumValueOverflow, loc);
             diag << previous << *base << previousRange;
-            return false;
+            return;
         }
         else {
             value = previous + one;
         }
 
         if (!checkValue(value, loc))
-            return false;
+            return;
 
         ev.setValue(value);
         previous = std::move(value);
         previousRange = range;
-
-        return true;
     };
 
     BindContext context(scope, location);
@@ -763,14 +755,10 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, std::nullopt);
             resultType->addMember(ev);
 
-            bool result;
             if (member->initializer)
-                result = setInitializer(ev, *member->initializer);
+                setInitializer(ev, *member->initializer);
             else
-                result = inferValue(ev, member->sourceRange());
-
-            if (!result)
-                return compilation.getErrorType();
+                inferValue(ev, member->sourceRange());
         }
         else {
             if (member->dimensions.size() > 1) {
@@ -795,14 +783,10 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
                 resultType->addMember(ev);
 
-                bool result;
                 if (member->initializer)
-                    result = setInitializer(ev, *member->initializer);
+                    setInitializer(ev, *member->initializer);
                 else
-                    result = inferValue(ev, member->sourceRange());
-
-                if (!result)
-                    return compilation.getErrorType();
+                    inferValue(ev, member->sourceRange());
             }
 
             bool down = range->isLittleEndian();
@@ -812,8 +796,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
                 resultType->addMember(ev);
 
-                if (!inferValue(ev, member->sourceRange()))
-                    return compilation.getErrorType();
+                inferValue(ev, member->sourceRange());
             }
         }
     }

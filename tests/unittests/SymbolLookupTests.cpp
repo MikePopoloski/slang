@@ -1126,3 +1126,18 @@ endmodule
     auto& baz = compilation.getRoot().lookupName<ParameterSymbol>("top.f.baz");
     CHECK(baz.getValue().integer() == 42);
 }
+
+TEST_CASE("Enums dependent on param") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter int stuff) ();
+    typedef enum { SDF = stuff, BAZ, BAR[2] } e1;
+
+    int j = BAZ;
+    int k = BAR1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
