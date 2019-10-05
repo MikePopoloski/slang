@@ -184,6 +184,13 @@ public:
                                         bitmask<LookupFlags> flags = LookupFlags::None,
                                         bool errorIfNotFound = false) const;
 
+    /// Uses the select syntax elements to select a child element of the given symbol.
+    /// If the selection succeeds, returns the selected child symbol. Otherwise, reports
+    /// the errors to the given LookupResult object and returns nullptr.
+    static const Symbol* selectChild(const Symbol& symbol,
+                                     span<const ElementSelectSyntax* const> selectors,
+                                     const BindContext& context, LookupResult& result);
+
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified
     /// type. This expects (and asserts) that the member at the given index is of the specified type
     /// `T`.

@@ -740,7 +740,20 @@ private:
         if (result.hasError())
             scope.getCompilation().addDiagnostics(result.getDiagnostics());
 
+        // If we found the interface but it's actually a port, unwrap to the target connection.
         const Symbol* symbol = result.found;
+        if (symbol && symbol->kind == SymbolKind::InterfacePort) {
+            symbol = symbol->as<InterfacePortSymbol>().connection;
+            if (symbol && !result.selectors.empty()) {
+                SmallVectorSized<const ElementSelectSyntax*, 4> selectors;
+                for (auto& sel : result.selectors)
+                    selectors.append(std::get<0>(sel));
+
+                symbol = Scope::selectChild(*symbol, selectors, BindContext(scope, lookupLocation),
+                                            result);
+            }
+        }
+
         if (!symbol)
             return;
 

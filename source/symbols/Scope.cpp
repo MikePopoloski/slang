@@ -785,55 +785,10 @@ void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
     return nextScope->lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
 }
 
-namespace {
-
-using namespace slang;
-
-struct NamePlusLoc {
-    const NameSyntax* name;
-    SourceLocation dotLocation;
-};
-
-using NameComponent = std::tuple<Token, const SyntaxList<ElementSelectSyntax>*>;
-
-NameComponent decomposeName(const NameSyntax& name) {
-    switch (name.kind) {
-        case SyntaxKind::IdentifierName:
-            return { name.as<IdentifierNameSyntax>().identifier, nullptr };
-        case SyntaxKind::SystemName:
-            return { name.as<SystemNameSyntax>().systemIdentifier, nullptr };
-        case SyntaxKind::IdentifierSelectName: {
-            auto& idSelect = name.as<IdentifierSelectNameSyntax>();
-            return { idSelect.identifier, &idSelect.selectors };
-        }
-        case SyntaxKind::ClassName: {
-            // TODO: handle class params
-            auto& cn = name.as<ClassNameSyntax>();
-            return { cn.identifier, nullptr };
-        }
-        case SyntaxKind::UnitScope:
-        case SyntaxKind::RootScope:
-        case SyntaxKind::LocalScope:
-        case SyntaxKind::ThisHandle:
-        case SyntaxKind::SuperHandle:
-        case SyntaxKind::ArrayUniqueMethod:
-        case SyntaxKind::ArrayAndMethod:
-        case SyntaxKind::ArrayOrMethod:
-        case SyntaxKind::ArrayXorMethod:
-        case SyntaxKind::ConstructorName: {
-            auto& keywordName = name.as<KeywordNameSyntax>();
-            return { keywordName.keyword, nullptr };
-        }
-        default:
-            THROW_UNREACHABLE;
-    }
-}
-
-const Symbol* handleLookupSelectors(const Symbol* symbol,
-                                    const SyntaxList<ElementSelectSyntax>& selectors,
-                                    const BindContext& context, LookupResult& result) {
-    ASSERT(symbol);
-
+const Symbol* Scope::selectChild(const Symbol& initialSymbol,
+                                 span<const ElementSelectSyntax* const> selectors,
+                                 const BindContext& context, LookupResult& result) {
+    const Symbol* symbol = &initialSymbol;
     for (const ElementSelectSyntax* syntax : selectors) {
         if (!syntax->selector || syntax->selector->kind != SyntaxKind::BitSelect) {
             result.addDiag(context.scope, diag::InvalidScopeIndexExpression, syntax->sourceRange());
@@ -894,6 +849,50 @@ const Symbol* handleLookupSelectors(const Symbol* symbol,
     }
 
     return symbol;
+}
+
+namespace {
+
+using namespace slang;
+
+struct NamePlusLoc {
+    const NameSyntax* name;
+    SourceLocation dotLocation;
+};
+
+using NameComponent = std::tuple<Token, const SyntaxList<ElementSelectSyntax>*>;
+
+NameComponent decomposeName(const NameSyntax& name) {
+    switch (name.kind) {
+        case SyntaxKind::IdentifierName:
+            return { name.as<IdentifierNameSyntax>().identifier, nullptr };
+        case SyntaxKind::SystemName:
+            return { name.as<SystemNameSyntax>().systemIdentifier, nullptr };
+        case SyntaxKind::IdentifierSelectName: {
+            auto& idSelect = name.as<IdentifierSelectNameSyntax>();
+            return { idSelect.identifier, &idSelect.selectors };
+        }
+        case SyntaxKind::ClassName: {
+            // TODO: handle class params
+            auto& cn = name.as<ClassNameSyntax>();
+            return { cn.identifier, nullptr };
+        }
+        case SyntaxKind::UnitScope:
+        case SyntaxKind::RootScope:
+        case SyntaxKind::LocalScope:
+        case SyntaxKind::ThisHandle:
+        case SyntaxKind::SuperHandle:
+        case SyntaxKind::ArrayUniqueMethod:
+        case SyntaxKind::ArrayAndMethod:
+        case SyntaxKind::ArrayOrMethod:
+        case SyntaxKind::ArrayXorMethod:
+        case SyntaxKind::ConstructorName: {
+            auto& keywordName = name.as<KeywordNameSyntax>();
+            return { keywordName.keyword, nullptr };
+        }
+        default:
+            THROW_UNREACHABLE;
+    }
 }
 
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
@@ -965,7 +964,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
         }
 
         if (selectors) {
-            symbol = handleLookupSelectors(symbol, *selectors, context, result);
+            symbol = Scope::selectChild(*symbol, *selectors, context, result);
             if (!symbol)
                 return false;
         }
@@ -1146,8 +1145,8 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
     if (selectors) {
         // If this is a scope, the selectors should be an index into it.
         if (result.found && result.found->isScope() && !result.found->isType()) {
-            result.found = handleLookupSelectors(result.found, *selectors,
-                                                 BindContext(*this, location), result);
+            result.found =
+                selectChild(*result.found, *selectors, BindContext(*this, location), result);
         }
         else {
             result.selectors.appendRange(*selectors);

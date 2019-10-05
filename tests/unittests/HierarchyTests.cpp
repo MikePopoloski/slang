@@ -1060,3 +1060,28 @@ source:16:16: error: use of undeclared identifier 'asdf'
                ^~~~
 )");
 }
+
+TEST_CASE("Interface array port selection") {
+    auto tree = SyntaxTree::fromText(R"(
+interface Iface;
+endinterface
+
+module m (Iface i);
+endmodule
+
+module n (Iface arr[4]);
+    for (genvar i = 0; i < 4; i++) begin
+        m minst(.i(arr[i]));
+    end
+endmodule
+
+module top;
+    Iface arr[4] (.*);
+    n ninst(.arr);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
