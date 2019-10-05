@@ -42,6 +42,11 @@ const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const T
             result = &compilation.getShortRealType();
         }
     }
+    else if (lt->isEnum() && rt->isEnum() && lt->isMatching(*rt)) {
+        // If both sides are the same enum type, preserve that in the output type.
+        // NOTE: This specifically ignores the forceFourState option.
+        return lt;
+    }
     else {
         bitwidth_t width = std::max(lt->getBitWidth(), rt->getBitWidth());
 
@@ -65,17 +70,9 @@ const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const T
     }
 
     // Attempt to preserve any type aliases passed in when selecting the result.
-    auto check = [result](auto type) {
-        if (type->isEnum()) {
-            const Type& ct = type->getCanonicalType();
-            type = &ct.as<EnumType>().baseType;
-        }
-        return type->isMatching(*result);
-    };
-
-    if (check(lt))
+    if (lt->isMatching(*result))
         return lt;
-    if (check(rt))
+    if (rt->isMatching(*result))
         return rt;
 
     return result;

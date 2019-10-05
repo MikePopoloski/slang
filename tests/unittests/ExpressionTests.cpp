@@ -239,6 +239,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("l == r") == "logic");
     CHECK(typeof("su == su") == "logic");
     CHECK(typeof("su2 == su2") == "bit");
+    CHECK(typeof("EVAL1 + 5") == "int");
 
     // Unpacked arrays
     declare("bit [7:0] arr1 [2];");
@@ -256,7 +257,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("arr2 ? 1 : 0") == "<error>");
     CHECK(typeof("i ? EVAL1 : EVAL2") == "enum{EVAL1=0,EVAL2=1}");
     CHECK(typeof("b1 ? e1 : e1") == "enum{EVAL1=0,EVAL2=1}");
-    CHECK(typeof("ig4 ? e1 : EVAL1") == "logic signed[31:0]");
+    CHECK(typeof("ig4 ? e1 : EVAL1") == "enum{EVAL1=0,EVAL2=1}");
 
     // Member access
     declare("struct packed { logic [13:0] a; bit b; } foo;");
