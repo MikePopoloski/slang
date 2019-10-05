@@ -188,6 +188,9 @@ ConstantValue ConstantValue::convertToShortReal() const {
 }
 
 ConstantValue ConstantValue::convertToStr() const {
+    if (isString())
+        return *this;
+
     if (!isInteger())
         return nullptr;
 

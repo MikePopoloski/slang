@@ -751,10 +751,12 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%.f", "r") == "3");
     CHECK(sformatf("%.9f", "r") == "3.210000000");
 
+    session.eval("string str = \"blah\";");
     CHECK(sformatf("%s", "\"abc\"") == "abc");
     CHECK(sformatf("%3s", "\"a\"") == "  a");
     CHECK(sformatf("%3s", "\"abc\"") == "abc");
     CHECK(sformatf("%3s", "\"abcdef\"") == "abcdef");
+    CHECK(sformatf("%3s", "str") == "blah");
 
     CHECK(sformatf("%c", "48") == "0");
     CHECK(sformatf("%c", "18'hx031") == "1");
