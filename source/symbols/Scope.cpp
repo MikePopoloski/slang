@@ -36,26 +36,15 @@ const LookupLocation LookupLocation::max{ nullptr, UINT_MAX };
 const LookupLocation LookupLocation::min{ nullptr, 0 };
 
 LookupLocation LookupLocation::before(const Symbol& symbol) {
-    if (InstanceSymbol::isKind(symbol.kind)) {
-        auto& def = symbol.as<InstanceSymbol>().definition;
-        return LookupLocation(def.getParentScope(), (uint32_t)def.getIndex());
-    }
-    else {
-        return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex());
-    }
+    return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex());
 }
 
 LookupLocation LookupLocation::after(const Symbol& symbol) {
-    if (InstanceSymbol::isKind(symbol.kind)) {
-        auto& def = symbol.as<InstanceSymbol>().definition;
-        return LookupLocation(def.getParentScope(), (uint32_t)def.getIndex() + 1);
-    }
-    else {
-        return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex() + 1);
-    }
+    return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex() + 1);
 }
 
 bool LookupLocation::operator<(const LookupLocation& other) const {
+    ASSERT(scope == other.scope || !scope || !other.scope);
     return index < other.index;
 }
 
@@ -789,11 +778,20 @@ void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
 
     // Continue up the scope chain via our parent. If we hit an instance, we need to instead
     // search within the context of the definition's parent scope.
-    auto nextScope = asSymbol().getLexicalScope();
+    const Scope* nextScope;
+    if (InstanceSymbol::isKind(asSymbol().kind)) {
+        auto& def = asSymbol().as<InstanceSymbol>().definition;
+        nextScope = def.getParentScope();
+        location = LookupLocation(nextScope, (uint32_t)def.getIndex() + 1);
+    }
+    else {
+        nextScope = asSymbol().getParentScope();
+        location = LookupLocation(nextScope, (uint32_t)asSymbol().getIndex() + 1);
+    }
+
     if (!nextScope)
         return;
 
-    location = LookupLocation::after(asSymbol());
     return nextScope->lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
 }
 
