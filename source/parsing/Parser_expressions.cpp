@@ -69,6 +69,12 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
             break;
         }
 
+        // the implication operator in constraint blocks is special, we don't handle it here
+        if (opKind == SyntaxKind::LogicalImplicationExpression &&
+            (options & ExpressionOptions::ConstraintContext)) {
+            break;
+        }
+
         // we have to special case '<=', which can be less than or nonblocking assignment depending
         // on context
         if (opKind == SyntaxKind::LessThanEqualExpression &&

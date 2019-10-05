@@ -559,3 +559,27 @@ TEST_CASE("Randomize method expressions") {
     testMethodExpr("asdf.randomize with (a) {}");
     testMethodExpr("asdf.randomize with (a, b) {}");
 }
+
+void testConstraintBlock(string_view text) {
+    testExpr("asdf.randomize with " + std::string(text),
+             SyntaxKind::ArrayOrRandomizeMethodExpression);
+}
+
+TEST_CASE("Constraint block expressions") {
+    testConstraintBlock("{atype == low;}");
+    testConstraintBlock("{10 <= addr && addr <= 20;}");
+    testConstraintBlock("{a inside {b, c};}");
+    testConstraintBlock("{x != 200; x dist { [100:102] :/ 1, 200 := 2, 300 := 5};}");
+    testConstraintBlock("{ unique {b, a[2:3], excluded}; }");
+    testConstraintBlock("{ (a == 0) -> { b == 1; } }");
+    testConstraintBlock("{ if (a == b) a < 10; else if (a == c) a > 100; }");
+    testConstraintBlock("{ foreach (A[i]) A[i] inside {2,4,8,16}; }");
+    testConstraintBlock("{ solve s before d; }");
+    testConstraintBlock("{ soft mode -> length == 1024; }");
+    testConstraintBlock("{ disable soft x; }");
+}
+
+TEST_CASE("Constraint block error recovery") {
+    auto& text = "int i = foo.randomize with { end";
+    parseCompilationUnit(text);
+}

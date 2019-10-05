@@ -1430,7 +1430,7 @@ ConstraintBlockSyntax& Parser::parseConstraintBlock() {
     Token closeBrace;
     auto openBrace = expect(TokenKind::OpenBrace);
     auto members = parseMemberList<ConstraintItemSyntax>(
-        TokenKind::CloseBrace, closeBrace, [this]() { return &parseConstraintItem(false); });
+        TokenKind::CloseBrace, closeBrace, [this]() { return parseConstraintItem(false); });
     return factory.constraintBlock(openBrace, members, closeBrace);
 }
 
@@ -1443,7 +1443,7 @@ ExpressionSyntax& Parser::parseExpressionOrDist() {
     return factory.expressionOrDist(expr, dist);
 }
 
-ConstraintItemSyntax& Parser::parseConstraintItem(bool allowBlock) {
+ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
     switch (peek().kind) {
         case TokenKind::SolveKeyword: {
             auto solve = consume();
@@ -1459,44 +1459,45 @@ ConstraintItemSyntax& Parser::parseConstraintItem(bool allowBlock) {
             parseList<isPossibleExpression, isSemicolon>(
                 afterBuffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
                 diag::ExpectedExpression, [this] { return &parsePrimaryExpression(); });
-            return factory.solveBeforeConstraint(solve, beforeBuffer.copy(alloc), before,
-                                                 afterBuffer.copy(alloc), semi);
+
+            return &factory.solveBeforeConstraint(solve, beforeBuffer.copy(alloc), before,
+                                                  afterBuffer.copy(alloc), semi);
         }
         case TokenKind::DisableKeyword: {
             auto disable = consume();
             auto soft = expect(TokenKind::SoftKeyword);
             auto& name = parseName();
-            return factory.disableConstraint(disable, soft, name, expect(TokenKind::Semicolon));
+            return &factory.disableConstraint(disable, soft, name, expect(TokenKind::Semicolon));
         }
         case TokenKind::ForeachKeyword: {
             auto keyword = consume();
             auto& vars = parseForeachLoopVariables();
-            return factory.loopConstraint(keyword, vars, parseConstraintItem(true));
+            return &factory.loopConstraint(keyword, vars, *parseConstraintItem(true));
         }
         case TokenKind::IfKeyword: {
             auto ifKeyword = consume();
             auto openParen = expect(TokenKind::OpenParenthesis);
             auto& condition = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            auto& constraints = parseConstraintItem(true);
+            auto& constraints = *parseConstraintItem(true);
 
             ElseConstraintClauseSyntax* elseClause = nullptr;
             if (peek(TokenKind::ElseKeyword)) {
                 auto elseKeyword = consume();
-                elseClause = &factory.elseConstraintClause(elseKeyword, parseConstraintItem(true));
+                elseClause = &factory.elseConstraintClause(elseKeyword, *parseConstraintItem(true));
             }
-            return factory.conditionalConstraint(ifKeyword, openParen, condition, closeParen,
-                                                 constraints, elseClause);
+            return &factory.conditionalConstraint(ifKeyword, openParen, condition, closeParen,
+                                                  constraints, elseClause);
         }
         case TokenKind::UniqueKeyword: {
             auto keyword = consume();
             auto& list = parseOpenRangeList();
-            return factory.uniquenessConstraint(keyword, list, expect(TokenKind::Semicolon));
+            return &factory.uniquenessConstraint(keyword, list, expect(TokenKind::Semicolon));
         }
         case TokenKind::SoftKeyword: {
             auto soft = consume();
             auto& exprOrDist = parseExpressionOrDist();
-            return factory.expressionConstraint(soft, exprOrDist, expect(TokenKind::Semicolon));
+            return &factory.expressionConstraint(soft, exprOrDist, expect(TokenKind::Semicolon));
         }
         case TokenKind::OpenBrace: {
             // Ambiguity here: an open brace could either be the start of a constraint block
@@ -1506,7 +1507,7 @@ ConstraintItemSyntax& Parser::parseConstraintItem(bool allowBlock) {
                 uint32_t index = 1;
                 if (!scanTypePart<isNotInConcatenationExpr>(index, TokenKind::OpenBrace,
                                                             TokenKind::CloseBrace))
-                    return parseConstraintBlock();
+                    return &parseConstraintBlock();
             }
             break;
         }
@@ -1514,12 +1515,20 @@ ConstraintItemSyntax& Parser::parseConstraintItem(bool allowBlock) {
             break;
     }
 
+    // If we reach this point we have some invalid syntax here. If we're in a nested
+    // constraint block (identified by allowBlock == true) then we should make up
+    // an item and return. This is accomplished by falling through to the parseSubExpression below.
+    // Otherwise, this is the top level and we should return nullptr so that we skip over
+    // the offending token.
+    if (!isPossibleExpression(peek().kind) && !allowBlock)
+        return nullptr;
+
     // at this point we either have an expression with optional distribution or
     // we have an implication constraint
-    auto expr = &parseExpression();
+    auto expr = &parseSubExpression(ExpressionOptions::ConstraintContext, 0);
     if (peek(TokenKind::MinusArrow)) {
         auto arrow = consume();
-        return factory.implicationConstraint(*expr, arrow, parseConstraintItem(true));
+        return &factory.implicationConstraint(*expr, arrow, *parseConstraintItem(true));
     }
 
     if (peek(TokenKind::DistKeyword)) {
@@ -1527,7 +1536,7 @@ ConstraintItemSyntax& Parser::parseConstraintItem(bool allowBlock) {
         expr = &factory.expressionOrDist(*expr, dist);
     }
 
-    return factory.expressionConstraint(Token(), *expr, expect(TokenKind::Semicolon));
+    return &factory.expressionConstraint(Token(), *expr, expect(TokenKind::Semicolon));
 }
 
 DistConstraintListSyntax& Parser::parseDistConstraintList() {

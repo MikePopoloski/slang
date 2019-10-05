@@ -26,17 +26,20 @@ enum class ExpressionOptions {
     None = 0,
 
     /// Allow pattern matching expressions; these are not allowed recursively so
-    /// they're turned off after finding the first one
+    /// they're turned off after finding the first one.
     AllowPatternMatch = 1,
 
     /// In a procedural assignment context, <= is a non-blocking assignment, not the less
     /// than or equal to operator.
     ProceduralAssignmentContext = 2,
 
-    /// In an event expression context, the "or" operator has special meaning
-    EventExpressionContext = 4
+    /// In an event expression context, the "or" operator has special meaning.
+    EventExpressionContext = 4,
+
+    /// In a constraint block context, the -> operator has special meaning.
+    ConstraintContext = 8
 };
-BITMASK_DEFINE_MAX_ELEMENT(ExpressionOptions, EventExpressionContext);
+BITMASK_DEFINE_MAX_ELEMENT(ExpressionOptions, ConstraintContext);
 
 /// Various options for parsing names.
 enum class NameOptions {
@@ -258,7 +261,7 @@ private:
     MemberSyntax& parseConstraint(span<AttributeInstanceSyntax*> attributes,
                                   span<Token> qualifiers);
     ConstraintBlockSyntax& parseConstraintBlock();
-    ConstraintItemSyntax& parseConstraintItem(bool allowBlock);
+    ConstraintItemSyntax* parseConstraintItem(bool allowBlock);
     DistConstraintListSyntax& parseDistConstraintList();
     DistItemSyntax& parseDistItem();
     ExpressionSyntax& parseArrayOrRandomizeMethod(ExpressionSyntax& expr);
