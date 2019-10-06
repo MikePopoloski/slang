@@ -318,3 +318,54 @@ endmodule
     auto& foo = compilation.getRoot().lookupName<VariableSymbol>("m.asdf.foo");
     CHECK(foo.getType().getArrayRange() == ConstantRange{4, 2});
 }
+
+TEST_CASE("If statement -- unevaluated branches -- valid") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    localparam int n = -1;
+    localparam logic[1:0] foo = '0;
+
+    int j;
+    initial begin
+        if (n >= 0) begin
+            j = foo[n];
+        end else begin
+            j = 1;
+        end
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("If statement -- unevaluated branches -- invalid") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    localparam int n = -1;
+    localparam logic[1:0] foo = '0;
+
+    int j;
+    initial begin
+        if (n >= 0) begin
+            j = foo[n];
+        end else begin
+            j = foo[n];
+        end
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IndexValueInvalid);
+}

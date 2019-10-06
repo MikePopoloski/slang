@@ -607,11 +607,21 @@ Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
     if (cond.bad() || !context.requireBooleanConvertible(cond))
         return badStmt(compilation, nullptr);
 
-    auto& ifTrue = Statement::bind(*syntax.statement, context, stmtCtx);
+    // If the condition is constant, we know which branch will be taken.
+    BindFlags ifFlags = BindFlags::None;
+    BindFlags elseFlags = BindFlags::None;
+    if (cond.constant) {
+        if (cond.constant->isTrue())
+            elseFlags = BindFlags::UnevaluatedBranch;
+        else
+            ifFlags = BindFlags::UnevaluatedBranch;
+    }
+
+    auto& ifTrue = Statement::bind(*syntax.statement, context.resetFlags(ifFlags), stmtCtx);
     const Statement* ifFalse = nullptr;
     if (syntax.elseClause) {
-        ifFalse =
-            &Statement::bind(syntax.elseClause->clause->as<StatementSyntax>(), context, stmtCtx);
+        ifFalse = &Statement::bind(syntax.elseClause->clause->as<StatementSyntax>(),
+                                   context.resetFlags(elseFlags), stmtCtx);
     }
 
     auto result = compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse);
