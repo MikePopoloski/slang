@@ -1,6 +1,6 @@
 [requires]
-Catch2/2.9.0@catchorg/stable
-jsonformoderncpp/3.6.1@vthiery/stable
+Catch2/2.9.2@catchorg/stable
+jsonformoderncpp/3.7.0@vthiery/stable
 CLI11/1.8.0@cliutils/stable
 fmt/5.3.0@bincrafters/stable
 
