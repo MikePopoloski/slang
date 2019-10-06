@@ -1119,3 +1119,43 @@ endmodule
     compilation.addSyntaxTree(tree1);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Local interface not considered hierarchical") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic [3:0] foo;
+endinterface
+
+module m;
+    I i();
+    localparam int j = $bits(i.foo);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& j = compilation.getRoot().lookupName<ParameterSymbol>("m.j");
+    CHECK(j.getValue().integer() == 4);
+}
+
+TEST_CASE("Local interface declared later considered hierarchical") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic [3:0] foo;
+endinterface
+
+module m;
+    localparam int j = $bits(i.foo);
+    I i();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+}
