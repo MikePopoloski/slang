@@ -102,8 +102,6 @@ public:
 
     static void fromSyntax(const Scope& scope, const ParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVector<ParameterSymbol*>& results);
-    static void fromSyntax(const Scope& scope, const ParameterDeclarationStatementSyntax& syntax,
-                           SmallVector<ParameterSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 

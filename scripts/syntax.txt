@@ -542,13 +542,27 @@ token keyword
 separated_list<PackageImportItem> items
 token semi
 
-ParameterDeclaration kind=ParameterDeclaration
+ParameterDeclarationBase final=false
 token keyword
+
+ParameterDeclaration base=ParameterDeclarationBase kind=ParameterDeclaration
 DataType type
 separated_list<Declarator> declarators
 
+EqualsTypeClause kind=EqualsTypeClause
+token equals
+DataType type
+
+TypeAssignment kind=TypeAssignment
+token name
+EqualsTypeClause? assignment
+
+TypeParameterDeclaration base=ParameterDeclarationBase kind=TypeParameterDeclaration
+token typeKeyword
+separated_list<TypeAssignment> declarators
+
 ParameterDeclarationStatement base=Member kind=ParameterDeclarationStatement
-ParameterDeclaration parameter
+ParameterDeclarationBase parameter
 token semi
 
 PortHeader final=false
@@ -956,7 +970,7 @@ token closeParen
 ParameterPortList kind=ParameterPortList
 token hash
 token openParen
-separated_list<ParameterDeclaration> declarations
+separated_list<ParameterDeclarationBase> declarations
 token closeParen
 
 ModuleHeader

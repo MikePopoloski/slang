@@ -126,15 +126,6 @@ void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationS
     }
 }
 
-void ParameterSymbol::fromSyntax(const Scope& scope,
-                                 const ParameterDeclarationStatementSyntax& syntax,
-                                 SmallVector<ParameterSymbol*>& results) {
-    auto& compilation = scope.getCompilation();
-    fromSyntax(scope, *syntax.parameter, true, false, results);
-    for (auto symbol : results)
-        compilation.addAttributes(*symbol, syntax.attributes);
-}
-
 ParameterSymbol& ParameterSymbol::clone(Compilation& compilation) const {
     auto result = compilation.emplace<ParameterSymbol>(name, location, isLocal, isPort);
     if (auto syntax = getSyntax())

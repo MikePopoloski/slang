@@ -120,12 +120,18 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
             if (declaration->keyword)
                 lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
 
-            SmallVectorSized<ParameterSymbol*, 8> params;
-            ParameterSymbol::fromSyntax(*result, *declaration, lastLocal, true, params);
+            if (declaration->kind == SyntaxKind::ParameterDeclaration) {
+                SmallVectorSized<ParameterSymbol*, 8> params;
+                ParameterSymbol::fromSyntax(*result, declaration->as<ParameterDeclarationSyntax>(),
+                                            lastLocal, true, params);
 
-            for (auto param : params) {
-                parameters.append(param);
-                result->addMember(*param);
+                for (auto param : params) {
+                    parameters.append(param);
+                    result->addMember(*param);
+                }
+            }
+            else {
+                // TODO: type params
             }
         }
     }
@@ -148,12 +154,18 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
             bool isLocal =
                 hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
 
-            SmallVectorSized<ParameterSymbol*, 8> params;
-            ParameterSymbol::fromSyntax(*result, *declaration, isLocal, false, params);
+            if (declaration->kind == SyntaxKind::ParameterDeclaration) {
+                SmallVectorSized<ParameterSymbol*, 8> params;
+                ParameterSymbol::fromSyntax(*result, declaration->as<ParameterDeclarationSyntax>(),
+                                            isLocal, false, params);
 
-            for (auto param : params) {
-                parameters.append(param);
-                result->addMember(*param);
+                for (auto param : params) {
+                    parameters.append(param);
+                    result->addMember(*param);
+                }
+            }
+            else {
+                // TODO: type params
             }
         }
     }
@@ -478,14 +490,18 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
         if (member->kind != SyntaxKind::ParameterDeclarationStatement)
             addMembers(*member);
         else {
-            for (auto declarator :
-                 member->as<ParameterDeclarationStatementSyntax>().parameter->declarators) {
+            auto paramBase = member->as<ParameterDeclarationStatementSyntax>().parameter;
+            if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
+                for (auto declarator : paramBase->as<ParameterDeclarationSyntax>().declarators) {
+                    ASSERT(paramIt != parameters.end());
+                    ASSERT(declarator->name.valueText() == (*paramIt)->name);
 
-                ASSERT(paramIt != parameters.end());
-                ASSERT(declarator->name.valueText() == (*paramIt)->name);
-
-                addMember((*paramIt)->clone(comp));
-                paramIt++;
+                    addMember((*paramIt)->clone(comp));
+                    paramIt++;
+                }
+            }
+            else {
+                // TODO: type params
             }
         }
     }

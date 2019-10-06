@@ -255,11 +255,20 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::ParameterDeclarationStatement: {
-            SmallVectorSized<ParameterSymbol*, 16> params;
-            ParameterSymbol::fromSyntax(*this, syntax.as<ParameterDeclarationStatementSyntax>(),
-                                        params);
-            for (auto param : params)
-                addMember(*param);
+            auto& statement = syntax.as<ParameterDeclarationStatementSyntax>();
+            auto paramBase = statement.parameter;
+            if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
+                SmallVectorSized<ParameterSymbol*, 8> params;
+                ParameterSymbol::fromSyntax(*this, paramBase->as<ParameterDeclarationSyntax>(),
+                                            /* isLocal */ true, /* isPort */ false, params);
+                for (auto param : params) {
+                    compilation.addAttributes(*param, statement.attributes);
+                    addMember(*param);
+                }
+            }
+            else {
+                // TODO: type params
+            }
             break;
         }
         case SyntaxKind::GenerateBlock:

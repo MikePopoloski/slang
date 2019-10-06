@@ -58,10 +58,13 @@ TEST_CASE("Parameter ports") {
     CHECK(parameters[0]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[1]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[2]->kind == SyntaxKind::ParameterDeclaration);
-    CHECK(parameters[2]->declarators[0]->name.valueText() == "blah");
+    CHECK(parameters[2]->as<ParameterDeclarationSyntax>().declarators[0]->name.valueText() ==
+          "blah");
     CHECK(parameters[3]->kind == SyntaxKind::ParameterDeclaration);
-    CHECK(parameters[3]->declarators[0]->name.valueText() == "blah");
-    CHECK(parameters[3]->declarators[0]->initializer->expr->kind == SyntaxKind::ShortIntType);
+    CHECK(parameters[3]->as<ParameterDeclarationSyntax>().declarators[0]->name.valueText() ==
+          "blah");
+    CHECK(parameters[3]->as<ParameterDeclarationSyntax>().declarators[0]->initializer->expr->kind ==
+          SyntaxKind::ShortIntType);
 }
 
 const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) {
