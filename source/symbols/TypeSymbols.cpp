@@ -858,6 +858,7 @@ const Type& PackedArrayType::fromSyntax(Compilation& compilation, const Type& el
         return elementType;
 
     // TODO: check bitwidth of array
+    // TODO: ensure integral
     auto result = compilation.emplace<PackedArrayType>(elementType, range);
     result->setSyntax(syntax);
     return *result;
@@ -1022,6 +1023,10 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation,
             fieldIndex++;
         }
     }
+
+    // TODO: error if dimensions
+    // TODO: error if signing
+    // TODO: check for void types
 
     result->setSyntax(syntax);
     return *result;
