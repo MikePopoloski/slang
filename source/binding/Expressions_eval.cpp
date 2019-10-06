@@ -747,7 +747,6 @@ optional<ConstantRange> RangeSelectExpression::getRange(EvalContext& context,
     ConstantRange valueRange = valueType.getArrayRange();
 
     if (selectionKind == RangeSelectionKind::Simple) {
-        // If this is a simple part select, the range has already been fully validated at bind time.
         result = type->getArrayRange();
     }
     else {
@@ -759,13 +758,13 @@ optional<ConstantRange> RangeSelectExpression::getRange(EvalContext& context,
 
         optional<int32_t> r = cr.integer().as<int32_t>();
         result = getIndexedRange(selectionKind, *l, *r, valueRange.isLittleEndian());
+    }
 
-        if (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right)) {
-            auto& diag = context.addDiag(diag::NotePartSelectInvalid, sourceRange);
-            diag << result.left << result.right;
-            diag << valueType;
-            return std::nullopt;
-        }
+    if (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right)) {
+        auto& diag = context.addDiag(diag::NotePartSelectInvalid, sourceRange);
+        diag << result.left << result.right;
+        diag << valueType;
+        return std::nullopt;
     }
 
     if (!result.isLittleEndian())

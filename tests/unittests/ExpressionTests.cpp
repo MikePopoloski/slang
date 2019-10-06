@@ -650,13 +650,20 @@ endmodule
     CHECK(elems[2].integer() == 1);
 }
 
-TEST_CASE("Element select out of bounds - valid") {
+TEST_CASE("Array select out of bounds - valid") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     localparam logic[3:0][31:0] foo = '{default:0};
     localparam int n = -1;
+
     localparam int j = n >= 0 ? foo[n] : -4;
     int k = n >= 0 ? foo[n] : -4;
+
+    localparam logic[1:0][31:0] l = n >= 0 ? foo[1:n] : '0;
+    logic[1:0][31:0] o = n >= 0 ? foo[1:n] : '0;
+
+    localparam logic[1:0][31:0] p = n >= 0 ? foo[n+:2] : '0;
+    logic[1:0][31:0] q = n >= 0 ? foo[n+:2] : '0;
 endmodule
 )");
 
@@ -665,13 +672,20 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Element select out of bounds - invalid") {
+TEST_CASE("Array select out of bounds - invalid") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     localparam logic[3:0][31:0] foo = '{default:0};
     localparam int n = -1;
+
     localparam int j = n >= -2 ? foo[n] : -4;
     int k = n >= -2 ? foo[n] : -4;
+
+    localparam logic[1:0][31:0] l = n >= -2 ? foo[1:n] : '0;
+    logic[1:0][31:0] o = n >= -2 ? foo[1:n] : '0;
+
+    localparam logic[1:0][31:0] p = n >= -2 ? foo[n+:2] : '0;
+    logic[1:0][31:0] q = n >= -2 ? foo[n+:2] : '0;
 endmodule
 )");
 
@@ -679,9 +693,13 @@ endmodule
     compilation.addSyntaxTree(tree);
     
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::IndexValueInvalid);
     CHECK(diags[1].code == diag::IndexValueInvalid);
+    CHECK(diags[2].code == diag::BadRangeExpression);
+    CHECK(diags[3].code == diag::BadRangeExpression);
+    CHECK(diags[4].code == diag::BadRangeExpression);
+    CHECK(diags[5].code == diag::BadRangeExpression);
 }
 
 TEST_CASE("Utility system functions") {

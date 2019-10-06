@@ -1777,7 +1777,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             return badExpr(compilation, result);
         }
 
-        if (!validateRange(selectionRange))
+        if ((context.flags & BindFlags::UnevaluatedBranch) == 0 && !validateRange(selectionRange))
             return badExpr(compilation, result);
     }
     else {
@@ -1792,7 +1792,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         }
 
         // If the lhs is a known constant, we can check that now too.
-        if (left.constant) {
+        if (left.constant && (context.flags & BindFlags::UnevaluatedBranch) == 0) {
             optional<int32_t> index = left.constant->integer().as<int32_t>();
             if (!index) {
                 auto& diag = context.addDiag(diag::IndexValueInvalid, left.sourceRange);
