@@ -1133,7 +1133,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
             result.found = nullptr;
             result.systemSubroutine = compilation.getSystemSubroutine(nameToken.valueText());
             if (!result.systemSubroutine) {
-                result.addDiag(*this, diag::UndeclaredIdentifier, nameToken.range())
+                result.addDiag(*this, diag::UnknownSystemName, nameToken.range())
                     << nameToken.valueText();
             }
             return;
