@@ -47,7 +47,7 @@ TEST_CASE("Complex header") {
 
 TEST_CASE("Parameter ports") {
     auto& text = "module foo #(foo, foo [3:1][9:0] = 4:3:9, parameter blah = blah, localparam type "
-                 "blah = shortint); endmodule";
+                 "stuff = shortint, stuff2, stuff3 = int, Blah blahblah); endmodule";
     const auto& module = parseModule(text);
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
@@ -55,16 +55,24 @@ TEST_CASE("Parameter ports") {
     CHECK_DIAGNOSTICS_EMPTY;
 
     auto parameters = module.header->parameters->declarations;
+    REQUIRE(parameters.size() == 5);
     CHECK(parameters[0]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[1]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[2]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[2]->as<ParameterDeclarationSyntax>().declarators[0]->name.valueText() ==
           "blah");
-    CHECK(parameters[3]->kind == SyntaxKind::ParameterDeclaration);
-    CHECK(parameters[3]->as<ParameterDeclarationSyntax>().declarators[0]->name.valueText() ==
-          "blah");
-    CHECK(parameters[3]->as<ParameterDeclarationSyntax>().declarators[0]->initializer->expr->kind ==
-          SyntaxKind::ShortIntType);
+    CHECK(parameters[3]->kind == SyntaxKind::TypeParameterDeclaration);
+
+    auto& typeParam = parameters[3]->as<TypeParameterDeclarationSyntax>();
+    REQUIRE(typeParam.declarators.size() == 3);
+    CHECK(typeParam.declarators[0]->name.valueText() == "stuff");
+    CHECK(typeParam.declarators[0]->assignment->type->kind == SyntaxKind::ShortIntType);
+    CHECK(typeParam.declarators[1]->name.valueText() == "stuff2");
+    CHECK(typeParam.declarators[2]->name.valueText() == "stuff3");
+
+    CHECK(parameters[4]->kind == SyntaxKind::ParameterDeclaration);
+    CHECK(parameters[4]->as<ParameterDeclarationSyntax>().declarators[0]->name.valueText() ==
+          "blahblah");
 }
 
 const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) {

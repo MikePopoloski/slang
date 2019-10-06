@@ -1824,9 +1824,7 @@ MemberSyntax& Parser::parseVariableDeclaration(span<AttributeInstanceSyntax*> at
         case TokenKind::ParameterKeyword:
         case TokenKind::LocalParamKeyword: {
             Token semi;
-            auto keyword = consume();
-            auto& type = parseDataType(/* allowImplicit */ true);
-            auto& parameter = factory.parameterDeclaration(keyword, type, parseDeclarators(semi));
+            auto& parameter = parseParameterDecl(consume(), &semi);
             return factory.parameterDeclarationStatement(attributes, parameter, semi);
         }
         case TokenKind::LetKeyword: {
@@ -2102,16 +2100,65 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(
                                        declarations.copy(alloc), expr, semi2, end, blockName);
 }
 
-ParameterDeclarationSyntax& Parser::parseParameterPort() {
-    if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
-        auto keyword = consume();
-        auto& type = parseDataType(/* allowImplicit */ true);
-        return factory.parameterDeclaration(keyword, type, parseOneDeclarator());
+ParameterDeclarationBaseSyntax& Parser::parseParameterPort() {
+    if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword))
+        return parseParameterDecl(consume(), nullptr);
+
+    // this is a normal parameter without the actual parameter keyword
+    return parseParameterDecl(Token(), nullptr);
+}
+
+TypeAssignmentSyntax& Parser::parseTypeAssignment() {
+    auto name = expect(TokenKind::Identifier);
+
+    EqualsTypeClauseSyntax* assignment = nullptr;
+    if (peek(TokenKind::Equals)) {
+        auto equals = consume();
+        assignment = &factory.equalsTypeClause(equals, parseDataType(/* allowImplicit */ false));
     }
 
-    // this is a normal parameter without the actual parameter keyword (stupid implicit nonsense)
-    auto& type = parseDataType(/* allowImplicit */ true);
-    return factory.parameterDeclaration(Token(), type, parseOneDeclarator());
+    return factory.typeAssignment(name, assignment);
+}
+
+ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token* semi) {
+    // Check for a type parameter. We need to check for a parenthesis to see if
+    // this is actually a type reference for a normal parameter.
+    if (peek(TokenKind::TypeKeyword) && peek(1).kind != TokenKind::OpenParenthesis) {
+        auto typeKeyword = consume();
+
+        SmallVectorSized<TokenOrSyntax, 4> decls;
+        if (semi) {
+            parseList<isIdentifierOrComma, isSemicolon>(
+                decls, TokenKind::Semicolon, TokenKind::Comma, *semi, RequireItems::True,
+                diag::ExpectedParameterPort, [this] { return &parseTypeAssignment(); });
+        }
+        else {
+            while (true) {
+                decls.append(&parseTypeAssignment());
+                if (!peek(TokenKind::Comma) || peek(1).kind != TokenKind::Identifier ||
+                    (peek(2).kind != TokenKind::Equals && peek(2).kind != TokenKind::Comma)) {
+                    break;
+                }
+
+                decls.append(consume());
+            }
+        }
+
+        return factory.typeParameterDeclaration(keyword, typeKeyword, decls.copy(alloc));
+    }
+    else {
+        auto& type = parseDataType(/* allowImplicit */ true);
+
+        // If the semi pointer is given, we should parse a list of decls.
+        // Otherwise we're in a parameter port list and should just parse one.
+        span<TokenOrSyntax> decls;
+        if (semi)
+            decls = parseDeclarators(*semi);
+        else
+            decls = parseOneDeclarator();
+
+        return factory.parameterDeclaration(keyword, type, decls);
+    }
 }
 
 ClockingSkewSyntax* Parser::parseClockingSkew() {

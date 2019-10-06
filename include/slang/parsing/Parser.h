@@ -222,7 +222,9 @@ private:
     AssertionItemPortListSyntax* parseAssertionItemPortList(TokenKind declarationKind);
     PropertyDeclarationSyntax& parsePropertyDeclaration(span<AttributeInstanceSyntax*> attributes);
     SequenceDeclarationSyntax& parseSequenceDeclaration(span<AttributeInstanceSyntax*> attributes);
-    ParameterDeclarationSyntax& parseParameterPort();
+    ParameterDeclarationBaseSyntax& parseParameterPort();
+    ParameterDeclarationBaseSyntax& parseParameterDecl(Token keyword, Token* semi);
+    TypeAssignmentSyntax& parseTypeAssignment();
     ClockingSkewSyntax* parseClockingSkew();
     ClockingDeclarationSyntax& parseClockingDeclaration(span<AttributeInstanceSyntax*> attributes);
     MemberSyntax& parseVariableDeclaration(span<AttributeInstanceSyntax*> attributes);
