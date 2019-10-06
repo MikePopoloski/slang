@@ -17,13 +17,15 @@ def writefile(path, contents):
 
 def main():
     parser = argparse.ArgumentParser(description='Diagnostic source generator')
-    parser.add_argument('--dir', default=os.getcwd(), help='Output directory')
+    parser.add_argument('--outDir', default=os.getcwd(), help='Output directory')
+    parser.add_argument('--srcDir', help='Source directory to search for usages')
+    parser.add_argument('--incDir', help='Include directory to search for usages')
     args = parser.parse_args()
 
     ourdir = os.path.dirname(os.path.realpath(__file__))
     inf = open(os.path.join(ourdir, "diagnostics.txt"))
 
-    headerdir = os.path.join(args.dir, 'slang', 'diagnostics')
+    headerdir = os.path.join(args.outDir, 'slang', 'diagnostics')
     try:
         os.makedirs(headerdir)
     except OSError:
@@ -31,6 +33,7 @@ def main():
 
     diags = {}
     groups = []
+    diaglist = []
     subsystem = 'General'
     curgroup = None
 
@@ -63,18 +66,27 @@ def main():
             sev = parts[0]
             if sev == 'warning':
                 diags[subsystem].append(('Warning', parts[2], parts[3], parts[1]))
+                diaglist.append(parts[2])
             elif sev == 'error':
                 diags[subsystem].append(('Error', parts[1], parts[2], ''))
+                diaglist.append(parts[1])
             elif sev == 'note':
                 diags[subsystem].append(('Note', parts[1], parts[2], ''))
+                diaglist.append(parts[1])
             else:
                 raise Exception('Invalid entry: {}'.format(line))
 
     for k,v in sorted(diags.items()):
         createheader(os.path.join(headerdir, k + "Diags.h"), k, v)
 
-    createsource(os.path.join(args.dir, "DiagCode.cpp"), diags, groups)
+    createsource(os.path.join(args.outDir, "DiagCode.cpp"), diags, groups)
     createallheader(os.path.join(headerdir, "AllDiags.h"), diags)
+
+    doCheck = False
+    if doCheck:
+        diaglist = checkDiags(args.srcDir, diaglist)
+        diaglist = checkDiags(args.incDir, diaglist)
+        reportUnused(diaglist)
 
 def createheader(path, subsys, diags):
     output = '''//------------------------------------------------------------------------------
@@ -206,6 +218,19 @@ def createallheader(path, diags):
 
     output += '\n'
     writefile(path, output)
+
+def checkDiags(path, diags):
+    import glob
+    for ext in ('cpp', 'h'):
+        for file in glob.glob(path + "/**/*." + ext, recursive=True):
+            with open(file, 'r') as f:
+                text = f.read()
+                diags = [d for d in diags if not ('::' + d) in text]
+    return diags
+
+def reportUnused(diags):
+    for d in diags:
+        print("warning: '{}' is unused".format(d))
 
 if __name__ == "__main__":
     main()

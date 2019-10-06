@@ -1,5 +1,8 @@
 add_custom_command(
-	COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/diagnostic_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
+	COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/diagnostic_gen.py
+				--outDir ${CMAKE_CURRENT_BINARY_DIR}
+				--srcDir ${CMAKE_CURRENT_SOURCE_DIR}
+				--incDir ${CMAKE_CURRENT_SOURCE_DIR}/../include/slang
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
 	DEPENDS ../scripts/diagnostic_gen.py ../scripts/diagnostics.txt
 	COMMENT "Generating diagnostics"
