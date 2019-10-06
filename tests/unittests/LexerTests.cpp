@@ -1,6 +1,7 @@
 #include "Test.h"
 
 #include "slang/syntax/SyntaxPrinter.h"
+#include "../source/text/CharInfo.h"
 
 TEST_CASE("Invalid chars") {
     auto& text = "\x04";
@@ -196,6 +197,7 @@ TEST_CASE("Newlines (LF)") {
     CHECK(token.toString() == text);
     CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::EndOfLine);
+    CHECK(token.trivia()[0].syntax() == nullptr);
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
@@ -255,6 +257,8 @@ TEST_CASE("System Identifiers") {
     CHECK(token2.toString() == text2);
     CHECK(token2.valueText() == text2);
     CHECK_DIAGNOSTICS_EMPTY;
+
+    CHECK(token != token2);
 }
 
 TEST_CASE("Invalid escapes") {
@@ -606,6 +610,10 @@ TEST_CASE("Directive continuation") {
     Trivia t = token.trivia()[0];
     CHECK(t.kind == TriviaKind::Directive);
     REQUIRE(t.syntax()->kind == SyntaxKind::DefineDirective);
+
+    CHECK(t.getSkippedTokens() == span<const Token>{});
+    CHECK(t.getRawText() == "");
+    CHECK(t.withLocation(alloc, SourceLocation()).getExplicitLocation() == t.getExplicitLocation());
 
     const DefineDirectiveSyntax& define = t.syntax()->as<DefineDirectiveSyntax>();
     REQUIRE(define.body.size() == 5);
@@ -1058,4 +1066,69 @@ TEST_CASE("Punctuation corner cases") {
     token = lexToken("|-");
     CHECK(token.kind == TokenKind::Or);
     CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Skipped token inspection") {
+    Token token = lexToken("`` foo");
+    CHECK(token.kind == TokenKind::Identifier);
+
+    auto trivia = token.trivia()[0];
+    CHECK(trivia.getExplicitLocation() == token.location() - 3);
+    CHECK(trivia.getSkippedTokens()[0].kind == TokenKind::MacroPaste);
+
+    token = token.withRawText(alloc, "asdf");
+    CHECK(token.rawText() == "asdf");
+    CHECK(token.location() == *trivia.getExplicitLocation() + 3);
+}
+
+TEST_CASE("Token with lots of trivia") {
+    Token token = lexToken(" /**/ /**/ /**/ /**/ /**/ /**/ /**/ foo");
+    CHECK(token.kind == TokenKind::Identifier);
+    REQUIRE(token.trivia().size() == 15);
+
+    Trivia trivia = token.trivia()[3];
+    CHECK(trivia.getRawText() == "/**/");
+    CHECK(!trivia.getExplicitLocation().has_value());
+
+    trivia = trivia.withLocation(alloc, SourceLocation(BufferID(1, "asdf"), 5));
+    CHECK(trivia.getRawText() == "/**/");
+    CHECK(trivia.getExplicitLocation()->offset() == 5);
+}
+
+void testExpect(TokenKind kind) {
+    diagnostics.clear();
+    Token actual(alloc, TokenKind::Identifier, {}, "SDF", SourceLocation(BufferID(1, "asdf"), 5));
+    Token token = Token::createExpected(alloc, diagnostics, actual, kind, Token());
+
+    CHECK(token.kind == kind);
+    CHECK(token.trivia().empty());
+    CHECK(token.location().offset() == 5);
+    CHECK(token.isMissing());
+
+    if (!isKeyword(kind)) {
+        CHECK(token.valueText().empty());
+        CHECK(token.rawText().empty());
+    }
+}
+
+TEST_CASE("Missing / expected tokens") {
+    testExpect(TokenKind::IncludeFileName);
+    testExpect(TokenKind::StringLiteral);
+    testExpect(TokenKind::Directive);
+    testExpect(TokenKind::MacroUsage);
+    testExpect(TokenKind::IntegerLiteral);
+    testExpect(TokenKind::IntegerBase);
+    testExpect(TokenKind::UnbasedUnsizedLiteral);
+    testExpect(TokenKind::RealLiteral);
+    testExpect(TokenKind::TimeLiteral);
+    testExpect(TokenKind::WithKeyword);
+}
+
+TEST_CASE("Test text utilities") {
+    CHECK(getLogicCharValue('a').value == 0);
+    CHECK(utf8SeqBytes(127) == 0);
+    CHECK(utf8SeqBytes(193) == 1);
+    CHECK(utf8SeqBytes(224) == 2);
+    CHECK(utf8SeqBytes(240) == 3);
+    CHECK(utf8SeqBytes(255) == 0);
 }

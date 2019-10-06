@@ -359,6 +359,23 @@ i + 1 ()
 )");
 }
 
+TEST_CASE("Diag include stack -- skipped tokens") {
+    auto& sm = SyntaxTree::getDefaultSourceManager();
+    sm.assignText("fake-include1.svh", R"(
+`include <asdf
+)");
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+`include "fake-include1.svh"
+endmodule
+)",
+"source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
+
 TEST_CASE("DiagnosticEngine stuff") {
     class TestClient : public DiagnosticClient {
     public:

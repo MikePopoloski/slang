@@ -32,19 +32,6 @@ inline bool isWhitespace(char c) {
     return false;
 }
 
-/// Returns whether the given character is considered horizontal whitespace
-/// (as opposed to vertical like line feeds or vertical tabs).
-inline bool isHorizontalWhitespace(char c) {
-    switch (c) {
-        case ' ':
-        case '\t':
-        case '\v':
-        case '\f':
-            return true;
-    }
-    return false;
-}
-
 /// Returns whether the given character is considered a new line.
 inline bool isNewline(char c) {
     return c == '\r' || c == '\n';
