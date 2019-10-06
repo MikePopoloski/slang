@@ -119,11 +119,11 @@ error MissingModportPortDirection "modport port declaration is missing direction
 error CaseStatementEmpty "{} statement has no items"
 error MultipleDefaultCases "{} statement has multiple default cases"
 error DirectionOnInterfacePort "direction specifier on interface port is not allowed"
-error NonStandardGenBlock "standalone generate block without loop or condition is not allowed"
 error UnexpectedQualifiers "unexpected qualifiers on class member"
 error ExpectedSampleKeyword "expected 'sample' keyword"
 error MultipleGenerateDefaultCases "case generate has multiple default cases"
 error CaseGenerateEmpty "case generate has no items"
+warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 
 subsystem Declarations
 error LocalParamNoInitializer "local parameter is missing an initializer"
@@ -295,4 +295,4 @@ note NoteAssertionFailed "assertion failed"
 
 group default = { real-underflow real-overflow literal-overflow ignored-macro-paste case-gen-dup
 				  case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
-				  dup-import redef-macro }
+				  dup-import redef-macro nonstandard-generate }

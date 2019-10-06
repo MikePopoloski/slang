@@ -377,24 +377,20 @@ MemberSyntax* Parser::parseMember() {
             errorIfAttributes(attributes);
             auto keyword = consume();
 
-            // It's definitely not legal to have a generate block here on its own (without an if or
-            // for loop) but some simulators seems to accept it and I've found code in the wild that
-            // depends on it. We'll parse it here and then issue a diagnostic about how it's not
-            // kosher.
-            if (peek(TokenKind::BeginKeyword)) {
-                addDiag(diag::NonStandardGenBlock, peek().location());
-
-                SmallVectorSized<MemberSyntax*, 2> buffer;
-                buffer.append(&parseGenerateBlock());
-                return &factory.generateRegion(attributes, keyword, buffer.copy(alloc),
-                                               expect(TokenKind::EndGenerateKeyword));
-            }
-
             Token endgenerate;
             auto members = parseMemberList<MemberSyntax>(TokenKind::EndGenerateKeyword, endgenerate,
                                                          [this]() { return parseMember(); });
             return &factory.generateRegion(attributes, keyword, members, endgenerate);
         }
+        case TokenKind::BeginKeyword:
+            errorIfAttributes(attributes);
+
+            // It's definitely not legal to have a generate block here on its own
+            // (without an if or for loop) but some simulators seems to accept it
+            // and I've found code in the wild that depends on it. We'll parse it
+            // here and then issue a diagnostic about how it's not kosher.
+            addDiag(diag::NonStandardGenBlock, peek().location());
+            return &parseGenerateBlock();
         case TokenKind::TimeUnitKeyword:
         case TokenKind::TimePrecisionKeyword:
             errorIfAttributes(attributes);
