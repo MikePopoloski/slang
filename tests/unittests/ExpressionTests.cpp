@@ -650,6 +650,40 @@ endmodule
     CHECK(elems[2].integer() == 1);
 }
 
+TEST_CASE("Element select out of bounds - valid") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam logic[3:0][31:0] foo = '{default:0};
+    localparam int n = -1;
+    localparam int j = n >= 0 ? foo[n] : -4;
+    int k = n >= 0 ? foo[n] : -4;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Element select out of bounds - invalid") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam logic[3:0][31:0] foo = '{default:0};
+    localparam int n = -1;
+    localparam int j = n >= -2 ? foo[n] : -4;
+    int k = n >= -2 ? foo[n] : -4;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::IndexValueInvalid);
+    CHECK(diags[1].code == diag::IndexValueInvalid);
+}
+
 TEST_CASE("Utility system functions") {
     Compilation compilation;
     auto& scope = compilation.createScriptScope();

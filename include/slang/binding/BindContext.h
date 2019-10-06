@@ -31,15 +31,19 @@ enum class BindFlags {
     /// different binding rules.
     InsideConcatenation = 4,
 
+    /// The expression is inside the unevaluated side of a conditional branch.
+    /// This is used to avoid issuing warnings for things that won't happen.
+    UnevaluatedBranch = 8,
+
     /// Allow the expression to also be a data type; used in a few places like
     /// the first argument to system methods like $bits
-    AllowDataType = 8,
+    AllowDataType = 16,
 
     /// The expression being bound is an enum value initializer.
-    EnumInitializer = 16,
+    EnumInitializer = 32,
 
     /// Attributes are disallowed on expressions in this context.
-    NoAttributes = 32
+    NoAttributes = 64
 };
 BITMASK_DEFINE_MAX_ELEMENT(BindFlags, NoAttributes);
 

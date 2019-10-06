@@ -1511,8 +1511,19 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
     }
 
     auto& pred = selfDetermined(compilation, *syntax.predicate->conditions[0]->expr, context);
-    auto& left = create(compilation, *syntax.left, context, BindFlags::None, assignmentTarget);
-    auto& right = create(compilation, *syntax.right, context, BindFlags::None, assignmentTarget);
+
+    // If the predicate is known at compile time, we can tell which branch will be unevaluated.
+    BindFlags leftFlags = BindFlags::None;
+    BindFlags rightFlags = BindFlags::None;
+    if (pred.constant && (!pred.constant->isInteger() || !pred.constant->integer().hasUnknown())) {
+        if (pred.constant->isTrue())
+            rightFlags = BindFlags::UnevaluatedBranch;
+        else
+            leftFlags = BindFlags::UnevaluatedBranch;
+    }
+
+    auto& left = create(compilation, *syntax.left, context, leftFlags, assignmentTarget);
+    auto& right = create(compilation, *syntax.right, context, rightFlags, assignmentTarget);
 
     // Force four-state return type for ambiguous condition case.
     const Type* resultType =
@@ -1668,7 +1679,8 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     }
 
     // If the selector is constant, we can do checking at compile time that it's within bounds.
-    if (selector.constant) {
+    // Only do that if we're not in an unevaluated conditional branch.
+    if (selector.constant && (context.flags & BindFlags::UnevaluatedBranch) == 0) {
         optional<int32_t> index = selector.constant->integer().as<int32_t>();
         if (!index || !value.type->getArrayRange().containsPoint(*index)) {
             auto& diag = context.addDiag(diag::IndexValueInvalid, selector.sourceRange);
