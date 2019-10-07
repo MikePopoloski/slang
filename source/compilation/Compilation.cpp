@@ -249,7 +249,7 @@ const RootSymbol& Compilation::getRoot() {
 
         bool allDefaulted = true;
         for (auto param : definition->parameters) {
-            if (!param->getDeclaredType()->getInitializerSyntax()) {
+            if (!param->hasDefault()) {
                 allDefaulted = false;
                 break;
             }

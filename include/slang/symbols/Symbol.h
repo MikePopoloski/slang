@@ -48,6 +48,7 @@ struct AttributeInstanceSyntax;
     x(NetType) \
     x(Definition) \
     x(Parameter) \
+    x(TypeParameter) \
     x(Port) \
     x(InterfacePort) \
     x(Modport) \

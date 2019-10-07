@@ -19,6 +19,7 @@ class DefinitionSymbol;
 class InterfaceInstanceSymbol;
 class ModportSymbol;
 class PackageSymbol;
+class TypeAliasType;
 
 /// Represents an empty member, i.e. a standalone semicolon.
 /// This exists as a symbol mostly to provide a place to attach attributes.
@@ -95,8 +96,26 @@ private:
     mutable optional<const PackageSymbol*> package;
 };
 
+class ParameterSymbolBase {
+public:
+    const Symbol& symbol;
+
+    bool isLocalParam() const { return isLocal; }
+    bool isPortParam() const { return isPort; }
+    bool isBodyParam() const { return !isPortParam(); }
+    bool hasDefault() const;
+
+protected:
+    ParameterSymbolBase(const Symbol& symbol, bool isLocal, bool isPort) :
+        symbol(symbol), isLocal(isLocal), isPort(isPort) {}
+
+private:
+    bool isLocal = false;
+    bool isPort = false;
+};
+
 /// Represents a parameter value.
-class ParameterSymbol : public ValueSymbol {
+class ParameterSymbol : public ValueSymbol, public ParameterSymbolBase {
 public:
     ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
@@ -110,16 +129,31 @@ public:
     const ConstantValue& getValue() const;
     void setValue(ConstantValue value);
 
-    bool isLocalParam() const { return isLocal; }
-    bool isPortParam() const { return isPort; }
-    bool isBodyParam() const { return !isPortParam(); }
-
     void toJson(json& j) const;
 
 private:
     const ConstantValue* overriden = nullptr;
-    bool isLocal = false;
-    bool isPort = false;
+};
+
+class TypeParameterSymbol : public Symbol, public ParameterSymbolBase {
+public:
+    TypeParameterSymbol(string_view name, SourceLocation loc, TypeAliasType& type, bool isLocal,
+                        bool isPort);
+
+    static void fromSyntax(const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
+                           bool isLocal, bool isPort, SmallVector<TypeParameterSymbol*>& results);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
+
+    TypeParameterSymbol& clone(Compilation& compilation) const;
+
+    TypeAliasType& getTypeAlias();
+    const TypeAliasType& getTypeAlias() const;
+
+    void toJson(json& j) const;
+
+private:
+    TypeAliasType* type = nullptr;
 };
 
 /// Represents the public-facing side of a module / program / interface port.

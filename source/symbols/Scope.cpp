@@ -267,7 +267,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 }
             }
             else {
-                // TODO: type params
+                SmallVectorSized<TypeParameterSymbol*, 8> params;
+                TypeParameterSymbol::fromSyntax(*this,
+                                                paramBase->as<TypeParameterDeclarationSyntax>(),
+                                                /* isLocal */ true, /* isPort */ false, params);
+                for (auto param : params) {
+                    compilation.addAttributes(*param, statement.attributes);
+                    addMember(*param);
+                }
             }
             break;
         }

@@ -16,7 +16,7 @@ namespace slang {
 class Expression;
 class ModportSymbol;
 class NetType;
-class ParameterSymbol;
+class ParameterSymbolBase;
 class PortSymbol;
 
 /// A helper base class for symbols that have an associated time scale.
@@ -68,7 +68,7 @@ public:
 /// to form a node in the design hierarchy.
 class DefinitionSymbol : public Symbol, public Scope, TimeScaleSymbolBase {
 public:
-    span<const ParameterSymbol* const> parameters;
+    span<const ParameterSymbolBase* const> parameters;
     DefinitionKind definitionKind;
     const NetType& defaultNetType;
 
@@ -119,7 +119,7 @@ protected:
                    const DefinitionSymbol& definition);
 
     void populate(const HierarchicalInstanceSyntax* syntax,
-                  span<const ParameterSymbol* const> parameters);
+                  span<const ParameterSymbolBase* const> parameters);
 
 private:
     SymbolMap* portMap;
@@ -138,7 +138,7 @@ public:
     static ModuleInstanceSymbol& instantiate(Compilation& compilation,
                                              const HierarchicalInstanceSyntax& syntax,
                                              const DefinitionSymbol& definition,
-                                             span<const ParameterSymbol* const> parameters);
+                                             span<const ParameterSymbolBase* const> parameters);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
 };
@@ -152,7 +152,7 @@ public:
     static InterfaceInstanceSymbol& instantiate(Compilation& compilation,
                                                 const HierarchicalInstanceSyntax& syntax,
                                                 const DefinitionSymbol& definition,
-                                                span<const ParameterSymbol* const> parameters);
+                                                span<const ParameterSymbolBase* const> parameters);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfaceInstance; }
 };

@@ -99,10 +99,17 @@ void WildcardImportSymbol::toJson(json& j) const {
         j["package"] = jsonLink(*pkg);
 }
 
+bool ParameterSymbolBase::hasDefault() const {
+    if (symbol.kind == SymbolKind::Parameter)
+        return symbol.as<ParameterSymbol>().getDeclaredType()->getInitializerSyntax();
+    else
+        return symbol.as<TypeParameterSymbol>().getTypeAlias().targetType.getTypeSyntax();
+}
+
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort) :
     ValueSymbol(SymbolKind::Parameter, name, loc,
                 DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::RequireConstant),
-    isLocal(isLocal), isPort(isPort) {
+    ParameterSymbolBase(*this, isLocal, isPort) {
 }
 
 void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationSyntax& syntax,
@@ -127,7 +134,9 @@ void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationS
 }
 
 ParameterSymbol& ParameterSymbol::clone(Compilation& compilation) const {
-    auto result = compilation.emplace<ParameterSymbol>(name, location, isLocal, isPort);
+    auto result =
+        compilation.emplace<ParameterSymbol>(name, location, isLocalParam(), isPortParam());
+
     if (auto syntax = getSyntax())
         result->setSyntax(*syntax);
 
@@ -156,6 +165,72 @@ void ParameterSymbol::setValue(ConstantValue value) {
 
 void ParameterSymbol::toJson(json& j) const {
     j["value"] = getValue();
+    j["isLocal"] = isLocalParam();
+    j["isPort"] = isPortParam();
+    j["isBody"] = isBodyParam();
+}
+
+TypeParameterSymbol::TypeParameterSymbol(string_view name, SourceLocation loc, TypeAliasType& type,
+                                         bool isLocal, bool isPort) :
+    Symbol(SymbolKind::Parameter, name, loc),
+    ParameterSymbolBase(*this, isLocal, isPort), type(&type) {
+}
+
+void TypeParameterSymbol::fromSyntax(const Scope& scope,
+                                     const TypeParameterDeclarationSyntax& syntax, bool isLocal,
+                                     bool isPort, SmallVector<TypeParameterSymbol*>& results) {
+    auto& comp = scope.getCompilation();
+    for (auto decl : syntax.declarators) {
+        auto name = decl->name.valueText();
+        auto loc = decl->name.location();
+
+        auto type = comp.emplace<TypeAliasType>(name, loc);
+        type->setSyntax(*decl);
+
+        auto param =
+            comp.emplace<TypeParameterSymbol>(decl->name.valueText(), loc, *type, isLocal, isPort);
+        param->setSyntax(*decl);
+
+        if (!decl->assignment) {
+            if (!isPort)
+                scope.addDiag(diag::BodyParamNoInitializer, loc);
+            else if (isLocal)
+                scope.addDiag(diag::LocalParamNoInitializer, loc);
+        }
+        else {
+            type->targetType.setTypeSyntax(*decl->assignment->type);
+        }
+
+        results.append(param);
+    }
+}
+
+TypeParameterSymbol& TypeParameterSymbol::clone(Compilation& comp) const {
+    auto newType = comp.emplace<TypeAliasType>(name, location);
+    auto result =
+        comp.emplace<TypeParameterSymbol>(name, location, *newType, isLocalParam(), isPortParam());
+
+    if (auto syntax = getSyntax()) {
+        result->setSyntax(*syntax);
+        newType->setSyntax(*syntax);
+    }
+
+    auto declared = getDeclaredType();
+    result->type->targetType.copyTypeFrom(*declared);
+
+    return *result;
+}
+
+TypeAliasType& TypeParameterSymbol::getTypeAlias() {
+    return *type;
+}
+
+const TypeAliasType& TypeParameterSymbol::getTypeAlias() const {
+    return *type;
+}
+
+void TypeParameterSymbol::toJson(json& j) const {
+    j["type"] = getTypeAlias();
     j["isLocal"] = isLocalParam();
     j["isPort"] = isPortParam();
     j["isBody"] = isBodyParam();

@@ -108,7 +108,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
     for (auto import : syntax.header->imports)
         result->addMembers(*import);
 
-    SmallVectorSized<const ParameterSymbol*, 8> parameters;
+    SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
     bool hasPortParams = syntax.header->parameters;
     if (hasPortParams) {
         bool lastLocal = false;
@@ -123,7 +123,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
             if (declaration->kind == SyntaxKind::ParameterDeclaration) {
                 SmallVectorSized<ParameterSymbol*, 8> params;
                 ParameterSymbol::fromSyntax(*result, declaration->as<ParameterDeclarationSyntax>(),
-                                            lastLocal, true, params);
+                                            lastLocal, /* isPort */ true, params);
 
                 for (auto param : params) {
                     parameters.append(param);
@@ -131,7 +131,15 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
                 }
             }
             else {
-                // TODO: type params
+                SmallVectorSized<TypeParameterSymbol*, 8> params;
+                TypeParameterSymbol::fromSyntax(*result,
+                                                declaration->as<TypeParameterDeclarationSyntax>(),
+                                                lastLocal, /* isPort */ true, params);
+
+                for (auto param : params) {
+                    parameters.append(param);
+                    result->addMember(*param);
+                }
             }
         }
     }
@@ -183,7 +191,8 @@ namespace {
 
 Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definition,
                        const HierarchicalInstanceSyntax& syntax,
-                       span<const ParameterSymbol* const> parameters, SmallVector<int32_t>& path,
+                       span<const ParameterSymbolBase* const> parameters,
+                       SmallVector<int32_t>& path,
                        span<const AttributeInstanceSyntax* const> attributes) {
     InstanceSymbol* inst;
     switch (definition.definitionKind) {
@@ -209,7 +218,7 @@ using DimIterator = span<VariableDimensionSyntax*>::iterator;
 
 Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& definition,
                              const HierarchicalInstanceSyntax& instanceSyntax,
-                             span<const ParameterSymbol* const> parameters,
+                             span<const ParameterSymbolBase* const> parameters,
                              const BindContext& context, DimIterator it, DimIterator end,
                              SmallVector<int32_t>& path,
                              span<const AttributeInstanceSyntax* const> attributes) {
@@ -337,7 +346,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                 if (param->isLocalParam())
                     continue;
 
-                paramOverrides.emplace(param->name, orderedParams[orderedIndex++]->expr);
+                paramOverrides.emplace(param->symbol.name, orderedParams[orderedIndex++]->expr);
             }
 
             // Make sure there aren't extra param assignments for non-existent params.
@@ -352,7 +361,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         else {
             // Otherwise handle named assignments.
             for (auto param : definition->parameters) {
-                auto it = namedParams.find(param->name);
+                auto it = namedParams.find(param->symbol.name);
                 if (it == namedParams.end())
                     continue;
 
@@ -364,7 +373,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                                                          : diag::AssignedToLocalBodyParam;
 
                     auto& diag = scope.addDiag(code, arg->name.location());
-                    diag.addNote(diag::NoteDeclarationHere, param->location);
+                    diag.addNote(diag::NoteDeclarationHere, param->symbol.location);
                     continue;
                 }
 
@@ -373,7 +382,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                 if (!arg->expr)
                     continue;
 
-                paramOverrides.emplace(param->name, arg->expr);
+                paramOverrides.emplace(param->symbol.name, arg->expr);
             }
 
             for (const auto& pair : namedParams) {
@@ -395,28 +404,63 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     Scope& tempDef = createTempInstance(compilation, *definition);
 
     BindContext context(scope, location, BindFlags::Constant);
-    SmallVectorSized<const ParameterSymbol*, 8> parameters;
+    SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
 
     for (auto param : definition->parameters) {
-        ParameterSymbol& newParam = param->clone(compilation);
-        tempDef.addMember(newParam);
-        parameters.append(&newParam);
+        if (param->symbol.kind == SymbolKind::Parameter) {
+            // This is a value parameter.
+            ParameterSymbol& newParam = param->symbol.as<ParameterSymbol>().clone(compilation);
+            tempDef.addMember(newParam);
+            parameters.append(&newParam);
 
-        if (auto it = paramOverrides.find(newParam.name); it != paramOverrides.end()) {
-            auto& expr = *it->second;
-            newParam.setInitializerSyntax(expr, expr.getFirstToken().location());
+            if (auto it = paramOverrides.find(newParam.name); it != paramOverrides.end()) {
+                auto& expr = *it->second;
+                newParam.setInitializerSyntax(expr, expr.getFirstToken().location());
 
-            auto declared = newParam.getDeclaredType();
-            declared->clearResolved();
-            declared->resolveAt(context);
-        }
-        else if (!newParam.isLocalParam() && newParam.isPortParam() && !newParam.getInitializer()) {
-            auto& diag = scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
-            diag << definition->name;
-            diag << newParam.name;
+                auto declared = newParam.getDeclaredType();
+                declared->clearResolved();
+                declared->resolveAt(context);
+            }
+            else if (!newParam.isLocalParam() && newParam.isPortParam() &&
+                     !newParam.getInitializer()) {
+                auto& diag =
+                    scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
+                diag << definition->name;
+                diag << newParam.name;
+            }
+            else {
+                newParam.getDeclaredType()->clearResolved();
+            }
         }
         else {
-            newParam.getDeclaredType()->clearResolved();
+            // Otherwise this is a type parameter.
+            auto& newParam = param->symbol.as<TypeParameterSymbol>().clone(compilation);
+            tempDef.addMember(newParam);
+            parameters.append(&newParam);
+
+            auto& declared = newParam.getTypeAlias().targetType;
+
+            if (auto it = paramOverrides.find(newParam.name); it != paramOverrides.end()) {
+                auto& expr = *it->second;
+                if (!DataTypeSyntax::isKind(expr.kind)) {
+                    scope.addDiag(diag::BadTypeParamExpr, expr.getFirstToken().location())
+                        << newParam.name;
+                    declared.clearResolved();
+                }
+                else {
+                    declared.setType(compilation.getType(expr.as<DataTypeSyntax>(), location, scope));
+                }
+            }
+            else if (!newParam.isLocalParam() && newParam.isPortParam() &&
+                     !declared.getTypeSyntax()) {
+                auto& diag =
+                    scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
+                diag << definition->name;
+                diag << newParam.name;
+            }
+            else {
+                declared.clearResolved();
+            }
         }
     }
 
@@ -453,7 +497,7 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
 }
 
 void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
-                              span<const ParameterSymbol* const> parameters) {
+                              span<const ParameterSymbolBase* const> parameters) {
     // TODO: getSyntax dependency
     auto& declSyntax = definition.getSyntax()->as<ModuleDeclarationSyntax>();
     Compilation& comp = getCompilation();
@@ -469,7 +513,11 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
         if (!original->isPortParam())
             break;
 
-        addMember(original->clone(comp));
+        if (original->symbol.kind == SymbolKind::Parameter)
+            addMember(original->symbol.as<ParameterSymbol>().clone(comp));
+        else
+            addMember(original->symbol.as<TypeParameterSymbol>().clone(comp));
+
         paramIt++;
     }
 
@@ -494,14 +542,24 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
             if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
                 for (auto declarator : paramBase->as<ParameterDeclarationSyntax>().declarators) {
                     ASSERT(paramIt != parameters.end());
-                    ASSERT(declarator->name.valueText() == (*paramIt)->name);
 
-                    addMember((*paramIt)->clone(comp));
+                    auto& symbol = (*paramIt)->symbol;
+                    ASSERT(declarator->name.valueText() == symbol.name);
+
+                    addMember(symbol.as<ParameterSymbol>().clone(comp));
                     paramIt++;
                 }
             }
             else {
-                // TODO: type params
+                for (auto declarator : paramBase->as<TypeParameterDeclarationSyntax>().declarators) {
+                    ASSERT(paramIt != parameters.end());
+
+                    auto& symbol = (*paramIt)->symbol;
+                    ASSERT(declarator->name.valueText() == symbol.name);
+
+                    addMember(symbol.as<TypeParameterSymbol>().clone(comp));
+                    paramIt++;
+                }
             }
         }
     }
@@ -517,7 +575,7 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const ParameterSymbol* const> parameters) {
+    const DefinitionSymbol& definition, span<const ParameterSymbolBase* const> parameters) {
 
     auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, syntax.name.valueText(),
                                                               syntax.name.location(), definition);
@@ -527,7 +585,7 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
 
 InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const ParameterSymbol* const> parameters) {
+    const DefinitionSymbol& definition, span<const ParameterSymbolBase* const> parameters) {
 
     auto instance = compilation.emplace<InterfaceInstanceSymbol>(
         compilation, syntax.name.valueText(), syntax.name.location(), definition);
