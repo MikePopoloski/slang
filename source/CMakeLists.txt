@@ -38,7 +38,13 @@ add_library(slang
 	binding/SystemSubroutine.cpp
 	binding/TimingControl.cpp
 
-	compilation/BuiltInSubroutines.cpp
+	compilation/builtins/ArrayMethods.cpp
+	compilation/builtins/EnumMethods.cpp
+	compilation/builtins/MathFuncs.cpp
+	compilation/builtins/MiscSystemFuncs.cpp
+	compilation/builtins/NonConstFuncs.cpp
+	compilation/builtins/QueryFuncs.cpp
+	compilation/builtins/SystemTasks.cpp
 	compilation/Compilation.cpp
 	compilation/ScriptSession.cpp
 	compilation/SemanticModel.cpp

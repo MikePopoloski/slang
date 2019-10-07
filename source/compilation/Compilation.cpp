@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/Compilation.h"
 
-#include "BuiltInSubroutines.h"
 #include <nlohmann/json.hpp>
 
 #include "slang/diagnostics/DiagnosticEngine.h"
@@ -74,6 +73,18 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
 };
 
 } // namespace
+
+namespace slang::Builtins {
+
+void registerArrayMethods(Compilation&);
+void registerEnumMethods(Compilation&);
+void registerMathFuncs(Compilation&);
+void registerMiscSystemFuncs(Compilation&);
+void registerNonConstFuncs(Compilation&);
+void registerQueryFuncs(Compilation&);
+void registerSystemTasks(Compilation&);
+
+} // namespace slang::Builtins
 
 namespace slang {
 
@@ -146,7 +157,14 @@ Compilation::Compilation() :
     root = std::make_unique<RootSymbol>(*this);
 
     // Register all system tasks, functions, and methods.
-    Builtins::registerAll(*this);
+    Builtins::registerArrayMethods(*this);
+    Builtins::registerArrayMethods(*this);
+    Builtins::registerEnumMethods(*this);
+    Builtins::registerMathFuncs(*this);
+    Builtins::registerMiscSystemFuncs(*this);
+    Builtins::registerNonConstFuncs(*this);
+    Builtins::registerQueryFuncs(*this);
+    Builtins::registerSystemTasks(*this);
 
     emptyUnit = &createScriptScope();
 }
