@@ -511,6 +511,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeAlias; }
 
 private:
+    friend class TypeParameterSymbol;
+
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
 };
 

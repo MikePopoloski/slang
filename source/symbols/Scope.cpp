@@ -1124,6 +1124,12 @@ const Symbol* getCompilationUnit(const Symbol& symbol) {
     }
 }
 
+void unwrapResult(LookupResult& result) {
+    // Unwrap type parameters into their target type alias.
+    if (result.found && result.found->kind == SymbolKind::TypeParameter)
+        result.found = &result.found->as<TypeParameterSymbol>().getTypeAlias();
+}
+
 } // namespace
 
 void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
@@ -1143,6 +1149,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
         case SyntaxKind::ScopedName:
             // Handle qualified names completely separately.
             lookupQualified(syntax.as<ScopedNameSyntax>(), location, flags, result);
+            unwrapResult(result);
             return;
         case SyntaxKind::ThisHandle:
         case SyntaxKind::ClassName:
@@ -1174,6 +1181,8 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
     if (!result.found && !result.hasError())
         reportUndeclared(name, nameToken.range(), flags, false, result);
 
+    unwrapResult(result);
+
     if (selectors) {
         // If this is a scope, the selectors should be an index into it.
         if (result.found && result.found->isScope() && !result.found->isType()) {
@@ -1195,6 +1204,7 @@ const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation loca
     LookupResult result;
     lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
     ASSERT(result.selectors.empty());
+    unwrapResult(result);
 
     if (errorIfNotFound && !result.found && !result.hasError())
         reportUndeclared(name, sourceRange, flags, false, result);
@@ -1374,8 +1384,10 @@ void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<Lookup
         do {
             symbol = scope->find(name);
             if (symbol) {
-                if (flags & LookupFlags::Type)
-                    usedBeforeDeclared = symbol->isType();
+                if (flags & LookupFlags::Type) {
+                    usedBeforeDeclared =
+                        symbol->isType() || symbol->kind == SymbolKind::TypeParameter;
+                }
                 else {
                     usedBeforeDeclared = symbol->isValue() ||
                                          symbol->kind == SymbolKind::InstanceArray ||

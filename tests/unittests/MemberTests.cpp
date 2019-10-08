@@ -319,3 +319,17 @@ endmodule
     CHECK((it++)->code == diag::PortDeclInANSIModule);
     CHECK(it == diags.end());
 }
+
+TEST_CASE("Type parameters") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type foo_t = int, foo_t foo = 1) ();
+    if (foo) begin
+        parameter type asdf = shortint, basdf = logic;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

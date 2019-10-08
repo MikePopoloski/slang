@@ -137,8 +137,9 @@ private:
 
 class TypeParameterSymbol : public Symbol, public ParameterSymbolBase {
 public:
-    TypeParameterSymbol(string_view name, SourceLocation loc, TypeAliasType& type, bool isLocal,
-                        bool isPort);
+    DeclaredType targetType;
+
+    TypeParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
     static void fromSyntax(const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVector<TypeParameterSymbol*>& results);
@@ -147,13 +148,12 @@ public:
 
     TypeParameterSymbol& clone(Compilation& compilation) const;
 
-    TypeAliasType& getTypeAlias();
-    const TypeAliasType& getTypeAlias() const;
+    const Type& getTypeAlias() const;
 
     void toJson(json& j) const;
 
 private:
-    TypeAliasType* type = nullptr;
+    mutable const Type* typeAlias = nullptr;
 };
 
 /// Represents the public-facing side of a module / program / interface port.

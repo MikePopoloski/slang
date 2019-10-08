@@ -438,7 +438,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             tempDef.addMember(newParam);
             parameters.append(&newParam);
 
-            auto& declared = newParam.getTypeAlias().targetType;
+            auto& declared = newParam.targetType;
 
             if (auto it = paramOverrides.find(newParam.name); it != paramOverrides.end()) {
                 auto& expr = *it->second;

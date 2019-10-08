@@ -106,7 +106,7 @@ const DeclaredType* Symbol::getDeclaredType() const {
         case SymbolKind::NetType:
             return &as<NetType>().declaredType;
         case SymbolKind::TypeParameter:
-            return &as<TypeParameterSymbol>().getTypeAlias().targetType;
+            return &as<TypeParameterSymbol>().targetType;
         default:
             if (isValue())
                 return as<ValueSymbol>().getDeclaredType();
