@@ -184,8 +184,7 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
         auto name = decl->name.valueText();
         auto loc = decl->name.location();
 
-        auto param =
-            comp.emplace<TypeParameterSymbol>(decl->name.valueText(), loc, isLocal, isPort);
+        auto param = comp.emplace<TypeParameterSymbol>(name, loc, isLocal, isPort);
         param->setSyntax(*decl);
 
         if (!decl->assignment) {
