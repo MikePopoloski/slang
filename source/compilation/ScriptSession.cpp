@@ -23,6 +23,7 @@ ConstantValue ScriptSession::eval(string_view text) {
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::HierarchyInstantiation:
+        case SyntaxKind::TypedefDeclaration:
             scope.addMembers(node);
             return nullptr;
         case SyntaxKind::DataDeclaration: {

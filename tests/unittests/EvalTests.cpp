@@ -881,3 +881,29 @@ endfunction
     CHECK(session.eval("foo(8)").integer() == 8);
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Eval enum methods") {
+    ScriptSession session;
+    session.eval("typedef enum { SDF = 2, BAR[5] = 4, BAZ = 99 } e_t;");
+    session.eval("e_t asdf = BAR1;");
+
+    CHECK(session.eval("asdf.next").integer() == 6);
+    CHECK(session.eval("asdf.next(4)").integer() == 99);
+    CHECK(session.eval("asdf.next(5)").integer() == 2);
+    CHECK(session.eval("asdf.next(7)").integer() == 5);
+    CHECK(session.eval("asdf.next(699)").integer() == 4);
+    CHECK(session.eval("asdf.next(1'bx)").integer() == 5);
+
+    CHECK(session.eval("asdf.prev").integer() == 4);
+    CHECK(session.eval("asdf.prev(2)").integer() == 2);
+    CHECK(session.eval("asdf.prev(3)").integer() == 99);
+    CHECK(session.eval("asdf.prev(7)").integer() == 5);
+    CHECK(session.eval("asdf.prev(699)").integer() == 6);
+    CHECK(session.eval("asdf.prev(1'bx)").integer() == 5);
+
+    session.eval("asdf = e_t'(1)");
+    CHECK(session.eval("asdf.next").integer() == 0);
+    CHECK(session.eval("asdf.prev(3)").integer() == 0);
+
+    NO_SESSION_ERRORS;
+}
