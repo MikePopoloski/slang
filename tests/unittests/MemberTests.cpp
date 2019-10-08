@@ -333,3 +333,121 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Type parameters 2") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type foo_t, foo_t foo = 1) ();
+    if (foo) begin
+        parameter type asdf = shortint, basdf = logic;
+    end
+endmodule
+
+module top;
+    m #(longint) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Type parameters 3") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type foo_t, foo_t foo = 1) ();
+    if (foo) begin
+        parameter type asdf = shortint, basdf = logic;
+    end
+endmodule
+
+module top;
+    typedef struct packed { logic l; } asdf;
+    m #(.foo_t(asdf)) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Type parameters 4") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter int i = 0;
+    localparam j = i;
+    parameter type t = int;
+
+    t t1 = 2;
+endmodule
+
+module top;
+    m #(1, shortint) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Type parameters -- bad replacement") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type foo_t, foo_t foo = 1) ();
+    if (foo) begin
+        parameter type asdf = shortint, basdf = logic;
+    end
+endmodule
+
+module top;
+    typedef struct { logic l; } asdf;
+    m #(asdf) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}
+
+TEST_CASE("Type parameters unset -- ok") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type foo_t = int, foo_t foo = 1) ();
+    if (foo) begin
+        parameter type asdf = shortint, basdf = logic;
+    end
+endmodule
+
+module top;
+    m #(.foo_t()) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Type parameters unset -- bad") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type foo_t, foo_t foo = 1) ();
+    if (foo) begin
+        parameter type asdf = shortint, basdf = logic;
+    end
+endmodule
+
+module top;
+    m #(.foo_t()) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ParamHasNoValue);
+}

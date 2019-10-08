@@ -90,7 +90,10 @@ protected:
         if (start.isMissing())
             return std::make_tuple(start, missingToken(endKind, start.location()), nullptr);
 
-        TResult result = parseItem();
+        TResult result = nullptr;
+        if (!peek(endKind))
+            result = parseItem();
+
         Token end = expect(endKind);
         return std::make_tuple(start, end, result);
     }

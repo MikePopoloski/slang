@@ -173,7 +173,15 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
                 }
             }
             else {
-                // TODO: type params
+                SmallVectorSized<TypeParameterSymbol*, 8> params;
+                TypeParameterSymbol::fromSyntax(*result,
+                                                declaration->as<TypeParameterDeclarationSyntax>(),
+                                                isLocal, false, params);
+
+                for (auto param : params) {
+                    parameters.append(param);
+                    result->addMember(*param);
+                }
             }
         }
     }
@@ -442,13 +450,24 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 
             if (auto it = paramOverrides.find(newParam.name); it != paramOverrides.end()) {
                 auto& expr = *it->second;
-                if (!DataTypeSyntax::isKind(expr.kind)) {
+
+                // If this is a NameSyntax, the parser didn't know we were assigning to
+                // a type parameter, so fix it up into a NamedTypeSyntax to get a type from it.
+                if (NameSyntax::isKind(expr.kind)) {
+                    // const_cast is ugly but safe here, we're only going to refer to it
+                    // by const reference everywhere down.
+                    auto& nameSyntax = const_cast<NameSyntax&>(expr.as<NameSyntax>());
+                    auto namedType = compilation.emplace<NamedTypeSyntax>(nameSyntax);
+                    declared.setType(compilation.getType(*namedType, location, scope));
+                }
+                else if (!DataTypeSyntax::isKind(expr.kind)) {
                     scope.addDiag(diag::BadTypeParamExpr, expr.getFirstToken().location())
                         << newParam.name;
                     declared.clearResolved();
                 }
                 else {
-                    declared.setType(compilation.getType(expr.as<DataTypeSyntax>(), location, scope));
+                    declared.setType(
+                        compilation.getType(expr.as<DataTypeSyntax>(), location, scope));
                 }
             }
             else if (!newParam.isLocalParam() && newParam.isPortParam() &&
@@ -551,7 +570,8 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
                 }
             }
             else {
-                for (auto declarator : paramBase->as<TypeParameterDeclarationSyntax>().declarators) {
+                for (auto declarator :
+                     paramBase->as<TypeParameterDeclarationSyntax>().declarators) {
                     ASSERT(paramIt != parameters.end());
 
                     auto& symbol = (*paramIt)->symbol;
