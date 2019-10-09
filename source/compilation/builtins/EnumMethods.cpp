@@ -171,6 +171,42 @@ public:
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
+class EnumNameMethod : public SystemSubroutine {
+public:
+    EnumNameMethod() : SystemSubroutine("name", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        return comp.getStringType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto val = args[0]->eval(context);
+        if (!val)
+            return nullptr;
+
+        const EnumType& type = args.at(0)->type->getCanonicalType().as<EnumType>();
+        auto& targetInt = val.integer();
+
+        for (auto& enumerand : type.values()) {
+            auto& cv = enumerand.getValue();
+            if (!cv)
+                return nullptr;
+
+            if (cv.integer() == targetInt)
+                return std::string(enumerand.name);
+        }
+
+        return ""s;
+    }
+
+    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+};
+
 void registerEnumMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -179,6 +215,7 @@ void registerEnumMethods(Compilation& c) {
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "next", true);
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "prev", false);
     REGISTER(SymbolKind::EnumType, EnumNum, );
+    REGISTER(SymbolKind::EnumType, EnumName, );
 #undef REGISTER
 }
 

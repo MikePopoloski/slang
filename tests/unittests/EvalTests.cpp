@@ -894,6 +894,10 @@ TEST_CASE("Eval enum methods") {
     CHECK(session.eval("asdf.next(699)").integer() == 4);
     CHECK(session.eval("asdf.next(1'bx)").integer() == 5);
 
+    CHECK(session.eval("asdf.name").str() == "BAR1");
+    CHECK(session.eval("asdf.next(4).name").str() == "BAZ");
+    CHECK(session.eval("asdf.next(4).name()").str() == "BAZ");
+
     CHECK(session.eval("asdf.prev").integer() == 4);
     CHECK(session.eval("asdf.prev(2)").integer() == 2);
     CHECK(session.eval("asdf.prev(3)").integer() == 99);
@@ -904,6 +908,7 @@ TEST_CASE("Eval enum methods") {
     session.eval("asdf = e_t'(1)");
     CHECK(session.eval("asdf.next").integer() == 0);
     CHECK(session.eval("asdf.prev(3)").integer() == 0);
+    CHECK(session.eval("asdf.name()").str() == "");
 
     NO_SESSION_ERRORS;
 }
