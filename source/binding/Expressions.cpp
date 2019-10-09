@@ -573,6 +573,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &ConditionalExpression::fromSyntax(
                 compilation, syntax.as<ConditionalExpressionSyntax>(), context, assignmentTarget);
             break;
+        case SyntaxKind::MemberAccessExpression:
+            result = &MemberAccessExpression::fromSyntax(
+                compilation, syntax.as<MemberAccessExpressionSyntax>(), nullptr, context);
+            break;
         case SyntaxKind::ConcatenationExpression:
             result = &ConcatenationExpression::fromSyntax(
                 compilation, syntax.as<ConcatenationExpressionSyntax>(), context);
@@ -738,36 +742,10 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
         auto memberSelect = std::get_if<LookupResult::MemberSelector>(&selector);
         if (memberSelect) {
-            string_view name = memberSelect->name;
-            if (name.empty())
-                return badExpr(compilation, expr);
-
-            const Type& type = expr->type->getCanonicalType();
-            switch (type.kind) {
-                case SymbolKind::PackedStructType:
-                case SymbolKind::UnpackedStructType:
-                case SymbolKind::PackedUnionType:
-                case SymbolKind::UnpackedUnionType:
-                    expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
-                                                                 context);
-                    break;
-
-                case SymbolKind::EnumType:
-                case SymbolKind::UnpackedArrayType:
-                    expr = &CallExpression::fromSystemMethod(compilation, *expr, *memberSelect,
-                                                             invocation, context);
-                    invocation = nullptr;
-                    break;
-
-                default: {
-                    auto& diag =
-                        context.addDiag(diag::InvalidMemberAccess, memberSelect->dotLocation);
-                    diag << expr->sourceRange;
-                    diag << memberSelect->nameRange;
-                    diag << *expr->type;
-                    return badExpr(compilation, expr);
-                }
-            }
+            expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
+                                                         invocation, context);
+            if (expr->kind == ExpressionKind::Call)
+                invocation = nullptr;
         }
         else {
             // Element / range selectors.
@@ -1863,7 +1841,28 @@ void RangeSelectExpression::toJson(json& j) const {
 
 Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expression& expr,
                                                  const LookupResult::MemberSelector& selector,
+                                                 const InvocationExpressionSyntax* invocation,
                                                  const BindContext& context) {
+    // This might look like a member access but actually be a built-in type method.
+    const Type& type = expr.type->getCanonicalType();
+    switch (type.kind) {
+        case SymbolKind::PackedStructType:
+        case SymbolKind::UnpackedStructType:
+        case SymbolKind::PackedUnionType:
+        case SymbolKind::UnpackedUnionType:
+            break;
+        case SymbolKind::EnumType:
+        case SymbolKind::UnpackedArrayType:
+            return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
+                                                    context);
+        default: {
+            auto& diag = context.addDiag(diag::InvalidMemberAccess, selector.dotLocation);
+            diag << expr.sourceRange;
+            diag << selector.nameRange;
+            diag << *expr.type;
+            return badExpr(compilation, &expr);
+        }
+    }
 
     const Symbol* member = expr.type->getCanonicalType().as<Scope>().find(selector.name);
     if (!member) {
@@ -1878,6 +1877,22 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
     SourceRange range{ expr.sourceRange.start(), selector.nameRange.end() };
     const auto& field = member->as<FieldSymbol>();
     return *compilation.emplace<MemberAccessExpression>(field.getType(), expr, field, range);
+}
+
+Expression& MemberAccessExpression::fromSyntax(Compilation& compilation,
+                                               const MemberAccessExpressionSyntax& syntax,
+                                               const InvocationExpressionSyntax* invocation,
+                                               const BindContext& context) {
+    auto name = syntax.name.valueText();
+    Expression& lhs = selfDetermined(compilation, *syntax.left, context);
+    if (lhs.bad() || name.empty())
+        return badExpr(compilation, &lhs);
+
+    LookupResult::MemberSelector selector;
+    selector.name = name;
+    selector.dotLocation = syntax.dot.location();
+    selector.nameRange = syntax.name.range();
+    return fromSelector(compilation, lhs, selector, invocation, context);
 }
 
 void MemberAccessExpression::toJson(json& j) const {
@@ -2064,7 +2079,11 @@ void ReplicationExpression::toJson(json& j) const {
 Expression& CallExpression::fromSyntax(Compilation& compilation,
                                        const InvocationExpressionSyntax& syntax,
                                        const BindContext& context) {
-    // TODO: once classes are supported, member access needs to work here
+    if (syntax.left->kind == SyntaxKind::MemberAccessExpression) {
+        return MemberAccessExpression::fromSyntax(
+            compilation, syntax.left->as<MemberAccessExpressionSyntax>(), &syntax, context);
+    }
+
     if (!NameSyntax::isKind(syntax.left->kind)) {
         SourceLocation loc = syntax.arguments ? syntax.arguments->openParen.location()
                                               : syntax.left->getFirstToken().location();
