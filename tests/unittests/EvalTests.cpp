@@ -912,3 +912,14 @@ TEST_CASE("Eval enum methods") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Eval string methods") {
+    ScriptSession session;
+    session.eval("string asdf = \"BaR1\";");
+
+    CHECK(session.eval("asdf.len").integer() == 4);
+    CHECK(session.eval("asdf.toupper").str() == "BAR1");
+    CHECK(session.eval("asdf.tolower").str() == "bar1");
+
+    NO_SESSION_ERRORS;
+}

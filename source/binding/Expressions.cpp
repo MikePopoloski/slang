@@ -1852,6 +1852,7 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
         case SymbolKind::UnpackedUnionType:
             break;
         case SymbolKind::EnumType:
+        case SymbolKind::StringType:
         case SymbolKind::UnpackedArrayType:
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     context);

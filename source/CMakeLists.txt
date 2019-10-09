@@ -44,7 +44,9 @@ add_library(slang
 	compilation/builtins/MiscSystemFuncs.cpp
 	compilation/builtins/NonConstFuncs.cpp
 	compilation/builtins/QueryFuncs.cpp
+	compilation/builtins/StringMethods.cpp
 	compilation/builtins/SystemTasks.cpp
+
 	compilation/Compilation.cpp
 	compilation/ScriptSession.cpp
 	compilation/SemanticModel.cpp

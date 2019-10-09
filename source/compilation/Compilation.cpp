@@ -82,6 +82,7 @@ void registerMathFuncs(Compilation&);
 void registerMiscSystemFuncs(Compilation&);
 void registerNonConstFuncs(Compilation&);
 void registerQueryFuncs(Compilation&);
+void registerStringMethods(Compilation&);
 void registerSystemTasks(Compilation&);
 
 } // namespace slang::Builtins
@@ -164,6 +165,7 @@ Compilation::Compilation() :
     Builtins::registerMiscSystemFuncs(*this);
     Builtins::registerNonConstFuncs(*this);
     Builtins::registerQueryFuncs(*this);
+    Builtins::registerStringMethods(*this);
     Builtins::registerSystemTasks(*this);
 
     emptyUnit = &createScriptScope();
