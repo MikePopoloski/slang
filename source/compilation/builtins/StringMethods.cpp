@@ -227,6 +227,31 @@ private:
     LiteralBase base;
 };
 
+class StringRealtoAMethod : public SimpleSystemSubroutine {
+public:
+    StringRealtoAMethod(Compilation& comp) :
+        SimpleSystemSubroutine("realtoa", SubroutineKind::Function, 1, { &comp.getRealType() },
+                               comp.getVoidType(), true) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto strCv = args[0]->evalLValue(context);
+        auto valCv = args[1]->eval(context);
+        if (!strCv || !valCv)
+            return nullptr;
+
+        // TODO: use std::to_chars
+        double value = valCv.real();
+        size_t sz = (size_t)snprintf(nullptr, 0, "%f", value);
+
+        std::string result(sz + 1, '\0');
+        snprintf(result.data(), sz + 1, "%f", value);
+        result.pop_back();
+
+        strCv.store(std::move(result));
+        return nullptr;
+    }
+};
+
 void registerStringMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -247,7 +272,7 @@ void registerStringMethods(Compilation& c) {
     REGISTER(SymbolKind::StringType, StringItoA, c, "hextoa", LiteralBase::Hex);
     REGISTER(SymbolKind::StringType, StringItoA, c, "octtoa", LiteralBase::Octal);
     REGISTER(SymbolKind::StringType, StringItoA, c, "bintoa", LiteralBase::Binary);
-
+    REGISTER(SymbolKind::StringType, StringRealtoA, c);
 
 #undef REGISTER
 }

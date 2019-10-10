@@ -971,5 +971,8 @@ TEST_CASE("Eval string methods") {
     session.eval("asdf.bintoa(1234);");
     CHECK(session.eval("asdf").str() == "10011010010");
 
+    session.eval("asdf.realtoa(3.14159);");
+    CHECK(session.eval("asdf").str() == "3.141590");
+
     NO_SESSION_ERRORS;
 }
