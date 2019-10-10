@@ -648,6 +648,10 @@ const NetType& Compilation::getNetType(TokenKind kind) const {
                                      : *it->second;
 }
 
+const Type& Compilation::getUnsignedIntType() {
+    return getType(32, IntegralFlags::Unsigned | IntegralFlags::TwoState);
+}
+
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
     if (index == Scope::DeferredMemberIndex::Invalid)
         index = deferredData.emplace();

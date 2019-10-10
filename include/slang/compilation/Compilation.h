@@ -179,6 +179,7 @@ public:
     const NullType& getNullType() const { return nullType; }
     const EventType& getEventType() const { return eventType; }
     const ErrorType& getErrorType() const { return errorType; }
+    const Type& getUnsignedIntType();
 
     /// Get the 'wire' built in net type. The rest of the built-in net types are rare enough
     /// that we don't bother providing dedicated accessors for them.

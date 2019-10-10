@@ -10,18 +10,10 @@
 
 namespace slang::Builtins {
 
-class StringLenMethod : public SystemSubroutine {
+class StringLenMethod : public SimpleSystemSubroutine {
 public:
-    StringLenMethod() : SystemSubroutine("len", SubroutineKind::Function) {}
-
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
-        auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 0, 0))
-            return comp.getErrorType();
-
-        return comp.getIntType();
-    }
+    StringLenMethod(Compilation& comp) :
+        SimpleSystemSubroutine("len", SubroutineKind::Function, 0, {}, comp.getIntType(), true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
@@ -30,23 +22,13 @@ public:
 
         return SVInt(32, val.str().length(), true);
     }
-
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
-class StringUpperLowerMethod : public SystemSubroutine {
+class StringUpperLowerMethod : public SimpleSystemSubroutine {
 public:
-    StringUpperLowerMethod(const std::string& name, bool upper) :
-        SystemSubroutine(name, SubroutineKind::Function), upper(upper) {}
-
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
-        auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 0, 0))
-            return comp.getErrorType();
-
-        return comp.getStringType();
-    }
+    StringUpperLowerMethod(Compilation& comp, const std::string& name, bool upper) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getStringType(), true),
+        upper(upper) {}
 
     ConstantValue eval(EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
@@ -65,8 +47,6 @@ public:
         return val;
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
-
 private:
     bool upper;
 };
@@ -74,9 +54,9 @@ private:
 void registerStringMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
-    REGISTER(SymbolKind::StringType, StringLen, );
-    REGISTER(SymbolKind::StringType, StringUpperLower, "toupper", true);
-    REGISTER(SymbolKind::StringType, StringUpperLower, "tolower", false);
+    REGISTER(SymbolKind::StringType, StringLen, c);
+    REGISTER(SymbolKind::StringType, StringUpperLower, c, "toupper", true);
+    REGISTER(SymbolKind::StringType, StringUpperLower, c, "tolower", false);
 
 #undef REGISTER
 }

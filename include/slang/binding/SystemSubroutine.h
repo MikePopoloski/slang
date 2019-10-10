@@ -53,7 +53,7 @@ public:
                                    const ExpressionSyntax& syntax) const final;
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final;
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&) const override { return true; }
 
 protected:
     SimpleSystemSubroutine(const std::string& name, SubroutineKind kind, int requiredArgs,

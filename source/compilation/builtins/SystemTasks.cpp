@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/SysFuncsDiags.h"
 
 namespace slang::Builtins {
 
@@ -44,6 +45,17 @@ public:
     }
 };
 
+static bool checkFinishNum(const BindContext& context, const Expression& arg) {
+    if (arg.constant && arg.constant->isInteger()) {
+        auto& val = arg.constant->integer();
+        if (val == 0 || val == 1 || val == 2)
+            return true;
+    }
+
+    context.addDiag(diag::BadFinishNum, arg.sourceRange);
+    return false;
+}
+
 class FinishControlTask : public SystemTaskBase {
 public:
     using SystemTaskBase::SystemTaskBase;
@@ -54,7 +66,10 @@ public:
         if (!checkArgCount(context, false, args, range, 0, 1))
             return comp.getErrorType();
 
-        // TODO: check optional first arg
+        if (args.size() == 1) {
+            if (!checkFinishNum(context, *args[0]))
+                return comp.getErrorType();
+        }
 
         return comp.getVoidType();
     }
@@ -68,8 +83,10 @@ public:
                                SourceRange) const final {
         auto& comp = context.getCompilation();
         if (!args.empty()) {
-            // TODO: check finish number
             if (args[0]->bad())
+                return comp.getErrorType();
+
+            if (!checkFinishNum(context, *args[0]))
                 return comp.getErrorType();
 
             if (!checkFormatArgs(context, args.subspan(1)))

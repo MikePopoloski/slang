@@ -172,8 +172,8 @@ module m;
         assume #0 (i < 0) else i--;
         cover final (i) i++;
 
-        assert (foo);                   // not boolean
-        cover (i) else $fatal("SDF");   // fail stmt not allowed
+        assert (foo);                      // not boolean
+        cover (i) else $fatal(1, "SDF");   // fail stmt not allowed
     end
 
 endmodule

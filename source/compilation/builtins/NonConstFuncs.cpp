@@ -9,39 +9,28 @@
 
 namespace slang::Builtins {
 
-class NonConstantFunction : public SystemSubroutine {
+class NonConstantFunction : public SimpleSystemSubroutine {
 public:
-    NonConstantFunction(const std::string& name, const Type& returnType) :
-        SystemSubroutine(name, SubroutineKind::Function), returnType(returnType) {}
-
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
-        auto& comp = context.getCompilation();
-        if (!checkArgCount(context, false, args, range, 0, 0))
-            return comp.getErrorType();
-
-        return returnType;
-    }
+    NonConstantFunction(const std::string& name, const Type& returnType, int requiredArgs = 0,
+                        const std::vector<const Type*>& argTypes = {}) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, requiredArgs, argTypes, returnType,
+                               false) {}
 
     ConstantValue eval(EvalContext&, const Args&) const final { return nullptr; }
     bool verifyConstant(EvalContext&, const Args&) const final { return false; }
-
-private:
-    const Type& returnType;
 };
 
 void registerNonConstFuncs(Compilation& c) {
-#define REGISTER(name, returnType) \
-    c.addSystemSubroutine(std::make_unique<NonConstantFunction>(name, returnType))
+#define REGISTER(...) \
+    c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
 
-    auto& uintType = c.getType(32, IntegralFlags::Unsigned);
+    std::vector<const Type*> intArg = { &c.getIntType() };
+
     REGISTER("$time", c.getTimeType());
-    REGISTER("$stime", uintType);
+    REGISTER("$stime", c.getUnsignedIntType());
     REGISTER("$realtime", c.getRealTimeType());
-
-    // TODO: optional argument to random functions
-    REGISTER("$random", c.getIntType());
-    REGISTER("$urandom", uintType);
+    REGISTER("$random", c.getIntType(), 0, intArg);
+    REGISTER("$urandom", c.getUnsignedIntType(), 0, intArg);
 
 #undef REGISTER
 }

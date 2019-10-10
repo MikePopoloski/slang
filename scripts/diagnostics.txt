@@ -274,6 +274,7 @@ error FormatUnspecifiedType "cannot format values of type {} without a specifica
 error FormatMismatchedType "value of type {} is invalid for '%{}' format specifier"
 error InvalidFormatStringType "value of type {} is not valid as a format string"
 error ArrayReductionIntegral "array reduction methods can only be called on unpacked arrays of integral values"
+error BadFinishNum "finish argument must have value of 0, 1, or 2"
 
 subsystem ConstEval
 error ExpressionNotConstant "expression is not constant"

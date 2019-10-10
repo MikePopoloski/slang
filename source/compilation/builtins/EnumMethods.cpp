@@ -60,19 +60,20 @@ public:
     EnumNextPrevMethod(const std::string& name, bool next) :
         SystemSubroutine(name, SubroutineKind::Function), next(next) {}
 
+    const Expression& bindArgument(int argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax) const final {
+        if (argIndex > 0)
+            return SystemSubroutine::bindArgument(argIndex, context, syntax);
+
+        return Expression::bind(context.getCompilation().getUnsignedIntType(), syntax,
+                                syntax.getFirstToken().location(), context);
+    }
+
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
             return comp.getErrorType();
-
-        if (args.size() == 2) {
-            if (!args[1]->type->isIntegral()) {
-                context.addDiag(diag::BadSystemSubroutineArg, args[1]->sourceRange)
-                    << *args[1]->type << kindStr();
-                return comp.getErrorType();
-            }
-        }
 
         return *args.at(0)->type;
     }
@@ -90,14 +91,8 @@ public:
             if (!countCv)
                 return nullptr;
 
+            // Convert to a signed 33-bit number for delta computation.
             count = countCv.integer();
-            count.flattenUnknowns();
-
-            // Truncate any of the high bits.
-            count.setSigned(false);
-            count = count.resize(32);
-
-            // Convert back to a signed 33-bit number for delta computation.
             count = count.resize(33);
             count.setSigned(true);
         }

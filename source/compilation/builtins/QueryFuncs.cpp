@@ -39,7 +39,7 @@ public:
         return comp.getIntegerType();
     }
 
-    ConstantValue eval(EvalContext&, const Args& args) const {
+    ConstantValue eval(EvalContext&, const Args& args) const final {
         // TODO: support for unpacked sizes
         return SVInt(32, args[0]->type->getBitWidth(), true);
     }
