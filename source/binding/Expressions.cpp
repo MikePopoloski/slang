@@ -2180,7 +2180,7 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
         for (ptrdiff_t i = 0; i < actualArgs.size(); i++) {
             // TODO: error if not ordered arguments
             const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-            buffer.append(&subroutine.bindArgument(int(i), context, *arg.expr));
+            buffer.append(&subroutine.bindArgument(size_t(i), context, *arg.expr));
         }
     }
 

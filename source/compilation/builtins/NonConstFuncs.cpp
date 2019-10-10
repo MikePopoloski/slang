@@ -11,7 +11,7 @@ namespace slang::Builtins {
 
 class NonConstantFunction : public SimpleSystemSubroutine {
 public:
-    NonConstantFunction(const std::string& name, const Type& returnType, int requiredArgs = 0,
+    NonConstantFunction(const std::string& name, const Type& returnType, size_t requiredArgs = 0,
                         const std::vector<const Type*>& argTypes = {}) :
         SimpleSystemSubroutine(name, SubroutineKind::Function, requiredArgs, argTypes, returnType,
                                false) {}
@@ -21,8 +21,7 @@ public:
 };
 
 void registerNonConstFuncs(Compilation& c) {
-#define REGISTER(...) \
-    c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
+#define REGISTER(...) c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
 
     std::vector<const Type*> intArg = { &c.getIntType() };
 

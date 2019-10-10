@@ -60,7 +60,7 @@ public:
     EnumNextPrevMethod(const std::string& name, bool next) :
         SystemSubroutine(name, SubroutineKind::Function), next(next) {}
 
-    const Expression& bindArgument(int argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
                                    const ExpressionSyntax& syntax) const final {
         if (argIndex > 0)
             return SystemSubroutine::bindArgument(argIndex, context, syntax);

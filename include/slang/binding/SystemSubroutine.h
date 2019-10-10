@@ -28,7 +28,7 @@ public:
     std::string name;
     SubroutineKind kind;
 
-    virtual const Expression& bindArgument(int argIndex, const BindContext& context,
+    virtual const Expression& bindArgument(size_t argIndex, const BindContext& context,
                                            const ExpressionSyntax& syntax) const;
     virtual const Type& checkArguments(const BindContext& context, const Args& args,
                                        SourceRange range) const = 0;
@@ -49,14 +49,14 @@ protected:
 /// basic argument types and a well-defined return type.
 class SimpleSystemSubroutine : public SystemSubroutine {
 public:
-    const Expression& bindArgument(int argIndex, const BindContext& context,
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
                                    const ExpressionSyntax& syntax) const final;
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final;
     bool verifyConstant(EvalContext&, const Args&) const override { return true; }
 
 protected:
-    SimpleSystemSubroutine(const std::string& name, SubroutineKind kind, int requiredArgs,
+    SimpleSystemSubroutine(const std::string& name, SubroutineKind kind, size_t requiredArgs,
                            const std::vector<const Type*>& argTypes, const Type& returnType,
                            bool isMethod) :
         SystemSubroutine(name, kind),
@@ -68,7 +68,7 @@ protected:
 private:
     std::vector<const Type*> argTypes;
     const Type* returnType;
-    int requiredArgs;
+    size_t requiredArgs;
     bool isMethod;
 };
 

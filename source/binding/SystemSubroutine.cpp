@@ -15,7 +15,7 @@
 
 namespace slang {
 
-const Expression& SystemSubroutine::bindArgument(int, const BindContext& context,
+const Expression& SystemSubroutine::bindArgument(size_t, const BindContext& context,
                                                  const ExpressionSyntax& syntax) const {
     return Expression::bind(syntax, context);
 }
@@ -97,7 +97,7 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
     return true;
 }
 
-const Expression& SimpleSystemSubroutine::bindArgument(int argIndex, const BindContext& context,
+const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const BindContext& context,
                                                        const ExpressionSyntax& syntax) const {
     if (argIndex >= argTypes.size())
         return SystemSubroutine::bindArgument(argIndex, context, syntax);

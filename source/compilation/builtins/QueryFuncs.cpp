@@ -14,7 +14,7 @@ class BitsFunction : public SystemSubroutine {
 public:
     BitsFunction() : SystemSubroutine("$bits", SubroutineKind::Function) {}
 
-    const Expression& bindArgument(int, const BindContext& context,
+    const Expression& bindArgument(size_t, const BindContext& context,
                                    const ExpressionSyntax& syntax) const final {
         BindContext nonConstCtx(context);
         nonConstCtx.flags &= ~BindFlags::Constant;
