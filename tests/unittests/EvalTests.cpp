@@ -930,5 +930,13 @@ TEST_CASE("Eval string methods") {
     CHECK(session.eval("asdf.getc(4)").integer() == 0);
     CHECK(session.eval("asdf.getc(0)").integer() == 'B');
 
+    CHECK(session.eval("asdf.compare(\"BaG2\")").integer() == -1);
+    CHECK(session.eval("asdf.compare(\"BaG0\")").integer() == 1);
+    CHECK(session.eval("asdf.compare(\"BaG1\")").integer() == 0);
+
+    CHECK(session.eval("asdf.icompare(\"baG2\")").integer() == -1);
+    CHECK(session.eval("asdf.icompare(\"bAg0\")").integer() == 1);
+    CHECK(session.eval("asdf.icompare(\"bAG1\")").integer() == 0);
+
     NO_SESSION_ERRORS;
 }

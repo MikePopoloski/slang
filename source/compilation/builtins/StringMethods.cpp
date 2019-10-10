@@ -98,6 +98,43 @@ private:
     bool upper;
 };
 
+class StringCompareMethod : public SimpleSystemSubroutine {
+public:
+    StringCompareMethod(Compilation& comp, const std::string& name, bool ignoreCase) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, { &comp.getStringType() },
+                               comp.getIntType(), true),
+        ignoreCase(ignoreCase) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto lhsCv = args[0]->eval(context);
+        auto rhsCv = args[1]->eval(context);
+        if (!lhsCv || !rhsCv)
+            return nullptr;
+
+        std::string& lhs = lhsCv.str();
+        std::string& rhs = rhsCv.str();
+
+        int result;
+        if (ignoreCase) {
+            // No convenient way to do this with standard lib functions :(
+            const char* p1 = lhs.c_str();
+            const char* p2 = rhs.c_str();
+            while ((result = std::tolower(*p1) - std::tolower(*p2++)) == 0) {
+                if (*p1++ == '\0')
+                    break;
+            }
+        }
+        else {
+            result = lhs.compare(rhs);
+        }
+
+        return SVInt(32, result, true);
+    }
+
+private:
+    bool ignoreCase;
+};
+
 void registerStringMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -106,6 +143,8 @@ void registerStringMethods(Compilation& c) {
     REGISTER(SymbolKind::StringType, StringGetc, c);
     REGISTER(SymbolKind::StringType, StringUpperLower, c, "toupper", true);
     REGISTER(SymbolKind::StringType, StringUpperLower, c, "tolower", false);
+    REGISTER(SymbolKind::StringType, StringCompare, c, "compare", false);
+    REGISTER(SymbolKind::StringType, StringCompare, c, "icompare", true);
 
 #undef REGISTER
 }
