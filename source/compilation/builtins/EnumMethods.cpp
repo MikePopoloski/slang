@@ -149,40 +149,23 @@ private:
     bool next;
 };
 
-class EnumNumMethod : public SystemSubroutine {
+class EnumNumMethod : public SimpleSystemSubroutine {
 public:
-    EnumNumMethod() : SystemSubroutine("num", SubroutineKind::Function) {}
-
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
-        auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 0, 0))
-            return comp.getErrorType();
-
-        return comp.getIntegerType();
-    }
+    EnumNumMethod(Compilation& comp) :
+        SimpleSystemSubroutine("num", SubroutineKind::Function, 0, {}, comp.getIntType(), true) {}
 
     ConstantValue eval(EvalContext&, const Args& args) const final {
         // Expression isn't actually evaluated here; we know the value to return at compile time.
         const EnumType& type = args.at(0)->type->getCanonicalType().as<EnumType>();
         return SVInt(32, (uint64_t)type.values().size(), true);
     }
-
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
-class EnumNameMethod : public SystemSubroutine {
+class EnumNameMethod : public SimpleSystemSubroutine {
 public:
-    EnumNameMethod() : SystemSubroutine("name", SubroutineKind::Function) {}
-
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
-        auto& comp = context.getCompilation();
-        if (!checkArgCount(context, true, args, range, 0, 0))
-            return comp.getErrorType();
-
-        return comp.getStringType();
-    }
+    EnumNameMethod(Compilation& comp) :
+        SimpleSystemSubroutine("name", SubroutineKind::Function, 0, {}, comp.getStringType(),
+                               true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
@@ -203,8 +186,6 @@ public:
 
         return ""s;
     }
-
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
 void registerEnumMethods(Compilation& c) {
@@ -214,8 +195,8 @@ void registerEnumMethods(Compilation& c) {
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "next", true);
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "prev", false);
-    REGISTER(SymbolKind::EnumType, EnumNum, );
-    REGISTER(SymbolKind::EnumType, EnumName, );
+    REGISTER(SymbolKind::EnumType, EnumNum, c);
+    REGISTER(SymbolKind::EnumType, EnumName, c);
 #undef REGISTER
 }
 

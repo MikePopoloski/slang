@@ -8,12 +8,12 @@
 
 #include "slang/binding/BindContext.h"
 #include "slang/binding/EvalContext.h"
-#include "slang/binding/SystemSubroutine.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
 
 namespace slang {
 
+class SystemSubroutine;
 struct ExpressionSyntax;
 
 // clang-format off

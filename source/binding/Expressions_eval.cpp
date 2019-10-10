@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/Expressions.h"
 #include "slang/binding/Statements.h"
+#include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/symbols/ASTVisitor.h"

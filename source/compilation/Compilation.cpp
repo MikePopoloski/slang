@@ -8,6 +8,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "slang/binding/SystemSubroutine.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
@@ -170,6 +171,8 @@ Compilation::Compilation() :
 
     emptyUnit = &createScriptScope();
 }
+
+Compilation::~Compilation() = default;
 
 void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     if (finalized)

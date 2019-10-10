@@ -36,13 +36,40 @@ public:
     virtual bool verifyConstant(EvalContext& context, const Args& args) const = 0;
 
 protected:
-    SystemSubroutine(std::string name, SubroutineKind kind) : name(std::move(name)), kind(kind) {}
+    SystemSubroutine(const std::string& name, SubroutineKind kind) : name(name), kind(kind) {}
 
     string_view kindStr() const;
     static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
                               SourceRange callRange, ptrdiff_t min, ptrdiff_t max);
 
     static bool checkFormatArgs(const BindContext& context, const Args& args);
+};
+
+/// An implementation of the SystemSubroutine interface that has
+/// basic argument types and a well-defined return type.
+class SimpleSystemSubroutine : public SystemSubroutine {
+public:
+    const Expression& bindArgument(int argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final;
+    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+
+protected:
+    SimpleSystemSubroutine(const std::string& name, SubroutineKind kind, int requiredArgs,
+                           const std::vector<const Type*>& argTypes, const Type& returnType,
+                           bool isMethod) :
+        SystemSubroutine(name, kind),
+        argTypes(argTypes), returnType(&returnType), requiredArgs(requiredArgs),
+        isMethod(isMethod) {
+        ASSERT(requiredArgs <= argTypes.size());
+    }
+
+private:
+    std::vector<const Type*> argTypes;
+    const Type* returnType;
+    int requiredArgs;
+    bool isMethod;
 };
 
 } // namespace slang

@@ -8,6 +8,7 @@
 
 #include "slang/binding/BindContext.h"
 #include "slang/binding/Expressions.h"
+#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/text/SFormat.h"
@@ -94,6 +95,24 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
     // TODO: check for left over specifiers
 
     return true;
+}
+
+const Expression& SimpleSystemSubroutine::bindArgument(int argIndex, const BindContext& context,
+                                                       const ExpressionSyntax& syntax) const {
+    if (argIndex >= argTypes.size())
+        return SystemSubroutine::bindArgument(argIndex, context, syntax);
+
+    return Expression::bind(*argTypes[argIndex], syntax, syntax.getFirstToken().location(),
+                            context);
+}
+
+const Type& SimpleSystemSubroutine::checkArguments(const BindContext& context, const Args& args,
+                                                   SourceRange range) const {
+    auto& comp = context.getCompilation();
+    if (!checkArgCount(context, isMethod, args, range, requiredArgs, argTypes.size()))
+        return comp.getErrorType();
+
+    return *returnType;
 }
 
 } // namespace slang

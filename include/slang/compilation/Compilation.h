@@ -28,6 +28,7 @@ struct CompilationUnitSyntax;
 class Compilation : public BumpAllocator {
 public:
     Compilation();
+    ~Compilation();
 
     /// Adds a syntax tree to the compilation. If the compilation has already been finalized
     /// by calling @a getRoot this call will throw an exception.

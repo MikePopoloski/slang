@@ -702,6 +702,22 @@ endmodule
     CHECK(diags[5].code == diag::BadRangeExpression);
 }
 
+TEST_CASE("Methods allowed in constant context") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum { SDF, BAR } foo;
+    localparam int i = foo.num;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& i = compilation.getRoot().lookupName<ParameterSymbol>("m.i");
+    CHECK(i.getValue().integer() == 2);
+}
+
 TEST_CASE("Utility system functions") {
     Compilation compilation;
     auto& scope = compilation.createScriptScope();
