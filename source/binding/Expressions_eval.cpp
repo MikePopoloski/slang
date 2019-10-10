@@ -685,7 +685,7 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval || !cs)
         return nullptr;
 
-    std::string str = value().type->isString() ? lval.load().str() : "";
+    const std::string& str = value().type->isString() ? lval.load().str() : "";
 
     int32_t index;
     if (!checkArrayIndex(context, *value().type, cs, str, sourceRange, index))

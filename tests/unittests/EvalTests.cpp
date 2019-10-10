@@ -921,5 +921,14 @@ TEST_CASE("Eval string methods") {
     CHECK(session.eval("asdf.toupper").str() == "BAR1");
     CHECK(session.eval("asdf.tolower").str() == "bar1");
 
+    session.eval("asdf.putc(-1, 71);");
+    CHECK(session.eval("asdf").str() == "BaR1");
+    session.eval("asdf.putc(2, \"G\");");
+    CHECK(session.eval("asdf").str() == "BaG1");
+
+    CHECK(session.eval("asdf.getc(3)").integer() == '1');
+    CHECK(session.eval("asdf.getc(4)").integer() == 0);
+    CHECK(session.eval("asdf.getc(0)").integer() == 'B');
+
     NO_SESSION_ERRORS;
 }

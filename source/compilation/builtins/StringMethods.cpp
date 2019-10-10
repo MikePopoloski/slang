@@ -24,6 +24,53 @@ public:
     }
 };
 
+class StringPutcMethod : public SimpleSystemSubroutine {
+public:
+    StringPutcMethod(Compilation& comp) :
+        SimpleSystemSubroutine("putc", SubroutineKind::Function, 2,
+                               { &comp.getIntType(), &comp.getByteType() }, comp.getVoidType(),
+                               true) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto strCv = args[0]->evalLValue(context);
+        auto indexCv = args[1]->eval(context);
+        auto charCv = args[2]->eval(context);
+        if (!strCv || !indexCv || !charCv)
+            return nullptr;
+
+        const std::string& str = strCv.load().str();
+        int32_t index = indexCv.integer().as<int32_t>().value();
+        uint8_t c = charCv.integer().as<uint8_t>().value();
+
+        if (c == 0 || index < 0 || index >= str.length())
+            return nullptr;
+
+        strCv.selectRange({ index, index }).store(SVInt(8, c, false));
+        return nullptr;
+    }
+};
+
+class StringGetcMethod : public SimpleSystemSubroutine {
+public:
+    StringGetcMethod(Compilation& comp) :
+        SimpleSystemSubroutine("getc", SubroutineKind::Function, 1, { &comp.getIntType() },
+                               comp.getByteType(), true) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto strCv = args[0]->eval(context);
+        auto indexCv = args[1]->eval(context);
+        if (!strCv || !indexCv)
+            return nullptr;
+
+        const std::string& str = strCv.str();
+        int32_t index = indexCv.integer().as<int32_t>().value();
+        if (index < 0 || index >= str.length())
+            return SVInt(8, 0, false);
+
+        return SVInt(8, str[index], false);
+    }
+};
+
 class StringUpperLowerMethod : public SimpleSystemSubroutine {
 public:
     StringUpperLowerMethod(Compilation& comp, const std::string& name, bool upper) :
@@ -55,6 +102,8 @@ void registerStringMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
     REGISTER(SymbolKind::StringType, StringLen, c);
+    REGISTER(SymbolKind::StringType, StringPutc, c);
+    REGISTER(SymbolKind::StringType, StringGetc, c);
     REGISTER(SymbolKind::StringType, StringUpperLower, c, "toupper", true);
     REGISTER(SymbolKind::StringType, StringUpperLower, c, "tolower", false);
 
