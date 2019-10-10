@@ -942,5 +942,19 @@ TEST_CASE("Eval string methods") {
     CHECK(session.eval("asdf.substr(1, 3)").str() == "aG1");
     CHECK(session.eval("asdf.substr(3, 3)").str() == "1");
 
+    CHECK(session.eval("asdf.atoi").integer() == 0);
+
+    session.eval("asdf = \"1_23_4asdf\";");
+    CHECK(session.eval("asdf.atoi").integer() == 1234);
+
+    session.eval("asdf = \"1_23_4afdf\";");
+    CHECK(session.eval("asdf.atohex").integer() == 0x1234afdf);
+
+    session.eval("asdf = \"1_23_4078afdf\";");
+    CHECK(session.eval("asdf.atooct").integer() == 0123407);
+
+    session.eval("asdf = \"1_1_01afdf\";");
+    CHECK(session.eval("asdf.atobin").integer() == 0b1101);
+
     NO_SESSION_ERRORS;
 }

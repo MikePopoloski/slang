@@ -15,7 +15,7 @@
 namespace slang::SFormat {
 
 static optional<uint32_t> parseUInt(const char*& ptr) {
-    // TODO: use std::from_chars
+    // TODO: use std::from_chars and disallow prefix
     char* end;
     errno = 0;
     unsigned long val = strtoul(ptr, &end, 10);

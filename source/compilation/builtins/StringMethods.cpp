@@ -163,6 +163,29 @@ public:
     }
 };
 
+class StringAtoIMethod : public SimpleSystemSubroutine {
+public:
+    StringAtoIMethod(Compilation& comp, const std::string& name, int base) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getIntegerType(), true),
+        base(base) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto cv = args[0]->eval(context);
+        if (!cv)
+            return nullptr;
+
+        std::string str = cv.str();
+        str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
+
+        // TODO: use from_chars and disallow prefix
+        long result = strtol(str.c_str(), nullptr, base);
+        return SVInt(32, uint64_t(result), true);
+    }
+
+private:
+    int base;
+};
+
 void registerStringMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -174,6 +197,10 @@ void registerStringMethods(Compilation& c) {
     REGISTER(SymbolKind::StringType, StringCompare, c, "compare", false);
     REGISTER(SymbolKind::StringType, StringCompare, c, "icompare", true);
     REGISTER(SymbolKind::StringType, StringSubstr, c);
+    REGISTER(SymbolKind::StringType, StringAtoI, c, "atoi", 10);
+    REGISTER(SymbolKind::StringType, StringAtoI, c, "atohex", 16);
+    REGISTER(SymbolKind::StringType, StringAtoI, c, "atooct", 8);
+    REGISTER(SymbolKind::StringType, StringAtoI, c, "atobin", 2);
 
 #undef REGISTER
 }
