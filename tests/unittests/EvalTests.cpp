@@ -956,5 +956,8 @@ TEST_CASE("Eval string methods") {
     session.eval("asdf = \"1_1_01afdf\";");
     CHECK(session.eval("asdf.atobin").integer() == 0b1101);
 
+    session.eval("asdf = \"3.141__5_9e+9asdf\";");
+    CHECK(session.eval("asdf.atoreal").real() == 3.14159e9);
+
     NO_SESSION_ERRORS;
 }

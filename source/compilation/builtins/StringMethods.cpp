@@ -186,6 +186,26 @@ private:
     int base;
 };
 
+class StringAtoRealMethod : public SimpleSystemSubroutine {
+public:
+    StringAtoRealMethod(Compilation& comp) :
+        SimpleSystemSubroutine("atoreal", SubroutineKind::Function, 0, {}, comp.getRealType(),
+                               true) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto cv = args[0]->eval(context);
+        if (!cv)
+            return nullptr;
+
+        std::string str = cv.str();
+        str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
+
+        // TODO: use from_chars
+        double result = strtod(str.c_str(), nullptr);
+        return real_t(result);
+    }
+};
+
 void registerStringMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -201,6 +221,7 @@ void registerStringMethods(Compilation& c) {
     REGISTER(SymbolKind::StringType, StringAtoI, c, "atohex", 16);
     REGISTER(SymbolKind::StringType, StringAtoI, c, "atooct", 8);
     REGISTER(SymbolKind::StringType, StringAtoI, c, "atobin", 2);
+    REGISTER(SymbolKind::StringType, StringAtoReal, c);
 
 #undef REGISTER
 }
