@@ -14,6 +14,11 @@
 
 namespace slang {
 
+const Expression& SystemSubroutine::bindArgument(int, const BindContext& context,
+                                                 const ExpressionSyntax& syntax) const {
+    return Expression::bind(syntax, context);
+}
+
 string_view SystemSubroutine::kindStr() const {
     return kind == SubroutineKind::Task ? "task"sv : "function"sv;
 }
@@ -63,7 +68,8 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
                 auto& lit = arg->as<StringLiteral>();
 
                 Diagnostics diags;
-                if (!SFormat::parseArgs(lit.getRawValue(), arg->sourceRange.start(), specs, diags)) {
+                if (!SFormat::parseArgs(lit.getRawValue(), arg->sourceRange.start(), specs,
+                                        diags)) {
                     context.scope.addDiags(diags);
                     return false;
                 }

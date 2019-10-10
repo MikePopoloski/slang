@@ -2179,11 +2179,7 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
         for (ptrdiff_t i = 0; i < actualArgs.size(); i++) {
             // TODO: error if not ordered arguments
             const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-            BindFlags extra = BindFlags::None;
-            if (i == 0 && (subroutine.flags & SystemSubroutineFlags::AllowDataTypeArg) != 0)
-                extra = BindFlags::AllowDataType;
-
-            buffer.append(&selfDetermined(compilation, *arg.expr, context, extra));
+            buffer.append(&subroutine.bindArgument(int(i), context, *arg.expr));
         }
     }
 

@@ -17,12 +17,7 @@ class BindContext;
 class EvalContext;
 class Expression;
 class Type;
-
-enum class SystemSubroutineFlags {
-    None = 0,
-    AllowDataTypeArg = 1,
-};
-BITMASK_DEFINE_MAX_ELEMENT(SystemSubroutineFlags, AllowDataTypeArg);
+struct ExpressionSyntax;
 
 class SystemSubroutine {
 public:
@@ -32,18 +27,16 @@ public:
 
     std::string name;
     SubroutineKind kind;
-    bitmask<SystemSubroutineFlags> flags;
 
+    virtual const Expression& bindArgument(int argIndex, const BindContext& context,
+                                           const ExpressionSyntax& syntax) const;
     virtual const Type& checkArguments(const BindContext& context, const Args& args,
                                        SourceRange range) const = 0;
     virtual ConstantValue eval(EvalContext& context, const Args& args) const = 0;
     virtual bool verifyConstant(EvalContext& context, const Args& args) const = 0;
 
 protected:
-    SystemSubroutine(std::string name, SubroutineKind kind,
-                     bitmask<SystemSubroutineFlags> flags = SystemSubroutineFlags::None) :
-        name(std::move(name)),
-        kind(kind), flags(flags) {}
+    SystemSubroutine(std::string name, SubroutineKind kind) : name(std::move(name)), kind(kind) {}
 
     string_view kindStr() const;
     static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,

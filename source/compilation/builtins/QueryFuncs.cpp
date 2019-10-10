@@ -10,9 +10,17 @@
 
 namespace slang::Builtins {
 
-class DataQueryFunction : public SystemSubroutine {
+class BitsFunction : public SystemSubroutine {
 public:
-    using SystemSubroutine::SystemSubroutine;
+    BitsFunction() : SystemSubroutine("$bits", SubroutineKind::Function) {}
+
+    const Expression& bindArgument(int, const BindContext& context,
+                                   const ExpressionSyntax& syntax) const final {
+        BindContext nonConstCtx(context);
+        nonConstCtx.flags &= ~BindFlags::Constant;
+        nonConstCtx.flags |= BindFlags::NoHierarchicalNames;
+        return Expression::bind(syntax, nonConstCtx, BindFlags::AllowDataType);
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final {
@@ -29,6 +37,11 @@ public:
         // TODO: not allowed on some dynamic types
 
         return comp.getIntegerType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args& args) const {
+        // TODO: support for unpacked sizes
+        return SVInt(32, args[0]->type->getBitWidth(), true);
     }
 
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
@@ -69,19 +82,12 @@ public:
 
 #define FUNC SubroutineKind::Function
 
-SUBROUTINE(BitsFunction, DataQueryFunction, "$bits", FUNC, SystemSubroutineFlags::AllowDataTypeArg);
-
 SUBROUTINE(LowFunction, ArrayQueryFunction, "$low", FUNC);
 SUBROUTINE(HighFunction, ArrayQueryFunction, "$high", FUNC);
 SUBROUTINE(LeftFunction, ArrayQueryFunction, "$left", FUNC);
 SUBROUTINE(RightFunction, ArrayQueryFunction, "$right", FUNC);
 SUBROUTINE(SizeFunction, ArrayQueryFunction, "$size", FUNC);
 SUBROUTINE(IncrementFunction, ArrayQueryFunction, "$increment", FUNC);
-
-ConstantValue BitsFunction::eval(EvalContext&, const Args& args) const {
-    // TODO: support for unpacked sizes
-    return SVInt(32, args[0]->type->getBitWidth(), true);
-}
 
 ConstantValue LowFunction::eval(EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
