@@ -109,8 +109,10 @@ const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const Bi
 const Type& SimpleSystemSubroutine::checkArguments(const BindContext& context, const Args& args,
                                                    SourceRange range) const {
     auto& comp = context.getCompilation();
-    if (!checkArgCount(context, isMethod, args, range, requiredArgs, argTypes.size()))
+    if (!checkArgCount(context, isMethod, args, range, ptrdiff_t(requiredArgs),
+                       ptrdiff_t(argTypes.size()))) {
         return comp.getErrorType();
+    }
 
     return *returnType;
 }
