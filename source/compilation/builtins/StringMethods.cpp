@@ -135,6 +135,30 @@ private:
     bool ignoreCase;
 };
 
+class StringSubstrMethod : public SimpleSystemSubroutine {
+public:
+    StringSubstrMethod(Compilation& comp) :
+        SimpleSystemSubroutine("substr", SubroutineKind::Function, 2,
+                               { &comp.getIntType(), &comp.getIntType() }, comp.getStringType(),
+                               true) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto strCv = args[0]->eval(context);
+        auto leftCv = args[1]->eval(context);
+        auto rightCv = args[2]->eval(context);
+        if (!strCv || !leftCv || !rightCv)
+            return nullptr;
+
+        const std::string& str = strCv.str();
+        int32_t left = leftCv.integer().as<int32_t>().value();
+        int32_t right = rightCv.integer().as<int32_t>().value();
+        if (left < 0 || right < left || size_t(right) >= str.length())
+            return ""s;
+
+        return str.substr(size_t(left), size_t(right - left + 1));
+    }
+};
+
 void registerStringMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -145,6 +169,7 @@ void registerStringMethods(Compilation& c) {
     REGISTER(SymbolKind::StringType, StringUpperLower, c, "tolower", false);
     REGISTER(SymbolKind::StringType, StringCompare, c, "compare", false);
     REGISTER(SymbolKind::StringType, StringCompare, c, "icompare", true);
+    REGISTER(SymbolKind::StringType, StringSubstr, c);
 
 #undef REGISTER
 }

@@ -938,5 +938,9 @@ TEST_CASE("Eval string methods") {
     CHECK(session.eval("asdf.icompare(\"bAg0\")").integer() == 1);
     CHECK(session.eval("asdf.icompare(\"bAG1\")").integer() == 0);
 
+    CHECK(session.eval("asdf.substr(1, 4)").str() == "");
+    CHECK(session.eval("asdf.substr(1, 3)").str() == "aG1");
+    CHECK(session.eval("asdf.substr(3, 3)").str() == "1");
+
     NO_SESSION_ERRORS;
 }
