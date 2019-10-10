@@ -959,5 +959,17 @@ TEST_CASE("Eval string methods") {
     session.eval("asdf = \"3.141__5_9e+9asdf\";");
     CHECK(session.eval("asdf.atoreal").real() == 3.14159e9);
 
+    session.eval("asdf.itoa(1234);");
+    CHECK(session.eval("asdf").str() == "1234");
+
+    session.eval("asdf.hextoa(1234);");
+    CHECK(session.eval("asdf").str() == "4d2");
+
+    session.eval("asdf.octtoa(1234);");
+    CHECK(session.eval("asdf").str() == "2322");
+
+    session.eval("asdf.bintoa(1234);");
+    CHECK(session.eval("asdf").str() == "10011010010");
+
     NO_SESSION_ERRORS;
 }

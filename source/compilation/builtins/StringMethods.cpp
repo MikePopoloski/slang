@@ -206,6 +206,27 @@ public:
     }
 };
 
+class StringItoAMethod : public SimpleSystemSubroutine {
+public:
+    StringItoAMethod(Compilation& comp, const std::string& name, LiteralBase base) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, { &comp.getIntegerType() },
+                               comp.getVoidType(), true),
+        base(base) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto strCv = args[0]->evalLValue(context);
+        auto valCv = args[1]->eval(context);
+        if (!strCv || !valCv)
+            return nullptr;
+
+        strCv.store(valCv.integer().toString(base, false));
+        return nullptr;
+    }
+
+private:
+    LiteralBase base;
+};
+
 void registerStringMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -222,6 +243,11 @@ void registerStringMethods(Compilation& c) {
     REGISTER(SymbolKind::StringType, StringAtoI, c, "atooct", 8);
     REGISTER(SymbolKind::StringType, StringAtoI, c, "atobin", 2);
     REGISTER(SymbolKind::StringType, StringAtoReal, c);
+    REGISTER(SymbolKind::StringType, StringItoA, c, "itoa", LiteralBase::Decimal);
+    REGISTER(SymbolKind::StringType, StringItoA, c, "hextoa", LiteralBase::Hex);
+    REGISTER(SymbolKind::StringType, StringItoA, c, "octtoa", LiteralBase::Octal);
+    REGISTER(SymbolKind::StringType, StringItoA, c, "bintoa", LiteralBase::Binary);
+
 
 #undef REGISTER
 }
