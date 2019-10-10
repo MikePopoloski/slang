@@ -67,7 +67,7 @@ public:
         if (index < 0 || size_t(index) >= str.length())
             return SVInt(8, 0, false);
 
-        return SVInt(8, str[size_t(index)], false);
+        return SVInt(8, uint64_t(str[size_t(index)]), false);
     }
 };
 
@@ -128,7 +128,7 @@ public:
             result = lhs.compare(rhs);
         }
 
-        return SVInt(32, result, true);
+        return SVInt(32, uint64_t(result), true);
     }
 
 private:
