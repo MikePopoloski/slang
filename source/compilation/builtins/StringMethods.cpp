@@ -126,6 +126,10 @@ public:
         }
         else {
             result = lhs.compare(rhs);
+            if (result < 0)
+                result = -1;
+            else if (result > 0)
+                result = 1;
         }
 
         return SVInt(32, uint64_t(result), true);
