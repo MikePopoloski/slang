@@ -42,7 +42,7 @@ public:
         int32_t index = indexCv.integer().as<int32_t>().value();
         uint8_t c = charCv.integer().as<uint8_t>().value();
 
-        if (c == 0 || index < 0 || index >= str.length())
+        if (c == 0 || index < 0 || size_t(index) >= str.length())
             return nullptr;
 
         strCv.selectRange({ index, index }).store(SVInt(8, c, false));
@@ -64,10 +64,10 @@ public:
 
         const std::string& str = strCv.str();
         int32_t index = indexCv.integer().as<int32_t>().value();
-        if (index < 0 || index >= str.length())
+        if (index < 0 || size_t(index) >= str.length())
             return SVInt(8, 0, false);
 
-        return SVInt(8, str[index], false);
+        return SVInt(8, str[size_t(index)], false);
     }
 };
 
