@@ -100,9 +100,6 @@ public:
     /// Indicates whether this is a packed or unpacked struct.
     bool isStruct() const;
 
-    /// Indicates whether this is any form of structure or union type.
-    bool isStructUnion() const;
-
     /// Indicates whether this type can be packed into a stream of bits.
     bool isBitstreamType() const;
 
@@ -369,9 +366,6 @@ public:
     FieldSymbol(string_view name, SourceLocation loc, uint32_t offset) :
         VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic), offset(offset) {}
 
-    /// Indicates whether the field is part of a packed structure or union.
-    bool isPacked() const;
-
     void toJson(json& j) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Field; }
@@ -399,6 +393,29 @@ public:
     ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnpackedStructType; }
+};
+
+/// Represents a packed union of members.
+class PackedUnionType : public IntegralType, public Scope {
+public:
+    PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState);
+
+    static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
+                                  LookupLocation location, const Scope& scope, bool forceSigned);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedUnionType; }
+};
+
+/// Represents an unpacked union of members.
+class UnpackedUnionType : public Type, public Scope {
+public:
+    explicit UnpackedUnionType(Compilation& compilation);
+
+    static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax);
+
+    ConstantValue getDefaultValueImpl() const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnpackedUnionType; }
 };
 
 /// Represents the Void (or lack of a) type. This can be used as the return type of functions

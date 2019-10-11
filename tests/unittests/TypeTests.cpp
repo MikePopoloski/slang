@@ -222,6 +222,36 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Packed unions") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+
+    union packed {
+        logic [4:0] bar;
+        logic [5:1] bif;
+    } foo;
+
+endmodule
+)");
+
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
+
+    const auto& foo = instance.memberAt<VariableSymbol>(0);
+    REQUIRE(foo.getType().kind == SymbolKind::PackedUnionType);
+
+    const auto& unionType = foo.getType().as<PackedUnionType>();
+    CHECK(unionType.bitWidth == 5);
+    CHECK(unionType.isFourState);
+    CHECK(!unionType.isSigned);
+    CHECK(unionType.isIntegral());
+    CHECK(!unionType.isAggregate());
+
+    CHECK(unionType.find("bar"));
+    CHECK(unionType.find("bif"));
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Typedefs") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
@@ -275,6 +305,13 @@ module Top;
     typedef struct packed { logic r; } s2_t;
     typedef s2_t;
     typedef struct s2_t;
+
+    // Forward declared union, multiple forward declarations
+    typedef union u1_t;
+    u1_t u;
+    typedef union u1_t;
+    typedef u1_t;
+    typedef union packed { logic [9:0] l; } u1_t;
 
 endmodule
 )");

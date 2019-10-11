@@ -122,19 +122,28 @@ bool Type::isFourState() const {
     if (ct.isIntegral())
         return ct.as<IntegralType>().isFourState;
 
-    if (ct.kind == SymbolKind::UnpackedArrayType)
-        return ct.as<UnpackedArrayType>().elementType.isFourState();
-
-    // TODO: also handle unions
-    if (ct.kind == SymbolKind::UnpackedStructType) {
-        auto& us = ct.as<UnpackedStructType>();
-        for (auto& field : us.membersOfType<FieldSymbol>()) {
-            if (field.getType().isFourState())
-                return true;
+    switch (ct.kind) {
+        case SymbolKind::UnpackedArrayType:
+            return ct.as<UnpackedArrayType>().elementType.isFourState();
+        case SymbolKind::UnpackedStructType: {
+            auto& us = ct.as<UnpackedStructType>();
+            for (auto& field : us.membersOfType<FieldSymbol>()) {
+                if (field.getType().isFourState())
+                    return true;
+            }
+            return false;
         }
+        case SymbolKind::UnpackedUnionType: {
+            auto& us = ct.as<UnpackedUnionType>();
+            for (auto& field : us.membersOfType<FieldSymbol>()) {
+                if (field.getType().isFourState())
+                    return true;
+            }
+            return false;
+        }
+        default:
+            return false;
     }
-
-    return false;
 }
 
 bool Type::isIntegral() const {
@@ -190,19 +199,6 @@ bool Type::isStruct() const {
     switch (ct.kind) {
         case SymbolKind::PackedStructType:
         case SymbolKind::UnpackedStructType:
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool Type::isStructUnion() const {
-    const Type& ct = getCanonicalType();
-    switch (ct.kind) {
-        case SymbolKind::PackedStructType:
-        case SymbolKind::UnpackedStructType:
-        case SymbolKind::PackedUnionType:
-        case SymbolKind::UnpackedUnionType:
             return true;
         default:
             return false;
@@ -417,6 +413,12 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                                                                      location, parent, forceSigned)
                                       : UnpackedStructType::fromSyntax(compilation, structUnion);
         }
+        case SyntaxKind::UnionType: {
+            const auto& structUnion = node.as<StructUnionTypeSyntax>();
+            return structUnion.packed ? PackedUnionType::fromSyntax(compilation, structUnion,
+                                                                    location, parent, forceSigned)
+                                      : UnpackedUnionType::fromSyntax(compilation, structUnion);
+        }
         case SyntaxKind::NamedType:
             return lookupNamedType(compilation, *node.as<NamedTypeSyntax>().name, location, parent);
         case SyntaxKind::ImplicitType: {
@@ -429,7 +431,6 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::SequenceType:
         case SyntaxKind::TypeReference:
         case SyntaxKind::TypeType:
-        case SyntaxKind::UnionType:
         case SyntaxKind::Untyped:
         case SyntaxKind::VirtualInterfaceType:
             parent.addDiag(diag::NotYetSupported, node.sourceRange());
@@ -897,12 +898,6 @@ ConstantValue UnpackedArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>(range.width(), elementType.getDefaultValue());
 }
 
-bool FieldSymbol::isPacked() const {
-    const Scope* scope = getParentScope();
-    ASSERT(scope);
-    return scope->asSymbol().kind == SymbolKind::PackedStructType;
-}
-
 void FieldSymbol::toJson(json& j) const {
     VariableSymbol::toJson(j);
     j["offset"] = offset;
@@ -955,6 +950,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
                 auto& diag = scope.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
                 diag << dimType;
                 diag << decl->dimensions.sourceRange();
+                issuedError = true;
             }
 
             bitWidth += type.getBitWidth();
@@ -967,6 +963,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
         }
     }
 
+    // TODO: cannot be empty
     if (!bitWidth)
         return compilation.getErrorType();
 
@@ -1027,6 +1024,137 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation,
     // TODO: error if dimensions
     // TODO: error if signing
     // TODO: check for void types
+    // TODO: cannot be empty
+
+    result->setSyntax(syntax);
+    return *result;
+}
+
+PackedUnionType::PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
+                                 bool isFourState) :
+    IntegralType(SymbolKind::PackedUnionType, "", SourceLocation(), bitWidth, isSigned,
+                 isFourState),
+    Scope(compilation, this) {
+}
+
+const Type& PackedUnionType::fromSyntax(Compilation& compilation,
+                                        const StructUnionTypeSyntax& syntax,
+                                        LookupLocation location, const Scope& scope,
+                                        bool forceSigned) {
+    ASSERT(syntax.packed);
+    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword || forceSigned;
+    bool isFourState = false;
+    bitwidth_t bitWidth = 0;
+
+    // We have to look at all the members up front to know our width and four-statedness.
+    SmallVectorSized<const Symbol*, 8> members;
+    for (auto member : syntax.members) {
+        const Type& type = compilation.getType(*member->type, location, scope);
+        isFourState |= type.isFourState();
+
+        bool issuedError = false;
+        if (!type.isIntegral() && !type.isError()) {
+            issuedError = true;
+            auto& diag = scope.addDiag(diag::PackedMemberNotIntegral,
+                                       member->type->getFirstToken().location());
+            diag << type;
+            diag << member->type->sourceRange();
+        }
+
+        for (auto decl : member->declarators) {
+            auto variable =
+                compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0);
+            variable->setType(type);
+            variable->setSyntax(*decl);
+            compilation.addAttributes(*variable, member->attributes);
+            members.append(variable);
+
+            // Unpacked arrays are disallowed in packed unions.
+            if (const Type& dimType = compilation.getType(type, decl->dimensions, location, scope);
+                dimType.isUnpackedArray() && !issuedError) {
+
+                auto& diag = scope.addDiag(diag::PackedMemberNotIntegral, decl->name.range());
+                diag << dimType;
+                diag << decl->dimensions.sourceRange();
+                issuedError = true;
+            }
+
+            if (!bitWidth)
+                bitWidth = type.getBitWidth();
+            else if (bitWidth != type.getBitWidth() && !issuedError) {
+                scope.addDiag(diag::PackedUnionWidthMismatch, decl->name.range());
+                issuedError = true;
+            }
+
+            if (decl->initializer) {
+                auto& diag = scope.addDiag(diag::PackedMemberHasInitializer,
+                                           decl->initializer->equals.location());
+                diag << decl->initializer->expr->sourceRange();
+            }
+        }
+    }
+
+    // TODO: cannot be empty
+    if (!bitWidth)
+        return compilation.getErrorType();
+
+    auto unionType =
+        compilation.emplace<PackedUnionType>(compilation, bitWidth, isSigned, isFourState);
+    for (auto member : members)
+        unionType->addMember(*member);
+
+    unionType->setSyntax(syntax);
+
+    const Type* result = unionType;
+    BindContext context(scope, location);
+
+    ptrdiff_t count = syntax.dimensions.size();
+    for (ptrdiff_t i = 0; i < count; i++) {
+        auto& dimSyntax = *syntax.dimensions[count - i - 1];
+        auto dim = context.evalPackedDimension(dimSyntax);
+        if (!dim)
+            return compilation.getErrorType();
+
+        result = &PackedArrayType::fromSyntax(compilation, *result, *dim, dimSyntax);
+    }
+
+    return *result;
+}
+
+UnpackedUnionType::UnpackedUnionType(Compilation& compilation) :
+    Type(SymbolKind::UnpackedUnionType, "", SourceLocation()), Scope(compilation, this) {
+}
+
+ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
+    auto range = membersOfType<FieldSymbol>();
+    auto it = range.begin();
+    if (it == range.end())
+        return nullptr;
+
+    return it->getType().getDefaultValue();
+}
+
+const Type& UnpackedUnionType::fromSyntax(Compilation& compilation,
+                                          const StructUnionTypeSyntax& syntax) {
+    ASSERT(!syntax.packed);
+
+    auto result = compilation.emplace<UnpackedUnionType>(compilation);
+    for (auto member : syntax.members) {
+        for (auto decl : member->declarators) {
+            auto variable =
+                compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0);
+            variable->setDeclaredType(*member->type);
+            variable->setFromDeclarator(*decl);
+            compilation.addAttributes(*variable, member->attributes);
+
+            result->addMember(*variable);
+        }
+    }
+
+    // TODO: error if dimensions
+    // TODO: error if signing
+    // TODO: check for void types
+    // TODO: cannot be empty
 
     result->setSyntax(syntax);
     return *result;
@@ -1069,6 +1197,7 @@ const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
             category = Category::None;
             break;
     }
+
     auto result = compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
                                                                syntax.name.location(), category);
     result->setSyntax(syntax);
@@ -1125,10 +1254,15 @@ void TypeAliasType::checkForwardDecls() const {
         case SymbolKind::UnpackedStructType:
             category = ForwardingTypedefSymbol::Struct;
             break;
+        case SymbolKind::PackedUnionType:
+        case SymbolKind::UnpackedUnionType:
+            category = ForwardingTypedefSymbol::Union;
+            break;
         case SymbolKind::EnumType:
             category = ForwardingTypedefSymbol::Enum;
             break;
         default:
+            // TODO:
             return;
     }
 

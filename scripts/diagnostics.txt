@@ -231,6 +231,7 @@ error ForwardTypedefDoesNotMatch "forward typedef basic type '{}' does not match
 error PackedMemberNotIntegral "packed members must be of integral type (type is {})"
 error PackedMemberHasInitializer "packed members can not have initializers"
 error PackedDimsOnPredefinedType "packed dimensions not allowed on predefined integer type '{}'"
+error PackedUnionWidthMismatch "all members of a packed union must have the same width"
 
 subsystem Lookup
 error Redefinition "redefinition of '{}'"

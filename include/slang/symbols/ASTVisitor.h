@@ -98,6 +98,8 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         TYPE(UnpackedArrayType);
         TYPE(PackedStructType);
         TYPE(UnpackedStructType);
+        TYPE(PackedUnionType);
+        TYPE(UnpackedUnionType);
         TYPE(VoidType);
         TYPE(NullType);
         TYPE(CHandleType);
@@ -106,8 +108,6 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         TYPE(ErrorType);
         TYPE(NetType);
 
-        case SymbolKind::PackedUnionType: THROW_UNREACHABLE;
-        case SymbolKind::UnpackedUnionType: THROW_UNREACHABLE;
         case SymbolKind::ClassType: THROW_UNREACHABLE;
         case SymbolKind::Program: THROW_UNREACHABLE;
     }
