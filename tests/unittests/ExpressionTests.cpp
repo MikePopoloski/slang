@@ -194,6 +194,7 @@ TEST_CASE("Expression types") {
     declare("real r;");
     declare("shortreal sr;");
     declare("struct packed { logic a; bit b; } sp;");
+    declare("union packed { logic [1:0] a; bit [0:1] b; } up;");
     declare("struct { logic a; bit b; } su;");
     declare("struct { bit a; bit b; } su2;");
     declare("reg reg1, reg2;");
@@ -240,6 +241,8 @@ TEST_CASE("Expression types") {
     CHECK(typeof("su == su") == "logic");
     CHECK(typeof("su2 == su2") == "bit");
     CHECK(typeof("EVAL1 + 5") == "int");
+    CHECK(typeof("up + 5") == "logic[31:0]");
+    CHECK(typeof("up + up") == "logic[1:0]");
 
     // Unpacked arrays
     declare("bit [7:0] arr1 [2];");
@@ -262,9 +265,12 @@ TEST_CASE("Expression types") {
     // Member access
     declare("struct packed { logic [13:0] a; bit b; } foo;");
     declare("struct packed { logic [13:0] a; bit b; } [3:0] spPackedArray;");
+    declare("union { logic [13:0] a; int b; } upUnion;");
     CHECK(typeof("foo.a") == "logic[13:0]");
     CHECK(typeof("spPackedArray") == "struct packed{logic[13:0] a;bit b;}[3:0]");
     CHECK(typeof("spPackedArray[0].a") == "logic[13:0]");
+    CHECK(typeof("upUnion.a") == "logic[13:0]");
+    CHECK(typeof("upUnion.b") == "int");
 
     // Casts
     declare("parameter int FOO = 1;");

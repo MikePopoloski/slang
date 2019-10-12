@@ -123,6 +123,11 @@ public:
         return getCanonicalType().kind == SymbolKind::UnpackedStructType;
     }
 
+    /// Indicates whether this is an unpacked union type.
+    bool isUnpackedUnion() const {
+        return getCanonicalType().kind == SymbolKind::UnpackedUnionType;
+    }
+
     /// Indicates whether this is an enum type.
     bool isEnum() const { return getCanonicalType().kind == SymbolKind::EnumType; }
 

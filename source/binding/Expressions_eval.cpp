@@ -793,6 +793,7 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     if (!cv)
         return nullptr;
 
+    // TODO: handle unpacked unions
     int32_t offset = (int32_t)field.offset;
     if (value().type->isUnpackedStruct())
         return cv.elements()[offset];
@@ -806,6 +807,7 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval)
         return nullptr;
 
+    // TODO: handle unpacked unions
     int32_t offset = (int32_t)field.offset;
     if (value().type->isUnpackedStruct())
         return lval.selectIndex(offset);

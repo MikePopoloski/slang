@@ -125,7 +125,30 @@ void TypePrinter::visit(const PackedStructType& type, string_view overrideName) 
         if (type.isSigned)
             buffer.append(" signed");
 
-        appendStructMembers(type);
+        appendMembers(type);
+        printScope(type.getParentScope());
+
+        // TODO: print system name
+        if (!overrideName.empty())
+            buffer.append(overrideName);
+    }
+}
+
+void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
+    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+        printScope(type.getParentScope());
+
+        if (overrideName.empty())
+            buffer.append("<unnamed packed union>");
+        else
+            buffer.append(overrideName);
+    }
+    else {
+        buffer.append("union packed");
+        if (type.isSigned)
+            buffer.append(" signed");
+
+        appendMembers(type);
         printScope(type.getParentScope());
 
         // TODO: print system name
@@ -176,7 +199,26 @@ void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName
     }
     else {
         buffer.append("struct");
-        appendStructMembers(type);
+        appendMembers(type);
+        printScope(type.getParentScope());
+
+        // TODO: print system name
+        if (!overrideName.empty())
+            buffer.append(overrideName);
+    }
+}
+
+void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName) {
+    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+        printScope(type.getParentScope());
+        if (overrideName.empty())
+            buffer.append("<unnamed unpacked union>");
+        else
+            buffer.append(overrideName);
+    }
+    else {
+        buffer.append("union");
+        appendMembers(type);
         printScope(type.getParentScope());
 
         // TODO: print system name
@@ -213,7 +255,7 @@ void TypePrinter::visit(const ErrorType&, string_view) {
     buffer.append("<error>");
 }
 
-void TypePrinter::appendStructMembers(const Scope& scope) {
+void TypePrinter::appendMembers(const Scope& scope) {
     buffer.append("{");
     for (auto& member : scope.members()) {
         auto& var = member.as<VariableSymbol>();

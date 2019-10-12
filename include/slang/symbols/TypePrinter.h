@@ -35,8 +35,10 @@ public:
     void visit(const EnumType& type, string_view overrideName);
     void visit(const PackedArrayType& type, string_view overrideName);
     void visit(const PackedStructType& type, string_view overrideName);
+    void visit(const PackedUnionType& type, string_view overrideName);
     void visit(const UnpackedArrayType& type, string_view overrideName);
     void visit(const UnpackedStructType& type, string_view overrideName);
+    void visit(const UnpackedUnionType& type, string_view overrideName);
     void visit(const VoidType& type, string_view overrideName);
     void visit(const NullType& type, string_view overrideName);
     void visit(const CHandleType& type, string_view overrideName);
@@ -49,7 +51,7 @@ public:
     void visit(const T&, string_view) {}
 
 private:
-    void appendStructMembers(const Scope& scope);
+    void appendMembers(const Scope& scope);
     void printScope(const Scope* scope);
 
     FormatBuffer buffer;

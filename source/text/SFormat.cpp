@@ -181,6 +181,14 @@ static bool isValidForRaw(const Type& type) {
     if (type.isIntegral())
         return true;
 
+    if (type.isUnpackedUnion()) {
+        auto members = type.as<UnpackedUnionType>().members();
+        if (members.begin() == members.end())
+            return false;
+
+        return isValidForRaw(members.begin()->as<FieldSymbol>().getType());
+    }
+
     if (!type.isUnpackedStruct())
         return false;
 
@@ -413,7 +421,8 @@ bool parseArgs(string_view formatString, SourceLocation loc, SmallVector<Arg>& a
             return;
         args.append({ type, c });
     };
-    return parseFormatString(formatString, loc, [](char) {}, onArg, diags);
+    return parseFormatString(
+        formatString, loc, [](char) {}, onArg, diags);
 }
 
 optional<std::string> format(string_view formatString, SourceLocation loc,
