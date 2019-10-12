@@ -91,6 +91,7 @@ add_library(slang
 
 	${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
 	util/BumpAllocator.cpp
+	util/CommandLine.cpp
 	util/Hash.cpp
 	util/Util.cpp
 )

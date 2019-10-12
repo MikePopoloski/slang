@@ -13,6 +13,20 @@
 
 namespace slang {
 
+static logic_t getLogicCharValue(char c) {
+    switch (c) {
+        case 'z':
+        case 'Z':
+        case '?':
+            return logic_t::z;
+        case 'x':
+        case 'X':
+            return logic_t::x;
+        default:
+            return logic_t(0);
+    }
+}
+
 VectorBuilder::VectorBuilder(Diagnostics& diagnostics) : diagnostics(diagnostics) {
 }
 

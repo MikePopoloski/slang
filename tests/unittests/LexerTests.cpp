@@ -1125,7 +1125,6 @@ TEST_CASE("Missing / expected tokens") {
 }
 
 TEST_CASE("Test text utilities") {
-    CHECK(getLogicCharValue('a').value == 0);
     CHECK(utf8SeqBytes(63) == 0);
     CHECK(utf8SeqBytes('\xc1') == 1);
     CHECK(utf8SeqBytes('\xe0') == 2);

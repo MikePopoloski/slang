@@ -8,6 +8,8 @@
 
 #include <fmt/format.h>
 
+#include "slang/util/SmallVector.h"
+
 #if defined(_MSC_VER)
 #    include <Windows.h>
 #endif
@@ -23,6 +25,44 @@ namespace slang::assert {
 } // namespace slang::assert
 
 namespace slang {
+
+int editDistance(string_view left, string_view right, bool allowReplacements, int maxDistance) {
+    // See: http://en.wikipedia.org/wiki/Levenshtein_distance
+    size_t m = left.size();
+    size_t n = right.size();
+
+    SmallVectorSized<int, 32> row;
+    for (int i = 0; i <= n; i++)
+        row.append(i);
+
+    for (size_t y = 1; y <= m; y++) {
+        row[0] = int(y);
+        int best = row[0];
+
+        int prev = int(y - 1);
+        for (size_t x = 1; x <= n; x++) {
+            int old = row[x];
+            if (allowReplacements) {
+                row[x] = std::min(prev + (left[y - 1] == right[x - 1] ? 0 : 1),
+                                  std::min(row[x - 1], row[x]) + 1);
+            }
+            else {
+                if (left[y - 1] == right[x - 1])
+                    row[x] = prev;
+                else
+                    row[x] = std::min(row[x - 1], row[x]) + 1;
+            }
+
+            prev = old;
+            best = std::min(best, row[x]);
+        }
+
+        if (maxDistance && best > maxDistance)
+            return maxDistance + 1;
+    }
+
+    return row[n];
+}
 
 #if defined(_MSC_VER)
 

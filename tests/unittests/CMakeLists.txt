@@ -16,6 +16,7 @@ add_executable(unittests
 	StatementTests.cpp
 	SymbolLookupTests.cpp
 	TypeTests.cpp
+	UtilTests.cpp
 )
 
 target_link_libraries(unittests PRIVATE slang CONAN_PKG::Catch2)

@@ -141,6 +141,11 @@ inline string_view to_string_view(span<char> text) {
     return string_view(text.data(), text.size());
 }
 
+/// Determines the number of edits to the left string that are required to
+/// change it into the right string.
+int editDistance(string_view left, string_view right, bool allowReplacements = true,
+                 int maxDistance = 0);
+
 inline void hash_combine(size_t&) {
 }
 

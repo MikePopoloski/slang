@@ -93,22 +93,6 @@ inline uint8_t getHexDigitValue(char c) {
     return uint8_t(10 + c - 'a');
 }
 
-/// Gets the logic_t value of the given logic digit,
-/// which encompasses various ways to say Unknown (X) or High Impedance (Z).
-inline logic_t getLogicCharValue(char c) {
-    switch (c) {
-        case 'z':
-        case 'Z':
-        case '?':
-            return logic_t::z;
-        case 'x':
-        case 'X':
-            return logic_t::x;
-        default:
-            return logic_t(0);
-    }
-}
-
 /// Returns the number of bytes to skip after reading a UTF-8 character.
 inline int utf8SeqBytes(char c) {
     unsigned char uc = static_cast<unsigned char>(c);
