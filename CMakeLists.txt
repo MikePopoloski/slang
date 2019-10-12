@@ -1,5 +1,5 @@
 # slang - cmake entry point
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 project(slang VERSION 0.1.0 LANGUAGES CXX)
 
 option(SLANG_MSVC_W4 "Enable /W4 for MSVC builds" ON)
