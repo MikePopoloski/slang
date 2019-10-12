@@ -691,7 +691,7 @@ template< class C, class E >
 struct is_compatible_container : std17::bool_constant
 <
     is_container<C>::value
-    && is_compatible_element<C,E>::value
+    //&& is_compatible_element<C,E>::value
 >{};
 
 #else // span_CPP11_140
