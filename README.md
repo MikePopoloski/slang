@@ -26,7 +26,7 @@ Experiment with parsing, type checking, and error detection live [on the web](ht
 #### Dependencies
 - [python 3](https://www.python.org/)
 - [conan](https://conan.io/)
-- [CMake](https://cmake.org/) (3.10 or later)
+- [CMake](https://cmake.org/) (3.12 or later)
 - C++17 compatible compiler
 
 #### Compilation
