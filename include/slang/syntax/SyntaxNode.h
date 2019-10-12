@@ -280,7 +280,7 @@ public:
     SeparatedSyntaxList(span<TokenOrSyntax> elements);
 
     bool empty() const { return elements.empty(); }
-    size_t size() const { return (elements.size() + 1) / 2; }
+    size_t size() const noexcept { return (elements.size() + 1) / 2; }
 
     const T* operator[](size_t index) const {
         index <<= 1;

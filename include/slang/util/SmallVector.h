@@ -57,9 +57,9 @@ public:
         return data_[len - 1];
     }
 
-    T* data() const { return data_; }
-    size_t size() const { return len; }
-    bool empty() const { return len == 0; }
+    T* data() const noexcept { return data_; }
+    size_t size() const noexcept { return len; }
+    bool empty() const noexcept { return len == 0; }
 
     /// Clear all elements but retain underlying storage.
     void clear() {
