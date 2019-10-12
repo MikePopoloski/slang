@@ -500,8 +500,8 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
     BindContext context(parent, location);
 
     const Type* finalType = &symbol->as<Type>();
-    uint32_t count = result.selectors.size();
-    for (uint32_t i = 0; i < count; i++) {
+    size_t count = result.selectors.size();
+    for (size_t i = 0; i < count; i++) {
         // TODO: handle dotted selectors
         auto selectSyntax = std::get<const ElementSelectSyntax*>(result.selectors[count - i - 1]);
         auto dim = context.evalPackedDimension(*selectSyntax);
@@ -587,8 +587,8 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     }
 
     const Type* result = &compilation.getScalarType(flags);
-    uint32_t count = dims.size();
-    for (uint32_t i = 0; i < count; i++) {
+    size_t count = dims.size();
+    for (size_t i = 0; i < count; i++) {
         auto& pair = dims[count - i - 1];
         result = &PackedArrayType::fromSyntax(compilation, *result, pair.first, *pair.second);
     }
@@ -879,8 +879,8 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
     BindContext context(scope, location);
 
     const Type* result = &elementType;
-    uint32_t count = (uint32_t)dimensions.size();
-    for (uint32_t i = 0; i < count; i++) {
+    size_t count = dimensions.size();
+    for (size_t i = 0; i < count; i++) {
         // TODO: handle other kinds of unpacked arrays
         EvaluatedDimension dim = context.evalDimension(*dimensions[count - i - 1], true);
         if (!dim.isRange())
@@ -977,8 +977,8 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
     const Type* result = structType;
     BindContext context(scope, location);
 
-    ptrdiff_t count = syntax.dimensions.size();
-    for (ptrdiff_t i = 0; i < count; i++) {
+    size_t count = syntax.dimensions.size();
+    for (size_t i = 0; i < count; i++) {
         auto& dimSyntax = *syntax.dimensions[count - i - 1];
         auto dim = context.evalPackedDimension(dimSyntax);
         if (!dim)
@@ -1063,7 +1063,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
 
         for (auto decl : member->declarators) {
             auto variable =
-                compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0);
+                compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0u);
             variable->setType(type);
             variable->setSyntax(*decl);
             compilation.addAttributes(*variable, member->attributes);
@@ -1108,8 +1108,8 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
     const Type* result = unionType;
     BindContext context(scope, location);
 
-    ptrdiff_t count = syntax.dimensions.size();
-    for (ptrdiff_t i = 0; i < count; i++) {
+    size_t count = syntax.dimensions.size();
+    for (size_t i = 0; i < count; i++) {
         auto& dimSyntax = *syntax.dimensions[count - i - 1];
         auto dim = context.evalPackedDimension(dimSyntax);
         if (!dim)
@@ -1142,7 +1142,7 @@ const Type& UnpackedUnionType::fromSyntax(Compilation& compilation,
     for (auto member : syntax.members) {
         for (auto decl : member->declarators) {
             auto variable =
-                compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0);
+                compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0u);
             variable->setDeclaredType(*member->type);
             variable->setFromDeclarator(*decl);
             compilation.addAttributes(*variable, member->attributes);

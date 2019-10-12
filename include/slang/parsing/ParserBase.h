@@ -68,9 +68,9 @@ protected:
         Token lastConsumed;
 
         // the current offset within the lookahead buffer
-        uint32_t currentOffset = 0;
-        uint32_t count = 0;
-        uint32_t capacity = 0;
+        size_t currentOffset = 0;
+        size_t count = 0;
+        size_t capacity = 0;
 
         void addNew();
         void moveToNext();

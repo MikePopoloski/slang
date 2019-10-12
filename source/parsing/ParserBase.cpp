@@ -141,7 +141,7 @@ void ParserBase::reportMisplacedSeparator() {
 void ParserBase::Window::addNew() {
     if (count >= capacity) {
         // shift tokens to the left if we are too far to the right
-        uint32_t shift = count - currentOffset;
+        size_t shift = count - currentOffset;
         if (currentOffset > (capacity >> 1)) {
             if (shift > 0)
                 memmove(buffer, buffer + currentOffset, shift * sizeof(Token));
@@ -170,20 +170,20 @@ void ParserBase::Window::moveToNext() {
 }
 
 void ParserBase::Window::insertHead(span<const Token> tokens) {
-    if (currentOffset >= (uint32_t)tokens.size()) {
-        currentOffset -= (uint32_t)tokens.size();
-        memcpy(buffer + currentOffset, tokens.data(), (uint32_t)tokens.size() * sizeof(Token));
+    if (currentOffset >= tokens.size()) {
+        currentOffset -= tokens.size();
+        memcpy(buffer + currentOffset, tokens.data(), tokens.size() * sizeof(Token));
         return;
     }
 
-    uint32_t existing = count - currentOffset;
-    ASSERT((uint32_t)tokens.size() + existing < capacity);
+    size_t existing = count - currentOffset;
+    ASSERT(tokens.size() + existing < capacity);
 
     memmove(buffer + tokens.size(), buffer + currentOffset, existing * sizeof(Token));
-    memcpy(buffer, tokens.data(), (uint32_t)tokens.size() * sizeof(Token));
+    memcpy(buffer, tokens.data(), tokens.size() * sizeof(Token));
 
     currentOffset = 0;
-    count = (uint32_t)tokens.size() + existing;
+    count = tokens.size() + existing;
 }
 
 } // namespace slang

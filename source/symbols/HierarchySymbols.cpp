@@ -817,7 +817,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
         bool currentFound = false;
         SourceRange currentMatchRange;
         auto& sci = item->as<StandardCaseItemSyntax>();
-        for (ptrdiff_t i = 0; i < sci.expressions.size(); i++) {
+        for (size_t i = 0; i < sci.expressions.size(); i++) {
             // Have to keep incrementing the iterator here so that we stay in sync.
             auto expr = *boundIt++;
             auto val = expr->constant;

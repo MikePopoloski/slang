@@ -892,7 +892,7 @@ public:
 
 private:
     static const Expression& bindReplCount(Compilation& comp, const ExpressionSyntax& syntax,
-                                           const BindContext& context, int32_t& count);
+                                           const BindContext& context, size_t& count);
 
     const Expression* count_;
 };

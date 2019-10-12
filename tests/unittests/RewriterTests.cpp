@@ -22,7 +22,7 @@ public:
         auto type = model.getDeclaredSymbol(decl.type->as<EnumTypeSyntax>());
         REQUIRE(type);
 
-        ptrdiff_t count = type->as<EnumType>().members().size();
+        size_t count = type->as<EnumType>().members().size();
         auto& newNode = parse(
             fmt::format("\n    localparam int {}__count = {};", decl.name.valueText(), count));
         insertAfter(decl, newNode);

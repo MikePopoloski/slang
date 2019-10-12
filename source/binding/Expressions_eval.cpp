@@ -183,7 +183,7 @@ ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
         span<const ConstantValue> ra = cvr.elements();
         ASSERT(la.size() == ra.size());
 
-        for (ptrdiff_t i = 0; i < la.size(); i++) {
+        for (size_t i = 0; i < la.size(); i++) {
             ConstantValue result = evalBinaryOperator(op, la[i], ra[i]);
             if (!result)
                 return nullptr;
@@ -609,7 +609,7 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
             // [11.4.11] says that if both sides are unpacked arrays, we
             // check each element. If they are equal, take it in the result,
             // otherwise use the default.
-            for (ptrdiff_t i = 0; i < la.size(); i++) {
+            for (size_t i = 0; i < la.size(); i++) {
                 ConstantValue comp = evalBinaryOperator(BinaryOperator::Equality, la[i], ra[i]);
                 if (!comp)
                     return nullptr;
@@ -668,7 +668,7 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     if (value().type->isUnpackedArray())
-        return cv.elements()[index];
+        return cv.elements()[size_t(index)];
 
     if (value().type->isString())
         return cv.getSlice(index, index);
@@ -794,10 +794,10 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     // TODO: handle unpacked unions
-    int32_t offset = (int32_t)field.offset;
     if (value().type->isUnpackedStruct())
-        return cv.elements()[offset];
+        return cv.elements()[field.offset];
 
+    int32_t offset = (int32_t)field.offset;
     int32_t width = (int32_t)type->getBitWidth();
     return cv.integer().slice(width + offset - 1, offset);
 }
@@ -924,8 +924,8 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     context.pushFrame(symbol, sourceRange.start(), lookupLocation);
     span<const FormalArgumentSymbol* const> formals = symbol.arguments;
-    for (ptrdiff_t i = 0; i < formals.size(); i++)
-        context.createLocal(formals[i], args[size_t(i)]);
+    for (size_t i = 0; i < formals.size(); i++)
+        context.createLocal(formals[i], args[i]);
 
     context.createLocal(symbol.returnValVar);
 

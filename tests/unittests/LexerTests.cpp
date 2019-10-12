@@ -611,7 +611,7 @@ TEST_CASE("Directive continuation") {
     CHECK(t.kind == TriviaKind::Directive);
     REQUIRE(t.syntax()->kind == SyntaxKind::DefineDirective);
 
-    CHECK(t.getSkippedTokens() == span<const Token>{});
+    CHECK(t.getSkippedTokens().empty());
     CHECK(t.getRawText() == "");
     CHECK(t.withLocation(alloc, SourceLocation()).getExplicitLocation() == t.getExplicitLocation());
 

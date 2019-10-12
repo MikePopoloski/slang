@@ -109,7 +109,7 @@ namespace slang {
     if currtype:
         generate(outf, currtype_name, tags, currtype, alltypes, kindmap)
 
-    cppf.write('uint32_t SyntaxNode::getChildCount() const {\n')
+    cppf.write('size_t SyntaxNode::getChildCount() const {\n')
     cppf.write('    switch (kind) {\n')
     cppf.write('        case SyntaxKind::Unknown: return 0;\n')
     cppf.write('        case SyntaxKind::SyntaxList:\n')
@@ -167,7 +167,7 @@ namespace slang {
 
         if v.members or v.final != '':
             for returnType in ('TokenOrSyntax', 'ConstTokenOrSyntax'):
-                cppf.write('{} {}::getChild(uint32_t index){} {{\n'.format(returnType, k, '' if returnType == 'TokenOrSyntax' else ' const'))
+                cppf.write('{} {}::getChild(size_t index){} {{\n'.format(returnType, k, '' if returnType == 'TokenOrSyntax' else ' const'))
 
                 if v.combinedMembers:
                     cppf.write('    switch (index) {\n')
@@ -187,7 +187,7 @@ namespace slang {
 
                 cppf.write('}\n\n')
 
-            cppf.write('void {}::setChild(uint32_t index, TokenOrSyntax child) {{\n'.format(k))
+            cppf.write('void {}::setChild(size_t index, TokenOrSyntax child) {{\n'.format(k))
             if v.combinedMembers:
                 cppf.write('    switch (index) {\n')
 
@@ -471,9 +471,9 @@ def generate(outf, name, tags, members, alltypes, kindmap):
     else:
         outf.write('    static bool isKind(SyntaxKind kind);\n\n')
 
-        outf.write('    TokenOrSyntax getChild(uint32_t index);\n')
-        outf.write('    ConstTokenOrSyntax getChild(uint32_t index) const;\n')
-        outf.write('    void setChild(uint32_t index, TokenOrSyntax child);\n\n')
+        outf.write('    TokenOrSyntax getChild(size_t index);\n')
+        outf.write('    ConstTokenOrSyntax getChild(size_t index) const;\n')
+        outf.write('    void setChild(size_t index, TokenOrSyntax child);\n\n')
         outf.write('    {}* clone(BumpAllocator& alloc) const;\n'.format(name))
 
     outf.write('};\n\n')

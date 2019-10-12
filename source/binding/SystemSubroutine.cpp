@@ -25,8 +25,8 @@ string_view SystemSubroutine::kindStr() const {
 }
 
 bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, const Args& args,
-                                     SourceRange callRange, ptrdiff_t min, ptrdiff_t max) {
-    ptrdiff_t provided = args.size();
+                                     SourceRange callRange, size_t min, size_t max) {
+    size_t provided = args.size();
     if (isMethod) {
         ASSERT(provided);
         provided--;
@@ -109,10 +109,8 @@ const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const Bi
 const Type& SimpleSystemSubroutine::checkArguments(const BindContext& context, const Args& args,
                                                    SourceRange range) const {
     auto& comp = context.getCompilation();
-    if (!checkArgCount(context, isMethod, args, range, ptrdiff_t(requiredArgs),
-                       ptrdiff_t(argTypes.size()))) {
+    if (!checkArgCount(context, isMethod, args, range, requiredArgs, argTypes.size()))
         return comp.getErrorType();
-    }
 
     return *returnType;
 }

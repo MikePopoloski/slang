@@ -58,7 +58,7 @@ public:
     }
 
     T* data() const { return data_; }
-    uint32_t size() const { return len; }
+    size_t size() const { return len; }
     bool empty() const { return len == 0; }
 
     /// Clear all elements but retain underlying storage.
@@ -89,8 +89,8 @@ public:
     /// Add a range of elements to the end of the array.
     void appendRange(const T* begin, const T* end) {
         if constexpr (std::is_trivially_copyable<T>()) {
-            uint32_t count = (uint32_t)std::distance(begin, end);
-            uint32_t newLen = len + count;
+            size_t count = (size_t)std::distance(begin, end);
+            size_t newLen = len + count;
             ensureSize(newLen);
 
             T* ptr = data_ + len;
@@ -106,8 +106,8 @@ public:
     /// simple forward iterators.
     template<typename It>
     void appendIterator(It begin, It end) {
-        uint32_t count = (uint32_t)(end - begin);
-        uint32_t newLen = len + count;
+        size_t count = (size_t)(end - begin);
+        size_t newLen = len + count;
         ensureSize(newLen);
 
         T* ptr = data_ + len;
@@ -125,12 +125,12 @@ public:
     }
 
     /// Adds @a size elements to the array (default constructed).
-    void extend(uint32_t size) {
+    void extend(size_t size) {
         ensureSize(len + size);
         len += size;
     }
 
-    void reserve(uint32_t size) { ensureSize(size); }
+    void reserve(size_t size) { ensureSize(size); }
 
     /// Creates a copy of the array using the given allocator.
     span<T> copy(BumpAllocator& alloc) const {
@@ -139,7 +139,7 @@ public:
 
         const T* source = data_;
         T* dest = reinterpret_cast<T*>(alloc.allocate(len * sizeof(T), alignof(T)));
-        for (uint32_t i = 0; i < len; i++)
+        for (size_t i = 0; i < len; i++)
             new (&dest[i]) T(*source++);
         return span<T>(dest, len);
     }
@@ -148,28 +148,28 @@ public:
     const T& operator[](size_t index) const { return data_[index]; }
 
 #if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
     /// Indicates whether we are still "small", which means we are still on the stack.
     bool isSmall() const { return (void*)data_ == (void*)firstElement; }
 #if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
+#    pragma GCC diagnostic pop
 #endif
 
 protected:
     // Protected to disallow construction or deletion via base class.
     // This way we don't need a virtual destructor, or vtable at all.
     SmallVector() {}
-    explicit SmallVector(uint32_t capacity) : capacity(capacity) {}
+    explicit SmallVector(size_t capacity) : capacity(capacity) {}
     ~SmallVector() { cleanup(); }
 
-    template<typename TType, uint32_t N>
+    template<typename TType, size_t N>
     friend class SmallVectorSized;
 
     T* data_ = reinterpret_cast<T*>(&firstElement[0]);
-    uint32_t len = 0;
-    uint32_t capacity = 0;
+    size_t len = 0;
+    size_t capacity = 0;
 
     // Always allocate room for one element, the first stack allocated element.
     // This way the base class can be generic with respect to how many elements
@@ -185,7 +185,7 @@ protected:
         else {
             // We assume we can trivially std::move elements here. Don't do anything dumb like
             // putting throwing move types into this container.
-            for (uint32_t i = 0; i < len; i++)
+            for (size_t i = 0; i < len; i++)
                 new (&newData[i]) T(std::move(data_[i]));
         }
 
@@ -202,7 +202,7 @@ protected:
         }
     }
 
-    void ensureSize(uint32_t size) {
+    void ensureSize(size_t size) {
         if (size > capacity) {
             capacity = size;
             resize();
@@ -211,7 +211,7 @@ protected:
 
     void destructElements() {
         if constexpr (!std::is_trivially_destructible<T>()) {
-            for (uint32_t i = 0; i < len; i++)
+            for (size_t i = 0; i < len; i++)
                 data_[i].~T();
         }
     }
@@ -223,7 +223,7 @@ protected:
     }
 };
 
-template<typename T, uint32_t N>
+template<typename T, size_t N>
 class SmallVectorSized : public SmallVector<T> {
     static_assert(N > 1, "Must have at least two elements in SmallVector stack size");
     static_assert(sizeof(T) * N <= 1024, "Initial size of SmallVector is over 1KB");
@@ -231,7 +231,7 @@ class SmallVectorSized : public SmallVector<T> {
 public:
     SmallVectorSized() : SmallVector<T>(N) {}
 
-    explicit SmallVectorSized(uint32_t capacity) : SmallVector<T>(N) { this->reserve(capacity); }
+    explicit SmallVectorSized(size_t capacity) : SmallVector<T>(N) { this->reserve(capacity); }
 
     SmallVectorSized(SmallVectorSized<T, N>&& other) noexcept :
         SmallVectorSized(static_cast<SmallVector<T>&&>(other)) {}

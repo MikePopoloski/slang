@@ -883,7 +883,7 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
 
     // TODO: audit trivia usage here, use of dest.back(), etc
 
-    for (ptrdiff_t i = 0; i < tokens.size(); i++) {
+    for (size_t i = 0; i < tokens.size(); i++) {
         Token newToken;
 
         // Once we see a `" token, we start collecting tokens into their own
@@ -1044,7 +1044,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     };
     SmallMap<string_view, ArgTokens, 8> argumentMap;
 
-    for (ptrdiff_t i = 0; i < formalList.size(); i++) {
+    for (size_t i = 0; i < formalList.size(); i++) {
         auto formal = formalList[i];
         auto name = formal->name.valueText();
         if (name.empty())

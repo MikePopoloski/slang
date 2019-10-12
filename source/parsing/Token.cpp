@@ -271,7 +271,7 @@ span<Trivia const> Token::trivia() const {
     if (triviaCountSmall == MaxTriviaSmallCount + 1) {
         size_t size;
         memcpy(&size, ptr + sizeof(trivia), sizeof(size_t));
-        return { trivia, ptrdiff_t(size) };
+        return { trivia, size };
     }
 
     return { trivia, triviaCountSmall };
@@ -364,7 +364,7 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, span<Trivia const> trivi
         memcpy(dest, &triviaPtr, sizeof(triviaPtr));
 
         if (trivia.size() > MaxTriviaSmallCount) {
-            size = size_t(trivia.size());
+            size = trivia.size();
             memcpy(dest + sizeof(triviaPtr), &size, sizeof(size_t));
         }
     }

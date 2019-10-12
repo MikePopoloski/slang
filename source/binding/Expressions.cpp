@@ -2122,7 +2122,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         }
 
         // TODO: handle named arguments in addition to ordered
-        for (ptrdiff_t i = 0; i < actualArgs.size(); i++) {
+        for (size_t i = 0; i < actualArgs.size(); i++) {
             const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
             argBuffer.append(&Expression::bind(formalArgs[i]->getType(), *arg.expr,
                                                arg.getFirstToken().location(), context));
@@ -2177,10 +2177,10 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
 
     if (syntax && syntax->arguments) {
         auto actualArgs = syntax->arguments->parameters;
-        for (ptrdiff_t i = 0; i < actualArgs.size(); i++) {
+        for (size_t i = 0; i < actualArgs.size(); i++) {
             // TODO: error if not ordered arguments
             const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-            buffer.append(&subroutine.bindArgument(size_t(i), context, *arg.expr));
+            buffer.append(&subroutine.bindArgument(i, context, *arg.expr));
         }
     }
 
@@ -2698,14 +2698,14 @@ void StructuredAssignmentPatternExpression::toJson(json&) const {
 }
 
 const Expression& ReplicatedAssignmentPatternExpression::bindReplCount(
-    Compilation& comp, const ExpressionSyntax& syntax, const BindContext& context, int32_t& count) {
+    Compilation& comp, const ExpressionSyntax& syntax, const BindContext& context, size_t& count) {
 
     const Expression& expr = bind(syntax, context, BindFlags::Constant);
     optional<int32_t> c = context.evalInteger(expr);
     if (!context.requireGtZero(c, expr.sourceRange))
         return badExpr(comp, &expr);
 
-    count = *c;
+    count = size_t(*c);
     return expr;
 }
 
@@ -2713,7 +2713,7 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
     Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Scope& structScope, SourceRange sourceRange) {
 
-    int32_t count;
+    size_t count;
     auto& countExpr = bindReplCount(comp, *syntax.countExpr, context, count);
     if (countExpr.bad())
         return badExpr(comp, nullptr);
@@ -2729,9 +2729,9 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
     }
 
     bool bad = false;
-    uint32_t index = 0;
+    size_t index = 0;
     SmallVectorSized<const Expression*, 8> elems;
-    for (int32_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         for (auto item : syntax.items) {
             auto& expr =
                 Expression::bind(*types[index++], *item, item->getFirstToken().location(), context);
@@ -2752,14 +2752,14 @@ Expression& ReplicatedAssignmentPatternExpression::forArray(
     Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Type& elementType, bitwidth_t numElements, SourceRange sourceRange) {
 
-    int32_t count;
+    size_t count;
     auto& countExpr = bindReplCount(comp, *syntax.countExpr, context, count);
     if (countExpr.bad())
         return badExpr(comp, nullptr);
 
     bool bad = false;
     SmallVectorSized<const Expression*, 8> elems;
-    for (int32_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         for (auto item : syntax.items) {
             auto& expr =
                 Expression::bind(elementType, *item, item->getFirstToken().location(), context);

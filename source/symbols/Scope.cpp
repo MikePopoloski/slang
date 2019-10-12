@@ -839,7 +839,7 @@ const Symbol* Scope::selectChild(const Symbol& initialSymbol,
                     return nullptr;
                 }
 
-                symbol = array.elements[array.range.translateIndex(*index)];
+                symbol = array.elements[size_t(array.range.translateIndex(*index))];
                 break;
             }
             case SymbolKind::GenerateBlockArray: {

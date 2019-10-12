@@ -40,7 +40,7 @@ protected:
 
     string_view kindStr() const;
     static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
-                              SourceRange callRange, ptrdiff_t min, ptrdiff_t max);
+                              SourceRange callRange, size_t min, size_t max);
 
     static bool checkFormatArgs(const BindContext& context, const Args& args);
 };

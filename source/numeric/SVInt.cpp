@@ -270,7 +270,7 @@ SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t cons
     };
 
     uint32_t i;
-    for (i = charsPerWord; i < (uint32_t)digits.size(); i += charsPerWord) {
+    for (i = charsPerWord; i < digits.size(); i += charsPerWord) {
         word = nextDigit();
         for (uint32_t j = charsPerWord - 1; j != 0; j--)
             word = word * 10 + nextDigit();
@@ -281,7 +281,7 @@ SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t cons
     maxWord = 10;
     word = nextDigit();
 
-    for (uint32_t j = (uint32_t)digits.size() - (i - charsPerWord) - 1; j > 0; j--) {
+    for (size_t j = digits.size() - (i - charsPerWord) - 1; j > 0; j--) {
         word = word * 10 + nextDigit();
         maxWord *= 10;
     }
@@ -304,8 +304,8 @@ SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uin
     uint64_t* endPtr = dest + numWords;
     uint32_t bitPos = 0;
 
-    for (ptrdiff_t i = digits.size() - 1; i >= 0; i--) {
-        logic_t d = digits[i];
+    for (ptrdiff_t i = ptrdiff_t(digits.size()) - 1; i >= 0; i--) {
+        logic_t d = digits[size_t(i)];
         uint64_t unknown = 0;
         uint64_t value = d.value;
 
@@ -689,7 +689,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
     }
 
     // for bases 2, 8, and 16 we can just shift instead of dividing
-    uint32_t startOffset = buffer.size();
+    size_t startOffset = buffer.size();
     static const char Digits[] = "0123456789abcdef";
     if (base == LiteralBase::Decimal) {
         // decimal numbers that have unknown values only print as a single letter,
@@ -1611,12 +1611,12 @@ void SVInt::initSlowCase(uint64_t value) {
 void SVInt::initSlowCase(span<const byte> bytes) {
     if (isSingleWord()) {
         val = 0;
-        memcpy(&val, bytes.data(), std::min<size_t>(WORD_SIZE, (size_t)bytes.size()));
+        memcpy(&val, bytes.data(), std::min<size_t>(WORD_SIZE, bytes.size()));
     }
     else {
         uint32_t words = getNumWords();
         pVal = new uint64_t[words](); // allocation is zero cleared
-        memcpy(pVal, bytes.data(), std::min<size_t>(words * WORD_SIZE, (size_t)bytes.size()));
+        memcpy(pVal, bytes.data(), std::min<size_t>(words * WORD_SIZE, bytes.size()));
     }
     clearUnusedBits();
 }

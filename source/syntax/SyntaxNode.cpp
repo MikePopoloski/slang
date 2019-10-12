@@ -15,11 +15,11 @@ using namespace slang;
 
 struct GetChildVisitor {
     template<typename T>
-    ConstTokenOrSyntax visit(const T& node, uint32_t index) {
+    ConstTokenOrSyntax visit(const T& node, size_t index) {
         return node.getChild(index);
     }
 
-    ConstTokenOrSyntax visitInvalid(const SyntaxNode&, uint32_t) { return nullptr; }
+    ConstTokenOrSyntax visitInvalid(const SyntaxNode&, size_t) { return nullptr; }
 };
 
 } // namespace
@@ -38,8 +38,8 @@ std::string SyntaxNode::toString() const {
 }
 
 Token SyntaxNode::getFirstToken() const {
-    uint32_t childCount = getChildCount();
-    for (uint32_t i = 0; i < childCount; i++) {
+    size_t childCount = getChildCount();
+    for (size_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
         if (child.isToken()) {
             if (child.token())
@@ -55,9 +55,9 @@ Token SyntaxNode::getFirstToken() const {
 }
 
 Token SyntaxNode::getLastToken() const {
-    uint32_t childCount = getChildCount();
-    for (int i = int(childCount) - 1; i >= 0; i--) {
-        auto child = getChild(uint32_t(i));
+    size_t childCount = getChildCount();
+    for (ptrdiff_t i = ptrdiff_t(childCount) - 1; i >= 0; i--) {
+        auto child = getChild(size_t(i));
         if (child.isToken()) {
             if (child.token())
                 return child.token();
@@ -77,19 +77,19 @@ SourceRange SyntaxNode::sourceRange() const {
     return SourceRange(firstToken.location(), lastToken.location() + lastToken.rawText().length());
 }
 
-ConstTokenOrSyntax SyntaxNode::getChild(uint32_t index) const {
+ConstTokenOrSyntax SyntaxNode::getChild(size_t index) const {
     GetChildVisitor visitor;
     return visit(visitor, index);
 }
 
-const SyntaxNode* SyntaxNode::childNode(uint32_t index) const {
+const SyntaxNode* SyntaxNode::childNode(size_t index) const {
     auto child = getChild(index);
     if (child.isToken())
         return nullptr;
     return child.node();
 }
 
-Token SyntaxNode::childToken(uint32_t index) const {
+Token SyntaxNode::childToken(size_t index) const {
     auto child = getChild(index);
     if (!child.isToken())
         return Token();

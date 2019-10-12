@@ -89,7 +89,6 @@ using namespace std::literals;
 using gsl::finally;
 using gsl::make_span;
 using gsl::not_null;
-using gsl::span;
 
 // Compiler-specific macros for warnings and suppressions
 #ifdef __clang__
@@ -97,6 +96,11 @@ using gsl::span;
 #else
 #    define NO_SANITIZE(warningName)
 #endif
+
+#define span_CONFIG_INDEX_TYPE std::size_t
+#define span_FEATURE_COMPARISON 0
+#include <span.hpp>
+using nonstd::span;
 
 #include <bitmask.hpp>
 using bitmask_lib::bitmask;
@@ -134,7 +138,7 @@ struct always_false : std::false_type {};
 
 /// Converts a span of characters into a string_view.
 inline string_view to_string_view(span<char> text) {
-    return string_view(text.data(), (size_t)text.size());
+    return string_view(text.data(), text.size());
 }
 
 inline void hash_combine(size_t&) {

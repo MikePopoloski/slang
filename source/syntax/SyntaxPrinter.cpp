@@ -87,8 +87,8 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
 }
 
 SyntaxPrinter& SyntaxPrinter::print(const SyntaxNode& node) {
-    uint32_t childCount = node.getChildCount();
-    for (uint32_t i = 0; i < childCount; i++) {
+    size_t childCount = node.getChildCount();
+    for (size_t i = 0; i < childCount; i++) {
         if (auto childNode = node.childNode(i); childNode)
             print(*childNode);
         else if (auto token = node.childToken(i); token)

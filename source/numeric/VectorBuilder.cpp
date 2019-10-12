@@ -198,7 +198,7 @@ SVInt VectorBuilder::finish() {
         // however, we go with the default multiplier amount.
         bitwidth_t bits = 0;
         if (digits.size() > 1)
-            bits = (digits.size() - 1) * multiplier;
+            bits = bitwidth_t(digits.size() - 1) * multiplier;
 
         if (digits[0].isUnknown())
             bits += multiplier;

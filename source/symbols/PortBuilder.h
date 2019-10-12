@@ -776,7 +776,7 @@ private:
         if (left.size() != right.size())
             return false;
 
-        for (ptrdiff_t i = 0; i < left.size(); i++) {
+        for (size_t i = 0; i < left.size(); i++) {
             if (left[i].width() != right[i].width())
                 return false;
         }
@@ -840,13 +840,13 @@ private:
 
             // It's ok to do the slicing, so pick the correct slice for the connection
             // based on the actual path of the instance we're elaborating.
-            for (ptrdiff_t i = 0; i < instance.arrayPath.size(); i++) {
+            for (size_t i = 0; i < instance.arrayPath.size(); i++) {
                 auto& array = symbol->as<InstanceArraySymbol>();
-                int32_t index = instanceDims[size_t(i)].translateIndex(instance.arrayPath[i]);
+                int32_t index = instanceDims[i].translateIndex(instance.arrayPath[i]);
                 if (!array.range.isLittleEndian())
                     index = array.range.upper() - index;
 
-                symbol = array.elements[index];
+                symbol = array.elements[size_t(index)];
             }
 
             port.connection = symbol;

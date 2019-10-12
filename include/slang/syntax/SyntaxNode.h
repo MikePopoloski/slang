@@ -134,10 +134,10 @@ public:
 
     /// Gets the child syntax node at the specified index. If the child at
     /// the given index is not a node (probably a token) then this returns null.
-    const SyntaxNode* childNode(uint32_t index) const;
-    Token childToken(uint32_t index) const;
+    const SyntaxNode* childNode(size_t index) const;
+    Token childToken(size_t index) const;
 
-    uint32_t getChildCount() const; // Note: implemented in AllSyntax.cpp
+    size_t getChildCount() const; // Note: implemented in AllSyntax.cpp
 
     template<typename T>
     T& as() {
@@ -163,16 +163,16 @@ protected:
     explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
 private:
-    ConstTokenOrSyntax getChild(uint32_t index) const;
+    ConstTokenOrSyntax getChild(size_t index) const;
 };
 
 class SyntaxListBase : public SyntaxNode {
 public:
-    uint32_t getChildCount() const { return childCount; }
+    size_t getChildCount() const { return childCount; }
 
-    virtual TokenOrSyntax getChild(uint32_t index) = 0;
-    virtual ConstTokenOrSyntax getChild(uint32_t index) const = 0;
-    virtual void setChild(uint32_t index, TokenOrSyntax child) = 0;
+    virtual TokenOrSyntax getChild(size_t index) = 0;
+    virtual ConstTokenOrSyntax getChild(size_t index) const = 0;
+    virtual void setChild(size_t index, TokenOrSyntax child) = 0;
 
     virtual SyntaxListBase* clone(BumpAllocator& alloc) const = 0;
 
@@ -181,10 +181,9 @@ public:
     static bool isKind(SyntaxKind kind);
 
 protected:
-    SyntaxListBase(SyntaxKind kind, uint32_t childCount) :
-        SyntaxNode(kind), childCount(childCount) {}
+    SyntaxListBase(SyntaxKind kind, size_t childCount) : SyntaxNode(kind), childCount(childCount) {}
 
-    uint32_t childCount;
+    size_t childCount;
 };
 
 template<typename T>
@@ -194,10 +193,10 @@ public:
     SyntaxList(span<T*> elements);
 
 private:
-    TokenOrSyntax getChild(uint32_t index) final { return (*this)[index]; }
-    ConstTokenOrSyntax getChild(uint32_t index) const final { return (*this)[index]; }
+    TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
+    ConstTokenOrSyntax getChild(size_t index) const final { return (*this)[index]; }
 
-    void setChild(uint32_t index, TokenOrSyntax child) final {
+    void setChild(size_t index, TokenOrSyntax child) final {
         (*this)[index] = &child.node()->as<T>();
     }
 
@@ -206,7 +205,7 @@ private:
     }
 
     void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
-        SmallVectorSized<T*, 8> buffer((uint32_t)children.size());
+        SmallVectorSized<T*, 8> buffer(children.size());
         for (auto& t : children)
             buffer.append(&t.node()->as<T>());
 
@@ -221,18 +220,16 @@ public:
     TokenList(span<Token> elements);
 
 private:
-    TokenOrSyntax getChild(uint32_t index) final { return (*this)[index]; }
-    ConstTokenOrSyntax getChild(uint32_t index) const final { return (*this)[index]; }
-    void setChild(uint32_t index, TokenOrSyntax child) final {
-        (*this)[index] = child.token();
-    }
+    TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
+    ConstTokenOrSyntax getChild(size_t index) const final { return (*this)[index]; }
+    void setChild(size_t index, TokenOrSyntax child) final { (*this)[index] = child.token(); }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const final {
         return alloc.emplace<TokenList>(*this);
     }
 
     void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
-        SmallVectorSized<Token, 8> buffer((uint32_t)children.size());
+        SmallVectorSized<Token, 8> buffer(children.size());
         for (auto& t : children)
             buffer.append(t.token());
 
@@ -244,15 +241,13 @@ private:
 template<typename T>
 class SeparatedSyntaxList : public SyntaxListBase {
 public:
-    using size_type = span<TokenOrSyntax>::size_type;
-
     template<typename U>
     class iterator_base
-        : public iterator_facade<iterator_base<U>, std::random_access_iterator_tag, U, size_type> {
+        : public iterator_facade<iterator_base<U>, std::random_access_iterator_tag, U, size_t> {
     public:
         using ParentList = std::conditional_t<std::is_const_v<std::remove_pointer_t<U>>,
                                               const SeparatedSyntaxList, SeparatedSyntaxList>;
-        iterator_base(ParentList& list, size_type index) : list(list), index(index) {}
+        iterator_base(ParentList& list, size_t index) : list(list), index(index) {}
 
         bool operator==(const iterator_base& other) const {
             return &list == &other.list && index == other.index;
@@ -262,20 +257,20 @@ public:
 
         U operator*() const { return list[index]; }
 
-        size_type operator-(const iterator_base& other) const { return index - other.index; }
+        size_t operator-(const iterator_base& other) const { return index - other.index; }
 
-        iterator_base& operator+=(int32_t n) {
-            index += n;
+        iterator_base& operator+=(ptrdiff_t n) {
+            index = size_t(ptrdiff_t(index) + n);
             return *this;
         }
-        iterator_base& operator-=(int32_t n) {
-            index -= n;
+        iterator_base& operator-=(ptrdiff_t n) {
+            index = size_t(ptrdiff_t(index) - n);
             return *this;
         }
 
     private:
         ParentList& list;
-        size_type index;
+        size_t index;
     };
 
     using iterator = iterator_base<T*>;
@@ -285,14 +280,14 @@ public:
     SeparatedSyntaxList(span<TokenOrSyntax> elements);
 
     bool empty() const { return elements.empty(); }
-    span<TokenOrSyntax>::size_type size() const { return (elements.size() + 1) / 2; }
+    size_t size() const { return (elements.size() + 1) / 2; }
 
-    const T* operator[](size_type index) const {
+    const T* operator[](size_t index) const {
         index <<= 1;
         return &elements[index].node()->template as<T>();
     }
 
-    T* operator[](size_type index) {
+    T* operator[](size_t index) {
         index <<= 1;
         return &elements[index].node()->template as<T>();
     }
@@ -305,16 +300,16 @@ public:
     const_iterator cend() const { return const_iterator(*this, size()); }
 
 private:
-    TokenOrSyntax getChild(uint32_t index) final { return elements[index]; }
-    ConstTokenOrSyntax getChild(uint32_t index) const final { return elements[index]; }
-    void setChild(uint32_t index, TokenOrSyntax child) final { elements[index] = child; }
+    TokenOrSyntax getChild(size_t index) final { return elements[index]; }
+    ConstTokenOrSyntax getChild(size_t index) const final { return elements[index]; }
+    void setChild(size_t index, TokenOrSyntax child) final { elements[index] = child; }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const final {
         return alloc.emplace<SeparatedSyntaxList<T>>(*this);
     }
 
     void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
-        SmallVectorSized<TokenOrSyntax, 8> buffer((uint32_t)children.size());
+        SmallVectorSized<TokenOrSyntax, 8> buffer(children.size());
         buffer.appendRange(children);
 
         elements = buffer.copy(alloc);
@@ -326,16 +321,16 @@ private:
 
 template<typename T>
 SyntaxList<T>::SyntaxList(span<T*> elements) :
-    SyntaxListBase(SyntaxKind::SyntaxList, (uint32_t)elements.size()), span<T*>(elements) {
+    SyntaxListBase(SyntaxKind::SyntaxList, elements.size()), span<T*>(elements) {
 }
 
 inline TokenList::TokenList(span<Token> elements) :
-    SyntaxListBase(SyntaxKind::TokenList, (uint32_t)elements.size()), span<Token>(elements) {
+    SyntaxListBase(SyntaxKind::TokenList, elements.size()), span<Token>(elements) {
 }
 
 template<typename T>
 SeparatedSyntaxList<T>::SeparatedSyntaxList(span<TokenOrSyntax> elements) :
-    SyntaxListBase(SyntaxKind::SeparatedList, (uint32_t)elements.size()), elements(elements) {
+    SyntaxListBase(SyntaxKind::SeparatedList, elements.size()), elements(elements) {
 }
 
 } // namespace slang

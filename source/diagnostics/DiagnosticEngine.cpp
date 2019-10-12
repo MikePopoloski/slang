@@ -185,7 +185,7 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
     std::string message = formatMessage(diagnostic);
 
     ReportedDiagnostic report(diagnostic);
-    report.expansionLocs = make_span(expansionLocs).subspan(ptrdiff_t(ignoreUntil));
+    report.expansionLocs = span<SourceLocation>(expansionLocs).subspan(ignoreUntil);
     report.ranges = diagnostic.ranges;
     report.location = loc;
     report.severity = severity;
@@ -234,7 +234,7 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
     auto&& formatStr = fmt::to_string_view(getMessage(diag.code));
     fmt::memory_buffer out;
     fmt::format_handler<format::detail::ArgFormatter<Range>, char, ctx> handler(
-        out, formatStr, fmt::basic_format_args(args.data(), (unsigned)args.size()),
+        out, formatStr, fmt::basic_format_args(args.data(), (int)args.size()),
         fmt::internal::locale_ref());
 
     typePrintingOptions->disambiguateTypes = allTypes;

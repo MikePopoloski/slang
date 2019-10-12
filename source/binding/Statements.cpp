@@ -744,7 +744,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
         switch (item->kind) {
             case SyntaxKind::StandardCaseItem: {
                 auto& sci = item->as<StandardCaseItemSyntax>();
-                for (ptrdiff_t i = 0; i < sci.expressions.size(); i++) {
+                for (size_t i = 0; i < sci.expressions.size(); i++) {
                     bad |= (*boundIt)->bad();
                     group.append(*boundIt++);
                 }

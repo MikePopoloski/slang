@@ -21,12 +21,12 @@ public:
         if (!checkArgCount(context, true, args, range, 0, 0))
             return comp.getErrorType();
 
-        return *args.at(0)->type;
+        return *args[0]->type;
     }
 
     ConstantValue eval(EvalContext&, const Args& args) const final {
         // Expression isn't actually evaluated here; we know the value to return at compile time.
-        const EnumType& type = args.at(0)->type->getCanonicalType().as<EnumType>();
+        const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
 
         auto range = type.values();
         if (range.begin() == range.end())
@@ -75,7 +75,7 @@ public:
         if (!checkArgCount(context, true, args, range, 0, 1))
             return comp.getErrorType();
 
-        return *args.at(0)->type;
+        return *args[0]->type;
     }
 
     ConstantValue eval(EvalContext& context, const Args& args) const final {
@@ -99,7 +99,7 @@ public:
 
         optional<size_t> foundIndex;
         SmallVectorSized<const EnumValueSymbol*, 8> values;
-        const EnumType& type = args.at(0)->type->getCanonicalType().as<EnumType>();
+        const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
         auto& targetInt = val.integer();
 
         // Get all values into an array for easier handling. Along the way,
@@ -151,7 +151,7 @@ public:
 
     ConstantValue eval(EvalContext&, const Args& args) const final {
         // Expression isn't actually evaluated here; we know the value to return at compile time.
-        const EnumType& type = args.at(0)->type->getCanonicalType().as<EnumType>();
+        const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
         return SVInt(32, (uint64_t)type.values().size(), true);
     }
 };
@@ -167,7 +167,7 @@ public:
         if (!val)
             return nullptr;
 
-        const EnumType& type = args.at(0)->type->getCanonicalType().as<EnumType>();
+        const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
         auto& targetInt = val.integer();
 
         for (auto& enumerand : type.values()) {
