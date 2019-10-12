@@ -229,7 +229,7 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
             arg);
     }
 
-    using Range = fmt::back_insert_range<fmt::internal::basic_buffer<char>>;
+    using Range = fmt::internal::buffer_range<char>;
 
     auto&& formatStr = fmt::to_string_view(getMessage(diag.code));
     fmt::memory_buffer out;

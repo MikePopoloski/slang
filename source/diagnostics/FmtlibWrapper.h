@@ -19,69 +19,80 @@ using namespace slang;
 // and to share formatting options with a parent DiagonsticWriter. We rely on fmtlib to
 // do the heavy lifting but want to hook into the operation at various points.
 template<typename OutputIt>
-class BasicFormatContext
-    : public fmt::internal::context_base<OutputIt, BasicFormatContext<OutputIt>, char> {
+class BasicFormatContext {
 public:
     using char_type = char;
 
-    template<typename T>
-    struct formatter_type {
-        using type = fmt::formatter<T, char_type>;
-    };
-
 private:
+    OutputIt out_;
+    fmt::basic_format_args<BasicFormatContext> args_;
     fmt::internal::arg_map<BasicFormatContext> map_;
+    fmt::internal::locale_ref loc_;
 
     BasicFormatContext(const BasicFormatContext&) = delete;
     void operator=(const BasicFormatContext&) = delete;
 
-    using base = fmt::internal::context_base<OutputIt, BasicFormatContext, char_type>;
-    using format_arg = typename base::format_arg;
-    using base::get_arg;
+public:
+    using iterator = OutputIt;
+    using format_arg = fmt::basic_format_arg<BasicFormatContext>;
+    template<typename T>
+    using formatter_type = fmt::formatter<T, char_type>;
 
 public:
-    using typename base::iterator;
-
-    BasicFormatContext(OutputIt out, fmt::basic_string_view<char_type> format_str,
-                       fmt::basic_format_args<BasicFormatContext> ctx_args,
+    BasicFormatContext(OutputIt out, fmt::basic_format_args<BasicFormatContext> ctx_args,
                        fmt::internal::locale_ref loc = fmt::internal::locale_ref()) :
-        base(out, format_str, ctx_args, loc) {}
+        out_(out),
+        args_(ctx_args), loc_(loc) {}
 
-    format_arg next_arg() { return this->do_get_arg(this->parse_context().next_arg_id()); }
-    format_arg get_arg(unsigned arg_id) { return this->do_get_arg(arg_id); }
+    format_arg arg(int id) const { return args_.get(id); }
+    format_arg arg(fmt::basic_string_view<char_type> name) {
+        map_.init(args_);
+        format_arg arg = map_.find(name);
+        if (arg.type() == fmt::internal::none_type)
+            this->on_error("argument not found");
+        return arg;
+    }
 
-    format_arg get_arg(fmt::basic_string_view<char_type>) { return format_arg(); }
+    fmt::internal::error_handler error_handler() { return {}; }
+    void on_error(const char* message) { error_handler().on_error(message); }
+
+    iterator out() { return out_; }
+
+    void advance_to(iterator it) { out_ = it; }
+
+    fmt::internal::locale_ref locale() { return loc_; }
 
     TypePrintingOptions* typeOptions;
     flat_hash_set<const Type*> seenTypes;
 };
 
-using FormatContext =
-    BasicFormatContext<std::back_insert_iterator<fmt::internal::basic_buffer<char>>>;
+using FormatContext = BasicFormatContext<fmt::internal::buffer_range<char>::iterator>;
 
 template<typename Range>
-class ArgFormatter
-    : public fmt::internal::function<typename fmt::internal::arg_formatter_base<Range>::iterator>,
-      public fmt::internal::arg_formatter_base<Range> {
+class ArgFormatter : public fmt::internal::arg_formatter_base<Range> {
 private:
     using char_type = typename Range::value_type;
     using base = fmt::internal::arg_formatter_base<Range>;
     using context_type = BasicFormatContext<typename base::iterator>;
 
     context_type& ctx_;
+    fmt::basic_parse_context<char_type>* parse_ctx_;
 
 public:
     using range = Range;
     using iterator = typename base::iterator;
     using format_specs = typename base::format_specs;
 
-    explicit ArgFormatter(context_type& ctx, format_specs* spec = FMT_NULL) :
-        base(Range(ctx.out()), spec, ctx.locale()), ctx_(ctx) {}
+    explicit ArgFormatter(context_type& ctx,
+                          fmt::basic_parse_context<char_type>* parse_ctx = nullptr,
+                          format_specs* spec = nullptr) :
+        base(Range(ctx.out()), spec, ctx.locale()),
+        ctx_(ctx), parse_ctx_(parse_ctx) {}
 
     using base::operator();
 
     iterator operator()(typename fmt::basic_format_arg<context_type>::handle handle) {
-        handle.format(ctx_);
+        handle.format(*parse_ctx_, ctx_);
         return this->out();
     }
 };
@@ -89,7 +100,7 @@ public:
 class DynamicFormatter {
 private:
     struct null_handler : fmt::internal::error_handler {
-        void on_align(fmt::alignment) {}
+        void on_align(fmt::align_t) {}
         void on_plus() {}
         void on_minus() {}
         void on_space() {}
@@ -99,6 +110,7 @@ private:
 public:
     template<typename ParseContext>
     auto parse(ParseContext& ctx) -> decltype(ctx.begin()) {
+        format_str_ = ctx.begin();
         // Checks are deferred to formatting time when the argument type is known.
         fmt::internal::dynamic_specs_handler<ParseContext> handler(specs_, ctx);
         return parse_format_specs(ctx.begin(), ctx.end(), handler);
@@ -108,23 +120,29 @@ public:
     auto format(const T& val, FormatContext& ctx) -> decltype(ctx.out()) {
         handle_specs(ctx);
         fmt::internal::specs_checker<null_handler> checker(
-            null_handler(), fmt::internal::get_type<FormatContext, T>::value);
-        checker.on_align(specs_.align());
-        if (specs_.flags == 0)
-            ; // Do nothing.
-        else if (specs_.has(fmt::SIGN_FLAG))
-            specs_.has(fmt::PLUS_FLAG) ? checker.on_plus() : checker.on_space();
-        else if (specs_.has(fmt::MINUS_FLAG))
-            checker.on_minus();
-        else if (specs_.has(fmt::HASH_FLAG))
+            null_handler(), fmt::internal::mapped_type_constant<T, FormatContext>::value);
+        checker.on_align(specs_.align);
+        switch (specs_.sign) {
+            case fmt::sign::none:
+                break;
+            case fmt::sign::plus:
+                checker.on_plus();
+                break;
+            case fmt::sign::minus:
+                checker.on_minus();
+                break;
+            case fmt::sign::space:
+                checker.on_space();
+                break;
+        }
+        if (specs_.alt)
             checker.on_hash();
-
-        if (specs_.precision != -1)
+        if (specs_.precision >= 0)
             checker.end_precision();
 
-        using range =
-            fmt::output_range<typename FormatContext::iterator, typename FormatContext::char_type>;
-        fmt::visit_format_arg(ArgFormatter<range>(ctx, &specs_),
+        using range = fmt::internal::output_range<typename FormatContext::iterator,
+                                                  typename FormatContext::char_type>;
+        fmt::visit_format_arg(ArgFormatter<range>(ctx, nullptr, &specs_),
                               fmt::internal::make_arg<FormatContext>(val));
         return ctx.out();
     }
@@ -132,16 +150,17 @@ public:
 private:
     template<typename Context>
     void handle_specs(Context& ctx) {
-        fmt::internal::handle_dynamic_spec<fmt::internal::width_checker>(specs_.width_,
-                                                                         specs_.width_ref, ctx);
+        fmt::internal::handle_dynamic_spec<fmt::internal::width_checker>(
+            specs_.width, specs_.width_ref, ctx, format_str_);
         fmt::internal::handle_dynamic_spec<fmt::internal::precision_checker>(
-            specs_.precision, specs_.precision_ref, ctx);
+            specs_.precision, specs_.precision_ref, ctx, format_str_);
     }
 
     fmt::internal::dynamic_format_specs<char> specs_;
+    const char* format_str_;
 };
 
-} // namespace
+} // namespace format::detail
 
 template<>
 struct fmt::formatter<slang::Type> {
