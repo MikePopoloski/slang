@@ -133,6 +133,8 @@ bool CommandLine::parse(int argc, const char* const argv[]) {
     return parse(args);
 }
 
+#if defined(_MSC_VER)
+
 bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
     SmallVectorSized<std::string, 8> storage(argc);
     SmallVectorSized<string_view, 8> args(argc);
@@ -143,6 +145,8 @@ bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
 
     return parse(args);
 }
+
+#endif
 
 bool CommandLine::parse(string_view argList) {
     SmallVectorSized<std::string, 8> storage;

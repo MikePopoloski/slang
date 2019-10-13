@@ -36,9 +36,12 @@ public:
     void setPositional(std::vector<std::string>& values, string_view valueName);
 
     bool parse(int argc, const char* const argv[]);
-    bool parse(int argc, const wchar_t* const argv[]);
     bool parse(string_view argList);
     bool parse(span<const string_view> args);
+
+#if defined(_MSC_VER)
+    bool parse(int argc, const wchar_t* const argv[]);
+#endif
 
     string_view getProgramName() const { return programName; }
     void setProgramName(string_view name) { programName = name; }
