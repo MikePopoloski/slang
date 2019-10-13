@@ -126,7 +126,7 @@ void CommandLine::setPositional(std::vector<std::string>& values, string_view va
 }
 
 bool CommandLine::parse(int argc, const char* const argv[]) {
-    SmallVectorSized<string_view, 8> args(argc);
+    SmallVectorSized<string_view, 8> args{ size_t(argc) };
     for (int i = 0; i < argc; i++)
         args.append(argv[i]);
 
@@ -136,8 +136,8 @@ bool CommandLine::parse(int argc, const char* const argv[]) {
 #if defined(_MSC_VER)
 
 bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
-    SmallVectorSized<std::string, 8> storage(argc);
-    SmallVectorSized<string_view, 8> args(argc);
+    SmallVectorSized<std::string, 8> storage{ size_t(argc) };
+    SmallVectorSized<string_view, 8> args{ size_t(argc) };
     for (int i = 0; i < argc; i++) {
         storage.append(narrow(argv[i]));
         args.append(storage.back());
