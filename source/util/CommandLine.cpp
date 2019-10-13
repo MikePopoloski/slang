@@ -216,12 +216,16 @@ bool CommandLine::parse(span<const string_view> args) {
     if (args.empty())
         throw std::runtime_error("Expected at least one argument");
 
+    if (optionMap.empty())
+        throw std::runtime_error("No options defined");
+
     programName = fs::path(args[0]).filename().string();
 
     SmallVectorSized<string_view, 8> positionalArgs;
     Option* expectingVal = nullptr;
     string_view expectingValName;
     bool doubleDash = false;
+    bool hadUnknowns = false;
 
     for (auto it = args.begin() + 1; it != args.end(); it++) {
         string_view arg = *it;
@@ -264,17 +268,21 @@ bool CommandLine::parse(span<const string_view> args) {
 
         // If we didn't find the option and there was only a single dash,
         // maybe this was actually a group of single-char options or a prefixed value.
-        if (!option && !longName)
+        if (!option && !longName) {
             option = tryGroupOrPrefix(name, value);
+            if (option)
+                arg = name;
+        }
 
         // If we still didn't find it, that's an error.
         if (!option) {
             // Try to find something close to give a better error message.
             auto error = fmt::format("{}: unknown command line argument '{}'"sv, programName, arg);
-            auto nearest = findNearestMatch(name);
+            auto nearest = findNearestMatch(arg);
             if (!nearest.empty())
                 error += fmt::format(", did you mean '{}'?"sv, nearest);
 
+            hadUnknowns = true;
             errors.emplace_back(std::move(error));
             continue;
         }
@@ -302,7 +310,7 @@ bool CommandLine::parse(span<const string_view> args) {
         for (auto arg : positionalArgs)
             positional->set(""sv, arg);
     }
-    else if (!positionalArgs.empty()) {
+    else if (!positionalArgs.empty() && !hadUnknowns) {
         errors.emplace_back(
             fmt::format("{}: positional arguments are not allowed (see e.g. '{}')"sv, programName,
                         positionalArgs[0]));
@@ -312,9 +320,6 @@ bool CommandLine::parse(span<const string_view> args) {
 }
 
 CommandLine::Option* CommandLine::findOption(string_view arg, string_view& value) const {
-    if (arg.empty())
-        return nullptr;
-
     // If there is an equals sign, strip off the value.
     size_t equalsIndex = arg.find_first_of('=');
     if (equalsIndex != string_view::npos) {
@@ -330,13 +335,32 @@ CommandLine::Option* CommandLine::findOption(string_view arg, string_view& value
     return it->second.get();
 }
 
-CommandLine::Option* CommandLine::tryGroupOrPrefix(string_view&, string_view&) {
-    // TODO:
-    return nullptr;
+CommandLine::Option* CommandLine::tryGroupOrPrefix(string_view& arg, string_view& value) {
+    // This function handles cases like:
+    // -abcvalue
+    // Where -a, -b, and -c are arguments and value is the value for argument -c
+    while (true) {
+        auto name = arg.substr(0, 1);
+        auto option = findOption(name, value);
+        if (!option)
+            return nullptr;
+
+        // If a value is expected, treat the rest of the argument as the value.
+        value = arg.substr(1);
+        if (option->expectsValue() || value.empty()) {
+            if (!value.empty() && value[0] == '=')
+                value = value.substr(1);
+            return option;
+        }
+
+        // Otherwise this is a single flag and we should move on.
+        option->set(name, ""sv);
+        arg = value;
+    }
 }
 
 std::string CommandLine::findNearestMatch(string_view arg) const {
-    if (arg.length() <= 1)
+    if (arg.length() <= 2)
         return {};
 
     size_t equalsIndex = arg.find_first_of('=');
@@ -344,7 +368,7 @@ std::string CommandLine::findNearestMatch(string_view arg) const {
         arg = arg.substr(0, equalsIndex);
 
     string_view bestName;
-    int bestDistance = INT_MAX;
+    int bestDistance = 5;
 
     for (auto& [key, value] : optionMap) {
         int dist = editDistance(key, arg, /* allowReplacements */ true, bestDistance);

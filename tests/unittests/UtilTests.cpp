@@ -126,6 +126,7 @@ TEST_CASE("Test CommandLine -- programmer errors") {
 
     CommandLine cmdLine;
 
+    CHECK_THROWS(cmdLine.parse("prog"));
     CHECK_THROWS(cmdLine.add("", foo, "SDF"));
     CHECK_THROWS(cmdLine.add(",--asdf1", foo, "SDF"));
     CHECK_THROWS(cmdLine.add("--asdf2,--asdf3,", foo, "SDF"));
@@ -156,7 +157,7 @@ TEST_CASE("Test CommandLine -- user errors") {
                          "--frob=asdf --foo 1 --foo 2 asdf -D --frib --bar"));
 
     auto errors = cmdLine.getErrors();
-    REQUIRE(errors.size() == 10);
+    REQUIRE(errors.size() == 9);
     CHECK(errors[0] == "prog: expected value for argument '--foo'"s);
     CHECK(errors[1] == "prog: invalid value '123f4' for integer argument '--foo'"s);
     CHECK(errors[2] == "prog: expected value for argument '--bar'"s);
@@ -166,5 +167,132 @@ TEST_CASE("Test CommandLine -- user errors") {
     CHECK(errors[6] == "prog: unknown command line argument '-D'"s);
     CHECK(errors[7] == "prog: unknown command line argument '--frib', did you mean '--frob'?"s);
     CHECK(errors[8] == "prog: no value provided for argument '--bar'"s);
-    CHECK(errors[9] == "prog: positional arguments are not allowed (see e.g. 'asdf')"s);
+}
+
+TEST_CASE("Test CommandLine -- grouping") {
+    optional<bool> a;
+    optional<bool> b;
+    optional<std::string> foo;
+
+    CommandLine cmdLine;
+    cmdLine.add("-a", a, "");
+    cmdLine.add("-b", b, "");
+    cmdLine.add("-c", foo, "", "");
+
+    CHECK(cmdLine.parse("prog -abcasdf"));
+
+    CHECK(a == true);
+    CHECK(b == true);
+    CHECK(foo == "asdf");
+}
+
+TEST_CASE("Test CommandLine -- grouping with space") {
+    optional<bool> a;
+    optional<bool> b;
+    optional<std::string> foo;
+
+    CommandLine cmdLine;
+    cmdLine.add("-a", a, "");
+    cmdLine.add("-b", b, "");
+    cmdLine.add("-c", foo, "", "");
+
+    CHECK(cmdLine.parse("prog -abc asdf"));
+
+    CHECK(a == true);
+    CHECK(b == true);
+    CHECK(foo == "asdf");
+}
+
+TEST_CASE("Test CommandLine -- grouping with equals") {
+    optional<bool> a;
+    optional<bool> b;
+    optional<std::string> foo;
+
+    CommandLine cmdLine;
+    cmdLine.add("-a", a, "");
+    cmdLine.add("-b", b, "");
+    cmdLine.add("-c", foo, "", "");
+
+    CHECK(cmdLine.parse("prog -abc=asdf"));
+
+    CHECK(a == true);
+    CHECK(b == true);
+    CHECK(foo == "asdf");
+}
+
+TEST_CASE("Test CommandLine -- grouping no value") {
+    optional<bool> a;
+    optional<bool> b;
+    optional<bool> c;
+
+    CommandLine cmdLine;
+    cmdLine.add("-a", a, "");
+    cmdLine.add("-b", b, "");
+    cmdLine.add("-c", c, "");
+
+    CHECK(cmdLine.parse("prog -abc"));
+
+    CHECK(a == true);
+    CHECK(b == true);
+    CHECK(c == true);
+}
+
+TEST_CASE("Test CommandLine -- grouping error") {
+    optional<bool> a;
+    optional<bool> b;
+    optional<std::string> foo;
+
+    CommandLine cmdLine;
+    cmdLine.add("-a", a, "");
+    cmdLine.add("-c", foo, "", "");
+
+    CHECK(!cmdLine.parse("prog -abc"));
+
+    auto errors = cmdLine.getErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0] == "prog: unknown command line argument '-abc', did you mean '-a'?"s);
+}
+
+TEST_CASE("Test CommandLine -- grouping trailing error") {
+    optional<bool> a;
+    optional<bool> b;
+    optional<std::string> foo;
+
+    CommandLine cmdLine;
+    cmdLine.add("-a", a, "");
+    cmdLine.add("-b", b, "");
+    cmdLine.add("-c", foo, "", "");
+
+    CHECK(!cmdLine.parse("prog -abc"));
+
+    auto errors = cmdLine.getErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0] == "prog: no value provided for argument 'c'"s);
+}
+
+TEST_CASE("Test CommandLine -- nearest match tests") {
+    optional<std::string> foo;
+
+    CommandLine cmdLine;
+    cmdLine.add("--foo", foo, "", "");
+
+    CHECK(!cmdLine.parse("prog --asdfasdf=asdfasdf --fooey asdf"));
+
+    auto errors = cmdLine.getErrors();
+    REQUIRE(errors.size() == 2);
+    CHECK(errors[0] == "prog: unknown command line argument '--asdfasdf=asdfasdf'"s);
+    CHECK(errors[1] == "prog: unknown command line argument '--fooey', did you mean '--foo'?"s);
+}
+
+TEST_CASE("Test CommandLine -- positional not allowed") {
+    optional<std::string> foo;
+
+    CommandLine cmdLine;
+    cmdLine.add("--foo", foo, "", "");
+
+    CHECK(!cmdLine.parse("prog asdf baz bar"));
+
+    auto errors = cmdLine.getErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0] == "prog: positional arguments are not allowed (see e.g. 'asdf')"s);
 }
