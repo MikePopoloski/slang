@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 
 #include <fmt/format.h>
+#include <fstream>
+#include <iostream>
 #include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
@@ -220,9 +222,7 @@ void writeToFile(Stream& os, string_view fileName, String contents) {
 
 #if defined(_MSC_VER)
 #    include <fcntl.h>
-#    include <fstream>
 #    include <io.h>
-#    include <iostream>
 
 void writeToFile(string_view fileName, string_view contents) {
     if (fileName == "-") {
