@@ -728,12 +728,6 @@ TEST_CASE("Utility system functions") {
     Compilation compilation;
     auto& scope = compilation.createScriptScope();
 
-    auto declare = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(string_view(source));
-        scope.getCompilation().addSyntaxTree(tree);
-        scope.addMembers(tree->root());
-    };
-
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
         BindContext context(scope, LookupLocation::max);

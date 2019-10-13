@@ -543,7 +543,7 @@ module m6(I.bar bar); endmodule
         auto& port = def->getPortMap().at(portName)->as<InterfacePortSymbol>(); \
         REQUIRE(port.interfaceDef);                                             \
         CHECK(port.interfaceDef->name == (ifaceName));                          \
-        if (*modportName) {                                                     \
+        if (*(modportName)) {                                                     \
             REQUIRE(port.modport);                                              \
             CHECK(port.modport->name == (modportName));                         \
         }                                                                       \

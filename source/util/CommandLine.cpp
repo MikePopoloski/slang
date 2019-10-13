@@ -86,7 +86,7 @@ void CommandLine::addInternal(string_view name, OptionStorage storage, string_vi
     auto option = std::make_shared<Option>();
     option->desc = desc;
     option->valueName = valueName;
-    option->storage = std::move(storage);
+    option->storage = std::move(storage); // NOLINT
 
     if (name.empty())
         throw std::invalid_argument("Name cannot be empty");

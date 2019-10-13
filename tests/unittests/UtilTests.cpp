@@ -3,7 +3,7 @@
 #include "slang/util/CommandLine.h"
 
 TEST_CASE("Test CommandLine -- basic") {
-    optional<bool> a, b, longFlag;
+    optional<bool> a, b, longFlag, longFlag2;
     optional<std::string> c;
     optional<int32_t> d;
     optional<uint64_t> ext;
@@ -18,6 +18,7 @@ TEST_CASE("Test CommandLine -- basic") {
     cmdLine.add("-a", a, "SDF");
     cmdLine.add("-b", b, "SDF");
     cmdLine.add("-z,-y,-x,--longFlag", longFlag, "SDF");
+    cmdLine.add("--longFlag2", longFlag2, "SDF");
     cmdLine.add("-c", c, "SDF", "val");
     cmdLine.add("-d", d, "SDF", "val");
     cmdLine.add("-e,--ext", ext, "SDF", "val");
@@ -30,7 +31,7 @@ TEST_CASE("Test CommandLine -- basic") {
 
     CHECK(cmdLine.parse("prog -a -b --longFlag=False pos1 pos2 -c asdf -d -1234 --ext=9876 "
                         "--ext2 9999.1234e12 pos3 --fiz=4321 --foz=-4321    - pos5 "
-                        "-- --buz --boz"sv));
+                        "--longFlag2=true -- --buz --boz"sv));
 
     CHECK(cmdLine.getProgramName() == "prog");
     cmdLine.setProgramName("asdf");
@@ -39,6 +40,7 @@ TEST_CASE("Test CommandLine -- basic") {
     CHECK(a);
     CHECK(b);
     CHECK(longFlag);
+    CHECK(longFlag2);
     CHECK(c);
     CHECK(d);
     CHECK(ext);
@@ -51,6 +53,7 @@ TEST_CASE("Test CommandLine -- basic") {
     CHECK(*a == true);
     CHECK(*b == true);
     CHECK(*longFlag == false);
+    CHECK(*longFlag2 == true);
     CHECK(*c == "asdf");
     CHECK(*d == -1234);
     CHECK(*ext == 9876);
@@ -66,6 +69,17 @@ TEST_CASE("Test CommandLine -- basic") {
     CHECK(vals[4] == "pos5");
     CHECK(vals[5] == "--buz");
     CHECK(vals[6] == "--boz");
+}
+
+TEST_CASE("Test CommandLine -- nonspan") {
+    optional<bool> a;
+    CommandLine cmdLine;
+    cmdLine.add("-a", a, "SDF");
+
+    std::array args = { "prog", "-a" };
+    CHECK(cmdLine.parse(args.size(), args.data()));
+
+    CHECK(a == true);
 }
 
 TEST_CASE("Test CommandLine -- vectors") {
@@ -87,10 +101,10 @@ TEST_CASE("Test CommandLine -- vectors") {
     CHECK(cmdLine.parse("prog -a 1 --longa 99 -f fff --longf=ffff -e 4.1 "
                         "-d 5 -d 5 -d 5 --longc 8 -c 9 -b -42 -b -43"sv));
 
-    CHECK(groupa == std::vector{ 1, 99 });
-    CHECK(groupb == std::vector{ -42ll, -43ll });
-    CHECK(groupc == std::vector{ 8u, 9u });
-    CHECK(groupd == std::vector{ 5ull, 5ull, 5ull });
+    CHECK(groupa == std::vector<int32_t>{ 1, 99 });
+    CHECK(groupb == std::vector<int64_t>{ -42ll, -43ll });
+    CHECK(groupc == std::vector<uint32_t>{ 8u, 9u });
+    CHECK(groupd == std::vector<uint64_t>{ 5ull, 5ull, 5ull });
     CHECK(groupe == std::vector{ 4.1 });
     CHECK(groupf == std::vector{ "fff"s, "ffff"s });
 }
