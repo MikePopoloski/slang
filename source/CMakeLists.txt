@@ -153,6 +153,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 		-Wnoexcept
 		-Wduplicated-cond
 		-Wtype-limits
+		-Wno-maybe-uninitialized
 	)
 endif()
 
