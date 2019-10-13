@@ -13,25 +13,31 @@ namespace slang {
 class CommandLine {
 public:
     void add(string_view name, optional<bool>& value, string_view desc);
-    void add(string_view name, optional<int32_t>& value, string_view desc, string_view valueName);
-    void add(string_view name, optional<uint32_t>& value, string_view desc, string_view valueName);
-    void add(string_view name, optional<int64_t>& value, string_view desc, string_view valueName);
-    void add(string_view name, optional<uint64_t>& value, string_view desc, string_view valueName);
-    void add(string_view name, optional<double>& value, string_view desc, string_view valueName);
+    void add(string_view name, optional<int32_t>& value, string_view desc,
+             string_view valueName = {});
+    void add(string_view name, optional<uint32_t>& value, string_view desc,
+             string_view valueName = {});
+    void add(string_view name, optional<int64_t>& value, string_view desc,
+             string_view valueName = {});
+    void add(string_view name, optional<uint64_t>& value, string_view desc,
+             string_view valueName = {});
+    void add(string_view name, optional<double>& value, string_view desc,
+             string_view valueName = {});
     void add(string_view name, optional<std::string>& value, string_view desc,
-             string_view valueName);
+             string_view valueName = {});
 
     void add(string_view name, std::vector<int32_t>& value, string_view desc,
-             string_view valueName);
+             string_view valueName = {});
     void add(string_view name, std::vector<uint32_t>& value, string_view desc,
-             string_view valueName);
+             string_view valueName = {});
     void add(string_view name, std::vector<int64_t>& value, string_view desc,
-             string_view valueName);
+             string_view valueName = {});
     void add(string_view name, std::vector<uint64_t>& value, string_view desc,
-             string_view valueName);
-    void add(string_view name, std::vector<double>& value, string_view desc, string_view valueName);
+             string_view valueName = {});
+    void add(string_view name, std::vector<double>& value, string_view desc,
+             string_view valueName = {});
     void add(string_view name, std::vector<std::string>& value, string_view desc,
-             string_view valueName);
+             string_view valueName = {});
 
     void setPositional(std::vector<std::string>& values, string_view valueName);
 
@@ -48,6 +54,8 @@ public:
 
     span<const std::string> getErrors() const { return errors; }
 
+    std::string getHelpText(string_view overview) const;
+
 private:
     using OptionStorage =
         std::variant<optional<bool>*, optional<int32_t>*, optional<uint32_t>*, optional<int64_t>*,
@@ -60,6 +68,7 @@ private:
         OptionStorage storage;
         std::string desc;
         std::string valueName;
+        std::string allArgNames;
 
         bool expectsValue() const;
 
@@ -100,6 +109,7 @@ private:
 
     std::shared_ptr<Option> positional;
     std::unordered_map<std::string, std::shared_ptr<Option>> optionMap;
+    std::vector<std::shared_ptr<Option>> orderedOptions;
 
     std::string programName;
     std::vector<std::string> errors;

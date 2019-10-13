@@ -17,16 +17,16 @@ TEST_CASE("Test CommandLine -- basic") {
     CommandLine cmdLine;
     cmdLine.add("-a", a, "SDF");
     cmdLine.add("-b", b, "SDF");
-    cmdLine.add("-z,-y,-x,--longFlag", longFlag, "SDF");
-    cmdLine.add("--longFlag2", longFlag2, "SDF");
-    cmdLine.add("-c", c, "SDF", "val");
-    cmdLine.add("-d", d, "SDF", "val");
-    cmdLine.add("-e,--ext", ext, "SDF", "val");
-    cmdLine.add("-f,--ext2", ext2, "SDF", "val");
-    cmdLine.add("--biz,--baz", unused1, "SDF", "val");
-    cmdLine.add("--buz,--boz", unused2, "SDF", "val");
-    cmdLine.add("--fiz,--faz", used1, "SDF", "val");
-    cmdLine.add("--fuz,--foz", used2, "SDF", "val");
+    cmdLine.add("-z,-y,-x,--longFlag", longFlag, "This flag does fun stuff");
+    cmdLine.add("--longFlag2", longFlag2, "Another good thing");
+    cmdLine.add("-c", c, "SDF");
+    cmdLine.add("-d", d, "SDF");
+    cmdLine.add("-e,--ext", ext, "Definitely should set me");
+    cmdLine.add("-f,--ext2", ext2, "Me too!", "<value>");
+    cmdLine.add("--biz,--baz", unused1, "SDF", "<entry>");
+    cmdLine.add("--buz,--boz", unused2, "SDF", "=<val>");
+    cmdLine.add("--fiz,--faz", used1, "SDF");
+    cmdLine.add("--fuz,--foz", used2, "SDF");
     cmdLine.setPositional(vals, "vals");
 
     CHECK(cmdLine.parse("prog -a -b --longFlag=False pos1 pos2 -c asdf -d -1234 --ext=9876 "
@@ -69,6 +69,27 @@ TEST_CASE("Test CommandLine -- basic") {
     CHECK(vals[4] == "pos5");
     CHECK(vals[5] == "--buz");
     CHECK(vals[6] == "--boz");
+
+    auto help = "\n" + cmdLine.getHelpText("prog - A fun program!!");
+    CHECK(help == R"(
+OVERVIEW: prog - A fun program!!
+
+USAGE: asdf [options] vals...
+
+OPTIONS:
+  -a                   SDF
+  -b                   SDF
+  -z,-y,-x,--longFlag  This flag does fun stuff
+  --longFlag2          Another good thing
+  -c                   SDF
+  -d                   SDF
+  -e,--ext             Definitely should set me
+  -f,--ext2 <value>    Me too!
+  --biz,--baz <entry>  SDF
+  --buz,--boz=<val>    SDF
+  --fiz,--faz          SDF
+  --fuz,--foz          SDF
+)");
 }
 
 TEST_CASE("Test CommandLine -- nonspan") {
@@ -77,7 +98,7 @@ TEST_CASE("Test CommandLine -- nonspan") {
     cmdLine.add("-a", a, "SDF");
 
     std::array args = { "prog", "-a" };
-    CHECK(cmdLine.parse(args.size(), args.data()));
+    CHECK(cmdLine.parse((int)args.size(), args.data()));
 
     CHECK(a == true);
 }
@@ -91,12 +112,12 @@ TEST_CASE("Test CommandLine -- vectors") {
     std::vector<std::string> groupf;
 
     CommandLine cmdLine;
-    cmdLine.add("-a,--longa", groupa, "SDF", "val");
-    cmdLine.add("-b,--longb", groupb, "SDF", "val");
-    cmdLine.add("-c,--longc", groupc, "SDF", "val");
-    cmdLine.add("-d,--longd", groupd, "SDF", "val");
-    cmdLine.add("-e,--longe", groupe, "SDF", "val");
-    cmdLine.add("-f,--longf", groupf, "SDF", "val");
+    cmdLine.add("-a,--longa", groupa, "SDF");
+    cmdLine.add("-b,--longb", groupb, "SDF");
+    cmdLine.add("-c,--longc", groupc, "SDF");
+    cmdLine.add("-d,--longd", groupd, "SDF");
+    cmdLine.add("-e,--longe", groupe, "SDF");
+    cmdLine.add("-f,--longf", groupf, "SDF");
 
     CHECK(cmdLine.parse("prog -a 1 --longa 99 -f fff --longf=ffff -e 4.1 "
                         "-d 5 -d 5 -d 5 --longc 8 -c 9 -b -42 -b -43"sv));
@@ -149,8 +170,8 @@ TEST_CASE("Test CommandLine -- user errors") {
     optional<bool> frob;
 
     CommandLine cmdLine;
-    cmdLine.add("--foo", foo, "", "");
-    cmdLine.add("--bar", bar, "", "");
+    cmdLine.add("--foo", foo, "");
+    cmdLine.add("--bar", bar, "");
     cmdLine.add("--frob", frob, "");
 
     CHECK(!cmdLine.parse("prog --foo \"\" --foo 123f4 --bar \"\" --bar 123.45g "
@@ -177,7 +198,7 @@ TEST_CASE("Test CommandLine -- grouping") {
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
     cmdLine.add("-b", b, "");
-    cmdLine.add("-c", foo, "", "");
+    cmdLine.add("-c", foo, "");
 
     CHECK(cmdLine.parse("prog -abcasdf"));
 
@@ -194,7 +215,7 @@ TEST_CASE("Test CommandLine -- grouping with space") {
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
     cmdLine.add("-b", b, "");
-    cmdLine.add("-c", foo, "", "");
+    cmdLine.add("-c", foo, "");
 
     CHECK(cmdLine.parse("prog -abc asdf"));
 
@@ -211,7 +232,7 @@ TEST_CASE("Test CommandLine -- grouping with equals") {
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
     cmdLine.add("-b", b, "");
-    cmdLine.add("-c", foo, "", "");
+    cmdLine.add("-c", foo, "");
 
     CHECK(cmdLine.parse("prog -abc=asdf"));
 
@@ -244,7 +265,7 @@ TEST_CASE("Test CommandLine -- grouping error") {
 
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
-    cmdLine.add("-c", foo, "", "");
+    cmdLine.add("-c", foo, "");
 
     CHECK(!cmdLine.parse("prog -abc"));
 
@@ -261,7 +282,7 @@ TEST_CASE("Test CommandLine -- grouping trailing error") {
     CommandLine cmdLine;
     cmdLine.add("-a", a, "");
     cmdLine.add("-b", b, "");
-    cmdLine.add("-c", foo, "", "");
+    cmdLine.add("-c", foo, "");
 
     CHECK(!cmdLine.parse("prog -abc"));
 
@@ -274,7 +295,7 @@ TEST_CASE("Test CommandLine -- nearest match tests") {
     optional<std::string> foo;
 
     CommandLine cmdLine;
-    cmdLine.add("--foo", foo, "", "");
+    cmdLine.add("--foo", foo, "");
 
     CHECK(!cmdLine.parse("prog --asdfasdf=asdfasdf --fooey asdf"));
 
@@ -288,7 +309,7 @@ TEST_CASE("Test CommandLine -- positional not allowed") {
     optional<std::string> foo;
 
     CommandLine cmdLine;
-    cmdLine.add("--foo", foo, "", "");
+    cmdLine.add("--foo", foo, "");
 
     CHECK(!cmdLine.parse("prog asdf baz bar"));
 

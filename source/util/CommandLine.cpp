@@ -83,13 +83,14 @@ void CommandLine::add(string_view name, std::vector<std::string>& value, string_
 
 void CommandLine::addInternal(string_view name, OptionStorage storage, string_view desc,
                               string_view valueName) {
+    if (name.empty())
+        throw std::invalid_argument("Name cannot be empty");
+
     auto option = std::make_shared<Option>();
     option->desc = desc;
     option->valueName = valueName;
+    option->allArgNames = name;
     option->storage = std::move(storage); // NOLINT
-
-    if (name.empty())
-        throw std::invalid_argument("Name cannot be empty");
 
     while (true) {
         size_t index = name.find_first_of(',');
@@ -119,6 +120,8 @@ void CommandLine::addInternal(string_view name, OptionStorage storage, string_vi
             break;
         name = name.substr(index + 1);
     }
+
+    orderedOptions.emplace_back(option);
 }
 
 void CommandLine::setPositional(std::vector<std::string>& values, string_view valueName) {
@@ -317,6 +320,45 @@ bool CommandLine::parse(span<const string_view> args) {
     }
 
     return errors.empty();
+}
+
+std::string CommandLine::getHelpText(string_view overview) const {
+    std::string result;
+    if (!overview.empty())
+        result = fmt::format("OVERVIEW: {}\n\n"sv, overview);
+
+    result += fmt::format("USAGE: {} [options]"sv, programName);
+    if (positional)
+        result += fmt::format(" {}...", positional->valueName);
+
+    result += "\n\nOPTIONS:\n"sv;
+
+    // For each option group that takes a value, tack on the value name.
+    // Then compute the maximum length of any particular group's key.
+    size_t maxLen = 0;
+    std::vector<std::pair<Option*, std::string>> lines;
+    for (auto& opt : orderedOptions) {
+        std::string key = opt->allArgNames;
+        std::string& val = opt->valueName;
+        if (!val.empty()) {
+            if (val[0] != '=')
+                key += ' ';
+            key += val;
+        }
+
+        maxLen = std::max(maxLen, key.length());
+        lines.emplace_back(opt.get(), std::move(key));
+    }
+
+    // Finally append all groups to the output.
+    for (auto& [opt, key] : lines) {
+        result += fmt::format("  {:{}}"sv, key, maxLen);
+        if (!opt->desc.empty())
+            result += fmt::format("  {}", opt->desc);
+        result += "\n";
+    }
+
+    return result;
 }
 
 CommandLine::Option* CommandLine::findOption(string_view arg, string_view& value) const {
