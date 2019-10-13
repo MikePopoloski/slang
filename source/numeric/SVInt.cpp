@@ -269,10 +269,10 @@ SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t cons
         }
     };
 
-    uint32_t i;
+    size_t i;
     for (i = charsPerWord; i < digits.size(); i += charsPerWord) {
         word = nextDigit();
-        for (uint32_t j = charsPerWord - 1; j != 0; j--)
+        for (size_t j = charsPerWord - 1; j != 0; j--)
             word = word * 10 + nextDigit();
 
         writeWord();
@@ -1423,7 +1423,7 @@ SVInt SVInt::sext(bitwidth_t bits) const {
     ASSERT(bits > bitWidth);
 
     if (bits <= SVInt::BITS_PER_WORD && !unknownFlag) {
-        uint64_t newVal = val << (SVInt::BITS_PER_WORD - bitWidth);
+        uint64_t newVal = val << (SVInt::BITS_PER_WORD - bitWidth); // NOLINT
         newVal = uint64_t((int64_t)newVal >> (bits - bitWidth));
         return SVInt(bits, newVal >> (SVInt::BITS_PER_WORD - bits), signFlag);
     }

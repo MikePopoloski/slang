@@ -55,7 +55,8 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower) const {
         return integer().slice(upper, lower);
 
     if (isUnpacked()) {
-        auto slice = elements().subspan(size_t(lower), size_t(upper - lower + 1));
+        int32_t count = upper - lower + 1;
+        auto slice = elements().subspan(size_t(lower), size_t(count));
         return std::vector<ConstantValue>(slice.begin(), slice.end());
     }
 
@@ -366,8 +367,10 @@ LValue LValue::selectIndex(int32_t index) const {
                 return nullptr;
             else if constexpr (std::is_same_v<T, ConstantValue*>)
                 return LValue(arg->elements()[size_t(index)]);
-            else if constexpr (std::is_same_v<T, CVRange>)
-                return LValue(arg.cv->elements()[size_t(arg.range.lower() + index)]);
+            else if constexpr (std::is_same_v<T, CVRange>) {
+                int32_t elem = index + arg.range.lower();
+                return LValue(arg.cv->elements()[size_t(elem)]);
+            }
             else if constexpr (std::is_same_v<T, Concat>)
                 THROW_UNREACHABLE;
             else

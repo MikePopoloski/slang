@@ -32,7 +32,7 @@ int editDistance(string_view left, string_view right, bool allowReplacements, in
     size_t n = right.size();
 
     SmallVectorSized<int, 32> row;
-    for (int i = 0; i <= n; i++)
+    for (int i = 0; i <= int(n); i++)
         row.append(i);
 
     for (size_t y = 1; y <= m; y++) {

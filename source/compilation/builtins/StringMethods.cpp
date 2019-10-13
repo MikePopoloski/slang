@@ -159,7 +159,8 @@ public:
         if (left < 0 || right < left || size_t(right) >= str.length())
             return ""s;
 
-        return str.substr(size_t(left), size_t(right - left + 1));
+        int32_t count = right - left + 1;
+        return str.substr(size_t(left), size_t(count));
     }
 };
 

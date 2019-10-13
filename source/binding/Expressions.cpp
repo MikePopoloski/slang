@@ -1955,7 +1955,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     }
 
     if (!errored) {
-        for (uint32_t i = 0; i < buffer.size(); i++) {
+        for (size_t i = 0; i < buffer.size(); i++) {
             if (!anyStrings)
                 selfDetermined(context, buffer[i]);
             else {

@@ -28,16 +28,16 @@ struct CloneVisitor {
         constexpr bool IsList = std::is_same_v<T, SyntaxListBase>;
         optional<SmallVectorSized<TokenOrSyntax, 8>> listBuffer;
 
-        auto backfillList = [&](uint32_t index) {
+        auto backfillList = [&](size_t index) {
             if (cloned->kind != SyntaxKind::SyntaxList && cloned->kind != SyntaxKind::SeparatedList)
                 throw std::logic_error("Can't use insertBefore or insertAfter on a non-list node");
 
             listBuffer.emplace();
-            for (uint32_t i = 0; i < index; i++)
+            for (size_t i = 0; i < index; i++)
                 listBuffer->append(cloned->getChild(i));
         };
 
-        for (uint32_t i = 0; i < node.getChildCount(); i++) {
+        for (size_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
             if (!child) {
                 if (IsList && listBuffer)
