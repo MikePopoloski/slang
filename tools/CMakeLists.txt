@@ -1,5 +1,5 @@
 add_executable(driver driver/driver.cpp)
-target_link_libraries(driver PRIVATE slang CONAN_PKG::CLI11)
+target_link_libraries(driver PRIVATE slang)
 
 add_executable(rewriter rewriter/rewriter.cpp)
 target_link_libraries(rewriter PRIVATE slang)
