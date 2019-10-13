@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <map>
+
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -108,7 +110,7 @@ private:
     std::string findNearestMatch(string_view arg) const;
 
     std::shared_ptr<Option> positional;
-    std::unordered_map<std::string, std::shared_ptr<Option>> optionMap;
+    std::map<std::string, std::shared_ptr<Option>> optionMap;
     std::vector<std::shared_ptr<Option>> orderedOptions;
 
     std::string programName;
