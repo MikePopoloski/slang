@@ -21,7 +21,6 @@ public:
     void add(string_view name, optional<std::string>& value, string_view desc,
              string_view valueName);
 
-    void add(string_view name, std::vector<bool>& value, string_view desc);
     void add(string_view name, std::vector<int32_t>& value, string_view desc,
              string_view valueName);
     void add(string_view name, std::vector<uint32_t>& value, string_view desc,
@@ -50,16 +49,33 @@ private:
     using OptionStorage =
         std::variant<optional<bool>*, optional<int32_t>*, optional<uint32_t>*, optional<int64_t>*,
                      optional<uint64_t>*, optional<double>*, optional<std::string>*,
-                     std::vector<bool>*, std::vector<int32_t>*, std::vector<uint32_t>*,
-                     std::vector<int64_t>*, std::vector<uint64_t>*, std::vector<double>*,
-                     std::vector<std::string>*>;
+                     std::vector<int32_t>*, std::vector<uint32_t>*, std::vector<int64_t>*,
+                     std::vector<uint64_t>*, std::vector<double>*, std::vector<std::string>*>;
 
-    struct Option {
+    class Option {
+    public:
         OptionStorage storage;
         std::string desc;
         std::string valueName;
 
-        void set(string_view value);
+        bool expectsValue() const;
+
+        std::string set(string_view name, string_view value);
+
+    private:
+        std::string set(optional<bool>& target, string_view name, string_view value);
+        std::string set(optional<int32_t>& target, string_view name, string_view value);
+        std::string set(optional<uint32_t>& target, string_view name, string_view value);
+        std::string set(optional<int64_t>& target, string_view name, string_view value);
+        std::string set(optional<uint64_t>& target, string_view name, string_view value);
+        std::string set(optional<double>& target, string_view name, string_view value);
+        std::string set(optional<std::string>& target, string_view name, string_view value);
+        std::string set(std::vector<int32_t>& target, string_view name, string_view value);
+        std::string set(std::vector<uint32_t>& target, string_view name, string_view value);
+        std::string set(std::vector<int64_t>& target, string_view name, string_view value);
+        std::string set(std::vector<uint64_t>& target, string_view name, string_view value);
+        std::string set(std::vector<double>& target, string_view name, string_view value);
+        std::string set(std::vector<std::string>& target, string_view name, string_view value);
     };
 
     void addInternal(string_view name, OptionStorage storage, string_view desc,

@@ -7,6 +7,7 @@
 #include "slang/util/CommandLine.h"
 
 #include "../text/CharInfo.h"
+#include <charconv>
 #include <filesystem>
 #include <fmt/format.h>
 
@@ -19,18 +20,22 @@ namespace slang {
 void CommandLine::add(string_view name, optional<bool>& value, string_view desc) {
     addInternal(name, &value, desc, {});
 }
+
 void CommandLine::add(string_view name, optional<int32_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
+
 void CommandLine::add(string_view name, optional<uint32_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
+
 void CommandLine::add(string_view name, optional<int64_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
+
 void CommandLine::add(string_view name, optional<uint64_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
@@ -40,34 +45,37 @@ void CommandLine::add(string_view name, optional<double>& value, string_view des
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
+
 void CommandLine::add(string_view name, optional<std::string>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
 
-void CommandLine::add(string_view name, std::vector<bool>& value, string_view desc) {
-    addInternal(name, &value, desc, {});
-}
 void CommandLine::add(string_view name, std::vector<int32_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
+
 void CommandLine::add(string_view name, std::vector<uint32_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
+
 void CommandLine::add(string_view name, std::vector<int64_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
+
 void CommandLine::add(string_view name, std::vector<uint64_t>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
+
 void CommandLine::add(string_view name, std::vector<double>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
 }
+
 void CommandLine::add(string_view name, std::vector<std::string>& value, string_view desc,
                       string_view valueName) {
     addInternal(name, &value, desc, valueName);
@@ -90,19 +98,31 @@ void CommandLine::addInternal(string_view name, OptionStorage storage, string_vi
             curr = name.substr(0, index);
             name = name.substr(index + 1);
         }
+        else {
+            name = string_view();
+        }
 
-        if (curr.empty() || curr[0] != '-')
+        if (curr.length() <= 1 || curr[0] != '-')
             throw std::invalid_argument("Names must begin with '-' or '--'");
 
-        curr = name.substr(1);
-        if (curr.empty())
-            throw std::invalid_argument("Names must begin with '-' or '--'");
+        curr = curr.substr(1);
         if (curr[0] == '-')
             curr = curr.substr(1);
 
-        if (!optionMap.try_emplace(std::string(curr), option).second)
-            throw std::invalid_argument(fmt::format("Argument with name '{}' already exists", curr));
+        if (!optionMap.try_emplace(std::string(curr), option).second) {
+            throw std::invalid_argument(
+                fmt::format("Argument with name '{}' already exists", curr));
+        }
     }
+}
+
+void CommandLine::setPositional(std::vector<std::string>& values, string_view valueName) {
+    if (positional)
+        throw std::runtime_error("Can only set one positional argument");
+
+    positional = std::make_shared<Option>();
+    positional->valueName = valueName;
+    positional->storage = &values;
 }
 
 bool CommandLine::parse(int argc, const char* const argv[]) {
@@ -186,18 +206,25 @@ bool CommandLine::parse(span<const string_view> args) {
     programName = fs::path(args[0]).filename().string();
 
     SmallVectorSized<string_view, 8> positionalArgs;
+    Option* expectingVal = nullptr;
+    string_view expectingValName;
     bool doubleDash = false;
-    for (auto it = args.begin(); it != args.end(); it++) {
-        // Skip completely empty arguments.
+
+    for (auto it = args.begin() + 1; it != args.end(); it++) {
         string_view arg = *it;
-        if (arg.empty())
+
+        // If we were previously expecting a value, set that now.
+        if (expectingVal) {
+            expectingVal->set(expectingValName, arg);
+            expectingVal = nullptr;
             continue;
+        }
 
         // This is a positional argument if:
         // - Doesn't start with '-'
         // - Is exactly '-'
         // - Or we've seen a double dash already
-        if (arg[0] != '-' || arg.length() == 1 || doubleDash) {
+        if (arg.empty() || arg[0] != '-' || arg.length() == 1 || doubleDash) {
             positionalArgs.append(arg);
             continue;
         }
@@ -236,13 +263,26 @@ bool CommandLine::parse(span<const string_view> args) {
             continue;
         }
 
-        // Otherwise, we found what we wanted.
-        option->set(value);
+        // Otherwise, we found what we wanted. If we have a value already, go ahead
+        // and set it. Otherwise if we're expecting a value, assume that it will come
+        // in the next argument.
+        if (value.empty() && option->expectsValue()) {
+            expectingVal = option;
+            expectingValName = name;
+        }
+        else {
+            option->set(name, value);
+        }
+    }
+
+    if (expectingVal) {
+        errors.emplace_back(fmt::format("{}: no value provided for argument '{}'"sv, programName,
+                                        expectingValName));
     }
 
     if (positional) {
         for (auto arg : positionalArgs)
-            positional->set(arg);
+            positional->set(""sv, arg);
     }
     else if (!positionalArgs.empty()) {
         errors.emplace_back(
@@ -272,7 +312,7 @@ CommandLine::Option* CommandLine::findOption(string_view arg, string_view& value
     return it->second.get();
 }
 
-CommandLine::Option* CommandLine::tryGroupOrPrefix(string_view& , string_view& ) {
+CommandLine::Option* CommandLine::tryGroupOrPrefix(string_view&, string_view&) {
     // TODO:
     return nullptr;
 }
@@ -296,8 +336,159 @@ string_view CommandLine::findNearestMatch(string_view arg) const {
     return bestName;
 }
 
-void CommandLine::Option::set(string_view ) {
-    // TODO:
+bool CommandLine::Option::expectsValue() const {
+    return storage.index() != 0;
+}
+
+std::string CommandLine::Option::set(string_view name, string_view value) {
+    return std::visit([&](auto&& arg) { return set(*arg, name, value); }, storage);
+}
+
+static optional<bool> parseBool(string_view name, string_view value, std::string& error) {
+    if (value.empty())
+        return true;
+    if (value == "True" || value == "true")
+        return true;
+    if (value == "False" || value == "false")
+        return false;
+
+    error = fmt::format("Invalid value '{}' for boolean argument '{}'", value, name);
+    return {};
+}
+
+template<typename T>
+static optional<T> parseInt(string_view name, string_view value, std::string& error) {
+    if (value.empty()) {
+        error = fmt::format("Expected value for argument '{}'", name);
+        return {};
+    }
+
+    T val;
+    auto end = value.data() + value.size();
+    auto result = std::from_chars(value.data(), end, val);
+    if (result.ec != std::errc() || result.ptr != end) {
+        error = fmt::format("Invalid value '{}' for integer argument '{}'", value, name);
+        return {};
+    }
+
+    return val;
+}
+
+static optional<double> parseDouble(string_view name, string_view value, std::string& error) {
+    if (value.empty()) {
+        error = fmt::format("Expected value for argument '{}'", name);
+        return {};
+    }
+
+    // TODO: use from_chars
+    char* end;
+    std::string copy(value);
+    double val = strtod(copy.c_str(), &end);
+
+    if (end != copy.c_str() + copy.size()) {
+        error = fmt::format("Invalid value '{}' for float argument '{}'", value, name);
+        return {};
+    }
+
+    return val;
+}
+
+std::string CommandLine::Option::set(optional<bool>& target, string_view name, string_view value) {
+    std::string error;
+    target = parseBool(name, value, error);
+    return error;
+}
+
+std::string CommandLine::Option::set(optional<int32_t>& target, string_view name,
+                                     string_view value) {
+    std::string error;
+    target = parseInt<int32_t>(name, value, error);
+    return error;
+}
+
+std::string CommandLine::Option::set(optional<uint32_t>& target, string_view name,
+                                     string_view value) {
+    std::string error;
+    target = parseInt<uint32_t>(name, value, error);
+    return error;
+}
+
+std::string CommandLine::Option::set(optional<int64_t>& target, string_view name,
+                                     string_view value) {
+    std::string error;
+    target = parseInt<int64_t>(name, value, error);
+    return error;
+}
+
+std::string CommandLine::Option::set(optional<uint64_t>& target, string_view name,
+                                     string_view value) {
+    std::string error;
+    target = parseInt<uint64_t>(name, value, error);
+    return error;
+}
+
+std::string CommandLine::Option::set(optional<double>& target, string_view name,
+                                     string_view value) {
+    std::string error;
+    target = parseDouble(name, value, error);
+    return error;
+}
+
+std::string CommandLine::Option::set(optional<std::string>& target, string_view,
+                                     string_view value) {
+    target = value;
+    return {};
+}
+
+std::string CommandLine::Option::set(std::vector<int32_t>& target, string_view name,
+                                     string_view value) {
+    std::string error;
+    auto result = parseInt<int32_t>(name, value, error);
+    if (result)
+        target.push_back(*result);
+    return error;
+}
+
+std::string CommandLine::Option::set(std::vector<uint32_t>& target, string_view name,
+                                     string_view value) {
+    std::string error;
+    auto result = parseInt<uint32_t>(name, value, error);
+    if (result)
+        target.push_back(*result);
+    return error;
+}
+
+std::string CommandLine::Option::set(std::vector<int64_t>& target, string_view name,
+                                     string_view value) {
+    std::string error;
+    auto result = parseInt<int64_t>(name, value, error);
+    if (result)
+        target.push_back(*result);
+    return error;
+}
+
+std::string CommandLine::Option::set(std::vector<uint64_t>& target, string_view name,
+                                     string_view value) {
+    std::string error;
+    auto result = parseInt<uint64_t>(name, value, error);
+    if (result)
+        target.push_back(*result);
+    return error;
+}
+
+std::string CommandLine::Option::set(std::vector<double>& target, string_view name,
+                                     string_view value) {
+    std::string error;
+    auto result = parseDouble(name, value, error);
+    if (result)
+        target.push_back(*result);
+    return error;
+}
+
+std::string CommandLine::Option::set(std::vector<std::string>& target, string_view,
+                                     string_view value) {
+    target.emplace_back(value);
+    return {};
 }
 
 } // namespace slang
