@@ -127,3 +127,30 @@ TEST_CASE("Test CommandLine -- programmer errors") {
 
     CHECK_THROWS(cmdLine.parse(string_view()));
 }
+
+TEST_CASE("Test CommandLine -- user errors") {
+    optional<int32_t> foo;
+    optional<double> bar;
+    optional<bool> frob;
+
+    CommandLine cmdLine;
+    cmdLine.add("--foo", foo, "", "");
+    cmdLine.add("--bar", bar, "", "");
+    cmdLine.add("--frob", frob, "");
+
+    CHECK(!cmdLine.parse("prog --foo \"\" --foo 123f4 --bar \"\" --bar 123.45g "
+                         "--frob=asdf --foo 1 --foo 2 asdf -D --frib --bar"));
+
+    auto errors = cmdLine.getErrors();
+    REQUIRE(errors.size() == 10);
+    CHECK(errors[0] == "prog: expected value for argument '--foo'"s);
+    CHECK(errors[1] == "prog: invalid value '123f4' for integer argument '--foo'"s);
+    CHECK(errors[2] == "prog: expected value for argument '--bar'"s);
+    CHECK(errors[3] == "prog: invalid value '123.45g' for float argument '--bar'"s);
+    CHECK(errors[4] == "prog: invalid value 'asdf' for boolean argument '--frob=asdf'"s);
+    CHECK(errors[5] == "prog: more than one value provided for argument '--foo'"s);
+    CHECK(errors[6] == "prog: unknown command line argument '-D'"s);
+    CHECK(errors[7] == "prog: unknown command line argument '--frib', did you mean '--frob'?"s);
+    CHECK(errors[8] == "prog: no value provided for argument '--bar'"s);
+    CHECK(errors[9] == "prog: positional arguments are not allowed (see e.g. 'asdf')"s);
+}

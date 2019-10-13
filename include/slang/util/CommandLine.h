@@ -79,6 +79,16 @@ private:
         std::string set(std::vector<uint64_t>& target, string_view name, string_view value);
         std::string set(std::vector<double>& target, string_view name, string_view value);
         std::string set(std::vector<std::string>& target, string_view name, string_view value);
+
+        template<typename T>
+        static constexpr bool allowValue(const optional<T>& target) {
+            return !target.has_value();
+        }
+
+        template<typename T>
+        static constexpr bool allowValue(const std::vector<T>&) {
+            return true;
+        }
     };
 
     void addInternal(string_view name, OptionStorage storage, string_view desc,
@@ -86,7 +96,7 @@ private:
 
     Option* findOption(string_view arg, string_view& value) const;
     Option* tryGroupOrPrefix(string_view& arg, string_view& value);
-    string_view findNearestMatch(string_view arg) const;
+    std::string findNearestMatch(string_view arg) const;
 
     std::shared_ptr<Option> positional;
     std::unordered_map<std::string, std::shared_ptr<Option>> optionMap;

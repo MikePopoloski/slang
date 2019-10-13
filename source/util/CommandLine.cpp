@@ -154,20 +154,24 @@ bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
 #endif
 
 bool CommandLine::parse(string_view argList) {
-    SmallVectorSized<std::string, 8> storage;
+    bool hasArg = false;
     std::string current;
-    auto end = argList.data() + argList.size();
+    SmallVectorSized<std::string, 8> storage;
 
+    auto end = argList.data() + argList.size();
     for (const char* ptr = argList.data(); ptr != end; ptr++) {
         // Whitespace breaks up arguments.
         if (isWhitespace(*ptr)) {
-            // Ignore empty arguments.
-            if (!current.empty()) {
+            if (hasArg) {
                 storage.emplace(std::move(current));
                 current.clear();
+                hasArg = false;
             }
             continue;
         }
+
+        // Any non-whitespace character here means we are building an argument.
+        hasArg = true;
 
         // Escape character preserves the value of the next character.
         if (*ptr == '\\') {
@@ -198,7 +202,7 @@ bool CommandLine::parse(string_view argList) {
         current += *ptr;
     }
 
-    if (!current.empty())
+    if (hasArg)
         storage.emplace(std::move(current));
 
     SmallVectorSized<string_view, 8> args(storage.size());
@@ -224,7 +228,10 @@ bool CommandLine::parse(span<const string_view> args) {
 
         // If we were previously expecting a value, set that now.
         if (expectingVal) {
-            expectingVal->set(expectingValName, arg);
+            std::string result = expectingVal->set(expectingValName, arg);
+            if (!result.empty())
+                errors.emplace_back(fmt::format("{}: {}", programName, result));
+
             expectingVal = nullptr;
             continue;
         }
@@ -233,7 +240,7 @@ bool CommandLine::parse(span<const string_view> args) {
         // - Doesn't start with '-'
         // - Is exactly '-'
         // - Or we've seen a double dash already
-        if (arg.empty() || arg[0] != '-' || arg.length() == 1 || doubleDash) {
+        if (arg.length() <= 1 || arg[0] != '-' || doubleDash) {
             positionalArgs.append(arg);
             continue;
         }
@@ -263,7 +270,7 @@ bool CommandLine::parse(span<const string_view> args) {
         // If we still didn't find it, that's an error.
         if (!option) {
             // Try to find something close to give a better error message.
-            auto error = fmt::format("{}: unknown command line argument '{}'"sv, programName, name);
+            auto error = fmt::format("{}: unknown command line argument '{}'"sv, programName, arg);
             auto nearest = findNearestMatch(name);
             if (!nearest.empty())
                 error += fmt::format(", did you mean '{}'?"sv, nearest);
@@ -277,10 +284,12 @@ bool CommandLine::parse(span<const string_view> args) {
         // in the next argument.
         if (value.empty() && option->expectsValue()) {
             expectingVal = option;
-            expectingValName = name;
+            expectingValName = arg;
         }
         else {
-            option->set(name, value);
+            std::string result = option->set(arg, value);
+            if (!result.empty())
+                errors.emplace_back(fmt::format("{}: {}", programName, result));
         }
     }
 
@@ -326,7 +335,10 @@ CommandLine::Option* CommandLine::tryGroupOrPrefix(string_view&, string_view&) {
     return nullptr;
 }
 
-string_view CommandLine::findNearestMatch(string_view arg) const {
+std::string CommandLine::findNearestMatch(string_view arg) const {
+    if (arg.length() <= 1)
+        return {};
+
     size_t equalsIndex = arg.find_first_of('=');
     if (equalsIndex != string_view::npos)
         arg = arg.substr(0, equalsIndex);
@@ -342,7 +354,13 @@ string_view CommandLine::findNearestMatch(string_view arg) const {
         }
     }
 
-    return bestName;
+    if (bestName.empty())
+        return {};
+
+    if (bestName.length() == 1)
+        return "-"s + std::string(bestName);
+
+    return "--"s + std::string(bestName);
 }
 
 bool CommandLine::Option::expectsValue() const {
@@ -350,7 +368,13 @@ bool CommandLine::Option::expectsValue() const {
 }
 
 std::string CommandLine::Option::set(string_view name, string_view value) {
-    return std::visit([&](auto&& arg) { return set(*arg, name, value); }, storage);
+    return std::visit(
+        [&](auto&& arg) {
+            if (!allowValue(*arg))
+                return fmt::format("more than one value provided for argument '{}'"sv, name);
+            return set(*arg, name, value);
+        },
+        storage);
 }
 
 static optional<bool> parseBool(string_view name, string_view value, std::string& error) {
@@ -361,14 +385,14 @@ static optional<bool> parseBool(string_view name, string_view value, std::string
     if (value == "False" || value == "false")
         return false;
 
-    error = fmt::format("Invalid value '{}' for boolean argument '{}'", value, name);
+    error = fmt::format("invalid value '{}' for boolean argument '{}'", value, name);
     return {};
 }
 
 template<typename T>
 static optional<T> parseInt(string_view name, string_view value, std::string& error) {
     if (value.empty()) {
-        error = fmt::format("Expected value for argument '{}'", name);
+        error = fmt::format("expected value for argument '{}'", name);
         return {};
     }
 
@@ -376,7 +400,7 @@ static optional<T> parseInt(string_view name, string_view value, std::string& er
     auto end = value.data() + value.size();
     auto result = std::from_chars(value.data(), end, val);
     if (result.ec != std::errc() || result.ptr != end) {
-        error = fmt::format("Invalid value '{}' for integer argument '{}'", value, name);
+        error = fmt::format("invalid value '{}' for integer argument '{}'", value, name);
         return {};
     }
 
@@ -385,7 +409,7 @@ static optional<T> parseInt(string_view name, string_view value, std::string& er
 
 static optional<double> parseDouble(string_view name, string_view value, std::string& error) {
     if (value.empty()) {
-        error = fmt::format("Expected value for argument '{}'", name);
+        error = fmt::format("expected value for argument '{}'", name);
         return {};
     }
 
@@ -395,7 +419,7 @@ static optional<double> parseDouble(string_view name, string_view value, std::st
     double val = strtod(copy.c_str(), &end);
 
     if (end != copy.c_str() + copy.size()) {
-        error = fmt::format("Invalid value '{}' for float argument '{}'", value, name);
+        error = fmt::format("invalid value '{}' for float argument '{}'", value, name);
         return {};
     }
 
