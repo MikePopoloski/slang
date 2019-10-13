@@ -5,7 +5,6 @@
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 
-#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
@@ -16,6 +15,7 @@
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/CommandLine.h"
 #include "slang/util/Version.h"
 
 using namespace slang;
@@ -56,7 +56,8 @@ bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
 }
 
 bool runCompiler(SourceManager& sourceManager, const Bag& options,
-                 const std::vector<SourceBuffer>& buffers, const std::string& astJsonFile) {
+                 const std::vector<SourceBuffer>& buffers,
+                 const optional<std::string>& astJsonFile) {
     Compilation compilation;
     for (const SourceBuffer& buffer : buffers)
         compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
@@ -76,50 +77,56 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
 
     print("{}", client->getString());
 
-    if (!astJsonFile.empty()) {
+    if (astJsonFile) {
         json output = compilation.getRoot();
-        writeToFile(astJsonFile, output.dump(2));
+        writeToFile(*astJsonFile, output.dump(2));
     }
 
     return diagEngine.getNumErrors() == 0;
 }
 
-int driverMain(int argc, char** argv) try {
+template<typename TArgs>
+int driverMain(int argc, TArgs argv) try {
     std::vector<std::string> sourceFiles;
     std::vector<std::string> includeDirs;
     std::vector<std::string> includeSystemDirs;
     std::vector<std::string> defines;
     std::vector<std::string> undefines;
 
-    std::string astJsonFile;
+    optional<std::string> astJsonFile;
 
-    bool showVersion = false;
-    bool onlyPreprocess = false;
+    optional<bool> showHelp;
+    optional<bool> showVersion;
+    optional<bool> onlyPreprocess;
 
-    CLI::App cmd("SystemVerilog compiler");
-    cmd.add_option("files", sourceFiles, "Source files to compile");
-    cmd.add_flag("-v,--version", showVersion, "Display version information and exit");
-    cmd.add_option("-I,--include-directory", includeDirs, "Additional include search paths");
-    cmd.add_option("--include-system-directory", includeSystemDirs,
-                   "Additional system include search paths");
-    cmd.add_option("-D,--define-macro", defines,
-                   "Define <macro>=<value> (or 1 if <value> ommitted) in all source files");
-    cmd.add_option("-U,--undefine-macro", undefines,
-                   "Undefine macro name at the start of all source files");
-    cmd.add_flag("-E,--preprocess", onlyPreprocess,
-                 "Only run the preprocessor (and print preprocessed files to stdout)");
+    CommandLine cmdLine;
+    cmdLine.add("-v,--version", showVersion, "Display version information and exit");
+    cmdLine.add("-I", includeDirs, "Additional include search paths", "<dir>");
+    cmdLine.add("--isystem", includeSystemDirs, "Additional system include search paths", "<dir>");
+    cmdLine.add("-D", defines,
+                "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
+                "<macro>=<value>");
+    cmdLine.add("-U", undefines, "Undefine macro name at the start of all source files", "<macro>");
+    cmdLine.add("-E,--preprocess", onlyPreprocess,
+                "Only run the preprocessor (and print preprocessed files to stdout)");
+    cmdLine.add("--ast-json", astJsonFile,
+                "Dump the compiled AST in JSON format to the specified file, or '-' for stdout",
+                "<file>");
+    cmdLine.add("-h,--help", showHelp, "Display available options");
+    cmdLine.setPositional(sourceFiles, "files");
 
-    cmd.add_option("--ast-json", astJsonFile,
-                   "Dump the compiled AST in JSON format to the specified file, or '-' for stdout");
-
-    try {
-        cmd.parse(argc, argv);
+    if (!cmdLine.parse(argc, argv)) {
+        for (auto& err : cmdLine.getErrors())
+            print("{}\n", err);
+        return 1;
     }
-    catch (const CLI::ParseError& e) {
-        return cmd.exit(e);
+
+    if (showHelp == true) {
+        print("{}", cmdLine.getHelpText("slang SystemVerilog compiler"));
+        return 0;
     }
 
-    if (showVersion) {
+    if (showVersion == true) {
         print("slang version {}.{}.{}\n", VersionInfo::getMajor(), VersionInfo::getMinor(),
               VersionInfo::getRevision());
         return 0;
@@ -168,15 +175,15 @@ int driverMain(int argc, char** argv) try {
     }
 
     if (anyErrors)
-        return 1;
+        return 2;
 
     if (buffers.empty()) {
         print("error: no input files\n");
-        return 2;
+        return 3;
     }
 
     try {
-        if (onlyPreprocess)
+        if (onlyPreprocess == true)
             anyErrors = !runPreprocessor(sourceManager, options, buffers);
         else
             anyErrors = !runCompiler(sourceManager, options, buffers, astJsonFile);
@@ -187,7 +194,7 @@ int driverMain(int argc, char** argv) try {
         throw;
 #else
         print("internal compiler error: {}\n", e.what());
-        return 3;
+        return 4;
 #endif
     }
 
@@ -199,7 +206,7 @@ catch (const std::exception& e) {
     throw;
 #else
     print("{}\n", e.what());
-    return 4;
+    return 5;
 #endif
 }
 
@@ -213,7 +220,9 @@ void writeToFile(Stream& os, string_view fileName, String contents) {
 
 #if defined(_MSC_VER)
 #    include <fcntl.h>
+#    include <fstream>
 #    include <io.h>
+#    include <iostream>
 
 void writeToFile(string_view fileName, string_view contents) {
     if (fileName == "-") {
@@ -249,19 +258,7 @@ void print(string_view format, const Args&... args) {
 
 int wmain(int argc, wchar_t** argv) {
     _setmode(_fileno(stdout), _O_U16TEXT);
-
-    std::vector<std::string> storage;
-    std::vector<char*> utf8Argv;
-
-    storage.reserve(argc);
-    utf8Argv.reserve(argc);
-
-    for (int i = 0; i < argc; ++i) {
-        storage.emplace_back(narrow(argv[i]));
-        utf8Argv.push_back(storage.back().data());
-    }
-
-    return driverMain(argc, utf8Argv.data());
+    return driverMain(argc, argv);
 }
 
 #else
