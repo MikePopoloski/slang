@@ -91,28 +91,33 @@ void CommandLine::addInternal(string_view name, OptionStorage storage, string_vi
     if (name.empty())
         throw std::invalid_argument("Name cannot be empty");
 
-    while (!name.empty()) {
+    while (true) {
         size_t index = name.find_first_of(',');
         string_view curr = name;
-        if (index != string_view::npos) {
+        if (index != string_view::npos)
             curr = name.substr(0, index);
-            name = name.substr(index + 1);
-        }
-        else {
-            name = string_view();
-        }
 
         if (curr.length() <= 1 || curr[0] != '-')
             throw std::invalid_argument("Names must begin with '-' or '--'");
 
         curr = curr.substr(1);
-        if (curr[0] == '-')
+        if (curr[0] == '-') {
             curr = curr.substr(1);
+            if (curr.empty())
+                throw std::invalid_argument("Names must begin with '-' or '--'");
+        }
+        else if (curr.length() > 1) {
+            throw std::invalid_argument("Long name requires '--' prefix");
+        }
 
         if (!optionMap.try_emplace(std::string(curr), option).second) {
             throw std::invalid_argument(
                 fmt::format("Argument with name '{}' already exists", curr));
         }
+
+        if (index == string_view::npos)
+            break;
+        name = name.substr(index + 1);
     }
 }
 
