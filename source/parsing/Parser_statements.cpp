@@ -121,7 +121,9 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
 
     // everything else should be some kind of expression
     if (isPossibleExpression(peek().kind)) {
-        auto& expr = parseExpression();
+        auto& expr = parseSubExpression(ExpressionOptions::AllowPatternMatch |
+                                            ExpressionOptions::ProceduralAssignmentContext,
+                                        0);
         return factory.expressionStatement(label, attributes, expr, expect(TokenKind::Semicolon));
     }
 

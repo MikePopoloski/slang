@@ -495,12 +495,13 @@ class AssignmentExpression : public Expression {
 public:
     optional<BinaryOperator> op;
 
-    AssignmentExpression(optional<BinaryOperator> op, const Type& type, Expression& left,
-                         Expression& right, SourceRange sourceRange) :
+    AssignmentExpression(optional<BinaryOperator> op, bool nonBlocking, const Type& type,
+                         Expression& left, Expression& right, SourceRange sourceRange) :
         Expression(ExpressionKind::Assignment, type, sourceRange),
-        op(op), left_(&left), right_(&right) {}
+        op(op), left_(&left), right_(&right), nonBlocking(nonBlocking) {}
 
     bool isCompound() const { return op.has_value(); }
+    bool isNonBlocking() const { return nonBlocking; }
 
     const Expression& left() const { return *left_; }
     Expression& left() { return *left_; }
@@ -521,6 +522,7 @@ public:
 private:
     Expression* left_;
     Expression* right_;
+    bool nonBlocking;
 };
 
 /// Represents a single element selection expression.

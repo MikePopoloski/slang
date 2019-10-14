@@ -369,3 +369,20 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::IndexValueInvalid);
 }
+
+TEST_CASE("Nonblocking assignment statement") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    int j;
+    initial begin
+        j <= 2;
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

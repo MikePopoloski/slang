@@ -565,6 +565,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::LogicalRightShiftAssignmentExpression:
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+        case SyntaxKind::NonblockingAssignmentExpression:
             result = &AssignmentExpression::fromSyntax(
                 compilation, syntax.as<BinaryExpressionSyntax>(), context);
             break;
@@ -626,7 +627,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::NextTimePropertyExpression:
         case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
         case SyntaxKind::NonOverlappedImplicationPropertyExpression:
-        case SyntaxKind::NonblockingAssignmentExpression:
         case SyntaxKind::OneStepLiteralExpression:
         case SyntaxKind::OrSequenceExpression:
         case SyntaxKind::OverlappedFollowedByPropertyExpression:
@@ -1582,9 +1582,13 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                                              const BinaryExpressionSyntax& syntax,
                                              const BindContext& context) {
     // TODO: verify that assignment is allowed in this expression context
-    auto op = syntax.kind == SyntaxKind::AssignmentExpression
-                  ? std::nullopt
-                  : std::make_optional(getBinaryOperator(syntax.kind));
+    optional<BinaryOperator> op;
+    if (syntax.kind != SyntaxKind::AssignmentExpression &&
+        syntax.kind != SyntaxKind::NonblockingAssignmentExpression) {
+        op = getBinaryOperator(syntax.kind);
+    }
+
+    bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
 
     // The right hand side of an assignment expression is typically an
     // "assignment-like context", except if the left hand side does not
@@ -1603,8 +1607,9 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                 &create(compilation, *syntax.left, context, BindFlags::None, rhs->type);
             selfDetermined(context, lhs);
 
-            auto result = compilation.emplace<AssignmentExpression>(op, *lhs->type, *lhs, *rhs,
-                                                                    syntax.sourceRange());
+            auto result = compilation.emplace<AssignmentExpression>(
+                op, isNonBlocking, *lhs->type, *lhs, *rhs, syntax.sourceRange());
+
             if (rhs->bad())
                 return badExpr(compilation, result);
 
@@ -1615,8 +1620,8 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     Expression& lhs = selfDetermined(compilation, *syntax.left, context);
     Expression& rhs = create(compilation, *syntax.right, context, BindFlags::None, lhs.type);
 
-    auto result =
-        compilation.emplace<AssignmentExpression>(op, *lhs.type, lhs, rhs, syntax.sourceRange());
+    auto result = compilation.emplace<AssignmentExpression>(op, isNonBlocking, *lhs.type, lhs, rhs,
+                                                            syntax.sourceRange());
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
 
@@ -1637,7 +1642,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
 void AssignmentExpression::toJson(json& j) const {
     j["left"] = left();
     j["right"] = right();
-
+    j["isNonBlocking"] = isNonBlocking();
     if (op)
         j["op"] = toString(*op);
 }
