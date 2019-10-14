@@ -11,6 +11,7 @@
 #include <flat_hash_map.hpp>
 #include <memory>
 #include <set>
+#include <variant>
 
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"

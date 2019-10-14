@@ -7,6 +7,7 @@
 #pragma once
 
 #include <map>
+#include <variant>
 
 #include "slang/util/Util.h"
 

@@ -7,6 +7,7 @@
 #pragma once
 
 #include <string>
+#include <variant>
 
 #include "slang/numeric/SVInt.h"
 

@@ -13,7 +13,6 @@
 #include <optional>    // for std::optional
 #include <string_view> // for std::string_view
 #include <utility>     // for many random utility functions
-#include <variant>     // for std::variant
 
 #include "slang/util/Assert.h"
 #include "slang/util/NotNull.h"

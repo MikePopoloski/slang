@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <variant>
 
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxKind.h"
