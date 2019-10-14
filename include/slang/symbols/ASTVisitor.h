@@ -11,6 +11,7 @@
 #include "slang/symbols/HierarchySymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
+#include "slang/util/TypeTraits.h"
 
 namespace slang {
 
@@ -19,14 +20,17 @@ namespace slang {
 /// node types you want to handle.
 template<typename TDerived>
 class ASTVisitor {
-    HAS_METHOD_TRAIT(handle);
-    HAS_METHOD_TRAIT(getBody);
+    template<typename T, typename Arg>
+    using handle_t = decltype(std::declval<T>().handle(std::declval<Arg>()));
+
+    template<typename T>
+    using getBody_t = decltype(std::declval<T>().getBody());
 
 public:
 #define DERIVED *static_cast<TDerived*>(this)
     template<typename T>
     void visit(const T& t) {
-        if constexpr (has_handle_v<TDerived, void, T>)
+        if constexpr (is_detected_v<handle_t, TDerived, T>)
             static_cast<TDerived*>(this)->handle(t);
         else
             visitDefault(t);
@@ -41,7 +45,7 @@ public:
         for (const auto& member : symbol.members())
             member.visit(DERIVED);
 
-        if constexpr (has_getBody_v<T, const Statement&>)
+        if constexpr (is_detected_v<getBody_t, T>)
             symbol.getBody().visit(DERIVED);
     }
 

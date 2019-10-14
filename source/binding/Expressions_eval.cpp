@@ -33,12 +33,13 @@ struct EvalVisitor {
 };
 
 class LValueVisitor {
-    HAS_METHOD_TRAIT(evalLValueImpl);
+    template<typename T, typename Arg>
+    using evalLValue_t = decltype(std::declval<T>().evalLValueImpl(std::declval<Arg>()));
 
 public:
     template<typename T>
     LValue visit(const T& expr, EvalContext& context) {
-        if constexpr (has_evalLValueImpl_v<T, LValue, EvalContext&>) {
+        if constexpr (is_detected_v<evalLValue_t, T, EvalContext&>) {
             if (expr.bad())
                 return nullptr;
 

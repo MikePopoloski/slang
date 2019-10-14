@@ -11,6 +11,7 @@
 
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/util/TypeTraits.h"
 
 namespace slang {
 
@@ -21,12 +22,13 @@ namespace slang {
 /// node types you want to handle.
 template<typename TDerived>
 class SyntaxVisitor {
-    HAS_METHOD_TRAIT(handle);
+    template<typename T, typename Arg>
+    using handle_t = decltype(std::declval<T>().handle(std::declval<Arg>()));
 
 public:
     template<typename T>
     void visit(const T& t) {
-        if constexpr (has_handle_v<TDerived, void, T&>)
+        if constexpr (is_detected_v<handle_t, TDerived, T>)
             DERIVED->handle(t);
         else
             DERIVED->visitDefault(t);

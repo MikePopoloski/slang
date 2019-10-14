@@ -236,7 +236,8 @@ namespace slang {
 // tree can bubble up and then propagate back down a different branch, which is also implemented
 // here.
 struct Expression::PropagationVisitor {
-    HAS_METHOD_TRAIT(propagateType);
+    template<typename T, typename... Args>
+    using propagate_t = decltype(std::declval<T>().propagateType(std::declval<Args>()...));
 
     const BindContext& context;
     const Type& newType;
@@ -259,7 +260,7 @@ struct Expression::PropagationVisitor {
         // check if the conversion should be pushed further down the tree. Otherwise we
         // should insert the implicit conversion here.
         bool needConversion = !newType.isEquivalent(*expr.type);
-        if constexpr (has_propagateType_v<T, bool, const BindContext&, const Type&>) {
+        if constexpr (is_detected_v<propagate_t, T, const BindContext&, const Type&>) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
                 (newType.isIntegral() && expr.type->isIntegral()) || newType.isString()) {
 

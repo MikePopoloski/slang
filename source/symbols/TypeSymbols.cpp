@@ -60,11 +60,12 @@ bool getFourState(PredefinedIntegerType::Kind kind) {
 // clang-format on
 
 struct GetDefaultVisitor {
-    HAS_METHOD_TRAIT(getDefaultValueImpl);
+    template<typename T>
+    using getDefault_t = decltype(std::declval<T>().getDefaultValueImpl());
 
     template<typename T>
     ConstantValue visit([[maybe_unused]] const T& type) {
-        if constexpr (has_getDefaultValueImpl_v<T, ConstantValue>) {
+        if constexpr (is_detected_v<getDefault_t, T>) {
             return type.getDefaultValueImpl();
         }
         else {

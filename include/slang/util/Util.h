@@ -44,29 +44,6 @@ using nonstd::span;
 #include <bitmask.hpp>
 using bitmask_lib::bitmask;
 
-#define HAS_METHOD_TRAIT(name)                                                               \
-    template<typename, typename T>                                                           \
-    struct has_##name {                                                                      \
-        static_assert(always_false<T>::value,                                                \
-                      "Second template parameter needs to be of function type.");            \
-    };                                                                                       \
-    template<typename C, typename Ret, typename... Args>                                     \
-    struct has_##name<C, Ret(Args...)> {                                                     \
-    private:                                                                                 \
-        template<typename T>                                                                 \
-        static constexpr auto check(T*) ->                                                   \
-            typename std::is_same<decltype(std::declval<T>().name(std::declval<Args>()...)), \
-                                  Ret>::type;                                                \
-        template<typename>                                                                   \
-        static constexpr std::false_type check(...);                                         \
-        typedef decltype(check<C>(nullptr)) type;                                            \
-                                                                                             \
-    public:                                                                                  \
-        static constexpr bool value = type::value;                                           \
-    };                                                                                       \
-    template<typename C, typename Ret, typename... Args>                                     \
-    static constexpr bool has_##name##_v = has_##name<C, Ret(Args...)>::value
-
 namespace slang {
 
 template<typename T>
