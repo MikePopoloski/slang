@@ -549,6 +549,9 @@ TEST_CASE("Crazy long hex literal") {
 
 TEST_CASE("Simple assignment patterns") {
     auto tree = SyntaxTree::fromText(R"(
+module n(int frob[3]);
+endmodule
+
 module m;
 
     parameter int foo[2] = '{42, -39};
@@ -556,6 +559,11 @@ module m;
 
     typedef struct { int a; int b; int c; } type_t;
     parameter bar = type_t '{1, 2, 3};
+
+    type_t baz;
+    initial baz = '{1, 2, 3};
+
+    n n1('{1, 2, 3});
 
 endmodule
 )");
@@ -586,6 +594,9 @@ endmodule
 
 TEST_CASE("Replicated assignment patterns") {
     auto tree = SyntaxTree::fromText(R"(
+module n(int frob[3]);
+endmodule
+
 module m;
 
     parameter int foo[2] = '{2 {42}};
@@ -593,6 +604,11 @@ module m;
 
     typedef struct { int a; shortint b; integer c; longint d; } type_t;
     parameter bar = type_t '{2 {1, 2}};
+
+    type_t baz;
+    initial baz = '{2 {1, 2}};
+
+    n n1('{3 {2}});
 
 endmodule
 )");
@@ -624,6 +640,9 @@ endmodule
 
 TEST_CASE("Structured assignment patterns") {
     auto tree = SyntaxTree::fromText(R"(
+module n(int frob[3]);
+endmodule
+
 module m;
 
     typedef struct { int a; shortint b; integer c; longint d; logic [1:0] e; } type_t;
@@ -631,6 +650,11 @@ module m;
 
     parameter int index = 1 * 2 - 1;
     parameter int foo[3] = '{ default:0, int:1, index - 1 + 1:-42 };
+
+    type_t baz;
+    initial baz = '{ c:9, default:2, int:42, int:37, d:-1 };
+
+    n n1('{ default:0, int:1, index - 1 + 1:-42 });
 
 endmodule
 )");

@@ -1613,7 +1613,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     }
 
     Expression& lhs = selfDetermined(compilation, *syntax.left, context);
-    Expression& rhs = create(compilation, *syntax.right, context);
+    Expression& rhs = create(compilation, *syntax.right, context, BindFlags::None, lhs.type);
 
     auto result =
         compilation.emplace<AssignmentExpression>(op, *lhs.type, lhs, rhs, syntax.sourceRange());
