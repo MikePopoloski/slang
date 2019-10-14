@@ -91,10 +91,11 @@ add_library(slang
 	text/SourceManager.cpp
 
 	${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
+	util/Assert.cpp
 	util/BumpAllocator.cpp
 	util/CommandLine.cpp
 	util/Hash.cpp
-	util/Util.cpp
+	util/String.cpp
 )
 
 add_dependencies(slang gen_version)

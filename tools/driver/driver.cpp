@@ -19,6 +19,7 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/CommandLine.h"
+#include "slang/util/String.h"
 #include "slang/util/Version.h"
 
 using namespace slang;

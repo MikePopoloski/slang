@@ -12,6 +12,7 @@
 #include <fmt/format.h>
 
 #include "slang/util/SmallVector.h"
+#include "slang/util/String.h"
 
 namespace fs = std::filesystem;
 

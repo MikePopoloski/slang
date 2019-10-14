@@ -10,6 +10,7 @@
 #include <string>
 
 #include "slang/util/StackContainer.h"
+#include "slang/util/String.h"
 
 namespace slang {
 

@@ -9,6 +9,7 @@
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
+#include "slang/util/String.h"
 
 namespace slang {
 

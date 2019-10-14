@@ -15,6 +15,7 @@
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
+#include "slang/util/String.h"
 
 static_assert(std::numeric_limits<double>::is_iec559, "SystemVerilog requires IEEE 754");
 

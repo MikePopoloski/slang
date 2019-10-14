@@ -10,6 +10,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
+#include "slang/util/String.h"
 #include "slang/util/Version.h"
 
 namespace slang {

@@ -13,6 +13,9 @@
 
 namespace slang {
 
+template<typename T>
+struct always_false : std::false_type {};
+
 const ConstantValue ConstantValue::Invalid;
 
 std::string ConstantValue::toString() const {
