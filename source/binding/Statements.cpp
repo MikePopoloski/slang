@@ -1120,6 +1120,31 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
     if (expr.bad())
         return badStmt(compilation, result);
 
+    // Only a subset of expressions are allowed as statements.
+    bool ok;
+    switch (expr.kind) {
+        case ExpressionKind::Call:
+        case ExpressionKind::Assignment:
+            ok = true;
+            break;
+        case ExpressionKind::UnaryOp: {
+            auto& unary = expr.as<UnaryExpression>();
+            ok = unary.op == UnaryOperator::Preincrement ||
+                 unary.op == UnaryOperator::Predecrement ||
+                 unary.op == UnaryOperator::Postincrement ||
+                 unary.op == UnaryOperator::Postdecrement;
+            break;
+        }
+        default:
+            ok = false;
+            break;
+    }
+
+    if (!ok) {
+        context.addDiag(diag::ExprNotStatement, expr.sourceRange);
+        return badStmt(compilation, result);
+    }
+
     return *result;
 }
 

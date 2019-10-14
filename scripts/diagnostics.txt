@@ -218,6 +218,7 @@ error DelayNotNumeric "delay expression type {} is not numeric"
 error InvalidEventExpression "invalid type {} for event expression"
 error CoverStmtNoFail "cover statement cannot have a fail statement"
 error StatementNotInLoop "statement can only be used inside a loop"
+error ExprNotStatement "expression is not allowed as a statement"
 warning event-const EventExpressionConstant "edge expression is constant"
 
 subsystem Types
