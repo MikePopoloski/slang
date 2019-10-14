@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
 namespace slang {

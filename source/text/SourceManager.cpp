@@ -7,6 +7,7 @@
 #include "slang/text/SourceManager.h"
 
 #include <fstream>
+#include <string>
 
 #include "slang/util/StackContainer.h"
 

@@ -6,12 +6,15 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <variant>
 
 #include "slang/numeric/SVInt.h"
 
 namespace slang {
+
+using json = nlohmann::json;
 
 /// Represents an IEEE754 double precision floating point number.
 /// This is a separate type from `double` to make it less likely that

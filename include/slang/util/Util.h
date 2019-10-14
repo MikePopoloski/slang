@@ -36,23 +36,6 @@ using std::uintptr_t;
 
 using namespace std::literals;
 
-#define UTIL_ENUM_ELEMENT(x) x,
-#define UTIL_ENUM_STRING(x) #x,
-#define ENUM(name, elements)                                           \
-    enum class name { elements(UTIL_ENUM_ELEMENT) };                   \
-    inline string_view toString(name e) {                              \
-        static const char* strings[] = { elements(UTIL_ENUM_STRING) }; \
-        return strings[static_cast<std::underlying_type_t<name>>(e)];  \
-    }                                                                  \
-    inline std::ostream& operator<<(std::ostream& os, name e) { return os << toString(e); }
-
-#define ENUM_MEMBER(name, elements)                                    \
-    enum name { elements(UTIL_ENUM_ELEMENT) };                         \
-    friend string_view toString(name e) {                              \
-        static const char* strings[] = { elements(UTIL_ENUM_STRING) }; \
-        return strings[static_cast<std::underlying_type_t<name>>(e)];  \
-    }
-
 #define span_CONFIG_INDEX_TYPE std::size_t
 #define span_FEATURE_COMPARISON 0
 #include <span.hpp>
@@ -60,9 +43,6 @@ using nonstd::span;
 
 #include <bitmask.hpp>
 using bitmask_lib::bitmask;
-
-#include <nlohmann/json_fwd.hpp>
-using json = nlohmann::json;
 
 #define HAS_METHOD_TRAIT(name)                                                               \
     template<typename, typename T>                                                           \
@@ -102,17 +82,6 @@ inline string_view to_string_view(span<char> text) {
 int editDistance(string_view left, string_view right, bool allowReplacements = true,
                  int maxDistance = 0);
 
-inline void hash_combine(size_t&) {
-}
-
-/// Hash combining function, based on the function from Boost.
-template<typename T, typename... Rest>
-inline void hash_combine(size_t& seed, const T& v, Rest... rest) {
-    std::hash<T> hasher;
-    seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    hash_combine(seed, rest...);
-}
-
 #if defined(_MSC_VER)
 
 std::wstring widen(string_view str);
@@ -131,35 +100,3 @@ inline string_view narrow(string_view str) {
 #endif
 
 } // namespace slang
-
-namespace detail {
-
-template<typename Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
-struct HashValueImpl {
-    static void apply(size_t& seed, const Tuple& tuple) {
-        HashValueImpl<Tuple, Index - 1>::apply(seed, tuple);
-        slang::hash_combine(seed, std::get<Index>(tuple));
-    }
-};
-
-template<typename Tuple>
-struct HashValueImpl<Tuple, 0> {
-    static void apply(size_t& seed, const Tuple& tuple) {
-        slang::hash_combine(seed, std::get<0>(tuple));
-    }
-};
-
-} // namespace detail
-
-namespace std {
-
-template<typename... TT>
-struct hash<std::tuple<TT...>> {
-    size_t operator()(const std::tuple<TT...>& tt) const {
-        size_t seed = 0;
-        ::detail::HashValueImpl<std::tuple<TT...>>::apply(seed, tt);
-        return seed;
-    }
-};
-
-} // namespace std

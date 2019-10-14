@@ -6,11 +6,16 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <nlohmann/json_fwd.hpp>
+
 #include "slang/symbols/DeclaredType.h"
 #include "slang/text/SourceLocation.h"
+#include "slang/util/Enum.h"
 #include "slang/util/Util.h"
 
 namespace slang {
+
+using json = nlohmann::json;
 
 class Compilation;
 class Scope;
