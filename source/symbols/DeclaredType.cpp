@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/DeclaredType.h"
 
+#include "slang/binding/Expressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
@@ -22,6 +23,11 @@ const Type& DeclaredType::getType() const {
     if (!type)
         resolveType(getBindContext());
     return *type;
+}
+
+void DeclaredType::setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>& newDimensions) {
+    dimensions = &newDimensions;
+    type = nullptr;
 }
 
 void DeclaredType::copyTypeFrom(const DeclaredType& source) {

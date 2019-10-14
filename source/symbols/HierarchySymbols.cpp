@@ -8,6 +8,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "slang/binding/Expressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -866,7 +867,7 @@ void GenerateBlockSymbol::toJson(json& j) const {
 }
 
 GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
-    Compilation& compilation, const LoopGenerateSyntax& syntax, Index scopeIndex,
+    Compilation& compilation, const LoopGenerateSyntax& syntax, SymbolIndex scopeIndex,
     LookupLocation location, const Scope& parent, uint32_t constructIndex) {
 
     string_view name = getGenerateBlockName(*syntax.block);

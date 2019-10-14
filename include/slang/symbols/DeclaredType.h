@@ -46,13 +46,10 @@ public:
         typeSyntax = &newType;
         type = nullptr;
     }
+
     const DataTypeSyntax* getTypeSyntax() const { return typeSyntax; }
 
-    void setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>& newDimensions) {
-        dimensions = &newDimensions;
-        type = nullptr;
-    }
-
+    void setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>& newDimensions);
     const SyntaxList<VariableDimensionSyntax>* getDimensionSyntax() const { return dimensions; }
 
     const Expression* getInitializer() const;

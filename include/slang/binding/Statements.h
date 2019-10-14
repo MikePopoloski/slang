@@ -16,6 +16,8 @@ class SequentialBlockStatement;
 class SequentialBlockSymbol;
 class TimingControl;
 class VariableSymbol;
+struct ForLoopStatementSyntax;
+struct StatementSyntax;
 
 // clang-format off
 #define STATEMENT(x) \
@@ -190,6 +192,8 @@ public:
     static const StatementList Empty;
 };
 
+struct BlockStatementSyntax;
+
 /// Represents a sequential block statement.
 class SequentialBlockStatement : public Statement {
 public:
@@ -213,6 +217,8 @@ private:
     const StatementList* list = nullptr;
 };
 
+struct ReturnStatementSyntax;
+
 class ReturnStatement : public Statement {
 public:
     const Expression* expr;
@@ -228,6 +234,8 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Return; }
 };
+
+struct JumpStatementSyntax;
 
 class BreakStatement : public Statement {
 public:
@@ -268,6 +276,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::VariableDeclaration; }
 };
 
+struct ConditionalStatementSyntax;
+
 class ConditionalStatement : public Statement {
 public:
     const Expression& cond;
@@ -287,6 +297,8 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Conditional; }
 };
+
+struct CaseStatementSyntax;
 
 class CaseStatement : public Statement {
 public:
@@ -339,6 +351,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForLoop; }
 };
 
+struct LoopStatementSyntax;
+
 class RepeatLoopStatement : public Statement {
 public:
     const Expression& count;
@@ -373,6 +387,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::WhileLoop; }
 };
 
+struct DoWhileStatementSyntax;
+
 class DoWhileLoopStatement : public Statement {
 public:
     const Expression& cond;
@@ -390,6 +406,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::DoWhileLoop; }
 };
 
+struct ForeverStatementSyntax;
+
 class ForeverLoopStatement : public Statement {
 public:
     const Statement& body;
@@ -406,6 +424,8 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeverLoop; }
 };
 
+struct ExpressionStatementSyntax;
+
 class ExpressionStatement : public Statement {
 public:
     const Expression& expr;
@@ -421,6 +441,8 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }
 };
+
+struct TimingControlStatementSyntax;
 
 class TimedStatement : public Statement {
 public:
@@ -439,6 +461,8 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Timed; }
 };
+
+struct ImmediateAssertionStatementSyntax;
 
 class AssertionStatement : public Statement {
 public:

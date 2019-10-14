@@ -76,6 +76,10 @@ struct AttributeInstanceSyntax;
 ENUM(SymbolKind, SYMBOLKIND)
 #undef SYMBOLKIND
 
+/// A numeric index that can be used to compare the relative ordering of symbols
+/// within a single lexical scope.
+enum class SymbolIndex : uint32_t {};
+
 /// Base class for all symbols (logical code constructs) such as modules, types,
 /// functions, variables, etc.
 class Symbol {
@@ -147,13 +151,9 @@ public:
         return const_cast<Symbol*>(this)->as<T>();
     }
 
-    /// A numeric index that can be used to compare the relative ordering of symbols
-    /// within a single lexical scope.
-    enum class Index : uint32_t {};
-
     /// Gets the index of the symbol within its parent scope, which can be used
     /// to determine the relative ordering of scope members.
-    Index getIndex() const { return indexInScope; }
+    SymbolIndex getIndex() const { return indexInScope; }
 
     /// Sets the syntax that was used to create this symbol. Mostly called by
     /// various factory functions.
@@ -171,7 +171,7 @@ protected:
     Symbol(const Symbol&) = delete;
 
     void setParent(const Scope& scope) { parentScope = &scope; }
-    void setParent(const Scope& scope, Index index) {
+    void setParent(const Scope& scope, SymbolIndex index) {
         setParent(scope);
         indexInScope = index;
     }
@@ -187,7 +187,7 @@ private:
     // determine ordering during lookups) will be set here.
     mutable const Scope* parentScope = nullptr;
     mutable const Symbol* nextInScope = nullptr;
-    mutable Index indexInScope{ 0 };
+    mutable SymbolIndex indexInScope{ 0 };
 
     const SyntaxNode* originatingSyntax = nullptr;
 };

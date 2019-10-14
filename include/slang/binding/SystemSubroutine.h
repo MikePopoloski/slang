@@ -6,18 +6,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/binding/ConstantValue.h"
+#include "slang/binding/Expressions.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang {
-
-class BindContext;
-class EvalContext;
-class Expression;
-class Type;
-struct ExpressionSyntax;
 
 class SystemSubroutine {
 public:

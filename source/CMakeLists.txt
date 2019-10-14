@@ -72,6 +72,7 @@ add_library(slang
 
 	symbols/DeclaredType.cpp
 	symbols/HierarchySymbols.cpp
+	symbols/Lookup.cpp
 	symbols/MemberSymbols.cpp
 	symbols/Scope.cpp
 	symbols/SemanticFacts.cpp

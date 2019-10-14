@@ -6,12 +6,21 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/symbols/Scope.h"
+#include "slang/binding/ConstantValue.h"
+#include "slang/symbols/Lookup.h"
 #include "slang/util/Util.h"
 
 namespace slang {
 
+class Compilation;
 class EvalContext;
+class Expression;
+class Scope;
+class Type;
+struct AttributeInstanceSyntax;
+struct ExpressionSyntax;
+struct SelectorSyntax;
+struct VariableDimensionSyntax;
 
 /// Specifies flags that control expression and statement binding.
 enum class BindFlags {
@@ -76,7 +85,7 @@ public:
         scope(scope),
         lookupLocation(lookupLocation), flags(flags) {}
 
-    Compilation& getCompilation() const { return scope.getCompilation(); }
+    Compilation& getCompilation() const;
 
     void addAttributes(const Expression& expr,
                        span<const AttributeInstanceSyntax* const> syntax) const;

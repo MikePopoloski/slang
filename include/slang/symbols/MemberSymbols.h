@@ -21,6 +21,8 @@ class ModportSymbol;
 class PackageSymbol;
 class TypeAliasType;
 
+struct EmptyMemberSyntax;
+
 /// Represents an empty member, i.e. a standalone semicolon.
 /// This exists as a symbol mostly to provide a place to attach attributes.
 class EmptyMemberSymbol : public Symbol {
@@ -114,6 +116,8 @@ private:
     bool isPort = false;
 };
 
+struct ParameterDeclarationSyntax;
+
 /// Represents a parameter value.
 class ParameterSymbol : public ValueSymbol, public ParameterSymbolBase {
 public:
@@ -135,6 +139,8 @@ private:
     const ConstantValue* overriden = nullptr;
 };
 
+struct TypeParameterDeclarationSyntax;
+
 class TypeParameterSymbol : public Symbol, public ParameterSymbolBase {
 public:
     DeclaredType targetType;
@@ -155,6 +161,8 @@ public:
 private:
     mutable const Type* typeAlias = nullptr;
 };
+
+struct PortListSyntax;
 
 /// Represents the public-facing side of a module / program / interface port.
 /// The port symbol itself is not directly referenceable from within the instance;
@@ -233,6 +241,8 @@ private:
     mutable optional<span<const ConstantRange>> range;
 };
 
+struct NetDeclarationSyntax;
+
 /// Represents a net declaration.
 class NetSymbol : public ValueSymbol {
 public:
@@ -248,6 +258,9 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Net; }
 };
+
+struct DataDeclarationSyntax;
+struct ForVariableDeclarationSyntax;
 
 /// Represents a variable declaration.
 class VariableSymbol : public ValueSymbol {
@@ -302,6 +315,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::FormalArgument; }
 };
 
+struct FunctionDeclarationSyntax;
+
 /// Represents a subroutine (task or function).
 class SubroutineSymbol : public Symbol, public Scope {
 public:
@@ -335,6 +350,8 @@ private:
     StatementBinder binder;
 };
 
+struct ModportDeclarationSyntax;
+
 /// Represents a modport within an interface definition.
 class ModportSymbol : public Symbol, public Scope {
 public:
@@ -347,6 +364,8 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
 };
+
+struct ContinuousAssignSyntax;
 
 /// Represents a continuous assignment statement.
 class ContinuousAssignSymbol : public Symbol {
@@ -366,6 +385,8 @@ public:
 private:
     mutable const Expression* assign = nullptr;
 };
+
+struct GenvarDeclarationSyntax;
 
 /// Represents a genvar declaration.
 class GenvarSymbol : public Symbol {

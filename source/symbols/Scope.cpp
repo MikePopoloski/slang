@@ -6,10 +6,11 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/Scope.h"
 
+#include "slang/binding/Expressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
-#include "slang/symbols/Symbol.h"
+#include "slang/symbols/HierarchySymbols.h"
 #include "slang/util/StackContainer.h"
 
 namespace {
@@ -31,59 +32,6 @@ public:
 } // namespace
 
 namespace slang {
-
-const LookupLocation LookupLocation::max{ nullptr, UINT_MAX };
-const LookupLocation LookupLocation::min{ nullptr, 0 };
-
-LookupLocation LookupLocation::before(const Symbol& symbol) {
-    return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex());
-}
-
-LookupLocation LookupLocation::after(const Symbol& symbol) {
-    return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex() + 1);
-}
-
-bool LookupLocation::operator<(const LookupLocation& other) const {
-    ASSERT(scope == other.scope || !scope || !other.scope);
-    return index < other.index;
-}
-
-Diagnostic& LookupResult::addDiag(const Scope& scope, DiagCode code, SourceLocation location) {
-    return diagnostics.add(scope.asSymbol(), code, location);
-}
-
-Diagnostic& LookupResult::addDiag(const Scope& scope, DiagCode code, SourceRange sourceRange) {
-    return diagnostics.add(scope.asSymbol(), code, sourceRange);
-}
-
-bool LookupResult::hasError() const {
-    // We have an error if we have any diagnostics or if there was a missing explicit import.
-    return !diagnostics.empty() || (!found && wasImported);
-}
-
-void LookupResult::clear() {
-    found = nullptr;
-    systemSubroutine = nullptr;
-    wasImported = false;
-    isHierarchical = false;
-    sawBadImport = false;
-    selectors.clear();
-    diagnostics.clear();
-}
-
-void LookupResult::copyFrom(const LookupResult& other) {
-    found = other.found;
-    systemSubroutine = other.systemSubroutine;
-    wasImported = other.wasImported;
-    isHierarchical = other.isHierarchical;
-    sawBadImport = other.sawBadImport;
-
-    selectors.clear();
-    selectors.appendRange(other.selectors);
-
-    diagnostics.clear();
-    diagnostics.appendRange(other.diagnostics);
-}
 
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
     compilation(compilation_), thisSym(thisSym_), nameMap(compilation.allocSymbolMap()) {
@@ -379,7 +327,7 @@ void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborat
     ASSERT(!member->nextInScope);
 
     if (!at) {
-        member->indexInScope = Symbol::Index{ 1 };
+        member->indexInScope = SymbolIndex{ 1 };
         member->nextInScope = std::exchange(firstMember, member);
     }
     else {
@@ -488,8 +436,8 @@ void Scope::reportNameConflict(const Symbol& member, const Symbol& existing) con
     diag->addNote(diag::NotePreviousDefinition, existing.location);
 }
 
-Symbol::Index Scope::getInsertionIndex(const Symbol& at) const {
-    return Symbol::Index{ (uint32_t)at.indexInScope + (&at == lastMember) };
+SymbolIndex Scope::getInsertionIndex(const Symbol& at) const {
+    return SymbolIndex{ (uint32_t)at.indexInScope + (&at == lastMember) };
 }
 
 void Scope::elaborate() const {

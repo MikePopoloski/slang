@@ -8,16 +8,17 @@
 
 #include <memory>
 
-#include "slang/binding/Expressions.h"
 #include "slang/diagnostics/Diagnostics.h"
-#include "slang/symbols/HierarchySymbols.h"
 #include "slang/symbols/TypeSymbols.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/SafeIndexedVector.h"
-#include "slang/util/SmallVector.h"
 
 namespace slang {
 
+class CompilationUnitSymbol;
+class DefinitionSymbol;
+class Expression;
+class RootSymbol;
 class SyntaxTree;
 class SystemSubroutine;
 struct CompilationUnitSyntax;

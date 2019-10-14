@@ -14,6 +14,10 @@
 
 namespace slang {
 
+Compilation& BindContext::getCompilation() const {
+    return scope.getCompilation();
+}
+
 void BindContext::addAttributes(const Expression& expr,
                                 span<const AttributeInstanceSyntax* const> syntax) const {
     if (syntax.empty())
