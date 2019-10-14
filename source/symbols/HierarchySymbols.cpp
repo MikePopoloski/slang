@@ -14,6 +14,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/util/StackContainer.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang {
 

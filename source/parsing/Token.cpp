@@ -8,7 +8,6 @@
 
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
-#include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/util/BumpAllocator.h"
 

@@ -101,6 +101,10 @@ ENUM(RangeSelectionKind, RANGE);
 UnaryOperator getUnaryOperator(SyntaxKind kind);
 BinaryOperator getBinaryOperator(SyntaxKind kind);
 
+struct AssignmentPatternExpressionSyntax;
+struct ElementSelectExpressionSyntax;
+struct InvocationExpressionSyntax;
+
 /// The base class for all expressions in SystemVerilog.
 class Expression {
 public:
@@ -240,6 +244,9 @@ public:
     static const InvalidExpression Instance;
 };
 
+struct LiteralExpressionSyntax;
+struct IntegerVectorExpressionSyntax;
+
 /// Represents an integer literal.
 class IntegerLiteral : public Expression {
 public:
@@ -374,6 +381,9 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 };
 
+struct PostfixUnaryExpressionSyntax;
+struct PrefixUnaryExpressionSyntax;
+
 /// Represents a unary operator expression.
 class UnaryExpression : public Expression {
 public:
@@ -407,6 +417,8 @@ private:
     Expression* operand_;
 };
 
+struct BinaryExpressionSyntax;
+
 /// Represents a binary operator expression.
 class BinaryExpression : public Expression {
 public:
@@ -438,6 +450,8 @@ private:
     Expression* left_;
     Expression* right_;
 };
+
+struct ConditionalExpressionSyntax;
 
 /// Represents a conditional operator expression.
 class ConditionalExpression : public Expression {
@@ -538,6 +552,8 @@ private:
     Expression* selector_;
 };
 
+struct RangeSelectSyntax;
+
 /// Represents a range selection expression.
 class RangeSelectExpression : public Expression {
 public:
@@ -578,6 +594,8 @@ private:
     const Expression* right_;
 };
 
+struct MemberAccessExpressionSyntax;
+
 /// Represents an access of a structure variable's members.
 class MemberAccessExpression : public Expression {
 public:
@@ -613,6 +631,8 @@ private:
     Expression* value_;
 };
 
+struct ConcatenationExpressionSyntax;
+
 /// Represents a concatenation expression.
 class ConcatenationExpression : public Expression {
 public:
@@ -638,6 +658,8 @@ public:
 private:
     span<const Expression* const> operands_;
 };
+
+struct MultipleConcatenationExpressionSyntax;
 
 /// Represents a replication expression.
 class ReplicationExpression : public Expression {
@@ -716,6 +738,9 @@ private:
     LookupLocation lookupLocation;
 };
 
+struct CastExpressionSyntax;
+struct SignedCastExpressionSyntax;
+
 /// Represents a type conversion expression.
 class ConversionExpression : public Expression {
 public:
@@ -786,6 +811,8 @@ private:
     span<const Expression* const> elements_;
 };
 
+struct SimpleAssignmentPatternSyntax;
+
 /// Represents an assignment pattern expression.
 class SimpleAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
@@ -809,6 +836,8 @@ public:
         return kind == ExpressionKind::SimpleAssignmentPattern;
     }
 };
+
+struct StructuredAssignmentPatternSyntax;
 
 /// Represents an assignment pattern expression.
 class StructuredAssignmentPatternExpression : public AssignmentPatternExpressionBase {
@@ -860,6 +889,8 @@ public:
         return kind == ExpressionKind::StructuredAssignmentPattern;
     }
 };
+
+struct ReplicatedAssignmentPatternSyntax;
 
 /// Represents a replicated assignment pattern expression.
 class ReplicatedAssignmentPatternExpression : public AssignmentPatternExpressionBase {

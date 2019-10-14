@@ -12,6 +12,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/HierarchySymbols.h"
 #include "slang/util/StackContainer.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang {
 

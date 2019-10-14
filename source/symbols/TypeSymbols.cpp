@@ -14,6 +14,7 @@
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypePrinter.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 
 namespace {

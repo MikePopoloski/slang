@@ -10,7 +10,6 @@
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
-#include "slang/syntax/AllSyntax.h"
 
 namespace slang {
 
@@ -218,6 +217,8 @@ private:
                                        LookupLocation location, const Scope& parent);
 };
 
+struct IntegerTypeSyntax;
+
 /// A base class for integral types, which include all scalar types, predefined integer types,
 /// packed arrays, packed structures, packed unions, and enum types.
 class IntegralType : public Type {
@@ -292,6 +293,7 @@ public:
 };
 
 class EnumValueSymbol;
+struct EnumTypeSyntax;
 
 /// Represents an enumerated type.
 class EnumType : public IntegralType, public Scope {
@@ -375,6 +377,8 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Field; }
 };
+
+struct StructUnionTypeSyntax;
 
 /// Represents a packed structure of members.
 class PackedStructType : public IntegralType, public Scope {
@@ -476,6 +480,9 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EventType; }
 };
 
+struct ForwardInterfaceClassTypedefDeclarationSyntax;
+struct ForwardTypedefDeclarationSyntax;
+
 /// A forward declaration of a user-defined type name. A given type name can have
 /// an arbitrary number of forward declarations in the same scope, so each symbol
 /// forms a linked list, headed by the actual type definition.
@@ -505,6 +512,8 @@ public:
 private:
     mutable const ForwardingTypedefSymbol* next = nullptr;
 };
+
+struct TypedefDeclarationSyntax;
 
 /// Represents a type alias, which is introduced via a typedef or type parameter.
 class TypeAliasType : public Type {
@@ -550,6 +559,8 @@ public:
 
     static const ErrorType Instance;
 };
+
+struct NetTypeDeclarationSyntax;
 
 /// Base class for all net types in SystemVerilog.
 ///

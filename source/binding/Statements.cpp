@@ -14,6 +14,7 @@
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/symbols/ASTVisitor.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace {
 

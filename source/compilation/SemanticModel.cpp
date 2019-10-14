@@ -7,6 +7,7 @@
 #include "slang/compilation/SemanticModel.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang {
 
@@ -87,11 +88,6 @@ const GenerateBlockSymbol* SemanticModel::getDeclaredSymbol(const IfGenerateSynt
 const GenerateBlockArraySymbol* SemanticModel::getDeclaredSymbol(const LoopGenerateSyntax& syntax) {
     auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
     return result ? &result->as<GenerateBlockArraySymbol>() : nullptr;
-}
-
-const FormalArgumentSymbol* SemanticModel::getDeclaredSymbol(const FunctionPortSyntax& syntax) {
-    auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
-    return result ? &result->as<FormalArgumentSymbol>() : nullptr;
 }
 
 const SubroutineSymbol* SemanticModel::getDeclaredSymbol(const FunctionDeclarationSyntax& syntax) {

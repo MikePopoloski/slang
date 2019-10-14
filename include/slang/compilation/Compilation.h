@@ -22,6 +22,7 @@ class RootSymbol;
 class SyntaxTree;
 class SystemSubroutine;
 struct CompilationUnitSyntax;
+struct ModuleDeclarationSyntax;
 
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.

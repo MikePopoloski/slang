@@ -14,6 +14,7 @@
 #include "slang/symbols/HierarchySymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/StackContainer.h"
 
