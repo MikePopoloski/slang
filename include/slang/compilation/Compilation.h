@@ -9,20 +9,38 @@
 #include <memory>
 
 #include "slang/diagnostics/Diagnostics.h"
-#include "slang/symbols/TypeSymbols.h"
+#include "slang/numeric/Time.h"
+#include "slang/symbols/Scope.h"
+#include "slang/symbols/Symbol.h"
+#include "slang/syntax/SyntaxNode.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/SafeIndexedVector.h"
 
 namespace slang {
 
+class CHandleType;
 class CompilationUnitSymbol;
 class DefinitionSymbol;
+class ErrorType;
+class EventType;
 class Expression;
+class FloatingType;
+class NullType;
+class PackageSymbol;
+class PackedArrayType;
+class PredefinedIntegerType;
 class RootSymbol;
+class ScalarType;
+class Statement;
+class StringType;
 class SyntaxTree;
 class SystemSubroutine;
+class VoidType;
+
 struct CompilationUnitSyntax;
 struct ModuleDeclarationSyntax;
+
+enum class IntegralFlags : uint8_t;
 
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
@@ -163,24 +181,24 @@ public:
     const NetType& getNetType(TokenKind kind) const;
 
     /// Various built-in type symbols for easy access.
-    const ScalarType& getBitType() const { return bitType; }
-    const ScalarType& getLogicType() const { return logicType; }
-    const ScalarType& getRegType() const { return regType; }
-    const PredefinedIntegerType& getShortIntType() const { return shortIntType; }
-    const PredefinedIntegerType& getIntType() const { return intType; }
-    const PredefinedIntegerType& getLongIntType() const { return longIntType; }
-    const PredefinedIntegerType& getByteType() const { return byteType; }
-    const PredefinedIntegerType& getIntegerType() const { return integerType; }
-    const PredefinedIntegerType& getTimeType() const { return timeType; }
-    const FloatingType& getRealType() const { return realType; }
-    const FloatingType& getRealTimeType() const { return realTimeType; }
-    const FloatingType& getShortRealType() const { return shortRealType; }
-    const StringType& getStringType() const { return stringType; }
-    const CHandleType& getCHandleType() const { return chandleType; }
-    const VoidType& getVoidType() const { return voidType; }
-    const NullType& getNullType() const { return nullType; }
-    const EventType& getEventType() const { return eventType; }
-    const ErrorType& getErrorType() const { return errorType; }
+    const ScalarType& getBitType() const { return *bitType; }
+    const ScalarType& getLogicType() const { return *logicType; }
+    const ScalarType& getRegType() const { return *regType; }
+    const PredefinedIntegerType& getShortIntType() const { return *shortIntType; }
+    const PredefinedIntegerType& getIntType() const { return *intType; }
+    const PredefinedIntegerType& getLongIntType() const { return *longIntType; }
+    const PredefinedIntegerType& getByteType() const { return *byteType; }
+    const PredefinedIntegerType& getIntegerType() const { return *integerType; }
+    const PredefinedIntegerType& getTimeType() const { return *timeType; }
+    const FloatingType& getRealType() const { return *realType; }
+    const FloatingType& getRealTimeType() const { return *realTimeType; }
+    const FloatingType& getShortRealType() const { return *shortRealType; }
+    const StringType& getStringType() const { return *stringType; }
+    const CHandleType& getCHandleType() const { return *chandleType; }
+    const VoidType& getVoidType() const { return *voidType; }
+    const NullType& getNullType() const { return *nullType; }
+    const EventType& getEventType() const { return *eventType; }
+    const ErrorType& getErrorType() const { return *errorType; }
     const Type& getUnsignedIntType();
 
     /// Get the 'wire' built in net type. The rest of the built-in net types are rare enough
@@ -276,27 +294,27 @@ private:
     ScalarType* scalarTypeTable[8]{ nullptr };
 
     // Instances of all the built-in types.
-    ScalarType bitType;
-    ScalarType logicType;
-    ScalarType regType;
-    ScalarType signedBitType;
-    ScalarType signedLogicType;
-    ScalarType signedRegType;
-    PredefinedIntegerType shortIntType;
-    PredefinedIntegerType intType;
-    PredefinedIntegerType longIntType;
-    PredefinedIntegerType byteType;
-    PredefinedIntegerType integerType;
-    PredefinedIntegerType timeType;
-    FloatingType realType;
-    FloatingType realTimeType;
-    FloatingType shortRealType;
-    StringType stringType;
-    CHandleType chandleType;
-    VoidType voidType;
-    NullType nullType;
-    EventType eventType;
-    ErrorType errorType;
+    ScalarType* bitType;
+    ScalarType* logicType;
+    ScalarType* regType;
+    ScalarType* signedBitType;
+    ScalarType* signedLogicType;
+    ScalarType* signedRegType;
+    PredefinedIntegerType* shortIntType;
+    PredefinedIntegerType* intType;
+    PredefinedIntegerType* longIntType;
+    PredefinedIntegerType* byteType;
+    PredefinedIntegerType* integerType;
+    PredefinedIntegerType* timeType;
+    FloatingType* realType;
+    FloatingType* realTimeType;
+    FloatingType* shortRealType;
+    StringType* stringType;
+    CHandleType* chandleType;
+    VoidType* voidType;
+    NullType* nullType;
+    EventType* eventType;
+    ErrorType* errorType;
     NetType* wireNetType;
 };
 

@@ -11,6 +11,8 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/HierarchySymbols.h"
+#include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/TypeSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 

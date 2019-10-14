@@ -17,6 +17,8 @@
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/HierarchySymbols.h"
+#include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/TypeSymbols.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"

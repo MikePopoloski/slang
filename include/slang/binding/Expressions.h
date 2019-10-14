@@ -8,13 +8,19 @@
 
 #include "slang/binding/BindContext.h"
 #include "slang/binding/EvalContext.h"
-#include "slang/symbols/MemberSymbols.h"
-#include "slang/symbols/TypeSymbols.h"
 
 namespace slang {
 
+class Symbol;
+class FieldSymbol;
+class SubroutineSymbol;
+class ValueSymbol;
 class SystemSubroutine;
+class Type;
+struct AssignmentPatternExpressionSyntax;
+struct ElementSelectExpressionSyntax;
 struct ExpressionSyntax;
+struct InvocationExpressionSyntax;
 
 // clang-format off
 #define EXPRESSION(x) \
@@ -100,10 +106,6 @@ ENUM(RangeSelectionKind, RANGE);
 
 UnaryOperator getUnaryOperator(SyntaxKind kind);
 BinaryOperator getBinaryOperator(SyntaxKind kind);
-
-struct AssignmentPatternExpressionSyntax;
-struct ElementSelectExpressionSyntax;
-struct InvocationExpressionSyntax;
 
 /// The base class for all expressions in SystemVerilog.
 class Expression {

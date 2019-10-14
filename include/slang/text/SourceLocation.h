@@ -140,6 +140,16 @@ private:
     SourceLocation endLoc;
 };
 
+/// Represents a source buffer; that is, the actual text of the source
+/// code along with an identifier for the buffer which potentially
+/// encodes its include stack.
+struct SourceBuffer {
+    string_view data;
+    BufferID id;
+
+    explicit operator bool() const { return id.valid(); }
+};
+
 } // namespace slang
 
 namespace std {

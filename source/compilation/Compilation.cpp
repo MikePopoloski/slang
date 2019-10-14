@@ -90,38 +90,53 @@ void registerSystemTasks(Compilation&);
 
 namespace slang {
 
-Compilation::Compilation() :
-    bitType(ScalarType::Bit), logicType(ScalarType::Logic), regType(ScalarType::Reg),
-    signedBitType(ScalarType::Bit, true), signedLogicType(ScalarType::Logic, true),
-    signedRegType(ScalarType::Reg, true), shortIntType(PredefinedIntegerType::ShortInt),
-    intType(PredefinedIntegerType::Int), longIntType(PredefinedIntegerType::LongInt),
-    byteType(PredefinedIntegerType::Byte), integerType(PredefinedIntegerType::Integer),
-    timeType(PredefinedIntegerType::Time), realType(FloatingType::Real),
-    realTimeType(FloatingType::RealTime), shortRealType(FloatingType::ShortReal) {
+Compilation::Compilation() {
+    // Construct all built-in types.
+    bitType = emplace<ScalarType>(ScalarType::Bit);
+    logicType = emplace<ScalarType>(ScalarType::Logic);
+    regType = emplace<ScalarType>(ScalarType::Reg);
+    signedBitType = emplace<ScalarType>(ScalarType::Bit, true);
+    signedLogicType = emplace<ScalarType>(ScalarType::Logic, true);
+    signedRegType = emplace<ScalarType>(ScalarType::Reg, true);
+    shortIntType = emplace<PredefinedIntegerType>(PredefinedIntegerType::ShortInt);
+    intType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Int);
+    longIntType = emplace<PredefinedIntegerType>(PredefinedIntegerType::LongInt);
+    byteType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Byte);
+    integerType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Integer);
+    timeType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Time);
+    realType = emplace<FloatingType>(FloatingType::Real);
+    realTimeType = emplace<FloatingType>(FloatingType::RealTime);
+    shortRealType = emplace<FloatingType>(FloatingType::ShortReal);
+    stringType = emplace<StringType>();
+    chandleType = emplace<CHandleType>();
+    voidType = emplace<VoidType>();
+    nullType = emplace<NullType>();
+    eventType = emplace<EventType>();
+    errorType = emplace<ErrorType>();
 
     // Register built-in types for lookup by syntax kind.
-    knownTypes[SyntaxKind::ShortIntType] = &shortIntType;
-    knownTypes[SyntaxKind::IntType] = &intType;
-    knownTypes[SyntaxKind::LongIntType] = &longIntType;
-    knownTypes[SyntaxKind::ByteType] = &byteType;
-    knownTypes[SyntaxKind::BitType] = &bitType;
-    knownTypes[SyntaxKind::LogicType] = &logicType;
-    knownTypes[SyntaxKind::RegType] = &regType;
-    knownTypes[SyntaxKind::IntegerType] = &integerType;
-    knownTypes[SyntaxKind::TimeType] = &timeType;
-    knownTypes[SyntaxKind::RealType] = &realType;
-    knownTypes[SyntaxKind::RealTimeType] = &realTimeType;
-    knownTypes[SyntaxKind::ShortRealType] = &shortRealType;
-    knownTypes[SyntaxKind::StringType] = &stringType;
-    knownTypes[SyntaxKind::CHandleType] = &chandleType;
-    knownTypes[SyntaxKind::VoidType] = &voidType;
-    knownTypes[SyntaxKind::NullLiteralExpression] = &nullType;
-    knownTypes[SyntaxKind::EventType] = &eventType;
-    knownTypes[SyntaxKind::Unknown] = &errorType;
+    knownTypes[SyntaxKind::ShortIntType] = shortIntType;
+    knownTypes[SyntaxKind::IntType] = intType;
+    knownTypes[SyntaxKind::LongIntType] = longIntType;
+    knownTypes[SyntaxKind::ByteType] = byteType;
+    knownTypes[SyntaxKind::BitType] = bitType;
+    knownTypes[SyntaxKind::LogicType] = logicType;
+    knownTypes[SyntaxKind::RegType] = regType;
+    knownTypes[SyntaxKind::IntegerType] = integerType;
+    knownTypes[SyntaxKind::TimeType] = timeType;
+    knownTypes[SyntaxKind::RealType] = realType;
+    knownTypes[SyntaxKind::RealTimeType] = realTimeType;
+    knownTypes[SyntaxKind::ShortRealType] = shortRealType;
+    knownTypes[SyntaxKind::StringType] = stringType;
+    knownTypes[SyntaxKind::CHandleType] = chandleType;
+    knownTypes[SyntaxKind::VoidType] = voidType;
+    knownTypes[SyntaxKind::NullLiteralExpression] = nullType;
+    knownTypes[SyntaxKind::EventType] = eventType;
+    knownTypes[SyntaxKind::Unknown] = errorType;
 
 #define MAKE_NETTYPE(type)                                               \
     knownNetTypes[TokenKind::type##Keyword] = std::make_unique<NetType>( \
-        NetType::type, getTokenKindText(TokenKind::type##Keyword), logicType)
+        NetType::type, getTokenKindText(TokenKind::type##Keyword), *logicType)
 
     MAKE_NETTYPE(Wire);
     MAKE_NETTYPE(WAnd);
@@ -137,14 +152,14 @@ Compilation::Compilation() :
     MAKE_NETTYPE(UWire);
 
     knownNetTypes[TokenKind::Unknown] =
-        std::make_unique<NetType>(NetType::Unknown, "<error>", logicType);
+        std::make_unique<NetType>(NetType::Unknown, "<error>", *logicType);
     wireNetType = knownNetTypes[TokenKind::WireKeyword].get();
 
 #undef MAKE_NETTYPE
 
     // Scalar types are indexed by bit flags.
-    auto registerScalar = [this](auto& type) {
-        scalarTypeTable[type.getIntegralFlags().bits() & 0x7] = &type;
+    auto registerScalar = [this](auto type) {
+        scalarTypeTable[type->getIntegralFlags().bits() & 0x7] = type;
     };
     registerScalar(bitType);
     registerScalar(logicType);
@@ -608,7 +623,7 @@ optional<TimeScale> Compilation::getDirectiveTimeScale(const ModuleDeclarationSy
 
 const Type& Compilation::getType(SyntaxKind typeKind) const {
     auto it = knownTypes.find(typeKind);
-    return it == knownTypes.end() ? errorType : *it->second;
+    return it == knownTypes.end() ? *errorType : *it->second;
 }
 
 const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation location,

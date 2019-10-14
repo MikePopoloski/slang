@@ -14,9 +14,7 @@
 
 namespace slang {
 
-class VectorBuilder;
 class BumpAllocator;
-struct SourceBuffer;
 
 /// Contains various options that can control lexing behavior.
 struct LexerOptions {

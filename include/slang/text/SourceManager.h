@@ -20,16 +20,6 @@ namespace fs = std::filesystem;
 
 namespace slang {
 
-/// Represents a source buffer; that is, the actual text of the source
-/// code along with an identifier for the buffer which potentially
-/// encodes its include stack.
-struct SourceBuffer {
-    string_view data;
-    BufferID id;
-
-    explicit operator bool() const { return id.valid(); }
-};
-
 /// SourceManager - Handles loading and tracking source files.
 ///
 /// The source manager abstracts away the differences between

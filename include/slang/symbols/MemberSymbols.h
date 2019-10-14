@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <tuple>
-
 #include "slang/binding/ConstantValue.h"
 #include "slang/binding/Statements.h"
 #include "slang/symbols/SemanticFacts.h"

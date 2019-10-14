@@ -6,9 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
 #include <string>
 #include <variant>
 
@@ -16,6 +13,7 @@
 #include "slang/syntax/SyntaxKind.h"
 #include "slang/util/Iterator.h"
 #include "slang/util/SmallVector.h"
+#include "slang/util/Util.h"
 
 namespace slang {
 
