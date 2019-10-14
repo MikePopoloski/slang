@@ -15,6 +15,9 @@
 #include <utility>     // for many random utility functions
 #include <variant>     // for std::variant
 
+#include "slang/util/Assert.h"
+#include "slang/util/NotNull.h"
+
 using std::byte;
 using std::int16_t;
 using std::int32_t;
@@ -34,39 +37,6 @@ using std::uintptr_t;
 
 using namespace std::literals;
 
-#if !defined(ASSERT_ENABLED)
-#    if !defined(NDEBUG)
-#        define ASSERT_ENABLED 1
-#    endif
-#endif
-
-#if ASSERT_ENABLED
-#    if defined(__GNUC__) || defined(__clang__)
-#        define ASSERT_FUNCTION __PRETTY_FUNCTION__
-#    elif defined(_MSC_VER)
-#        define ASSERT_FUNCTION __FUNCSIG__
-#    elif defined(__SUNPRO_CC)
-#        define ASSERT_FUNCTION __func__
-#    else
-#        define ASSERT_FUNCTION __FUNCTION__
-#    endif
-#    define ASSERT(cond)                                                                 \
-        do {                                                                             \
-            if (!(cond))                                                                 \
-                slang::assert::assertFailed(#cond, __FILE__, __LINE__, ASSERT_FUNCTION); \
-        } while (false)
-
-#else
-#    define ASSERT(cond)        \
-        do {                    \
-            (void)sizeof(cond); \
-        } while (false)
-#endif
-
-#define THROW_UNREACHABLE                                                                  \
-    throw std::logic_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " + \
-                           "Default case should be unreachable!")
-
 #define UTIL_ENUM_ELEMENT(x) x,
 #define UTIL_ENUM_STRING(x) #x,
 #define ENUM(name, elements)                                           \
@@ -83,19 +53,6 @@ using namespace std::literals;
         static const char* strings[] = { elements(UTIL_ENUM_STRING) }; \
         return strings[static_cast<std::underlying_type_t<name>>(e)];  \
     }
-
-#include <gsl/gsl>
-
-using gsl::finally;
-using gsl::make_span;
-using gsl::not_null;
-
-// Compiler-specific macros for warnings and suppressions
-#ifdef __clang__
-#    define NO_SANITIZE(warningName) __attribute__((no_sanitize(warningName)))
-#else
-#    define NO_SANITIZE(warningName)
-#endif
 
 #define span_CONFIG_INDEX_TYPE std::size_t
 #define span_FEATURE_COMPARISON 0
@@ -173,17 +130,6 @@ inline string_view narrow(string_view str) {
 }
 
 #endif
-
-namespace assert {
-
-class AssertionException : public std::logic_error {
-public:
-    AssertionException(const std::string& message) : std::logic_error(message) {}
-};
-
-[[noreturn]] void assertFailed(const char* expr, const char* file, int line, const char* func);
-
-} // namespace assert
 
 } // namespace slang
 

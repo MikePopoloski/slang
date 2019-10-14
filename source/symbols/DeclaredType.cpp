@@ -52,7 +52,7 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
 
     ASSERT(!evaluating);
     evaluating = true;
-    auto guard = finally([this] { evaluating = false; });
+    auto guard = ScopeGuard([this] { evaluating = false; });
 
     if (typeSyntax->kind == SyntaxKind::ImplicitType &&
         (flags & DeclaredTypeFlags::InferImplicit) != 0) {
@@ -86,7 +86,7 @@ void DeclaredType::resolveAt(const BindContext& context) const {
 
     ASSERT(!evaluating);
     evaluating = true;
-    auto guard = finally([this] { evaluating = false; });
+    auto guard = ScopeGuard([this] { evaluating = false; });
 
     // Enums are special in that their initializers target the base type of the enum
     // instead of the actual enum type (which doesn't allow implicit conversions from

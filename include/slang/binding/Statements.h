@@ -8,6 +8,7 @@
 
 #include "slang/binding/EvalContext.h"
 #include "slang/symbols/SemanticFacts.h"
+#include "slang/util/ScopeGuard.h"
 
 namespace slang {
 
@@ -97,7 +98,7 @@ public:
         /// Records that we've entered a loop, and returns a guard that will
         /// revert back to the previous inLoop state on destruction.
         [[nodiscard]] auto enterLoop() {
-            auto guard = finally([this, saved = inLoop] { inLoop = saved; });
+            auto guard = ScopeGuard([this, saved = inLoop] { inLoop = saved; });
             inLoop = true;
             return guard;
         }

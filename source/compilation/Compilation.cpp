@@ -52,7 +52,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
     void handle(const ContinuousAssignSymbol& symbol) { symbol.getAssignment(); }
 
     void handle(const DefinitionSymbol& symbol) {
-        auto guard = finally([saved = inDef, this] { inDef = saved; });
+        auto guard = ScopeGuard([saved = inDef, this] { inDef = saved; });
         inDef = true;
         visitDefault(symbol);
     }
@@ -230,7 +230,7 @@ const RootSymbol& Compilation::getRoot() {
 
     ASSERT(!finalizing);
     finalizing = true;
-    auto guard = finally([this] { finalizing = false; });
+    auto guard = ScopeGuard([this] { finalizing = false; });
 
     // Visit all compilation units added to the design.
     ElaborationVisitor elaborationVisitor;
