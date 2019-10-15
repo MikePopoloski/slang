@@ -72,7 +72,7 @@ SequentialBlockStatement* Statement::StatementContext::tryGetBlock(Compilation& 
 }
 
 const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
-                                 StatementContext& stmtCtx) {
+                                 StatementContext& stmtCtx, bool inList) {
     // TODO:
     /*if (syntax.label) {
         results.append(SequentialBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
@@ -84,6 +84,8 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
     switch (syntax.kind) {
         case SyntaxKind::EmptyStatement:
             result = comp.emplace<EmptyStatement>();
+            if (inList && syntax.attributes.empty())
+                context.addDiag(diag::EmptyStatement, syntax.sourceRange());
             break;
         case SyntaxKind::ReturnStatement:
             result =
@@ -418,7 +420,8 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
         auto& items = *std::get<const SyntaxList<SyntaxNode>*>(syntax);
         for (auto item : items) {
             if (StatementSyntax::isKind(item->kind)) {
-                buffer.append(&Statement::bind(item->as<StatementSyntax>(), context, stmtCtx));
+                buffer.append(&Statement::bind(item->as<StatementSyntax>(), context, stmtCtx,
+                                               /* inList */ true));
                 anyBad |= buffer.back()->bad();
             }
         }
@@ -460,7 +463,8 @@ Statement& SequentialBlockStatement::fromSyntax(Compilation& compilation,
     bool anyBad = false;
     SmallVectorSized<const Statement*, 8> buffer;
     for (auto item : syntax.items) {
-        auto& stmt = Statement::bind(item->as<StatementSyntax>(), context, stmtCtx);
+        auto& stmt =
+            Statement::bind(item->as<StatementSyntax>(), context, stmtCtx, /* inList */ true);
         buffer.append(&stmt);
         anyBad |= stmt.bad();
     }

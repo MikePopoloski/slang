@@ -11,15 +11,18 @@
 
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/HierarchySymbols.h"
-#include "slang/util/StackContainer.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/StackContainer.h"
 
 namespace slang {
 
-EmptyMemberSymbol& EmptyMemberSymbol::fromSyntax(Compilation& compilation,
+EmptyMemberSymbol& EmptyMemberSymbol::fromSyntax(Compilation& compilation, const Scope& scope,
                                                  const EmptyMemberSyntax& syntax) {
     auto result = compilation.emplace<EmptyMemberSymbol>(syntax.semi.location());
+
     compilation.addAttributes(*result, syntax.attributes);
+    if (syntax.attributes.empty())
+        scope.addDiag(diag::EmptyMember, syntax.sourceRange());
 
     return *result;
 }

@@ -172,6 +172,7 @@ warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"
 warning unconnected-unnamed-port UnconnectedUnnamedPort "instance does not provide a connection for an unnamed port"
 warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed because `default_nettype is set to 'none'"
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
+warning empty-member EmptyMember "empty member has no effect"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -220,6 +221,7 @@ error CoverStmtNoFail "cover statement cannot have a fail statement"
 error StatementNotInLoop "statement can only be used inside a loop"
 error ExprNotStatement "expression is not allowed as a statement"
 warning event-const EventExpressionConstant "edge expression is constant"
+warning empty-stmt EmptyStatement "empty statement has no effect"
 
 subsystem Types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"
@@ -301,3 +303,5 @@ note NoteAssertionFailed "assertion failed"
 group default = { real-underflow real-overflow literal-overflow ignored-macro-paste case-gen-dup
 				  case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
 				  dup-import redef-macro nonstandard-generate }
+
+group extra = { empty-member empty-stmt }

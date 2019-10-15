@@ -30,7 +30,8 @@ public:
 
     void toJson(json&) const {}
 
-    static EmptyMemberSymbol& fromSyntax(Compilation& compilation, const EmptyMemberSyntax& syntax);
+    static EmptyMemberSymbol& fromSyntax(Compilation& compilation, const Scope& scope,
+                                         const EmptyMemberSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EmptyMember; }
 };

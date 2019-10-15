@@ -108,7 +108,7 @@ public:
 
     /// Binds a statement tree from the given syntax nodes.
     static const Statement& bind(const StatementSyntax& syntax, const BindContext& context,
-                                 StatementContext& stmtCtx);
+                                 StatementContext& stmtCtx, bool inList = false);
 
     template<typename T>
     T& as() {
