@@ -69,7 +69,7 @@ struct AttributeInstanceSyntax;
     x(GenerateBlock) \
     x(GenerateBlockArray) \
     x(ProceduralBlock) \
-    x(SequentialBlock) \
+    x(StatementBlock) \
     x(Net) \
     x(Variable) \
     x(FormalArgument) \

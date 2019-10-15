@@ -26,7 +26,7 @@ public:
 
     const CompilationUnitSymbol* getDeclaredSymbol(const CompilationUnitSyntax& syntax);
     const InstanceSymbol* getDeclaredSymbol(const HierarchyInstantiationSyntax& syntax);
-    const SequentialBlockSymbol* getDeclaredSymbol(const BlockStatementSyntax& syntax);
+    const StatementBlockSymbol* getDeclaredSymbol(const BlockStatementSyntax& syntax);
     const ProceduralBlockSymbol* getDeclaredSymbol(const ProceduralBlockSyntax& syntax);
     const GenerateBlockSymbol* getDeclaredSymbol(const IfGenerateSyntax& syntax);
     const GenerateBlockArraySymbol* getDeclaredSymbol(const LoopGenerateSyntax& syntax);

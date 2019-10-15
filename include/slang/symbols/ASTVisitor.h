@@ -85,7 +85,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         SYMBOL(GenerateBlock);
         SYMBOL(GenerateBlockArray);
         SYMBOL(ProceduralBlock);
-        SYMBOL(SequentialBlock);
+        SYMBOL(StatementBlock);
         SYMBOL(Net);
         SYMBOL(Variable);
         SYMBOL(FormalArgument);
@@ -129,7 +129,7 @@ decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
         case StatementKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
         CASE(Empty, EmptyStatement);
         CASE(List, StatementList);
-        CASE(SequentialBlock, SequentialBlockStatement);
+        CASE(Block, BlockStatement);
         CASE(ExpressionStatement, ExpressionStatement);
         CASE(VariableDeclaration, VariableDeclStatement);
         CASE(Return, ReturnStatement);

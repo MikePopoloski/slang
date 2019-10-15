@@ -61,10 +61,10 @@ bool Statement::verifyConstant(EvalContext& context) const {
     return visit(visitor, context);
 }
 
-SequentialBlockStatement* Statement::StatementContext::tryGetBlock(Compilation& compilation,
-                                                                   const SyntaxNode& node) {
+BlockStatement* Statement::StatementContext::tryGetBlock(Compilation& compilation,
+                                                         const SyntaxNode& node) {
     if (!blocks.empty() && blocks[0]->getSyntax() == &node) {
-        auto result = compilation.emplace<SequentialBlockStatement>(*blocks[0]);
+        auto result = compilation.emplace<BlockStatement>(*blocks[0]);
         blocks = blocks.subspan(1);
         return result;
     }
@@ -141,8 +141,8 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             // should always sync up exactly.
             result = stmtCtx.tryGetBlock(comp, syntax);
             if (!result) {
-                result = &SequentialBlockStatement::fromSyntax(
-                    comp, syntax.as<BlockStatementSyntax>(), context, stmtCtx);
+                result = &BlockStatement::fromSyntax(comp, syntax.as<BlockStatementSyntax>(),
+                                                     context, stmtCtx);
             }
             break;
         case SyntaxKind::TimingControlStatement:
@@ -192,7 +192,7 @@ Statement& Statement::badStmt(Compilation& compilation, const Statement* stmt) {
 }
 
 static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
-                       SmallVector<const SequentialBlockSymbol*>& results) {
+                       SmallVector<const StatementBlockSymbol*>& results) {
     // TODO:
     /*if (syntax.label) {
         results.append(SequentialBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
@@ -225,7 +225,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // - They are unnamed but have variable declarations within them
             auto& block = syntax.as<BlockStatementSyntax>();
             if (block.blockName) {
-                results.append(&SequentialBlockSymbol::fromSyntax(scope.getCompilation(), block));
+                results.append(&StatementBlockSymbol::fromSyntax(scope.getCompilation(), block));
                 return;
             }
 
@@ -233,7 +233,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                 // If we find any decls at all, this block gets its own scope.
                 if (!StatementSyntax::isKind(item->kind)) {
                     results.append(
-                        &SequentialBlockSymbol::fromSyntax(scope.getCompilation(), block));
+                        &StatementBlockSymbol::fromSyntax(scope.getCompilation(), block));
                     return;
                 }
             }
@@ -283,7 +283,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             if (!forLoop.initializers.empty() &&
                 forLoop.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
 
-                results.append(&SequentialBlockSymbol::fromSyntax(scope.getCompilation(), forLoop));
+                results.append(&StatementBlockSymbol::fromSyntax(scope.getCompilation(), forLoop));
             }
             else {
                 recurse(forLoop.statement);
@@ -332,17 +332,17 @@ void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& synta
     stmt = nullptr;
     syntax = &syntax_;
 
-    SmallVectorSized<const SequentialBlockSymbol*, 8> buffer;
+    SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     findBlocks(scope, syntax_, buffer);
     blocks = buffer.copy(scope.getCompilation());
 }
 
-void StatementBinder::setSyntax(const SequentialBlockSymbol& scope,
+void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
                                 const ForLoopStatementSyntax& syntax_) {
     stmt = nullptr;
     syntax = &syntax_;
 
-    SmallVectorSized<const SequentialBlockSymbol*, 8> buffer;
+    SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     findBlocks(scope, *syntax_.statement, buffer);
     blocks = buffer.copy(scope.getCompilation());
 }
@@ -351,7 +351,7 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
     stmt = nullptr;
     syntax = &items;
 
-    SmallVectorSized<const SequentialBlockSymbol*, 8> buffer;
+    SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     for (auto item : items) {
         switch (item->kind) {
             case SyntaxKind::DataDeclaration:
@@ -390,7 +390,7 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
     SmallVectorSized<const Statement*, 8> buffer;
 
     auto scopeKind = scope.asSymbol().kind;
-    if (scopeKind == SymbolKind::SequentialBlock || scopeKind == SymbolKind::Subroutine) {
+    if (scopeKind == SymbolKind::StatementBlock || scopeKind == SymbolKind::Subroutine) {
         // This relies on the language requiring all declarations be at the start
         // of a statement block. Additional work would be required to support
         // declarations anywhere in the block.
@@ -456,10 +456,8 @@ bool StatementList::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
-Statement& SequentialBlockStatement::fromSyntax(Compilation& compilation,
-                                                const BlockStatementSyntax& syntax,
-                                                const BindContext& context,
-                                                StatementContext& stmtCtx) {
+Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
+                                      const BindContext& context, StatementContext& stmtCtx) {
     bool anyBad = false;
     SmallVectorSized<const Statement*, 8> buffer;
     for (auto item : syntax.items) {
@@ -470,24 +468,24 @@ Statement& SequentialBlockStatement::fromSyntax(Compilation& compilation,
     }
 
     auto list = compilation.emplace<StatementList>(buffer.copy(compilation));
-    auto result = compilation.emplace<SequentialBlockStatement>(*list);
+    auto result = compilation.emplace<BlockStatement>(*list);
     if (anyBad)
         return badStmt(compilation, result);
 
     return *result;
 }
 
-const Statement& SequentialBlockStatement::getStatements() const {
+const Statement& BlockStatement::getStatements() const {
     if (block)
         return block->getBody();
     return *list;
 }
 
-ER SequentialBlockStatement::evalImpl(EvalContext& context) const {
+ER BlockStatement::evalImpl(EvalContext& context) const {
     return getStatements().eval(context);
 }
 
-bool SequentialBlockStatement::verifyConstantImpl(EvalContext& context) const {
+bool BlockStatement::verifyConstantImpl(EvalContext& context) const {
     return getStatements().verifyConstant(context);
 }
 
@@ -496,7 +494,7 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
                                        const BindContext& context) {
     // Find the parent subroutine.
     const Scope* scope = &context.scope;
-    while (scope->asSymbol().kind == SymbolKind::SequentialBlock)
+    while (scope->asSymbol().kind == SymbolKind::StatementBlock)
         scope = scope->asSymbol().getParentScope();
 
     auto stmtLoc = syntax.returnKeyword.location();

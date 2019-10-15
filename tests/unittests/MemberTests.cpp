@@ -194,7 +194,7 @@ endmodule
     REQUIRE(attrs.size() == 1);
     CHECK(attrs[0]->name == "blah3");
 
-    auto& block = root.lookupName<SequentialBlockSymbol>("m.block");
+    auto& block = root.lookupName<StatementBlockSymbol>("m.block");
     auto stmtList = block.getBody().as<StatementList>().list;
     REQUIRE(stmtList.size() == 2);
 

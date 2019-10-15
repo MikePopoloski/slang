@@ -146,7 +146,7 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& block = compilation.getRoot().lookupName<SequentialBlockSymbol>("m.block");
+    auto& block = compilation.getRoot().lookupName<StatementBlockSymbol>("m.block");
     auto& cs = block.getBody().as<CaseStatement>();
     CHECK(cs.expr.type->toString() == "logic[8:0]");
 

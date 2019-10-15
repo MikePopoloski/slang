@@ -178,22 +178,22 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }
 };
 
-class SequentialBlockSymbol : public Symbol, public Scope {
+class StatementBlockSymbol : public Symbol, public Scope {
 public:
-    SequentialBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::SequentialBlock, name, loc), Scope(compilation, this) {}
+    StatementBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
+        Symbol(SymbolKind::StatementBlock, name, loc), Scope(compilation, this) {}
 
     void setTemporaryParent(const Scope& scope, SymbolIndex index) { setParent(scope, index); }
     const Statement& getBody() const;
 
     void toJson(json&) const {}
 
-    static SequentialBlockSymbol& fromSyntax(Compilation& compilation,
-                                             const BlockStatementSyntax& syntax);
-    static SequentialBlockSymbol& fromSyntax(Compilation& compilation,
-                                             const ForLoopStatementSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(Compilation& compilation,
+                                            const BlockStatementSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(Compilation& compilation,
+                                            const ForLoopStatementSyntax& syntax);
 
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::SequentialBlock; }
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 
 private:
     StatementBinder binder;
@@ -213,7 +213,7 @@ public:
 
     static ProceduralBlockSymbol& fromSyntax(
         const Scope& scope, const ProceduralBlockSyntax& syntax,
-        span<const SequentialBlockSymbol* const>& additionalBlocks);
+        span<const StatementBlockSymbol* const>& additionalBlocks);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ProceduralBlock; }
 

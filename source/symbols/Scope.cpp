@@ -239,7 +239,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::AlwaysFFBlock:
         case SyntaxKind::InitialBlock:
         case SyntaxKind::FinalBlock: {
-            span<const SequentialBlockSymbol* const> additional;
+            span<const StatementBlockSymbol* const> additional;
             auto& block = ProceduralBlockSymbol::fromSyntax(
                 *this, syntax.as<ProceduralBlockSyntax>(), additional);
 

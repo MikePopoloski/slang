@@ -70,9 +70,9 @@ const InstanceSymbol* SemanticModel::getDeclaredSymbol(const HierarchyInstantiat
     return result ? &result->as<InstanceSymbol>() : nullptr;
 }
 
-const SequentialBlockSymbol* SemanticModel::getDeclaredSymbol(const BlockStatementSyntax& syntax) {
+const StatementBlockSymbol* SemanticModel::getDeclaredSymbol(const BlockStatementSyntax& syntax) {
     auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
-    return result ? &result->as<SequentialBlockSymbol>() : nullptr;
+    return result ? &result->as<StatementBlockSymbol>() : nullptr;
 }
 
 const ProceduralBlockSymbol* SemanticModel::getDeclaredSymbol(const ProceduralBlockSyntax& syntax) {

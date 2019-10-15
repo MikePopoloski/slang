@@ -12,8 +12,8 @@
 
 namespace slang {
 
-class SequentialBlockStatement;
-class SequentialBlockSymbol;
+class BlockStatement;
+class StatementBlockSymbol;
 class TimingControl;
 class VariableSymbol;
 struct ForLoopStatementSyntax;
@@ -24,7 +24,7 @@ struct StatementSyntax;
     x(Invalid) \
     x(Empty) \
     x(List) \
-    x(SequentialBlock) \
+    x(Block) \
     x(ExpressionStatement) \
     x(VariableDeclaration) \
     x(Return) \
@@ -85,7 +85,7 @@ public:
         /// A series of block symbols that are expected to be bound, in order,
         /// during the creation of the statement tree. Each statement created
         /// can pop blocks off the beginning of this list.
-        span<const SequentialBlockSymbol* const> blocks;
+        span<const StatementBlockSymbol* const> blocks;
 
         /// Tracks whether we're currently within a loop (which can control,
         /// for example, whether a break or continue statement is allowed).
@@ -93,9 +93,9 @@ public:
 
         /// Attempts to match up the head of the block list with the given
         /// statement syntax node. If they match, the block symbol is popped
-        /// and returned wrapped inside a SequentialBlockStatement.
+        /// and returned wrapped inside a BlockStatement.
         /// Otherwise nullptr is returned.
-        SequentialBlockStatement* tryGetBlock(Compilation& compilation, const SyntaxNode& syntax);
+        BlockStatement* tryGetBlock(Compilation& compilation, const SyntaxNode& syntax);
 
         /// Records that we've entered a loop, and returns a guard that will
         /// revert back to the previous inLoop state on destruction.
@@ -137,18 +137,18 @@ protected:
 class StatementBinder {
 public:
     void setSyntax(const Scope& scope, const StatementSyntax& syntax);
-    void setSyntax(const SequentialBlockSymbol& scope, const ForLoopStatementSyntax& syntax);
+    void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax);
     void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax);
 
     const Statement& getStatement(const BindContext& context) const;
-    span<const SequentialBlockSymbol* const> getBlocks() const { return blocks; }
+    span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
 
 private:
     const Statement& bindStatement(const BindContext& context) const;
 
     std::variant<const StatementSyntax*, const SyntaxList<SyntaxNode>*> syntax;
     mutable const Statement* stmt = nullptr;
-    span<const SequentialBlockSymbol* const> blocks;
+    span<const StatementBlockSymbol* const> blocks;
 };
 
 /// Represents an invalid statement, which is usually generated and inserted
@@ -194,14 +194,14 @@ public:
 
 struct BlockStatementSyntax;
 
-/// Represents a sequential block statement.
-class SequentialBlockStatement : public Statement {
+/// Represents a sequential or parallel block statement.
+class BlockStatement : public Statement {
 public:
-    explicit SequentialBlockStatement(const SequentialBlockSymbol& block) :
-        Statement(StatementKind::SequentialBlock), block(&block) {}
+    explicit BlockStatement(const StatementBlockSymbol& block) :
+        Statement(StatementKind::Block), block(&block) {}
 
-    explicit SequentialBlockStatement(const StatementList& list) :
-        Statement(StatementKind::SequentialBlock), list(&list) {}
+    explicit BlockStatement(const StatementList& list) :
+        Statement(StatementKind::Block), list(&list) {}
 
     const Statement& getStatements() const;
     EvalResult evalImpl(EvalContext& context) const;
@@ -210,10 +210,10 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
 
-    static bool isKind(StatementKind kind) { return kind == StatementKind::SequentialBlock; }
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Block; }
 
 private:
-    const SequentialBlockSymbol* block = nullptr;
+    const StatementBlockSymbol* block = nullptr;
     const StatementList* list = nullptr;
 };
 

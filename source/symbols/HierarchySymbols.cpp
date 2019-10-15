@@ -13,10 +13,10 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
-#include "slang/util/StackContainer.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/StackContainer.h"
 
 namespace slang {
 
@@ -622,12 +622,12 @@ void InstanceArraySymbol::toJson(json& j) const {
     j["range"] = range.toString();
 }
 
-const Statement& SequentialBlockSymbol::getBody() const {
+const Statement& StatementBlockSymbol::getBody() const {
     return binder.getStatement(BindContext(*this, LookupLocation::max));
 }
 
-SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilation,
-                                                         const BlockStatementSyntax& syntax) {
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
+                                                       const BlockStatementSyntax& syntax) {
     string_view name;
     SourceLocation loc;
     if (syntax.blockName) {
@@ -640,7 +640,7 @@ SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilatio
         loc = syntax.begin.location();
     }
 
-    auto result = compilation.emplace<SequentialBlockSymbol>(compilation, name, loc);
+    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc);
     result->binder.setItems(*result, syntax.items);
     result->setSyntax(syntax);
 
@@ -649,10 +649,10 @@ SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilatio
     return *result;
 }
 
-SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilation,
-                                                         const ForLoopStatementSyntax& syntax) {
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
+                                                       const ForLoopStatementSyntax& syntax) {
     auto result =
-        compilation.emplace<SequentialBlockSymbol>(compilation, "", syntax.forKeyword.location());
+        compilation.emplace<StatementBlockSymbol>(compilation, "", syntax.forKeyword.location());
     result->setSyntax(syntax);
 
     // If one entry is a variable declaration, they should all be.
@@ -680,7 +680,7 @@ const Statement& ProceduralBlockSymbol::getBody() const {
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     const Scope& scope, const ProceduralBlockSyntax& syntax,
-    span<const SequentialBlockSymbol* const>& additionalBlocks) {
+    span<const StatementBlockSymbol* const>& additionalBlocks) {
 
     auto& comp = scope.getCompilation();
     auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
@@ -927,7 +927,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    auto& iterScope = *compilation.emplace<SequentialBlockSymbol>(compilation, "", loc);
+    auto& iterScope = *compilation.emplace<StatementBlockSymbol>(compilation, "", loc);
     auto& local = *compilation.emplace<VariableSymbol>(genvar.valueText(), genvar.location());
     local.setType(compilation.getIntegerType());
 
