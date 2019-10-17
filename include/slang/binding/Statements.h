@@ -108,7 +108,8 @@ public:
 
     /// Binds a statement tree from the given syntax nodes.
     static const Statement& bind(const StatementSyntax& syntax, const BindContext& context,
-                                 StatementContext& stmtCtx, bool inList = false);
+                                 StatementContext& stmtCtx, bool inList = false,
+                                 bool labelHandled = false);
 
     template<typename T>
     T& as() {
@@ -136,7 +137,7 @@ protected:
 /// defer statement binding until its actually needed.
 class StatementBinder {
 public:
-    void setSyntax(const Scope& scope, const StatementSyntax& syntax);
+    void setSyntax(const Scope& scope, const StatementSyntax& syntax, bool labelHandled);
     void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax);
     void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax);
 
@@ -149,6 +150,7 @@ private:
     std::variant<const StatementSyntax*, const SyntaxList<SyntaxNode>*> syntax;
     mutable const Statement* stmt = nullptr;
     span<const StatementBlockSymbol* const> blocks;
+    bool labelHandled = false;
 };
 
 /// Represents an invalid statement, which is usually generated and inserted

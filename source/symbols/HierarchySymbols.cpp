@@ -626,12 +626,22 @@ const Statement& StatementBlockSymbol::getBody() const {
     return binder.getStatement(BindContext(*this, LookupLocation::max));
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const BlockStatementSyntax& syntax) {
     string_view name;
     SourceLocation loc;
     if (syntax.blockName) {
         auto token = syntax.blockName->name;
+        name = token.valueText();
+        loc = token.location();
+
+        if (syntax.label) {
+            scope.addDiag(diag::LabelAndName, syntax.blockName->sourceRange())
+                << syntax.label->sourceRange();
+        }
+    }
+    else if (syntax.label) {
+        auto token = syntax.label->name;
         name = token.valueText();
         loc = token.location();
     }
@@ -640,22 +650,34 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
         loc = syntax.begin.location();
     }
 
-    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc);
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc);
     result->binder.setItems(*result, syntax.items);
     result->setSyntax(syntax);
 
-    compilation.addAttributes(*result, syntax.attributes);
+    comp.addAttributes(*result, syntax.attributes);
 
     return *result;
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
                                                        const ForLoopStatementSyntax& syntax) {
-    auto result =
-        compilation.emplace<StatementBlockSymbol>(compilation, "", syntax.forKeyword.location());
+    string_view name;
+    SourceLocation loc;
+    if (syntax.label) {
+        auto token = syntax.label->name;
+        name = token.valueText();
+        loc = token.location();
+    }
+    else {
+        name = "";
+        loc = syntax.forKeyword.location();
+    }
+
+    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc);
     result->setSyntax(syntax);
 
-    // If one entry is a variable declaration, they should all be.
+    // If one entry is a variable declaration, they must all be.
     const VariableSymbol* lastVar = nullptr;
     for (auto init : syntax.initializers) {
         auto& var = VariableSymbol::fromSyntax(compilation,
@@ -674,6 +696,21 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
     return *result;
 }
 
+StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(Compilation& compilation,
+                                                            const StatementSyntax& syntax) {
+    auto token = syntax.label->name;
+    string_view name = token.valueText();
+    SourceLocation loc = token.location();
+
+    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc);
+    result->binder.setSyntax(*result, syntax, /* labelHandled */ true);
+    result->setSyntax(syntax);
+
+    compilation.addAttributes(*result, syntax.attributes);
+
+    return *result;
+}
+
 const Statement& ProceduralBlockSymbol::getBody() const {
     return binder.getStatement(BindContext(*getParentScope(), LookupLocation::after(*this)));
 }
@@ -686,7 +723,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
     auto result = comp.emplace<ProceduralBlockSymbol>(syntax.keyword.location(), kind);
 
-    result->binder.setSyntax(scope, *syntax.statement);
+    result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false);
     result->setSyntax(syntax);
     comp.addAttributes(*result, syntax.attributes);
 

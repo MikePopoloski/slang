@@ -386,3 +386,52 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Statement labels") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    int j;
+    initial begin
+        label1: j <= 2;
+    end
+
+    always label2: begin
+    end
+
+    initial begin
+        label3: for (int i = 0; i < 3; i++) begin end
+    end
+
+    initial begin : name label5: begin end end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& m = compilation.getRoot().lookupName<ModuleInstanceSymbol>("m");
+    CHECK(m.lookupName("label1"));
+    CHECK(m.lookupName("label2"));
+    CHECK(m.lookupName("label3"));
+    CHECK(m.lookupName("name"));
+    CHECK(m.lookupName<StatementBlockSymbol>("name").lookupName("label5"));
+}
+
+TEST_CASE("Statement block with label and name") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial label1: begin : label2
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::LabelAndName);
+}

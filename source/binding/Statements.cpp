@@ -71,16 +71,30 @@ BlockStatement* Statement::StatementContext::tryGetBlock(Compilation& compilatio
     return nullptr;
 }
 
-const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
-                                 StatementContext& stmtCtx, bool inList) {
-    // TODO:
-    /*if (syntax.label) {
-        results.append(SequentialBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
-        return;
-    }*/
+static bool hasSimpleLabel(const StatementSyntax& syntax) {
+    if (!syntax.label)
+        return false;
 
+    return syntax.kind != SyntaxKind::SequentialBlockStatement &&
+           syntax.kind != SyntaxKind::ParallelBlockStatement &&
+           syntax.kind != SyntaxKind::ForLoopStatement &&
+           syntax.kind != SyntaxKind::ForeachLoopStatement;
+}
+
+const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
+                                 StatementContext& stmtCtx, bool inList, bool labelHandled) {
     auto& comp = context.scope.getCompilation();
     Statement* result;
+
+    if (!labelHandled && hasSimpleLabel(syntax)) {
+        result = stmtCtx.tryGetBlock(comp, syntax);
+        ASSERT(result);
+
+        result->syntax = &syntax;
+        comp.addAttributes(*result, syntax.attributes);
+        return *result;
+    }
+
     switch (syntax.kind) {
         case SyntaxKind::EmptyStatement:
             result = comp.emplace<EmptyStatement>();
@@ -192,12 +206,12 @@ Statement& Statement::badStmt(Compilation& compilation, const Statement* stmt) {
 }
 
 static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
-                       SmallVector<const StatementBlockSymbol*>& results) {
-    // TODO:
-    /*if (syntax.label) {
-        results.append(SequentialBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
+                       SmallVector<const StatementBlockSymbol*>& results,
+                       bool labelHandled = false) {
+    if (!labelHandled && hasSimpleLabel(syntax)) {
+        results.append(&StatementBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
         return;
-    }*/
+    }
 
     auto recurse = [&](auto stmt) { findBlocks(scope, *stmt, results); };
 
@@ -221,19 +235,18 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         case SyntaxKind::SequentialBlockStatement:
         case SyntaxKind::ParallelBlockStatement: {
             // Block statements form their own hierarchy scope if:
-            // - They have a name
+            // - They have a name (or a label)
             // - They are unnamed but have variable declarations within them
             auto& block = syntax.as<BlockStatementSyntax>();
-            if (block.blockName) {
-                results.append(&StatementBlockSymbol::fromSyntax(scope.getCompilation(), block));
+            if (block.blockName || block.label) {
+                results.append(&StatementBlockSymbol::fromSyntax(scope, block));
                 return;
             }
 
             for (auto item : block.items) {
                 // If we find any decls at all, this block gets its own scope.
                 if (!StatementSyntax::isKind(item->kind)) {
-                    results.append(
-                        &StatementBlockSymbol::fromSyntax(scope.getCompilation(), block));
+                    results.append(&StatementBlockSymbol::fromSyntax(scope, block));
                     return;
                 }
             }
@@ -285,6 +298,11 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
 
                 results.append(&StatementBlockSymbol::fromSyntax(scope.getCompilation(), forLoop));
             }
+            else if (syntax.label) {
+                results.append(
+                    &StatementBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
+                return;
+            }
             else {
                 recurse(forLoop.statement);
             }
@@ -328,12 +346,14 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
     }
 }
 
-void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& syntax_) {
+void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& syntax_,
+                                bool labelHandled_) {
     stmt = nullptr;
     syntax = &syntax_;
+    labelHandled = labelHandled_;
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, syntax_, buffer);
+    findBlocks(scope, syntax_, buffer, labelHandled);
     blocks = buffer.copy(scope.getCompilation());
 }
 
@@ -341,6 +361,7 @@ void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
                                 const ForLoopStatementSyntax& syntax_) {
     stmt = nullptr;
     syntax = &syntax_;
+    labelHandled = false;
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     findBlocks(scope, *syntax_.statement, buffer);
@@ -350,6 +371,7 @@ void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
 void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items) {
     stmt = nullptr;
     syntax = &items;
+    labelHandled = false;
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     for (auto item : items) {
@@ -412,7 +434,8 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
 
     if (auto stmtSyntax = std::get_if<const StatementSyntax*>(&syntax)) {
         if (auto ptr = *stmtSyntax) {
-            buffer.append(&Statement::bind(*ptr, context, stmtCtx));
+            buffer.append(
+                &Statement::bind(*ptr, context, stmtCtx, /* inList */ false, labelHandled));
             anyBad |= buffer.back()->bad();
         }
     }
@@ -458,6 +481,9 @@ bool StatementList::verifyConstantImpl(EvalContext& context) const {
 
 Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
                                       const BindContext& context, StatementContext& stmtCtx) {
+    ASSERT(!syntax.blockName);
+    ASSERT(!syntax.label);
+
     bool anyBad = false;
     SmallVectorSized<const Statement*, 8> buffer;
     for (auto item : syntax.items) {
@@ -471,6 +497,8 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
     auto result = compilation.emplace<BlockStatement>(*list);
     if (anyBad)
         return badStmt(compilation, result);
+
+    // TODO: check end name
 
     return *result;
 }

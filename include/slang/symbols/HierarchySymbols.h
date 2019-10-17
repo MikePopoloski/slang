@@ -188,10 +188,11 @@ public:
 
     void toJson(json&) const {}
 
-    static StatementBlockSymbol& fromSyntax(Compilation& compilation,
-                                            const BlockStatementSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(Compilation& compilation,
                                             const ForLoopStatementSyntax& syntax);
+    static StatementBlockSymbol& fromLabeledStmt(Compilation& compilation,
+                                                 const StatementSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 
