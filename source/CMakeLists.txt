@@ -146,7 +146,6 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 	target_compile_options(slang PRIVATE
 		-Wunused-value
 		-Wformat-security
-		-Wnull-dereference
 		-Wimplicit-fallthrough=5
 		-Walloc-zero
 		-Wlogical-op
