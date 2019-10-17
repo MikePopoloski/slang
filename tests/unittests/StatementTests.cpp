@@ -435,3 +435,52 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::LabelAndName);
 }
+
+TEST_CASE("Parallel blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial fork
+        int i = 4;
+        i += 2;
+    join
+
+    int j = 0;
+    initial begin
+        begin end
+        fork : bar
+            j = 1;
+            j = 2;
+        join_any
+        fork : foo
+        join_none
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Parallel blocks -- invalid in constexpr") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function int foo;
+        int i = 0;
+        fork : asdf
+            i += 2;
+        join
+        return i;
+    endfunction
+
+    localparam int bar = foo();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpressionNotConstant);
+}

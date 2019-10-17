@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/SemanticFacts.h"
 
+#include "slang/syntax/AllSyntax.h"
+
 namespace slang::SemanticFacts {
 
 // clang-format off
@@ -68,5 +70,20 @@ AssertionKind getAssertKind(SyntaxKind kind) {
 }
 
 // clang-format on
+
+StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax) {
+    if (syntax.kind == SyntaxKind::SequentialBlockStatement)
+        return StatementBlockKind::Sequential;
+
+    ASSERT(syntax.kind == SyntaxKind::ParallelBlockStatement);
+    switch (syntax.end.kind) {
+        case TokenKind::JoinAnyKeyword:
+            return StatementBlockKind::JoinAny;
+        case TokenKind::JoinNoneKeyword:
+            return StatementBlockKind::JoinNone;
+        default:
+            return StatementBlockKind::JoinAll;
+    }
+}
 
 } // namespace slang::SemanticFacts

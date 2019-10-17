@@ -64,7 +64,7 @@ bool Statement::verifyConstant(EvalContext& context) const {
 BlockStatement* Statement::StatementContext::tryGetBlock(Compilation& compilation,
                                                          const SyntaxNode& node) {
     if (!blocks.empty() && blocks[0]->getSyntax() == &node) {
-        auto result = compilation.emplace<BlockStatement>(*blocks[0]);
+        auto result = compilation.emplace<BlockStatement>(*blocks[0], node.sourceRange());
         blocks = blocks.subspan(1);
         return result;
     }
@@ -97,7 +97,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
 
     switch (syntax.kind) {
         case SyntaxKind::EmptyStatement:
-            result = comp.emplace<EmptyStatement>();
+            result = comp.emplace<EmptyStatement>(syntax.sourceRange());
             if (inList && syntax.attributes.empty())
                 context.addDiag(diag::EmptyStatement, syntax.sourceRange());
             break;
@@ -150,6 +150,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                                                       context);
             break;
         case SyntaxKind::SequentialBlockStatement:
+        case SyntaxKind::ParallelBlockStatement:
             // A block statement may or may not match up with a hierarchy node. Handle both cases
             // here. We traverse statements in the same order as the findBlocks call below, so this
             // should always sync up exactly.
@@ -178,7 +179,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::BlockingEventTriggerStatement:
         case SyntaxKind::NonblockingEventTriggerStatement:
         case SyntaxKind::WaitForkStatement:
-        case SyntaxKind::ParallelBlockStatement:
         case SyntaxKind::ForeachLoopStatement:
         case SyntaxKind::WaitStatement:
         case SyntaxKind::RandCaseStatement:
@@ -420,11 +420,13 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
             if (member.kind != SymbolKind::Variable)
                 continue;
 
-            // Filter out implicitly generated function return type variables,
-            // they are initialized elsewhere.
+            // Filter out implicitly generated function return type variables -- they are
+            // initialized elsewhere. Note that we manufacture a somewhat reasonable
+            // source range here, since we don't have the real one.
             auto& var = member.as<VariableSymbol>();
+            SourceRange range{ var.location, var.location + var.name.length() };
             if (!var.isCompilerGenerated)
-                buffer.append(comp.emplace<VariableDeclStatement>(var));
+                buffer.append(comp.emplace<VariableDeclStatement>(var, range));
         }
     }
 
@@ -479,6 +481,10 @@ bool StatementList::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
+BlockStatement::BlockStatement(const StatementBlockSymbol& block, SourceRange sourceRange) :
+    Statement(StatementKind::Block, sourceRange), blockKind(block.blockKind), block(&block) {
+}
+
 Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
                                       const BindContext& context, StatementContext& stmtCtx) {
     ASSERT(!syntax.blockName);
@@ -494,7 +500,8 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
     }
 
     auto list = compilation.emplace<StatementList>(buffer.copy(compilation));
-    auto result = compilation.emplace<BlockStatement>(*list);
+    auto result = compilation.emplace<BlockStatement>(
+        *list, SemanticFacts::getStatementBlockKind(syntax), syntax.sourceRange());
     if (anyBad)
         return badStmt(compilation, result);
 
@@ -510,16 +517,25 @@ const Statement& BlockStatement::getStatements() const {
 }
 
 ER BlockStatement::evalImpl(EvalContext& context) const {
+    if (blockKind != StatementBlockKind::Sequential)
+        return ER::Fail;
+
     return getStatements().eval(context);
 }
 
 bool BlockStatement::verifyConstantImpl(EvalContext& context) const {
+    if (blockKind != StatementBlockKind::Sequential) {
+        context.addDiag(diag::NoteParallelBlockNotConst, sourceRange);
+        return false;
+    }
+
     return getStatements().verifyConstant(context);
 }
 
 Statement& ReturnStatement::fromSyntax(Compilation& compilation,
                                        const ReturnStatementSyntax& syntax,
                                        const BindContext& context) {
+    // TODO: disallow in parallel blocks
     // Find the parent subroutine.
     const Scope* scope = &context.scope;
     while (scope->asSymbol().kind == SymbolKind::StatementBlock)
@@ -535,7 +551,7 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
     auto& expr =
         Expression::bind(subroutine.getReturnType(), *syntax.returnValue, stmtLoc, context);
 
-    auto result = compilation.emplace<ReturnStatement>(&expr);
+    auto result = compilation.emplace<ReturnStatement>(&expr, syntax.sourceRange());
     if (expr.bad())
         return badStmt(compilation, result);
 
@@ -561,7 +577,7 @@ bool ReturnStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& BreakStatement::fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
                                       const BindContext& context, StatementContext& stmtCtx) {
-    auto result = compilation.emplace<BreakStatement>();
+    auto result = compilation.emplace<BreakStatement>(syntax.sourceRange());
     if (!stmtCtx.inLoop) {
         context.addDiag(diag::StatementNotInLoop, syntax.sourceRange());
         return badStmt(compilation, result);
@@ -580,7 +596,7 @@ bool BreakStatement::verifyConstantImpl(EvalContext&) const {
 Statement& ContinueStatement::fromSyntax(Compilation& compilation,
                                          const JumpStatementSyntax& syntax,
                                          const BindContext& context, StatementContext& stmtCtx) {
-    auto result = compilation.emplace<ContinueStatement>();
+    auto result = compilation.emplace<ContinueStatement>(syntax.sourceRange());
     if (!stmtCtx.inLoop) {
         context.addDiag(diag::StatementNotInLoop, syntax.sourceRange());
         return badStmt(compilation, result);
@@ -655,7 +671,8 @@ Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
                                    context.resetFlags(elseFlags), stmtCtx);
     }
 
-    auto result = compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse);
+    auto result =
+        compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse, syntax.sourceRange());
     if (ifTrue.bad() || (ifFalse && ifFalse->bad()))
         return badStmt(compilation, result);
 
@@ -789,8 +806,8 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
         }
     }
 
-    auto result = compilation.emplace<CaseStatement>(condition, check, *expr,
-                                                     items.copy(compilation), defStmt);
+    auto result = compilation.emplace<CaseStatement>(
+        condition, check, *expr, items.copy(compilation), defStmt, syntax.sourceRange());
     if (bad)
         return badStmt(compilation, result);
 
@@ -914,7 +931,8 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<ForLoopStatement>(initializers.copy(compilation), &stopExpr,
-                                                        steps.copy(compilation), bodyStmt);
+                                                        steps.copy(compilation), bodyStmt,
+                                                        syntax.sourceRange());
 
     if (anyBad || stopExpr.bad() || bodyStmt.bad())
         return badStmt(compilation, result);
@@ -984,7 +1002,8 @@ Statement& RepeatLoopStatement::fromSyntax(Compilation& compilation,
     }
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
-    auto result = compilation.emplace<RepeatLoopStatement>(countExpr, bodyStmt);
+    auto result =
+        compilation.emplace<RepeatLoopStatement>(countExpr, bodyStmt, syntax.sourceRange());
 
     if (bad || bodyStmt.bad())
         return badStmt(compilation, result);
@@ -1036,7 +1055,7 @@ Statement& WhileLoopStatement::fromSyntax(Compilation& compilation,
         bad = true;
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
-    auto result = compilation.emplace<WhileLoopStatement>(condExpr, bodyStmt);
+    auto result = compilation.emplace<WhileLoopStatement>(condExpr, bodyStmt, syntax.sourceRange());
 
     if (bad || bodyStmt.bad())
         return badStmt(compilation, result);
@@ -1079,7 +1098,8 @@ Statement& DoWhileLoopStatement::fromSyntax(Compilation& compilation,
         bad = true;
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
-    auto result = compilation.emplace<DoWhileLoopStatement>(condExpr, bodyStmt);
+    auto result =
+        compilation.emplace<DoWhileLoopStatement>(condExpr, bodyStmt, syntax.sourceRange());
 
     if (bad || bodyStmt.bad())
         return badStmt(compilation, result);
@@ -1117,7 +1137,7 @@ Statement& ForeverLoopStatement::fromSyntax(Compilation& compilation,
     auto guard = stmtCtx.enterLoop();
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
-    auto result = compilation.emplace<ForeverLoopStatement>(bodyStmt);
+    auto result = compilation.emplace<ForeverLoopStatement>(bodyStmt, syntax.sourceRange());
     if (bodyStmt.bad())
         return badStmt(compilation, result);
 
@@ -1146,7 +1166,7 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const ExpressionStatementSyntax& syntax,
                                            const BindContext& context) {
     auto& expr = Expression::bind(*syntax.expr, context);
-    auto result = compilation.emplace<ExpressionStatement>(expr);
+    auto result = compilation.emplace<ExpressionStatement>(expr, syntax.sourceRange());
     if (expr.bad())
         return badStmt(compilation, result);
 
@@ -1191,7 +1211,7 @@ Statement& TimedStatement::fromSyntax(Compilation& compilation,
                                       const BindContext& context, StatementContext& stmtCtx) {
     auto& timing = TimingControl::bind(*syntax.timingControl, context);
     auto& stmt = Statement::bind(*syntax.statement, context, stmtCtx);
-    auto result = compilation.emplace<TimedStatement>(timing, stmt);
+    auto result = compilation.emplace<TimedStatement>(timing, stmt, syntax.sourceRange());
 
     if (timing.bad() || stmt.bad())
         return badStmt(compilation, result);
@@ -1210,8 +1230,7 @@ bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
     if (context.isScriptEval())
         return true;
 
-    ASSERT(timing.syntax);
-    context.addDiag(diag::NoteTimedStmtNotConst, timing.syntax->sourceRange());
+    context.addDiag(diag::NoteTimedStmtNotConst, sourceRange);
     return false;
 }
 
@@ -1243,8 +1262,8 @@ Statement& AssertionStatement::fromSyntax(Compilation& compilation,
 
     // TODO: add checking for requirements on deferred assertion actions
 
-    auto result = compilation.emplace<AssertionStatement>(assertKind, cond, ifTrue, ifFalse,
-                                                          isDeferred, isFinal);
+    auto result = compilation.emplace<AssertionStatement>(
+        assertKind, cond, ifTrue, ifFalse, isDeferred, isFinal, syntax.sourceRange());
     if ((ifTrue && ifTrue->bad()) || (ifFalse && ifFalse->bad()))
         return badStmt(compilation, result);
 
@@ -1268,9 +1287,7 @@ ER AssertionStatement::evalImpl(EvalContext& context) const {
     if (assertionKind == AssertionKind::Cover)
         return ER::Success;
 
-    // TODO: give statements a guaranteed SourceRange member
-    ASSERT(cond.syntax);
-    context.addDiag(diag::NoteAssertionFailed, cond.syntax->sourceRange());
+    context.addDiag(diag::NoteAssertionFailed, sourceRange);
     return ER::Fail;
 }
 
@@ -1285,9 +1302,7 @@ bool AssertionStatement::verifyConstantImpl(EvalContext& context) const {
         return false;
 
     if (isDeferred) {
-        // TODO: give statements a guaranteed SourceRange member
-        ASSERT(syntax);
-        context.addDiag(diag::NoteTimedStmtNotConst, syntax->sourceRange());
+        context.addDiag(diag::NoteTimedStmtNotConst, sourceRange);
         return false;
     }
 

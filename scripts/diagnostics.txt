@@ -294,8 +294,9 @@ note NoteFunctionIdentifiersMustBeLocal "all identifiers that are not parameters
 note NoteParamUsedInCEBeforeDecl "parameter '{}' is declared after the invocation of the current constant function"
 note NoteNoCaseItemsMatched "no items in {} case statement matched value {}"
 note NoteCaseItemsNotUnique "more than one match found in unique case statement for value {}"
-note NoteTimedStmtNotConst "constant functions cannot schedule events"
+note NoteTimedStmtNotConst "constant expressions cannot schedule events"
 note NoteAssertionFailed "assertion failed"
+note NoteParallelBlockNotConst "parallel blocks are not allowed in constant expressions"
 
 
 // Following are groups of diagnostics, to make it easy to control them from the command line.

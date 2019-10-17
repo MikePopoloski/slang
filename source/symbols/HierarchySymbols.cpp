@@ -650,8 +650,10 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
         loc = syntax.begin.location();
     }
 
+    StatementBlockKind blockKind = SemanticFacts::getStatementBlockKind(syntax);
+
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc);
+    auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind);
     result->binder.setItems(*result, syntax.items);
     result->setSyntax(syntax);
 
@@ -674,7 +676,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
         loc = syntax.forKeyword.location();
     }
 
-    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc);
+    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc,
+                                                            StatementBlockKind::Sequential);
     result->setSyntax(syntax);
 
     // If one entry is a variable declaration, they must all be.
@@ -702,7 +705,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(Compilation& compila
     string_view name = token.valueText();
     SourceLocation loc = token.location();
 
-    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc);
+    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc,
+                                                            StatementBlockKind::Sequential);
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true);
     result->setSyntax(syntax);
 
@@ -964,7 +968,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    auto& iterScope = *compilation.emplace<StatementBlockSymbol>(compilation, "", loc);
+    auto& iterScope = *compilation.emplace<StatementBlockSymbol>(compilation, "", loc,
+                                                                 StatementBlockKind::Sequential);
     auto& local = *compilation.emplace<VariableSymbol>(genvar.valueText(), genvar.location());
     local.setType(compilation.getIntegerType());
 

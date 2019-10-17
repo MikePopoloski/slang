@@ -180,8 +180,12 @@ public:
 
 class StatementBlockSymbol : public Symbol, public Scope {
 public:
-    StatementBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::StatementBlock, name, loc), Scope(compilation, this) {}
+    StatementBlockKind blockKind;
+
+    StatementBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                         StatementBlockKind blockKind) :
+        Symbol(SymbolKind::StatementBlock, name, loc),
+        Scope(compilation, this), blockKind(blockKind) {}
 
     void setTemporaryParent(const Scope& scope, SymbolIndex index) { setParent(scope, index); }
     const Statement& getBody() const;

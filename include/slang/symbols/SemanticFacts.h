@@ -14,6 +14,8 @@
 
 namespace slang {
 
+struct BlockStatementSyntax;
+
 #define LIFETIME(x) x(Automatic) x(Static)
 /// Specifies the storage lifetime of a variable.
 ENUM(VariableLifetime, LIFETIME);
@@ -27,6 +29,11 @@ ENUM(FormalArgumentDirection, FORMAL);
 #define BLOCK(x) x(Initial) x(Final) x(Always) x(AlwaysComb) x(AlwaysLatch) x(AlwaysFF)
 /// Specifies possible procedural block kinds.
 ENUM(ProceduralBlockKind, BLOCK);
+#undef BLOCK
+
+#define BLOCK(x) x(Sequential) x(JoinAll) x(JoinAny) x(JoinNone)
+/// Specifies possible statement block kinds.
+ENUM(StatementBlockKind, BLOCK);
 #undef BLOCK
 
 #define PORT(x) x(In) x(Out) x(InOut) x(Ref)
@@ -69,6 +76,8 @@ DefinitionKind getDefinitionKind(SyntaxKind kind);
 EdgeKind getEdgeKind(TokenKind kind);
 
 AssertionKind getAssertKind(SyntaxKind kind);
+
+StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax);
 
 } // namespace SemanticFacts
 

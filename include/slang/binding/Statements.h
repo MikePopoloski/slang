@@ -52,6 +52,9 @@ public:
     /// The syntax used to create this statement, if it was parsed from a source file.
     const StatementSyntax* syntax = nullptr;
 
+    /// The source range of this statement, if it originated from source code.
+    SourceRange sourceRange;
+
     /// Indicates whether the statement is invalid.
     bool bad() const { return kind == StatementKind::Invalid; }
 
@@ -127,7 +130,7 @@ public:
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
 protected:
-    explicit Statement(StatementKind kind) : kind(kind) {}
+    Statement(StatementKind kind, SourceRange sourceRange) : kind(kind), sourceRange(sourceRange) {}
 
     static Statement& badStmt(Compilation& compilation, const Statement* stmt);
 };
@@ -161,7 +164,7 @@ public:
     const Statement* child;
 
     explicit InvalidStatement(const Statement* child) :
-        Statement(StatementKind::Invalid), child(child) {}
+        Statement(StatementKind::Invalid, SourceRange()), child(child) {}
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Invalid; }
 
@@ -171,7 +174,8 @@ public:
 /// Represents an empty statement, used as a placeholder or an anchor for attributes.
 class EmptyStatement : public Statement {
 public:
-    EmptyStatement() : Statement(StatementKind::Empty) {}
+    explicit EmptyStatement(SourceRange sourceRange) :
+        Statement(StatementKind::Empty, sourceRange) {}
 
     EvalResult evalImpl(EvalContext&) const { return EvalResult::Success; }
     bool verifyConstantImpl(EvalContext&) const { return true; }
@@ -185,7 +189,7 @@ public:
     span<const Statement* const> list;
 
     explicit StatementList(span<const Statement* const> list) :
-        Statement(StatementKind::List), list(list) {}
+        Statement(StatementKind::List, SourceRange()), list(list) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -199,11 +203,13 @@ struct BlockStatementSyntax;
 /// Represents a sequential or parallel block statement.
 class BlockStatement : public Statement {
 public:
-    explicit BlockStatement(const StatementBlockSymbol& block) :
-        Statement(StatementKind::Block), block(&block) {}
+    StatementBlockKind blockKind;
 
-    explicit BlockStatement(const StatementList& list) :
-        Statement(StatementKind::Block), list(&list) {}
+    BlockStatement(const StatementBlockSymbol& block, SourceRange sourceRange);
+    BlockStatement(const StatementList& list, StatementBlockKind blockKind,
+                   SourceRange sourceRange) :
+        Statement(StatementKind::Block, sourceRange),
+        blockKind(blockKind), list(&list) {}
 
     const Statement& getStatements() const;
     EvalResult evalImpl(EvalContext& context) const;
@@ -225,8 +231,8 @@ class ReturnStatement : public Statement {
 public:
     const Expression* expr;
 
-    explicit ReturnStatement(const Expression* expr) :
-        Statement(StatementKind::Return), expr(expr) {}
+    explicit ReturnStatement(const Expression* expr, SourceRange sourceRange) :
+        Statement(StatementKind::Return, sourceRange), expr(expr) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -241,7 +247,8 @@ struct JumpStatementSyntax;
 
 class BreakStatement : public Statement {
 public:
-    BreakStatement() : Statement(StatementKind::Break) {}
+    explicit BreakStatement(SourceRange sourceRange) :
+        Statement(StatementKind::Break, sourceRange) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -254,7 +261,8 @@ public:
 
 class ContinueStatement : public Statement {
 public:
-    ContinueStatement() : Statement(StatementKind::Continue) {}
+    explicit ContinueStatement(SourceRange sourceRange) :
+        Statement(StatementKind::Continue, sourceRange) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -269,8 +277,8 @@ class VariableDeclStatement : public Statement {
 public:
     const VariableSymbol& symbol;
 
-    explicit VariableDeclStatement(const VariableSymbol& symbol) :
-        Statement(StatementKind::VariableDeclaration), symbol(symbol) {}
+    VariableDeclStatement(const VariableSymbol& symbol, SourceRange sourceRange) :
+        Statement(StatementKind::VariableDeclaration, sourceRange), symbol(symbol) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -286,9 +294,9 @@ public:
     const Statement& ifTrue;
     const Statement* ifFalse;
 
-    ConditionalStatement(const Expression& cond, const Statement& ifTrue,
-                         const Statement* ifFalse) :
-        Statement(StatementKind::Conditional),
+    ConditionalStatement(const Expression& cond, const Statement& ifTrue, const Statement* ifFalse,
+                         SourceRange sourceRange) :
+        Statement(StatementKind::Conditional, sourceRange),
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
     EvalResult evalImpl(EvalContext& context) const;
@@ -319,8 +327,9 @@ public:
     Check check;
 
     CaseStatement(Condition condition, Check check, const Expression& expr,
-                  span<ItemGroup const> items, const Statement* defaultCase) :
-        Statement(StatementKind::Case),
+                  span<ItemGroup const> items, const Statement* defaultCase,
+                  SourceRange sourceRange) :
+        Statement(StatementKind::Case, sourceRange),
         expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
@@ -340,8 +349,9 @@ public:
     const Statement& body;
 
     ForLoopStatement(span<const Expression* const> initializers, const Expression* stopExpr,
-                     span<const Expression* const> steps, const Statement& body) :
-        Statement(StatementKind::ForLoop),
+                     span<const Expression* const> steps, const Statement& body,
+                     SourceRange sourceRange) :
+        Statement(StatementKind::ForLoop, sourceRange),
         initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
@@ -360,8 +370,8 @@ public:
     const Expression& count;
     const Statement& body;
 
-    RepeatLoopStatement(const Expression& count, const Statement& body) :
-        Statement(StatementKind::RepeatLoop), count(count), body(body) {}
+    RepeatLoopStatement(const Expression& count, const Statement& body, SourceRange sourceRange) :
+        Statement(StatementKind::RepeatLoop, sourceRange), count(count), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -377,8 +387,8 @@ public:
     const Expression& cond;
     const Statement& body;
 
-    WhileLoopStatement(const Expression& cond, const Statement& body) :
-        Statement(StatementKind::WhileLoop), cond(cond), body(body) {}
+    WhileLoopStatement(const Expression& cond, const Statement& body, SourceRange sourceRange) :
+        Statement(StatementKind::WhileLoop, sourceRange), cond(cond), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -396,8 +406,8 @@ public:
     const Expression& cond;
     const Statement& body;
 
-    DoWhileLoopStatement(const Expression& cond, const Statement& body) :
-        Statement(StatementKind::DoWhileLoop), cond(cond), body(body) {}
+    DoWhileLoopStatement(const Expression& cond, const Statement& body, SourceRange sourceRange) :
+        Statement(StatementKind::DoWhileLoop, sourceRange), cond(cond), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -414,8 +424,8 @@ class ForeverLoopStatement : public Statement {
 public:
     const Statement& body;
 
-    explicit ForeverLoopStatement(const Statement& body) :
-        Statement(StatementKind::ForeverLoop), body(body) {}
+    ForeverLoopStatement(const Statement& body, SourceRange sourceRange) :
+        Statement(StatementKind::ForeverLoop, sourceRange), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -432,8 +442,8 @@ class ExpressionStatement : public Statement {
 public:
     const Expression& expr;
 
-    explicit ExpressionStatement(const Expression& expr) :
-        Statement(StatementKind::ExpressionStatement), expr(expr) {}
+    ExpressionStatement(const Expression& expr, SourceRange sourceRange) :
+        Statement(StatementKind::ExpressionStatement, sourceRange), expr(expr) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -451,8 +461,8 @@ public:
     const TimingControl& timing;
     const Statement& stmt;
 
-    TimedStatement(const TimingControl& timing, const Statement& stmt) :
-        Statement(StatementKind::Timed), timing(timing), stmt(stmt) {}
+    TimedStatement(const TimingControl& timing, const Statement& stmt, SourceRange sourceRange) :
+        Statement(StatementKind::Timed, sourceRange), timing(timing), stmt(stmt) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -476,8 +486,9 @@ public:
     bool isFinal;
 
     AssertionStatement(AssertionKind assertionKind, const Expression& cond, const Statement* ifTrue,
-                       const Statement* ifFalse, bool isDeferred, bool isFinal) :
-        Statement(StatementKind::Assertion),
+                       const Statement* ifFalse, bool isDeferred, bool isFinal,
+                       SourceRange sourceRange) :
+        Statement(StatementKind::Assertion, sourceRange),
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse), assertionKind(assertionKind),
         isDeferred(isDeferred), isFinal(isFinal) {}
 
