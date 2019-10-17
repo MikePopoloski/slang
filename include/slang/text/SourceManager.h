@@ -152,18 +152,13 @@ private:
     // Stores actual file contents and metadata; only one per loaded file
     class FileData {
     public:
-        std::string name;                              // name of the file
-        std::vector<char> mem;                         // file contents
-        std::vector<size_t> lineOffsets;               // cache of compute line offsets
-        std::vector<LineDirectiveInfo> lineDirectives; // cache of line directives
-        const fs::path* directory;                     // directory in which the file exists
+        std::string name;                // name of the file
+        std::vector<char> mem;           // file contents
+        std::vector<size_t> lineOffsets; // cache of compute line offsets
+        const fs::path* directory;       // directory in which the file exists
 
         FileData(const fs::path* directory, std::string name, std::vector<char>&& data) :
             name(std::move(name)), mem(std::move(data)), directory(directory) {}
-
-        // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
-        // line directive of the given raw line number, or nullptr if there is none
-        const LineDirectiveInfo* getPreviousLineDirective(size_t rawLineNumber) const;
     };
 
     // Stores a pointer to file data along with information about where we included it.
@@ -171,10 +166,15 @@ private:
     struct FileInfo {
         FileData* data = nullptr;
         SourceLocation includedFrom;
+        std::vector<LineDirectiveInfo> lineDirectives; // cache of line directives
 
         FileInfo() {}
         FileInfo(FileData* data, SourceLocation includedFrom) :
             data(data), includedFrom(includedFrom) {}
+
+        // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
+        // line directive of the given raw line number, or nullptr if there is none
+        const LineDirectiveInfo* getPreviousLineDirective(size_t rawLineNumber) const;
     };
 
     // Instead of a file, this lets a BufferID point to a macro expansion location.
@@ -220,7 +220,8 @@ private:
     // uniquified backing memory for directories
     std::set<fs::path> directories;
 
-    FileData* getFileData(BufferID buffer) const;
+    FileInfo* getFileInfo(BufferID buffer);
+    const FileInfo* getFileInfo(BufferID buffer) const;
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom);
 
     SourceBuffer openCached(const fs::path& fullPath, SourceLocation includedFrom);

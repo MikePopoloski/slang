@@ -38,9 +38,8 @@ size_t SourceManager::getLineNumber(SourceLocation location) const {
     if (rawLineNumber == 0)
         return 0;
 
-    FileData* fd = getFileData(fileLocation.buffer());
-    auto lineDirective = fd->getPreviousLineDirective(rawLineNumber);
-
+    auto info = getFileInfo(fileLocation.buffer());
+    auto lineDirective = info->getPreviousLineDirective(rawLineNumber);
     if (!lineDirective)
         return rawLineNumber;
     else
@@ -48,11 +47,12 @@ size_t SourceManager::getLineNumber(SourceLocation location) const {
 }
 
 size_t SourceManager::getColumnNumber(SourceLocation location) const {
-    FileData* fd = getFileData(location.buffer());
-    if (!fd)
+    auto info = getFileInfo(location.buffer());
+    if (!info || !info->data)
         return 0;
 
     // walk backward to find start of line
+    auto fd = info->data;
     size_t lineStart = location.offset();
     ASSERT(lineStart < fd->mem.size());
     while (lineStart > 0 && fd->mem[lineStart - 1] != '\n' && fd->mem[lineStart - 1] != '\r')
@@ -65,34 +65,33 @@ string_view SourceManager::getFileName(SourceLocation location) const {
     SourceLocation fileLocation = getFullyExpandedLoc(location);
 
     // Avoid computing line offsets if we just need a name of `line-less file
-    FileData* fd = getFileData(fileLocation.buffer());
-    if (!fd)
+    auto info = getFileInfo(fileLocation.buffer());
+    if (!info || !info->data)
         return "";
-    else if (fd->lineDirectives.empty())
-        return string_view(fd->name);
+    else if (info->lineDirectives.empty())
+        return info->data->name;
 
-    auto lineDirective = fd->getPreviousLineDirective(getRawLineNumber(fileLocation));
+    auto lineDirective = info->getPreviousLineDirective(getRawLineNumber(fileLocation));
     if (!lineDirective)
-        return string_view(fd->name);
+        return info->data->name;
     else
-        return string_view(lineDirective->name);
+        return lineDirective->name;
 }
 
 string_view SourceManager::getRawFileName(BufferID buffer) const {
-    FileData* fd = getFileData(buffer);
-    if (!fd)
+    auto info = getFileInfo(buffer);
+    if (!info || !info->data)
         return "";
     else
-        return string_view(fd->name);
+        return info->data->name;
 }
 
 SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
-    if (!buffer)
+    auto info = getFileInfo(buffer);
+    if (!info)
         return SourceLocation();
 
-    ASSERT(buffer.getId() < bufferEntries.size());
-    const FileInfo* info = std::get_if<FileInfo>(&bufferEntries[buffer.getId()]);
-    return info ? info->includedFrom : SourceLocation();
+    return info->includedFrom;
 }
 
 string_view SourceManager::getMacroName(SourceLocation location) const {
@@ -112,12 +111,7 @@ string_view SourceManager::getMacroName(SourceLocation location) const {
 }
 
 bool SourceManager::isFileLoc(SourceLocation location) const {
-    auto buffer = location.buffer();
-    if (!buffer)
-        return false;
-
-    ASSERT(buffer.getId() < bufferEntries.size());
-    return std::get_if<FileInfo>(&bufferEntries[buffer.getId()]) != nullptr;
+    return getFileInfo(location.buffer());
 }
 
 bool SourceManager::isMacroLoc(SourceLocation location) const {
@@ -230,10 +224,11 @@ SourceLocation SourceManager::getFullyExpandedLoc(SourceLocation location) const
 }
 
 string_view SourceManager::getSourceText(BufferID buffer) const {
-    FileData* fd = getFileData(buffer);
-    if (!fd)
+    auto info = getFileInfo(buffer);
+    if (!info || !info->data)
         return "";
 
+    auto fd = info->data;
     return string_view(fd->mem.data(), fd->mem.size());
 }
 
@@ -304,9 +299,9 @@ SourceBuffer SourceManager::readHeader(string_view path, SourceLocation included
     }
 
     // search relative to the current file
-    FileData* fd = getFileData(includedFrom.buffer());
-    if (fd && fd->directory) {
-        SourceBuffer result = openCached((*fd->directory) / p, includedFrom);
+    FileInfo* info = getFileInfo(includedFrom.buffer());
+    if (info && info->data && info->data->directory) {
+        SourceBuffer result = openCached((*info->data->directory) / p, includedFrom);
         if (result.id)
             return result;
     }
@@ -329,8 +324,8 @@ SourceBuffer SourceManager::readHeader(string_view path, SourceLocation included
 void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, string_view name,
                                      uint8_t level) {
     SourceLocation fileLocation = getFullyExpandedLoc(location);
-    FileData* fd = getFileData(fileLocation.buffer());
-    if (!fd)
+    FileInfo* info = getFileInfo(fileLocation.buffer());
+    if (!info || !info->data)
         return;
 
     fs::path full;
@@ -338,18 +333,26 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
     if (linePath.has_relative_path())
         full = linePath.lexically_proximate(fs::current_path());
     else
-        full = fs::path(widen(fd->name)).replace_filename(linePath);
+        full = fs::path(widen(info->data->name)).replace_filename(linePath);
 
     size_t sourceLineNum = getRawLineNumber(fileLocation);
-    fd->lineDirectives.emplace_back(full.u8string(), sourceLineNum, lineNum, level);
+    info->lineDirectives.emplace_back(full.u8string(), sourceLineNum, lineNum, level);
 }
 
-SourceManager::FileData* SourceManager::getFileData(BufferID buffer) const {
+SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer) {
     if (!buffer)
         return nullptr;
 
     ASSERT(buffer.getId() < bufferEntries.size());
-    return std::get<FileInfo>(bufferEntries[buffer.getId()]).data;
+    return std::get_if<FileInfo>(&bufferEntries[buffer.getId()]);
+}
+
+const SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer) const {
+    if (!buffer)
+        return nullptr;
+
+    ASSERT(buffer.getId() < bufferEntries.size());
+    return std::get_if<FileInfo>(&bufferEntries[buffer.getId()]);
 }
 
 SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom) {
@@ -442,10 +445,10 @@ bool SourceManager::readFile(const fs::path& path, std::vector<char>& buffer) {
     return true;
 }
 
-const SourceManager::LineDirectiveInfo* SourceManager::FileData::getPreviousLineDirective(
+const SourceManager::LineDirectiveInfo* SourceManager::FileInfo::getPreviousLineDirective(
     size_t rawLineNumber) const {
     auto it = std::lower_bound(
-        lineDirectives.begin(), lineDirectives.end(), LineDirectiveInfo("", rawLineNumber, 0, 0),
+        lineDirectives.begin(), lineDirectives.end(), LineDirectiveInfo({}, rawLineNumber, 0, 0),
         [](const auto& a, const auto& b) { return a.lineInFile < b.lineInFile; });
 
     if (it != lineDirectives.begin()) {
@@ -464,11 +467,12 @@ const SourceManager::LineDirectiveInfo* SourceManager::FileData::getPreviousLine
 }
 
 size_t SourceManager::getRawLineNumber(SourceLocation location) const {
-    FileData* fd = getFileData(location.buffer());
-    if (!fd)
+    const FileInfo* info = getFileInfo(location.buffer());
+    if (!info || !info->data)
         return 0;
 
     // compute line offsets if we haven't already
+    auto fd = info->data;
     if (fd->lineOffsets.empty())
         computeLineOffsets(fd->mem, fd->lineOffsets);
 
