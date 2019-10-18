@@ -325,6 +325,12 @@ private:
     // Handle splitting out an exponent from a token that was otherwise miscategorized by the lexer.
     void handleExponentSplit(Token token, size_t offset);
 
+    // Report errors for incorrectly specified block names.
+    void checkBlockNames(string_view begin, string_view end, SourceLocation loc);
+    void checkBlockNames(Token nameToken, const NamedBlockClauseSyntax* endBlock);
+    void checkBlockNames(const NamedBlockClauseSyntax* beginBlock,
+                         const NamedBlockClauseSyntax* endBlock, const NamedLabelSyntax* label);
+
     // ---- Member variables ----
 
     // The factory used to create new syntax nodes.

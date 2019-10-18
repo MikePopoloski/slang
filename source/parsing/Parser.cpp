@@ -97,9 +97,12 @@ ModuleDeclarationSyntax& Parser::parseModule(span<AttributeInstanceSyntax*> attr
     auto members =
         parseMemberList<MemberSyntax>(endKind, endmodule, [this]() { return parseMember(); });
 
+    auto endName = parseNamedBlockClause();
+    checkBlockNames(header.name, endName);
+
     auto& result =
         factory.moduleDeclaration(getModuleDeclarationKind(header.moduleKeyword.kind), attributes,
-                                  header, members, endmodule, parseNamedBlockClause());
+                                  header, members, endmodule, endName);
 
     metadataMap[&result] = meta;
     return result;
@@ -758,6 +761,9 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(
     auto items = parseBlockItems(endKind, end);
     auto endBlockName = parseNamedBlockClause();
 
+    // TODO: check name here
+    //checkBlockNames(prototype.name, endBlockName);
+
     return factory.functionDeclaration(functionKind, attributes, prototype, semi, items, end,
                                        endBlockName);
 }
@@ -931,7 +937,9 @@ MemberSyntax& Parser::parseGenerateBlock() {
     Token end;
     auto members = parseMemberList<MemberSyntax>(TokenKind::EndKeyword, end,
                                                  [this]() { return parseMember(); });
+    
     auto endName = parseNamedBlockClause();
+    checkBlockNames(beginName, endName, label);
 
     return factory.generateBlock(nullptr, // never any attributes
                                  label, begin, beginName, members, end, endName);
@@ -983,6 +991,8 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(span<AttributeInstanceSynt
     auto members = parseMemberList<MemberSyntax>(TokenKind::EndClassKeyword, endClass,
                                                  [this]() { return parseClassMember(); });
     auto endBlockName = parseNamedBlockClause();
+    checkBlockNames(name, endBlockName);
+
     return factory.classDeclaration(attributes, virtualOrInterface, classKeyword, lifetime, name,
                                     parameterList, extendsClause, implementsClause, semi, members,
                                     endClass, endBlockName);
@@ -1408,6 +1418,8 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(
     auto members = parseMemberList<MemberSyntax>(TokenKind::EndGroupKeyword, endGroup,
                                                  [this]() { return parseCoverageMember(); });
     auto endBlockName = parseNamedBlockClause();
+    checkBlockNames(name, endBlockName);
+
     return factory.covergroupDeclaration(attributes, keyword, name, portList, event, semi, members,
                                          endGroup, endBlockName);
 }
@@ -2076,6 +2088,8 @@ PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(
     Token end = expect(TokenKind::EndPropertyKeyword);
 
     auto blockName = parseNamedBlockClause();
+    checkBlockNames(name, blockName);
+
     return factory.propertyDeclaration(attributes, keyword, name, portList, semi,
                                        declarations.copy(alloc), spec, optSemi, end, blockName);
 }
@@ -2098,6 +2112,8 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(
     Token end = expect(TokenKind::EndSequenceKeyword);
 
     auto blockName = parseNamedBlockClause();
+    checkBlockNames(name, blockName);
+
     return factory.sequenceDeclaration(attributes, keyword, name, portList, semi,
                                        declarations.copy(alloc), expr, semi2, end, blockName);
 }
@@ -2272,6 +2288,8 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(
 
     Token endClocking = expect(TokenKind::EndClockingKeyword);
     NamedBlockClauseSyntax* endBlockName = parseNamedBlockClause();
+    checkBlockNames(blockName, endBlockName);
+
     return factory.clockingDeclaration(attributes, globalOrDefault, clocking, blockName, at, event,
                                        eventIdentifier, semi, buffer.copy(alloc), endClocking,
                                        endBlockName);
@@ -2488,6 +2506,47 @@ bool Parser::scanQualifiedName(uint32_t& index) {
 void Parser::errorIfAttributes(span<AttributeInstanceSyntax*> attributes) {
     if (!attributes.empty())
         addDiag(diag::AttributesNotAllowed, peek().location());
+}
+
+void Parser::checkBlockNames(string_view begin, string_view end, SourceLocation loc) {
+    if (begin.empty() || end.empty())
+        return;
+
+    if (begin != end)
+        addDiag(diag::EndNameMismatch, loc) << end << begin;
+}
+
+void Parser::checkBlockNames(Token nameToken, const NamedBlockClauseSyntax* endBlock) {
+    if (!endBlock || !nameToken)
+        return;
+
+    checkBlockNames(nameToken.valueText(), endBlock->name.valueText(), endBlock->name.location());
+}
+
+void Parser::checkBlockNames(const NamedBlockClauseSyntax* beginBlock,
+                             const NamedBlockClauseSyntax* endBlock,
+                             const NamedLabelSyntax* label) {
+    Token name;
+    if (beginBlock) {
+        name = beginBlock->name;
+        if (label) {
+            addDiag(diag::LabelAndName, label->name.location()) << name.range();
+            return;
+        }
+    }
+    else if (label) {
+        name = label->name;
+    }
+
+    if (!endBlock)
+        return;
+
+    if (!name) {
+        addDiag(diag::EndNameNotEmpty, endBlock->name.location());
+        return;
+    }
+
+    checkBlockNames(name.valueText(), endBlock->name.valueText(), endBlock->name.location());
 }
 
 void Parser::handleTooDeep() {

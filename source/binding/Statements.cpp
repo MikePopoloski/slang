@@ -505,8 +505,6 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
     if (anyBad)
         return badStmt(compilation, result);
 
-    // TODO: check end name
-
     return *result;
 }
 

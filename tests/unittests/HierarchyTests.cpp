@@ -886,7 +886,6 @@ module m;
 
     for (i = 0; i; --i) foo: begin : baz end    // name and label
 
-
 endmodule
 )");
 

@@ -634,11 +634,6 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
         auto token = syntax.blockName->name;
         name = token.valueText();
         loc = token.location();
-
-        if (syntax.label) {
-            scope.addDiag(diag::LabelAndName, syntax.blockName->sourceRange())
-                << syntax.label->sourceRange();
-        }
     }
     else if (syntax.label) {
         auto token = syntax.label->name;
@@ -740,21 +735,15 @@ void ProceduralBlockSymbol::toJson(json& j) const {
     j["procedureKind"] = toString(procedureKind);
 }
 
-static string_view getGenerateBlockName(const Scope& scope, const SyntaxNode& node) {
+static string_view getGenerateBlockName(const SyntaxNode& node) {
     if (node.kind != SyntaxKind::GenerateBlock)
         return "";
 
     // Try to find a name for this block. Generate blocks allow the name to be specified twice
-    // (for no good reason) so check both locations. If the name is in both places it's an error.
+    // (for no good reason) so check both locations.
     const GenerateBlockSyntax& block = node.as<GenerateBlockSyntax>();
-    if (block.label) {
-        if (block.beginName) {
-            scope.addDiag(diag::LabelAndName, block.beginName->sourceRange())
-                << block.label->sourceRange();
-        }
-
+    if (block.label)
         return block.label->name.valueText();
-    }
 
     if (block.beginName)
         return block.beginName->name.valueText();
@@ -785,7 +774,7 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
             break;
     }
 
-    string_view name = getGenerateBlockName(parent, syntax);
+    string_view name = getGenerateBlockName(syntax);
     SourceLocation loc = syntax.getFirstToken().location();
 
     auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc, constructIndex,
@@ -919,7 +908,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     Compilation& compilation, const LoopGenerateSyntax& syntax, SymbolIndex scopeIndex,
     LookupLocation location, const Scope& parent, uint32_t constructIndex) {
 
-    string_view name = getGenerateBlockName(parent, *syntax.block);
+    string_view name = getGenerateBlockName(*syntax.block);
     SourceLocation loc = syntax.block->getFirstToken().location();
     auto result =
         compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc, constructIndex);

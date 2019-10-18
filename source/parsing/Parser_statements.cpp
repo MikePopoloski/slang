@@ -637,6 +637,8 @@ BlockStatementSyntax& Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind
     Token end;
     auto items = parseBlockItems(endKind, end);
     auto endName = parseNamedBlockClause();
+
+    checkBlockNames(name, endName, label);
     return factory.blockStatement(blockKind, label, attributes, begin, name, items, end, endName);
 }
 
