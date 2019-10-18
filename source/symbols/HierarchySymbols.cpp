@@ -740,16 +740,21 @@ void ProceduralBlockSymbol::toJson(json& j) const {
     j["procedureKind"] = toString(procedureKind);
 }
 
-static string_view getGenerateBlockName(const SyntaxNode& node) {
+static string_view getGenerateBlockName(const Scope& scope, const SyntaxNode& node) {
     if (node.kind != SyntaxKind::GenerateBlock)
         return "";
 
     // Try to find a name for this block. Generate blocks allow the name to be specified twice
-    // (for no good reason) so check both locations. The parser has already checked for
-    // inconsistencies here.
+    // (for no good reason) so check both locations. If the name is in both places it's an error.
     const GenerateBlockSyntax& block = node.as<GenerateBlockSyntax>();
-    if (block.label)
+    if (block.label) {
+        if (block.beginName) {
+            scope.addDiag(diag::LabelAndName, block.beginName->sourceRange())
+                << block.label->sourceRange();
+        }
+
         return block.label->name.valueText();
+    }
 
     if (block.beginName)
         return block.beginName->name.valueText();
@@ -780,7 +785,7 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
             break;
     }
 
-    string_view name = getGenerateBlockName(syntax);
+    string_view name = getGenerateBlockName(parent, syntax);
     SourceLocation loc = syntax.getFirstToken().location();
 
     auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc, constructIndex,
@@ -914,7 +919,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     Compilation& compilation, const LoopGenerateSyntax& syntax, SymbolIndex scopeIndex,
     LookupLocation location, const Scope& parent, uint32_t constructIndex) {
 
-    string_view name = getGenerateBlockName(*syntax.block);
+    string_view name = getGenerateBlockName(parent, *syntax.block);
     SourceLocation loc = syntax.block->getFirstToken().location();
     auto result =
         compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc, constructIndex);

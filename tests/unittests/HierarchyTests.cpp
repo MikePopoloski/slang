@@ -884,6 +884,9 @@ module m;
     for (i = 0; i < 10; i += 0) begin end       // repeated val
     for (i = 0; i < 10; i += arr[i+4]) name: begin end       // bad iter expr
 
+    for (i = 0; i; --i) foo: begin : baz end    // name and label
+
+
 endmodule
 )");
 
@@ -905,6 +908,7 @@ endmodule
     CHECK((it++)->code == diag::GenvarUnknownBits);
     CHECK((it++)->code == diag::GenvarDuplicate);
     CHECK((it++)->code == diag::ExpressionNotConstant);
+    CHECK((it++)->code == diag::LabelAndName);
     CHECK(it == diags.end());
 }
 
