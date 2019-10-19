@@ -65,6 +65,7 @@ add_library(slang
 	parsing/LexerFacts.cpp
 	parsing/Parser.cpp
 	parsing/Parser_expressions.cpp
+	parsing/Parser_members.cpp
 	parsing/Parser_statements.cpp
 	parsing/ParserBase.cpp
 	parsing/Preprocessor.cpp
