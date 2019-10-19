@@ -314,6 +314,21 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::FormalArgument; }
 };
 
+/// Represents a field member of a struct or union.
+class FieldSymbol : public VariableSymbol {
+public:
+    /// The offset of the field within its parent structure or union. If the parent type is
+    /// packed, this is an offset in bits. Otherwise it's an index into the list of fields.
+    uint32_t offset;
+
+    FieldSymbol(string_view name, SourceLocation loc, uint32_t offset) :
+        VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic), offset(offset) {}
+
+    void toJson(json& j) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Field; }
+};
+
 struct FunctionDeclarationSyntax;
 
 /// Represents a subroutine (task or function).

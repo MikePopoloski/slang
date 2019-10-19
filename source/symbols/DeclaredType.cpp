@@ -12,6 +12,7 @@
 #include "slang/symbols/Symbol.h"
 #include "slang/symbols/TypeSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/ScopeGuard.h"
 
 namespace slang {
 

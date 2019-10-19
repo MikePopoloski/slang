@@ -7,13 +7,13 @@
 #pragma once
 
 #include "slang/binding/ConstantValue.h"
-#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
 
 namespace slang {
 
 class Compilation;
+class SubroutineSymbol;
 
 /// Specifies possible traits for integral types.
 enum class IntegralFlags : uint8_t {
@@ -361,21 +361,6 @@ public:
     ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnpackedArrayType; }
-};
-
-/// Represents a field member of a struct or union.
-class FieldSymbol : public VariableSymbol {
-public:
-    /// The offset of the field within its parent structure or union. If the parent type is
-    /// packed, this is an offset in bits. Otherwise it's an index into the list of fields.
-    uint32_t offset;
-
-    FieldSymbol(string_view name, SourceLocation loc, uint32_t offset) :
-        VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic), offset(offset) {}
-
-    void toJson(json& j) const;
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Field; }
 };
 
 struct StructUnionTypeSyntax;
