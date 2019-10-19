@@ -8,7 +8,7 @@
 
 #include "slang/binding/Expressions.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/VariableSymbols.h"
 
 namespace slang {
 

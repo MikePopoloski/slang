@@ -900,11 +900,6 @@ ConstantValue UnpackedArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>(range.width(), elementType.getDefaultValue());
 }
 
-void FieldSymbol::toJson(json& j) const {
-    VariableSymbol::toJson(j);
-    j["offset"] = offset;
-}
-
 PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
                                    bool isFourState) :
     IntegralType(SymbolKind::PackedStructType, "", SourceLocation(), bitWidth, isSigned,

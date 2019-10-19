@@ -14,7 +14,10 @@
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/DefinitionSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/ParameterSymbols.h"
+#include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
+#include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 

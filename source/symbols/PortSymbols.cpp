@@ -1,10 +1,12 @@
 //------------------------------------------------------------------------------
-// PortBuilder.h
-// Internal helpers to build port symbols and connections.
+// PortSymbols.cpp
+// Contains port-related symbol definitions.
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#pragma once
+#include "slang/symbols/PortSymbols.h"
+
+#include <nlohmann/json.hpp>
 
 #include "slang/binding/Expressions.h"
 #include "slang/compilation/Compilation.h"
@@ -13,8 +15,9 @@
 #include "slang/symbols/DefinitionSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
-#include "slang/util/StackContainer.h"
+#include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/StackContainer.h"
 
 namespace slang {
 
@@ -472,8 +475,9 @@ public:
         scope(instanceScope),
         instance(childScope.asSymbol().as<InstanceSymbol>()) {
 
-        // This needs to be a lookup for the instance's parent in the hierarchy, not its lexical location.
-        // Usually all lookups want the lexical location, so we have to specifically ask for the parent here.
+        // This needs to be a lookup for the instance's parent in the hierarchy, not its lexical
+        // location. Usually all lookups want the lexical location, so we have to specifically ask
+        // for the parent here.
         lookupLocation = LookupLocation(instance.getParentScope(), (uint32_t)instance.getIndex());
 
         bool hasConnections = false;
@@ -875,5 +879,173 @@ private:
 };
 
 } // end anonymous namespace
+
+PortSymbol::PortSymbol(string_view name, SourceLocation loc, bitmask<DeclaredTypeFlags> flags) :
+    ValueSymbol(SymbolKind::Port, name, loc, flags) {
+}
+
+const Expression* PortSymbol::getConnection() const {
+    if (!conn) {
+        if (!connSyntax)
+            conn = nullptr;
+        else {
+            BindContext context(*getParentScope(), LookupLocation::before(*this));
+            auto loc = connSyntax->getFirstToken().location();
+
+            switch (direction) {
+                case PortDirection::In:
+                    conn = &Expression::bind(getType(), *connSyntax, loc, context);
+                    break;
+                case PortDirection::Out:
+                    // TODO: require assignable
+                    // TODO: assignment-like context
+                    conn = &Expression::bind(*connSyntax, context);
+                    context.requireLValue(*conn.value(), loc);
+                    break;
+                case PortDirection::InOut:
+                    // TODO: require assignable
+                    // TODO: check not variable
+                    conn = &Expression::bind(*connSyntax, context);
+                    context.requireLValue(*conn.value(), loc);
+                    break;
+                case PortDirection::Ref:
+                    // TODO: implement this
+                    conn = nullptr;
+                    break;
+            }
+
+            // TODO: if port is explicit, check that expression as well
+        }
+    }
+    return *conn;
+}
+
+void PortSymbol::setConnection(const Expression* expr,
+                               span<const AttributeSymbol* const> attributes) {
+    conn = expr;
+    connSyntax = nullptr;
+    connAttrs = attributes;
+}
+
+void PortSymbol::setConnection(const ExpressionSyntax& syntax,
+                               span<const AttributeSymbol* const> attributes) {
+    conn = nullptr;
+    connSyntax = &syntax;
+    connAttrs = attributes;
+}
+
+void PortSymbol::fromSyntax(const PortListSyntax& syntax, const Scope& scope,
+                            SmallVector<Symbol*>& results,
+                            span<const PortDeclarationSyntax* const> portDeclarations) {
+    switch (syntax.kind) {
+        case SyntaxKind::AnsiPortList: {
+            AnsiPortListBuilder builder{ scope };
+            for (auto port : syntax.as<AnsiPortListSyntax>().ports) {
+                switch (port->kind) {
+                    case SyntaxKind::ImplicitAnsiPort:
+                        results.append(builder.createPort(port->as<ImplicitAnsiPortSyntax>()));
+                        break;
+                    case SyntaxKind::ExplicitAnsiPort:
+                        results.append(builder.createPort(port->as<ExplicitAnsiPortSyntax>()));
+                        break;
+                    default:
+                        THROW_UNREACHABLE;
+                }
+            }
+
+            if (!portDeclarations.empty()) {
+                scope.addDiag(diag::PortDeclInANSIModule,
+                              portDeclarations[0]->getFirstToken().location());
+            }
+            break;
+        }
+        case SyntaxKind::NonAnsiPortList: {
+            NonAnsiPortListBuilder builder{ scope, portDeclarations };
+            for (auto port : syntax.as<NonAnsiPortListSyntax>().ports) {
+                switch (port->kind) {
+                    case SyntaxKind::ImplicitNonAnsiPort:
+                        results.append(builder.createPort(port->as<ImplicitNonAnsiPortSyntax>()));
+                        break;
+                    case SyntaxKind::ExplicitNonAnsiPort:
+                        scope.addDiag(diag::NotYetSupported, port->sourceRange());
+                        break;
+                    default:
+                        THROW_UNREACHABLE;
+                }
+            }
+            break;
+        }
+        case SyntaxKind::WildcardPortList:
+            scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
+void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> ports,
+                                 const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) {
+    const Scope* instanceScope = childScope.asSymbol().getParentScope();
+    ASSERT(instanceScope);
+
+    PortConnectionBuilder builder(childScope, *instanceScope, portConnections);
+    for (auto portBase : ports) {
+        if (portBase->kind == SymbolKind::Port)
+            builder.setConnection(portBase->as<PortSymbol>());
+        else
+            builder.setConnection(portBase->as<InterfacePortSymbol>());
+    }
+
+    builder.finalize();
+}
+
+void PortSymbol::toJson(json& j) const {
+    j["direction"] = toString(direction);
+
+    if (internalSymbol)
+        j["internalSymbol"] = jsonLink(*internalSymbol);
+
+    if (defaultValue)
+        j["default"] = *defaultValue;
+
+    if (auto ext = getConnection())
+        j["externalConnection"] = *ext;
+}
+
+span<const ConstantRange> InterfacePortSymbol::getDeclaredRange() const {
+    if (range)
+        return *range;
+
+    auto syntax = getSyntax();
+    ASSERT(syntax);
+
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    BindContext context(*scope, LookupLocation::before(*this));
+
+    SmallVectorSized<ConstantRange, 4> buffer;
+    for (auto dimSyntax : syntax->as<DeclaratorSyntax>().dimensions) {
+        EvaluatedDimension dim = context.evalDimension(*dimSyntax, true);
+        if (!dim.isRange()) {
+            buffer.clear();
+            break;
+        }
+
+        buffer.append(dim.range);
+    }
+
+    range = buffer.copy(scope->getCompilation());
+    return *range;
+}
+
+void InterfacePortSymbol::toJson(json& j) const {
+    if (interfaceDef)
+        j["interfaceDef"] = jsonLink(*interfaceDef);
+    if (modport)
+        j["modport"] = jsonLink(*modport);
+    if (connection)
+        j["connection"] = jsonLink(*connection);
+}
 
 } // namespace slang

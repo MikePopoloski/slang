@@ -10,6 +10,7 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
+#include "slang/symbols/VariableSymbols.h"
 #include "slang/text/FormatBuffer.h"
 
 namespace slang {

@@ -76,12 +76,15 @@ add_library(slang
 	symbols/DefinitionSymbols.cpp
 	symbols/Lookup.cpp
 	symbols/MemberSymbols.cpp
+	symbols/ParameterSymbols.cpp
+	symbols/PortSymbols.cpp
 	symbols/Scope.cpp
 	symbols/SemanticFacts.cpp
 	symbols/Symbol.cpp
 	symbols/TimeScaleSymbolBase.cpp
 	symbols/TypePrinter.cpp
 	symbols/TypeSymbols.cpp
+	symbols/VariableSymbols.cpp
 
 	${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp
 	syntax/SyntaxFacts.cpp
