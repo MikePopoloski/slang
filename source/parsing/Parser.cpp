@@ -100,9 +100,8 @@ ModuleDeclarationSyntax& Parser::parseModule(span<AttributeInstanceSyntax*> attr
     auto endName = parseNamedBlockClause();
     checkBlockNames(header.name, endName);
 
-    auto& result =
-        factory.moduleDeclaration(getModuleDeclarationKind(header.moduleKeyword.kind), attributes,
-                                  header, members, endmodule, endName);
+    auto& result = factory.moduleDeclaration(getModuleDeclarationKind(header.moduleKeyword.kind),
+                                             attributes, header, members, endmodule, endName);
 
     metadataMap[&result] = meta;
     return result;
@@ -761,8 +760,9 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(
     auto items = parseBlockItems(endKind, end);
     auto endBlockName = parseNamedBlockClause();
 
-    // TODO: check name here
-    //checkBlockNames(prototype.name, endBlockName);
+    Token nameToken = prototype.name->getLastToken();
+    if (nameToken.kind == TokenKind::Identifier)
+        checkBlockNames(nameToken, endBlockName);
 
     return factory.functionDeclaration(functionKind, attributes, prototype, semi, items, end,
                                        endBlockName);
@@ -937,7 +937,7 @@ MemberSyntax& Parser::parseGenerateBlock() {
     Token end;
     auto members = parseMemberList<MemberSyntax>(TokenKind::EndKeyword, end,
                                                  [this]() { return parseMember(); });
-    
+
     auto endName = parseNamedBlockClause();
     checkBlockNames(beginName, endName, label);
 

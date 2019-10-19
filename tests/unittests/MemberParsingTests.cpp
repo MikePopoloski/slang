@@ -162,3 +162,51 @@ a1: assert property (@(posedge clk) a |-> p3);
     REQUIRE(assertStatement);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Trailing block names -- ok") {
+    auto& text = R"(
+module m1;
+    property p3;
+        b ##1 c;
+    endproperty : p3
+
+    if (1) foo : begin
+    end : foo
+
+    always begin : baz
+    end : baz
+endmodule : m1;
+
+function foo;
+endfunction : foo
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Trailing block names -- errors") {
+    auto& text = R"(
+module m1;
+    property ;
+        b ##1 c;
+    endproperty : p3
+
+    if (1) begin
+    end : foo
+
+    always begin : baz
+    end : bluza
+endmodule : m1;
+
+function foo;
+endfunction : foo
+)";
+
+    parseCompilationUnit(text);
+    
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
+    CHECK(diagnostics[1].code == diag::EndNameNotEmpty);
+    CHECK(diagnostics[2].code == diag::EndNameMismatch);
+}
