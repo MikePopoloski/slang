@@ -80,10 +80,9 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         // on context
         if (opKind == SyntaxKind::LessThanEqualExpression &&
             (options & ExpressionOptions::ProceduralAssignmentContext)) {
-
-            options &= ~ExpressionOptions::ProceduralAssignmentContext;
             opKind = SyntaxKind::NonblockingAssignmentExpression;
         }
+        options &= ~ExpressionOptions::ProceduralAssignmentContext;
 
         // see if we should take this operator or if it's part of our parent due to precedence
         int newPrecedence = getPrecedence(opKind);

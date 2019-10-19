@@ -375,8 +375,10 @@ TEST_CASE("Nonblocking assignment statement") {
 module m;
 
     int j;
+    int g;
     initial begin
         j <= 2;
+        g = j <= 2;
     end
 
 endmodule
