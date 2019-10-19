@@ -70,13 +70,16 @@ add_library(slang
 	parsing/Preprocessor.cpp
 	parsing/Token.cpp
 
+	symbols/BlockSymbols.cpp
+	symbols/CompilationUnitSymbols.cpp
 	symbols/DeclaredType.cpp
-	symbols/HierarchySymbols.cpp
+	symbols/DefinitionSymbols.cpp
 	symbols/Lookup.cpp
 	symbols/MemberSymbols.cpp
 	symbols/Scope.cpp
 	symbols/SemanticFacts.cpp
 	symbols/Symbol.cpp
+	symbols/TimeScaleSymbolBase.cpp
 	symbols/TypePrinter.cpp
 	symbols/TypeSymbols.cpp
 

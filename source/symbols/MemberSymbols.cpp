@@ -10,7 +10,7 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
-#include "slang/symbols/HierarchySymbols.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 

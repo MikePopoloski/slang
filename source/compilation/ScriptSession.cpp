@@ -7,7 +7,7 @@
 #include "slang/compilation/ScriptSession.h"
 
 #include "slang/binding/Expressions.h"
-#include "slang/symbols/HierarchySymbols.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 
 namespace slang {

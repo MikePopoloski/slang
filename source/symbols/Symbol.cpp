@@ -11,7 +11,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTVisitor.h"
-#include "slang/symbols/HierarchySymbols.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
 #include "slang/syntax/AllSyntax.h"

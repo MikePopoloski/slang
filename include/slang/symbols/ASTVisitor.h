@@ -8,7 +8,9 @@
 
 #include "slang/binding/Expressions.h"
 #include "slang/binding/Statements.h"
-#include "slang/symbols/HierarchySymbols.h"
+#include "slang/symbols/BlockSymbols.h"
+#include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/DefinitionSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/TypeSymbols.h"
 #include "slang/util/TypeTraits.h"
