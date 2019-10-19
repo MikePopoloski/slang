@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/symbols/TypeSymbols.h"
+#include "slang/symbols/AllTypes.h"
 #include "slang/text/FormatBuffer.h"
 
 namespace slang {

@@ -14,7 +14,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/symbols/ASTVisitor.h"
-#include "slang/symbols/TypeSymbols.h"
+#include "slang/symbols/Type.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 

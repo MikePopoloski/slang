@@ -8,11 +8,11 @@
 
 #include <flat_hash_map.hpp>
 
+#include "slang/symbols/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/DefinitionSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
-#include "slang/symbols/TypeSymbols.h"
 
 namespace slang {
 

@@ -70,6 +70,7 @@ add_library(slang
 	parsing/Preprocessor.cpp
 	parsing/Token.cpp
 
+	symbols/AllTypes.cpp
 	symbols/BlockSymbols.cpp
 	symbols/CompilationUnitSymbols.cpp
 	symbols/DeclaredType.cpp
@@ -83,7 +84,7 @@ add_library(slang
 	symbols/Symbol.cpp
 	symbols/TimeScaleSymbolBase.cpp
 	symbols/TypePrinter.cpp
-	symbols/TypeSymbols.cpp
+	symbols/Type.cpp
 	symbols/VariableSymbols.cpp
 
 	${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp

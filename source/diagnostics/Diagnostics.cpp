@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/Diagnostics.h"
 
-#include "slang/symbols/TypeSymbols.h"
+#include "slang/symbols/Type.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {

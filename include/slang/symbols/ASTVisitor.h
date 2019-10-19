@@ -8,6 +8,7 @@
 
 #include "slang/binding/Expressions.h"
 #include "slang/binding/Statements.h"
+#include "slang/symbols/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/DefinitionSymbols.h"
@@ -15,7 +16,6 @@
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
-#include "slang/symbols/TypeSymbols.h"
 #include "slang/util/TypeTraits.h"
 
 namespace slang {

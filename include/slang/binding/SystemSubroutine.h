@@ -7,9 +7,9 @@
 #pragma once
 
 #include "slang/binding/Expressions.h"
+#include "slang/symbols/AllTypes.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/util/SmallVector.h"
-#include "slang/symbols/TypeSymbols.h"
 #include "slang/util/Util.h"
 
 namespace slang {

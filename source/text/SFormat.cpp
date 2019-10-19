@@ -10,8 +10,8 @@
 #include <ieee1800/vpi_user.h>
 
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/symbols/AllTypes.h"
 #include "slang/symbols/VariableSymbols.h"
-#include "slang/symbols/TypeSymbols.h"
 
 namespace slang::SFormat {
 
