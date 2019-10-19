@@ -1509,6 +1509,7 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(
                     break;
             }
 
+            // TODO: this seems unfinished
             if (!declaration && !defaultKeyword && !direction) {
                 auto token = consume();
                 skipped.append(token);

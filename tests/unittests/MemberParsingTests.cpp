@@ -210,3 +210,17 @@ endfunction : foo
     CHECK(diagnostics[1].code == diag::EndNameNotEmpty);
     CHECK(diagnostics[2].code == diag::EndNameMismatch);
 }
+
+TEST_CASE("Struct member invalid token") {
+    auto& text = R"(
+module m1;
+    struct { for } asdf;
+endmodule : m1;
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::ImplicitNotAllowed);
+    CHECK(diagnostics[1].code == diag::ExpectedDeclarator);
+}

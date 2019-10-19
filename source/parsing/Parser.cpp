@@ -279,8 +279,9 @@ bool Parser::isPlainPortName() {
     while (peek(index).kind == TokenKind::OpenBracket) {
         index++;
         if (!scanTypePart<isNotInPortReference>(index, TokenKind::OpenBracket,
-                                                TokenKind::CloseBracket))
+                                                TokenKind::CloseBracket)) {
             return true; // if we see nonsense, we'll recover by pretending this is a plain port
+        }
     }
 
     auto kind = peek(index).kind;
@@ -309,8 +310,9 @@ bool Parser::isNonAnsiPort() {
     kind = peek(index++).kind;
     if (kind == TokenKind::OpenBracket) {
         if (!scanTypePart<isNotInPortReference>(index, TokenKind::OpenBracket,
-                                                TokenKind::CloseBracket))
+                                                TokenKind::CloseBracket)) {
             return false;
+        }
 
         kind = peek(index).kind;
     }
@@ -419,6 +421,10 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
 
             buffer.append(
                 &factory.structUnionMember(attributes, randomQualifier, type, declarators, semi));
+
+            if (type.kind == SyntaxKind::ImplicitType && declarators.empty())
+                skipToken({});
+
             kind = peek().kind;
         }
         closeBrace = expect(TokenKind::CloseBrace);

@@ -896,9 +896,11 @@ EventExpressionSyntax& Parser::parseEventExpression() {
 ExpressionSyntax& Parser::parseNewExpression(ExpressionSyntax* scope) {
     if (scope && scope->kind != SyntaxKind::ClassScope) {
         // TODO: verify this error message makes sense
+        // TODO: this needs to consume or skip the new keyword
         addDiag(diag::ExpectedClassScope, scope->getFirstToken().location());
         return *scope;
     }
+
     auto newKeyword = expect(TokenKind::NewKeyword);
     auto kind = peek().kind;
 

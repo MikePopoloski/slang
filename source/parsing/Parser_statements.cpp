@@ -690,13 +690,16 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
 
 EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(
     NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+
     auto trigger = consume();
+
     SyntaxKind kind = SyntaxKind::BlockingEventTriggerStatement;
     TimingControlSyntax* timing = nullptr;
     if (trigger.kind == TokenKind::MinusDoubleArrow) {
         kind = SyntaxKind::NonblockingEventTriggerStatement;
         timing = parseTimingControl();
     }
+
     return factory.eventTriggerStatement(kind, label, attributes, trigger, timing, parseName());
 }
 
