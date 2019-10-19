@@ -637,7 +637,7 @@ const Type& Compilation::getType(const Type& elementType,
     return UnpackedArrayType::fromSyntax(*this, elementType, location, scope, dimensions);
 }
 
-const PackedArrayType& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags) {
+const Type& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags) {
     ASSERT(width > 0);
     uint32_t key = width;
     key |= uint32_t(flags.bits()) << SVInt::BITWIDTH_BITS;
@@ -651,8 +651,8 @@ const PackedArrayType& Compilation::getType(bitwidth_t width, bitmask<IntegralFl
     return *type;
 }
 
-const ScalarType& Compilation::getScalarType(bitmask<IntegralFlags> flags) {
-    ScalarType* ptr = scalarTypeTable[flags.bits() & 0x7];
+const Type& Compilation::getScalarType(bitmask<IntegralFlags> flags) {
+    Type* ptr = scalarTypeTable[flags.bits() & 0x7];
     ASSERT(ptr);
     return *ptr;
 }

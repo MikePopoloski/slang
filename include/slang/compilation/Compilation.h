@@ -176,29 +176,29 @@ public:
                         const SyntaxList<VariableDimensionSyntax>& dimensions,
                         LookupLocation location, const Scope& parent);
 
-    const PackedArrayType& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
-    const ScalarType& getScalarType(bitmask<IntegralFlags> flags);
+    const Type& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
+    const Type& getScalarType(bitmask<IntegralFlags> flags);
     const NetType& getNetType(TokenKind kind) const;
 
     /// Various built-in type symbols for easy access.
-    const ScalarType& getBitType() const { return *bitType; }
-    const ScalarType& getLogicType() const { return *logicType; }
-    const ScalarType& getRegType() const { return *regType; }
-    const PredefinedIntegerType& getShortIntType() const { return *shortIntType; }
-    const PredefinedIntegerType& getIntType() const { return *intType; }
-    const PredefinedIntegerType& getLongIntType() const { return *longIntType; }
-    const PredefinedIntegerType& getByteType() const { return *byteType; }
-    const PredefinedIntegerType& getIntegerType() const { return *integerType; }
-    const PredefinedIntegerType& getTimeType() const { return *timeType; }
-    const FloatingType& getRealType() const { return *realType; }
-    const FloatingType& getRealTimeType() const { return *realTimeType; }
-    const FloatingType& getShortRealType() const { return *shortRealType; }
-    const StringType& getStringType() const { return *stringType; }
-    const CHandleType& getCHandleType() const { return *chandleType; }
-    const VoidType& getVoidType() const { return *voidType; }
-    const NullType& getNullType() const { return *nullType; }
-    const EventType& getEventType() const { return *eventType; }
-    const ErrorType& getErrorType() const { return *errorType; }
+    const Type& getBitType() const { return *bitType; }
+    const Type& getLogicType() const { return *logicType; }
+    const Type& getRegType() const { return *regType; }
+    const Type& getShortIntType() const { return *shortIntType; }
+    const Type& getIntType() const { return *intType; }
+    const Type& getLongIntType() const { return *longIntType; }
+    const Type& getByteType() const { return *byteType; }
+    const Type& getIntegerType() const { return *integerType; }
+    const Type& getTimeType() const { return *timeType; }
+    const Type& getRealType() const { return *realType; }
+    const Type& getRealTimeType() const { return *realTimeType; }
+    const Type& getShortRealType() const { return *shortRealType; }
+    const Type& getStringType() const { return *stringType; }
+    const Type& getCHandleType() const { return *chandleType; }
+    const Type& getVoidType() const { return *voidType; }
+    const Type& getNullType() const { return *nullType; }
+    const Type& getEventType() const { return *eventType; }
+    const Type& getErrorType() const { return *errorType; }
     const Type& getUnsignedIntType();
 
     /// Get the 'wire' built in net type. The rest of the built-in net types are rare enough
@@ -272,7 +272,7 @@ private:
     flat_hash_map<std::tuple<string_view, SymbolKind>, std::unique_ptr<SystemSubroutine>> methodMap;
 
     // A cache of vector types, keyed on various properties such as bit width.
-    flat_hash_map<uint32_t, const PackedArrayType*> vectorTypeCache;
+    flat_hash_map<uint32_t, const Type*> vectorTypeCache;
 
     // Map from syntax kinds to the built-in types.
     flat_hash_map<SyntaxKind, const Type*> knownTypes;
@@ -290,31 +290,31 @@ private:
     flat_hash_map<const void*, span<const AttributeSymbol* const>> attributeMap;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
-    // reg Two of the entries are not valid and will be nullptr (!fourstate & reg).
-    ScalarType* scalarTypeTable[8]{ nullptr };
+    // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).
+    Type* scalarTypeTable[8]{ nullptr };
 
     // Instances of all the built-in types.
-    ScalarType* bitType;
-    ScalarType* logicType;
-    ScalarType* regType;
-    ScalarType* signedBitType;
-    ScalarType* signedLogicType;
-    ScalarType* signedRegType;
-    PredefinedIntegerType* shortIntType;
-    PredefinedIntegerType* intType;
-    PredefinedIntegerType* longIntType;
-    PredefinedIntegerType* byteType;
-    PredefinedIntegerType* integerType;
-    PredefinedIntegerType* timeType;
-    FloatingType* realType;
-    FloatingType* realTimeType;
-    FloatingType* shortRealType;
-    StringType* stringType;
-    CHandleType* chandleType;
-    VoidType* voidType;
-    NullType* nullType;
-    EventType* eventType;
-    ErrorType* errorType;
+    Type* bitType;
+    Type* logicType;
+    Type* regType;
+    Type* signedBitType;
+    Type* signedLogicType;
+    Type* signedRegType;
+    Type* shortIntType;
+    Type* intType;
+    Type* longIntType;
+    Type* byteType;
+    Type* integerType;
+    Type* timeType;
+    Type* realType;
+    Type* realTimeType;
+    Type* shortRealType;
+    Type* stringType;
+    Type* chandleType;
+    Type* voidType;
+    Type* nullType;
+    Type* eventType;
+    Type* errorType;
     NetType* wireNetType;
 };
 

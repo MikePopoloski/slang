@@ -12,7 +12,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
-#include "slang/symbols/AllTypes.h"
+#include "slang/symbols/Type.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
