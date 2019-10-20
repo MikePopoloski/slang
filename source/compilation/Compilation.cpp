@@ -686,4 +686,8 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
     return importData[index];
 }
 
+bool Compilation::markGenerateBlock(const SyntaxNode& node) {
+    return visitedGenBlocks.insert(&node).second;
+}
+
 } // namespace slang

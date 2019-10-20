@@ -166,6 +166,8 @@ int driverMain(int argc, TArgs argv) try {
     Bag options;
     options.add(ppoptions);
 
+    std::string cur = std::filesystem::current_path().string();
+
     std::vector<SourceBuffer> buffers;
     for (const std::string& file : sourceFiles) {
         SourceBuffer buffer = sourceManager.readSource(file);

@@ -18,24 +18,14 @@
 
 namespace slang {
 
-class CHandleType;
 class CompilationUnitSymbol;
 class DefinitionSymbol;
-class ErrorType;
-class EventType;
 class Expression;
-class FloatingType;
-class NullType;
 class PackageSymbol;
-class PackedArrayType;
-class PredefinedIntegerType;
 class RootSymbol;
-class ScalarType;
 class Statement;
-class StringType;
 class SyntaxTree;
 class SystemSubroutine;
-class VoidType;
 
 struct CompilationUnitSyntax;
 struct ModuleDeclarationSyntax;
@@ -213,6 +203,12 @@ public:
     /// Allocates a symbol map.
     SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
 
+    /// Marks a given generate block's syntax node as having been visited.
+    /// Returns true if this is the first time we've visited this node, otherwise false.
+    /// This is used to make sure we don't infinitely recurse when visiting
+    /// uninstantiated generate blocks.
+    bool markGenerateBlock(const SyntaxNode& node);
+
 private:
     // These functions are called by Scopes to create and track various members.
     friend class Scope;
@@ -288,6 +284,9 @@ private:
 
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
     flat_hash_map<const void*, span<const AttributeSymbol* const>> attributeMap;
+
+    // A set of all generate block syntax nodes that have ever been visited.
+    flat_hash_set<const SyntaxNode*> visitedGenBlocks;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).

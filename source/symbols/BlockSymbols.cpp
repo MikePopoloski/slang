@@ -12,8 +12,8 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
-#include "slang/symbols/Type.h"
 #include "slang/symbols/ParameterSymbols.h"
+#include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
@@ -177,11 +177,14 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
 
     auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc, constructIndex,
                                                           isInstantiated);
-
-    block->addMembers(syntax);
     block->setSyntax(syntax);
     compilation.addAttributes(*block, attributes);
     results.append(block);
+
+    // If this block isn't instantiated, don't add in members unless this is the first time
+    // we're ever visiting it. Otherwise this could lead to an infinitely recursive hierarchy.
+    if (compilation.markGenerateBlock(syntax) || isInstantiated)
+        block->addMembers(syntax);
 }
 
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
@@ -342,9 +345,13 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
             genvar.valueText(), genvar.location(), true /* isLocal */, false /* isPort */);
 
         block->addMember(*implicitParam);
-        block->addMembers(*syntax.block);
         block->setSyntax(*syntax.block);
         result->addMember(*block);
+
+        // If this block isn't instantiated, don't add in members unless this is the first time
+        // we're ever visiting it. Otherwise this could lead to an infinitely recursive hierarchy.
+        if (compilation.markGenerateBlock(syntax) || isInstantiated)
+            block->addMembers(*syntax.block);
 
         implicitParam->setType(compilation.getIntegerType());
         implicitParam->setValue(std::move(value));

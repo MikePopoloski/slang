@@ -1162,3 +1162,18 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UsedBeforeDeclared);
 }
+
+TEST_CASE("Recursive modules -- if generate") {
+    auto tree = SyntaxTree::fromText(R"(
+module foo #(parameter int count = 64) ();
+    if (count == 2) begin end
+    else begin
+        foo #(count / 2) asdf();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
