@@ -140,8 +140,9 @@ ElseClauseSyntax* Parser::parseElseClause() {
     return nullptr;
 }
 
-ConditionalStatementSyntax& Parser::parseConditionalStatement(
-    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority) {
+ConditionalStatementSyntax& Parser::parseConditionalStatement(NamedLabelSyntax* label,
+                                                              AttrList attributes,
+                                                              Token uniqueOrPriority) {
     auto ifKeyword = expect(TokenKind::IfKeyword);
     auto openParen = expect(TokenKind::OpenParenthesis);
 
@@ -155,8 +156,7 @@ ConditionalStatementSyntax& Parser::parseConditionalStatement(
                                         predicate, closeParen, statement, elseClause);
 }
 
-CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label,
-                                                span<AttributeInstanceSyntax*> attributes,
+CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrList attributes,
                                                 Token uniqueOrPriority, Token caseKeyword) {
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& caseExpr = parseExpression();
@@ -293,8 +293,7 @@ DefaultCaseItemSyntax& Parser::parseDefaultCaseItem() {
     return factory.defaultCaseItem(defaultKeyword, colon, parseStatement());
 }
 
-LoopStatementSyntax& Parser::parseLoopStatement(NamedLabelSyntax* label,
-                                                span<AttributeInstanceSyntax*> attributes) {
+LoopStatementSyntax& Parser::parseLoopStatement(NamedLabelSyntax* label, AttrList attributes) {
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& expr = parseExpression();
@@ -305,7 +304,7 @@ LoopStatementSyntax& Parser::parseLoopStatement(NamedLabelSyntax* label,
 }
 
 DoWhileStatementSyntax& Parser::parseDoWhileStatement(NamedLabelSyntax* label,
-                                                      span<AttributeInstanceSyntax*> attributes) {
+                                                      AttrList attributes) {
     auto doKeyword = consume();
     auto& statement = parseStatement();
     auto whileKeyword = expect(TokenKind::WhileKeyword);
@@ -330,7 +329,7 @@ SyntaxNode& Parser::parseForInitializer() {
 }
 
 ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
-                                                      span<AttributeInstanceSyntax*> attributes) {
+                                                      AttrList attributes) {
     auto forKeyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
 
@@ -379,16 +378,15 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
                                    closeParen);
 }
 
-ForeachLoopStatementSyntax& Parser::parseForeachLoopStatement(
-    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+ForeachLoopStatementSyntax& Parser::parseForeachLoopStatement(NamedLabelSyntax* label,
+                                                              AttrList attributes) {
 
     auto keyword = consume();
     auto& vars = parseForeachLoopVariables();
     return factory.foreachLoopStatement(label, attributes, keyword, vars, parseStatement(false));
 }
 
-ReturnStatementSyntax& Parser::parseReturnStatement(NamedLabelSyntax* label,
-                                                    span<AttributeInstanceSyntax*> attributes) {
+ReturnStatementSyntax& Parser::parseReturnStatement(NamedLabelSyntax* label, AttrList attributes) {
     auto keyword = consume();
 
     ExpressionSyntax* expr = nullptr;
@@ -399,15 +397,15 @@ ReturnStatementSyntax& Parser::parseReturnStatement(NamedLabelSyntax* label,
     return factory.returnStatement(label, attributes, keyword, expr, semi);
 }
 
-JumpStatementSyntax& Parser::parseJumpStatement(NamedLabelSyntax* label,
-                                                span<AttributeInstanceSyntax*> attributes) {
+JumpStatementSyntax& Parser::parseJumpStatement(NamedLabelSyntax* label, AttrList attributes) {
     auto keyword = consume();
     auto semi = expect(TokenKind::Semicolon);
     return factory.jumpStatement(label, attributes, keyword, semi);
 }
 
-ProceduralAssignStatementSyntax& Parser::parseProceduralAssignStatement(
-    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {
+ProceduralAssignStatementSyntax& Parser::parseProceduralAssignStatement(NamedLabelSyntax* label,
+                                                                        AttrList attributes,
+                                                                        SyntaxKind kind) {
 
     auto keyword = consume();
     auto& lvalue = parsePrimaryExpression();
@@ -418,8 +416,9 @@ ProceduralAssignStatementSyntax& Parser::parseProceduralAssignStatement(
                                              semi);
 }
 
-ProceduralDeassignStatementSyntax& Parser::parseProceduralDeassignStatement(
-    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {
+ProceduralDeassignStatementSyntax& Parser::parseProceduralDeassignStatement(NamedLabelSyntax* label,
+                                                                            AttrList attributes,
+                                                                            SyntaxKind kind) {
 
     auto keyword = consume();
     auto& variable = parsePrimaryExpression();
@@ -427,8 +426,7 @@ ProceduralDeassignStatementSyntax& Parser::parseProceduralDeassignStatement(
     return factory.proceduralDeassignStatement(kind, label, attributes, keyword, variable, semi);
 }
 
-StatementSyntax& Parser::parseDisableStatement(NamedLabelSyntax* label,
-                                               span<AttributeInstanceSyntax*> attributes) {
+StatementSyntax& Parser::parseDisableStatement(NamedLabelSyntax* label, AttrList attributes) {
     auto disable = consume();
     if (peek(TokenKind::ForkKeyword)) {
         auto fork = consume();
@@ -440,8 +438,7 @@ StatementSyntax& Parser::parseDisableStatement(NamedLabelSyntax* label,
     return factory.disableStatement(label, attributes, disable, name, expect(TokenKind::Semicolon));
 }
 
-StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label,
-                                                 span<AttributeInstanceSyntax*> attributes) {
+StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, AttrList attributes) {
     // figure out what kind of assertion we're looking at; concurrent assertions
     // are involved and get their own handling
     SyntaxKind assertionKind = SyntaxKind::Unknown;
@@ -488,8 +485,8 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label,
                                                parenExpr, actionBlock);
 }
 
-ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(
-    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelSyntax* label,
+                                                                     AttrList attributes) {
 
     SyntaxKind kind = SyntaxKind::Unknown;
     Token propertyOrSequence;
@@ -629,8 +626,7 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
 }
 
 BlockStatementSyntax& Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind,
-                                         NamedLabelSyntax* label,
-                                         span<AttributeInstanceSyntax*> attributes) {
+                                         NamedLabelSyntax* label, AttrList attributes) {
     auto begin = consume();
     auto name = parseNamedBlockClause();
 
@@ -642,8 +638,7 @@ BlockStatementSyntax& Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind
     return factory.blockStatement(blockKind, label, attributes, begin, name, items, end, endName);
 }
 
-StatementSyntax& Parser::parseWaitStatement(NamedLabelSyntax* label,
-                                            span<AttributeInstanceSyntax*> attributes) {
+StatementSyntax& Parser::parseWaitStatement(NamedLabelSyntax* label, AttrList attributes) {
     auto wait = consume();
     if (peek(TokenKind::ForkKeyword)) {
         auto fork = consume();
@@ -658,8 +653,8 @@ StatementSyntax& Parser::parseWaitStatement(NamedLabelSyntax* label,
                                  parseStatement());
 }
 
-WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(
-    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(NamedLabelSyntax* label,
+                                                          AttrList attributes) {
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     SmallVectorSized<TokenOrSyntax, 4> buffer;
@@ -674,7 +669,7 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(
 }
 
 RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
-                                                        span<AttributeInstanceSyntax*> attributes) {
+                                                        AttrList attributes) {
     auto randCase = consume();
     SmallVectorSized<RandCaseItemSyntax*, 16> itemBuffer;
 
@@ -688,8 +683,8 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
     return factory.randCaseStatement(label, attributes, randCase, itemBuffer.copy(alloc), endcase);
 }
 
-EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(
-    NamedLabelSyntax* label, span<AttributeInstanceSyntax*> attributes) {
+EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(NamedLabelSyntax* label,
+                                                                AttrList attributes) {
 
     auto trigger = consume();
 

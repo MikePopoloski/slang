@@ -5,8 +5,8 @@
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #include "slang/parsing/Token.h"
-#include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxNode.h"
 
 namespace slang {
 
@@ -794,6 +794,35 @@ bool isMemberQualifier(TokenKind kind) {
         case TokenKind::StaticKeyword:
         case TokenKind::LocalKeyword:
         case TokenKind::ProtectedKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isDriveStrength(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Supply0Keyword:
+        case TokenKind::Strong0Keyword:
+        case TokenKind::Pull0Keyword:
+        case TokenKind::Weak0Keyword:
+        case TokenKind::HighZ0Keyword:
+        case TokenKind::Supply1Keyword:
+        case TokenKind::Strong1Keyword:
+        case TokenKind::Pull1Keyword:
+        case TokenKind::Weak1Keyword:
+        case TokenKind::HighZ1Keyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isChargeStrength(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::SmallKeyword:
+        case TokenKind::MediumKeyword:
+        case TokenKind::LargeKeyword:
             return true;
         default:
             return false;

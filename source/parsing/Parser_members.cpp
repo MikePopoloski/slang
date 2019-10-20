@@ -25,7 +25,7 @@ ModuleDeclarationSyntax& Parser::parseModule() {
     return parseModule(parseAttributes());
 }
 
-ModuleDeclarationSyntax& Parser::parseModule(span<AttributeInstanceSyntax*> attributes) {
+ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes) {
     auto& header = parseModuleHeader();
     auto endKind = getModuleEndKind(header.moduleKeyword.kind);
 
@@ -253,8 +253,7 @@ span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TPars
     return members.copy(alloc);
 }
 
-TimeUnitsDeclarationSyntax& Parser::parseTimeUnitsDeclaration(
-    span<AttributeInstanceSyntax*> attributes) {
+TimeUnitsDeclarationSyntax& Parser::parseTimeUnitsDeclaration(AttrList attributes) {
     auto keyword = consume();
     auto time = expect(TokenKind::TimeLiteral);
 
@@ -268,7 +267,7 @@ TimeUnitsDeclarationSyntax& Parser::parseTimeUnitsDeclaration(
                                         expect(TokenKind::Semicolon));
 }
 
-MemberSyntax& Parser::parseModportSubroutinePortList(span<AttributeInstanceSyntax*> attributes) {
+MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
     auto importExport = consume();
 
     SmallVectorSized<TokenOrSyntax, 8> buffer;
@@ -366,8 +365,7 @@ ModportItemSyntax& Parser::parseModportItem() {
     return factory.modportItem(name, ports);
 }
 
-ModportDeclarationSyntax& Parser::parseModportDeclaration(
-    span<AttributeInstanceSyntax*> attributes) {
+ModportDeclarationSyntax& Parser::parseModportDeclaration(AttrList attributes) {
     auto keyword = consume();
 
     Token semi;
@@ -443,8 +441,9 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
     return factory.functionPrototype(keyword, lifetime, returnType, name, portList);
 }
 
-FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(
-    span<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind) {
+FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
+                                                            SyntaxKind functionKind,
+                                                            TokenKind endKind) {
     Token end;
     auto& prototype = parseFunctionPrototype();
     auto semi = expect(TokenKind::Semicolon);
@@ -459,7 +458,7 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(
                                        endBlockName);
 }
 
-GenvarDeclarationSyntax& Parser::parseGenvarDeclaration(span<AttributeInstanceSyntax*> attributes) {
+GenvarDeclarationSyntax& Parser::parseGenvarDeclaration(AttrList attributes) {
     Token keyword;
     Token semi;
     span<TokenOrSyntax> identifiers;
@@ -472,7 +471,7 @@ GenvarDeclarationSyntax& Parser::parseGenvarDeclaration(span<AttributeInstanceSy
     return factory.genvarDeclaration(attributes, keyword, identifiers, semi);
 }
 
-LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(span<AttributeInstanceSyntax*> attributes) {
+LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(AttrList attributes) {
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto genvar = consumeIf(TokenKind::GenVarKeyword);
@@ -538,7 +537,7 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(span<AttributeInstanceSyn
                                 parseGenerateBlock());
 }
 
-IfGenerateSyntax& Parser::parseIfGenerateConstruct(span<AttributeInstanceSyntax*> attributes) {
+IfGenerateSyntax& Parser::parseIfGenerateConstruct(AttrList attributes) {
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& condition = parseExpression();
@@ -555,7 +554,7 @@ IfGenerateSyntax& Parser::parseIfGenerateConstruct(span<AttributeInstanceSyntax*
                               elseClause);
 }
 
-CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(span<AttributeInstanceSyntax*> attributes) {
+CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(AttrList attributes) {
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& condition = parseExpression();
@@ -651,7 +650,7 @@ ImplementsClauseSyntax* Parser::parseImplementsClause(TokenKind keywordKind, Tok
     return &factory.implementsClause(implements, buffer.copy(alloc));
 }
 
-ClassDeclarationSyntax& Parser::parseClassDeclaration(span<AttributeInstanceSyntax*> attributes,
+ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
                                                       Token virtualOrInterface) {
     auto classKeyword = consume();
     auto lifetime = parseLifetime();
@@ -776,7 +775,7 @@ MemberSyntax* Parser::parseClassMember() {
     return nullptr;
 }
 
-ContinuousAssignSyntax& Parser::parseContinuousAssign(span<AttributeInstanceSyntax*> attributes) {
+ContinuousAssignSyntax& Parser::parseContinuousAssign(AttrList attributes) {
     // TODO: timing control
     auto assign = consume();
     SmallVectorSized<TokenOrSyntax, 8> buffer;
@@ -800,7 +799,7 @@ DefParamAssignmentSyntax& Parser::parseDefParamAssignment() {
     return factory.defParamAssignment(name, initializer);
 }
 
-DefParamSyntax& Parser::parseDefParam(span<AttributeInstanceSyntax*> attributes) {
+DefParamSyntax& Parser::parseDefParam(AttrList attributes) {
     auto defparam = consume();
     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
@@ -812,7 +811,7 @@ DefParamSyntax& Parser::parseDefParam(span<AttributeInstanceSyntax*> attributes)
     return factory.defParam(attributes, defparam, buffer.copy(alloc), semi);
 }
 
-CoverageOptionSyntax* Parser::parseCoverageOption(span<AttributeInstanceSyntax*> attributes) {
+CoverageOptionSyntax* Parser::parseCoverageOption(AttrList attributes) {
     auto token = peek();
     if (token.kind == TokenKind::Identifier) {
         if (token.valueText() == "option" || token.valueText() == "type_option") {
@@ -869,8 +868,8 @@ MemberSyntax* Parser::parseCoverageMember() {
     return nullptr;
 }
 
-CoverpointSyntax* Parser::parseCoverpoint(span<AttributeInstanceSyntax*> attributes,
-                                          DataTypeSyntax* type, NamedLabelSyntax* label) {
+CoverpointSyntax* Parser::parseCoverpoint(AttrList attributes, DataTypeSyntax* type,
+                                          NamedLabelSyntax* label) {
     // if we have total junk here don't bother trying to fabricate a working tree
     if (attributes.empty() && !type && !label && !peek(TokenKind::CoverPointKeyword))
         return nullptr;
@@ -1066,8 +1065,7 @@ BlockEventExpressionSyntax& Parser::parseBlockEventExpression() {
     return left;
 }
 
-CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(
-    span<AttributeInstanceSyntax*> attributes) {
+CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attributes) {
 
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
@@ -1115,8 +1113,7 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(
                                          endGroup, endBlockName);
 }
 
-MemberSyntax& Parser::parseConstraint(span<AttributeInstanceSyntax*> attributes,
-                                      span<Token> qualifiers) {
+MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifiers) {
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
     if (peek(TokenKind::Semicolon)) {
@@ -1273,8 +1270,7 @@ span<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
     return buffer.copy(alloc);
 }
 
-PackageImportDeclarationSyntax& Parser::parseImportDeclaration(
-    span<AttributeInstanceSyntax*> attributes) {
+PackageImportDeclarationSyntax& Parser::parseImportDeclaration(AttrList attributes) {
     auto keyword = consume();
 
     Token semi;
@@ -1299,7 +1295,7 @@ PackageImportItemSyntax& Parser::parsePackageImportItem() {
     return factory.packageImportItem(package, doubleColon, item);
 }
 
-DPIImportExportSyntax& Parser::parseDPIImportExport(span<AttributeInstanceSyntax*> attributes) {
+DPIImportExportSyntax& Parser::parseDPIImportExport(AttrList attributes) {
     auto keyword = consume();
     auto stringLiteral = expect(TokenKind::StringLiteral);
     if (!stringLiteral.isMissing() && stringLiteral.valueText() != "DPI-C" &&
@@ -1383,8 +1379,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
     return &factory.assertionItemPortList(openParen, buffer.copy(alloc), closeParen);
 }
 
-PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(
-    span<AttributeInstanceSyntax*> attributes) {
+PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(AttrList attributes) {
 
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
@@ -1406,8 +1401,7 @@ PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(
                                        declarations.copy(alloc), spec, optSemi, end, blockName);
 }
 
-SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(
-    span<AttributeInstanceSyntax*> attributes) {
+SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(AttrList attributes) {
 
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
@@ -1447,8 +1441,7 @@ ClockingSkewSyntax* Parser::parseClockingSkew() {
     return &factory.clockingSkew(edge, hash, value);
 }
 
-ClockingDeclarationSyntax& Parser::parseClockingDeclaration(
-    span<AttributeInstanceSyntax*> attributes) {
+ClockingDeclarationSyntax& Parser::parseClockingDeclaration(AttrList attributes) {
 
     Token globalOrDefault;
     if (!peek(TokenKind::ClockingKeyword))
@@ -1547,8 +1540,7 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(
                                        endBlockName);
 }
 
-HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(
-    span<AttributeInstanceSyntax*> attributes) {
+HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attributes) {
 
     auto type = expect(TokenKind::Identifier);
     auto parameters = parseParameterValueAssignment();

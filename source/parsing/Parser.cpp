@@ -262,7 +262,7 @@ MemberSyntax& Parser::parseAnsiPort() {
     return factory.implicitAnsiPort(attributes, header, declarator);
 }
 
-PortDeclarationSyntax& Parser::parsePortDeclaration(span<AttributeInstanceSyntax*> attributes) {
+PortDeclarationSyntax& Parser::parsePortDeclaration(AttrList attributes) {
     Token direction;
     if (isPortDirection(peek().kind))
         direction = consume();
@@ -520,12 +520,42 @@ DataTypeSyntax& Parser::parseDataType(bool allowImplicit) {
     return factory.implicitType(signing, dimensions);
 }
 
-MemberSyntax& Parser::parseNetDeclaration(span<AttributeInstanceSyntax*> attributes) {
+DriveStrengthSyntax* Parser::parseDriveStrength() {
+    if (!peek(TokenKind::OpenParenthesis))
+        return nullptr;
+
+    auto expectStrength = [&] {
+        Token next = peek();
+        if (isDriveStrength(next.kind))
+            return next;
+
+        addDiag(diag::ExpectedNetStrength, next.location());
+        return missingToken(TokenKind::Supply0Keyword, next.location());
+    };
+
+    auto openParen = consume();
+    auto strength0 = expectStrength();
+    auto comma = expect(TokenKind::Comma);
+    auto strength1 = expectStrength();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+
+    return &factory.driveStrength(openParen, strength0, comma, strength1, closeParen);
+}
+
+MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     auto netType = consume();
 
     NetStrengthSyntax* strength = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
-        // TODO: strength specifiers
+        if (isChargeStrength(peek(1).kind)) {
+            auto openParen = consume();
+            auto charge = consume();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            strength = &factory.chargeStrength(openParen, charge, closeParen);
+        }
+        else {
+            strength = parseDriveStrength();
+        }
     }
 
     Token expansionHint;
@@ -543,7 +573,7 @@ MemberSyntax& Parser::parseNetDeclaration(span<AttributeInstanceSyntax*> attribu
                                   semi);
 }
 
-MemberSyntax& Parser::parseVariableDeclaration(span<AttributeInstanceSyntax*> attributes) {
+MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
     switch (peek().kind) {
         case TokenKind::TypedefKeyword: {
             auto typedefKeyword = consume();
@@ -660,7 +690,7 @@ span<TokenOrSyntax> Parser::parseDeclarators(Token& semi) {
     return parseDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
 }
 
-span<AttributeInstanceSyntax*> Parser::parseAttributes() {
+Parser::AttrList Parser::parseAttributes() {
     SmallVectorSized<AttributeInstanceSyntax*, 4> buffer;
     while (peek(TokenKind::OpenParenthesisStar)) {
         Token openParen;
@@ -689,7 +719,7 @@ AttributeSpecSyntax& Parser::parseAttributeSpec() {
     return factory.attributeSpec(name, initializer);
 }
 
-NetTypeDeclarationSyntax& Parser::parseNetTypeDecl(span<AttributeInstanceSyntax*> attributes) {
+NetTypeDeclarationSyntax& Parser::parseNetTypeDecl(AttrList attributes) {
     auto keyword = consume();
     auto& type = parseDataType(false);
     auto name = expect(TokenKind::Identifier);
@@ -942,7 +972,7 @@ bool Parser::scanQualifiedName(uint32_t& index) {
     return true;
 }
 
-void Parser::errorIfAttributes(span<AttributeInstanceSyntax*> attributes) {
+void Parser::errorIfAttributes(AttrList attributes) {
     if (!attributes.empty())
         addDiag(diag::AttributesNotAllowed, peek().location());
 }

@@ -58,6 +58,8 @@ bool isPossibleDelayOrEventControl(TokenKind kind);
 bool isEndKeyword(TokenKind kind);
 bool isDeclarationModifier(TokenKind kind);
 bool isMemberQualifier(TokenKind kind);
+bool isDriveStrength(TokenKind kind);
+bool isChargeStrength(TokenKind kind);
 bool isEndOfParenList(TokenKind kind);
 bool isEndOfBracedList(TokenKind kind);
 bool isEndOfBracketedList(TokenKind kind);
