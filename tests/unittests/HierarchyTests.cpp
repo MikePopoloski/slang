@@ -17,6 +17,33 @@ TEST_CASE("Finding top level") {
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Finding top level - 2") {
+    auto tree1 = SyntaxTree::fromText(R"(
+module top;
+endmodule
+
+module nottop;
+endmodule
+)");
+    auto tree2 = SyntaxTree::fromText(R"(
+module foo #(parameter int f = 2) ();
+    if (f != 2) begin
+        nottop nt();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree2);
+    compilation.addSyntaxTree(tree1);
+    NO_COMPILATION_ERRORS;
+
+    const RootSymbol& root = compilation.getRoot();
+    REQUIRE(root.topInstances.size() == 2);
+    CHECK(root.topInstances[0]->name == "foo");
+    CHECK(root.topInstances[1]->name == "top");
+}
+
 TEST_CASE("Top level params") {
     auto tree = SyntaxTree::fromText(R"(
 module Top #(parameter int foo = 3) ();
@@ -1165,10 +1192,14 @@ endmodule
 
 TEST_CASE("Recursive modules -- if generate") {
     auto tree = SyntaxTree::fromText(R"(
-module foo #(parameter int count = 64) ();
+module bar #(parameter int c) ();
+    if (c == 99) bar #(99) b();
+endmodule
+
+module foo #(parameter int count = 2) ();
     if (count == 2) begin end
     else begin
-        foo #(count / 2) asdf();
+        bar #(99) asdf();
     end
 endmodule
 )");

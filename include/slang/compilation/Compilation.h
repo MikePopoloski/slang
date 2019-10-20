@@ -203,11 +203,10 @@ public:
     /// Allocates a symbol map.
     SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
 
-    /// Marks a given generate block's syntax node as having been visited.
-    /// Returns true if this is the first time we've visited this node, otherwise false.
-    /// This is used to make sure we don't infinitely recurse when visiting
-    /// uninstantiated generate blocks.
-    bool markGenerateBlock(const SyntaxNode& node);
+    /// Visits an uninstantiated generate block to see if there are any
+    /// module instantiations we need to observe -- this is used to determine
+    /// which modules are considered "top level".
+    void noteUninstantiatedGenerateBlock(const SyntaxNode& node);
 
 private:
     // These functions are called by Scopes to create and track various members.

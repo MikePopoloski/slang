@@ -686,8 +686,125 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
     return importData[index];
 }
 
-bool Compilation::markGenerateBlock(const SyntaxNode& node) {
-    return visitedGenBlocks.insert(&node).second;
+namespace {
+using NameSet = flat_hash_set<string_view>;
+}
+
+static void findInstantiations(const MemberSyntax& node, SmallVector<NameSet>& scopeStack,
+                               NameSet& found);
+
+static void findInstantiations(const ModuleDeclarationSyntax& module,
+                               SmallVector<NameSet>& scopeStack, NameSet& found) {
+    // If there are nested modules that shadow global module names, we need to
+    // ignore them when considering instantiations.
+    NameSet* localDefs = nullptr;
+    for (auto member : module.members) {
+        switch (member->kind) {
+            case SyntaxKind::ModuleDeclaration:
+            case SyntaxKind::InterfaceDeclaration:
+            case SyntaxKind::ProgramDeclaration: {
+                // ignore empty names
+                string_view name = member->as<ModuleDeclarationSyntax>().header->name.valueText();
+                if (!name.empty()) {
+                    // create new scope entry lazily
+                    if (!localDefs) {
+                        scopeStack.emplace();
+                        localDefs = &scopeStack.back();
+                    }
+                    localDefs->insert(name);
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    // now traverse all children
+    for (auto member : module.members)
+        findInstantiations(*member, scopeStack, found);
+
+    if (localDefs)
+        scopeStack.pop();
+}
+
+static bool containsName(const SmallVector<flat_hash_set<string_view>>& scopeStack,
+                         string_view name) {
+    for (const auto& set : scopeStack) {
+        if (set.find(name) != set.end())
+            return true;
+    }
+    return false;
+}
+
+static void findInstantiations(const MemberSyntax& node, SmallVector<NameSet>& scopeStack,
+                               NameSet& found) {
+    switch (node.kind) {
+        case SyntaxKind::HierarchyInstantiation: {
+            // Determine whether this is a local or global module we're instantiating;
+            // don't worry about local instantiations right now, they can't be root.
+            const auto& his = node.as<HierarchyInstantiationSyntax>();
+            string_view name = his.type.valueText();
+            if (!name.empty() && !containsName(scopeStack, name))
+                found.insert(name);
+            break;
+        }
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+        case SyntaxKind::ProgramDeclaration:
+            findInstantiations(node.as<ModuleDeclarationSyntax>(), scopeStack, found);
+            break;
+        case SyntaxKind::GenerateRegion:
+            for (auto& child : node.as<GenerateRegionSyntax>().members)
+                findInstantiations(*child, scopeStack, found);
+            break;
+        case SyntaxKind::GenerateBlock:
+            for (auto& child : node.as<GenerateBlockSyntax>().members)
+                findInstantiations(*child, scopeStack, found);
+            break;
+        case SyntaxKind::LoopGenerate:
+            findInstantiations(*node.as<LoopGenerateSyntax>().block, scopeStack, found);
+            break;
+        case SyntaxKind::CaseGenerate:
+            for (auto& item : node.as<CaseGenerateSyntax>().items) {
+                switch (item->kind) {
+                    case SyntaxKind::DefaultCaseItem:
+                        findInstantiations(
+                            item->as<DefaultCaseItemSyntax>().clause->as<MemberSyntax>(),
+                            scopeStack, found);
+                        break;
+                    case SyntaxKind::StandardCaseItem:
+                        findInstantiations(
+                            item->as<StandardCaseItemSyntax>().clause->as<MemberSyntax>(),
+                            scopeStack, found);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        case SyntaxKind::IfGenerate: {
+            const auto& ifGen = node.as<IfGenerateSyntax>();
+            findInstantiations(*ifGen.block, scopeStack, found);
+            if (ifGen.elseClause)
+                findInstantiations(ifGen.elseClause->clause->as<MemberSyntax>(), scopeStack, found);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+void Compilation::noteUninstantiatedGenerateBlock(const SyntaxNode& node) {
+    if (!visitedGenBlocks.insert(&node).second)
+        return;
+
+    NameSet instances;
+    SmallVectorSized<NameSet, 2> scopeStack;
+    findInstantiations(node.as<MemberSyntax>(), scopeStack, instances);
+
+    for (string_view entry : instances)
+        getDefinition(entry);
 }
 
 } // namespace slang

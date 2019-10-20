@@ -181,10 +181,10 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
     compilation.addAttributes(*block, attributes);
     results.append(block);
 
-    // If this block isn't instantiated, don't add in members unless this is the first time
-    // we're ever visiting it. Otherwise this could lead to an infinitely recursive hierarchy.
-    if (compilation.markGenerateBlock(syntax) || isInstantiated)
+    if (isInstantiated)
         block->addMembers(syntax);
+    else
+        compilation.noteUninstantiatedGenerateBlock(syntax);
 }
 
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
@@ -348,10 +348,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         block->setSyntax(*syntax.block);
         result->addMember(*block);
 
-        // If this block isn't instantiated, don't add in members unless this is the first time
-        // we're ever visiting it. Otherwise this could lead to an infinitely recursive hierarchy.
-        if (compilation.markGenerateBlock(syntax) || isInstantiated)
+        if (isInstantiated)
             block->addMembers(*syntax.block);
+        else
+            compilation.noteUninstantiatedGenerateBlock(*syntax.block);
 
         implicitParam->setType(compilation.getIntegerType());
         implicitParam->setValue(std::move(value));
