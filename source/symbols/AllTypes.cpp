@@ -85,13 +85,10 @@ bool IntegralType::isKind(SymbolKind kind) {
 }
 
 ConstantRange IntegralType::getBitVectorRange() const {
-    if (isPredefinedInteger() || isScalar() || kind == SymbolKind::PackedStructType ||
-        kind == SymbolKind::PackedUnionType) {
+    if (kind == SymbolKind::PackedArrayType)
+        return as<PackedArrayType>().range;
 
-        return { int32_t(bitWidth - 1), 0 };
-    }
-
-    return as<PackedArrayType>().range;
+    return { int32_t(bitWidth - 1), 0 };
 }
 
 bool IntegralType::isDeclaredReg() const {
@@ -216,10 +213,13 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                                  LookupLocation location, const Scope& scope, bool forceSigned) {
     const Type* base;
     const Type* cb;
+    bitwidth_t bitWidth;
+
     if (!syntax.baseType) {
         // If no explicit base type is specified we default to an int.
         base = &compilation.getIntType();
         cb = base;
+        bitWidth = cb->getBitWidth();
     }
     else {
         base = &compilation.getType(*syntax.baseType, location, scope, forceSigned);
@@ -229,12 +229,16 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 << *base;
             cb = &compilation.getErrorType();
         }
+
+        bitWidth = cb->getBitWidth();
+        if (bitWidth == 0)
+            bitWidth = 1;
     }
 
-    SVInt allOnes(cb->getBitWidth(), 0, cb->isSigned());
+    SVInt allOnes(bitWidth, 0, cb->isSigned());
     allOnes.setAllOnes();
 
-    SVInt one(cb->getBitWidth(), 1, cb->isSigned());
+    SVInt one(bitWidth, 1, cb->isSigned());
     SVInt previous;
     SourceRange previousRange;
     bool first = true;
@@ -274,7 +278,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         auto loc = range.start();
         SVInt value;
         if (first) {
-            value = SVInt(cb->getBitWidth(), 0, cb->isSigned());
+            value = SVInt(bitWidth, 0, cb->isSigned());
             first = false;
         }
         else if (previous.hasUnknown()) {
