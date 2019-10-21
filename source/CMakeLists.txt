@@ -39,6 +39,7 @@ add_library(slang
 	binding/TimingControl.cpp
 
 	compilation/builtins/ArrayMethods.cpp
+	compilation/builtins/ConversionFuncs.cpp
 	compilation/builtins/EnumMethods.cpp
 	compilation/builtins/MathFuncs.cpp
 	compilation/builtins/MiscSystemFuncs.cpp

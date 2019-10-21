@@ -771,3 +771,19 @@ TEST_CASE("Utility system functions") {
 
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Conversion system functions") {
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
+
+    auto typeof = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        BindContext context(scope, LookupLocation::max);
+        return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
+    };
+
+    CHECK(typeof("$signed(3'd4)") == "bit signed[2:0]");
+    CHECK(typeof("$unsigned(3'sd4)") == "bit[2:0]");
+
+    NO_COMPILATION_ERRORS;
+}

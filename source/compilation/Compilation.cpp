@@ -78,6 +78,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
 namespace slang::Builtins {
 
 void registerArrayMethods(Compilation&);
+void registerConversionFuncs(Compilation&);
 void registerEnumMethods(Compilation&);
 void registerMathFuncs(Compilation&);
 void registerMiscSystemFuncs(Compilation&);
@@ -175,7 +176,7 @@ Compilation::Compilation() {
 
     // Register all system tasks, functions, and methods.
     Builtins::registerArrayMethods(*this);
-    Builtins::registerArrayMethods(*this);
+    Builtins::registerConversionFuncs(*this);
     Builtins::registerEnumMethods(*this);
     Builtins::registerMathFuncs(*this);
     Builtins::registerMiscSystemFuncs(*this);
