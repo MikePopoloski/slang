@@ -305,6 +305,28 @@ void GenerateBlockSymbol::toJson(json& j) const {
     j["isInstantiated"] = isInstantiated;
 }
 
+static uint64_t getGenerateLoopCount(const Scope& parent) {
+    uint64_t count = 0;
+    const Scope* cur = &parent;
+    do {
+        const Symbol& sym = cur->asSymbol();
+        if (sym.kind == SymbolKind::GenerateBlockArray) {
+            auto& gba = sym.as<GenerateBlockArraySymbol>();
+            if (!count)
+                count = gba.entries.size();
+            else
+                count *= gba.entries.size();
+        }
+        else if (sym.kind != SymbolKind::GenerateBlock) {
+            break;
+        }
+
+        cur = sym.getParentScope();
+    } while (cur);
+
+    return count;
+}
+
 GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     Compilation& compilation, const LoopGenerateSyntax& syntax, SymbolIndex scopeIndex,
     LookupLocation location, const Scope& parent, uint32_t constructIndex) {
@@ -319,6 +341,12 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     auto genvar = syntax.identifier;
     if (genvar.isMissing())
         return *result;
+
+    // Walk up the tree a bit to see if we're nested inside another generate loop.
+    // If we are, we'll include that parent's array size in our decision about
+    // wether we've looped too many times within one generate block.
+    const uint64_t baseCount = getGenerateLoopCount(parent);
+    const uint64_t loopLimit = compilation.getOptions().maxGenerateSteps;
 
     // If the loop initializer has a `genvar` keyword, we can use the name directly
     // Otherwise we need to do a lookup to make sure we have the actual genvar somewhere.
@@ -405,9 +433,15 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         iterContext.addDiag(diag::GenvarUnknownBits, genvar.range()) << *loopVal;
 
     // Generate blocks!
+    uint64_t loopCount = 0;
     SmallSet<SVInt, 8> usedValues;
-    bool any = false;
     while (true) {
+        loopCount += baseCount;
+        if (loopCount > loopLimit) {
+            parent.addDiag(diag::MaxGenerateStepsExceeded, syntax.keyword.range());
+            break;
+        }
+
         auto stop = stopExpr.eval(evalContext);
         if (stop.bad() || !stop.isTrue())
             break;
@@ -418,7 +452,6 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
             break;
         }
 
-        any = true;
         createBlock(*loopVal, true);
 
         if (!iterExpr.eval(evalContext))
@@ -431,7 +464,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     evalContext.reportDiags(iterContext, syntax.sourceRange());
 
     result->entries = entries.copy(compilation);
-    if (!any)
+    if (entries.empty())
         createBlock(SVInt(32, 0, true), false);
 
     return *result;

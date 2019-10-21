@@ -1227,3 +1227,28 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MaxInstanceDepthExceeded);
 }
+
+TEST_CASE("Generate loops -- too many iterations") {
+    auto tree = SyntaxTree::fromText(R"(
+module bar;
+    for (genvar i = 0; i < 1024; i++) begin
+        for (genvar j = 0; j < 1024; j++) begin
+        end
+    end
+endmodule
+)");
+
+    // Reduce this a bit just to make the tests faster.
+    CompilationOptions co;
+    co.maxGenerateSteps = 8192;
+    
+    Bag options;
+    options.add(co);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MaxGenerateStepsExceeded);
+}
