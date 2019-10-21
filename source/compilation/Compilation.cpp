@@ -91,7 +91,7 @@ void registerSystemTasks(Compilation&);
 
 namespace slang {
 
-Compilation::Compilation() {
+Compilation::Compilation(const Bag& options) : options(options.getOrDefault<CompilationOptions>()) {
     // Construct all built-in types.
     bitType = emplace<ScalarType>(ScalarType::Bit);
     logicType = emplace<ScalarType>(ScalarType::Logic);

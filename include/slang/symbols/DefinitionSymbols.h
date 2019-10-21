@@ -7,8 +7,8 @@
 #pragma once
 
 #include "slang/binding/ConstantValue.h"
-#include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Scope.h"
+#include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/symbols/TimeScaleSymbolBase.h"
 
@@ -58,6 +58,7 @@ class InstanceSymbol : public Symbol, public Scope {
 public:
     const DefinitionSymbol& definition;
     span<const int32_t> arrayPath;
+    uint32_t hierarchyDepth;
 
     const SymbolMap& getPortMap() const {
         ensureElaborated();
@@ -74,7 +75,7 @@ public:
 
 protected:
     InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc,
-                   const DefinitionSymbol& definition);
+                   const DefinitionSymbol& definition, uint32_t hierarchyDepth);
 
     void populate(const HierarchicalInstanceSyntax* syntax,
                   span<const ParameterSymbolBase* const> parameters);
@@ -86,8 +87,9 @@ private:
 class ModuleInstanceSymbol : public InstanceSymbol {
 public:
     ModuleInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                         const DefinitionSymbol& definition) :
-        InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, loc, definition) {}
+                         const DefinitionSymbol& definition, uint32_t hierarchyDepth) :
+        InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, loc, definition,
+                       hierarchyDepth) {}
 
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name,
                                              SourceLocation loc,
@@ -96,7 +98,8 @@ public:
     static ModuleInstanceSymbol& instantiate(Compilation& compilation,
                                              const HierarchicalInstanceSyntax& syntax,
                                              const DefinitionSymbol& definition,
-                                             span<const ParameterSymbolBase* const> parameters);
+                                             span<const ParameterSymbolBase* const> parameters,
+                                             uint32_t hierarchyDepth);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
 };
@@ -104,13 +107,15 @@ public:
 class InterfaceInstanceSymbol : public InstanceSymbol {
 public:
     InterfaceInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                            const DefinitionSymbol& definition) :
-        InstanceSymbol(SymbolKind::InterfaceInstance, compilation, name, loc, definition) {}
+                            const DefinitionSymbol& definition, uint32_t hierarchyDepth) :
+        InstanceSymbol(SymbolKind::InterfaceInstance, compilation, name, loc, definition,
+                       hierarchyDepth) {}
 
     static InterfaceInstanceSymbol& instantiate(Compilation& compilation,
                                                 const HierarchicalInstanceSyntax& syntax,
                                                 const DefinitionSymbol& definition,
-                                                span<const ParameterSymbolBase* const> parameters);
+                                                span<const ParameterSymbolBase* const> parameters,
+                                                uint32_t hierarchyDepth);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfaceInstance; }
 };

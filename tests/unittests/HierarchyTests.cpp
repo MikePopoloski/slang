@@ -1208,3 +1208,22 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Recursive modules -- invalid") {
+    auto tree = SyntaxTree::fromText(R"(
+module bar;
+    foo f();
+endmodule
+
+module foo #(parameter int count = 2) ();
+    foo #(count * 2 + 1) f();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MaxInstanceDepthExceeded);
+}

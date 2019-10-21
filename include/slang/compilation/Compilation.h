@@ -13,6 +13,7 @@
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/syntax/SyntaxNode.h"
+#include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/SafeIndexedVector.h"
 
@@ -32,13 +33,35 @@ struct ModuleDeclarationSyntax;
 
 enum class IntegralFlags : uint8_t;
 
+/// Contains various options that can control compilation behavior.
+struct CompilationOptions {
+    /// The maximum depth of nested module instances (and interfaces/programs),
+    /// to detect infinite recursion.
+    uint32_t maxInstanceDepth = 512;
+
+    /// The maximum number of steps that will be taken when expanding a single
+    /// generate construct, to detect infinite loops.
+    uint32_t maxGenerateSteps = 16384;
+
+    /// The maximum depth of nested function calls in constant expressions,
+    /// to detect infinite recursion.
+    uint32_t maxConstexprDepth = 512;
+
+    /// The maximum number of steps to allow when evaluating a constant expressions,
+    /// to detect infinite loops.
+    uint32_t maxConstexprSteps = 1000000;
+};
+
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
 /// Common symbols such as built in types are exposed here as well.
 class Compilation : public BumpAllocator {
 public:
-    Compilation();
+    explicit Compilation(const Bag& options = {});
     ~Compilation();
+
+    /// Gets the set of options used to construct the compilation.
+    const CompilationOptions& getOptions() const { return options; }
 
     /// Adds a syntax tree to the compilation. If the compilation has already been finalized
     /// by calling @a getRoot this call will throw an exception.
@@ -220,72 +243,12 @@ private:
     void addAttributes(const void* ptr, span<const AttributeInstanceSyntax* const> syntax);
     span<const AttributeSymbol* const> getAttributes(const void* ptr) const;
 
-    Diagnostics diags;
-    std::unique_ptr<RootSymbol> root;
-    CompilationUnitSymbol* emptyUnit = nullptr;
-    const SourceManager* sourceManager = nullptr;
-    TimeScale defaultTimeScale;
-    bool finalized = false;
-    bool finalizing = false; // to prevent reentrant calls to getRoot()
-
-    optional<Diagnostics> cachedParseDiagnostics;
-    optional<Diagnostics> cachedSemanticDiagnostics;
-    optional<Diagnostics> cachedAllDiagnostics;
-
-    // A list of compilation units that have been added to the compilation.
-    std::vector<const CompilationUnitSymbol*> compilationUnits;
-
-    // Storage for syntax trees that have been added to the compilation.
-    std::vector<std::shared_ptr<SyntaxTree>> syntaxTrees;
+    // Stored options object.
+    CompilationOptions options;
 
     // Specialized allocators for types that are not trivially destructible.
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
-
-    // Sideband data for scopes that have deferred members.
-    SafeIndexedVector<Scope::DeferredMemberData, Scope::DeferredMemberIndex> deferredData;
-
-    // Sideband data for scopes that have wildcard imports. The list of imports
-    // is stored here and queried during name lookups.
-    SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
-
-    // The name map for global definitions. The key is a combination of definition name +
-    // the scope in which it was declared. The value is the definition symbol along with a
-    // boolean that indicates whether it has ever been instantiated in the design.
-    mutable flat_hash_map<std::tuple<string_view, const Scope*>,
-                          std::tuple<const DefinitionSymbol*, bool>>
-        definitionMap;
-
-    // The name map for packages. Note that packages have their own namespace,
-    // which is why they can't share the definitions name table.
-    flat_hash_map<string_view, const PackageSymbol*> packageMap;
-
-    // The name map for system subroutines.
-    flat_hash_map<string_view, std::unique_ptr<SystemSubroutine>> subroutineMap;
-
-    // The name map for system methods.
-    flat_hash_map<std::tuple<string_view, SymbolKind>, std::unique_ptr<SystemSubroutine>> methodMap;
-
-    // A cache of vector types, keyed on various properties such as bit width.
-    flat_hash_map<uint32_t, const Type*> vectorTypeCache;
-
-    // Map from syntax kinds to the built-in types.
-    flat_hash_map<SyntaxKind, const Type*> knownTypes;
-
-    // Map from token kinds to the built-in net types.
-    flat_hash_map<TokenKind, std::unique_ptr<NetType>> knownNetTypes;
-
-    // Map from syntax nodes to parse-time metadata about default net types.
-    flat_hash_map<const ModuleDeclarationSyntax*, const NetType*> defaultNetTypeMap;
-
-    // Map from syntax nodes to parse-time metadata about time scale directives.
-    flat_hash_map<const ModuleDeclarationSyntax*, TimeScale> timeScaleDirectiveMap;
-
-    // Map from pointers (to symbols, statements, expressions) to their associated attributes.
-    flat_hash_map<const void*, span<const AttributeSymbol* const>> attributeMap;
-
-    // A set of all generate block syntax nodes that have ever been visited.
-    flat_hash_set<const SyntaxNode*> visitedGenBlocks;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).
@@ -314,6 +277,69 @@ private:
     Type* eventType;
     Type* errorType;
     NetType* wireNetType;
+
+    // Sideband data for scopes that have deferred members.
+    SafeIndexedVector<Scope::DeferredMemberData, Scope::DeferredMemberIndex> deferredData;
+
+    // Sideband data for scopes that have wildcard imports. The list of imports
+    // is stored here and queried during name lookups.
+    SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
+
+    // The name map for global definitions. The key is a combination of definition name +
+    // the scope in which it was declared. The value is the definition symbol along with a
+    // boolean that indicates whether it has ever been instantiated in the design.
+    mutable flat_hash_map<std::tuple<string_view, const Scope*>,
+                          std::tuple<const DefinitionSymbol*, bool>>
+        definitionMap;
+
+    // A cache of vector types, keyed on various properties such as bit width.
+    flat_hash_map<uint32_t, const Type*> vectorTypeCache;
+
+    // Map from syntax kinds to the built-in types.
+    flat_hash_map<SyntaxKind, const Type*> knownTypes;
+
+    // Map from token kinds to the built-in net types.
+    flat_hash_map<TokenKind, std::unique_ptr<NetType>> knownNetTypes;
+
+    // Map from syntax nodes to parse-time metadata about default net types.
+    flat_hash_map<const ModuleDeclarationSyntax*, const NetType*> defaultNetTypeMap;
+
+    // Map from syntax nodes to parse-time metadata about time scale directives.
+    flat_hash_map<const ModuleDeclarationSyntax*, TimeScale> timeScaleDirectiveMap;
+
+    // The name map for packages. Note that packages have their own namespace,
+    // which is why they can't share the definitions name table.
+    flat_hash_map<string_view, const PackageSymbol*> packageMap;
+
+    // The name map for system subroutines.
+    flat_hash_map<string_view, std::unique_ptr<SystemSubroutine>> subroutineMap;
+
+    // The name map for system methods.
+    flat_hash_map<std::tuple<string_view, SymbolKind>, std::unique_ptr<SystemSubroutine>> methodMap;
+
+    // Map from pointers (to symbols, statements, expressions) to their associated attributes.
+    flat_hash_map<const void*, span<const AttributeSymbol* const>> attributeMap;
+
+    // A set of all generate block syntax nodes that have ever been visited.
+    flat_hash_set<const SyntaxNode*> visitedGenBlocks;
+
+    Diagnostics diags;
+    std::unique_ptr<RootSymbol> root;
+    CompilationUnitSymbol* emptyUnit = nullptr;
+    const SourceManager* sourceManager = nullptr;
+    TimeScale defaultTimeScale;
+    bool finalized = false;
+    bool finalizing = false; // to prevent reentrant calls to getRoot()
+
+    optional<Diagnostics> cachedParseDiagnostics;
+    optional<Diagnostics> cachedSemanticDiagnostics;
+    optional<Diagnostics> cachedAllDiagnostics;
+
+    // A list of compilation units that have been added to the compilation.
+    std::vector<const CompilationUnitSymbol*> compilationUnits;
+
+    // Storage for syntax trees that have been added to the compilation.
+    std::vector<std::shared_ptr<SyntaxTree>> syntaxTrees;
 };
 
 } // namespace slang

@@ -157,15 +157,17 @@ Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definit
                        const HierarchicalInstanceSyntax& syntax,
                        span<const ParameterSymbolBase* const> parameters,
                        SmallVector<int32_t>& path,
-                       span<const AttributeInstanceSyntax* const> attributes) {
+                       span<const AttributeInstanceSyntax* const> attributes,
+                       uint32_t hierarchyDepth) {
     InstanceSymbol* inst;
     switch (definition.definitionKind) {
         case DefinitionKind::Module:
-            inst = &ModuleInstanceSymbol::instantiate(compilation, syntax, definition, parameters);
+            inst = &ModuleInstanceSymbol::instantiate(compilation, syntax, definition, parameters,
+                                                      hierarchyDepth);
             break;
         case DefinitionKind::Interface:
-            inst =
-                &InterfaceInstanceSymbol::instantiate(compilation, syntax, definition, parameters);
+            inst = &InterfaceInstanceSymbol::instantiate(compilation, syntax, definition,
+                                                         parameters, hierarchyDepth);
             break;
         case DefinitionKind::Program: // TODO: handle this
         default:
@@ -178,6 +180,8 @@ Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definit
     return inst;
 };
 
+// TODO: clean this up
+
 using DimIterator = span<VariableDimensionSyntax*>::iterator;
 
 Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& definition,
@@ -185,10 +189,11 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
                              span<const ParameterSymbolBase* const> parameters,
                              const BindContext& context, DimIterator it, DimIterator end,
                              SmallVector<int32_t>& path,
-                             span<const AttributeInstanceSyntax* const> attributes) {
+                             span<const AttributeInstanceSyntax* const> attributes,
+                             uint32_t hierarchyDepth) {
     if (it == end) {
-        return createInstance(compilation, definition, instanceSyntax, parameters, path,
-                              attributes);
+        return createInstance(compilation, definition, instanceSyntax, parameters, path, attributes,
+                              hierarchyDepth);
     }
 
     // Evaluate the dimensions of the array. If this fails for some reason,
@@ -209,7 +214,7 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
     for (int32_t i = range.lower(); i <= range.upper(); i++) {
         path.append(i);
         auto symbol = recurseInstanceArray(compilation, definition, instanceSyntax, parameters,
-                                           context, it, end, path, attributes);
+                                           context, it, end, path, attributes, hierarchyDepth);
         path.pop();
 
         if (!symbol)
@@ -238,7 +243,7 @@ Scope& createTempInstance(Compilation& compilation, const DefinitionSymbol& def)
         void setParent(const Scope& scope) { ModuleInstanceSymbol::setParent(scope); }
     };
 
-    auto& tempDef = *compilation.emplace<TempInstance>(compilation, def.name, def.location, def);
+    auto& tempDef = *compilation.emplace<TempInstance>(compilation, def.name, def.location, def, 0);
     tempDef.setParent(*def.getParentScope());
 
     // Need the imports here as well, since parameters may depend on them.
@@ -439,21 +444,46 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
+    // In order to avoid infinitely recursive instantiations, keep track of how deep we are
+    // in the hierarchy tree. Each instance knows, so we only need to walk up as far as our
+    // nearest parent in order to know our own depth here.
+    uint32_t hierarchyDepth = 0;
+    const Symbol* parent = &scope.asSymbol();
+    while (true) {
+        if (InstanceSymbol::isKind(parent->kind)) {
+            hierarchyDepth = parent->as<InstanceSymbol>().hierarchyDepth + 1;
+            if (hierarchyDepth > compilation.getOptions().maxInstanceDepth) {
+                auto& diag = scope.addDiag(diag::MaxInstanceDepthExceeded, syntax.type.range());
+                diag << compilation.getOptions().maxInstanceDepth;
+                return;
+            }
+            break;
+        }
+
+        auto s = parent->getParentScope();
+        if (!s)
+            break;
+
+        parent = &s->asSymbol();
+    }
+
     for (auto instanceSyntax : syntax.instances) {
         SmallVectorSized<int32_t, 4> path;
         auto dims = instanceSyntax->dimensions;
         auto symbol =
             recurseInstanceArray(compilation, *definition, *instanceSyntax, parameters, context,
-                                 dims.begin(), dims.end(), path, syntax.attributes);
+                                 dims.begin(), dims.end(), path, syntax.attributes, hierarchyDepth);
         if (symbol)
             results.append(symbol);
     }
 }
 
 InstanceSymbol::InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name,
-                               SourceLocation loc, const DefinitionSymbol& definition) :
+                               SourceLocation loc, const DefinitionSymbol& definition,
+                               uint32_t hierarchyDepth) :
     Symbol(kind, name, loc),
-    Scope(compilation, this), definition(definition), portMap(compilation.allocSymbolMap()) {
+    Scope(compilation, this), definition(definition), hierarchyDepth(hierarchyDepth),
+    portMap(compilation.allocSymbolMap()) {
 }
 
 void InstanceSymbol::toJson(json& j) const {
@@ -544,27 +574,30 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
                                                         SourceLocation loc,
                                                         const DefinitionSymbol& definition) {
-    auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc, definition);
+    auto instance =
+        compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc, definition, 0);
     instance->populate(nullptr, definition.parameters);
     return *instance;
 }
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const ParameterSymbolBase* const> parameters) {
+    const DefinitionSymbol& definition, span<const ParameterSymbolBase* const> parameters,
+    uint32_t hierarchyDepth) {
 
-    auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, syntax.name.valueText(),
-                                                              syntax.name.location(), definition);
+    auto instance = compilation.emplace<ModuleInstanceSymbol>(
+        compilation, syntax.name.valueText(), syntax.name.location(), definition, hierarchyDepth);
     instance->populate(&syntax, parameters);
     return *instance;
 }
 
 InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const ParameterSymbolBase* const> parameters) {
+    const DefinitionSymbol& definition, span<const ParameterSymbolBase* const> parameters,
+    uint32_t hierarchyDepth) {
 
     auto instance = compilation.emplace<InterfaceInstanceSymbol>(
-        compilation, syntax.name.valueText(), syntax.name.location(), definition);
+        compilation, syntax.name.valueText(), syntax.name.location(), definition, hierarchyDepth);
 
     instance->populate(&syntax, parameters);
     return *instance;
