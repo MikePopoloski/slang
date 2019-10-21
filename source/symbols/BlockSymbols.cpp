@@ -374,7 +374,6 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
         block->addMember(*implicitParam);
         block->setSyntax(*syntax.block);
-        result->addMember(*block);
 
         if (isInstantiated)
             block->addMembers(*syntax.block);
@@ -439,7 +438,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         loopCount += baseCount;
         if (loopCount > loopLimit) {
             parent.addDiag(diag::MaxGenerateStepsExceeded, syntax.keyword.range());
-            break;
+            return *result;
         }
 
         auto stop = stopExpr.eval(evalContext);
@@ -466,6 +465,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     result->entries = entries.copy(compilation);
     if (entries.empty())
         createBlock(SVInt(32, 0, true), false);
+    else {
+        for (auto& entry : entries)
+            result->addMember(*entry.block);
+    }
 
     return *result;
 }
