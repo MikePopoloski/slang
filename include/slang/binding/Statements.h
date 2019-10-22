@@ -153,6 +153,7 @@ private:
     std::variant<const StatementSyntax*, const SyntaxList<SyntaxNode>*> syntax;
     mutable const Statement* stmt = nullptr;
     span<const StatementBlockSymbol* const> blocks;
+    mutable bool isBinding = false;
     bool labelHandled = false;
 };
 

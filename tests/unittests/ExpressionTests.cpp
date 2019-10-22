@@ -787,3 +787,26 @@ TEST_CASE("Conversion system functions") {
 
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Consteval - infinite recursion checking") {
+    auto tree = SyntaxTree::fromText(R"(
+function int foo;
+    return bar() + 1;
+endfunction
+
+function int bar;
+    return foo;
+endfunction
+
+module m;
+    localparam int i = foo();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpressionNotConstant);
+}

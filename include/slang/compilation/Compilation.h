@@ -45,7 +45,7 @@ struct CompilationOptions {
 
     /// The maximum depth of nested function calls in constant expressions,
     /// to detect infinite recursion.
-    uint32_t maxConstexprDepth = 512;
+    uint32_t maxConstexprDepth = 256;
 
     /// The maximum number of steps to allow when evaluating a constant expressions,
     /// to detect infinite loops.

@@ -401,8 +401,17 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
 }
 
 const Statement& StatementBinder::getStatement(const BindContext& context) const {
-    if (!stmt)
+    if (!stmt) {
+        // Avoid issues with recursive function calls re-entering this
+        // method while we're still binding.
+        if (isBinding)
+            return InvalidStatement::Instance;
+
+        isBinding = true;
+        auto guard = ScopeGuard([this] { isBinding = false; });
         stmt = &bindStatement(context);
+    }
+
     return *stmt;
 }
 

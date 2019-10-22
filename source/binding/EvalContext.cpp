@@ -7,6 +7,7 @@
 #include "slang/binding/EvalContext.h"
 
 #include "slang/binding/BindContext.h"
+#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/Type.h"
@@ -41,13 +42,20 @@ ConstantValue* EvalContext::findLocal(const ValueSymbol* symbol) {
     return &it->second;
 }
 
-void EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
+bool EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
                             LookupLocation lookupLocation) {
+    const uint32_t maxDepth = rootScope->getCompilation().getOptions().maxConstexprDepth;
+    if (stack.size() >= maxDepth) {
+        addDiag(diag::NoteExceededMaxCallDepth, subroutine.location) << maxDepth;
+        return false;
+    }
+
     Frame frame;
     frame.subroutine = &subroutine;
     frame.callLocation = callLocation;
     frame.lookupLocation = lookupLocation;
     stack.emplace_back(std::move(frame));
+    return true;
 }
 
 void EvalContext::popFrame() {

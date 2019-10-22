@@ -302,6 +302,7 @@ note NoteCaseItemsNotUnique "more than one match found in unique case statement 
 note NoteTimedStmtNotConst "constant expressions cannot schedule events"
 note NoteAssertionFailed "assertion failed"
 note NoteParallelBlockNotConst "parallel blocks are not allowed in constant expressions"
+note NoteExceededMaxCallDepth "constant evaluation exceeded maximum depth of {} calls"
 
 
 // Following are groups of diagnostics, to make it easy to control them from the command line.

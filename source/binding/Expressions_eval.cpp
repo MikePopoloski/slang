@@ -923,7 +923,9 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 
     // Push a new stack frame, push argument values as locals.
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
-    context.pushFrame(symbol, sourceRange.start(), lookupLocation);
+    if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
+        return nullptr;
+
     span<const FormalArgumentSymbol* const> formals = symbol.arguments;
     for (size_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
@@ -954,7 +956,8 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
 
     // TODO: implement all rules here
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
-    context.pushFrame(symbol, sourceRange.start(), lookupLocation);
+    if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
+        return false;
 
     bool result = symbol.getBody().verifyConstant(context);
     context.popFrame();

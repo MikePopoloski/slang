@@ -19,11 +19,7 @@ namespace slang {
 class BindContext;
 class SubroutineSymbol;
 
-enum class EvalFlags : uint8_t {
-    None = 0,
-    IsScript = 1,
-    IsVerifying = 2
-};
+enum class EvalFlags : uint8_t { None = 0, IsScript = 1, IsVerifying = 2 };
 BITMASK_DEFINE_MAX_ELEMENT(EvalFlags, IsVerifying);
 
 /// A container for all context required to evaluate a statement or expression.
@@ -57,8 +53,8 @@ public:
     ConstantValue* findLocal(const ValueSymbol* symbol);
 
     /// Push a new frame onto the call stack.
-    void pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
-                   LookupLocation lookupLocation);
+    [[nodiscard]] bool pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
+                                 LookupLocation lookupLocation);
 
     /// Pop the active frame from the call stack.
     void popFrame();
