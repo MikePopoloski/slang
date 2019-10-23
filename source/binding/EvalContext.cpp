@@ -81,15 +81,20 @@ std::string EvalContext::dumpStack() const {
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
-    Diagnostic& diag = diags.add(code, location);
+    // Be careful: adding diagnostics can resize the underlying array,
+    // so we have to remember an index here and return the reference
+    // after reporting the stack.
+    size_t index = diags.size();
+    diags.add(code, location);
     reportStack();
-    return diag;
+    return diags[index];
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
-    Diagnostic& diag = diags.add(code, range);
+    size_t index = diags.size();
+    diags.add(code, range);
     reportStack();
-    return diag;
+    return diags[index];
 }
 
 void EvalContext::addDiags(const Diagnostics& additional) {
