@@ -243,7 +243,8 @@ Scope& createTempInstance(Compilation& compilation, const DefinitionSymbol& def)
         void setParent(const Scope& scope) { ModuleInstanceSymbol::setParent(scope); }
     };
 
-    auto& tempDef = *compilation.emplace<TempInstance>(compilation, def.name, def.location, def, 0);
+    auto& tempDef =
+        *compilation.emplace<TempInstance>(compilation, def.name, def.location, def, 0u);
     tempDef.setParent(*def.getParentScope());
 
     // Need the imports here as well, since parameters may depend on them.
@@ -575,7 +576,7 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
                                                         SourceLocation loc,
                                                         const DefinitionSymbol& definition) {
     auto instance =
-        compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc, definition, 0);
+        compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc, definition, 0u);
     instance->populate(nullptr, definition.parameters);
     return *instance;
 }
