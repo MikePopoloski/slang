@@ -200,7 +200,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     // TODO: mising return type
     result->arguments = arguments.copy(compilation);
     result->declaredReturnType.setTypeSyntax(*proto->returnType);
-    result->binder.setItems(*result, syntax.items);
+    result->binder.setItems(*result, syntax.items, syntax.sourceRange());
     return *result;
 }
 

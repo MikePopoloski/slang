@@ -62,6 +62,14 @@ void EvalContext::popFrame() {
     stack.pop_back();
 }
 
+bool EvalContext::step(SourceLocation loc) {
+    if (++steps < rootScope->getCompilation().getOptions().maxConstexprSteps)
+        return true;
+
+    addDiag(diag::NoteExceededMaxSteps, loc);
+    return false;
+}
+
 const Scope& EvalContext::getCurrentScope() const {
     const Frame& frame = topFrame();
     if (frame.subroutine)

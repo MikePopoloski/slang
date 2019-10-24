@@ -59,6 +59,11 @@ public:
     /// Pop the active frame from the call stack.
     void popFrame();
 
+    /// Records the fact that we are executing another statement. This is used to count
+    /// the number of statements executed so far to detect if we've been evaluating
+    /// a single constant function for too long.
+    [[nodiscard]] bool step(SourceLocation loc);
+
     /// Gets the root scope in which the evaluation process started.
     const Scope& getRootScope() const { return *rootScope; }
 
@@ -90,6 +95,7 @@ public:
     /// Issues all recorded diagnostics to the given binding context.
     void reportDiags(const BindContext& context, SourceRange range) const;
 
+    /// Reports the current function call stack to the given diagnostic bag.
     void reportStack(Diagnostics& diags) const;
 
 private:
@@ -99,6 +105,7 @@ private:
     Diagnostics diags;
     bitmask<EvalFlags> flags;
     const Scope* rootScope;
+    uint32_t steps = 0;
     bool reportedCallstack = false;
 };
 

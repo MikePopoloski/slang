@@ -810,3 +810,26 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpressionNotConstant);
 }
+
+TEST_CASE("Consteval - infinite loop checking") {
+    auto tree = SyntaxTree::fromText(R"(
+function int foo;
+    for (int i = 0; i < 10000; i++) begin end
+endfunction
+
+module m;
+    localparam int i = foo();
+endmodule
+)");
+
+    // Reduce this a bit just to make the tests faster.
+    CompilationOptions co;
+    co.maxConstexprSteps = 8192;
+
+    Bag options;
+    options.add(co);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

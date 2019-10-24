@@ -47,7 +47,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind);
-    result->binder.setItems(*result, syntax.items);
+    result->binder.setItems(*result, syntax.items, syntax.sourceRange());
     result->setSyntax(syntax);
 
     comp.addAttributes(*result, syntax.attributes);

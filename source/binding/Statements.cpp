@@ -26,6 +26,10 @@ struct EvalVisitor {
     ER visit(const T& stmt, EvalContext& context) {
         if (stmt.bad())
             return ER::Fail;
+
+        if (!context.step(stmt.sourceRange.start()))
+            return ER::Fail;
+
         return stmt.evalImpl(context);
     }
 
@@ -49,7 +53,6 @@ struct VerifyVisitor {
 namespace slang {
 
 const InvalidStatement InvalidStatement::Instance(nullptr);
-const StatementList StatementList::Empty({});
 
 ER Statement::eval(EvalContext& context) const {
     EvalVisitor visitor;
@@ -351,6 +354,7 @@ void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& synta
     stmt = nullptr;
     syntax = &syntax_;
     labelHandled = labelHandled_;
+    sourceRange = syntax_.sourceRange();
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     findBlocks(scope, syntax_, buffer, labelHandled);
@@ -362,16 +366,19 @@ void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
     stmt = nullptr;
     syntax = &syntax_;
     labelHandled = false;
+    sourceRange = syntax_.sourceRange();
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     findBlocks(scope, *syntax_.statement, buffer);
     blocks = buffer.copy(scope.getCompilation());
 }
 
-void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items) {
+void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items,
+                               SourceRange range) {
     stmt = nullptr;
     syntax = &items;
     labelHandled = false;
+    sourceRange = range;
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     for (auto item : items) {
@@ -469,7 +476,7 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
     if (buffer.size() == 1)
         return *buffer[0];
 
-    return *comp.emplace<StatementList>(buffer.copy(comp));
+    return *comp.emplace<StatementList>(buffer.copy(comp), sourceRange);
 }
 
 ER StatementList::evalImpl(EvalContext& context) const {
@@ -508,7 +515,7 @@ Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockState
         anyBad |= stmt.bad();
     }
 
-    auto list = compilation.emplace<StatementList>(buffer.copy(compilation));
+    auto list = compilation.emplace<StatementList>(buffer.copy(compilation), syntax.sourceRange());
     auto result = compilation.emplace<BlockStatement>(
         *list, SemanticFacts::getStatementBlockKind(syntax), syntax.sourceRange());
     if (anyBad)

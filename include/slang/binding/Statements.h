@@ -142,7 +142,7 @@ class StatementBinder {
 public:
     void setSyntax(const Scope& scope, const StatementSyntax& syntax, bool labelHandled);
     void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax);
-    void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax);
+    void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax, SourceRange sourceRange);
 
     const Statement& getStatement(const BindContext& context) const;
     span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
@@ -151,8 +151,9 @@ private:
     const Statement& bindStatement(const BindContext& context) const;
 
     std::variant<const StatementSyntax*, const SyntaxList<SyntaxNode>*> syntax;
-    mutable const Statement* stmt = nullptr;
     span<const StatementBlockSymbol* const> blocks;
+    mutable const Statement* stmt = nullptr;
+    SourceRange sourceRange;
     mutable bool isBinding = false;
     bool labelHandled = false;
 };
@@ -189,14 +190,13 @@ class StatementList : public Statement {
 public:
     span<const Statement* const> list;
 
-    explicit StatementList(span<const Statement* const> list) :
-        Statement(StatementKind::List, SourceRange()), list(list) {}
+    StatementList(span<const Statement* const> list, SourceRange sourceRange) :
+        Statement(StatementKind::List, sourceRange), list(list) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::List; }
-    static const StatementList Empty;
 };
 
 struct BlockStatementSyntax;
