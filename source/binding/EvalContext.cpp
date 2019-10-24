@@ -163,8 +163,8 @@ void EvalContext::reportStack(Diagnostics& stackDiags) const {
         return;
     }
 
-    const size_t start = limit / 2;
-    const size_t end = start + limit % 2;
+    const ptrdiff_t start = ptrdiff_t(limit / 2);
+    const ptrdiff_t end = start + ptrdiff_t(limit % 2);
     for (auto it = stack.rbegin(), itEnd = it + start; it != itEnd; it++)
         reportFrame(*this, stackDiags, *it);
 
