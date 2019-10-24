@@ -119,33 +119,52 @@ void EvalContext::reportStack() {
     reportStack(diags);
 }
 
-void EvalContext::reportStack(Diagnostics& stackDiags) const {
-    FormatBuffer buffer;
-    for (const Frame& frame : make_reverse_range(stack)) {
-        if (!frame.subroutine)
-            break;
+static void reportFrame(const EvalContext& context, Diagnostics& diags,
+                        const EvalContext::Frame& frame) {
+    if (!frame.subroutine)
+        return;
 
-        if (isVerifying()) {
-            stackDiags.add(diag::NoteInCallTo, frame.callLocation) << frame.subroutine->name;
-        }
-        else {
-            buffer.clear();
-            buffer.format("{}(", frame.subroutine->name);
-
-            for (auto arg : frame.subroutine->arguments) {
-                auto it = frame.temporaries.find(arg);
-                ASSERT(it != frame.temporaries.end());
-
-                buffer.append(it->second.toString());
-                if (arg != frame.subroutine->arguments.last(1)[0])
-                    buffer.append(", ");
-            }
-
-            buffer.append(")");
-
-            stackDiags.add(diag::NoteInCallTo, frame.callLocation) << buffer.str();
-        }
+    if (context.isVerifying()) {
+        diags.add(diag::NoteInCallTo, frame.callLocation) << frame.subroutine->name;
+        return;
     }
+
+    FormatBuffer buffer;
+    buffer.format("{}(", frame.subroutine->name);
+
+    for (auto arg : frame.subroutine->arguments) {
+        auto it = frame.temporaries.find(arg);
+        ASSERT(it != frame.temporaries.end());
+
+        buffer.append(it->second.toString());
+        if (arg != frame.subroutine->arguments.last(1)[0])
+            buffer.append(", ");
+    }
+
+    buffer.append(")");
+
+    diags.add(diag::NoteInCallTo, frame.callLocation) << buffer.str();
+}
+
+void EvalContext::reportStack(Diagnostics& stackDiags) const {
+    const size_t limit = rootScope->getCompilation().getOptions().maxConstexprBacktrace;
+    if (stack.size() <= limit || limit == 0) {
+        FormatBuffer buffer;
+        for (const Frame& frame : make_reverse_range(stack))
+            reportFrame(*this, stackDiags, frame);
+        return;
+    }
+
+    const size_t start = limit / 2;
+    const size_t end = start + limit % 2;
+    for (auto it = stack.rbegin(), itEnd = it + start; it != itEnd; it++)
+        reportFrame(*this, stackDiags, *it);
+
+    stackDiags.add(diag::NoteSkippingFrames, (stack.rbegin() + start)->callLocation)
+        << stack.size() - limit;
+
+    for (auto it = stack.rend() - end, itEnd = stack.rend(); it != itEnd; it++)
+        reportFrame(*this, stackDiags, *it);
 }
 
 } // namespace slang

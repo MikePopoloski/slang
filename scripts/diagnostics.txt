@@ -289,6 +289,7 @@ error BadFinishNum "finish argument must have value of 0, 1, or 2"
 subsystem ConstEval
 error ExpressionNotConstant "expression is not constant"
 note NoteInCallTo "in call to '{}'"
+note NoteSkippingFrames "(skipping {} calls in backtrace; use --constexpr-backtrace-limit=0 to see all)"
 note NoteNonConstVariable "reference to non-constant variable '{}' is not allowed in a constant expression"
 note NoteArrayIndexInvalid "cannot refer to element {} of array of type {} in a constant expression"
 note NotePartSelectInvalid "cannot select range of {}:{} from array of type {} in a constant expression"
