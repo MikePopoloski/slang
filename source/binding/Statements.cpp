@@ -429,9 +429,12 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
 
     auto scopeKind = scope.asSymbol().kind;
     if (scopeKind == SymbolKind::StatementBlock || scopeKind == SymbolKind::Subroutine) {
-        // This relies on the language requiring all declarations be at the start
-        // of a statement block. Additional work would be required to support
-        // declarations anywhere in the block.
+        // This relies on the language requiring all declarations be at the
+        // start of a statement block. Additional work would be required to
+        // support declarations anywhere in the block, because as written all
+        // of the initialization will happen at the start of the block, which
+        // might have different side-effects than if they were initialized in
+        // the middle somewhere. The parser currently enforces this for us.
         for (auto& member : scope.members()) {
             if (member.kind != SymbolKind::Variable)
                 continue;

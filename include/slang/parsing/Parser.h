@@ -267,6 +267,7 @@ private:
     bool isPlainPortName();
     bool scanDimensionList(uint32_t& index);
     bool scanQualifiedName(uint32_t& index);
+    bool scanAttributes(uint32_t& index);
 
     template<bool (*IsEnd)(TokenKind)>
     bool scanTypePart(uint32_t& index, TokenKind start, TokenKind end);

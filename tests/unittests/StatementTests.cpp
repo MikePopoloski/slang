@@ -486,3 +486,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpressionNotConstant);
 }
+
+TEST_CASE("Statement blocks -- decl after statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        i++;
+        int i = 0;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DeclarationsAtStart);
+}

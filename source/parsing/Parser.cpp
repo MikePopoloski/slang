@@ -825,8 +825,12 @@ PortConnectionSyntax& Parser::parsePortConnection() {
 }
 
 bool Parser::isPortDeclaration() {
+    uint32_t index = 0;
+    if (!scanAttributes(index))
+        return false;
+
     // TODO: check for interface port declaration
-    return isPortDirection(peek().kind);
+    return isPortDirection(peek(index).kind);
 }
 
 bool Parser::isNetDeclaration() {
@@ -836,16 +840,8 @@ bool Parser::isNetDeclaration() {
 
 bool Parser::isVariableDeclaration() {
     uint32_t index = 0;
-    while (peek(index).kind == TokenKind::OpenParenthesisStar) {
-        // scan over attributes
-        while (true) {
-            auto kind = peek(++index).kind;
-            if (kind == TokenKind::EndOfFile)
-                return false;
-            if (kind == TokenKind::OpenParenthesisStar || kind == TokenKind::StarCloseParenthesis)
-                break;
-        }
-    }
+    if (!scanAttributes(index))
+        return false;
 
     // decide whether a statement is a declaration or the start of an expression
     auto kind = peek(index).kind;
@@ -919,10 +915,12 @@ bool Parser::isHierarchyInstantiation() {
     if (peek(index).kind == TokenKind::Hash) {
         if (peek(++index).kind != TokenKind::OpenParenthesis)
             return false;
+
         index++;
         if (!scanTypePart<isNotInType>(index, TokenKind::OpenParenthesis,
-                                       TokenKind::CloseParenthesis))
+                                       TokenKind::CloseParenthesis)) {
             return false;
+        }
     }
 
     if (peek(index++).kind != TokenKind::Identifier)
@@ -956,10 +954,12 @@ bool Parser::scanQualifiedName(uint32_t& index) {
             // scan parameter value assignment
             if (peek(++index).kind != TokenKind::OpenParenthesis)
                 return false;
+
             index++;
             if (!scanTypePart<isNotInType>(index, TokenKind::OpenParenthesis,
-                                           TokenKind::CloseParenthesis))
+                                           TokenKind::CloseParenthesis)) {
                 return false;
+            }
         }
 
         if (peek(index).kind != TokenKind::DoubleColon)
@@ -968,6 +968,21 @@ bool Parser::scanQualifiedName(uint32_t& index) {
         index++;
         if (peek(index++).kind != TokenKind::Identifier)
             return false;
+    }
+    return true;
+}
+
+bool Parser::scanAttributes(uint32_t& index) {
+    while (peek(index).kind == TokenKind::OpenParenthesisStar) {
+        // scan over attributes
+        while (true) {
+            auto kind = peek(++index).kind;
+            if (kind == TokenKind::EndOfFile)
+                return false;
+            if (kind == TokenKind::StarCloseParenthesis)
+                break;
+        }
+        index++;
     }
     return true;
 }

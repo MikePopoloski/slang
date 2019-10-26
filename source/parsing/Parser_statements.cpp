@@ -583,16 +583,25 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
     SmallVectorSized<SyntaxNode*, 16> buffer;
     auto kind = peek().kind;
     bool error = false;
+    bool sawStatement = false;
+    bool erroredAboutDecls = false;
 
     while (!isEndKeyword(kind) && kind != TokenKind::EndOfFile) {
+        SourceLocation loc = peek().location();
         SyntaxNode* newNode = nullptr;
-        if (isPortDeclaration())
-            // TODO: isPortDeclaration doesn't skip over attributes
+        bool isStmt = false;
+
+        if (isPortDeclaration()) {
             newNode = &parsePortDeclaration(parseAttributes());
-        else if (isVariableDeclaration())
+        }
+        else if (isVariableDeclaration()) {
             newNode = &parseVariableDeclaration(parseAttributes());
-        else if (isPossibleStatement(kind))
+        }
+        else if (isPossibleStatement(kind)) {
             newNode = &parseStatement();
+            isStmt = true;
+            sawStatement = true;
+        }
         else {
             skipToken(error ? std::nullopt : std::make_optional(diag::ExpectedStatement));
             error = true;
@@ -601,6 +610,11 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
         if (newNode) {
             buffer.append(newNode);
             error = false;
+
+            if (!erroredAboutDecls && !isStmt && sawStatement) {
+                addDiag(diag::DeclarationsAtStart, loc);
+                erroredAboutDecls = true;
+            }
         }
         kind = peek().kind;
     }

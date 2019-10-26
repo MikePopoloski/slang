@@ -127,6 +127,7 @@ error CaseGenerateEmpty "case generate has no items"
 error LabelAndName "cannot specify both a label and a name for the same block"
 error EndNameMismatch "'{}' doesn't match previous name '{}'"
 error EndNameNotEmpty "trailing name not allowed on previously unnamed block"
+error DeclarationsAtStart "declaration must come before all statements in the block"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 
 subsystem Declarations
