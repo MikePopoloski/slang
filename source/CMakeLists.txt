@@ -170,6 +170,9 @@ endif()
 target_link_libraries(slang PUBLIC CONAN_PKG::jsonformoderncpp)
 target_link_libraries(slang PUBLIC CONAN_PKG::fmt)
 
+find_package(Threads)
+target_link_libraries(slang PUBLIC ${CMAKE_THREAD_LIBS_INIT})
+
 target_include_directories(slang PUBLIC ../include/)
 target_include_directories(slang PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(slang SYSTEM PUBLIC ../external/)
