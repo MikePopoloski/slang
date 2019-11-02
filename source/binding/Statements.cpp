@@ -392,6 +392,10 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
                 scope.addMembers(*item);
                 break;
             case SyntaxKind::PortDeclaration:
+                // These get handled in subroutine symbol creation.
+                // TODO: make sure we error if there are port declarations that aren't
+                // inside a subroutine.
+                break;
             case SyntaxKind::LetDeclaration:
             case SyntaxKind::NetTypeDeclaration:
                 scope.addDiag(diag::NotYetSupported, item->sourceRange());

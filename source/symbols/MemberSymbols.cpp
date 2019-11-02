@@ -12,8 +12,9 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
-#include "slang/symbols/Type.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
@@ -186,6 +187,60 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
             result->addMember(*arg);
             arguments.append(arg);
             lastDirection = direction;
+            compilation.addAttributes(*arg, portSyntax->attributes);
+        }
+    }
+
+    // Subroutines can also declare arguments inside their bodies as port declarations.
+    // Let's go looking for them. They're required to be declared before any other statements.
+    bool portListError = false;
+    for (auto item : syntax.items) {
+        if (StatementSyntax::isKind(item->kind))
+            break;
+
+        if (item->kind != SyntaxKind::PortDeclaration)
+            continue;
+
+        auto& portDecl = item->as<PortDeclarationSyntax>();
+        if (portDecl.header->kind != SyntaxKind::VariablePortHeader) {
+            parent.addDiag(diag::ExpectedFunctionPort, portDecl.header->sourceRange());
+            continue;
+        }
+
+        if (!portListError && proto->portList) {
+            auto& diag = parent.addDiag(diag::MixingSubroutinePortKinds, portDecl.sourceRange());
+            diag.addNote(diag::NoteDeclarationHere, proto->portList->getFirstToken().location());
+            portListError = true;
+        }
+
+        // TODO: const ref is not currently handled by parser
+        auto& header = portDecl.header->as<VariablePortHeaderSyntax>();
+        FormalArgumentDirection direction;
+        switch (header.direction.kind) {
+            case TokenKind::InputKeyword:
+                direction = FormalArgumentDirection::In;
+                break;
+            case TokenKind::OutputKeyword:
+                direction = FormalArgumentDirection::Out;
+                break;
+            case TokenKind::InOutKeyword:
+                direction = FormalArgumentDirection::InOut;
+                break;
+            case TokenKind::RefKeyword:
+                direction = FormalArgumentDirection::Ref;
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+
+        for (auto declarator : portDecl.declarators) {
+            auto arg = compilation.emplace<FormalArgumentSymbol>(
+                declarator->name.valueText(), declarator->name.location(), direction);
+            arg->setDeclaredType(*header.dataType);
+            arg->setFromDeclarator(*declarator);
+            result->addMember(*arg);
+            arguments.append(arg);
+            compilation.addAttributes(*arg, syntax.attributes);
         }
     }
 

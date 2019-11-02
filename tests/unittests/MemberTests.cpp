@@ -451,3 +451,44 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ParamHasNoValue);
 }
+
+TEST_CASE("Functions -- body params") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function foo;
+        input i;
+        output logic [1:0] baz;
+        baz = i;
+        foo = i;
+    endfunction
+
+    logic [1:0] b;
+    logic j;
+    initial j = foo(1, b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Functions -- mixed param types") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function foo(int j, int b);
+        input i;
+        output logic [1:0] baz;
+        baz = i;
+        foo = i;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MixingSubroutinePortKinds);
+}

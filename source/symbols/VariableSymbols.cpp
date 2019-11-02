@@ -51,6 +51,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
         variable->setDeclaredType(*syntax.type);
         variable->setFromDeclarator(*declarator);
         results.append(variable);
+        compilation.addAttributes(*variable, syntax.attributes);
     }
 }
 

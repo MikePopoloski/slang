@@ -173,6 +173,7 @@ error ImplicitNamedPortNotFound "could not find connection for implicit named po
 error ImplicitNamedPortTypeMismatch "implicit named port '{}' of type {} connects to value of inequivalent type {}"
 error MaxInstanceDepthExceeded "module instantiation exceeded maximum depth of {}"
 error MaxGenerateStepsExceeded "generate loop hit maximum step limit; possible infinite loop?"
+error MixingSubroutinePortKinds "port declarations not allowed when subroutine defines a formal argument list"
 warning case-gen-dup CaseGenerateDup "more than one case generate block matches the value {}"
 warning case-gen-none CaseGenerateNoBlock "no case generate expression matches the value {}"
 warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"
