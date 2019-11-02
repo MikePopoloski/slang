@@ -188,7 +188,7 @@ PortHeaderSyntax& Parser::parsePortHeader(Token direction) {
     auto kind = peek().kind;
     if (isNetType(kind)) {
         auto netType = consume();
-        return factory.netPortHeader(direction, netType, parseDataType(/* allowImplicit */ true));
+        return factory.netPortHeader(direction, netType, parseDataType(TypeOptions::AllowImplicit));
     }
 
     if (kind == TokenKind::InterfaceKeyword) {
@@ -210,7 +210,7 @@ PortHeaderSyntax& Parser::parsePortHeader(Token direction) {
     if (kind == TokenKind::VarKeyword) {
         auto varKeyword = consume();
         return factory.variablePortHeader(direction, varKeyword,
-                                          parseDataType(/* allowImplicit */ true));
+                                          parseDataType(TypeOptions::AllowImplicit));
     }
 
     if (kind == TokenKind::Identifier) {
@@ -231,7 +231,8 @@ PortHeaderSyntax& Parser::parsePortHeader(Token direction) {
     }
 
     // assume we have some kind of data type here
-    return factory.variablePortHeader(direction, Token(), parseDataType(/* allowImplicit */ true));
+    return factory.variablePortHeader(direction, Token(),
+                                      parseDataType(TypeOptions::AllowImplicit));
 }
 
 MemberSyntax& Parser::parseAnsiPort() {
@@ -439,7 +440,7 @@ EnumTypeSyntax& Parser::parseEnum() {
 
     DataTypeSyntax* baseType = nullptr;
     if (!peek(TokenKind::OpenBrace)) {
-        baseType = &parseDataType(/* allowImplicit */ false);
+        baseType = &parseDataType();
         if (!IntegerTypeSyntax::isKind(baseType->kind) && baseType->kind != SyntaxKind::NamedType)
             addDiag(diag::ExpectedEnumBase, baseType->getFirstToken().location());
     }
@@ -457,7 +458,7 @@ EnumTypeSyntax& Parser::parseEnum() {
                             parseDimensionList());
 }
 
-DataTypeSyntax& Parser::parseDataType(bool allowImplicit) {
+DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
     auto kind = peek().kind;
     auto type = getIntegerType(kind);
     if (type != SyntaxKind::Unknown) {
@@ -467,8 +468,11 @@ DataTypeSyntax& Parser::parseDataType(bool allowImplicit) {
     }
 
     type = getKeywordType(kind);
-    if (type != SyntaxKind::Unknown)
+    if (type != SyntaxKind::Unknown) {
+        if (type == SyntaxKind::VoidType && (options & TypeOptions::AllowVoid) == 0)
+            addDiag(diag::VoidNotAllowed, peek().location());
         return factory.keywordType(type, consume());
+    }
 
     switch (kind) {
         case TokenKind::StructKeyword:
@@ -499,7 +503,7 @@ DataTypeSyntax& Parser::parseDataType(bool allowImplicit) {
     }
 
     if (kind == TokenKind::Identifier) {
-        if (!allowImplicit)
+        if ((options & TypeOptions::AllowImplicit) == 0)
             return factory.namedType(parseName());
         else {
             // If we're allowed to have an implicit type here, it means there's a chance this
@@ -517,7 +521,7 @@ DataTypeSyntax& Parser::parseDataType(bool allowImplicit) {
     auto signing = parseSigning();
     auto dimensions = parseDimensionList();
 
-    if (!allowImplicit)
+    if ((options & TypeOptions::AllowImplicit) == 0)
         addDiag(diag::ImplicitNotAllowed, peek().location());
 
     return factory.implicitType(signing, dimensions);
@@ -565,7 +569,7 @@ MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     if (peek(TokenKind::VectoredKeyword) || peek(TokenKind::ScalaredKeyword))
         expansionHint = consume();
 
-    auto& type = parseDataType(/* allowImplicit */ true);
+    auto& type = parseDataType(TypeOptions::AllowImplicit);
 
     // TODO: delay control
 
@@ -652,7 +656,7 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
         kind = peek().kind;
     }
 
-    auto& dataType = parseDataType(/* allowImplicit */ hasVar);
+    auto& dataType = parseDataType(hasVar ? TypeOptions::AllowImplicit : TypeOptions::None);
 
     Token semi;
     auto declarators = parseDeclarators(semi);
@@ -784,7 +788,7 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
         return factory.typeParameterDeclaration(keyword, typeKeyword, decls.copy(alloc));
     }
     else {
-        auto& type = parseDataType(/* allowImplicit */ true);
+        auto& type = parseDataType(TypeOptions::AllowImplicit);
 
         // If the semi pointer is given, we should parse a list of decls.
         // Otherwise we're in a parameter port list and should just parse one.

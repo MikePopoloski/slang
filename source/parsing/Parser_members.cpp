@@ -396,9 +396,9 @@ FunctionPortSyntax& Parser::parseFunctionPort() {
     // to disambiguate. Otherwise see if we have a port name or nothing at all.
     DataTypeSyntax* dataType = nullptr;
     if (!peek(TokenKind::Identifier))
-        dataType = &parseDataType(/* allowImplicit */ true);
+        dataType = &parseDataType(TypeOptions::AllowImplicit);
     else if (!isPlainPortName())
-        dataType = &parseDataType(/* allowImplicit */ false);
+        dataType = &parseDataType();
 
     return factory.functionPort(attributes, constKeyword, direction, varKeyword, dataType,
                                 parseDeclarator());
@@ -417,11 +417,11 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
     DataTypeSyntax* returnType = nullptr;
     uint32_t index = 0;
     if (!scanQualifiedName(index))
-        returnType = &parseDataType(/* allowImplicit */ true);
+        returnType = &parseDataType(TypeOptions::AllowImplicit | TypeOptions::AllowVoid);
     else {
         auto next = peek(index);
         if (next.kind != TokenKind::Semicolon && next.kind != TokenKind::OpenParenthesis)
-            returnType = &parseDataType(/* allowImplicit */ true);
+            returnType = &parseDataType(TypeOptions::AllowImplicit | TypeOptions::AllowVoid);
         else
             returnType = &factory.implicitType(Token(), nullptr);
     }
@@ -845,7 +845,7 @@ MemberSyntax* Parser::parseCoverageMember() {
     }
 
     if (isPossibleDataType(token.kind)) {
-        auto& type = parseDataType(/* allowImplicit */ true);
+        auto& type = parseDataType(TypeOptions::AllowImplicit);
         auto name = expect(TokenKind::Identifier);
         auto& label = factory.namedLabel(name, expect(TokenKind::Colon));
         return parseCoverpoint(attributes, &type, &label);
@@ -1353,14 +1353,14 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
             switch (peek().kind) {
                 case TokenKind::PropertyKeyword:
                     if (declarationKind != TokenKind::PropertyKeyword) {
-                        type = &parseDataType(true);
+                        type = &parseDataType(TypeOptions::AllowImplicit);
                         break;
                     }
                     type = &factory.keywordType(SyntaxKind::PropertyType, consume());
                     break;
                 case TokenKind::SequenceKeyword:
                     if (declarationKind == TokenKind::LetKeyword) {
-                        type = &parseDataType(true);
+                        type = &parseDataType(TypeOptions::AllowImplicit);
                         break;
                     }
                     type = &factory.keywordType(SyntaxKind::SequenceType, consume());
@@ -1369,7 +1369,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
                     type = &factory.keywordType(SyntaxKind::Untyped, consume());
                     break;
                 default:
-                    type = &parseDataType(true);
+                    type = &parseDataType(TypeOptions::AllowImplicit);
                     break;
             }
             ASSERT(type);

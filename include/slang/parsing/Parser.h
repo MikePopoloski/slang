@@ -60,6 +60,19 @@ enum class NameOptions {
 };
 BITMASK_DEFINE_MAX_ELEMENT(NameOptions, ExpectingExpression);
 
+/// Various options for parsing types.
+enum class TypeOptions {
+    /// No special options specified.
+    None = 0,
+
+    /// Allow implicit types, e.g. just a signing or dimension list.
+    AllowImplicit = 1,
+
+    /// Allow void types.
+    AllowVoid = 2
+};
+BITMASK_DEFINE_MAX_ELEMENT(TypeOptions, AllowVoid);
+
 } // namespace detail
 
 /// Contains various options that can control parsing behavior.
@@ -113,6 +126,7 @@ public:
 private:
     using ExpressionOptions = detail::ExpressionOptions;
     using NameOptions = detail::NameOptions;
+    using TypeOptions = detail::TypeOptions;
     using AttrList = span<AttributeInstanceSyntax*>;
 
     // ---- Recursive-descent parsing routines, by syntax type ----
@@ -173,7 +187,7 @@ private:
     span<VariableDimensionSyntax*> parseDimensionList();
     StructUnionTypeSyntax& parseStructUnion(SyntaxKind syntaxKind);
     EnumTypeSyntax& parseEnum();
-    DataTypeSyntax& parseDataType(bool allowImplicit);
+    DataTypeSyntax& parseDataType(bitmask<TypeOptions> options = {});
     DotMemberClauseSyntax* parseDotMemberClause();
     AttrList parseAttributes();
     AttributeSpecSyntax& parseAttributeSpec();
