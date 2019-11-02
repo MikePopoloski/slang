@@ -101,6 +101,10 @@ public:
     /// Indicates whether this type can be packed into a stream of bits.
     bool isBitstreamType() const;
 
+    /// Indicates whether this type is considered a "simple type", which includes
+    /// built-in integers, reals, and alias types.
+    bool isSimpleType() const;
+
     /// Indicates whether this type is an unpacked array of bytes. Various string-related
     /// methods in the language check for this to interpret such arguments as strings.
     bool isByteArray() const;

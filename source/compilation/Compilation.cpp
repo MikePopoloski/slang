@@ -131,7 +131,6 @@ Compilation::Compilation(const Bag& options) : options(options.getOrDefault<Comp
     knownTypes[SyntaxKind::StringType] = stringType;
     knownTypes[SyntaxKind::CHandleType] = chandleType;
     knownTypes[SyntaxKind::VoidType] = voidType;
-    knownTypes[SyntaxKind::NullLiteralExpression] = nullType;
     knownTypes[SyntaxKind::EventType] = eventType;
     knownTypes[SyntaxKind::Unknown] = errorType;
 

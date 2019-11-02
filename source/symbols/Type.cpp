@@ -153,6 +153,18 @@ bool Type::isBitstreamType() const {
     return isIntegral() || isUnpackedArray() || isUnpackedStruct();
 }
 
+bool Type::isSimpleType() const {
+    switch (kind) {
+        case SymbolKind::PredefinedIntegerType:
+        case SymbolKind::ScalarType:
+        case SymbolKind::FloatingType:
+        case SymbolKind::TypeAlias:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool Type::isByteArray() const {
     const Type& ct = getCanonicalType();
     if (!ct.isUnpackedArray())

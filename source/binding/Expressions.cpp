@@ -808,8 +808,17 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                                               const AssignmentPatternExpressionSyntax& syntax,
                                               const BindContext& context,
                                               const Type* assignmentTarget) {
-    if (syntax.type)
+    SourceRange range = syntax.sourceRange();
+
+    if (syntax.type) {
+        // TODO: allow type references here
         assignmentTarget = &comp.getType(*syntax.type, context.lookupLocation, context.scope);
+        if (assignmentTarget->kind != SymbolKind::TypeAlias &&
+            assignmentTarget->kind != SymbolKind::PredefinedIntegerType) {
+            context.addDiag(diag::BadAssignmentPatternType, range) << *assignmentTarget;
+            return badExpr(comp, nullptr);
+        }
+    }
 
     if (!assignmentTarget || assignmentTarget->isError()) {
         if (!assignmentTarget)
@@ -817,7 +826,6 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
         return badExpr(comp, nullptr);
     }
 
-    SourceRange range = syntax.sourceRange();
     const Type& type = *assignmentTarget;
     const Scope* structScope = nullptr;
     const Type* elementType = nullptr;
@@ -2236,6 +2244,11 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 
     if (targetExpr.kind == ExpressionKind::DataType) {
         result->type = targetExpr.type;
+        if (!result->type->isSimpleType() && !result->type->isError() &&
+            !result->type->isString()) {
+            context.addDiag(diag::BadCastType, targetExpr.sourceRange) << *result->type;
+            return badExpr(compilation, result);
+        }
     }
     else {
         auto val = context.evalInteger(targetExpr);
@@ -2605,14 +2618,20 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
         else if (DataTypeSyntax::isKind(item->key->kind)) {
             const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
                                                context.lookupLocation, context.scope);
-            auto& expr =
-                bind(typeKey, *item->expr, item->expr->getFirstToken().location(), context);
+            if (typeKey.isSimpleType()) {
+                auto& expr =
+                    bind(typeKey, *item->expr, item->expr->getFirstToken().location(), context);
 
-            typeSetters.emplace(TypeSetter{ &typeKey, &expr });
-            bad |= expr.bad();
+                typeSetters.emplace(TypeSetter{ &typeKey, &expr });
+                bad |= expr.bad();
+            }
+            else {
+                context.addDiag(diag::AssignmentPatternKeyExpr, item->key->sourceRange());
+                bad = true;
+            }
         }
         else {
-            context.addDiag(diag::StructAssignmentPatternKey, item->key->sourceRange());
+            context.addDiag(diag::AssignmentPatternKeyExpr, item->key->sourceRange());
             bad = true;
         }
     }
@@ -2653,11 +2672,17 @@ Expression& StructuredAssignmentPatternExpression::forArray(
         else if (DataTypeSyntax::isKind(item->key->kind)) {
             const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
                                                context.lookupLocation, context.scope);
-            auto& expr =
-                bind(typeKey, *item->expr, item->expr->getFirstToken().location(), context);
+            if (typeKey.isSimpleType()) {
+                auto& expr =
+                    bind(typeKey, *item->expr, item->expr->getFirstToken().location(), context);
 
-            typeSetters.emplace(TypeSetter{ &typeKey, &expr });
-            bad |= expr.bad();
+                typeSetters.emplace(TypeSetter{ &typeKey, &expr });
+                bad |= expr.bad();
+            }
+            else {
+                context.addDiag(diag::AssignmentPatternKeyExpr, item->key->sourceRange());
+                bad = true;
+            }
         }
         else {
             // TODO: check for type name here

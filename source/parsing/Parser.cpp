@@ -438,8 +438,11 @@ EnumTypeSyntax& Parser::parseEnum() {
     auto keyword = consume();
 
     DataTypeSyntax* baseType = nullptr;
-    if (!peek(TokenKind::OpenBrace))
+    if (!peek(TokenKind::OpenBrace)) {
         baseType = &parseDataType(/* allowImplicit */ false);
+        if (!IntegerTypeSyntax::isKind(baseType->kind) && baseType->kind != SyntaxKind::NamedType)
+            addDiag(diag::ExpectedEnumBase, baseType->getFirstToken().location());
+    }
 
     auto openBrace = expect(TokenKind::OpenBrace);
 
