@@ -422,6 +422,8 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
         auto next = peek(index);
         if (next.kind != TokenKind::Semicolon && next.kind != TokenKind::OpenParenthesis)
             returnType = &parseDataType(/* allowImplicit */ true);
+        else
+            returnType = &factory.implicitType(Token(), nullptr);
     }
 
     auto& name = parseName();
@@ -438,7 +440,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
         portList = &factory.functionPortList(openParen, buffer.copy(alloc), closeParen);
     }
 
-    return factory.functionPrototype(keyword, lifetime, returnType, name, portList);
+    return factory.functionPrototype(keyword, lifetime, *returnType, name, portList);
 }
 
 FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,

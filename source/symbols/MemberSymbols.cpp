@@ -252,7 +252,6 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     result->addMember(*implicitReturnVar);
     result->returnValVar = implicitReturnVar;
 
-    // TODO: mising return type
     result->arguments = arguments.copy(compilation);
     result->declaredReturnType.setTypeSyntax(*proto->returnType);
     result->binder.setItems(*result, syntax.items, syntax.sourceRange());

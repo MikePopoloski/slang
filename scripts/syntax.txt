@@ -1109,7 +1109,7 @@ token closeParen
 FunctionPrototype kind=FunctionPrototype
 token keyword
 token lifetime
-DataType? returnType
+DataType returnType
 Name name
 FunctionPortList? portList
 
