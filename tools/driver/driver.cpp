@@ -30,7 +30,8 @@ void print(string_view format, const Args&... args);
 void writeToFile(string_view fileName, string_view contents);
 
 bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
-                     const std::vector<SourceBuffer>& buffers) {
+                     const std::vector<SourceBuffer>& buffers, bool includeComments,
+                     bool includeDirectives) {
     BumpAllocator alloc;
 
     bool success = true;
@@ -40,6 +41,9 @@ bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
         preprocessor.pushSource(buffer);
 
         SyntaxPrinter output;
+        output.setIncludeComments(includeComments);
+        output.setIncludeDirectives(includeDirectives);
+
         while (true) {
             Token token = preprocessor.next();
             output.print(token);
@@ -59,8 +63,39 @@ bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
     return success;
 }
 
+void printMacros(SourceManager& sourceManager, const Bag& options,
+                 const std::vector<SourceBuffer>& buffers) {
+    BumpAllocator alloc;
+
+    for (const SourceBuffer& buffer : buffers) {
+        Diagnostics diagnostics;
+        Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
+        preprocessor.pushSource(buffer);
+
+        while (true) {
+            Token token = preprocessor.next();
+            if (token.kind == TokenKind::EndOfFile)
+                break;
+        }
+
+        for (auto macro : preprocessor.getDefinedMacros()) {
+            SyntaxPrinter printer;
+            printer.setIncludeComments(false);
+            printer.setIncludeTrivia(false);
+            printer.print(macro->name);
+
+            printer.setIncludeTrivia(true);
+            if (macro->formalArguments)
+                printer.print(*macro->formalArguments);
+            printer.print(macro->body);
+
+            print("{}\n", printer.str());
+        }
+    }
+}
+
 bool runCompiler(SourceManager& sourceManager, const Bag& options,
-                 const std::vector<SourceBuffer>& buffers,
+                 const std::vector<SourceBuffer>& buffers, bool onlyParse,
                  const optional<std::string>& astJsonFile) {
     Compilation compilation;
     for (const SourceBuffer& buffer : buffers)
@@ -76,8 +111,14 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
     ASSERT(group);
     diagEngine.setSeverity(*group, DiagnosticSeverity::Warning);
 
-    for (auto& diag : compilation.getAllDiagnostics())
-        diagEngine.issue(diag);
+    if (onlyParse) {
+        for (auto& diag : compilation.getParseDiagnostics())
+            diagEngine.issue(diag);
+    }
+    else {
+        for (auto& diag : compilation.getAllDiagnostics())
+            diagEngine.issue(diag);
+    }
 
     print("{}", client->getString());
 
@@ -91,32 +132,55 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
 
 template<typename TArgs>
 int driverMain(int argc, TArgs argv) try {
-    std::vector<std::string> sourceFiles;
-    std::vector<std::string> includeDirs;
-    std::vector<std::string> includeSystemDirs;
-    std::vector<std::string> defines;
-    std::vector<std::string> undefines;
+    CommandLine cmdLine;
 
-    optional<std::string> astJsonFile;
-
+    // General
     optional<bool> showHelp;
     optional<bool> showVersion;
-    optional<bool> onlyPreprocess;
-
-    CommandLine cmdLine;
+    cmdLine.add("-h,--help", showHelp, "Display available options");
     cmdLine.add("-v,--version", showVersion, "Display version information and exit");
-    cmdLine.add("-I", includeDirs, "Additional include search paths", "<dir>");
-    cmdLine.add("--isystem", includeSystemDirs, "Additional system include search paths", "<dir>");
-    cmdLine.add("-D", defines,
-                "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
-                "<macro>=<value>");
-    cmdLine.add("-U", undefines, "Undefine macro name at the start of all source files", "<macro>");
+
+    // Output control
+    optional<bool> onlyPreprocess;
+    optional<bool> onlyParse;
+    optional<bool> onlyMacros;
     cmdLine.add("-E,--preprocess", onlyPreprocess,
                 "Only run the preprocessor (and print preprocessed files to stdout)");
+    cmdLine.add("--macros-only", onlyMacros, "Print a list of found macros and exit");
+    cmdLine.add("--parse-only", onlyParse,
+                "Stop after parsing input files, don't perform elaboration or type checking");
+
+    // Include paths
+    std::vector<std::string> includeDirs;
+    std::vector<std::string> includeSystemDirs;
+    cmdLine.add("-I,--include-directory", includeDirs, "Additional include search paths", "<dir>");
+    cmdLine.add("--isystem", includeSystemDirs, "Additional system include search paths", "<dir>");
+
+    // Preprocessor
+    optional<bool> includeComments;
+    optional<bool> includeDirectives;
+    optional<uint32_t> maxIncludeDepth;
+    std::vector<std::string> defines;
+    std::vector<std::string> undefines;
+    cmdLine.add("-D,--define-macro", defines,
+                "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
+                "<macro>=<value>");
+    cmdLine.add("-U,--undefine-macro", undefines,
+                "Undefine macro name at the start of all source files", "<macro>");
+    cmdLine.add("--comments", includeComments, "Include comments in preprocessed output (with -E)");
+    cmdLine.add("--directives", includeDirectives,
+                "Include compiler directives in preprocessed output (with -E)");
+    cmdLine.add("--max-include-depth", maxIncludeDepth,
+                "Maximum depth of nested include files allowed");
+
+    // JSON dumping
+    optional<std::string> astJsonFile;
     cmdLine.add("--ast-json", astJsonFile,
                 "Dump the compiled AST in JSON format to the specified file, or '-' for stdout",
                 "<file>");
-    cmdLine.add("-h,--help", showHelp, "Display available options");
+
+    // File list
+    std::vector<std::string> sourceFiles;
     cmdLine.setPositional(sourceFiles, "files");
 
     if (!cmdLine.parse(argc, argv)) {
@@ -163,10 +227,11 @@ int driverMain(int argc, TArgs argv) try {
     ppoptions.undefines = undefines;
     ppoptions.predefineSource = "<command-line>";
 
+    if (maxIncludeDepth.has_value())
+        ppoptions.maxIncludeDepth = *maxIncludeDepth;
+
     Bag options;
     options.add(ppoptions);
-
-    std::string cur = std::filesystem::current_path().string();
 
     std::vector<SourceBuffer> buffers;
     for (const std::string& file : sourceFiles) {
@@ -188,11 +253,23 @@ int driverMain(int argc, TArgs argv) try {
         return 3;
     }
 
+    if (onlyParse.has_value() + onlyPreprocess.has_value() + onlyMacros.has_value() > 1) {
+        print("Can only specify one of --preprocess, --macros-only, --parse-only");
+        return 4;
+    }
+
     try {
-        if (onlyPreprocess == true)
-            anyErrors = !runPreprocessor(sourceManager, options, buffers);
-        else
-            anyErrors = !runCompiler(sourceManager, options, buffers, astJsonFile);
+        if (onlyPreprocess == true) {
+            anyErrors = !runPreprocessor(sourceManager, options, buffers, includeComments == true,
+                                         includeDirectives == true);
+        }
+        else if (onlyMacros == true) {
+            printMacros(sourceManager, options, buffers);
+        }
+        else {
+            anyErrors =
+                !runCompiler(sourceManager, options, buffers, onlyParse == true, astJsonFile);
+        }
     }
     catch (const std::exception& e) {
 #ifdef FUZZ_TARGET

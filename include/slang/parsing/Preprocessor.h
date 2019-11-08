@@ -106,6 +106,9 @@ public:
     BumpAllocator& getAllocator() const { return alloc; }
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
+    /// Gets all macros that have been defined thus far in the preprocessor.
+    std::vector<const DefineDirectiveSyntax*> getDefinedMacros() const;
+
 private:
     Preprocessor(const Preprocessor& other);
     Preprocessor& operator=(const Preprocessor& other) = delete;

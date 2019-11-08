@@ -122,6 +122,16 @@ void Preprocessor::resetAllDirectives() {
     defaultNetType = TokenKind::WireKeyword;
 }
 
+std::vector<const DefineDirectiveSyntax*> Preprocessor::getDefinedMacros() const {
+    std::vector<const DefineDirectiveSyntax*> results;
+    for (auto& [name, def] : macros) {
+        if (def.syntax)
+            results.push_back(def.syntax);
+    }
+
+    return results;
+}
+
 Token Preprocessor::next() {
     return consume();
 }
