@@ -223,7 +223,7 @@ PortHeaderSyntax& Parser::parsePortHeader(Token direction) {
 
         DataTypeSyntax* type;
         if (!isPlainPortName())
-            type = &parseDataType(/* allowImplicit */ false);
+            type = &parseDataType();
         else
             type = &factory.implicitType(Token(), nullptr);
 
@@ -415,7 +415,7 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
                     break;
             }
 
-            auto& type = parseDataType(/* allowImplicit */ false);
+            auto& type = parseDataType();
 
             Token semi;
             auto declarators = parseDeclarators(semi);
@@ -616,7 +616,8 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
                 default:
                     break;
             }
-            auto& type = parseDataType(/* allowImplicit */ false);
+
+            auto& type = parseDataType();
             auto name = expect(TokenKind::Identifier);
             auto dims = parseDimensionList();
             return factory.typedefDeclaration(attributes, typedefKeyword, type, name, dims,
@@ -755,7 +756,7 @@ TypeAssignmentSyntax& Parser::parseTypeAssignment() {
     EqualsTypeClauseSyntax* assignment = nullptr;
     if (peek(TokenKind::Equals)) {
         auto equals = consume();
-        assignment = &factory.equalsTypeClause(equals, parseDataType(/* allowImplicit */ false));
+        assignment = &factory.equalsTypeClause(equals, parseDataType());
     }
 
     return factory.typeAssignment(name, assignment);

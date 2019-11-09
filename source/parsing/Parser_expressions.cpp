@@ -264,7 +264,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             if (isPossibleDataType(kind) && kind != TokenKind::Identifier &&
                 kind != TokenKind::UnitSystemName) {
 
-                auto& type = parseDataType(/* allowImplicit */ false);
+                auto& type = parseDataType();
                 if (peek(TokenKind::ApostropheOpenBrace))
                     expr = &parseAssignmentPatternExpression(&type);
                 else

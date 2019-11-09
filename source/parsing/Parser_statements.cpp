@@ -319,7 +319,7 @@ DoWhileStatementSyntax& Parser::parseDoWhileStatement(NamedLabelSyntax* label,
 SyntaxNode& Parser::parseForInitializer() {
     if (isVariableDeclaration()) {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
-        auto& type = parseDataType(/* allowImplicit */ false);
+        auto& type = parseDataType();
 
         // TODO: require initializer
         return factory.forVariableDeclaration(varKeyword, &type, parseDeclarator());
