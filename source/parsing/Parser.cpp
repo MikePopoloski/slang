@@ -729,7 +729,7 @@ AttributeSpecSyntax& Parser::parseAttributeSpec() {
 
 NetTypeDeclarationSyntax& Parser::parseNetTypeDecl(AttrList attributes) {
     auto keyword = consume();
-    auto& type = parseDataType(false);
+    auto& type = parseDataType();
     auto name = expect(TokenKind::Identifier);
 
     WithFunctionClauseSyntax* withFunction = nullptr;
