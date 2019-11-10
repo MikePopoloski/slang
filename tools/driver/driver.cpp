@@ -98,7 +98,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
                  const std::vector<SourceBuffer>& buffers,
                  const std::vector<std::string>& warningOptions, bool onlyParse,
                  const optional<std::string>& astJsonFile) {
-    Compilation compilation;
+    Compilation compilation(options);
     for (const SourceBuffer& buffer : buffers)
         compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
 
@@ -171,13 +171,46 @@ int driverMain(int argc, TArgs argv) try {
     cmdLine.add("--directives", includeDirectives,
                 "Include compiler directives in preprocessed output (with -E)");
     cmdLine.add("--max-include-depth", maxIncludeDepth,
-                "Maximum depth of nested include files allowed");
+                "Maximum depth of nested include files allowed", "<depth>");
+
+    // Parsing
+    optional<uint32_t> maxParseDepth;
+    optional<uint32_t> maxLexerErrors;
+    cmdLine.add("--max-parse-depth", maxParseDepth,
+                "Maximum depth of nested language constructs allowed", "<depth>");
+    cmdLine.add("--max-lexer-errors", maxLexerErrors,
+                "Maximum number of errors that can occur during lexing before the rest of the file "
+                "is skipped",
+                "<count>");
 
     // JSON dumping
     optional<std::string> astJsonFile;
     cmdLine.add("--ast-json", astJsonFile,
                 "Dump the compiled AST in JSON format to the specified file, or '-' for stdout",
                 "<file>");
+
+    // Compilation
+    optional<uint32_t> maxInstanceDepth;
+    optional<uint32_t> maxGenerateSteps;
+    optional<uint32_t> maxConstexprDepth;
+    optional<uint32_t> maxConstexprSteps;
+    optional<uint32_t> maxConstexprBacktrace;
+    cmdLine.add("--max-hierarchy-depth", maxInstanceDepth, "Maximum depth of the design hierarchy",
+                "<depth>");
+    cmdLine.add("--max-generate-steps", maxGenerateSteps,
+                "Maximum number of steps that can occur during generate block "
+                "evaluation before giving up",
+                "<steps>");
+    cmdLine.add("--max-constexpr-depth", maxConstexprDepth,
+                "Maximum depth of a constant evaluation call stack", "<depth>");
+    cmdLine.add("--max-constexpr-steps", maxConstexprSteps,
+                "Maximum number of steps that can occur during constant "
+                "evaluation before giving up",
+                "<steps>");
+    cmdLine.add("--constexpr-backtrace-limit", maxConstexprBacktrace,
+                "Maximum number of frames to show when printing a constant evaluation "
+                "backtrace; the rest will be abbreviated",
+                "<limit>");
 
     // Diagnostics control
     std::vector<std::string> warningOptions;
@@ -230,12 +263,34 @@ int driverMain(int argc, TArgs argv) try {
     ppoptions.predefines = defines;
     ppoptions.undefines = undefines;
     ppoptions.predefineSource = "<command-line>";
-
     if (maxIncludeDepth.has_value())
         ppoptions.maxIncludeDepth = *maxIncludeDepth;
 
+    LexerOptions loptions;
+    if (maxLexerErrors.has_value())
+        loptions.maxErrors = *maxLexerErrors;
+
+    ParserOptions poptions;
+    if (maxParseDepth.has_value())
+        poptions.maxRecursionDepth = *maxParseDepth;
+
+    CompilationOptions coptions;
+    if (maxInstanceDepth.has_value())
+        coptions.maxInstanceDepth = *maxInstanceDepth;
+    if (maxGenerateSteps.has_value())
+        coptions.maxGenerateSteps = *maxGenerateSteps;
+    if (maxConstexprDepth.has_value())
+        coptions.maxConstexprDepth = *maxConstexprDepth;
+    if (maxConstexprSteps.has_value())
+        coptions.maxConstexprSteps = *maxConstexprSteps;
+    if (maxConstexprBacktrace.has_value())
+        coptions.maxConstexprBacktrace = *maxConstexprBacktrace;
+
     Bag options;
     options.add(ppoptions);
+    options.add(loptions);
+    options.add(poptions);
+    options.add(coptions);
 
     std::vector<SourceBuffer> buffers;
     for (const std::string& file : sourceFiles) {
