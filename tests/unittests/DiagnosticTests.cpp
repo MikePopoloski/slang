@@ -470,3 +470,23 @@ TEST_CASE("DiagnosticEngine stuff") {
         engine.issue(diag);
     CHECK(client->count == 9); // includes 2 warnings
 }
+
+TEST_CASE("DiagnosticEngine::setWarningOptions") {
+    auto options = std::vector {
+        "everything"s,
+        "none"s,
+        "error"s,
+        "error=case-gen-dup"s,
+        "no-error=empty-member"s,
+        "empty-stmt"s,
+        "no-extra"s,
+        "asdf"s
+    };
+
+    DiagnosticEngine engine(getSourceManager());
+    Diagnostics diags = engine.setWarningOptions(options);
+    CHECK(diags.size() == 1);
+
+    std::string msg = DiagnosticEngine::reportAll(getSourceManager(), diags);
+    CHECK(msg == "warning: unknown warning option '-Wasdf' [-Wunknown-warning-option]\n");
+}

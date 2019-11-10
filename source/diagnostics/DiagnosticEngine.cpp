@@ -173,24 +173,26 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
     SmallVectorSized<SourceLocation, 8> expansionLocs;
     SourceLocation loc = diagnostic.location;
     size_t ignoreUntil = 0;
+    bool showIncludeStack = false;
 
-    while (sourceManager.isMacroLoc(loc)) {
-        SourceLocation prevLoc = loc;
-        if (sourceManager.isMacroArgLoc(loc)) {
-            expansionLocs.append(sourceManager.getExpansionLoc(loc));
-            loc = sourceManager.getOriginalLoc(loc);
-        }
-        else {
-            expansionLocs.append(loc);
-            loc = sourceManager.getExpansionLoc(loc);
+    if (loc != SourceLocation::NoLocation) {
+        while (sourceManager.isMacroLoc(loc)) {
+            SourceLocation prevLoc = loc;
+            if (sourceManager.isMacroArgLoc(loc)) {
+                expansionLocs.append(sourceManager.getExpansionLoc(loc));
+                loc = sourceManager.getOriginalLoc(loc);
+            }
+            else {
+                expansionLocs.append(loc);
+                loc = sourceManager.getExpansionLoc(loc);
+            }
+
+            if (checkMacroArgRanges(*this, prevLoc, diagnostic.ranges))
+                ignoreUntil = expansionLocs.size();
         }
 
-        if (checkMacroArgRanges(*this, prevLoc, diagnostic.ranges))
-            ignoreUntil = expansionLocs.size();
+        showIncludeStack = reportedIncludeStack.emplace(loc.buffer()).second;
     }
-
-    // Keep track of whether we should show the include stack for this diagnostic.
-    bool showIncludeStack = reportedIncludeStack.emplace(loc.buffer()).second;
 
     std::string message = formatMessage(diagnostic);
 
@@ -398,8 +400,7 @@ Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options)
         else if (auto code = findFromOptionName(name))
             setSeverity(code, severity);
         else {
-            auto& diag =
-                diags.add(diag::UnknownWarningOption, SourceLocation()); // TODO: location
+            auto& diag = diags.add(diag::UnknownWarningOption, SourceLocation::NoLocation);
             diag << std::string(errorPrefix) + std::string(name);
         }
     };

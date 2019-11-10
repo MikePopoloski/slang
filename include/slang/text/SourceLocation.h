@@ -21,7 +21,7 @@ class SourceManager;
 /// the expansion location and original definition location.
 struct BufferID {
     BufferID() = default;
-    explicit BufferID(uint32_t value, string_view name) :
+    constexpr BufferID(uint32_t value, string_view name) :
 #ifdef DEBUG
         name(name),
 #endif
@@ -38,7 +38,7 @@ struct BufferID {
     bool operator>(const BufferID& rhs) const { return rhs < *this; }
     bool operator>=(const BufferID& rhs) const { return rhs <= *this; }
 
-    uint32_t getId() const { return id; }
+    constexpr uint32_t getId() const { return id; }
 
     explicit operator bool() const { return valid(); }
 
@@ -58,8 +58,8 @@ private:
 /// macro location.
 class SourceLocation {
 public:
-    SourceLocation() : bufferID(0), charOffset(0) {}
-    SourceLocation(BufferID buffer, size_t offset) :
+    constexpr SourceLocation() : bufferID(0), charOffset(0) {}
+    constexpr SourceLocation(BufferID buffer, size_t offset) :
 #ifdef DEBUG
         bufferName(buffer.name),
 #endif
@@ -115,10 +115,15 @@ public:
     string_view bufferName;
 #endif
 
+    static const SourceLocation NoLocation;
+
 private:
     uint64_t bufferID : 28;
     uint64_t charOffset : 36;
 };
+
+inline constexpr const SourceLocation SourceLocation::NoLocation{ BufferID((1u << 28) - 1, ""),
+                                                                  (1ull << 36) - 1 };
 
 #ifndef DEBUG
 static_assert(sizeof(SourceLocation) == 8);

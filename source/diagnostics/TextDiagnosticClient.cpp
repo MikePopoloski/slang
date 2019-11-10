@@ -45,7 +45,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
 
     // Write the diagnostic.
     formatDiag(diag.location, mappedRanges, getSeverityString(diag.severity), diag.formattedMessage,
-        engine->getOptionName(diag.originalDiagnostic.code));
+               engine->getOptionName(diag.originalDiagnostic.code));
 
     // Write out macro expansions, if we have any, in reverse order.
     for (auto it = diag.expansionLocs.rbegin(); it != diag.expansionLocs.rend(); it++) {
@@ -107,6 +107,14 @@ static void highlightRange(SourceRange range, SourceLocation caretLoc, size_t co
 void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange> ranges,
                                       string_view severity, string_view message,
                                       string_view optionName) {
+    if (loc == SourceLocation::NoLocation) {
+        buffer.format("{}: {}", severity, message);
+        if (!optionName.empty())
+            buffer.format(" [-W{}]", optionName);
+        buffer.append("\n"sv);
+        return;
+    }
+
     size_t col = sourceManager->getColumnNumber(loc);
     buffer.format("{}:{}:{}: {}: {}", sourceManager->getFileName(loc),
                   sourceManager->getLineNumber(loc), col, severity, message);
