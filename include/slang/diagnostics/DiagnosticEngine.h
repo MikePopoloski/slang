@@ -144,9 +144,18 @@ public:
     /// their defaults and removing all user-specified diagnostics.
     void clearMappings();
 
+    /// Clears out all custom mappings for diagnostics that are set to the specific
+    /// severity type.
+    void clearMappings(DiagnosticSeverity severity);
+
     /// Formats the given diagnostic using its arguments and the currently mapped
     /// message for its diagnostic code.
     std::string formatMessage(const Diagnostic& diag) const;
+
+    /// Sets diagnostic options from the given option strings, typically from a list of -W
+    /// arguments passed to a command line invocation. Any errors encountered while parsing
+    /// the options are returned via the diagnostics set.
+    Diagnostics setWarningOptions(span<const std::string> options);
 
     /// A helper function that takes a set of source ranges and translates them
     /// to be relevant to the given context location. For normal file ranges

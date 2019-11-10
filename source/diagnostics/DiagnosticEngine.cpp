@@ -9,6 +9,7 @@
 #include "FmtlibWrapper.h"
 
 #include "slang/diagnostics/DiagnosticClient.h"
+#include "slang/diagnostics/MetaDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/StackContainer.h"
@@ -112,6 +113,15 @@ const DiagGroup* DiagnosticEngine::findDiagGroup(string_view name) const {
 void DiagnosticEngine::clearMappings() {
     severityTable.clear();
     messageTable.clear();
+}
+
+void DiagnosticEngine::clearMappings(DiagnosticSeverity severity) {
+    for (auto it = severityTable.begin(); it != severityTable.end();) {
+        if (it->second == severity)
+            it = severityTable.erase(it);
+        else
+            it++;
+    }
 }
 
 // Checks that all of the given ranges are in the same macro argument expansion as `loc`
@@ -374,6 +384,60 @@ std::string DiagnosticEngine::reportAll(const SourceManager& sourceManager,
         engine.issue(diag);
 
     return client->getString();
+}
+
+Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options) {
+    // By default, start with all warnings disabled except the default group.
+    setIgnoreAllWarnings(true);
+    setSeverity(*findDiagGroup("default"sv), DiagnosticSeverity::Warning);
+
+    Diagnostics diags;
+    auto findAndSet = [&](string_view name, DiagnosticSeverity severity, const char* errorPrefix) {
+        if (auto group = findDiagGroup(name))
+            setSeverity(*group, severity);
+        else if (auto code = findFromOptionName(name))
+            setSeverity(code, severity);
+        else {
+            auto& diag =
+                diags.add(diag::UnknownWarningOption, SourceLocation()); // TODO: location
+            diag << std::string(errorPrefix) + std::string(name);
+        }
+    };
+
+    // TODO: remove once we have C++20
+    auto startsWith = [](string_view str, string_view prefix) {
+        return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+    };
+
+    for (auto& arg : options) {
+        if (arg == "everything") {
+            // Enable all warnings.
+            clearMappings(DiagnosticSeverity::Ignored);
+            setIgnoreAllWarnings(false);
+        }
+        else if (arg == "none") {
+            // Disable all warnings.
+            clearMappings(DiagnosticSeverity::Warning);
+            setIgnoreAllWarnings(true);
+        }
+        else if (arg == "error") {
+            setWarningsAsErrors(true);
+        }
+        else if (startsWith(arg, "error=")) {
+            findAndSet(arg.substr(6), DiagnosticSeverity::Error, "-Werror=");
+        }
+        else if (startsWith(arg, "no-error=")) {
+            findAndSet(arg.substr(9), DiagnosticSeverity::Error, "-Wno-error=");
+        }
+        else if (startsWith(arg, "no-")) {
+            findAndSet(arg.substr(3), DiagnosticSeverity::Ignored, "-Wno-");
+        }
+        else {
+            findAndSet(arg, DiagnosticSeverity::Warning, "-W");
+        }
+    }
+
+    return diags;
 }
 
 } // namespace slang

@@ -311,6 +311,9 @@ note NoteParallelBlockNotConst "parallel blocks are not allowed in constant expr
 note NoteExceededMaxCallDepth "constant evaluation exceeded maximum depth of {} calls"
 note NoteExceededMaxSteps "constant evaluation hit maximum step limit; possible infinite loop?"
 
+subsystem Meta
+warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'"
+
 
 // Following are groups of diagnostics, to make it easy to control them from the command line.
 // The default group is the set of warnings that are enabled by default.

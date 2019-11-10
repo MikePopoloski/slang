@@ -32,7 +32,8 @@ enum class DiagSubsystem : uint16_t {
     Types,
     Lookup,
     SysFuncs,
-    ConstEval
+    ConstEval,
+    Meta
 };
 
 /// The severity of a given diagnostic. This is not tied to the diagnostic itself;

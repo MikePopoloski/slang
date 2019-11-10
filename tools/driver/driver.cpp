@@ -95,21 +95,21 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
 }
 
 bool runCompiler(SourceManager& sourceManager, const Bag& options,
-                 const std::vector<SourceBuffer>& buffers, bool onlyParse,
+                 const std::vector<SourceBuffer>& buffers,
+                 const std::vector<std::string>& warningOptions, bool onlyParse,
                  const optional<std::string>& astJsonFile) {
     Compilation compilation;
     for (const SourceBuffer& buffer : buffers)
         compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
 
     DiagnosticEngine diagEngine(sourceManager);
-    diagEngine.setIgnoreAllWarnings(true);
+    Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
 
     auto client = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(client);
 
-    auto group = diagEngine.findDiagGroup("default"sv);
-    ASSERT(group);
-    diagEngine.setSeverity(*group, DiagnosticSeverity::Warning);
+    for (auto& diag : optionDiags)
+        diagEngine.issue(diag);
 
     if (onlyParse) {
         for (auto& diag : compilation.getParseDiagnostics())
@@ -178,6 +178,10 @@ int driverMain(int argc, TArgs argv) try {
     cmdLine.add("--ast-json", astJsonFile,
                 "Dump the compiled AST in JSON format to the specified file, or '-' for stdout",
                 "<file>");
+
+    // Diagnostics control
+    std::vector<std::string> warningOptions;
+    cmdLine.add("-W", warningOptions, "Control the specified warning", "<warning>");
 
     // File list
     std::vector<std::string> sourceFiles;
@@ -267,8 +271,8 @@ int driverMain(int argc, TArgs argv) try {
             printMacros(sourceManager, options, buffers);
         }
         else {
-            anyErrors =
-                !runCompiler(sourceManager, options, buffers, onlyParse == true, astJsonFile);
+            anyErrors = !runCompiler(sourceManager, options, buffers, warningOptions,
+                                     onlyParse == true, astJsonFile);
         }
     }
     catch (const std::exception& e) {
