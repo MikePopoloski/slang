@@ -312,6 +312,7 @@ note NoteExceededMaxCallDepth "constant evaluation exceeded maximum depth of {} 
 note NoteExceededMaxSteps "constant evaluation hit maximum step limit; possible infinite loop?"
 
 subsystem Meta
+error TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
 warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'"
 
 

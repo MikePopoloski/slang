@@ -151,6 +151,9 @@ static bool checkMacroArgRanges(const DiagnosticEngine& engine, SourceLocation l
 }
 
 void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
+    if (issuedOverLimitErr)
+        return;
+
     DiagnosticSeverity severity = getSeverity(diagnostic.code);
     switch (severity) {
         case DiagnosticSeverity::Ignored:
@@ -162,13 +165,21 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
             break;
         case DiagnosticSeverity::Error:
         case DiagnosticSeverity::Fatal:
-            if (errorLimit && numErrors >= errorLimit)
+            if (errorLimit && numErrors >= errorLimit) {
+                Diagnostic diag(diag::TooManyErrors, SourceLocation::NoLocation);
+                issueImpl(diag, DiagnosticSeverity::Fatal);
+                issuedOverLimitErr = true;
                 return;
+            }
 
             numErrors++;
             break;
     }
 
+    issueImpl(diagnostic, severity);
+}
+
+void DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity) {
     // Walk out until we find a location for this diagnostic that isn't inside a macro.
     SmallVectorSized<SourceLocation, 8> expansionLocs;
     SourceLocation loc = diagnostic.location;

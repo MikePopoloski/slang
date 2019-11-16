@@ -173,6 +173,8 @@ public:
     static std::string reportAll(const SourceManager& sourceManager, span<const Diagnostic> diags);
 
 private:
+    void issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity);
+
     const SourceManager& sourceManager;
     std::unique_ptr<TypePrintingOptions> typePrintingOptions;
     flat_hash_map<DiagCode, DiagnosticSeverity> severityTable;
@@ -187,6 +189,7 @@ private:
     bool warningsAsErrors = false;
     bool errorsAsFatal = false;
     bool fatalsAsErrors = false;
+    bool issuedOverLimitErr = false;
 };
 
 } // namespace slang

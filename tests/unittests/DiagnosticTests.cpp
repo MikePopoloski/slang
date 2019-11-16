@@ -468,7 +468,7 @@ TEST_CASE("DiagnosticEngine stuff") {
     engine.setErrorLimit(7);
     for (int i = 0; i < 10; i++)
         engine.issue(diag);
-    CHECK(client->count == 9); // includes 2 warnings
+    CHECK(client->count == 10); // includes 2 warnings and 1 fatal
 }
 
 TEST_CASE("DiagnosticEngine::setWarningOptions") {
