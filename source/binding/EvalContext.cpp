@@ -18,7 +18,7 @@ namespace slang {
 
 EvalContext::EvalContext(const Scope& scope, bitmask<EvalFlags> flags) :
     flags(flags), rootScope(&scope) {
-    stack.emplace_back(Frame{});
+    stack.emplace(Frame{});
 }
 
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
@@ -54,12 +54,12 @@ bool EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation c
     frame.subroutine = &subroutine;
     frame.callLocation = callLocation;
     frame.lookupLocation = lookupLocation;
-    stack.emplace_back(std::move(frame));
+    stack.emplace(std::move(frame));
     return true;
 }
 
 void EvalContext::popFrame() {
-    stack.pop_back();
+    stack.pop();
 }
 
 bool EvalContext::step(SourceLocation loc) {
@@ -165,13 +165,14 @@ void EvalContext::reportStack(Diagnostics& stackDiags) const {
 
     const ptrdiff_t start = ptrdiff_t(limit / 2);
     const ptrdiff_t end = start + ptrdiff_t(limit % 2);
-    for (auto it = stack.rbegin(), itEnd = it + start; it != itEnd; it++)
+    auto reversed = make_reverse_range(stack);
+    for (auto it = reversed.begin(), itEnd = it + start; it != itEnd; it++)
         reportFrame(*this, stackDiags, *it);
 
-    stackDiags.add(diag::NoteSkippingFrames, (stack.rbegin() + start)->callLocation)
+    stackDiags.add(diag::NoteSkippingFrames, (reversed.begin() + start)->callLocation)
         << stack.size() - limit;
 
-    for (auto it = stack.rend() - end, itEnd = stack.rend(); it != itEnd; it++)
+    for (auto it = reversed.end() - end, itEnd = reversed.end(); it != itEnd; it++)
         reportFrame(*this, stackDiags, *it);
 }
 

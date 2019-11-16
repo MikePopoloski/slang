@@ -101,7 +101,7 @@ public:
 private:
     void reportStack();
 
-    std::deque<Frame> stack;
+    SmallVectorSized<Frame, 4> stack;
     Diagnostics diags;
     bitmask<EvalFlags> flags;
     const Scope* rootScope;
