@@ -36,8 +36,8 @@ struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
 struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
-    DiagnosticVisitor(const Diagnostics& diags, int errorLimit) :
-        diags(diags), errorLimit(errorLimit) {}
+    DiagnosticVisitor(const Diagnostics& diags, uint32_t errorLimit) :
+        errorLimit(errorLimit), diags(diags) {}
 
     template<typename T>
     void handle(const T& symbol) {
@@ -85,7 +85,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
     }
 
     bool inDef = false;
-    int errorLimit;
+    uint32_t errorLimit;
     const Diagnostics& diags;
     flat_hash_map<const Symbol*, size_t> instanceCount;
 };
@@ -484,7 +484,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
     // If we haven't already done so, touch every symbol, scope, statement,
     // and expression tree so that we can be sure we have all the diagnostics.
-    DiagnosticVisitor visitor(diags, options.errorLimit == 0 ? INT_MAX : options.errorLimit);
+    DiagnosticVisitor visitor(diags, options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
 
     // Go through all diagnostics and build a map from source location / code to the

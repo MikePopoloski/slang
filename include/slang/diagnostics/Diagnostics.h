@@ -147,7 +147,7 @@ public:
     void sort(const SourceManager& sourceManager);
 
     /// Gets the number of errors that have been added to the collection.
-    int getNumErrors() const { return errorCount; }
+    uint32_t getNumErrors() const { return errorCount; }
 
     using SmallVectorSized::begin;
     using SmallVectorSized::end;
@@ -159,7 +159,7 @@ public:
     using SmallVectorSized::operator[];
 
 private:
-    int errorCount = 0;
+    uint32_t errorCount = 0;
 };
 
 class DiagGroup {
