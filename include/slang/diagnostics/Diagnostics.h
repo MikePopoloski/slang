@@ -119,11 +119,10 @@ public:
 };
 
 /// A collection of diagnostics.
-class Diagnostics : public SmallVectorSized<Diagnostic, 4> {
+class Diagnostics : private SmallVectorSized<Diagnostic, 2> {
 public:
     Diagnostics() = default;
-
-    Diagnostics(Diagnostics&& other) noexcept : SmallVectorSized(std::move(other)) {}
+    Diagnostics(Diagnostics&& other) noexcept = default;
 
     /// Adds a new diagnostic to the collection, pointing to the given source location.
     Diagnostic& add(DiagCode code, SourceLocation location);
@@ -137,8 +136,30 @@ public:
     /// Adds a new diagnostic to the collection, highlighting the given source range.
     Diagnostic& add(const Symbol& source, DiagCode code, SourceRange range);
 
+    void append(const Diagnostic& other);
+    void append(Diagnostic&& other);
+    void appendRange(const Diagnostics& other);
+
+    void pop();
+    void clear();
+
     /// Sorts the diagnostics in the collection based on source file and line number.
     void sort(const SourceManager& sourceManager);
+
+    /// Gets the number of errors that have been added to the collection.
+    int getNumErrors() const { return errorCount; }
+
+    using SmallVectorSized::begin;
+    using SmallVectorSized::end;
+    using SmallVectorSized::front;
+    using SmallVectorSized::back;
+    using SmallVectorSized::size;
+    using SmallVectorSized::empty;
+    using SmallVectorSized::data;
+    using SmallVectorSized::operator[];
+
+private:
+    int errorCount = 0;
 };
 
 class DiagGroup {

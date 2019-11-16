@@ -11,6 +11,17 @@
 
 namespace slang {
 
+// Defined in the generated DiagCode.cpp file.
+DiagnosticSeverity getDefaultSeverity(DiagCode code);
+
+static bool isError(DiagCode code) {
+    return getDefaultSeverity(code) >= DiagnosticSeverity::Error;
+}
+
+static bool isError(const Diagnostic& diag) {
+    return isError(diag.code);
+}
+
 Diagnostic::Diagnostic(DiagCode code, SourceLocation location) noexcept :
     code(code), location(location) {
 }
@@ -59,6 +70,9 @@ Diagnostic& operator<<(Diagnostic& diag, const ConstantValue& arg) {
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
+    if (isError(code))
+        errorCount++;
+
     ASSERT(location);
     emplace(code, location);
     return back();
@@ -69,6 +83,9 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceRange range) {
 }
 
 Diagnostic& Diagnostics::add(const Symbol& source, DiagCode code, SourceLocation location) {
+    if (isError(code))
+        errorCount++;
+
     ASSERT(location);
     emplace(source, code, location);
     return back();
@@ -76,6 +93,41 @@ Diagnostic& Diagnostics::add(const Symbol& source, DiagCode code, SourceLocation
 
 Diagnostic& Diagnostics::add(const Symbol& source, DiagCode code, SourceRange range) {
     return add(source, code, range.start()) << range;
+}
+
+void Diagnostics::append(const Diagnostic& other) {
+    if (isError(other))
+        errorCount++;
+
+    SmallVectorSized::append(other);
+}
+
+void Diagnostics::append(Diagnostic&& other) {
+    if (isError(other))
+        errorCount++;
+
+    SmallVectorSized::emplace(std::move(other));
+}
+
+void Diagnostics::appendRange(const Diagnostics& other) {
+    for (auto& diag : other) {
+        if (isError(diag))
+            errorCount++;
+    }
+
+    SmallVectorSized::appendRange(other);
+}
+
+void Diagnostics::pop() {
+    if (isError(back()))
+        errorCount--;
+
+    SmallVectorSized::pop();
+}
+
+void Diagnostics::clear() {
+    SmallVectorSized::clear();
+    errorCount = 0;
 }
 
 void Diagnostics::sort(const SourceManager& sourceManager) {

@@ -36,8 +36,14 @@ struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
 struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
+    DiagnosticVisitor(const Diagnostics& diags, int errorLimit) :
+        diags(diags), errorLimit(errorLimit) {}
+
     template<typename T>
     void handle(const T& symbol) {
+        if (diags.getNumErrors() > errorLimit)
+            return;
+
         if constexpr (std::is_base_of_v<Symbol, T>) {
             auto declaredType = symbol.getDeclaredType();
             if (declaredType) {
@@ -52,24 +58,35 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
     void handle(const ContinuousAssignSymbol& symbol) { symbol.getAssignment(); }
 
     void handle(const DefinitionSymbol& symbol) {
+        if (diags.getNumErrors() > errorLimit)
+            return;
+
         auto guard = ScopeGuard([saved = inDef, this] { inDef = saved; });
         inDef = true;
         visitDefault(symbol);
     }
 
     void handle(const ModuleInstanceSymbol& symbol) {
+        if (diags.getNumErrors() > errorLimit)
+            return;
+
         if (!inDef)
             instanceCount[&symbol.definition]++;
         visitDefault(symbol);
     }
 
     void handle(const InterfaceInstanceSymbol& symbol) {
+        if (diags.getNumErrors() > errorLimit)
+            return;
+
         if (!inDef)
             instanceCount[&symbol.definition]++;
         visitDefault(symbol);
     }
 
     bool inDef = false;
+    int errorLimit;
+    const Diagnostics& diags;
     flat_hash_map<const Symbol*, size_t> instanceCount;
 };
 
@@ -467,7 +484,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
     // If we haven't already done so, touch every symbol, scope, statement,
     // and expression tree so that we can be sure we have all the diagnostics.
-    DiagnosticVisitor visitor;
+    DiagnosticVisitor visitor(diags, options.errorLimit == 0 ? INT_MAX : options.errorLimit);
     getRoot().visit(visitor);
 
     // Go through all diagnostics and build a map from source location / code to the
@@ -576,7 +593,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             Diagnostic diag = *found;
             diag.symbol = getInstanceOrDef(inst);
             diag.coalesceCount = count;
-            results.emplace(std::move(diag));
+            results.append(std::move(diag));
         }
         else {
             results.append(*diagList.front());

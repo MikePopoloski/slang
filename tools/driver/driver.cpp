@@ -96,14 +96,15 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
 
 bool runCompiler(SourceManager& sourceManager, const Bag& options,
                  const std::vector<SourceBuffer>& buffers,
-                 const std::vector<std::string>& warningOptions, bool onlyParse,
-                 const optional<std::string>& astJsonFile) {
+                 const std::vector<std::string>& warningOptions, uint32_t errorLimit,
+                 bool onlyParse, const optional<std::string>& astJsonFile) {
     Compilation compilation(options);
     for (const SourceBuffer& buffer : buffers)
         compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
 
     DiagnosticEngine diagEngine(sourceManager);
     Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
+    diagEngine.setErrorLimit(errorLimit);
 
     auto client = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(client);
@@ -213,8 +214,13 @@ int driverMain(int argc, TArgs argv) try {
                 "<limit>");
 
     // Diagnostics control
+    optional<uint32_t> errorLimit;
     std::vector<std::string> warningOptions;
     cmdLine.add("-W", warningOptions, "Control the specified warning", "<warning>");
+    cmdLine.add("--error-limit", errorLimit,
+                "Limit on the number of errors that will be printed. Setting this to zero will "
+                "disable the limit.",
+                "<limit>");
 
     // File list
     std::vector<std::string> sourceFiles;
@@ -285,6 +291,8 @@ int driverMain(int argc, TArgs argv) try {
         coptions.maxConstexprSteps = *maxConstexprSteps;
     if (maxConstexprBacktrace.has_value())
         coptions.maxConstexprBacktrace = *maxConstexprBacktrace;
+    if (errorLimit.has_value())
+        coptions.errorLimit = *errorLimit * 2;
 
     Bag options;
     options.add(ppoptions);
@@ -327,7 +335,7 @@ int driverMain(int argc, TArgs argv) try {
         }
         else {
             anyErrors = !runCompiler(sourceManager, options, buffers, warningOptions,
-                                     onlyParse == true, astJsonFile);
+                                     errorLimit.value_or(20), onlyParse == true, astJsonFile);
         }
     }
     catch (const std::exception& e) {

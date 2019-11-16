@@ -54,6 +54,10 @@ struct CompilationOptions {
     /// The maximum number of frames in a callstack to display in diagnostics
     /// before abbreviating them.
     uint32_t maxConstexprBacktrace = 10;
+
+    /// The maximum number of errors that can be found before we short circuit
+    /// the tree walking process.
+    uint32_t errorLimit = 64;
 };
 
 /// A centralized location for creating and caching symbols. This includes
