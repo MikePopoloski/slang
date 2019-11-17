@@ -8,14 +8,7 @@ TEST_CASE("If statement") {
     CHECK(stmt.toString() == text);
     CHECK(stmt.as<ConditionalStatementSyntax>().predicate->conditions[0]->expr->kind ==
           SyntaxKind::LogicalAndExpression);
-}
-
-TEST_CASE("Case statement (empty)") {
-    auto& text = "unique casez (foo) endcase";
-    auto& stmt = parseStatement(text);
-
-    REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
-    CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Case statement (normal)") {
@@ -24,6 +17,7 @@ TEST_CASE("Case statement (normal)") {
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Case statement (pattern)") {
@@ -32,6 +26,7 @@ TEST_CASE("Case statement (pattern)") {
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Case statement (range)") {
@@ -40,6 +35,7 @@ TEST_CASE("Case statement (range)") {
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Loop statements") {
@@ -48,6 +44,7 @@ TEST_CASE("Loop statements") {
 
     REQUIRE(stmt.kind == SyntaxKind::LoopStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Do while statement") {
@@ -56,6 +53,7 @@ TEST_CASE("Do while statement") {
 
     REQUIRE(stmt.kind == SyntaxKind::DoWhileStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Foreach statement") {
@@ -64,13 +62,18 @@ TEST_CASE("Foreach statement") {
 
     REQUIRE(stmt.kind == SyntaxKind::ForeachLoopStatement);
     CHECK(stmt.toString() == text);
+    
+    // TODO:
+    //CHECK_DIAGNOSTICS_EMPTY;
 }
+
 TEST_CASE("Forever statement") {
     auto& text = "forever ;";
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ForeverStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Return statement") {
@@ -79,6 +82,7 @@ TEST_CASE("Return statement") {
 
     REQUIRE(stmt.kind == SyntaxKind::ReturnStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Jump statements") {
@@ -87,6 +91,7 @@ TEST_CASE("Jump statements") {
 
     REQUIRE(stmt.kind == SyntaxKind::JumpStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Disable statement") {
@@ -95,6 +100,7 @@ TEST_CASE("Disable statement") {
 
     REQUIRE(stmt.kind == SyntaxKind::DisableStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Disable fork statement") {
@@ -103,6 +109,7 @@ TEST_CASE("Disable fork statement") {
 
     REQUIRE(stmt.kind == SyntaxKind::DisableForkStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 void testTimingControl(string_view text, SyntaxKind kind) {
@@ -111,6 +118,7 @@ void testTimingControl(string_view text, SyntaxKind kind) {
     REQUIRE(stmt.kind == SyntaxKind::TimingControlStatement);
     CHECK(stmt.as<TimingControlStatementSyntax>().timingControl->kind == kind);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Timing control statements") {
@@ -134,6 +142,9 @@ void testStatement(string_view text, SyntaxKind kind) {
 
     REQUIRE(stmt.kind == kind);
     CHECK(stmt.toString() == text);
+
+    // TODO:
+    //CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Procedural assign") {
@@ -170,6 +181,7 @@ TEST_CASE("Sequential declarations") {
     parseBlockDeclaration("foo::bar#()::blah f;");
     parseBlockDeclaration("struct packed { blah blah; } f;");
     parseBlockDeclaration("enum { blah = 4 } f, h, i;");
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Blocking Event Trigger") {
@@ -178,6 +190,7 @@ TEST_CASE("Blocking Event Trigger") {
 
     REQUIRE(stmt.kind == SyntaxKind::BlockingEventTriggerStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Nonblocking Event Trigger") {
@@ -186,4 +199,5 @@ TEST_CASE("Nonblocking Event Trigger") {
 
     REQUIRE(stmt.kind == SyntaxKind::NonblockingEventTriggerStatement);
     CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
