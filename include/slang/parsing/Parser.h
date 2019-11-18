@@ -25,9 +25,8 @@ enum class ExpressionOptions {
     /// No special options specified.
     None = 0,
 
-    /// Allow pattern matching expressions; these are not allowed recursively so
-    /// they're turned off after finding the first one.
-    AllowPatternMatch = 1,
+    /// Inside a pattern expression we don't allow a nested pattern expression.
+    PatternContext = 1,
 
     /// In a procedural assignment context, <= is a non-blocking assignment, not the less
     /// than or equal to operator.
@@ -279,6 +278,7 @@ private:
     bool isHierarchyInstantiation();
     bool isNonAnsiPort();
     bool isPlainPortName();
+    bool isConditionalExpression();
     bool scanDimensionList(uint32_t& index);
     bool scanQualifiedName(uint32_t& index);
     bool scanAttributes(uint32_t& index);

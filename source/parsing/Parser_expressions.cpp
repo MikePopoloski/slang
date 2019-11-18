@@ -14,18 +14,18 @@
 namespace slang {
 
 ExpressionSyntax& Parser::parseExpression() {
-    return parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
+    return parseSubExpression(ExpressionOptions::None, 0);
 }
 
 ExpressionSyntax& Parser::parseMinTypMaxExpression() {
-    ExpressionSyntax& first = parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
+    ExpressionSyntax& first = parseExpression();
     if (!peek(TokenKind::Colon))
         return first;
 
     auto colon1 = consume();
-    auto& typ = parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
+    auto& typ = parseExpression();
     auto colon2 = expect(TokenKind::Colon);
-    auto& max = parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
+    auto& max = parseExpression();
 
     return factory.minTypMaxExpression(first, colon1, typ, colon2, max);
 }
@@ -105,15 +105,19 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         }
     }
 
-    // can't nest pattern matching expressions
-    if (options & ExpressionOptions::AllowPatternMatch) {
-        // if we see the matches keyword or &&& we're in a pattern conditional predicate
-        // if we see a question mark, we were in a simple conditional predicate (at the precedence
-        // level one beneath logical-or)
-        auto logicalOrPrecedence = getPrecedence(SyntaxKind::LogicalOrExpression);
-        if (current.kind == TokenKind::MatchesKeyword || current.kind == TokenKind::TripleAnd ||
-            (current.kind == TokenKind::Question && precedence < logicalOrPrecedence)) {
+    // Handle conditional expressions (and their optional pattern matched predicate).
+    // Only do this if we're not already within a conditional pattern context, and if
+    // we're at the right precedence level (one lower than a logical-or) to take it.
+    int logicalOrPrecedence = getPrecedence(SyntaxKind::LogicalOrExpression);
+    if ((options & ExpressionOptions::PatternContext) == 0 && precedence < logicalOrPrecedence) {
+        // If this is the start of a pattern predicate, check whether there's actually a
+        // question mark coming up. Otherwise we might be a predicate inside a
+        // statement which doesn't need the question.
+        bool takeConditional = current.kind == TokenKind::Question;
+        if (current.kind == TokenKind::MatchesKeyword || current.kind == TokenKind::TripleAnd)
+            takeConditional = isConditionalExpression();
 
+        if (takeConditional) {
             Token question;
             auto& predicate =
                 parseConditionalPredicate(*leftOperand, TokenKind::Question, question);
@@ -125,6 +129,7 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
                 &factory.conditionalExpression(predicate, question, attributes, left, colon, right);
         }
     }
+
     return *leftOperand;
 }
 
@@ -823,8 +828,9 @@ PatternSyntax& Parser::parsePattern() {
         default:
             break;
     }
+
     // otherwise, it's either an expression or an error (parseExpression will handle that for us)
-    return factory.expressionPattern(parseSubExpression(ExpressionOptions::None, 0));
+    return factory.expressionPattern(parseSubExpression(ExpressionOptions::PatternContext, 0));
 }
 
 ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& first,
@@ -853,7 +859,7 @@ ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& 
 }
 
 ConditionalPatternSyntax& Parser::parseConditionalPattern() {
-    auto& expr = parseSubExpression(ExpressionOptions::None, 0);
+    auto& expr = parseSubExpression(ExpressionOptions::PatternContext, 0);
 
     MatchesClauseSyntax* matchesClause = nullptr;
     if (peek(TokenKind::MatchesKeyword)) {
@@ -880,8 +886,7 @@ EventExpressionSyntax& Parser::parseEventExpression() {
             edge = consume();
         }
 
-        auto& expr = parseSubExpression(
-            ExpressionOptions::AllowPatternMatch | ExpressionOptions::EventExpressionContext, 0);
+        auto& expr = parseSubExpression(ExpressionOptions::EventExpressionContext, 0);
         left = &factory.signalEventExpression(edge, expr);
     }
 
@@ -1018,6 +1023,41 @@ ExpressionSyntax& Parser::parseArrayOrRandomizeMethod(ExpressionSyntax& expr) {
         constraints = &parseConstraintBlock();
 
     return factory.arrayOrRandomizeMethodExpression(expr, with, args, constraints);
+}
+
+bool Parser::isConditionalExpression() {
+    uint32_t index = 1;
+    while (true) {
+        TokenKind kind = peek(index++).kind;
+        switch (kind) {
+            case TokenKind::Question:
+                return true;
+            case TokenKind::CloseParenthesis:
+                return false;
+            case TokenKind::OpenParenthesis:
+                if (!scanTypePart<isNotInType>(index, TokenKind::OpenParenthesis,
+                                               TokenKind::CloseParenthesis)) {
+                    return false;
+                }
+                break;
+            case TokenKind::OpenBrace:
+                if (!scanTypePart<isNotInType>(index, TokenKind::OpenBrace,
+                                               TokenKind::CloseBrace)) {
+                    return false;
+                }
+                break;
+            case TokenKind::OpenBracket:
+                if (!scanTypePart<isNotInType>(index, TokenKind::OpenBracket,
+                                               TokenKind::CloseBracket)) {
+                    return false;
+                }
+                break;
+            default:
+                if (isNotInType(kind))
+                    return false;
+                break;
+        }
+    }
 }
 
 } // namespace slang

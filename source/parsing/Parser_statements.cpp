@@ -121,9 +121,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
 
     // everything else should be some kind of expression
     if (isPossibleExpression(peek().kind)) {
-        auto& expr = parseSubExpression(ExpressionOptions::AllowPatternMatch |
-                                            ExpressionOptions::ProceduralAssignmentContext,
-                                        0);
+        auto& expr = parseSubExpression(ExpressionOptions::ProceduralAssignmentContext, 0);
         return factory.expressionStatement(label, attributes, expr, expect(TokenKind::Semicolon));
     }
 
@@ -147,8 +145,8 @@ ConditionalStatementSyntax& Parser::parseConditionalStatement(NamedLabelSyntax* 
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     Token closeParen;
-    auto& predicate = parseConditionalPredicate(parseSubExpression(ExpressionOptions::None, 0),
-                                                TokenKind::CloseParenthesis, closeParen);
+    auto& predicate =
+        parseConditionalPredicate(parseExpression(), TokenKind::CloseParenthesis, closeParen);
     auto& statement = parseStatement();
     auto elseClause = parseElseClause();
 

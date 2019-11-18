@@ -201,3 +201,30 @@ TEST_CASE("Nonblocking Event Trigger") {
     CHECK(stmt.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Conditional expression inside conditional statement") {
+    auto& text = "if (foo ? a : b) begin end";
+    auto& stmt = parseStatement(text);
+
+    REQUIRE(stmt.kind == SyntaxKind::ConditionalStatement);
+    CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Conditional matching statement") {
+    auto& text = "if (foo matches bar &&& (baz ? 1 : 0) &&& baz) begin end";
+    auto& stmt = parseStatement(text);
+
+    REQUIRE(stmt.kind == SyntaxKind::ConditionalStatement);
+    CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Conditional matching expression") {
+    auto& text = "if (foo matches bar &&& (baz ? 1 : 0) &&& baz ? 1 : 0) begin end";
+    auto& stmt = parseStatement(text);
+
+    REQUIRE(stmt.kind == SyntaxKind::ConditionalStatement);
+    CHECK(stmt.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
