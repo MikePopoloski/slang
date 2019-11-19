@@ -726,7 +726,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
     TokenKind next = peek().kind;
     bool inForEach = (options & NameOptions::InForEach) != 0;
     if (inForEach && (next == TokenKind::Comma || next == TokenKind::CloseBracket))
-        return factory.emptyIdentifierName();
+        return factory.emptyIdentifierName(placeholderToken());
 
     Token identifier;
     if (next == TokenKind::Identifier) {
@@ -791,7 +791,7 @@ ArgumentListSyntax& Parser::parseArgumentList() {
 ArgumentSyntax& Parser::parseArgument() {
     // check for empty arguments
     if (peek(TokenKind::Comma))
-        return factory.emptyArgument();
+        return factory.emptyArgument(placeholderToken());
 
     // check for named arguments
     if (peek(TokenKind::Dot)) {

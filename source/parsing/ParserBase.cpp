@@ -106,6 +106,10 @@ Token ParserBase::missingToken(TokenKind kind, SourceLocation location) {
     return Token::createMissing(alloc, kind, location);
 }
 
+Token ParserBase::placeholderToken() {
+    return Token(alloc, TokenKind::Placeholder, {}, {}, peek().location());
+}
+
 Token ParserBase::getLastConsumed() const {
     return window.lastConsumed;
 }

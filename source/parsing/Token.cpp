@@ -244,6 +244,7 @@ string_view Token::rawText() const {
         case TokenKind::EmptyMacroArgument:
         case TokenKind::LineContinuation:
             return string_view(info->rawTextPtr, rawLen);
+        case TokenKind::Placeholder:
         case TokenKind::EndOfFile:
             return "";
         default:

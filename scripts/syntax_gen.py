@@ -442,6 +442,9 @@ def generate(outf, name, tags, members, alltypes, kindmap):
         else:
             argMembers.append(m)
 
+    if final and not argMembers:
+        raise Exception('{} has no members'.format(name))
+
     constructorArgs = '{}{}'.format(kindArg, ', '.join(argMembers))
     alltypes[name] = TypeInfo(processed_members, members, pointerMembers, optionalMembers,
                               final, constructorArgs, argNames, base, combined, notNullMembers)

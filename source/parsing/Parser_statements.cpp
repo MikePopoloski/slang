@@ -363,6 +363,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
 ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& arrayName = parseName(NameOptions::InForEach);
+
     span<TokenOrSyntax> list;
     Token openBracket;
     Token closeBracket;

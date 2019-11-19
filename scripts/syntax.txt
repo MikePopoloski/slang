@@ -36,7 +36,7 @@ Argument final=false
 empty
 
 EmptyArgument base=Argument kind=EmptyArgument
-empty
+token placeholder
 
 OrderedArgument base=Argument kind=OrderedArgument
 Expression expr
@@ -261,7 +261,7 @@ token identifier
 list<ElementSelect> selectors
 
 EmptyIdentifierName base=Name kind=EmptyIdentifierName
-empty
+token placeholder
 
 KeywordName base=Name
 token keyword

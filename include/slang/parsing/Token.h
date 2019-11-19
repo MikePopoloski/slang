@@ -245,6 +245,7 @@ enum class TokenKind : uint16_t {
     UnbasedUnsizedLiteral,
     RealLiteral,
     TimeLiteral,
+    Placeholder,
 
     // punctuation
     Apostrophe,
@@ -587,8 +588,8 @@ enum class TokenKind : uint16_t {
     UnitSystemName,
     RootSystemName,
 
-    // directives (these get consumed by the preprocessor and don't make it downstream to the
-    // parser)
+    // directives (these get consumed by the preprocessor and don't
+    // make it downstream to the parser)
     Directive,
     IncludeFileName,
     MacroUsage,

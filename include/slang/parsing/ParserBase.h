@@ -36,6 +36,7 @@ protected:
     void pushTokens(span<const Token> tokens);
 
     Token missingToken(TokenKind kind, SourceLocation location);
+    Token placeholderToken();
 
     Token getLastConsumed() const;
 
