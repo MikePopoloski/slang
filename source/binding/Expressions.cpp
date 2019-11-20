@@ -2198,9 +2198,28 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
     if (syntax && syntax->arguments) {
         auto actualArgs = syntax->arguments->parameters;
         for (size_t i = 0; i < actualArgs.size(); i++) {
-            // TODO: error if not ordered arguments
-            const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-            buffer.append(&subroutine.bindArgument(i, context, *arg.expr));
+            switch (actualArgs[i]->kind) {
+                case SyntaxKind::OrderedArgument: {
+                    const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
+                    buffer.append(&subroutine.bindArgument(i, context, *arg.expr));
+                    break;
+                }
+                case SyntaxKind::NamedArgument:
+                    context.addDiag(diag::NamedArgNotAllowed, actualArgs[i]->sourceRange());
+                    return badExpr(compilation, nullptr);
+                case SyntaxKind::EmptyArgument:
+                    if (subroutine.allowEmptyArgument(i)) {
+                        buffer.append(compilation.emplace<EmptyArgumentExpression>(
+                            compilation.getVoidType(), actualArgs[i]->sourceRange()));
+                    }
+                    else {
+                        context.addDiag(diag::EmptyArgNotAllowed, actualArgs[i]->sourceRange());
+                        return badExpr(compilation, nullptr);
+                    }
+                    break;
+                default:
+                    THROW_UNREACHABLE;
+            }
         }
     }
 

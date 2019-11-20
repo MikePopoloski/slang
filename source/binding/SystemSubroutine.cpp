@@ -16,6 +16,10 @@
 
 namespace slang {
 
+bool SystemSubroutine::allowEmptyArgument(size_t) const {
+    return false;
+}
+
 const Expression& SystemSubroutine::bindArgument(size_t, const BindContext& context,
                                                  const ExpressionSyntax& syntax) const {
     return Expression::bind(syntax, context);
@@ -52,14 +56,22 @@ bool SystemSubroutine::checkArgCount(const BindContext& context, bool isMethod, 
 }
 
 bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& args) {
-    // TODO: empty args
-
     SmallVectorSized<SFormat::Arg, 8> specs;
     auto specIt = specs.begin();
 
     auto argIt = args.begin();
     while (argIt != args.end()) {
         auto arg = *argIt++;
+        if (arg->kind == ExpressionKind::EmptyArgument) {
+            // Empty arguments are ok as long as we aren't processing a format string.
+            if (specIt == specs.end())
+                continue;
+
+            SFormat::Arg fmtArg = *specIt++;
+            context.addDiag(diag::FormatEmptyArg, arg->sourceRange) << string_view(&fmtArg.spec, 1);
+            return false;
+        }
+
         if (arg->bad())
             return false;
 
@@ -87,7 +99,7 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
             SFormat::Arg fmtArg = *specIt++;
             if (!SFormat::isArgTypeValid(fmtArg.type, type)) {
                 context.addDiag(diag::FormatMismatchedType, arg->sourceRange)
-                    << type << fmtArg.spec;
+                    << type << string_view(&fmtArg.spec, 1);
                 return false;
             }
         }

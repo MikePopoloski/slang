@@ -223,6 +223,8 @@ error AssignmentPatternKeyDupName "assignment pattern has multiple keys for memb
 error AssignmentPatternNoMember "member '{}' is not covered by any assignment pattern key"
 error AssignmentPatternNestedNoMember "member '{}' has nested elements that are not covered by any assignment pattern key"
 error AssignmentPatternMissingElements "not all elements of array are covered by an assignment pattern key"
+error EmptyArgNotAllowed "empty argument not allowed"
+error NamedArgNotAllowed "named argument not allowed"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -288,6 +290,7 @@ error FormatSpecifierNotFloat "floating point format specifier options used on n
 error FormatUnspecifiedType "cannot format values of type {} without a specification string"
 error FormatMismatchedType "value of type {} is invalid for '%{}' format specifier"
 error InvalidFormatStringType "value of type {} is not valid as a format string"
+error FormatEmptyArg "empty argument not allowed -- expecting value for '%{}' format specifier"
 error ArrayReductionIntegral "array reduction methods can only be called on unpacked arrays of integral values"
 error BadFinishNum "finish argument must have value of 0, 1, or 2"
 

@@ -45,7 +45,8 @@ struct InvocationExpressionSyntax;
     x(DataType) \
     x(SimpleAssignmentPattern) \
     x(StructuredAssignmentPattern) \
-    x(ReplicatedAssignmentPattern)
+    x(ReplicatedAssignmentPattern) \
+    x(EmptyArgument)
 ENUM(ExpressionKind, EXPRESSION);
 #undef EXPRESION
 
@@ -930,6 +931,22 @@ private:
                                            const BindContext& context, size_t& count);
 
     const Expression* count_;
+};
+
+/// Represents an empty argument. There's no actual syntax to go along with this,
+/// and the type is always invalid, but we use this as a placeholder to hold the fact
+/// that the argument is empty.
+class EmptyArgumentExpression : public Expression {
+public:
+    EmptyArgumentExpression(const Type& type, SourceRange sourceRange) :
+        Expression(ExpressionKind::EmptyArgument, type, sourceRange) {}
+
+    ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    void toJson(json&) const {}
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::EmptyArgument; }
 };
 
 } // namespace slang

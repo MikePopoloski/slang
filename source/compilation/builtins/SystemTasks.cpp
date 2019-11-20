@@ -21,6 +21,8 @@ class DisplayTask : public SystemTaskBase {
 public:
     using SystemTaskBase::SystemTaskBase;
 
+    bool allowEmptyArgument(size_t) const final { return true; }
+
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange) const final {
         auto& comp = context.getCompilation();
@@ -78,6 +80,8 @@ public:
 class FatalTask : public SystemTaskBase {
 public:
     using SystemTaskBase::SystemTaskBase;
+
+    bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange) const final {

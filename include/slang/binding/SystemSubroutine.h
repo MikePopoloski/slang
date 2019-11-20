@@ -23,6 +23,7 @@ public:
     std::string name;
     SubroutineKind kind;
 
+    virtual bool allowEmptyArgument(size_t argIndex) const;
     virtual const Expression& bindArgument(size_t argIndex, const BindContext& context,
                                            const ExpressionSyntax& syntax) const;
     virtual const Type& checkArguments(const BindContext& context, const Args& args,

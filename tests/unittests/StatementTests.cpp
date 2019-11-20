@@ -504,3 +504,34 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DeclarationsAtStart);
 }
+
+TEST_CASE("I/O system tasks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        $display("asdf", , 5);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Format string - error from empty argument") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        $display("asdf %s%d", , 5);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::FormatEmptyArg);
+}
