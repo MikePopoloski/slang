@@ -41,32 +41,32 @@ Diagnostic& Diagnostic::addNote(const Diagnostic& diag) {
     return notes.back();
 }
 
-Diagnostic& operator<<(Diagnostic& diag, const std::string& arg) {
-    diag.args.emplace_back(arg);
-    return diag;
+Diagnostic& Diagnostic::operator<<(const std::string& arg) {
+    args.emplace_back(arg);
+    return *this;
 }
 
-Diagnostic& operator<<(Diagnostic& diag, string_view arg) {
-    diag.args.emplace_back(std::string(arg));
-    return diag;
+Diagnostic& Diagnostic::operator<<(string_view arg) {
+    args.emplace_back(std::string(arg));
+    return *this;
 }
 
-Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {
+Diagnostic& Diagnostic::operator<<(const Type& arg) {
     ASSERT(!arg.isError());
-    diag.args.emplace_back(&arg);
-    return diag;
+    args.emplace_back(&arg);
+    return *this;
 }
 
-Diagnostic& operator<<(Diagnostic& diag, SourceRange range) {
+Diagnostic& Diagnostic::operator<<(SourceRange range) {
     ASSERT(range.start());
     ASSERT(range.end());
-    diag.ranges.push_back(range);
-    return diag;
+    ranges.push_back(range);
+    return *this;
 }
 
-Diagnostic& operator<<(Diagnostic& diag, const ConstantValue& arg) {
-    diag.args.emplace_back(arg);
-    return diag;
+Diagnostic& Diagnostic::operator<<(const ConstantValue& arg) {
+    args.emplace_back(arg);
+    return *this;
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {

@@ -72,7 +72,7 @@ string_view toString(DiagCode code);
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    using Arg = std::variant<std::string, int64_t, uint64_t, const Type*, ConstantValue>;
+    using Arg = std::variant<std::string, int64_t, uint64_t, const Type*, ConstantValue, char>;
     std::vector<Arg> args;
     std::vector<SourceRange> ranges;
     std::vector<Diagnostic> notes;
@@ -98,23 +98,23 @@ public:
     Diagnostic& addNote(const Diagnostic& diag);
 
     /// Adds an argument to the diagnostic.
-    friend Diagnostic& operator<<(Diagnostic& diag, const Type& arg);
-    friend Diagnostic& operator<<(Diagnostic& diag, const std::string& arg);
-    friend Diagnostic& operator<<(Diagnostic& diag, string_view arg);
-    friend Diagnostic& operator<<(Diagnostic& diag, SourceRange arg);
-    friend Diagnostic& operator<<(Diagnostic& diag, const ConstantValue& arg);
+    Diagnostic& operator<<(const Type& arg);
+    Diagnostic& operator<<(const std::string& arg);
+    Diagnostic& operator<<(string_view arg);
+    Diagnostic& operator<<(SourceRange arg);
+    Diagnostic& operator<<(const ConstantValue& arg);
 
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>>>
-    inline friend Diagnostic& operator<<(Diagnostic& diag, T arg) {
-        diag.args.emplace_back((int64_t)arg);
-        return diag;
+    Diagnostic& operator<<(T arg) {
+        args.emplace_back((int64_t)arg);
+        return *this;
     }
 
     template<typename T, typename = void,
              typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>>
-    inline friend Diagnostic& operator<<(Diagnostic& diag, T arg) {
-        diag.args.emplace_back((uint64_t)arg);
-        return diag;
+    Diagnostic& operator<<(T arg) {
+        args.emplace_back((uint64_t)arg);
+        return *this;
     }
 };
 
@@ -149,13 +149,13 @@ public:
     /// Gets the number of errors that have been added to the collection.
     uint32_t getNumErrors() const { return errorCount; }
 
+    using SmallVectorSized::back;
     using SmallVectorSized::begin;
+    using SmallVectorSized::data;
+    using SmallVectorSized::empty;
     using SmallVectorSized::end;
     using SmallVectorSized::front;
-    using SmallVectorSized::back;
     using SmallVectorSized::size;
-    using SmallVectorSized::empty;
-    using SmallVectorSized::data;
     using SmallVectorSized::operator[];
 
 private:
