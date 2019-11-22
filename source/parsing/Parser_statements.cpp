@@ -115,6 +115,8 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
         case TokenKind::MinusArrow:
         case TokenKind::MinusDoubleArrow:
             return parseEventTriggerStatement(label, attributes);
+        case TokenKind::VoidKeyword:
+            return parseVoidCallStatement(label, attributes);
         default:
             break;
     }
@@ -698,7 +700,6 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
 
 EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(NamedLabelSyntax* label,
                                                                 AttrList attributes) {
-
     auto trigger = consume();
 
     SyntaxKind kind = SyntaxKind::BlockingEventTriggerStatement;
@@ -709,6 +710,16 @@ EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(NamedLabelSyntax
     }
 
     return factory.eventTriggerStatement(kind, label, attributes, trigger, timing, parseName());
+}
+
+StatementSyntax& Parser::parseVoidCallStatement(NamedLabelSyntax* label, AttrList attributes) {
+    auto keyword = consume();
+    auto apostrophe = expect(TokenKind::Apostrophe);
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto& expr = parseExpression();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    return factory.voidCastedCallStatement(label, attributes, keyword, apostrophe, openParen, expr,
+                                           closeParen);
 }
 
 } // namespace slang

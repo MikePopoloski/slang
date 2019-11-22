@@ -143,8 +143,7 @@ void testStatement(string_view text, SyntaxKind kind) {
     REQUIRE(stmt.kind == kind);
     CHECK(stmt.toString() == text);
 
-    // TODO:
-    //CHECK_DIAGNOSTICS_EMPTY;
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Procedural assign") {
@@ -156,7 +155,7 @@ TEST_CASE("Procedural assign") {
 
 TEST_CASE("Function calls") {
     testStatement("foo();", SyntaxKind::ExpressionStatement);
-    testStatement("void'(foo());", SyntaxKind::ExpressionStatement);
+    testStatement("void'(foo())", SyntaxKind::VoidCastedCallStatement);
     testStatement("foo::bar.baz(blah, 324, yes);", SyntaxKind::ExpressionStatement);
 }
 

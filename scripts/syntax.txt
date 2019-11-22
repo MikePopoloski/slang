@@ -812,6 +812,13 @@ ExpressionStatement base=Statement kind=ExpressionStatement
 Expression expr
 token semi
 
+VoidCastedCallStatement base=Statement kind=VoidCastedCallStatement
+token voidKeyword
+token apostrophe
+token openParen
+Expression expr
+token closeParen
+
 ProceduralAssignStatement base=Statement
 token keyword
 Expression lvalue

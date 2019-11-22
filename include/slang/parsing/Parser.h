@@ -173,6 +173,7 @@ private:
     ProceduralDeassignStatementSyntax& parseProceduralDeassignStatement(NamedLabelSyntax* label, AttrList attributes, SyntaxKind kind);
     StatementSyntax& parseDisableStatement(NamedLabelSyntax* label, AttrList attributes);
     StatementSyntax& parseAssertionStatement(NamedLabelSyntax* label, AttrList attributes);
+    StatementSyntax& parseVoidCallStatement(NamedLabelSyntax* label, AttrList attributes);
     ConcurrentAssertionStatementSyntax& parseConcurrentAssertion(NamedLabelSyntax* label, AttrList attributes);
     PropertySpecSyntax& parsePropertySpec();
     ActionBlockSyntax& parseActionBlock();
