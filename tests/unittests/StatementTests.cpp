@@ -581,3 +581,24 @@ endmodule
     CHECK(diags[2].code == diag::VoidNotAllowed);
     CHECK(diags[3].code == diag::PointlessVoidCast);
 }
+
+TEST_CASE("Function call -- ignored return") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function int foo;
+        return 0;
+    endfunction
+
+    initial begin
+        foo();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnusedResult);
+}

@@ -145,8 +145,7 @@ module m;
 
     (* blah3 *);
 
-    function logic func;
-        return 0;
+    function void func;
     endfunction
 
     int j;

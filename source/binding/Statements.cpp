@@ -1200,6 +1200,12 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
     bool ok;
     switch (expr.kind) {
         case ExpressionKind::Call:
+            if (!expr.type->isVoid()) {
+                context.addDiag(diag::UnusedResult, expr.sourceRange)
+                    << expr.as<CallExpression>().getSubroutineName();
+            }
+            ok = true;
+            break;
         case ExpressionKind::Assignment:
             ok = true;
             break;
