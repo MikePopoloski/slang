@@ -1293,7 +1293,7 @@ DPIImportExport base=Member kind=DPIImportExport
 token keyword
 token stringLiteral
 token property
-token name
+token c_identifier
 token equals
 FunctionPrototype method
 token semi
