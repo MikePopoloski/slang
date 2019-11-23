@@ -140,7 +140,7 @@ const Type& TypeParameterSymbol::getTypeAlias() const {
         alias->setSyntax(*syntax);
 
     alias->targetType.copyTypeFrom(targetType);
-    alias->setParent(*scope);
+    alias->setParent(*scope, getIndex());
 
     typeAlias = alias;
     return *typeAlias;

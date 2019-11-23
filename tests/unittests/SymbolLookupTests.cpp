@@ -1141,3 +1141,21 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Lookup -- type parameter ordering in module header regression") {
+    auto tree = SyntaxTree::fromText(R"(
+module fifo #(
+    parameter int unsigned DATA_WIDTH = 32,
+    parameter type dtype = logic[DATA_WIDTH - 1:0]
+    )(input dtype data_i);
+endmodule
+
+module top;
+    fifo f(3);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
