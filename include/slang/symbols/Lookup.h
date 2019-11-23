@@ -58,6 +58,9 @@ public:
     /// Places a location just after the given symbol in its parent scope.
     static LookupLocation after(const Symbol& symbol);
 
+    /// Places a location just before the given symbol in lexical scope.
+    static LookupLocation beforeLexical(const Symbol& symbol);
+
     /// A special location that should always compare after any other.
     static const LookupLocation max;
 

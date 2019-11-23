@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/Lookup.h"
 
+#include "slang/symbols/DefinitionSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
 
@@ -19,6 +20,14 @@ LookupLocation LookupLocation::before(const Symbol& symbol) {
 }
 
 LookupLocation LookupLocation::after(const Symbol& symbol) {
+    return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex() + 1);
+}
+
+LookupLocation LookupLocation::beforeLexical(const Symbol& symbol) {
+    if (InstanceSymbol::isKind(symbol.kind)) {
+        auto& def = symbol.as<InstanceSymbol>().definition;
+        return LookupLocation(def.getParentScope(), (uint32_t)def.getIndex() + 1);
+    }
     return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex() + 1);
 }
 

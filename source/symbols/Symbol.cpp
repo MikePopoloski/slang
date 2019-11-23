@@ -150,12 +150,12 @@ optional<bool> Symbol::isBeforeInCompilationUnit(const Symbol& target) const {
     const Scope* scope;
     while ((scope = sym->getLexicalScope()) != nullptr &&
            sym->kind != SymbolKind::CompilationUnit && scope != target.getLexicalScope()) {
-        locMap[scope] = LookupLocation::before(*sym);
+        locMap[scope] = LookupLocation::beforeLexical(*sym);
         sym = &scope->asSymbol();
     }
 
     if (scope == target.getLexicalScope())
-        return LookupLocation::before(*sym) < LookupLocation::before(target);
+        return LookupLocation::beforeLexical(*sym) < LookupLocation::beforeLexical(target);
 
     // If `target` wasn't in a direct scope of any of our own parents,
     // repeat the process walking up `target`s scopes.
@@ -163,7 +163,7 @@ optional<bool> Symbol::isBeforeInCompilationUnit(const Symbol& target) const {
     while ((scope = sym->getLexicalScope()) != nullptr &&
            sym->kind != SymbolKind::CompilationUnit) {
         if (auto it = locMap.find(scope); it != locMap.end())
-            return it->second < LookupLocation::before(*sym);
+            return it->second < LookupLocation::beforeLexical(*sym);
 
         sym = &scope->asSymbol();
     }

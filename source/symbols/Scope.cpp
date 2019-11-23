@@ -751,21 +751,11 @@ void Scope::lookupUnqualifiedImpl(string_view name, LookupLocation location,
 
     // Continue up the scope chain via our parent. If we hit an instance, we need to instead
     // search within the context of the definition's parent scope.
-    const Scope* nextScope;
-    if (InstanceSymbol::isKind(asSymbol().kind)) {
-        auto& def = asSymbol().as<InstanceSymbol>().definition;
-        nextScope = def.getParentScope();
-        location = LookupLocation(nextScope, (uint32_t)def.getIndex() + 1);
-    }
-    else {
-        nextScope = asSymbol().getParentScope();
-        location = LookupLocation(nextScope, (uint32_t)asSymbol().getIndex() + 1);
-    }
-
-    if (!nextScope)
+    location = LookupLocation::beforeLexical(asSymbol());
+    if (!location.getScope())
         return;
 
-    return nextScope->lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
+    return location.getScope()->lookupUnqualifiedImpl(name, location, sourceRange, flags, result);
 }
 
 const Symbol* Scope::selectChild(const Symbol& initialSymbol,
