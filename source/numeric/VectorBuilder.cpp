@@ -231,8 +231,10 @@ SVInt VectorBuilder::finish() {
             }
             else {
                 // We should warn about overflow here, but the spec says it is valid and
-                // the literal gets truncated. Definitely a warning though.
-                diagnostics.add(diag::VectorLiteralOverflow, firstLocation);
+                // the literal gets truncated. Definitely a warning though unless there's
+                // only one digit and it's unknown.
+                if (digits.size() > 1 || !digits[0].isUnknown())
+                    diagnostics.add(diag::VectorLiteralOverflow, firstLocation);
             }
         }
     }
