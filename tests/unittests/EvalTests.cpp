@@ -719,7 +719,7 @@ TEST_CASE("Eval sformatf") {
         return session.eval("$sformatf(\""s + str + "\", " + args + ")").str();
     };
 
-    CHECK(sformatf("", "") == "");
+    CHECK(session.eval("$sformatf(\"\")"s).str() == "");
     CHECK(sformatf("%d", "foo") == "                                     0");
     CHECK(sformatf("%0d", "foo") == "0");
     CHECK(sformatf("%2D", "foo") == " 0");
@@ -762,7 +762,7 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%c", "18'hx031") == "1");
     CHECK(sformatf("%c", "999") == "\xe7");
 
-    CHECK(sformatf("%m", "") == "$unit");
+    CHECK(session.eval("$sformatf(\"%m\")"s).str() == "$unit");
 
     session.eval(R"(
 function string func;
@@ -775,6 +775,8 @@ endfunction
 
     CHECK(sformatf("%u", "14'ha2c") == "\x2c\x0a\0\0"s);
     CHECK(sformatf("%z", "14'hzX2c") == "\x2c\x0f\0\0\0\x3f\0\0"s);
+    
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Concat assignments") {
@@ -783,10 +785,11 @@ TEST_CASE("Concat assignments") {
     session.eval("logic bar;");
 
     session.eval("{bar, foo} = 3'b111 + 2'd3");
-    NO_SESSION_ERRORS;
 
     CHECK(session.eval("bar").integer() == 1);
     CHECK(session.eval("foo").integer() == 2);
+
+    NO_SESSION_ERRORS;
 }
 
 TEST_CASE("Eval repeat loop") {
