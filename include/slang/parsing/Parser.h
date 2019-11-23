@@ -46,7 +46,7 @@ enum class NameOptions {
     None = 0,
 
     /// Parsing the name of a foreach variable.
-    InForEach = 1,
+    ForeachName = 1,
 
     /// This is the first element of a potentially dotted name path.
     IsFirst = 2,
@@ -165,6 +165,7 @@ private:
     DoWhileStatementSyntax& parseDoWhileStatement(NamedLabelSyntax* label, AttrList attributes);
     ForLoopStatementSyntax& parseForLoopStatement(NamedLabelSyntax* label, AttrList attributes);
     SyntaxNode& parseForInitializer();
+    NameSyntax& parseForeachLoopVariable();
     ForeachLoopListSyntax& parseForeachLoopVariables();
     ForeachLoopStatementSyntax& parseForeachLoopStatement(NamedLabelSyntax* label, AttrList attributes);
     ReturnStatementSyntax& parseReturnStatement(NamedLabelSyntax* label, AttrList attributes);

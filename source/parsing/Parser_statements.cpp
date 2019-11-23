@@ -362,9 +362,17 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label,
                                     steps.copy(alloc), closeParen, parseStatement());
 }
 
+NameSyntax& Parser::parseForeachLoopVariable() {
+    if (peek(TokenKind::Comma) || peek(TokenKind::CloseBracket))
+        return factory.emptyIdentifierName(placeholderToken());
+
+    auto identifier = expect(TokenKind::Identifier);
+    return factory.identifierName(identifier);
+}
+
 ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     auto openParen = expect(TokenKind::OpenParenthesis);
-    auto& arrayName = parseName(NameOptions::InForEach);
+    auto& arrayName = parseName(NameOptions::ForeachName);
 
     span<TokenOrSyntax> list;
     Token openBracket;
@@ -372,7 +380,7 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
     parseList<isIdentifierOrComma, isEndOfBracketedList>(
         TokenKind::OpenBracket, TokenKind::CloseBracket, TokenKind::Comma, openBracket, list,
         closeBracket, RequireItems::False, diag::ExpectedIdentifier,
-        [this] { return &parseName(NameOptions::InForEach); });
+        [this] { return &parseForeachLoopVariable(); }, AllowEmpty::True);
 
     auto closeParen = expect(TokenKind::CloseParenthesis);
     return factory.foreachLoopList(openParen, arrayName, openBracket, list, closeBracket,

@@ -62,9 +62,7 @@ TEST_CASE("Foreach statement") {
 
     REQUIRE(stmt.kind == SyntaxKind::ForeachLoopStatement);
     CHECK(stmt.toString() == text);
-    
-    // TODO:
-    //CHECK_DIAGNOSTICS_EMPTY;
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Forever statement") {

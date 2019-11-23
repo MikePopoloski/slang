@@ -724,10 +724,6 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
     }
 
     TokenKind next = peek().kind;
-    bool inForEach = (options & NameOptions::InForEach) != 0;
-    if (inForEach && (next == TokenKind::Comma || next == TokenKind::CloseBracket))
-        return factory.emptyIdentifierName(placeholderToken());
-
     Token identifier;
     if (next == TokenKind::Identifier) {
         identifier = consume();
@@ -750,7 +746,9 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
         case TokenKind::OpenBracket: {
             uint32_t index = 1;
             scanTypePart<isSemicolon>(index, TokenKind::OpenBracket, TokenKind::CloseBracket);
-            if (!inForEach || peek(index).kind != TokenKind::CloseParenthesis) {
+            if ((options & NameOptions::ForeachName) == 0 ||
+                peek(index).kind != TokenKind::CloseParenthesis) {
+
                 SmallVectorSized<ElementSelectSyntax*, 4> buffer;
                 do {
                     buffer.append(&parseElementSelect());
