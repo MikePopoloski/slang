@@ -552,3 +552,32 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Void-casted function call statement -- diags") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function int foo;
+    endfunction
+
+    function void bar;
+    endfunction
+
+    int i = 4;
+    initial begin
+        void'(1 + 2);
+        i = void'(3);
+        void'(bar());
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::VoidCastFuncCall);
+    CHECK(diags[1].code == diag::BadCastType);
+    CHECK(diags[2].code == diag::VoidNotAllowed);
+    CHECK(diags[3].code == diag::PointlessVoidCast);
+}
