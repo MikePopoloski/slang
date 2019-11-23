@@ -388,7 +388,7 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     //   the invoking constant function call.
     // - All identifiers that are not parameters or functions shall be declared locally to
     //   the current function.
-    if (symbol.kind != SymbolKind::Parameter) {
+    if (symbol.kind != SymbolKind::Parameter && symbol.kind != SymbolKind::EnumValue) {
         const Scope* scope = symbol.getParentScope();
         while (scope && scope != subroutine)
             scope = scope->asSymbol().getParentScope();
@@ -411,7 +411,7 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
         }
 
         if (!isBefore) {
-            context.addDiag(diag::NoteParamUsedInCEBeforeDecl, sourceRange) << symbol.name;
+            context.addDiag(diag::NoteIdUsedInCEBeforeDecl, sourceRange) << symbol.name;
             context.addDiag(diag::NoteDeclarationHere, symbol.location);
             return false;
         }

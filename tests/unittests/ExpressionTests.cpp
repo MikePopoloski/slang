@@ -836,3 +836,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpressionNotConstant);
 }
+
+TEST_CASE("Consteval - enum used in constant function") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef enum { A, B } e_t;
+
+function int foo;
+    return A;
+endfunction
+
+module m;
+    localparam int i = foo();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
