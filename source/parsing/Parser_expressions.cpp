@@ -783,14 +783,14 @@ ArgumentListSyntax& Parser::parseArgumentList() {
     parseList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
         closeParen, RequireItems::False, diag::ExpectedArgument,
-        [this] { return &parseArgument(); });
+        [this] { return &parseArgument(); }, AllowEmpty::True);
 
     return factory.argumentList(openParen, list, closeParen);
 }
 
 ArgumentSyntax& Parser::parseArgument() {
     // check for empty arguments
-    if (peek(TokenKind::Comma))
+    if (peek(TokenKind::Comma) || peek(TokenKind::CloseParenthesis))
         return factory.emptyArgument(placeholderToken());
 
     // check for named arguments
