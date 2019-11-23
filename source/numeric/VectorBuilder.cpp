@@ -208,15 +208,13 @@ SVInt VectorBuilder::finish() {
 
         // All of the digits in the number require `multiplier` bits, except for
         // possibly the first (leading) digit. This one has leading zeros in it,
-        // so only requires clog2(d+1) bits. If the leading digit is unknown
-        // however, we go with the default multiplier amount.
+        // so only requires clog2(d+1) bits.
         bitwidth_t bits = 0;
         if (digits.size() > 1)
             bits = bitwidth_t(digits.size() - 1) * multiplier;
 
-        if (digits[0].isUnknown())
-            bits += multiplier;
-        else
+        // If the leading digit is unknown however, allow any size.
+        if (!digits[0].isUnknown())
             bits += clog2(digits[0].value + 1);
 
         if (bits > sizeBits) {
@@ -231,10 +229,8 @@ SVInt VectorBuilder::finish() {
             }
             else {
                 // We should warn about overflow here, but the spec says it is valid and
-                // the literal gets truncated. Definitely a warning though unless there's
-                // only one digit and it's unknown.
-                if (digits.size() > 1 || !digits[0].isUnknown())
-                    diagnostics.add(diag::VectorLiteralOverflow, firstLocation);
+                // the literal gets truncated. Definitely a warning though.
+                diagnostics.add(diag::VectorLiteralOverflow, firstLocation);
             }
         }
     }
