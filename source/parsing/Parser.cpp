@@ -872,7 +872,7 @@ bool Parser::isVariableDeclaration() {
 
         // either an import of a package or a DPI import
         case TokenKind::ImportKeyword:
-            return peek(index + 1).kind != TokenKind::StringKeyword;
+            return peek(index + 1).kind != TokenKind::StringLiteral;
 
         // this could be a virtual interface, a virtual class declaration, or a virtual function
         case TokenKind::VirtualKeyword:
