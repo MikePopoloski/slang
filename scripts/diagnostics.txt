@@ -233,8 +233,11 @@ error InvalidEventExpression "invalid type {} for event expression"
 error CoverStmtNoFail "cover statement cannot have a fail statement"
 error StatementNotInLoop "statement can only be used inside a loop"
 error ExprNotStatement "expression is not allowed as a statement"
+error VoidCastFuncCall "void casting is only allowed for function calls"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "empty statement has no effect"
+warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"
+warning unused-result UnusedResult "ignoring return value of '{}', cast to void to suppress"
 
 subsystem Types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"
@@ -324,6 +327,6 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 
 group default = { real-underflow real-overflow literal-overflow ignored-macro-paste case-gen-dup
 				  case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
-				  dup-import redef-macro nonstandard-generate }
+				  dup-import redef-macro nonstandard-generate pointless-void-cast unused-result }
 
 group extra = { empty-member empty-stmt }

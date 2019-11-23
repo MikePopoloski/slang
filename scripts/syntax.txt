@@ -818,6 +818,7 @@ token apostrophe
 token openParen
 Expression expr
 token closeParen
+token semi
 
 ProceduralAssignStatement base=Statement
 token keyword

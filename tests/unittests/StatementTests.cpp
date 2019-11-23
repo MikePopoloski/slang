@@ -535,3 +535,20 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::FormatEmptyArg);
 }
+
+TEST_CASE("Void-casted function call statement") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function foo;
+    endfunction
+
+    initial begin
+        void'(foo());
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

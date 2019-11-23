@@ -718,8 +718,9 @@ StatementSyntax& Parser::parseVoidCallStatement(NamedLabelSyntax* label, AttrLis
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto& expr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
+    auto semi = expect(TokenKind::Semicolon);
     return factory.voidCastedCallStatement(label, attributes, keyword, apostrophe, openParen, expr,
-                                           closeParen);
+                                           closeParen, semi);
 }
 
 } // namespace slang

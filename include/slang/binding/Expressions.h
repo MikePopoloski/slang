@@ -712,6 +712,8 @@ public:
 
     bool isSystemCall() const { return subroutine.index() == 1; }
 
+    string_view getSubroutineName() const;
+
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
 

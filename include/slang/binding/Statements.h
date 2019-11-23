@@ -438,6 +438,7 @@ public:
 };
 
 struct ExpressionStatementSyntax;
+struct VoidCastedCallStatementSyntax;
 
 class ExpressionStatement : public Statement {
 public:
@@ -450,6 +451,10 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation, const ExpressionStatementSyntax& syntax,
+                                 const BindContext& context);
+
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const VoidCastedCallStatementSyntax& syntax,
                                  const BindContext& context);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }

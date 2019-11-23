@@ -152,6 +152,10 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             result = &ExpressionStatement::fromSyntax(comp, syntax.as<ExpressionStatementSyntax>(),
                                                       context);
             break;
+        case SyntaxKind::VoidCastedCallStatement:
+            result = &ExpressionStatement::fromSyntax(
+                comp, syntax.as<VoidCastedCallStatementSyntax>(), context);
+            break;
         case SyntaxKind::SequentialBlockStatement:
         case SyntaxKind::ParallelBlockStatement:
             // A block statement may or may not match up with a hierarchy node. Handle both cases
@@ -232,6 +236,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         case SyntaxKind::NonblockingEventTriggerStatement:
         case SyntaxKind::ExpressionStatement:
         case SyntaxKind::WaitForkStatement:
+        case SyntaxKind::VoidCastedCallStatement:
             // These statements don't have child statements within them.
             return;
 
@@ -1214,6 +1219,29 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
     if (!ok) {
         context.addDiag(diag::ExprNotStatement, expr.sourceRange);
         return badStmt(compilation, result);
+    }
+
+    return *result;
+}
+
+Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
+                                           const VoidCastedCallStatementSyntax& syntax,
+                                           const BindContext& context) {
+    auto& expr = Expression::bind(*syntax.expr, context);
+    auto result = compilation.emplace<ExpressionStatement>(expr, syntax.sourceRange());
+    if (expr.bad())
+        return badStmt(compilation, result);
+
+    // TODO: differentiate func call vs task call
+    if (expr.kind != ExpressionKind::Call) {
+        context.addDiag(diag::VoidCastFuncCall, expr.sourceRange)
+            << expr.as<CallExpression>().getSubroutineName();
+        return badStmt(compilation, result);
+    }
+
+    if (expr.type->isVoid()) {
+        context.addDiag(diag::PointlessVoidCast, expr.sourceRange)
+            << expr.as<CallExpression>().getSubroutineName();
     }
 
     return *result;
