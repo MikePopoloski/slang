@@ -1170,7 +1170,7 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, span<const Constant
     for (int32_t i = range.left; range.isLittleEndian() ? i >= range.right : i <= range.right;
          range.isLittleEndian() ? i-- : i++) {
 
-        *local = SVInt(32, i, true);
+        *local = SVInt(32, uint64_t(i), true);
 
         ER result;
         if (curRanges.size() > 1)
