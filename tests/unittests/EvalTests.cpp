@@ -885,6 +885,29 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Eval foreach loop") {
+    ScriptSession session;
+    session.eval(R"(
+function int foo();
+    bit [1:0][2:1] asdf [3:-1][2];
+
+    int result = 0;
+    foreach (asdf[a,b,,d]) begin
+        if (b == 1)
+            continue;
+        result += a;
+        result += b * 10;
+        result += d * 100;
+    end
+
+    return result;
+endfunction
+)");
+
+    CHECK(session.eval("foo()").integer() == 1510);
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Eval enum methods") {
     ScriptSession session;
     session.eval("typedef enum { SDF = 2, BAR[5] = 4, BAZ = 99 } e_t;");

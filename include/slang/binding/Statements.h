@@ -393,10 +393,16 @@ struct ForeachLoopStatementSyntax;
 
 class ForeachLoopStatement : public Statement {
 public:
+    const Expression& arrayRef;
+    span<const ConstantRange> loopRanges;
+    span<const ValueSymbol* const> loopVariables;
     const Statement& body;
 
-    ForeachLoopStatement(const Statement& body, SourceRange sourceRange) :
-        Statement(StatementKind::ForeachLoop, sourceRange), body(body) {}
+    ForeachLoopStatement(const Expression& arrayRef, span<const ConstantRange> loopRanges,
+                         span<const ValueSymbol* const> loopVariables, const Statement& body,
+                         SourceRange sourceRange) :
+        Statement(StatementKind::ForeachLoop, sourceRange),
+        arrayRef(arrayRef), loopRanges(loopRanges), loopVariables(loopVariables), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -405,6 +411,10 @@ public:
                                  const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
+
+private:
+    EvalResult evalRecursive(EvalContext& context, span<const ConstantRange> curRanges,
+                             span<const ValueSymbol* const> curVars) const;
 };
 
 class WhileLoopStatement : public Statement {

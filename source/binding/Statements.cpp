@@ -1104,10 +1104,10 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
         return badStmt(compilation, nullptr);
     }
 
-    int numDims = 0;
+    SmallVectorSized<ConstantRange, 4> dims;
     const Type* type = arrayRef.type;
     while (type->isArray()) {
-        numDims++;
+        dims.append(type->getArrayRange());
         auto& ct = type->getCanonicalType();
         if (ct.kind == SymbolKind::UnpackedArrayType)
             type = &ct.as<UnpackedArrayType>().elementType;
@@ -1115,28 +1115,74 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
             type = &ct.as<PackedArrayType>().elementType;
     }
 
-    if (syntax.loopList->loopVariables.size() > numDims) {
+    if (syntax.loopList->loopVariables.size() > dims.size()) {
         context.addDiag(diag::TooManyForeachVars, syntax.loopList->loopVariables.sourceRange())
             << *arrayRef.type;
         return badStmt(compilation, nullptr);
     }
 
+    // Find a reference to all of our loop variables, which should always be
+    // in the parent block symbol.
+    SmallVectorSized<ConstantRange, 4> filteredDims;
+    SmallVectorSized<const ValueSymbol*, 4> loopVars;
+    auto dimIt = dims.begin();
+    for (auto loopVar : syntax.loopList->loopVariables) {
+        if (loopVar->kind != SyntaxKind::EmptyIdentifierName) {
+            auto& idName = loopVar->as<IdentifierNameSyntax>();
+            auto sym = context.scope.find(idName.identifier.valueText());
+            if (sym) {
+                loopVars.append(&sym->as<ValueSymbol>());
+                filteredDims.append(*dimIt);
+            }
+        }
+        dimIt++;
+    }
+
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
-    auto result = compilation.emplace<ForeachLoopStatement>(bodyStmt, syntax.sourceRange());
+    auto result = compilation.emplace<ForeachLoopStatement>(
+        arrayRef, filteredDims.copy(compilation), loopVars.copy(compilation), bodyStmt,
+        syntax.sourceRange());
 
     if (bodyStmt.bad())
         return badStmt(compilation, result);
     return *result;
 }
 
-ER ForeachLoopStatement::evalImpl(EvalContext&) const {
-    // TODO:
-    return ER::Success;
+ER ForeachLoopStatement::evalImpl(EvalContext& context) const {
+    ER result = evalRecursive(context, loopRanges, loopVariables);
+    if (result == ER::Break || result == ER::Continue)
+        return ER::Success;
+
+    return result;
 }
 
 bool ForeachLoopStatement::verifyConstantImpl(EvalContext& context) const {
-    // TODO:
+    // TODO: dynamic arrays need to check whether the array itself is constant here
     return body.verifyConstant(context);
+}
+
+ER ForeachLoopStatement::evalRecursive(EvalContext& context, span<const ConstantRange> curRanges,
+                                       span<const ValueSymbol* const> curVars) const {
+    auto local = context.findLocal(curVars[0]);
+    ASSERT(local);
+
+    ConstantRange range = curRanges[0];
+    for (int32_t i = range.left; range.isLittleEndian() ? i >= range.right : i <= range.right;
+         range.isLittleEndian() ? i-- : i++) {
+
+        *local = SVInt(32, i, true);
+
+        ER result;
+        if (curRanges.size() > 1)
+            result = evalRecursive(context, curRanges.subspan(1), curVars.subspan(1));
+        else
+            result = body.eval(context);
+
+        if (result != ER::Success && result != ER::Continue)
+            return result;
+    }
+
+    return ER::Success;
 }
 
 Statement& WhileLoopStatement::fromSyntax(Compilation& compilation,
