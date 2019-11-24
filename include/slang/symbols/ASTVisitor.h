@@ -176,6 +176,7 @@ decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... a
         CASE(UnaryOp, UnaryExpression);
         CASE(BinaryOp, BinaryExpression);
         CASE(ConditionalOp, ConditionalExpression);
+        CASE(Inside, InsideExpression);
         CASE(Assignment, AssignmentExpression);
         CASE(Concatenation, ConcatenationExpression);
         CASE(Replication, ReplicationExpression);

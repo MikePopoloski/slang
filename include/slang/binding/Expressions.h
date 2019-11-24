@@ -34,6 +34,7 @@ struct InvocationExpressionSyntax;
     x(UnaryOp) \
     x(BinaryOp) \
     x(ConditionalOp) \
+    x(Inside) \
     x(Assignment) \
     x(Concatenation) \
     x(Replication) \
@@ -489,6 +490,47 @@ private:
     Expression* pred_;
     Expression* left_;
     Expression* right_;
+};
+
+/// Represents a range of values bounded by two expressions.
+struct ExpressionRange {
+    const Expression& lower;
+    const Expression& upper;
+
+    ExpressionRange(const Expression& lower, const Expression& upper) :
+        lower(lower), upper(upper) {}
+};
+
+struct InsideExpressionSyntax;
+
+/// Represents a set membership operator expression.
+class InsideExpression : public Expression {
+public:
+    using RangeElement = std::variant<const Expression*, ExpressionRange>;
+
+    InsideExpression(const Type& type, Expression& left, span<const RangeElement> rangeList,
+                     SourceRange sourceRange) :
+        Expression(ExpressionKind::Inside, type, sourceRange),
+        left_(&left), rangeList_(rangeList) {}
+
+    const Expression& left() const { return *left_; }
+    Expression& left() { return *left_; }
+
+    span<const RangeElement> rangeList() const { return rangeList_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void toJson(json& j) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const InsideExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Inside; }
+
+private:
+    Expression* left_;
+    span<const RangeElement> rangeList_;
 };
 
 /// Represents an assignment expression.

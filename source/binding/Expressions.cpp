@@ -577,6 +577,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &ConditionalExpression::fromSyntax(
                 compilation, syntax.as<ConditionalExpressionSyntax>(), context, assignmentTarget);
             break;
+        case SyntaxKind::InsideExpression:
+            result = &InsideExpression::fromSyntax(compilation, syntax.as<InsideExpressionSyntax>(),
+                                                   context);
+            break;
         case SyntaxKind::MemberAccessExpression:
             result = &MemberAccessExpression::fromSyntax(
                 compilation, syntax.as<MemberAccessExpressionSyntax>(), nullptr, context);
@@ -618,7 +622,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::ExpressionOrDist:
         case SyntaxKind::IffPropertyExpression:
         case SyntaxKind::ImpliesPropertyExpression:
-        case SyntaxKind::InsideExpression:
         case SyntaxKind::IntersectSequenceExpression:
         case SyntaxKind::MinTypMaxExpression:
         case SyntaxKind::NewArrayExpression:
@@ -1589,6 +1592,47 @@ void ConditionalExpression::toJson(json& j) const {
     j["pred"] = pred();
     j["left"] = left();
     j["right"] = right();
+}
+
+Expression& InsideExpression::fromSyntax(Compilation& compilation,
+                                         const InsideExpressionSyntax& syntax,
+                                         const BindContext& context) {
+    Expression& lhs = selfDetermined(compilation, *syntax.expr, context);
+    bool bad = lhs.bad();
+
+    SmallVectorSized<RangeElement, 8> elems;
+    for (auto elemSyntax : syntax.ranges->valueRanges) {
+        if (elemSyntax->kind == SyntaxKind::ElementSelect) {
+            // TODO:
+        }
+        else {
+            auto& expr = selfDetermined(compilation, *elemSyntax, context);
+            bad |= expr.bad();
+            elems.append(&expr);
+        }
+    }
+
+    auto result = compilation.emplace<InsideExpression>(
+        compilation.getLogicType(), lhs, elems.copy(compilation), syntax.sourceRange());
+    if (bad)
+        return badExpr(compilation, result);
+
+    return *result;
+}
+
+void InsideExpression::toJson(json& j) const {
+    j["left"] = left();
+    for (auto& elem : rangeList()) {
+        if (elem.index() == 0)
+            j["rangeList"].push_back(*std::get<0>(elem));
+        else {
+            auto& range = std::get<1>(elem);
+            json child;
+            child["lower"] = range.lower;
+            child["upper"] = range.lower;
+            j["rangeList"].push_back(child);
+        }
+    }
 }
 
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
