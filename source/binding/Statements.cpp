@@ -140,6 +140,14 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                 result = &WhileLoopStatement::fromSyntax(comp, loop, context, stmtCtx);
             break;
         }
+        case SyntaxKind::ForeachLoopStatement:
+            // We might have an implicit block here; check for that first.
+            result = stmtCtx.tryGetBlock(comp, syntax);
+            if (!result) {
+                result = &ForeachLoopStatement::fromSyntax(
+                    comp, syntax.as<ForeachLoopStatementSyntax>(), context, stmtCtx);
+            }
+            break;
         case SyntaxKind::DoWhileStatement:
             result = &DoWhileLoopStatement::fromSyntax(comp, syntax.as<DoWhileStatementSyntax>(),
                                                        context, stmtCtx);
@@ -186,7 +194,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::BlockingEventTriggerStatement:
         case SyntaxKind::NonblockingEventTriggerStatement:
         case SyntaxKind::WaitForkStatement:
-        case SyntaxKind::ForeachLoopStatement:
         case SyntaxKind::WaitStatement:
         case SyntaxKind::RandCaseStatement:
         case SyntaxKind::AssertPropertyStatement:
@@ -317,7 +324,9 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             return;
         }
         case SyntaxKind::ForeachLoopStatement:
-            recurse(syntax.as<ForeachLoopStatementSyntax>().statement);
+            // A foreach loop always creates a block.
+            results.append(&StatementBlockSymbol::fromSyntax(
+                scope.getCompilation(), syntax.as<ForeachLoopStatementSyntax>()));
             return;
         case SyntaxKind::TimingControlStatement:
             recurse(syntax.as<TimingControlStatementSyntax>().statement);
@@ -366,8 +375,8 @@ void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& synta
     blocks = buffer.copy(scope.getCompilation());
 }
 
-void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
-                                const ForLoopStatementSyntax& syntax_) {
+template<typename TStatement>
+void StatementBinder::setSyntaxImpl(const StatementBlockSymbol& scope, const TStatement& syntax_) {
     stmt = nullptr;
     syntax = &syntax_;
     labelHandled = false;
@@ -376,6 +385,16 @@ void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     findBlocks(scope, *syntax_.statement, buffer);
     blocks = buffer.copy(scope.getCompilation());
+}
+
+void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
+                                const ForLoopStatementSyntax& syntax_) {
+    setSyntaxImpl(scope, syntax_);
+}
+
+void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
+                                const ForeachLoopStatementSyntax& syntax_) {
+    setSyntaxImpl(scope, syntax_);
 }
 
 void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items,
@@ -1068,6 +1087,67 @@ ER RepeatLoopStatement::evalImpl(EvalContext& context) const {
 
 bool RepeatLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return count.verifyConstant(context) && body.verifyConstant(context);
+}
+
+Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
+                                            const ForeachLoopStatementSyntax& syntax,
+                                            const BindContext& context, StatementContext& stmtCtx) {
+    auto guard = stmtCtx.enterLoop();
+
+    // Find the array over which we are looping. Make sure it's actually an array.
+    auto& arrayRef = Expression::bind(*syntax.loopList->arrayName, context);
+    if (arrayRef.kind != ExpressionKind::NamedValue || !arrayRef.type->isArray()) {
+        context.addDiag(diag::NotAnArray, arrayRef.sourceRange);
+        return badStmt(compilation, nullptr);
+    }
+
+    // Validate loop variables. There can't be more of them than there are array dimensions,
+    // and they can't share the name of the target array.
+    int numDims = 0;
+    const Type* type = arrayRef.type;
+    while (type->isArray()) {
+        numDims++;
+        auto& ct = type->getCanonicalType();
+        if (ct.kind == SymbolKind::UnpackedArrayType)
+            type = &ct.as<UnpackedArrayType>().elementType;
+        else
+            type = &ct.as<PackedArrayType>().elementType;
+    }
+
+    if (syntax.loopList->loopVariables.size() > numDims) {
+        context.addDiag(diag::TooManyForeachVars, syntax.loopList->sourceRange()) << *arrayRef.type;
+        return badStmt(compilation, nullptr);
+    }
+
+    // TODO: cardinality
+    auto& arraySym = arrayRef.as<NamedValueExpression>().symbol;
+    for (auto var : syntax.loopList->loopVariables) {
+        if (var->kind == SyntaxKind::EmptyIdentifierName)
+            continue;
+
+        auto& idName = var->as<IdentifierNameSyntax>();
+        if (idName.identifier.valueText() == arraySym.name) {
+            context.addDiag(diag::LoopVarShadowsArray, var->sourceRange()) << arraySym.name;
+            return badStmt(compilation, nullptr);
+        }
+    }
+
+    auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
+    auto result = compilation.emplace<ForeachLoopStatement>(bodyStmt, syntax.sourceRange());
+
+    if (bodyStmt.bad())
+        return badStmt(compilation, result);
+    return *result;
+}
+
+ER ForeachLoopStatement::evalImpl(EvalContext&) const {
+    // TODO:
+    return ER::Success;
+}
+
+bool ForeachLoopStatement::verifyConstantImpl(EvalContext& context) const {
+    // TODO:
+    return body.verifyConstant(context);
 }
 
 Statement& WhileLoopStatement::fromSyntax(Compilation& compilation,

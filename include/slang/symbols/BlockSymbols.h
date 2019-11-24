@@ -29,6 +29,8 @@ public:
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(Compilation& compilation,
                                             const ForLoopStatementSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(Compilation& compilation,
+                                            const ForeachLoopStatementSyntax& syntax);
     static StatementBlockSymbol& fromLabeledStmt(Compilation& compilation,
                                                  const StatementSyntax& syntax);
 

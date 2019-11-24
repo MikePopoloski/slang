@@ -144,6 +144,7 @@ decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
         CASE(Case, CaseStatement);
         CASE(ForLoop, ForLoopStatement);
         CASE(RepeatLoop, RepeatLoopStatement);
+        CASE(ForeachLoop, ForeachLoopStatement);
         CASE(WhileLoop, WhileLoopStatement);
         CASE(DoWhileLoop, DoWhileLoopStatement);
         CASE(ForeverLoop, ForeverLoopStatement);

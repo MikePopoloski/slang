@@ -92,6 +92,45 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
     return *result;
 }
 
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
+                                                       const ForeachLoopStatementSyntax& syntax) {
+    string_view name;
+    SourceLocation loc;
+    if (syntax.label) {
+        auto token = syntax.label->name;
+        name = token.valueText();
+        loc = token.location();
+    }
+    else {
+        name = "";
+        loc = syntax.keyword.location();
+    }
+
+    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc,
+                                                            StatementBlockKind::Sequential);
+    result->setSyntax(syntax);
+
+    // Creates loop iteration variables.
+    for (auto loopVar : syntax.loopList->loopVariables) {
+        if (loopVar->kind == SyntaxKind::EmptyIdentifierName)
+            continue;
+
+        auto& idName = loopVar->as<IdentifierNameSyntax>();
+        if (idName.identifier.valueText().empty())
+            continue;
+
+        result->addMember(VariableSymbol::fromForeachVar(compilation, idName));
+    }
+
+    result->binder.setSyntax(*result, syntax);
+    for (auto block : result->binder.getBlocks())
+        result->addMember(*block);
+
+    compilation.addAttributes(*result, syntax.attributes);
+
+    return *result;
+}
+
 StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(Compilation& compilation,
                                                             const StatementSyntax& syntax) {
     auto token = syntax.label->name;

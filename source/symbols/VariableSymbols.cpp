@@ -72,6 +72,18 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
     return *var;
 }
 
+VariableSymbol& VariableSymbol::fromForeachVar(Compilation& compilation,
+                                               const IdentifierNameSyntax& syntax) {
+    auto var = compilation.emplace<VariableSymbol>(syntax.identifier.valueText(),
+                                                   syntax.identifier.location());
+    var->setSyntax(syntax);
+
+    // TODO: for associative arrays the type needs to be the index type
+    var->setType(compilation.getIntType());
+
+    return *var;
+}
+
 void VariableSymbol::toJson(json& j) const {
     j["lifetime"] = toString(lifetime);
     j["isConst"] = isConst;

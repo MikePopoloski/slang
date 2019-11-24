@@ -17,6 +17,7 @@ class StatementBlockSymbol;
 class TimingControl;
 class VariableSymbol;
 struct ForLoopStatementSyntax;
+struct ForeachLoopStatementSyntax;
 struct StatementSyntax;
 
 // clang-format off
@@ -34,6 +35,7 @@ struct StatementSyntax;
     x(Case) \
     x(ForLoop) \
     x(RepeatLoop) \
+    x(ForeachLoop) \
     x(WhileLoop) \
     x(DoWhileLoop) \
     x(ForeverLoop) \
@@ -142,12 +144,16 @@ class StatementBinder {
 public:
     void setSyntax(const Scope& scope, const StatementSyntax& syntax, bool labelHandled);
     void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax);
+    void setSyntax(const StatementBlockSymbol& scope, const ForeachLoopStatementSyntax& syntax);
     void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax, SourceRange sourceRange);
 
     const Statement& getStatement(const BindContext& context) const;
     span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
 
 private:
+    template<typename TStatement>
+    void setSyntaxImpl(const StatementBlockSymbol& scope, const TStatement& syntax);
+
     const Statement& bindStatement(const BindContext& context) const;
 
     std::variant<const StatementSyntax*, const SyntaxList<SyntaxNode>*> syntax;
@@ -381,6 +387,24 @@ public:
                                  const BindContext& context, StatementContext& stmtCtx);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::RepeatLoop; }
+};
+
+struct ForeachLoopStatementSyntax;
+
+class ForeachLoopStatement : public Statement {
+public:
+    const Statement& body;
+
+    ForeachLoopStatement(const Statement& body, SourceRange sourceRange) :
+        Statement(StatementKind::ForeachLoop, sourceRange), body(body) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const ForeachLoopStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
 };
 
 class WhileLoopStatement : public Statement {

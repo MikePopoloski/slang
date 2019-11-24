@@ -13,6 +13,7 @@ namespace slang {
 
 class NetType;
 
+struct IdentifierNameSyntax;
 struct DataDeclarationSyntax;
 struct ForVariableDeclarationSyntax;
 
@@ -38,6 +39,9 @@ public:
     static VariableSymbol& fromSyntax(Compilation& compilation,
                                       const ForVariableDeclarationSyntax& syntax,
                                       const VariableSymbol* lastVar);
+
+    static VariableSymbol& fromForeachVar(Compilation& compilation,
+                                          const IdentifierNameSyntax& syntax);
 
     static bool isKind(SymbolKind kind) {
         return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument ||
