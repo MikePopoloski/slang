@@ -21,6 +21,50 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Foreach loop statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+
+    bit [3:0][2:1] asdf [5:1][4][1];
+
+    initial begin
+        foreach (asdf[i,j,,k]) begin
+        end
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Foreach loop errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo;
+    bit [3:0][2:1] asdf;
+
+    initial begin
+        foreach (foo[i]) begin end
+        foreach (asdf[i,j,]) begin end
+        foreach (asdf[i,asdf]) begin end
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::NotAnArray);
+    CHECK(diags[1].code == diag::TooManyForeachVars);
+    CHECK(diags[2].code == diag::LoopVarShadowsArray);
+}
+
 TEST_CASE("Delay statements") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

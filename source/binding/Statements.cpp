@@ -325,8 +325,8 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         }
         case SyntaxKind::ForeachLoopStatement:
             // A foreach loop always creates a block.
-            results.append(&StatementBlockSymbol::fromSyntax(
-                scope.getCompilation(), syntax.as<ForeachLoopStatementSyntax>()));
+            results.append(
+                &StatementBlockSymbol::fromSyntax(scope, syntax.as<ForeachLoopStatementSyntax>()));
             return;
         case SyntaxKind::TimingControlStatement:
             recurse(syntax.as<TimingControlStatementSyntax>().statement);
@@ -1096,13 +1096,14 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
 
     // Find the array over which we are looping. Make sure it's actually an array.
     auto& arrayRef = Expression::bind(*syntax.loopList->arrayName, context);
+    if (arrayRef.bad())
+        return badStmt(compilation, nullptr);
+
     if (arrayRef.kind != ExpressionKind::NamedValue || !arrayRef.type->isArray()) {
         context.addDiag(diag::NotAnArray, arrayRef.sourceRange);
         return badStmt(compilation, nullptr);
     }
 
-    // Validate loop variables. There can't be more of them than there are array dimensions,
-    // and they can't share the name of the target array.
     int numDims = 0;
     const Type* type = arrayRef.type;
     while (type->isArray()) {
@@ -1115,21 +1116,9 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
     }
 
     if (syntax.loopList->loopVariables.size() > numDims) {
-        context.addDiag(diag::TooManyForeachVars, syntax.loopList->sourceRange()) << *arrayRef.type;
+        context.addDiag(diag::TooManyForeachVars, syntax.loopList->loopVariables.sourceRange())
+            << *arrayRef.type;
         return badStmt(compilation, nullptr);
-    }
-
-    // TODO: cardinality
-    auto& arraySym = arrayRef.as<NamedValueExpression>().symbol;
-    for (auto var : syntax.loopList->loopVariables) {
-        if (var->kind == SyntaxKind::EmptyIdentifierName)
-            continue;
-
-        auto& idName = var->as<IdentifierNameSyntax>();
-        if (idName.identifier.valueText() == arraySym.name) {
-            context.addDiag(diag::LoopVarShadowsArray, var->sourceRange()) << arraySym.name;
-            return badStmt(compilation, nullptr);
-        }
     }
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);

@@ -12,6 +12,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -92,7 +93,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const ForeachLoopStatementSyntax& syntax) {
     string_view name;
     SourceLocation loc;
@@ -106,9 +107,19 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
         loc = syntax.keyword.location();
     }
 
-    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc,
-                                                            StatementBlockKind::Sequential);
+    auto& comp = scope.getCompilation();
+    auto result =
+        comp.emplace<StatementBlockSymbol>(comp, name, loc, StatementBlockKind::Sequential);
     result->setSyntax(syntax);
+
+    // Get the name of the array variable.
+    auto nameSyntax = syntax.loopList->arrayName;
+    while (nameSyntax->kind == SyntaxKind::ScopedName)
+        nameSyntax = nameSyntax->as<ScopedNameSyntax>().right;
+
+    string_view arrayName;
+    if (nameSyntax->kind == SyntaxKind::IdentifierName)
+        arrayName = nameSyntax->as<IdentifierNameSyntax>().identifier.valueText();
 
     // Creates loop iteration variables.
     for (auto loopVar : syntax.loopList->loopVariables) {
@@ -116,17 +127,23 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
             continue;
 
         auto& idName = loopVar->as<IdentifierNameSyntax>();
-        if (idName.identifier.valueText().empty())
+        auto varName = idName.identifier.valueText();
+        if (varName.empty())
             continue;
 
-        result->addMember(VariableSymbol::fromForeachVar(compilation, idName));
+        if (varName == arrayName) {
+            scope.addDiag(diag::LoopVarShadowsArray, loopVar->sourceRange()) << varName;
+            continue;
+        }
+
+        result->addMember(VariableSymbol::fromForeachVar(comp, idName));
     }
 
     result->binder.setSyntax(*result, syntax);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
 
-    compilation.addAttributes(*result, syntax.attributes);
+    comp.addAttributes(*result, syntax.attributes);
 
     return *result;
 }
