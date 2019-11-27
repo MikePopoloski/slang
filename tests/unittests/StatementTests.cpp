@@ -196,12 +196,12 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 6);
-    CHECK(diags[0].code == diag::InvalidCaseStmtType);
-    CHECK(diags[1].code == diag::InvalidCaseStmtType);
-    CHECK(diags[2].code == diag::NoCommonCaseStmtType);
-    CHECK(diags[3].code == diag::NoCommonCaseStmtType);
-    CHECK(diags[4].code == diag::InvalidCaseStmtType);
-    CHECK(diags[5].code == diag::InvalidCaseStmtType);
+    CHECK(diags[0].code == diag::BadSetMembershipType);
+    CHECK(diags[1].code == diag::BadSetMembershipType);
+    CHECK(diags[2].code == diag::NoCommonComparisonType);
+    CHECK(diags[3].code == diag::NoCommonComparisonType);
+    CHECK(diags[4].code == diag::BadSetMembershipType);
+    CHECK(diags[5].code == diag::BadSetMembershipType);
 }
 
 TEST_CASE("Assertion statements") {

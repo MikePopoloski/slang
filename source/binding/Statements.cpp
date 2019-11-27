@@ -749,7 +749,7 @@ bool ConditionalStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
                                      const BindContext& context, StatementContext& stmtCtx) {
-    if (syntax.matchesOrInside) {
+    if (syntax.matchesOrInside.kind == TokenKind::MatchesKeyword) {
         context.addDiag(diag::NotYetSupported, syntax.matchesOrInside.range());
         return badStmt(compilation, nullptr);
     }
@@ -822,8 +822,11 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     }
 
     SmallVectorSized<const Expression*, 8> bound;
-    bad |= !Expression::bindCaseExpressions(context, syntax.caseKeyword.kind, *syntax.expr,
-                                            expressions, bound);
+    TokenKind keyword = syntax.caseKeyword.kind;
+    bool isInside = syntax.matchesOrInside.kind == TokenKind::InsideKeyword;
+    bad |=
+        !Expression::bindMembershipExpressions(context, keyword, keyword != TokenKind::CaseKeyword,
+                                               isInside, *syntax.expr, expressions, bound);
 
     SmallVectorSized<ItemGroup, 8> items;
     SmallVectorSized<const Expression*, 8> group;

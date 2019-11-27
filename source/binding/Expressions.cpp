@@ -306,24 +306,23 @@ const Expression& Expression::bind(const Type& lhs, const ExpressionSyntax& rhs,
     return result;
 }
 
-bool Expression::bindCaseExpressions(const BindContext& context, TokenKind caseKind,
-                                     const ExpressionSyntax& valueExpr,
-                                     span<const ExpressionSyntax* const> expressions,
-                                     SmallVector<const Expression*>& results) {
-
+bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind keyword,
+                                           bool wildcard, bool /*unwrapUnpacked*/,
+                                           const ExpressionSyntax& valueExpr,
+                                           span<const ExpressionSyntax* const> expressions,
+                                           SmallVector<const Expression*>& results) {
     Compilation& comp = context.scope.getCompilation();
     Expression& valueRes = create(comp, valueExpr, context);
     results.append(&valueRes);
 
     const Type* type = valueRes.type;
     bool bad = valueRes.bad();
-    bool wildcard = caseKind != TokenKind::CaseKeyword;
     bool canBeStrings = valueRes.isImplicitString();
 
     if ((!wildcard && type->isAggregate()) || (wildcard && !type->isIntegral())) {
         if (!bad) {
-            context.addDiag(diag::InvalidCaseStmtType, valueRes.sourceRange)
-                << *type << getTokenKindText(caseKind);
+            context.addDiag(diag::BadSetMembershipType, valueRes.sourceRange)
+                << *type << getTokenKindText(keyword);
             bad = true;
         }
     }
@@ -340,8 +339,8 @@ bool Expression::bindCaseExpressions(const BindContext& context, TokenKind caseK
         const Type& bt = *bound->type;
         if (wildcard) {
             if (!bt.isIntegral()) {
-                context.addDiag(diag::InvalidCaseStmtType, bound->sourceRange)
-                    << bt << getTokenKindText(caseKind);
+                context.addDiag(diag::BadSetMembershipType, bound->sourceRange)
+                    << bt << getTokenKindText(keyword);
                 bad = true;
             }
             else {
@@ -371,13 +370,14 @@ bool Expression::bindCaseExpressions(const BindContext& context, TokenKind caseK
             }
             else if (bt.isAggregate()) {
                 // Aggregates are just never allowed in case expressions.
-                context.addDiag(diag::InvalidCaseStmtType, bound->sourceRange)
-                    << bt << getTokenKindText(caseKind);
+                context.addDiag(diag::BadSetMembershipType, bound->sourceRange)
+                    << bt << getTokenKindText(keyword);
                 bad = true;
             }
             else {
                 // Couldn't find a common type.
-                context.addDiag(diag::NoCommonCaseStmtType, bound->sourceRange) << bt << *type;
+                context.addDiag(diag::NoCommonComparisonType, bound->sourceRange)
+                    << getTokenKindText(keyword) << bt << *type;
                 bad = true;
             }
         }

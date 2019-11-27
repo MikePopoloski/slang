@@ -142,12 +142,29 @@ public:
                                          Expression& expr, SourceLocation location,
                                          optional<SourceRange> lhsRange = std::nullopt);
 
-    /// Specialized method for binding all of the expressions in a case statement at once.
-    /// This requires specific support because all of the expressions can affect each other.
-    static bool bindCaseExpressions(const BindContext& context, TokenKind caseKind,
-                                    const ExpressionSyntax& valueExpr,
-                                    span<const ExpressionSyntax* const> expressions,
-                                    SmallVector<const Expression*>& results);
+    /// Specialized method for binding all of the expressions in a set membership check.
+    /// This is used for case statements and the 'inside' operator.
+    ///
+    /// The @param valueExpr is the value being checked for membership, and @param expressions
+    /// denotes the set to check within. All of the expressions influence each other for
+    /// purposes of finding a common comparison type.
+    ///
+    /// The @param keyword parameter is used to customize diagnostics produced.
+    ///
+    /// If @param wildcard is set to true, expression types will be restricted to
+    /// be only integral types.
+    ///
+    /// If @param unwrapUnpacked is set to true, unpacked arrays will be unwrapped to
+    /// their element types to find the type to check against. Otherwise, all aggregates
+    /// are illegal.
+    ///
+    /// @returns true if all expressions are legal, otherwise false and appropriate
+    /// diagnostics are issued.
+    static bool bindMembershipExpressions(const BindContext& context, TokenKind keyword,
+                                          bool wildcard, bool unwrapUnpacked,
+                                          const ExpressionSyntax& valueExpr,
+                                          span<const ExpressionSyntax* const> expressions,
+                                          SmallVector<const Expression*>& results);
 
     /// Indicates whether the expression is invalid.
     bool bad() const;

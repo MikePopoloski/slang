@@ -291,8 +291,9 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
 
     BindContext bindContext(parent, location, BindFlags::Constant);
     SmallVectorSized<const Expression*, 8> bound;
-    if (!Expression::bindCaseExpressions(bindContext, TokenKind::CaseKeyword, *syntax.condition,
-                                         expressions, bound)) {
+    if (!Expression::bindMembershipExpressions(
+            bindContext, TokenKind::CaseKeyword, /* wildcard */ false,
+            /* unwrapUnpacked */ false, *syntax.condition, expressions, bound)) {
         return;
     }
 
