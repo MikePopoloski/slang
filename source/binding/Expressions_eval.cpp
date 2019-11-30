@@ -648,16 +648,9 @@ bool InsideExpression::verifyConstantImpl(EvalContext& context) const {
     if (!left().verifyConstant(context))
         return false;
 
-    for (auto& elem : rangeList()) {
-        if (elem.index() == 0) {
-            if (!std::get<0>(elem)->verifyConstant(context))
-                return false;
-        }
-        else {
-            auto& range = std::get<1>(elem);
-            if (!range.lower.verifyConstant(context) || !range.upper.verifyConstant(context))
-                return false;
-        }
+    for (auto elem : rangeList()) {
+        if (!elem->verifyConstant(context))
+            return false;
     }
 
     return true;

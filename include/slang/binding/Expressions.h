@@ -509,31 +509,19 @@ private:
     Expression* right_;
 };
 
-/// Represents a range of values bounded by two expressions.
-struct ExpressionRange {
-    const Expression& lower;
-    const Expression& upper;
-
-    ExpressionRange(const Expression& lower, const Expression& upper) :
-        lower(lower), upper(upper) {}
-};
-
 struct InsideExpressionSyntax;
 
 /// Represents a set membership operator expression.
 class InsideExpression : public Expression {
 public:
-    using RangeElement = std::variant<const Expression*, ExpressionRange>;
-
-    InsideExpression(const Type& type, Expression& left, span<const RangeElement> rangeList,
-                     SourceRange sourceRange) :
+    InsideExpression(const Type& type, const Expression& left,
+                     span<const Expression* const> rangeList, SourceRange sourceRange) :
         Expression(ExpressionKind::Inside, type, sourceRange),
         left_(&left), rangeList_(rangeList) {}
 
     const Expression& left() const { return *left_; }
-    Expression& left() { return *left_; }
 
-    span<const RangeElement> rangeList() const { return rangeList_; }
+    span<const Expression* const> rangeList() const { return rangeList_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -546,8 +534,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Inside; }
 
 private:
-    Expression* left_;
-    span<const RangeElement> rangeList_;
+    const Expression* left_;
+    span<const Expression* const> rangeList_;
 };
 
 /// Represents an assignment expression.

@@ -307,7 +307,7 @@ const Expression& Expression::bind(const Type& lhs, const ExpressionSyntax& rhs,
 }
 
 bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind keyword,
-                                           bool wildcard, bool /*unwrapUnpacked*/,
+                                           bool wildcard, bool unwrapUnpacked,
                                            const ExpressionSyntax& valueExpr,
                                            span<const ExpressionSyntax* const> expressions,
                                            SmallVector<const Expression*>& results) {
@@ -336,29 +336,36 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         if (bad)
             continue;
 
-        const Type& bt = *bound->type;
+        const Type* bt = bound->type;
         if (wildcard) {
-            if (!bt.isIntegral()) {
+            if (!bt->isIntegral()) {
                 context.addDiag(diag::BadSetMembershipType, bound->sourceRange)
-                    << bt << getTokenKindText(keyword);
+                    << *bt << getTokenKindText(keyword);
                 bad = true;
             }
             else {
-                type = binaryOperatorType(comp, type, &bt, false);
+                type = binaryOperatorType(comp, type, bt, false);
             }
         }
         else {
+            // If this is an "inside" operation, then unpacked arrays are unwrapped
+            // into their element types before checking further.
+            if (unwrapUnpacked) {
+                while (bt->isUnpackedArray())
+                    bt = &bt->getCanonicalType().as<UnpackedArrayType>().elementType;
+            }
+
             if (canBeStrings && !bound->isImplicitString())
                 canBeStrings = false;
 
-            if (bt.isNumeric() && type->isNumeric()) {
-                type = binaryOperatorType(comp, type, &bt, false);
+            if (bt->isNumeric() && type->isNumeric()) {
+                type = binaryOperatorType(comp, type, bt, false);
             }
-            else if ((bt.isClass() && bt.isAssignmentCompatible(*type)) ||
-                     (type->isClass() && type->isAssignmentCompatible(bt))) {
+            else if ((bt->isClass() && bt->isAssignmentCompatible(*type)) ||
+                     (type->isClass() && type->isAssignmentCompatible(*bt))) {
                 // ok
             }
-            else if ((bt.isCHandle() || bt.isNull()) && (type->isCHandle() || type->isNull())) {
+            else if ((bt->isCHandle() || bt->isNull()) && (type->isCHandle() || type->isNull())) {
                 // ok
             }
             else if (canBeStrings) {
@@ -368,16 +375,16 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
                 // convertible to them).
                 type = &comp.getStringType();
             }
-            else if (bt.isAggregate()) {
-                // Aggregates are just never allowed in case expressions.
+            else if (bt->isAggregate()) {
+                // Aggregates are just never allowed in membership expressions.
                 context.addDiag(diag::BadSetMembershipType, bound->sourceRange)
-                    << bt << getTokenKindText(keyword);
+                    << *bt << getTokenKindText(keyword);
                 bad = true;
             }
             else {
                 // Couldn't find a common type.
                 context.addDiag(diag::NoCommonComparisonType, bound->sourceRange)
-                    << getTokenKindText(keyword) << bt << *type;
+                    << getTokenKindText(keyword) << *bt << *type;
                 bad = true;
             }
         }
@@ -1597,23 +1604,18 @@ void ConditionalExpression::toJson(json& j) const {
 Expression& InsideExpression::fromSyntax(Compilation& compilation,
                                          const InsideExpressionSyntax& syntax,
                                          const BindContext& context) {
-    Expression& lhs = selfDetermined(compilation, *syntax.expr, context);
-    bool bad = lhs.bad();
+    SmallVectorSized<const ExpressionSyntax*, 8> expressions;
+    for (auto elemSyntax : syntax.ranges->valueRanges)
+        expressions.append(elemSyntax);
 
-    SmallVectorSized<RangeElement, 8> elems;
-    for (auto elemSyntax : syntax.ranges->valueRanges) {
-        if (elemSyntax->kind == SyntaxKind::ElementSelect) {
-            // TODO:
-        }
-        else {
-            auto& expr = selfDetermined(compilation, *elemSyntax, context);
-            bad |= expr.bad();
-            elems.append(&expr);
-        }
-    }
+    SmallVectorSized<const Expression*, 8> bound;
+    bool bad =
+        bindMembershipExpressions(context, TokenKind::InsideKeyword, /* wildcard */ false,
+                                  /* unwrapUnpacked */ true, *syntax.expr, expressions, bound);
 
-    auto result = compilation.emplace<InsideExpression>(
-        compilation.getLogicType(), lhs, elems.copy(compilation), syntax.sourceRange());
+    auto boundSpan = bound.copy(compilation);
+    auto result = compilation.emplace<InsideExpression>(compilation.getLogicType(), *boundSpan[0],
+                                                        boundSpan.subspan(1), syntax.sourceRange());
     if (bad)
         return badExpr(compilation, result);
 
@@ -1622,17 +1624,8 @@ Expression& InsideExpression::fromSyntax(Compilation& compilation,
 
 void InsideExpression::toJson(json& j) const {
     j["left"] = left();
-    for (auto& elem : rangeList()) {
-        if (elem.index() == 0)
-            j["rangeList"].push_back(*std::get<0>(elem));
-        else {
-            auto& range = std::get<1>(elem);
-            json child;
-            child["lower"] = range.lower;
-            child["upper"] = range.lower;
-            j["rangeList"].push_back(child);
-        }
-    }
+    for (auto elem : rangeList())
+        j["rangeList"].push_back(*elem);
 }
 
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
