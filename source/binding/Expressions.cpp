@@ -400,7 +400,7 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         // to immediately copy it to the output.
         Expression* expr = const_cast<Expression*>(result);
 
-        if (type->isNumeric() || type->isString())
+        if ((type->isNumeric() || type->isString()) && !expr->type->isUnpackedArray())
             contextDetermined(context, expr, *type);
         else
             selfDetermined(context, expr);

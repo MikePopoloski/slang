@@ -133,8 +133,10 @@ TEST_CASE("Case statements") {
 module m;
 
     logic foo;
+    int bar;
     string blah;
     struct { logic l; } sp;
+    int unpacked [3];
 
     always begin : block
         case (foo)
@@ -182,6 +184,17 @@ module m;
         casez (3'b1x1)
             3.2:; // not integral
         endcase
+
+        casex (foo) inside  // inside not allowed with casex
+            1'b1, 1'bx: ;
+            default;
+        endcase
+
+        case (bar) inside
+            1, 2, 3: ;
+            unpacked: ;
+            default;
+        endcase
     end
 
 endmodule
@@ -195,13 +208,14 @@ endmodule
     CHECK(cs.expr.type->toString() == "logic[8:0]");
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::BadSetMembershipType);
     CHECK(diags[1].code == diag::BadSetMembershipType);
     CHECK(diags[2].code == diag::NoCommonComparisonType);
     CHECK(diags[3].code == diag::NoCommonComparisonType);
     CHECK(diags[4].code == diag::BadSetMembershipType);
     CHECK(diags[5].code == diag::BadSetMembershipType);
+    CHECK(diags[6].code == diag::CaseInsideKeyword);
 }
 
 TEST_CASE("Assertion statements") {

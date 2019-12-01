@@ -707,6 +707,41 @@ function int func9;
 endfunction
 )");
     session.eval("func9()");
+
+    session.eval(R"(
+function int func10(int foo);
+    case (foo) inside
+        0: return -1;
+        1: return 1;
+    endcase
+    return 2;
+endfunction
+)");
+    CHECK(session.eval("func10(0)").integer() == -1);
+
+    session.eval(R"(
+function int func11(int foo);
+    int asdf[3] = '{ 1, 3, 5 };
+    case (foo) inside
+        asdf: return 9;
+    endcase
+    return 2;
+endfunction
+)");
+    CHECK(session.eval("func11(4)").integer() == 2);
+    CHECK(session.eval("func11(5)").integer() == 9);
+
+    session.eval(R"(
+function int func12(logic [3:0] foo);
+    case (foo) inside
+        4'b1x?1: return 1;
+        4'b1?10: return 2;
+    endcase
+    return 3;
+endfunction
+)");
+    CHECK(session.eval("func12(4'b1011)").integer() == 1);
+    CHECK(session.eval("func12(4'bx110)").integer() == 3);
 }
 
 TEST_CASE("Eval sformatf") {

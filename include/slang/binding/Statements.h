@@ -324,7 +324,7 @@ public:
         not_null<const Statement*> stmt;
     };
 
-    enum class Condition { Normal, WildcardXOrZ, WildcardJustZ };
+    enum class Condition { Normal, WildcardXOrZ, WildcardJustZ, Inside };
     enum class Check { None, Unique, Unique0, Priority };
 
     const Expression& expr;

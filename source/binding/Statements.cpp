@@ -824,9 +824,18 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     SmallVectorSized<const Expression*, 8> bound;
     TokenKind keyword = syntax.caseKeyword.kind;
     bool isInside = syntax.matchesOrInside.kind == TokenKind::InsideKeyword;
-    bad |=
-        !Expression::bindMembershipExpressions(context, keyword, keyword != TokenKind::CaseKeyword,
-                                               isInside, *syntax.expr, expressions, bound);
+    bad |= !Expression::bindMembershipExpressions(context, keyword,
+                                                  !isInside && keyword != TokenKind::CaseKeyword,
+                                                  isInside, *syntax.expr, expressions, bound);
+
+    if (isInside && condition != Condition::Normal) {
+        context.addDiag(diag::CaseInsideKeyword, syntax.matchesOrInside.range())
+            << getTokenKindText(keyword) << syntax.caseKeyword.range();
+        bad = true;
+    }
+    else if (isInside) {
+        condition = Condition::Inside;
+    }
 
     SmallVectorSized<ItemGroup, 8> items;
     SmallVectorSized<const Expression*, 8> group;
@@ -864,8 +873,22 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
 
 static bool checkMatch(CaseStatement::Condition condition, const ConstantValue& cvl,
                        const ConstantValue& cvr) {
+    if (condition == CaseStatement::Condition::Inside) {
+        // Unpacked arrays get unwrapped into their members for comparison.
+        if (cvr.isUnpacked()) {
+            for (auto& elem : cvr.elements()) {
+                if (checkMatch(condition, cvl, elem))
+                    return true;
+            }
+            return false;
+        }
 
-    if (condition != CaseStatement::Condition::Normal) {
+        // Otherwise, we do a wildcard comparison if both sides are integers
+        // and an equivalence comparison if not.
+        if (cvl.isInteger() && cvr.isInteger())
+            return (bool)condWildcardEqual(cvl.integer(), cvr.integer());
+    }
+    else if (condition != CaseStatement::Condition::Normal) {
         const SVInt& l = cvl.integer();
         const SVInt& r = cvr.integer();
         if (condition == CaseStatement::Condition::WildcardJustZ)
