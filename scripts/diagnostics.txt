@@ -191,6 +191,7 @@ error BadConditionalExpression "invalid operands to conditional expression ({} a
 error BadIndexExpression "value of type {} cannot be indexed"
 error BadConcatExpression "invalid operand type {} in concatenation"
 error BadReplicationExpression "invalid operands to replication expression ({} and {})"
+error BadOpenRange "invalid bounds in open range ({} and {})"
 error BadCastType "invalid casting type {}"
 error BadSetMembershipType "invalid type {} for {} expression"
 error ConcatWithStringInt "cannot mix strings and integers in a concatenation (use a cast if this is desired)"

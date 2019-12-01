@@ -262,7 +262,8 @@ struct Expression::PropagationVisitor {
         bool needConversion = !newType.isEquivalent(*expr.type);
         if constexpr (is_detected_v<propagate_t, T, const BindContext&, const Type&>) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
-                (newType.isIntegral() && expr.type->isIntegral()) || newType.isString()) {
+                (newType.isIntegral() && expr.type->isIntegral()) || newType.isString() ||
+                expr.kind == ExpressionKind::OpenRange) {
 
                 if (expr.propagateType(context, newType))
                     needConversion = false;
@@ -327,6 +328,38 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         }
     }
 
+    auto checkType = [&](const Expression& expr, const Type& bt) {
+        if (bt.isNumeric() && type->isNumeric()) {
+            type = binaryOperatorType(comp, type, &bt, false);
+        }
+        else if ((bt.isClass() && bt.isAssignmentCompatible(*type)) ||
+                 (type->isClass() && type->isAssignmentCompatible(bt))) {
+            // ok
+        }
+        else if ((bt.isCHandle() || bt.isNull()) && (type->isCHandle() || type->isNull())) {
+            // ok
+        }
+        else if (canBeStrings) {
+            // If canBeStrings is still true, it means either this specific type or
+            // the common type (or both) are of type string. This is ok, but force
+            // all further expressions to also be strings (or implicitly
+            // convertible to them).
+            type = &comp.getStringType();
+        }
+        else if (bt.isAggregate()) {
+            // Aggregates are just never allowed in membership expressions.
+            context.addDiag(diag::BadSetMembershipType, expr.sourceRange)
+                << bt << getTokenKindText(keyword);
+            bad = true;
+        }
+        else {
+            // Couldn't find a common type.
+            context.addDiag(diag::NoCommonComparisonType, expr.sourceRange)
+                << getTokenKindText(keyword) << bt << *type;
+            bad = true;
+        }
+    };
+
     // We need to find a common type across all expressions. If this is for a wildcard
     // case statement, the types can only be integral. Otherwise all singular types are allowed.
     for (auto expr : expressions) {
@@ -335,6 +368,9 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         bad |= bound->bad();
         if (bad)
             continue;
+
+        if (canBeStrings && !bound->isImplicitString())
+            canBeStrings = false;
 
         const Type* bt = bound->type;
         if (wildcard) {
@@ -346,48 +382,26 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
             else {
                 type = binaryOperatorType(comp, type, bt, false);
             }
+            continue;
         }
-        else {
-            // If this is an "inside" operation, then unpacked arrays are unwrapped
-            // into their element types before checking further.
-            if (unwrapUnpacked) {
-                while (bt->isUnpackedArray())
-                    bt = &bt->getCanonicalType().as<UnpackedArrayType>().elementType;
-            }
 
-            if (canBeStrings && !bound->isImplicitString())
-                canBeStrings = false;
-
-            if (bt->isNumeric() && type->isNumeric()) {
-                type = binaryOperatorType(comp, type, bt, false);
-            }
-            else if ((bt->isClass() && bt->isAssignmentCompatible(*type)) ||
-                     (type->isClass() && type->isAssignmentCompatible(*bt))) {
-                // ok
-            }
-            else if ((bt->isCHandle() || bt->isNull()) && (type->isCHandle() || type->isNull())) {
-                // ok
-            }
-            else if (canBeStrings) {
-                // If canBeStrings is still true, it means either this specific type or
-                // the common type (or both) are of type string. This is ok, but force
-                // all further expressions to also be strings (or implicitly
-                // convertible to them).
-                type = &comp.getStringType();
-            }
-            else if (bt->isAggregate()) {
-                // Aggregates are just never allowed in membership expressions.
-                context.addDiag(diag::BadSetMembershipType, bound->sourceRange)
-                    << *bt << getTokenKindText(keyword);
-                bad = true;
-            }
-            else {
-                // Couldn't find a common type.
-                context.addDiag(diag::NoCommonComparisonType, bound->sourceRange)
-                    << getTokenKindText(keyword) << *bt << *type;
-                bad = true;
-            }
+        // Special handling for open range expressions -- they don't have
+        // a real type on their own, we need to check their bounds.
+        if (bound->kind == ExpressionKind::OpenRange) {
+            auto& range = bound->as<OpenRangeExpression>();
+            checkType(range.left(), *range.left().type);
+            checkType(range.right(), *range.right().type);
+            continue;
         }
+
+        // If this is an "inside" operation, then unpacked arrays are unwrapped
+        // into their element types before checking further.
+        if (unwrapUnpacked) {
+            while (bt->isUnpackedArray())
+                bt = &bt->getCanonicalType().as<UnpackedArrayType>().elementType;
+        }
+
+        checkType(*bound, *bt);
     }
 
     if (bad)
@@ -464,6 +478,10 @@ bool Expression::isImplicitString() const {
         case ExpressionKind::Replication: {
             auto& repl = as<ReplicationExpression>();
             return repl.concat().isImplicitString();
+        }
+        case ExpressionKind::OpenRange: {
+            auto& range = as<OpenRangeExpression>();
+            return range.left().isImplicitString() || range.right().isImplicitString();
         }
         default:
             return false;
@@ -616,6 +634,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result =
                 &bindAssignmentPattern(compilation, syntax.as<AssignmentPatternExpressionSyntax>(),
                                        context, assignmentTarget);
+            break;
+        case SyntaxKind::OpenRangeExpression:
+            result = &OpenRangeExpression::fromSyntax(
+                compilation, syntax.as<OpenRangeExpressionSyntax>(), context);
             break;
         case SyntaxKind::AcceptOnPropertyExpression:
         case SyntaxKind::AlwaysPropertyExpression:
@@ -2887,6 +2909,38 @@ Expression& ReplicatedAssignmentPatternExpression::forArray(
 void ReplicatedAssignmentPatternExpression::toJson(json& j) const {
     j["count"] = count();
     AssignmentPatternExpressionBase::toJson(j);
+}
+
+Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
+                                            const OpenRangeExpressionSyntax& syntax,
+                                            const BindContext& context) {
+    Expression& left = create(comp, *syntax.left, context);
+    Expression& right = create(comp, *syntax.right, context);
+
+    auto result =
+        comp.emplace<OpenRangeExpression>(comp.getVoidType(), left, right, syntax.sourceRange());
+    if (left.bad() || right.bad())
+        return badExpr(comp, result);
+
+    if (!(left.type->isNumeric() && right.type->isNumeric()) &&
+        !(left.isImplicitString() && right.isImplicitString())) {
+        auto& diag = context.addDiag(diag::BadOpenRange, syntax.colon.location());
+        diag << left.sourceRange << right.sourceRange << *left.type << *right.type;
+        return badExpr(comp, result);
+    }
+
+    return *result;
+}
+
+bool OpenRangeExpression::propagateType(const BindContext& context, const Type& newType) {
+    contextDetermined(context, left_, newType);
+    contextDetermined(context, right_, newType);
+    return true;
+}
+
+void OpenRangeExpression::toJson(json& j) const {
+    j["left"] = left();
+    j["right"] = right();
 }
 
 UnaryOperator getUnaryOperator(SyntaxKind kind) {

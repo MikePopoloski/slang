@@ -47,7 +47,8 @@ struct InvocationExpressionSyntax;
     x(SimpleAssignmentPattern) \
     x(StructuredAssignmentPattern) \
     x(ReplicatedAssignmentPattern) \
-    x(EmptyArgument)
+    x(EmptyArgument) \
+    x(OpenRange)
 ENUM(ExpressionKind, EXPRESSION);
 #undef EXPRESION
 
@@ -996,6 +997,40 @@ public:
     void toJson(json&) const {}
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::EmptyArgument; }
+};
+
+struct OpenRangeExpressionSyntax;
+
+/// Denotes a range of values by providing expressions for the lower and upper
+/// bounds of the range. This expression needs special handling in the various
+/// places that allow it, since it doesn't really have a type.
+class OpenRangeExpression : public Expression {
+public:
+    OpenRangeExpression(const Type& type, Expression& left, Expression& right,
+                        SourceRange sourceRange) :
+        Expression(ExpressionKind::OpenRange, type, sourceRange),
+        left_(&left), right_(&right) {}
+
+    const Expression& left() const { return *left_; }
+    Expression& left() { return *left_; }
+
+    const Expression& right() const { return *right_; }
+    Expression& right() { return *right_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool propagateType(const BindContext& context, const Type& newType);
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void toJson(json& j) const;
+
+    static Expression& fromSyntax(Compilation& comp, const OpenRangeExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::OpenRange; }
+
+private:
+    Expression* left_;
+    Expression* right_;
 };
 
 } // namespace slang

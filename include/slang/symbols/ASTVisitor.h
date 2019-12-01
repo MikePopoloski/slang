@@ -190,6 +190,7 @@ decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... a
         CASE(StructuredAssignmentPattern, StructuredAssignmentPatternExpression);
         CASE(ReplicatedAssignmentPattern, ReplicatedAssignmentPatternExpression);
         CASE(EmptyArgument, EmptyArgumentExpression);
+        CASE(OpenRange, OpenRangeExpression);
     }
 #undef CASE
     // clang-format on

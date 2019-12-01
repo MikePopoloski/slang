@@ -1088,4 +1088,13 @@ bool AssignmentPatternExpressionBase::verifyConstantImpl(EvalContext& context) c
     return true;
 }
 
+ConstantValue OpenRangeExpression::evalImpl(EvalContext&) const {
+    // Should never enter this expecting a real result.
+    return nullptr;
+}
+
+bool OpenRangeExpression::verifyConstantImpl(EvalContext& context) const {
+    return left().verifyConstant(context) && right().verifyConstant(context);
+}
+
 } // namespace slang
