@@ -623,7 +623,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::ArrayOrRandomizeMethodExpression:
         case SyntaxKind::BinarySequenceDelayExpression:
         case SyntaxKind::DefaultPatternKeyExpression:
-        case SyntaxKind::ElementSelect:
         case SyntaxKind::EmptyQueueExpression:
         case SyntaxKind::EventuallyPropertyExpression:
         case SyntaxKind::ExpressionOrDist:

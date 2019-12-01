@@ -30,7 +30,7 @@ TEST_CASE("Case statement (pattern)") {
 }
 
 TEST_CASE("Case statement (range)") {
-    auto& text = "casex (foo) inside 3, [4:2], [99]: ; default; endcase";
+    auto& text = "casex (foo) inside 3, [4:2], [99:100]: ; default; endcase";
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);

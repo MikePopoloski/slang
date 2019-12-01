@@ -202,6 +202,13 @@ token tagged
 token member
 Expression? expr
 
+OpenRangeExpression base=Expression kind=OpenRangeExpression
+token openBracket
+Expression left
+token colon
+Expression right
+token closeBracket
+
 OpenRangeList kind=OpenRangeList
 token openBrace
 separated_list<Expression> valueRanges
@@ -240,7 +247,7 @@ Expression right
 kindmap<RangeSelect>
 SimpleRangeSelect AscendingRangeSelect DescendingRangeSelect
 
-ElementSelect base=Expression kind=ElementSelect
+ElementSelect kind=ElementSelect
 token openBracket
 Selector? selector
 token closeBracket

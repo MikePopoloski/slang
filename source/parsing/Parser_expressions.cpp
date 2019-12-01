@@ -392,7 +392,13 @@ OpenRangeListSyntax& Parser::parseOpenRangeList() {
 ExpressionSyntax& Parser::parseOpenRangeElement() {
     if (!peek(TokenKind::OpenBracket))
         return parseExpression();
-    return parseElementSelect();
+
+    auto openBracket = consume();
+    auto& left = parseExpression();
+    auto colon = expect(TokenKind::Colon);
+    auto& right = parseExpression();
+    auto closeBracket = expect(TokenKind::CloseBracket);
+    return factory.openRangeExpression(openBracket, left, colon, right, closeBracket);
 }
 
 ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
@@ -949,7 +955,7 @@ TimingControlSyntax* Parser::parseTimingControl() {
                                                             expect(TokenKind::CloseBracket));
                 }
                 else {
-                    delay = &parseElementSelect();
+                    delay = &parseOpenRangeElement();
                 }
             }
             else {

@@ -983,11 +983,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
 TransRangeSyntax& Parser::parseTransRange() {
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     while (true) {
-        if (peek(TokenKind::OpenBracket))
-            buffer.append(&parseElementSelect());
-        else
-            buffer.append(&parseExpression());
-
+        buffer.append(&parseOpenRangeElement());
         if (!peek(TokenKind::Comma))
             break;
 
