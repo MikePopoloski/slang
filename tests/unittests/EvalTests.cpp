@@ -810,7 +810,7 @@ endfunction
 
     CHECK(sformatf("%u", "14'ha2c") == "\x2c\x0a\0\0"s);
     CHECK(sformatf("%z", "14'hzX2c") == "\x2c\x0f\0\0\0\x3f\0\0"s);
-    
+
     NO_SESSION_ERRORS;
 }
 
@@ -1034,6 +1034,21 @@ TEST_CASE("Eval string methods") {
 
     session.eval("asdf.realtoa(3.14159);");
     CHECK(session.eval("asdf").str() == "3.141590");
+
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Eval inside expressions") {
+    ScriptSession session;
+    session.eval("int i = 4;");
+    session.eval("int arr1[3] = '{ 1, 2, 3 };");
+    session.eval("int arr2[3] = '{ 1, 2, 4 };");
+
+    CHECK(session.eval("i inside { 1, 2, 3, 3'b101, arr1 }").integer() == 0);
+    CHECK(session.eval("i inside { 3'b101, arr2 }").integer() == 1);
+    CHECK_THAT((logic_t)session.eval("3'bx10 inside { 3'b101, arr2 }").integer(),
+               exactlyEquals(logic_t::x));
+    CHECK(session.eval("3'bx10 inside { 3'bxx0, arr2 }").integer() == 1);
 
     NO_SESSION_ERRORS;
 }

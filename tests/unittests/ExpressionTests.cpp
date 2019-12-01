@@ -288,6 +288,9 @@ TEST_CASE("Expression types") {
     declare("string s3 = 1 ? \"asdf\" : \"bar\";");
     declare("string s4 = {\"asdf\", 8'd42};");
 
+    // Inside expressions
+    CHECK(typeof("i inside { 4, arr3, pa, sp }") == "logic");
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::BadUnaryExpression);

@@ -1610,8 +1610,8 @@ Expression& InsideExpression::fromSyntax(Compilation& compilation,
 
     SmallVectorSized<const Expression*, 8> bound;
     bool bad =
-        bindMembershipExpressions(context, TokenKind::InsideKeyword, /* wildcard */ false,
-                                  /* unwrapUnpacked */ true, *syntax.expr, expressions, bound);
+        !bindMembershipExpressions(context, TokenKind::InsideKeyword, /* wildcard */ false,
+                                   /* unwrapUnpacked */ true, *syntax.expr, expressions, bound);
 
     auto boundSpan = bound.copy(compilation);
     auto result = compilation.emplace<InsideExpression>(compilation.getLogicType(), *boundSpan[0],

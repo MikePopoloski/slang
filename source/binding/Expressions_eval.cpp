@@ -639,9 +639,50 @@ bool ConditionalExpression::verifyConstantImpl(EvalContext& context) const {
            pred().verifyConstant(context);
 }
 
-ConstantValue InsideExpression::evalImpl(EvalContext&) const {
-    // TODO:
-    return nullptr;
+static logic_t checkInsideMatch(const ConstantValue& cvl, const ConstantValue& cvr) {
+    // Unpacked arrays get unwrapped into their members for comparison.
+    if (cvr.isUnpacked()) {
+        bool anyUnknown = false;
+        for (auto& elem : cvr.elements()) {
+            logic_t result = checkInsideMatch(cvl, elem);
+            if (result)
+                return logic_t(true);
+
+            if (result.isUnknown())
+                anyUnknown = true;
+        }
+
+        return anyUnknown ? logic_t::x : logic_t(0);
+    }
+
+    // Otherwise, we do a wildcard comparison if both sides are integers
+    // and an equivalence comparison if not.
+    if (cvl.isInteger() && cvr.isInteger())
+        return condWildcardEqual(cvl.integer(), cvr.integer());
+
+    return logic_t(cvl.equivalentTo(cvr));
+}
+
+ConstantValue InsideExpression::evalImpl(EvalContext& context) const {
+    ConstantValue cvl = left().eval(context);
+    if (!cvl)
+        return nullptr;
+
+    bool anyUnknown = false;
+    for (auto elem : rangeList()) {
+        ConstantValue cvr = elem->eval(context);
+        if (!cvr)
+            return nullptr;
+
+        logic_t result = checkInsideMatch(cvl, cvr);
+        if (result)
+            return SVInt(logic_t(true));
+
+        if (result.isUnknown())
+            anyUnknown = true;
+    }
+
+    return SVInt(anyUnknown ? logic_t::x : logic_t(0));
 }
 
 bool InsideExpression::verifyConstantImpl(EvalContext& context) const {
