@@ -742,6 +742,19 @@ endfunction
 )");
     CHECK(session.eval("func12(4'b1011)").integer() == 1);
     CHECK(session.eval("func12(4'bx110)").integer() == 3);
+
+    session.eval(R"(
+function int func13(logic [3:0] foo);
+    case (foo) inside
+        [5'd1:5'd2]: return 1;
+        [5'd3:5'd20]: return 2;
+    endcase
+    return 3;
+endfunction
+)");
+    CHECK(session.eval("func13(4'd2)").integer() == 1);
+    CHECK(session.eval("func13(4'd10)").integer() == 2);
+    CHECK(session.eval("func13(4'd0)").integer() == 3);
 }
 
 TEST_CASE("Eval sformatf") {
@@ -1049,6 +1062,14 @@ TEST_CASE("Eval inside expressions") {
     CHECK_THAT((logic_t)session.eval("3'bx10 inside { 3'b101, arr2 }").integer(),
                exactlyEquals(logic_t::x));
     CHECK(session.eval("3'bx10 inside { 3'bxx0, arr2 }").integer() == 1);
+
+    CHECK(session.eval("4 inside { 1, 2, [3:5] }").integer() == 1);
+    CHECK(session.eval("4 inside { 1, 2, [-3:3] }").integer() == 0);
+
+    session.eval("string s = \"asdf\";");
+    CHECK(session.eval("s inside { \"foo\", [\"aaaa\" : \"bbbb\"] }").integer() == 1);
+    CHECK(session.eval("s inside { \"foo\", [\"bbbb\" : \"cccc\"] }").integer() == 0);
+    CHECK(session.eval("s inside { [\"bbbb\" : \"cccc\"], \"asdf\" }").integer() == 1);
 
     NO_SESSION_ERRORS;
 }

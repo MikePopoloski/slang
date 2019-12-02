@@ -670,11 +670,22 @@ ConstantValue InsideExpression::evalImpl(EvalContext& context) const {
 
     bool anyUnknown = false;
     for (auto elem : rangeList()) {
-        ConstantValue cvr = elem->eval(context);
-        if (!cvr)
-            return nullptr;
+        logic_t result;
+        if (elem->kind == ExpressionKind::OpenRange) {
+            ConstantValue cvr = elem->as<OpenRangeExpression>().checkInside(context, cvl);
+            if (!cvr)
+                return nullptr;
 
-        logic_t result = checkInsideMatch(cvl, cvr);
+            result = (logic_t)cvr.integer();
+        }
+        else {
+            ConstantValue cvr = elem->eval(context);
+            if (!cvr)
+                return nullptr;
+
+            result = checkInsideMatch(cvl, cvr);
+        }
+
         if (result)
             return SVInt(logic_t(true));
 
@@ -1095,6 +1106,17 @@ ConstantValue OpenRangeExpression::evalImpl(EvalContext&) const {
 
 bool OpenRangeExpression::verifyConstantImpl(EvalContext& context) const {
     return left().verifyConstant(context) && right().verifyConstant(context);
+}
+
+ConstantValue OpenRangeExpression::checkInside(EvalContext& context, const ConstantValue& val) const {
+    ConstantValue cvl = left().eval(context);
+    ConstantValue cvr = right().eval(context);
+    if (!cvl || !cvr)
+        return nullptr;
+
+    cvl = evalBinaryOperator(BinaryOperator::GreaterThanEqual, val, cvl);
+    cvr = evalBinaryOperator(BinaryOperator::LessThanEqual, val, cvr);
+    return evalLogicalOp(BinaryOperator::LogicalAnd, cvl.integer(), cvr.integer());
 }
 
 } // namespace slang

@@ -1021,6 +1021,8 @@ public:
     bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext& context) const;
 
+    ConstantValue checkInside(EvalContext& context, const ConstantValue& val) const;
+
     void toJson(json& j) const;
 
     static Expression& fromSyntax(Compilation& comp, const OpenRangeExpressionSyntax& syntax,

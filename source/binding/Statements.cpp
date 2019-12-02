@@ -911,16 +911,28 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
 
     for (auto& group : items) {
         for (auto item : group.expressions) {
-            auto val = item->eval(context);
-            if (!val)
-                return ER::Fail;
+            bool matched;
+            if (item->kind == ExpressionKind::OpenRange) {
+                ConstantValue val = item->as<OpenRangeExpression>().checkInside(context, cv);
+                if (!val)
+                    return ER::Fail;
 
-            if (checkMatch(condition, cv, val)) {
+                matched = (bool)(logic_t)val.integer();
+            }
+            else {
+                auto val = item->eval(context);
+                if (!val)
+                    return ER::Fail;
+
+                matched = checkMatch(condition, cv, val);
+            }
+
+            if (matched) {
                 // If we already matched with a previous item, the only we reason
                 // we'd still get here is to check for uniqueness. The presence of
                 // another match means we failed the uniqueness check.
                 if (matchedStmt) {
-                    context.addDiag(diag::NoteCaseItemsNotUnique, item->sourceRange) << val;
+                    context.addDiag(diag::NoteCaseItemsNotUnique, item->sourceRange) << cv;
                     context.addDiag(diag::NotePreviousMatch, matchRange);
                     unique = false;
                 }
