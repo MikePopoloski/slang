@@ -223,6 +223,7 @@ private:
     MemberSyntax& parseVariableDeclaration(AttrList attributes);
     MemberSyntax& parseNetDeclaration(AttrList attributes);
     DriveStrengthSyntax* parseDriveStrength();
+    TimingControlSyntax* parseDelay3();
     HierarchyInstantiationSyntax& parseHierarchyInstantiation(AttrList attributes);
     HierarchicalInstanceSyntax& parseHierarchicalInstance();
     PortConnectionSyntax& parsePortConnection();

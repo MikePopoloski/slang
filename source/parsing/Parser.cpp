@@ -549,6 +549,35 @@ DriveStrengthSyntax* Parser::parseDriveStrength() {
     return &factory.driveStrength(openParen, strength0, comma, strength1, closeParen);
 }
 
+TimingControlSyntax* Parser::parseDelay3() {
+    if (!peek(TokenKind::Hash))
+        return nullptr;
+
+    if (peek(1).kind != TokenKind::OpenParenthesis)
+        return parseTimingControl();
+
+    auto hash = consume();
+    auto openParen = consume();
+    auto& delay1 = parseMinTypMaxExpression();
+
+    Token comma1, comma2;
+    ExpressionSyntax* delay2 = nullptr;
+    ExpressionSyntax* delay3 = nullptr;
+
+    if (peek(TokenKind::Comma)) {
+        comma1 = consume();
+        delay2 = &parseMinTypMaxExpression();
+
+        if (peek(TokenKind::Comma)) {
+            comma2 = consume();
+            delay3 = &parseMinTypMaxExpression();
+        }
+    }
+
+    return &factory.delay3(hash, openParen, delay1, comma1, delay2, comma2, delay3,
+                           expect(TokenKind::CloseParenthesis));
+}
+
 MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     auto netType = consume();
 
@@ -570,14 +599,13 @@ MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
         expansionHint = consume();
 
     auto& type = parseDataType(TypeOptions::AllowImplicit);
-
-    // TODO: delay control
+    auto delay = parseDelay3();
 
     Token semi;
     auto declarators = parseDeclarators(semi);
 
-    return factory.netDeclaration(attributes, netType, strength, expansionHint, type, declarators,
-                                  semi);
+    return factory.netDeclaration(attributes, netType, strength, expansionHint, type, delay,
+                                  declarators, semi);
 }
 
 MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {

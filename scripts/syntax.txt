@@ -397,6 +397,16 @@ Expression delayValue
 kindmap<Delay>
 DelayControl CycleDelay
 
+Delay3 base=TimingControl kind=Delay3
+token hash
+token openParen
+Expression delay1
+token comma1
+Expression? delay2
+token comma2
+Expression? delay3
+token closeParen
+
 EventControl base=TimingControl kind=EventControl
 token at
 Name eventName
@@ -525,6 +535,7 @@ token netType
 NetStrength? strength
 token expansionHint
 DataType type
+TimingControl? delay
 separated_list<Declarator> declarators
 token semi
 
