@@ -110,13 +110,26 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
     return true;
 }
 
+BindContext SystemSubroutine::makeNonConst(const BindContext& ctx) {
+    BindContext nonConstCtx(ctx);
+    nonConstCtx.flags &= ~BindFlags::Constant;
+    nonConstCtx.flags |= BindFlags::NoHierarchicalNames;
+    return nonConstCtx;
+}
+
 const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const BindContext& context,
                                                        const ExpressionSyntax& syntax) const {
-    if (argIndex >= argTypes.size())
-        return SystemSubroutine::bindArgument(argIndex, context, syntax);
+    optional<BindContext> nonConstCtx;
+    const BindContext* ctx = &context;
+    if (allowNonConst) {
+        nonConstCtx.emplace(makeNonConst(context));
+        ctx = &nonConstCtx.value();
+    }
 
-    return Expression::bind(*argTypes[argIndex], syntax, syntax.getFirstToken().location(),
-                            context);
+    if (argIndex >= argTypes.size())
+        return SystemSubroutine::bindArgument(argIndex, *ctx, syntax);
+
+    return Expression::bind(*argTypes[argIndex], syntax, syntax.getFirstToken().location(), *ctx);
 }
 
 const Type& SimpleSystemSubroutine::checkArguments(const BindContext& context, const Args& args,

@@ -16,6 +16,11 @@ public:
     EnumFirstLastMethod(const std::string& name, bool first) :
         SystemSubroutine(name, SubroutineKind::Function), first(first) {}
 
+    const Expression& bindArgument(size_t, const BindContext& context,
+                                   const ExpressionSyntax& syntax) const final {
+        return Expression::bind(syntax, makeNonConst(context));
+    }
+
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final {
         auto& comp = context.getCompilation();
@@ -148,7 +153,8 @@ private:
 class EnumNumMethod : public SimpleSystemSubroutine {
 public:
     EnumNumMethod(Compilation& comp) :
-        SimpleSystemSubroutine("num", SubroutineKind::Function, 0, {}, comp.getIntType(), true) {}
+        SimpleSystemSubroutine("num", SubroutineKind::Function, 0, {}, comp.getIntType(),
+                               /* isMethod */ true, /* allowNonConst */ true) {}
 
     ConstantValue eval(EvalContext&, const Args& args) const final {
         // Expression isn't actually evaluated here; we know the value to return at compile time.

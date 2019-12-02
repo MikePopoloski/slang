@@ -857,3 +857,16 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Constant system functions with non-const arguments") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo[3];
+    localparam int i = $size(foo);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

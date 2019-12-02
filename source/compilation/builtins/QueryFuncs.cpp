@@ -16,9 +16,7 @@ public:
 
     const Expression& bindArgument(size_t, const BindContext& context,
                                    const ExpressionSyntax& syntax) const final {
-        BindContext nonConstCtx(context);
-        nonConstCtx.flags &= ~BindFlags::Constant;
-        nonConstCtx.flags |= BindFlags::NoHierarchicalNames;
+        BindContext nonConstCtx = makeNonConst(context);
         return Expression::bind(syntax, nonConstCtx, BindFlags::AllowDataType);
     }
 
@@ -50,6 +48,11 @@ public:
 class ArrayQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
+
+    const Expression& bindArgument(size_t, const BindContext& context,
+                                   const ExpressionSyntax& syntax) const final {
+        return Expression::bind(syntax, makeNonConst(context));
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final {

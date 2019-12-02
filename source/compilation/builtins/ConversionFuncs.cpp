@@ -15,6 +15,11 @@ public:
     SignedConversionFunction(const std::string& name, bool toSigned) :
         SystemSubroutine(name, SubroutineKind::Function), toSigned(toSigned) {}
 
+    const Expression& bindArgument(size_t, const BindContext& context,
+                                   const ExpressionSyntax& syntax) const final {
+        return Expression::bind(syntax, makeNonConst(context));
+    }
+
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final {
         auto& comp = context.getCompilation();
