@@ -381,7 +381,7 @@ static uint64_t getGenerateLoopCount(const Scope& parent) {
         cur = sym.getParentScope();
     } while (cur);
 
-    return count;
+    return count ? count : 1;
 }
 
 GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
