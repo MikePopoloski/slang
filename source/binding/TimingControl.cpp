@@ -32,8 +32,11 @@ const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
                 comp, *syntax.as<EventControlWithExpressionSyntax>().expr, context);
             break;
         }
-        case SyntaxKind::CycleDelay:
         case SyntaxKind::ImplicitEventControl:
+            result = &ImplicitEventControl::fromSyntax(
+                comp, syntax.as<ImplicitEventControlSyntax>(), context);
+            break;
+        case SyntaxKind::CycleDelay:
         case SyntaxKind::RepeatedEventControl:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badCtrl(comp, nullptr);
@@ -145,6 +148,13 @@ TimingControl& EventListControl::fromSyntax(Compilation& compilation,
     }
 
     return *result;
+}
+
+TimingControl& ImplicitEventControl::fromSyntax(Compilation& compilation,
+                                                const ImplicitEventControlSyntax&,
+                                                const BindContext&) {
+    // Nothing to do here except return the object.
+    return *compilation.emplace<ImplicitEventControl>();
 }
 
 } // namespace slang

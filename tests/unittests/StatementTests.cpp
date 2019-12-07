@@ -104,6 +104,11 @@ module m;
     always @(i);
     always @((++i / 2) or blah, r, (posedge blah or negedge i), edge i);
 
+    always @*;
+    always @ *;
+    always @(*);
+    always @ ( * );
+
     // warning about constant expr
     localparam int param = 4;
     always @(3);

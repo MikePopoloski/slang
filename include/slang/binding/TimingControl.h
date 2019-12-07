@@ -16,7 +16,8 @@ namespace slang {
     x(Invalid) \
     x(Delay) \
     x(SignalEvent) \
-    x(EventList)
+    x(EventList) \
+    x(ImplicitEvent)
 ENUM(TimingControlKind, CONTROL);
 #undef CONTROL
 // clang-format on
@@ -24,10 +25,6 @@ ENUM(TimingControlKind, CONTROL);
 class BindContext;
 class Compilation;
 class Expression;
-struct DelaySyntax;
-struct EventControlSyntax;
-struct EventExpressionSyntax;
-struct SignalEventExpressionSyntax;
 struct TimingControlSyntax;
 
 class TimingControl {
@@ -68,6 +65,8 @@ public:
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Invalid; }
 };
 
+struct DelaySyntax;
+
 class DelayControl : public TimingControl {
 public:
     const Expression& expr;
@@ -80,6 +79,9 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay; }
 };
+
+struct EventControlSyntax;
+struct SignalEventExpressionSyntax;
 
 class SignalEventControl : public TimingControl {
 public:
@@ -103,6 +105,8 @@ private:
                                    const BindContext& context);
 };
 
+struct EventExpressionSyntax;
+
 class EventListControl : public TimingControl {
 public:
     span<const TimingControl* const> events;
@@ -110,11 +114,23 @@ public:
     explicit EventListControl(span<const TimingControl* const> events) :
         TimingControl(TimingControlKind::EventList), events(events) {}
 
-    static TimingControl& fromSyntax(Compilation& compilation,
-                                     const EventExpressionSyntax& syntax,
+    static TimingControl& fromSyntax(Compilation& compilation, const EventExpressionSyntax& syntax,
                                      const BindContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::EventList; }
+};
+
+struct ImplicitEventControlSyntax;
+
+class ImplicitEventControl : public TimingControl {
+public:
+    ImplicitEventControl() : TimingControl(TimingControlKind::ImplicitEvent) {}
+
+    static TimingControl& fromSyntax(Compilation& compilation,
+                                     const ImplicitEventControlSyntax& syntax,
+                                     const BindContext& context);
+
+    static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::ImplicitEvent; }
 };
 
 } // namespace slang
