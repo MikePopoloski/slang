@@ -33,7 +33,7 @@ add_library(slang
 	binding/BindContext.cpp
 	binding/ConstantValue.cpp
 	binding/EvalContext.cpp
-	binding/Expressions.cpp
+	binding/Expression.cpp
 	binding/LiteralExpressions.cpp
 	binding/MiscExpressions.cpp
 	binding/OperatorExpressions.cpp

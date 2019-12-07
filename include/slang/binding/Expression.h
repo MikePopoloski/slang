@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// Expressions.h
+// Expression.h
 // Expression creation and analysis.
 //
 // File is under the MIT license; see LICENSE for details.

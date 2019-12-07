@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/binding/Expressions.h"
+#include "slang/binding/Expression.h"
 
 namespace slang {
 

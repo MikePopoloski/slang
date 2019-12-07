@@ -7,7 +7,7 @@
 #include "slang/binding/SystemSubroutine.h"
 
 #include "slang/binding/BindContext.h"
-#include "slang/binding/Expressions.h"
+#include "slang/binding/Expression.h"
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"

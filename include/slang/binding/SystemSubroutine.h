@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/binding/Expressions.h"
+#include "slang/binding/Expression.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/util/SmallVector.h"

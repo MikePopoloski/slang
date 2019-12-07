@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/Statements.h"
 
-#include "slang/binding/Expressions.h"
+#include "slang/binding/Expression.h"
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"

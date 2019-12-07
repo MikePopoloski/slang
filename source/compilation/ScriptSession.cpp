@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/ScriptSession.h"
 
-#include "slang/binding/Expressions.h"
+#include "slang/binding/Expression.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 

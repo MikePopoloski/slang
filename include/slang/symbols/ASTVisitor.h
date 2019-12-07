@@ -7,7 +7,6 @@
 #pragma once
 
 #include "slang/binding/AssignmentExpressions.h"
-#include "slang/binding/Expressions.h"
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/OperatorExpressions.h"

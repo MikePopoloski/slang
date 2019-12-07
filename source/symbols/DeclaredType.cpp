@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/DeclaredType.h"
 
-#include "slang/binding/Expressions.h"
+#include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/Scope.h"

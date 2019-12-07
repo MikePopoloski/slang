@@ -1,10 +1,10 @@
 //------------------------------------------------------------------------------
-// Expressions.cpp
+// Expression.cpp
 // Expression creation and analysis.
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "slang/binding/Expressions.h"
+#include "slang/binding/Expression.h"
 
 #include <nlohmann/json.hpp>
 

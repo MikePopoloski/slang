@@ -8,7 +8,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "slang/binding/Expressions.h"
+#include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
