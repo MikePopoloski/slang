@@ -107,9 +107,6 @@ ENUM(RangeSelectionKind, RANGE);
 #undef RANGE
 // clang-format on
 
-UnaryOperator getUnaryOperator(SyntaxKind kind);
-BinaryOperator getBinaryOperator(SyntaxKind kind);
-
 /// The base class for all expressions in SystemVerilog.
 class Expression {
 public:
@@ -214,6 +211,17 @@ protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
 
+    static UnaryOperator getUnaryOperator(SyntaxKind kind);
+    static BinaryOperator getBinaryOperator(SyntaxKind kind);
+
+    static const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt,
+                                          bool forceFourState);
+
+    static ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
+                                            const ConstantValue& cvr);
+
+    static void checkBindFlags(const Expression& expr, const BindContext& context);
+
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax,
                               const BindContext& context,
                               bitmask<BindFlags> extraFlags = BindFlags::None,
@@ -266,121 +274,6 @@ public:
     static const InvalidExpression Instance;
 };
 
-struct LiteralExpressionSyntax;
-struct IntegerVectorExpressionSyntax;
-
-/// Represents an integer literal.
-class IntegerLiteral : public Expression {
-public:
-    /// Indicates whether the original token in the source text was declared
-    /// unsized; if false, an explicit size was given.
-    bool isDeclaredUnsized;
-
-    IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
-                   bool isDeclaredUnsized, SourceRange sourceRange);
-
-    SVInt getValue() const { return valueStorage; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
-
-    void toJson(json&) const {}
-
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-    static Expression& fromSyntax(Compilation& compilation,
-                                  const IntegerVectorExpressionSyntax& syntax);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::IntegerLiteral; }
-
-private:
-    SVIntStorage valueStorage;
-};
-
-/// Represents a real number literal.
-class RealLiteral : public Expression {
-public:
-    RealLiteral(const Type& type, double value, SourceRange sourceRange) :
-        Expression(ExpressionKind::RealLiteral, type, sourceRange), value(value) {}
-
-    double getValue() const { return value; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
-
-    void toJson(json&) const {}
-
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RealLiteral; }
-
-private:
-    double value;
-};
-
-/// Represents an unbased unsized integer literal, which fills all bits in an expression.
-class UnbasedUnsizedIntegerLiteral : public Expression {
-public:
-    UnbasedUnsizedIntegerLiteral(const Type& type, logic_t value, SourceRange sourceRange) :
-        Expression(ExpressionKind::UnbasedUnsizedIntegerLiteral, type, sourceRange), value(value) {}
-
-    logic_t getValue() const { return value; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext&) const { return true; }
-
-    void toJson(json&) const {}
-
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-
-    static bool isKind(ExpressionKind kind) {
-        return kind == ExpressionKind::UnbasedUnsizedIntegerLiteral;
-    }
-
-private:
-    logic_t value;
-};
-
-/// Represents a null literal.
-class NullLiteral : public Expression {
-public:
-    NullLiteral(const Type& type, SourceRange sourceRange) :
-        Expression(ExpressionKind::NullLiteral, type, sourceRange) {}
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
-
-    void toJson(json&) const {}
-
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NullLiteral; }
-};
-
-/// Represents a string literal.
-class StringLiteral : public Expression {
-public:
-    StringLiteral(const Type& type, string_view value, string_view rawValue, ConstantValue& intVal,
-                  SourceRange sourceRange);
-
-    string_view getValue() const { return value; }
-    string_view getRawValue() const { return rawValue; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext&) const { return true; }
-
-    void toJson(json& j) const;
-
-    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::StringLiteral; }
-
-private:
-    string_view value;
-    string_view rawValue;
-    ConstantValue* intStorage;
-};
-
 /// Represents an expression that references a named value.
 class NamedValueExpression : public Expression {
 public:
@@ -401,177 +294,6 @@ public:
                                   SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
-};
-
-struct PostfixUnaryExpressionSyntax;
-struct PrefixUnaryExpressionSyntax;
-
-/// Represents a unary operator expression.
-class UnaryExpression : public Expression {
-public:
-    UnaryOperator op;
-
-    UnaryExpression(UnaryOperator op, const Type& type, Expression& operand,
-                    SourceRange sourceRange) :
-        Expression(ExpressionKind::UnaryOp, type, sourceRange),
-        op(op), operand_(&operand) {}
-
-    const Expression& operand() const { return *operand_; }
-    Expression& operand() { return *operand_; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext& context) const;
-
-    void toJson(json& j) const;
-
-    static Expression& fromSyntax(Compilation& compilation,
-                                  const PrefixUnaryExpressionSyntax& syntax,
-                                  const BindContext& context);
-
-    static Expression& fromSyntax(Compilation& compilation,
-                                  const PostfixUnaryExpressionSyntax& syntax,
-                                  const BindContext& context);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnaryOp; }
-
-private:
-    Expression* operand_;
-};
-
-struct BinaryExpressionSyntax;
-
-/// Represents a binary operator expression.
-class BinaryExpression : public Expression {
-public:
-    BinaryOperator op;
-
-    BinaryExpression(BinaryOperator op, const Type& type, Expression& left, Expression& right,
-                     SourceRange sourceRange) :
-        Expression(ExpressionKind::BinaryOp, type, sourceRange),
-        op(op), left_(&left), right_(&right) {}
-
-    const Expression& left() const { return *left_; }
-    Expression& left() { return *left_; }
-
-    const Expression& right() const { return *right_; }
-    Expression& right() { return *right_; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext& context) const;
-
-    void toJson(json& j) const;
-
-    static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
-                                  const BindContext& context);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
-
-private:
-    Expression* left_;
-    Expression* right_;
-};
-
-struct ConditionalExpressionSyntax;
-
-/// Represents a conditional operator expression.
-class ConditionalExpression : public Expression {
-public:
-    ConditionalExpression(const Type& type, Expression& pred, Expression& left, Expression& right,
-                          SourceRange sourceRange) :
-        Expression(ExpressionKind::ConditionalOp, type, sourceRange),
-        pred_(&pred), left_(&left), right_(&right) {}
-
-    const Expression& pred() const { return *pred_; }
-    Expression& pred() { return *pred_; }
-
-    const Expression& left() const { return *left_; }
-    Expression& left() { return *left_; }
-
-    const Expression& right() const { return *right_; }
-    Expression& right() { return *right_; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext& context) const;
-
-    void toJson(json& j) const;
-
-    static Expression& fromSyntax(Compilation& compilation,
-                                  const ConditionalExpressionSyntax& syntax,
-                                  const BindContext& context, const Type* assignmentTarget);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ConditionalOp; }
-
-private:
-    Expression* pred_;
-    Expression* left_;
-    Expression* right_;
-};
-
-struct InsideExpressionSyntax;
-
-/// Represents a set membership operator expression.
-class InsideExpression : public Expression {
-public:
-    InsideExpression(const Type& type, const Expression& left,
-                     span<const Expression* const> rangeList, SourceRange sourceRange) :
-        Expression(ExpressionKind::Inside, type, sourceRange),
-        left_(&left), rangeList_(rangeList) {}
-
-    const Expression& left() const { return *left_; }
-
-    span<const Expression* const> rangeList() const { return rangeList_; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
-
-    void toJson(json& j) const;
-
-    static Expression& fromSyntax(Compilation& compilation, const InsideExpressionSyntax& syntax,
-                                  const BindContext& context);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Inside; }
-
-private:
-    const Expression* left_;
-    span<const Expression* const> rangeList_;
-};
-
-/// Represents an assignment expression.
-class AssignmentExpression : public Expression {
-public:
-    optional<BinaryOperator> op;
-
-    AssignmentExpression(optional<BinaryOperator> op, bool nonBlocking, const Type& type,
-                         Expression& left, Expression& right, SourceRange sourceRange) :
-        Expression(ExpressionKind::Assignment, type, sourceRange),
-        op(op), left_(&left), right_(&right), nonBlocking(nonBlocking) {}
-
-    bool isCompound() const { return op.has_value(); }
-    bool isNonBlocking() const { return nonBlocking; }
-
-    const Expression& left() const { return *left_; }
-    Expression& left() { return *left_; }
-
-    const Expression& right() const { return *right_; }
-    Expression& right() { return *right_; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
-
-    void toJson(json& j) const;
-
-    static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
-                                  const BindContext& context);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Assignment; }
-
-private:
-    Expression* left_;
-    Expression* right_;
-    bool nonBlocking;
 };
 
 /// Represents a single element selection expression.
@@ -682,65 +404,6 @@ public:
 
 private:
     Expression* value_;
-};
-
-struct ConcatenationExpressionSyntax;
-
-/// Represents a concatenation expression.
-class ConcatenationExpression : public Expression {
-public:
-    ConcatenationExpression(const Type& type, span<const Expression* const> operands,
-                            SourceRange sourceRange) :
-        Expression(ExpressionKind::Concatenation, type, sourceRange),
-        operands_(operands) {}
-
-    span<const Expression* const> operands() const { return operands_; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    LValue evalLValueImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
-
-    void toJson(json& j) const;
-
-    static Expression& fromSyntax(Compilation& compilation,
-                                  const ConcatenationExpressionSyntax& syntax,
-                                  const BindContext& context);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Concatenation; }
-
-private:
-    span<const Expression* const> operands_;
-};
-
-struct MultipleConcatenationExpressionSyntax;
-
-/// Represents a replication expression.
-class ReplicationExpression : public Expression {
-public:
-    ReplicationExpression(const Type& type, const Expression& count, Expression& concat,
-                          SourceRange sourceRange) :
-        Expression(ExpressionKind::Replication, type, sourceRange),
-        count_(&count), concat_(&concat) {}
-
-    const Expression& count() const { return *count_; }
-
-    const Expression& concat() const { return *concat_; }
-    Expression& concat() { return *concat_; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
-
-    void toJson(json& j) const;
-
-    static Expression& fromSyntax(Compilation& compilation,
-                                  const MultipleConcatenationExpressionSyntax& syntax,
-                                  const BindContext& context);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Replication; }
-
-private:
-    const Expression* count_;
-    Expression* concat_;
 };
 
 /// Represents a subroutine call.
@@ -997,42 +660,6 @@ public:
     void toJson(json&) const {}
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::EmptyArgument; }
-};
-
-struct OpenRangeExpressionSyntax;
-
-/// Denotes a range of values by providing expressions for the lower and upper
-/// bounds of the range. This expression needs special handling in the various
-/// places that allow it, since it doesn't really have a type.
-class OpenRangeExpression : public Expression {
-public:
-    OpenRangeExpression(const Type& type, Expression& left, Expression& right,
-                        SourceRange sourceRange) :
-        Expression(ExpressionKind::OpenRange, type, sourceRange),
-        left_(&left), right_(&right) {}
-
-    const Expression& left() const { return *left_; }
-    Expression& left() { return *left_; }
-
-    const Expression& right() const { return *right_; }
-    Expression& right() { return *right_; }
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const BindContext& context, const Type& newType);
-    bool verifyConstantImpl(EvalContext& context) const;
-
-    ConstantValue checkInside(EvalContext& context, const ConstantValue& val) const;
-
-    void toJson(json& j) const;
-
-    static Expression& fromSyntax(Compilation& comp, const OpenRangeExpressionSyntax& syntax,
-                                  const BindContext& context);
-
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::OpenRange; }
-
-private:
-    Expression* left_;
-    Expression* right_;
 };
 
 } // namespace slang

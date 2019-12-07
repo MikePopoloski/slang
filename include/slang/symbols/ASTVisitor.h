@@ -6,7 +6,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/Expressions.h"
+#include "slang/binding/LiteralExpressions.h"
+#include "slang/binding/OperatorExpressions.h"
 #include "slang/binding/Statements.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"

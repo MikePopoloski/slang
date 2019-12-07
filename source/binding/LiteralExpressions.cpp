@@ -1,0 +1,173 @@
+//------------------------------------------------------------------------------
+// LiteralExpressions.cpp
+// Definitions for literal expressions.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
+#include "slang/binding/LiteralExpressions.h"
+
+#include <nlohmann/json.hpp>
+
+#include "slang/compilation/Compilation.h"
+#include "slang/symbols/Type.h"
+#include "slang/syntax/AllSyntax.h"
+
+namespace slang {
+
+IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
+                               bool isDeclaredUnsized, SourceRange sourceRange) :
+    Expression(ExpressionKind::IntegerLiteral, type, sourceRange),
+    isDeclaredUnsized(isDeclaredUnsized),
+    valueStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown()) {
+
+    if (value.isSingleWord())
+        valueStorage.val = *value.getRawPtr();
+    else {
+        valueStorage.pVal =
+            (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
+        memcpy(valueStorage.pVal, value.getRawPtr(), sizeof(uint64_t) * value.getNumWords());
+    }
+}
+
+Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
+                                       const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::IntegerLiteralExpression);
+
+    SVInt val = syntax.literal.intValue().resize(32);
+    val.setSigned(true);
+
+    return *compilation.emplace<IntegerLiteral>(compilation, compilation.getIntType(),
+                                                std::move(val), true, syntax.sourceRange());
+}
+
+Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
+                                       const IntegerVectorExpressionSyntax& syntax) {
+    const SVInt& value = syntax.value.intValue();
+
+    bitmask<IntegralFlags> flags;
+    if (value.isSigned())
+        flags |= IntegralFlags::Signed;
+    if (value.hasUnknown())
+        flags |= IntegralFlags::FourState;
+
+    const Type& type = compilation.getType(value.getBitWidth(), flags);
+    return *compilation.emplace<IntegerLiteral>(compilation, type, value, !syntax.size.valid(),
+                                                syntax.sourceRange());
+}
+
+ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
+    SVInt result = getValue();
+    ASSERT(result.getBitWidth() == type->getBitWidth());
+    return result;
+}
+
+Expression& RealLiteral::fromSyntax(Compilation& compilation,
+                                    const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::RealLiteralExpression);
+
+    return *compilation.emplace<RealLiteral>(compilation.getRealType(), syntax.literal.realValue(),
+                                             syntax.sourceRange());
+}
+
+ConstantValue RealLiteral::evalImpl(EvalContext&) const {
+    return real_t(value);
+}
+
+Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
+                                                     const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::UnbasedUnsizedLiteralExpression);
+
+    // UnsizedUnbasedLiteralExpressions default to a size of 1 in an undetermined
+    // context, but can grow to be wider during propagation.
+    logic_t val = syntax.literal.bitValue();
+    return *compilation.emplace<UnbasedUnsizedIntegerLiteral>(
+        compilation.getType(1,
+                            val.isUnknown() ? IntegralFlags::FourState : IntegralFlags::TwoState),
+        val, syntax.sourceRange());
+}
+
+bool UnbasedUnsizedIntegerLiteral::propagateType(const BindContext&, const Type& newType) {
+    bitwidth_t newWidth = newType.getBitWidth();
+    ASSERT(newType.isIntegral());
+    ASSERT(newWidth);
+
+    type = &newType;
+    return true;
+}
+
+ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
+    bitwidth_t width = type->getBitWidth();
+    bool isSigned = type->isSigned();
+
+    switch (value.value) {
+        case 0:
+            return SVInt(width, 0, isSigned);
+        case 1: {
+            SVInt tmp(width, 0, isSigned);
+            tmp.setAllOnes();
+            return tmp;
+        }
+        case logic_t::X_VALUE:
+            return SVInt::createFillX(width, isSigned);
+        case logic_t::Z_VALUE:
+            return SVInt::createFillZ(width, isSigned);
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
+Expression& NullLiteral::fromSyntax(Compilation& compilation,
+                                    const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::NullLiteralExpression);
+    return *compilation.emplace<NullLiteral>(compilation.getNullType(), syntax.sourceRange());
+}
+
+ConstantValue NullLiteral::evalImpl(EvalContext&) const {
+    return ConstantValue::NullPlaceholder{};
+}
+
+StringLiteral::StringLiteral(const Type& type, string_view value, string_view rawValue,
+                             ConstantValue& intVal, SourceRange sourceRange) :
+    Expression(ExpressionKind::StringLiteral, type, sourceRange),
+    value(value), rawValue(rawValue), intStorage(&intVal) {
+}
+
+Expression& StringLiteral::fromSyntax(Compilation& compilation,
+                                      const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::StringLiteralExpression);
+
+    string_view value = syntax.literal.valueText();
+    bitwidth_t width;
+    ConstantValue* intVal;
+
+    if (value.empty()) {
+        // [11.10.3] says that empty string literals take on a value of "\0" (8 zero bits).
+        width = 8;
+        intVal = compilation.allocConstant(SVInt(8, 0, false));
+    }
+    else {
+        width = bitwidth_t(value.size()) * 8;
+
+        // String literals represented as integers put the first character on the
+        // left, which translates to the msb, so we have to reverse the string.
+        SmallVectorSized<byte, 64> bytes;
+        for (char c : make_reverse_range(value))
+            bytes.append((byte)c);
+
+        intVal = compilation.allocConstant(SVInt(width, bytes, false));
+    }
+
+    auto& type = compilation.getType(width, IntegralFlags::Unsigned);
+    return *compilation.emplace<StringLiteral>(type, value, syntax.literal.rawText(), *intVal,
+                                               syntax.sourceRange());
+}
+
+ConstantValue StringLiteral::evalImpl(EvalContext&) const {
+    return *intStorage;
+}
+
+void StringLiteral::toJson(json& j) const {
+    j["literal"] = value;
+}
+
+} // namespace slang

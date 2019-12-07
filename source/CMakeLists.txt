@@ -29,10 +29,13 @@ add_custom_target(gen_version
 )
 
 add_library(slang
+	binding/AssignmentExpressions.cpp
 	binding/BindContext.cpp
 	binding/ConstantValue.cpp
 	binding/EvalContext.cpp
 	binding/Expressions.cpp
+	binding/LiteralExpressions.cpp
+	binding/OperatorExpressions.cpp
 	binding/Expressions_eval.cpp
 	binding/Statements.cpp
 	binding/SystemSubroutine.cpp

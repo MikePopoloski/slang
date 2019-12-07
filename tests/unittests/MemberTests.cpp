@@ -1,6 +1,8 @@
 #include "Test.h"
 #include <nlohmann/json.hpp>
 
+#include "slang/binding/OperatorExpressions.h"
+
 TEST_CASE("Nets") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;

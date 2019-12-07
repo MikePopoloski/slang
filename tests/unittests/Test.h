@@ -9,7 +9,9 @@
 #include <catch2/catch.hpp>
 #include <sstream>
 
-#include "slang/binding/Expressions.h"
+#include "slang/binding/AssignmentExpressions.h"
+#include "slang/binding/LiteralExpressions.h"
+#include "slang/binding/OperatorExpressions.h"
 #include "slang/binding/Statements.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/AllDiags.h"
