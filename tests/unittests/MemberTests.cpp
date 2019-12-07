@@ -491,3 +491,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MixingSubroutinePortKinds);
 }
+
+TEST_CASE("Module non-ansi port lookup locations") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(mask, hbit);
+   parameter outbits = 4;
+   output reg [outbits-1:0] hbit;
+
+   input [size-1:0] mask;
+   parameter size = 16;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+}

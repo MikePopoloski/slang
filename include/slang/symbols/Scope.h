@@ -247,8 +247,9 @@ private:
         void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
         span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
 
-        void addPortDeclaration(const PortDeclarationSyntax& syntax);
-        span<const PortDeclarationSyntax* const> getPortDeclarations() const;
+        void addPortDeclaration(const PortDeclarationSyntax& syntax, const Symbol* insertion);
+        span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> getPortDeclarations()
+            const;
 
         void addNameConflict(const Symbol& member);
         span<const Symbol* const> getNameConflicts() const;
@@ -268,7 +269,7 @@ private:
 
         // Track a list of non-ANSI port declarations declared in the scope; once we've fully
         // elaborated we'll go back and make sure they're valid.
-        std::vector<const PortDeclarationSyntax*> portDecls;
+        std::vector<std::pair<const PortDeclarationSyntax*, const Symbol*>> portDecls;
 
         // A list of members that have name conflicts that need to be reported.
         std::vector<const Symbol*> nameConflicts;

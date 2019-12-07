@@ -50,9 +50,10 @@ public:
 
     void toJson(json& j) const;
 
-    static void fromSyntax(const PortListSyntax& syntax, const Scope& scope,
-                           SmallVector<Symbol*>& results,
-                           span<const PortDeclarationSyntax* const> portDeclarations);
+    static void fromSyntax(
+        const PortListSyntax& syntax, const Scope& scope, SmallVector<Symbol*>& results,
+        SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers,
+        span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> portDeclarations);
 
     static void makeConnections(const Scope& scope, span<Symbol* const> ports,
                                 const SeparatedSyntaxList<PortConnectionSyntax>& portConnections);

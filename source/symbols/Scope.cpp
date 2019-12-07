@@ -172,7 +172,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::PortDeclaration:
-            getOrAddDeferredData().addPortDeclaration(syntax.as<PortDeclarationSyntax>());
+            getOrAddDeferredData().addPortDeclaration(syntax.as<PortDeclarationSyntax>(),
+                                                      lastMember);
             break;
         case SyntaxKind::ModportDeclaration: {
             SmallVectorSized<const ModportSymbol*, 16> results;
@@ -500,8 +501,9 @@ void Scope::elaborate() const {
             case SyntaxKind::AnsiPortList:
             case SyntaxKind::NonAnsiPortList: {
                 SmallVectorSized<Symbol*, 8> ports;
+                SmallVectorSized<std::pair<Symbol*, const Symbol*>, 8> implicitMembers;
                 PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
-                                       deferredData.getPortDeclarations());
+                                       implicitMembers, deferredData.getPortDeclarations());
 
                 // Only a few kinds of symbols can have port maps; grab that port map
                 // now so we can add each port to it for future lookup.
@@ -518,16 +520,10 @@ void Scope::elaborate() const {
                     portMap->emplace(port->name, port);
                     insertMember(port, last, true);
                     last = port;
-
-                    if (port->kind == SymbolKind::Port) {
-                        auto& valuePort = port->as<PortSymbol>();
-                        if (valuePort.internalSymbol &&
-                            !valuePort.internalSymbol->getParentScope()) {
-                            insertMember(valuePort.internalSymbol, last, true);
-                            last = valuePort.internalSymbol;
-                        }
-                    }
                 }
+
+                for (auto [implicitMember, insertionPoint] : implicitMembers)
+                    insertMember(implicitMember, insertionPoint, true);
 
                 // If we have port connections, tie them to the ports now.
                 if (auto connections = deferredData.getPortConnections())
@@ -1413,11 +1409,13 @@ span<const ForwardingTypedefSymbol* const> Scope::DeferredMemberData::getForward
     return forwardingTypedefs;
 }
 
-void Scope::DeferredMemberData::addPortDeclaration(const PortDeclarationSyntax& syntax) {
-    portDecls.push_back(&syntax);
+void Scope::DeferredMemberData::addPortDeclaration(const PortDeclarationSyntax& syntax,
+                                                   const Symbol* insertion) {
+    portDecls.emplace_back(&syntax, insertion);
 }
 
-span<const PortDeclarationSyntax* const> Scope::DeferredMemberData::getPortDeclarations() const {
+span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> Scope::DeferredMemberData::
+    getPortDeclarations() const {
     return portDecls;
 }
 
