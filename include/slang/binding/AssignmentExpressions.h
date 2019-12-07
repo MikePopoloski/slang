@@ -47,4 +47,37 @@ private:
     bool nonBlocking;
 };
 
+struct CastExpressionSyntax;
+struct SignedCastExpressionSyntax;
+
+/// Represents a type conversion expression.
+class ConversionExpression : public Expression {
+public:
+    bool isImplicit;
+
+    ConversionExpression(const Type& type, bool isImplicit, Expression& operand,
+                         SourceRange sourceRange) :
+        Expression(ExpressionKind::Conversion, type, sourceRange),
+        isImplicit(isImplicit), operand_(&operand) {}
+
+    const Expression& operand() const { return *operand_; }
+    Expression& operand() { return *operand_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void toJson(json& j) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const CastExpressionSyntax& syntax,
+                                  const BindContext& context);
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const SignedCastExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
+
+private:
+    Expression* operand_;
+};
+
 } // namespace slang

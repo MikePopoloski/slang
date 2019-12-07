@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/BindContext.h"
 
-#include "slang/binding/Expressions.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"

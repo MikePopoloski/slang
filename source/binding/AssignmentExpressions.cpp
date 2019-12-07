@@ -256,4 +256,110 @@ void AssignmentExpression::toJson(json& j) const {
         j["op"] = toString(*op);
 }
 
+Expression& ConversionExpression::fromSyntax(Compilation& compilation,
+                                             const CastExpressionSyntax& syntax,
+                                             const BindContext& context) {
+    auto& targetExpr = bind(*syntax.left, context, BindFlags::AllowDataType | BindFlags::Constant);
+    auto& operand = selfDetermined(compilation, *syntax.right, context);
+
+    auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(), false,
+                                                            operand, syntax.sourceRange());
+    if (targetExpr.bad() || operand.bad())
+        return badExpr(compilation, result);
+
+    if (targetExpr.kind == ExpressionKind::DataType) {
+        result->type = targetExpr.type;
+        if (!result->type->isSimpleType() && !result->type->isError() &&
+            !result->type->isString()) {
+            context.addDiag(diag::BadCastType, targetExpr.sourceRange) << *result->type;
+            return badExpr(compilation, result);
+        }
+    }
+    else {
+        auto val = context.evalInteger(targetExpr);
+        if (!val || !context.requireGtZero(val, targetExpr.sourceRange))
+            return badExpr(compilation, result);
+
+        bitwidth_t width = bitwidth_t(*val);
+        if (!context.requireValidBitWidth(width, targetExpr.sourceRange))
+            return badExpr(compilation, result);
+
+        if (!operand.type->isIntegral()) {
+            auto& diag = context.addDiag(diag::BadIntegerCast, syntax.apostrophe.location());
+            diag << *operand.type;
+            diag << targetExpr.sourceRange << operand.sourceRange;
+            return badExpr(compilation, result);
+        }
+
+        result->type = &compilation.getType(width, operand.type->getIntegralFlags());
+    }
+
+    const Type& type = *result->type;
+    if (!type.isCastCompatible(*operand.type)) {
+        auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
+        diag << *operand.type << type;
+        diag << targetExpr.sourceRange << operand.sourceRange;
+        return badExpr(compilation, result);
+    }
+
+    return *result;
+}
+
+Expression& ConversionExpression::fromSyntax(Compilation& compilation,
+                                             const SignedCastExpressionSyntax& syntax,
+                                             const BindContext& context) {
+    auto& operand = selfDetermined(compilation, *syntax.inner, context);
+    auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(), false,
+                                                            operand, syntax.sourceRange());
+    if (operand.bad())
+        return badExpr(compilation, result);
+
+    if (!operand.type->isIntegral()) {
+        auto& diag = context.addDiag(diag::BadIntegerCast, syntax.apostrophe.location());
+        diag << *operand.type;
+        diag << operand.sourceRange;
+        return badExpr(compilation, result);
+    }
+
+    auto flags = operand.type->getIntegralFlags() & ~IntegralFlags::Signed;
+    if (syntax.signing.kind == TokenKind::SignedKeyword)
+        flags |= IntegralFlags::Signed;
+
+    result->type = &compilation.getType(operand.type->getBitWidth(), flags);
+    return *result;
+}
+
+ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
+    ConstantValue value = operand().eval(context);
+
+    const Type& to = *type;
+    if (to.isIntegral())
+        return value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
+
+    if (to.isFloating()) {
+        switch (to.getBitWidth()) {
+            case 32:
+                return value.convertToShortReal();
+            case 64:
+                return value.convertToReal();
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    if (to.isString())
+        return value.convertToStr();
+
+    // TODO: other types
+    THROW_UNREACHABLE;
+}
+
+bool ConversionExpression::verifyConstantImpl(EvalContext& context) const {
+    return operand().verifyConstant(context);
+}
+
+void ConversionExpression::toJson(json& j) const {
+    j["operand"] = operand();
+}
+
 } // namespace slang

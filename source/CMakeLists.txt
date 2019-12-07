@@ -35,8 +35,9 @@ add_library(slang
 	binding/EvalContext.cpp
 	binding/Expressions.cpp
 	binding/LiteralExpressions.cpp
+	binding/MiscExpressions.cpp
 	binding/OperatorExpressions.cpp
-	binding/Expressions_eval.cpp
+	binding/PatternExpressions.cpp
 	binding/Statements.cpp
 	binding/SystemSubroutine.cpp
 	binding/TimingControl.cpp
