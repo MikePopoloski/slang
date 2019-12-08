@@ -585,6 +585,9 @@ module m;
         $readmemh("SDF", blah);
         $readmemb("SDF", blah, 3);
         $readmemh("SDF", blah, 3, 4);
+
+        // TODO: unpacked array non-lvalue
+        $writememh("SDF", blah, 3, 4);
     end
 endmodule
 )");

@@ -179,9 +179,10 @@ public:
     }
 };
 
-class ReadMemTask : public SystemTaskBase {
+class ReadWriteMemTask : public SystemTaskBase {
 public:
-    using SystemTaskBase::SystemTaskBase;
+    ReadWriteMemTask(const std::string& name, bool isInput) :
+        SystemTaskBase(name), isInput(isInput) {}
 
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final {
@@ -189,7 +190,7 @@ public:
         if (!checkArgCount(context, false, args, range, 2, 4))
             return comp.getErrorType();
 
-        if (!context.requireLValue(*args[1], args[1]->sourceRange.start()))
+        if (isInput && !context.requireLValue(*args[1], args[1]->sourceRange.start()))
             return comp.getErrorType();
 
         if (!args[0]->type->canBeStringLike())
@@ -218,6 +219,9 @@ public:
 
         return comp.getVoidType();
     }
+
+private:
+    bool isInput;
 };
 
 void registerSystemTasks(Compilation& c) {
@@ -276,8 +280,10 @@ void registerSystemTasks(Compilation& c) {
 
     REGISTER(StringFormatTask, "$sformat");
 
-    REGISTER(ReadMemTask, "$readmemb");
-    REGISTER(ReadMemTask, "$readmemh");
+    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemb", true));
+    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemh", true));
+    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememb", false));
+    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememh", false));
 
 #undef REGISTER
 }
