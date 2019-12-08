@@ -572,6 +572,8 @@ TEST_CASE("I/O system tasks") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     string foo;
+    int blah[3];
+
     initial begin
         $display("asdf", , 5);
         $fdisplay(1, "asdf", , 5);
@@ -580,6 +582,9 @@ module m;
         $fwrite(1, "asdf", , 5);
         $swrite(foo, "asdf", , 5);
         $sformat(foo, "%d", 5);
+        $readmemh("SDF", blah);
+        $readmemb("SDF", blah, 3);
+        $readmemh("SDF", blah, 3, 4);
     end
 endmodule
 )");
@@ -623,6 +628,40 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ExpressionNotAssignable);
     CHECK(diags[1].code == diag::ExpressionNotAssignable);
+}
+
+TEST_CASE("Readmem error cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int bar;
+    real foo[3];
+    int baz[3];
+    string s;
+
+    initial begin
+        $readmemb("F");
+        $readmemb(3.4, "asdf");
+        $readmemb(3.4, foo);
+        $readmemb("asdf", foo);
+        $readmemb("asdf", bar);
+        $readmemb("asdf", baz, s);
+        $readmemb("asdf", baz, 1, s);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::TooFewArguments);
+    CHECK(diags[1].code == diag::ExpressionNotAssignable);
+    CHECK(diags[2].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[3].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[4].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[5].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[6].code == diag::BadSystemSubroutineArg);
 }
 
 TEST_CASE("Void-casted function call statement") {

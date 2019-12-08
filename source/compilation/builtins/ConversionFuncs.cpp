@@ -27,11 +27,8 @@ public:
             return comp.getErrorType();
 
         auto& type = *args[0]->type;
-        if (!type.isIntegral()) {
-            context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange)
-                << type << kindStr();
-            return comp.getErrorType();
-        }
+        if (!type.isIntegral())
+            return badArg(context, *args[0]);
 
         auto flags = type.getIntegralFlags() & ~IntegralFlags::Signed;
         if (toSigned)

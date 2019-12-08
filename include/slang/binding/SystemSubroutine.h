@@ -35,6 +35,8 @@ protected:
     SystemSubroutine(const std::string& name, SubroutineKind kind) : name(name), kind(kind) {}
 
     string_view kindStr() const;
+    const Type& badArg(const BindContext& context, const Expression& arg) const;
+
     static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
                               SourceRange callRange, size_t min, size_t max);
 

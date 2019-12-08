@@ -20,11 +20,8 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
 
-        if (!args[0]->type->isIntegral()) {
-            context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange)
-                << *args[0]->type << kindStr();
-            return comp.getErrorType();
-        }
+        if (!args[0]->type->isIntegral())
+            return badArg(context, *args[0]);
 
         return comp.getIntegerType();
     }

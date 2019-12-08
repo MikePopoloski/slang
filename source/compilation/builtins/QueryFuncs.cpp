@@ -26,11 +26,8 @@ public:
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
 
-        if (!args[0]->type->isBitstreamType()) {
-            context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange)
-                << *args[0]->type << kindStr();
-            return comp.getErrorType();
-        }
+        if (!args[0]->type->isBitstreamType())
+            return badArg(context, *args[0]);
 
         // TODO: not allowed on some dynamic types
 
@@ -62,11 +59,8 @@ public:
             return comp.getErrorType();
 
         auto& type = *args[0]->type;
-        if (!type.isIntegral() && !type.isUnpackedArray()) {
-            context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange)
-                << type << kindStr();
-            return comp.getErrorType();
-        }
+        if (!type.isIntegral() && !type.isUnpackedArray())
+            return badArg(context, *args[0]);
 
         // TODO: not allowed on some dynamic types
 

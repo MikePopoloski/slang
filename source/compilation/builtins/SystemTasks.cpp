@@ -113,11 +113,8 @@ public:
         if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
             return comp.getErrorType();
 
-        if (!args[0]->type->isIntegral()) {
-            context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange)
-                << *args[0]->type << kindStr();
-            return comp.getErrorType();
-        }
+        if (!args[0]->type->isIntegral())
+            return badArg(context, *args[0]);
 
         if (!checkFormatArgs(context, args.subspan(1)))
             return comp.getErrorType();
@@ -182,6 +179,47 @@ public:
     }
 };
 
+class ReadMemTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 2, 4))
+            return comp.getErrorType();
+
+        if (!context.requireLValue(*args[1], args[1]->sourceRange.start()))
+            return comp.getErrorType();
+
+        if (!args[0]->type->canBeStringLike())
+            return badArg(context, *args[0]);
+
+        if (!args[1]->type->isUnpackedArray())
+            return badArg(context, *args[1]);
+
+        const Type* t = args[1]->type;
+        do {
+            t = &t->as<UnpackedArrayType>().elementType;
+        } while (t->isUnpackedArray());
+
+        if (!t->isIntegral())
+            return badArg(context, *args[1]);
+
+        if (args.size() >= 3) {
+            if (!args[2]->type->isIntegral())
+                return badArg(context, *args[2]);
+
+            if (args.size() == 4) {
+                if (!args[3]->type->isIntegral())
+                    return badArg(context, *args[3]);
+            }
+        }
+
+        return comp.getVoidType();
+    }
+};
+
 void registerSystemTasks(Compilation& c) {
 #define REGISTER(type, name) c.addSystemSubroutine(std::make_unique<type>(name))
     REGISTER(DisplayTask, "$display");
@@ -237,6 +275,10 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(SimpleControlTask, "$monitoroff");
 
     REGISTER(StringFormatTask, "$sformat");
+
+    REGISTER(ReadMemTask, "$readmemb");
+    REGISTER(ReadMemTask, "$readmemh");
+
 #undef REGISTER
 }
 

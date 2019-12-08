@@ -131,6 +131,11 @@ bool SystemSubroutine::checkFormatValues(const BindContext& context, const Args&
     return true;
 }
 
+const Type& SystemSubroutine::badArg(const BindContext& context, const Expression& arg) const {
+    context.addDiag(diag::BadSystemSubroutineArg, arg.sourceRange) << *arg.type << kindStr();
+    return context.getCompilation().getErrorType();
+}
+
 BindContext SystemSubroutine::makeNonConst(const BindContext& ctx) {
     BindContext nonConstCtx(ctx);
     nonConstCtx.flags &= ~BindFlags::Constant;
