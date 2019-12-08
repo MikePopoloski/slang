@@ -31,6 +31,9 @@ void registerNonConstFuncs(Compilation& c) {
     REGISTER("$random", c.getIntType(), 0, intArg);
     REGISTER("$urandom", c.getUnsignedIntType(), 0, intArg);
 
+    REGISTER("$fopen", c.getIntType(), 1, std::vector{ &c.getStringType(), &c.getStringType() });
+    REGISTER("$fclose", c.getVoidType(), 1, intArg);
+
 #undef REGISTER
 }
 

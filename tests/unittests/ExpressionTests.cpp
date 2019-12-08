@@ -772,6 +772,11 @@ TEST_CASE("Utility system functions") {
     // [18.13] Constrained pseudo-random value generation
     CHECK(typeof("$urandom") == "bit[31:0]");
 
+    // [21.3] File input/output system functions
+    CHECK(typeof("$fopen(\"dsa\")") == "int");
+    CHECK(typeof("$fopen(\"dsa\", \"r\")") == "int");
+    CHECK(typeof("$fclose(3)") == "void");
+
     NO_COMPILATION_ERRORS;
 }
 

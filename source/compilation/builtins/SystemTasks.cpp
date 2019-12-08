@@ -101,6 +101,31 @@ public:
     }
 };
 
+class FileDisplayTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+
+    bool allowEmptyArgument(size_t index) const final { return index != 0; }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, SIZE_MAX))
+            return comp.getErrorType();
+
+        if (!args[0]->type->isIntegral()) {
+            context.addDiag(diag::BadSystemSubroutineArg, args[0]->sourceRange)
+                << *args[0]->type << kindStr();
+            return comp.getErrorType();
+        }
+
+        if (!checkFormatArgs(context, args.subspan(1)))
+            return comp.getErrorType();
+
+        return comp.getVoidType();
+    }
+};
+
 void registerSystemTasks(Compilation& c) {
 #define REGISTER(type, name) c.addSystemSubroutine(std::make_unique<type>(name))
     REGISTER(DisplayTask, "$display");
@@ -119,6 +144,23 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(DisplayTask, "$monitorb");
     REGISTER(DisplayTask, "$monitoro");
     REGISTER(DisplayTask, "$monitorh");
+
+    REGISTER(FileDisplayTask, "$fdisplay");
+    REGISTER(FileDisplayTask, "$fdisplayb");
+    REGISTER(FileDisplayTask, "$fdisplayo");
+    REGISTER(FileDisplayTask, "$fdisplayh");
+    REGISTER(FileDisplayTask, "$fwrite");
+    REGISTER(FileDisplayTask, "$fwriteb");
+    REGISTER(FileDisplayTask, "$fwriteo");
+    REGISTER(FileDisplayTask, "$fwriteh");
+    REGISTER(FileDisplayTask, "$fstrobe");
+    REGISTER(FileDisplayTask, "$fstrobeb");
+    REGISTER(FileDisplayTask, "$fstrobeo");
+    REGISTER(FileDisplayTask, "$fstrobeh");
+    REGISTER(FileDisplayTask, "$fmonitor");
+    REGISTER(FileDisplayTask, "$fmonitorb");
+    REGISTER(FileDisplayTask, "$fmonitoro");
+    REGISTER(FileDisplayTask, "$fmonitorh");
 
     REGISTER(DisplayTask, "$error");
     REGISTER(DisplayTask, "$warning");

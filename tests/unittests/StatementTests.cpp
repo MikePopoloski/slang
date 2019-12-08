@@ -573,6 +573,9 @@ TEST_CASE("I/O system tasks") {
 module m;
     initial begin
         $display("asdf", , 5);
+        $fdisplay(1, "asdf", , 5);
+        $fmonitorb(1, "asdf", , 5);
+        $fstrobeh(1, "asdf", , 5);
     end
 endmodule
 )");
