@@ -776,6 +776,14 @@ TEST_CASE("Utility system functions") {
     CHECK(typeof("$fopen(\"dsa\")") == "int");
     CHECK(typeof("$fopen(\"dsa\", \"r\")") == "int");
     CHECK(typeof("$fclose(3)") == "void");
+    CHECK(typeof("$fgetc(3)") == "int");
+    CHECK(typeof("$ungetc(3, 4)") == "int");
+    CHECK(typeof("$ftell(3)") == "int");
+    CHECK(typeof("$fseek(3, 4, 5)") == "int");
+    CHECK(typeof("$rewind(3)") == "int");
+    CHECK(typeof("$fflush(3)") == "void");
+    CHECK(typeof("$fflush()") == "void");
+    CHECK(typeof("$feof(3)") == "int");
 
     NO_COMPILATION_ERRORS;
 }

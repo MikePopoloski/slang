@@ -23,16 +23,24 @@ public:
 void registerNonConstFuncs(Compilation& c) {
 #define REGISTER(...) c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
 
-    std::vector<const Type*> intArg = { &c.getIntType() };
+    auto& intType = c.getIntType();
+    std::vector<const Type*> intArg = { &intType };
 
     REGISTER("$time", c.getTimeType());
     REGISTER("$stime", c.getUnsignedIntType());
     REGISTER("$realtime", c.getRealTimeType());
-    REGISTER("$random", c.getIntType(), 0, intArg);
+    REGISTER("$random", intType, 0, intArg);
     REGISTER("$urandom", c.getUnsignedIntType(), 0, intArg);
 
-    REGISTER("$fopen", c.getIntType(), 1, std::vector{ &c.getStringType(), &c.getStringType() });
+    REGISTER("$fopen", intType, 1, std::vector{ &c.getStringType(), &c.getStringType() });
     REGISTER("$fclose", c.getVoidType(), 1, intArg);
+    REGISTER("$fgetc", intType, 1, intArg);
+    REGISTER("$ungetc", intType, 2, std::vector{ &intType, &intType });
+    REGISTER("$ftell", intType, 1, intArg);
+    REGISTER("$fseek", intType, 3, std::vector{ &intType, &intType, &intType });
+    REGISTER("$rewind", intType, 1, intArg);
+    REGISTER("$fflush", c.getVoidType(), 0, intArg);
+    REGISTER("$feof", intType, 1, intArg);
 
 #undef REGISTER
 }
