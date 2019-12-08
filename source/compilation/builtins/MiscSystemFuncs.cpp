@@ -23,25 +23,12 @@ public:
 
         const Type& ft = *args[0]->type;
         if (!ft.isIntegral() && !ft.isString() && !ft.isByteArray()) {
-            context.addDiag(diag::InvalidFormatStringType, args[0]->sourceRange) << *args[0]->type;
+            context.addDiag(diag::InvalidStringArg, args[0]->sourceRange) << *args[0]->type;
             return comp.getErrorType();
         }
 
-        // If the format string is known at compile time, check it for correctness now.
-        if (args[0]->constant) {
-            ConstantValue formatStr = args[0]->constant->convertToStr();
-            if (formatStr) {
-                Diagnostics diags;
-                SmallVectorSized<SFormat::Arg, 8> specs;
-                if (!SFormat::parseArgs(formatStr.str(), args[0]->sourceRange.start(), specs,
-                                        diags)) {
-                    context.scope.addDiags(diags);
-                    return comp.getErrorType();
-                }
-
-                // TODO: check the rest of the args as well
-            }
-        }
+        if (!checkFormatValues(context, args))
+            return comp.getErrorType();
 
         return comp.getStringType();
     }

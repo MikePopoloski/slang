@@ -379,7 +379,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& foo = compilation.getRoot().lookupName<VariableSymbol>("m.asdf.foo");
-    CHECK(foo.getType().getArrayRange() == ConstantRange{4, 2});
+    CHECK(foo.getType().getArrayRange() == ConstantRange{ 4, 2 });
 }
 
 TEST_CASE("If statement -- unevaluated branches -- valid") {
@@ -544,7 +544,7 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpressionNotConstant);
@@ -571,11 +571,15 @@ endmodule
 TEST_CASE("I/O system tasks") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
+    string foo;
     initial begin
         $display("asdf", , 5);
         $fdisplay(1, "asdf", , 5);
         $fmonitorb(1, "asdf", , 5);
         $fstrobeh(1, "asdf", , 5);
+        $fwrite(1, "asdf", , 5);
+        $swrite(foo, "asdf", , 5);
+        $sformat(foo, "%d", 5);
     end
 endmodule
 )");
@@ -600,6 +604,25 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::FormatEmptyArg);
+}
+
+TEST_CASE("String output task - not an lvalue error") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        $swrite("SDF", "asdf %d", 5);
+        $sformat("SDF", "asdf %d", 5);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExpressionNotAssignable);
+    CHECK(diags[1].code == diag::ExpressionNotAssignable);
 }
 
 TEST_CASE("Void-casted function call statement") {

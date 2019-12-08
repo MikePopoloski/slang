@@ -110,7 +110,7 @@ public:
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final {
         auto& comp = context.getCompilation();
-        if (!checkArgCount(context, false, args, range, 1, SIZE_MAX))
+        if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
             return comp.getErrorType();
 
         if (!args[0]->type->isIntegral()) {
@@ -120,6 +120,62 @@ public:
         }
 
         if (!checkFormatArgs(context, args.subspan(1)))
+            return comp.getErrorType();
+
+        return comp.getVoidType();
+    }
+};
+
+class StringOutputTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+
+    bool allowEmptyArgument(size_t index) const final { return index != 0; }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
+            return comp.getErrorType();
+
+        if (!context.requireLValue(*args[0], args[0]->sourceRange.start()))
+            return comp.getErrorType();
+
+        const Type& ft = *args[0]->type;
+        if (!ft.isIntegral() && !ft.isString() && !ft.isByteArray()) {
+            context.addDiag(diag::InvalidStringArg, args[0]->sourceRange) << *args[0]->type;
+            return comp.getErrorType();
+        }
+
+        if (!checkFormatArgs(context, args.subspan(1)))
+            return comp.getErrorType();
+
+        return comp.getVoidType();
+    }
+};
+
+class StringFormatTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 2, INT32_MAX))
+            return comp.getErrorType();
+
+        if (!context.requireLValue(*args[0], args[0]->sourceRange.start()))
+            return comp.getErrorType();
+
+        for (size_t i = 0; i < 2; i++) {
+            const Type& ft = *args[i]->type;
+            if (!ft.isIntegral() && !ft.isString() && !ft.isByteArray()) {
+                context.addDiag(diag::InvalidStringArg, args[i]->sourceRange) << *args[i]->type;
+                return comp.getErrorType();
+            }
+        }
+
+        if (!checkFormatArgs(context, args.subspan(2)))
             return comp.getErrorType();
 
         return comp.getVoidType();
@@ -162,6 +218,11 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(FileDisplayTask, "$fmonitoro");
     REGISTER(FileDisplayTask, "$fmonitorh");
 
+    REGISTER(StringOutputTask, "$swrite");
+    REGISTER(StringOutputTask, "$swriteb");
+    REGISTER(StringOutputTask, "$swriteo");
+    REGISTER(StringOutputTask, "$swriteh");
+
     REGISTER(DisplayTask, "$error");
     REGISTER(DisplayTask, "$warning");
     REGISTER(DisplayTask, "$info");
@@ -174,6 +235,8 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(SimpleControlTask, "$exit");
     REGISTER(SimpleControlTask, "$monitoron");
     REGISTER(SimpleControlTask, "$monitoroff");
+
+    REGISTER(StringFormatTask, "$sformat");
 #undef REGISTER
 }
 

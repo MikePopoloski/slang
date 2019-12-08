@@ -40,6 +40,8 @@ protected:
 
     static bool checkFormatArgs(const BindContext& context, const Args& args);
 
+    static bool checkFormatValues(const BindContext& context, const Args& args);
+
     static BindContext makeNonConst(const BindContext& context);
 };
 

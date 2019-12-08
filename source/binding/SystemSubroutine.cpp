@@ -111,6 +111,26 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
     return true;
 }
 
+bool SystemSubroutine::checkFormatValues(const BindContext& context, const Args& args) {
+    // If the format string is known at compile time, check it for correctness now.
+    if (!args[0]->constant)
+        return true;
+
+    ConstantValue formatStr = args[0]->constant->convertToStr();
+    if (!formatStr)
+        return false;
+
+    Diagnostics diags;
+    SmallVectorSized<SFormat::Arg, 8> specs;
+    if (!SFormat::parseArgs(formatStr.str(), args[0]->sourceRange.start(), specs, diags)) {
+        context.scope.addDiags(diags);
+        return false;
+    }
+
+    // TODO: check the rest of the args as well
+    return true;
+}
+
 BindContext SystemSubroutine::makeNonConst(const BindContext& ctx) {
     BindContext nonConstCtx(ctx);
     nonConstCtx.flags &= ~BindFlags::Constant;
