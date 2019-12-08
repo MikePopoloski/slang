@@ -317,6 +317,11 @@ ConstantRange Type::getArrayRange() const {
     return {};
 }
 
+bool Type::canBeStringLike() const {
+    const Type& t = getCanonicalType();
+    return t.isIntegral() || t.isString() || t.isByteArray();
+}
+
 std::string Type::toString() const {
     TypePrinter printer;
     printer.append(*this);

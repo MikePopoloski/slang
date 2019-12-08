@@ -474,7 +474,7 @@ bool isArgTypeValid(Arg::Type required, const Type& type) {
         case Arg::Pattern:
             return true;
         case Arg::String:
-            return type.isIntegral() || type.isString() || type.isByteArray();
+            return type.canBeStringLike();
         case Arg::None:
             return false;
     }

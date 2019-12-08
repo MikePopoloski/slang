@@ -22,8 +22,8 @@ public:
             return comp.getErrorType();
 
         const Type& ft = *args[0]->type;
-        if (!ft.isIntegral() && !ft.isString() && !ft.isByteArray()) {
-            context.addDiag(diag::InvalidStringArg, args[0]->sourceRange) << *args[0]->type;
+        if (!ft.canBeStringLike()) {
+            context.addDiag(diag::InvalidStringArg, args[0]->sourceRange) << ft;
             return comp.getErrorType();
         }
 

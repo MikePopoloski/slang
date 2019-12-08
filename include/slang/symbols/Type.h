@@ -193,6 +193,10 @@ public:
     /// Otherwise returns an empty range.
     ConstantRange getArrayRange() const;
 
+    /// Returns true if the type can represent a string-like value; this includes
+    /// the string type itself as well as byte arrays and all integral types.
+    bool canBeStringLike() const;
+
     std::string toString() const;
 
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,

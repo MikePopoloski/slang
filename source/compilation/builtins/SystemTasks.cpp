@@ -142,8 +142,8 @@ public:
             return comp.getErrorType();
 
         const Type& ft = *args[0]->type;
-        if (!ft.isIntegral() && !ft.isString() && !ft.isByteArray()) {
-            context.addDiag(diag::InvalidStringArg, args[0]->sourceRange) << *args[0]->type;
+        if (!ft.canBeStringLike()) {
+            context.addDiag(diag::InvalidStringArg, args[0]->sourceRange) << ft;
             return comp.getErrorType();
         }
 
@@ -169,8 +169,8 @@ public:
 
         for (size_t i = 0; i < 2; i++) {
             const Type& ft = *args[i]->type;
-            if (!ft.isIntegral() && !ft.isString() && !ft.isByteArray()) {
-                context.addDiag(diag::InvalidStringArg, args[i]->sourceRange) << *args[i]->type;
+            if (!ft.canBeStringLike()) {
+                context.addDiag(diag::InvalidStringArg, args[i]->sourceRange) << ft;
                 return comp.getErrorType();
             }
         }
