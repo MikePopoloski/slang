@@ -42,6 +42,8 @@ void registerNonConstFuncs(Compilation& c) {
     REGISTER("$fflush", c.getVoidType(), 0, intArg);
     REGISTER("$feof", intType, 1, intArg);
 
+    REGISTER("$test$plusargs", intType, 1, std::vector{ &c.getStringType() });
+
 #undef REGISTER
 }
 
