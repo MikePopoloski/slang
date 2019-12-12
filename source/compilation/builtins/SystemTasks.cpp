@@ -284,8 +284,21 @@ void registerSystemTasks(Compilation& c) {
         name, c.getVoidType(), required, std::vector<const Type*>{ __VA_ARGS__ }))
 
     TASK("$exit", 0);
+
     TASK("$monitoron", 0);
     TASK("$monitoroff", 0);
+
+    TASK("$dumpfile", 0, &c.getStringType());
+    TASK("$dumpon", 0);
+    TASK("$dumpoff", 0);
+    TASK("$dumpall", 0);
+    TASK("$dumplimit", 1, &c.getIntType());
+    TASK("$dumpflush", 0);
+    TASK("$dumpportson", 0, &c.getStringType());
+    TASK("$dumpportsoff", 0, &c.getStringType());
+    TASK("$dumpportsall", 0, &c.getStringType());
+    TASK("$dumpportslimit", 1, &c.getIntType(), &c.getStringType());
+    TASK("$dumpportsflush", 0, &c.getStringType());
 
 #undef TASK
 }
