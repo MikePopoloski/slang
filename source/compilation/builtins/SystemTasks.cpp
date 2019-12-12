@@ -17,6 +17,17 @@ public:
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
+class SimpleSystemTask : public SimpleSystemSubroutine {
+public:
+    SimpleSystemTask(const std::string& name, const Type& returnType, size_t requiredArgs = 0,
+                     const std::vector<const Type*>& argTypes = {}) :
+        SimpleSystemSubroutine(name, SubroutineKind::Task, requiredArgs, argTypes, returnType,
+                               false) {}
+
+    ConstantValue eval(EvalContext&, const Args&) const final { return nullptr; }
+    bool verifyConstant(EvalContext&, const Args&) const final { return false; }
+};
+
 class DisplayTask : public SystemTaskBase {
 public:
     using SystemTaskBase::SystemTaskBase;
@@ -27,20 +38,6 @@ public:
                                SourceRange) const final {
         auto& comp = context.getCompilation();
         if (!checkFormatArgs(context, args))
-            return comp.getErrorType();
-
-        return comp.getVoidType();
-    }
-};
-
-class SimpleControlTask : public SystemTaskBase {
-public:
-    using SystemTaskBase::SystemTaskBase;
-
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
-        auto& comp = context.getCompilation();
-        if (!checkArgCount(context, false, args, range, 0, 0))
             return comp.getErrorType();
 
         return comp.getVoidType();
@@ -274,18 +271,23 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(FinishControlTask, "$finish");
     REGISTER(FinishControlTask, "$stop");
 
-    REGISTER(SimpleControlTask, "$exit");
-    REGISTER(SimpleControlTask, "$monitoron");
-    REGISTER(SimpleControlTask, "$monitoroff");
-
     REGISTER(StringFormatTask, "$sformat");
+#undef REGISTER
 
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemb", true));
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemh", true));
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememb", false));
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememh", false));
 
-#undef REGISTER
+#define TASK(name, required, ...)                             \
+    c.addSystemSubroutine(std::make_unique<SimpleSystemTask>( \
+        name, c.getVoidType(), required, std::vector<const Type*>{ __VA_ARGS__ }))
+
+    TASK("$exit", 0);
+    TASK("$monitoron", 0);
+    TASK("$monitoroff", 0);
+
+#undef TASK
 }
 
 } // namespace slang::Builtins
