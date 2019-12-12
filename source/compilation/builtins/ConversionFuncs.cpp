@@ -52,10 +52,129 @@ private:
     bool toSigned;
 };
 
+class RtoIFunction : public SimpleSystemSubroutine {
+public:
+    RtoIFunction(Compilation& comp) :
+        SimpleSystemSubroutine("$rtoi", SubroutineKind::Function, 1, { &comp.getRealType() },
+                               comp.getIntegerType(), false) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto val = args[0]->eval(context);
+        if (!val)
+            return nullptr;
+
+        return SVInt(32, (uint64_t)val.real(), true);
+    }
+};
+
+class ItoRFunction : public SimpleSystemSubroutine {
+public:
+    ItoRFunction(Compilation& comp) :
+        SimpleSystemSubroutine("$itor", SubroutineKind::Function, 1, { &comp.getIntegerType() },
+                               comp.getRealType(), false) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto val = args[0]->eval(context);
+        if (!val)
+            return nullptr;
+
+        int32_t i = val.integer().as<int32_t>().value_or(0);
+        return real_t(double(i));
+    }
+};
+
+class RealToBitsFunction : public SimpleSystemSubroutine {
+public:
+    RealToBitsFunction(Compilation& comp) :
+        SimpleSystemSubroutine("$realtobits", SubroutineKind::Function, 1, { &comp.getRealType() },
+                               comp.getType(64, IntegralFlags::Unsigned), false) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto val = args[0]->eval(context);
+        if (!val)
+            return nullptr;
+
+        // TODO: bit_cast
+        double d = val.real();
+        uint64_t result;
+        memcpy(&result, &d, sizeof(uint64_t));
+        return SVInt(64, result, false);
+    }
+};
+
+class BitsToRealFunction : public SimpleSystemSubroutine {
+public:
+    BitsToRealFunction(Compilation& comp) :
+        SimpleSystemSubroutine("$bitstoreal", SubroutineKind::Function, 1,
+                               { &comp.getType(64, IntegralFlags::Unsigned) }, comp.getRealType(),
+                               false) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto val = args[0]->eval(context);
+        if (!val)
+            return nullptr;
+
+        // TODO: bit_cast
+        uint64_t i = val.integer().as<uint64_t>().value_or(0);
+        double result;
+        memcpy(&result, &i, sizeof(double));
+
+        return real_t(result);
+    }
+};
+
+class ShortRealToBitsFunction : public SimpleSystemSubroutine {
+public:
+    ShortRealToBitsFunction(Compilation& comp) :
+        SimpleSystemSubroutine("$shortrealtobits", SubroutineKind::Function, 1,
+                               { &comp.getShortRealType() },
+                               comp.getType(32, IntegralFlags::Unsigned), false) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto val = args[0]->eval(context);
+        if (!val)
+            return nullptr;
+
+        // TODO: bit_cast
+        float f = val.shortReal();
+        uint32_t result;
+        memcpy(&result, &f, sizeof(uint32_t));
+        return SVInt(32, result, false);
+    }
+};
+
+class BitsToShortRealFunction : public SimpleSystemSubroutine {
+public:
+    BitsToShortRealFunction(Compilation& comp) :
+        SimpleSystemSubroutine("$bitstoshortreal", SubroutineKind::Function, 1,
+                               { &comp.getType(32, IntegralFlags::Unsigned) },
+                               comp.getShortRealType(), false) {}
+
+    ConstantValue eval(EvalContext& context, const Args& args) const final {
+        auto val = args[0]->eval(context);
+        if (!val)
+            return nullptr;
+
+        // TODO: bit_cast
+        uint32_t i = val.integer().as<uint32_t>().value_or(0);
+        float result;
+        memcpy(&result, &i, sizeof(float));
+
+        return shortreal_t(result);
+    }
+};
+
 void registerConversionFuncs(Compilation& c) {
 #define REGISTER(name, ...) c.addSystemSubroutine(std::make_unique<name##Function>(__VA_ARGS__))
     REGISTER(SignedConversion, "$signed", true);
     REGISTER(SignedConversion, "$unsigned", false);
+
+    REGISTER(RtoI, c);
+    REGISTER(ItoR, c);
+    REGISTER(RealToBits, c);
+    REGISTER(BitsToReal, c);
+    REGISTER(ShortRealToBits, c);
+    REGISTER(BitsToShortReal, c);
 #undef REGISTER
 }
 

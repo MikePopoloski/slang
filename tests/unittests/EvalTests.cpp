@@ -1073,3 +1073,21 @@ TEST_CASE("Eval inside expressions") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Real conversion functions") {
+    ScriptSession session;
+
+    CHECK(session.eval("$rtoi(123.678)").integer() == 123);
+    CHECK(session.eval("$rtoi(50000000000.0)").integer() == -1539607552);
+
+    CHECK(session.eval("$itor(123)").real() == 123.0);
+    CHECK(session.eval("$itor('x)").real() == 0.0);
+
+    CHECK(session.eval("$realtobits(123.456)").integer() == 4638387860618067575ull);
+    CHECK(session.eval("$bitstoreal(64'd4638387860618067575)").real() == 123.456);
+
+    CHECK(session.eval("$shortrealtobits(123.456)").integer() == 1123477881);
+    CHECK(session.eval("$bitstoshortreal(1123477881)").shortReal() == 123.456f);
+
+    NO_SESSION_ERRORS;
+}
