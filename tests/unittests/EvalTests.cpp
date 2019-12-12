@@ -1091,3 +1091,32 @@ TEST_CASE("Real conversion functions") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Real math functions") {
+    ScriptSession session;
+
+    CHECK(session.eval("$ln(123.456)").real() == log(123.456));
+    CHECK(session.eval("$log10(123.456)").real() == log10(123.456));
+    CHECK(session.eval("$exp(123.456)").real() == exp(123.456));
+    CHECK(session.eval("$sqrt(123.456)").real() == sqrt(123.456));
+    CHECK(session.eval("$floor(123.456)").real() == floor(123.456));
+    CHECK(session.eval("$ceil(123.456)").real() == ceil(123.456));
+    CHECK(session.eval("$sin(123.456)").real() == sin(123.456));
+    CHECK(session.eval("$cos(123.456)").real() == cos(123.456));
+    CHECK(session.eval("$tan(123.456)").real() == tan(123.456));
+    CHECK(session.eval("$asin(0.456)").real() == asin(0.456));
+    CHECK(session.eval("$acos(0.456)").real() == acos(0.456));
+    CHECK(session.eval("$atan(0.456)").real() == atan(0.456));
+    CHECK(session.eval("$sinh(0.456)").real() == sinh(0.456));
+    CHECK(session.eval("$cosh(0.456)").real() == cosh(0.456));
+    CHECK(session.eval("$tanh(0.456)").real() == tanh(0.456));
+    CHECK(session.eval("$asinh(0.456)").real() == asinh(0.456));
+    CHECK(session.eval("$acosh(123.456)").real() == acosh(123.456));
+    CHECK(session.eval("$atanh(0.456)").real() == atanh(0.456));
+
+    CHECK(session.eval("$pow(2.1, 1.456)").real() == pow(2.1, 1.456));
+    CHECK(session.eval("$atan2(2.1, 1.456)").real() == atan2(2.1, 1.456));
+    CHECK(session.eval("$hypot(2.1, 1.456)").real() == hypot(2.1, 1.456));
+
+    NO_SESSION_ERRORS;
+}
