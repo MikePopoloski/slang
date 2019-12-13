@@ -1106,13 +1106,13 @@ TEST_CASE("Real math functions") {
     CHECK(session.eval("$tan(123.456)").real() == tan(123.456));
     CHECK(session.eval("$asin(0.456)").real() == asin(0.456));
     CHECK(session.eval("$acos(0.456)").real() == acos(0.456));
-    CHECK(session.eval("$atan(0.456)").real() == atan(0.456));
-    CHECK(session.eval("$sinh(0.456)").real() == sinh(0.456));
-    CHECK(session.eval("$cosh(0.456)").real() == cosh(0.456));
-    CHECK(session.eval("$tanh(0.456)").real() == tanh(0.456));
-    CHECK(session.eval("$asinh(0.456)").real() == asinh(0.456));
-    CHECK(session.eval("$acosh(123.456)").real() == acosh(123.456));
-    CHECK(session.eval("$atanh(0.456)").real() == atanh(0.456));
+    CHECK(session.eval("$atan(0.456)").real() == Approx(atan(0.456)));
+    CHECK(session.eval("$sinh(0.456)").real() == Approx(sinh(0.456)));
+    CHECK(session.eval("$cosh(0.456)").real() == Approx(cosh(0.456)));
+    CHECK(session.eval("$tanh(0.456)").real() == Approx(tanh(0.456)));
+    CHECK(session.eval("$asinh(0.456)").real() == Approx(asinh(0.456)));
+    CHECK(session.eval("$acosh(123.456)").real() == Approx(acosh(123.456)));
+    CHECK(session.eval("$atanh(0.456)").real() == Approx(atanh(0.456)));
 
     CHECK(session.eval("$pow(2.1, 1.456)").real() == pow(2.1, 1.456));
     CHECK(session.eval("$atan2(2.1, 1.456)").real() == atan2(2.1, 1.456));
