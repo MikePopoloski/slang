@@ -7,6 +7,7 @@
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/symbols/TypePrinter.h"
 
 namespace slang::Builtins {
 
@@ -37,6 +38,35 @@ public:
     ConstantValue eval(EvalContext&, const Args& args) const final {
         // TODO: support for unpacked sizes
         return SVInt(32, args[0]->type->getBitWidth(), true);
+    }
+
+    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+};
+
+class TypenameFunction : public SystemSubroutine {
+public:
+    TypenameFunction() : SystemSubroutine("$typename", SubroutineKind::Function) {}
+
+    const Expression& bindArgument(size_t, const BindContext& context,
+                                   const ExpressionSyntax& syntax) const final {
+        BindContext nonConstCtx = makeNonConst(context);
+        return Expression::bind(syntax, nonConstCtx, BindFlags::AllowDataType);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 1))
+            return comp.getErrorType();
+
+        return comp.getStringType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args& args) const final {
+        TypePrinter printer;
+        printer.append(*args[0]->type);
+
+        return printer.toString();
     }
 
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
@@ -119,6 +149,7 @@ ConstantValue IncrementFunction::eval(EvalContext&, const Args& args) const {
 void registerQueryFuncs(Compilation& c) {
 #define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(Bits);
+    REGISTER(Typename);
     REGISTER(Low);
     REGISTER(High);
     REGISTER(Left);

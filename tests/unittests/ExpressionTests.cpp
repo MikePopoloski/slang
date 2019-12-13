@@ -356,6 +356,8 @@ module m1;
 
     int i = $bits(blah);
     int j = $bits(logic[3:0]);
+    string s = $typename(blah);
+    string t = $typename(logic[3:0]);
 
 endmodule
 )");
@@ -365,10 +367,11 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("$bits - hierarchical allowed in non-const") {
+TEST_CASE("$bits / typename - hierarchical allowed in non-const") {
     auto tree = SyntaxTree::fromText(R"(
 module m1;
     int i = $bits(n.asdf);
+    string s = $typename(n.asdf);
 endmodule
 
 module n;
