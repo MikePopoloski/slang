@@ -9,6 +9,7 @@ note NotePreviousUsage "previous usage here"
 note NoteDeclarationHere "declared here"
 note NotePreviousMatch "previous match here"
 error AttributesNotAllowed "attributes are not allowed here"
+warning not-supported WarnNotYetSupported "language feature not yet supported"
 
 subsystem Lexer
 error NonPrintableChar "non-printable character in source text; SystemVerilog only supports ASCII text"
@@ -332,6 +333,7 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 
 group default = { real-underflow real-overflow literal-overflow ignored-macro-paste case-gen-dup
 				  case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
-				  dup-import redef-macro nonstandard-generate pointless-void-cast unused-result }
+				  dup-import redef-macro nonstandard-generate pointless-void-cast unused-result
+				  not-supported }
 
 group extra = { empty-member empty-stmt }
