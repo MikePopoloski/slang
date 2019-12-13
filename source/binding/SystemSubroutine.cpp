@@ -138,8 +138,10 @@ const Type& SystemSubroutine::badArg(const BindContext& context, const Expressio
 
 BindContext SystemSubroutine::makeNonConst(const BindContext& ctx) {
     BindContext nonConstCtx(ctx);
-    nonConstCtx.flags &= ~BindFlags::Constant;
-    nonConstCtx.flags |= BindFlags::NoHierarchicalNames;
+    if (nonConstCtx.flags & BindFlags::Constant) {
+        nonConstCtx.flags &= ~BindFlags::Constant;
+        nonConstCtx.flags |= BindFlags::NoHierarchicalNames;
+    }
     return nonConstCtx;
 }
 

@@ -365,6 +365,22 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("$bits - hierarchical allowed in non-const") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+    int i = $bits(n.asdf);
+endmodule
+
+module n;
+    logic [5:1] asdf;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Checking for required constant subexpressions") {
     auto tree = SyntaxTree::fromText(R"(
 module m1;
