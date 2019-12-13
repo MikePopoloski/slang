@@ -567,7 +567,7 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
     Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Scope& structScope, SourceRange sourceRange) {
 
-    size_t count;
+    size_t count = 0;
     auto& countExpr = bindReplCount(comp, *syntax.countExpr, context, count);
     if (countExpr.bad())
         return badExpr(comp, nullptr);
