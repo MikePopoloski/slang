@@ -74,6 +74,7 @@ add_library(slang
 	parsing/Parser_statements.cpp
 	parsing/ParserBase.cpp
 	parsing/Preprocessor.cpp
+	parsing/Preprocessor_macros.cpp
 	parsing/Token.cpp
 
 	symbols/AllTypes.cpp

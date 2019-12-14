@@ -200,6 +200,9 @@ private:
                                SmallSet<DefineDirectiveSyntax*, 8>& alreadyExpanded);
     bool applyMacroOps(span<Token const> tokens, SmallVector<Token>& dest);
 
+    static bool isOnSameLine(Token token);
+    static bool isSameMacro(const DefineDirectiveSyntax& left, const DefineDirectiveSyntax& right);
+
     // functions to advance the underlying token stream
     Token peek();
     Token consume();
