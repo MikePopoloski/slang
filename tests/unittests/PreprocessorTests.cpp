@@ -1205,3 +1205,14 @@ TEST_CASE("Redefine macro -- different bodies") {
         CHECK(diagnostics[i].code == diag::RedefiningMacro);
     }
 }
+
+TEST_CASE("Macro stringify missing quote") {
+    auto& text = R"(
+`define FOO(a) `" a + b
+`FOO(1)
+)";
+
+    std::string result = preprocess(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedMacroStringifyEnd);
+}

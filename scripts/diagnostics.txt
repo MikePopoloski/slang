@@ -72,6 +72,7 @@ error MacroOpsOutsideDefinition "macro operators may only be used within a macro
 error SplitBlockCommentInDirective "block comments on the same line as a directive must also be terminated on that line"
 error ExpectedIncludeFileName "expected an include file name"
 error ExpectedTimeLiteral "expected time literal"
+error ExpectedMacroStringifyEnd "expected closing quote to end macro stringification"
 warning ignored-macro-paste IgnoredMacroPaste "paste token is pointless because it is adjacent to whitespace"
 warning redef-macro RedefiningMacro "macro '{}' redefined"
 

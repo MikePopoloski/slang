@@ -892,8 +892,6 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
     Token stringify;
     bool anyNewMacros = false;
 
-    // TODO: audit trivia usage here, use of dest.back(), etc
-
     for (size_t i = 0; i < tokens.size(); i++) {
         Token newToken;
 
@@ -938,6 +936,7 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                     }
                 }
                 else {
+                    // Dest cannot be empty here.
                     newToken = Lexer::concatenateTokens(alloc, dest.back(), tokens[i + 1]);
                     if (newToken) {
                         dest.pop();
@@ -957,8 +956,8 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
             continue;
 
         // If we have an empty macro argument just collect its trivia and use it on the next token
-        // we find.
-        // TODO: what about trailing trivia that's left over?
+        // we find. Note that this can be left over at the end of applying ops; that's fine,
+        // nothing is relying on observing this after the end of the macro's tokens.
         if (newToken.kind == TokenKind::EmptyMacroArgument) {
             emptyArgTrivia.appendRange(newToken.trivia());
             continue;
@@ -1001,9 +1000,11 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
             }
         }
 
-        // TODO: error if no closing quote
         stringifyBuffer.append(newToken);
     }
+
+    if (stringify)
+        addDiag(diag::ExpectedMacroStringifyEnd, stringify.location());
 
     return anyNewMacros;
 }
