@@ -13,9 +13,9 @@ coverage:
     changes: no
 
   ignore:
-    - "external/*"
-    - "tests/*"
-    - "tools/*"
+    - "external/**/*"
+    - "tests/**/*"
+    - "tools/**/*"
 
 parsers:
   gcov:
