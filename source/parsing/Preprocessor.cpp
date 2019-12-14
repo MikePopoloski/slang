@@ -229,7 +229,8 @@ Token Preprocessor::handleDirectives(Token token) {
                         trivia.append(handleEndKeywordsDirective(token));
                         break;
                     case SyntaxKind::PragmaDirective:
-                        // TODO: implement pragmas
+                        trivia.append(handlePragmaDirective(token));
+                        break;
                     case SyntaxKind::UnconnectedDriveDirective:
                     case SyntaxKind::NoUnconnectedDriveDirective:
                         // TODO: implement unconnected drive
@@ -801,6 +802,110 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
         keywordVersionStack.pop_back();
 
     return createSimpleDirective(directive);
+}
+
+Trivia Preprocessor::handlePragmaDirective(Token directive) {
+    if (peek().kind != TokenKind::Identifier || !isOnSameLine(peek())) {
+        addDiag(diag::ExpectedPragmaName, directive.location());
+        return createSimpleDirective(directive);
+    }
+
+    SmallVectorSized<TokenOrSyntax, 4> args;
+    Token name = consume();
+    Token token = peek();
+    bool wantComma = false;
+
+    while (token.kind != TokenKind::EndOfFile && isOnSameLine(token)) {
+        if (wantComma) {
+            args.append(expect(TokenKind::Comma));
+            wantComma = false;
+        }
+        else {
+            auto [expr, succeeded] = parsePragmaExpression();
+            args.append(expr);
+            wantComma = true;
+
+            if (!succeeded)
+                break;
+        }
+        token = peek();
+    }
+
+    auto result = alloc.emplace<PragmaDirectiveSyntax>(directive, name, args.copy(alloc));
+    return Trivia(TriviaKind::Directive, result);
+}
+
+std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
+    Token token = peek();
+    if (token.kind == TokenKind::Identifier) {
+        auto name = consume();
+        if (peek().kind == TokenKind::Equals) {
+            auto equals = consume();
+            auto [expr, succeeded] = parsePragmaValue();
+            auto result = alloc.emplace<NameValuePragmaExpressionSyntax>(name, equals, *expr);
+            return { result, succeeded };
+        }
+
+        return { alloc.emplace<SimplePragmaExpressionSyntax>(name), true };
+    }
+
+    if (token.kind != TokenKind::OpenParenthesis)
+        return parsePragmaValue();
+
+    SmallVectorSized<TokenOrSyntax, 4> values;
+    Token openParen = consume();
+    bool wantComma = false;
+    bool ok = true;
+
+    token = peek();
+    while (token.kind != TokenKind::EndOfFile && isOnSameLine(token)) {
+        if (wantComma) {
+            if (token.kind == TokenKind::CloseParenthesis)
+                break;
+
+            values.append(expect(TokenKind::Comma));
+            wantComma = false;
+        }
+        else {
+            auto [expr, succeeded] = parsePragmaExpression();
+            values.append(expr);
+            wantComma = true;
+
+            if (!succeeded) {
+                ok = false;
+                break;
+            }
+        }
+        token = peek();
+    }
+
+    Token closeParen = expect(TokenKind::CloseParenthesis);
+    return { alloc.emplace<ParenPragmaExpressionSyntax>(openParen, values.copy(alloc), closeParen),
+             ok };
+}
+
+std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
+    Token token = peek();
+    if (!isOnSameLine(token)) {
+        auto loc = lastConsumed.location() + lastConsumed.rawText().length();
+        addDiag(diag::ExpectedPragmaExpression, loc);
+
+        auto expected = Token::createMissing(alloc, TokenKind::Identifier, loc);
+        return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
+    }
+
+    if (token.kind == TokenKind::IntegerBase || token.kind == TokenKind::IntegerLiteral) {
+        // TODO:
+    }
+
+    if (token.kind == TokenKind::Identifier || token.kind == TokenKind::StringLiteral) {
+        return { alloc.emplace<SimplePragmaExpressionSyntax>(consume()), true };
+    }
+
+    addDiag(diag::ExpectedPragmaExpression, token.location());
+
+    auto expected = Token::createMissing(alloc, TokenKind::Identifier, token.location());
+    return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
 }
 
 Trivia Preprocessor::createSimpleDirective(Token directive) {

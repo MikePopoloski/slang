@@ -1536,7 +1536,7 @@ token directive
 SimpleDirective base=Directive
 
 kindmap<SimpleDirective>
-CellDefineDirective PragmaDirective UnconnectedDriveDirective
+CellDefineDirective UnconnectedDriveDirective
 NoUnconnectedDriveDirective EndCellDefineDirective EndKeywordsDirective
 ResetAllDirective UndefineAllDirective
 
@@ -1603,3 +1603,28 @@ token name
 
 BeginKeywordsDirective base=Directive kind=BeginKeywordsDirective
 token versionSpecifier
+
+PragmaExpression final=false
+empty
+
+SimplePragmaExpression base=PragmaExpression kind=SimplePragmaExpression
+token value
+
+NameValuePragmaExpression base=PragmaExpression kind=NameValuePragmaExpression
+token name
+token equals
+PragmaExpression value
+
+NumberPragmaExpression base=PragmaExpression kind=NumberPragmaExpression
+token size
+token base
+token value
+
+ParenPragmaExpression base=PragmaExpression kind=ParenPragmaExpression
+token openParen
+separated_list<PragmaExpression> values
+token closeParen
+
+PragmaDirective base=Directive kind=PragmaDirective
+token name
+separated_list<PragmaExpression> args

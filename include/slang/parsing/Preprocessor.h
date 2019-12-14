@@ -25,6 +25,7 @@ struct MacroActualArgumentListSyntax;
 struct MacroFormalArgumentListSyntax;
 struct MacroActualArgumentSyntax;
 struct MacroFormalArgumentSyntax;
+struct PragmaExpressionSyntax;
 
 string_view getDirectiveText(SyntaxKind kind);
 
@@ -134,6 +135,7 @@ private:
     Trivia handleUndefineAllDirective(Token directive);
     Trivia handleBeginKeywordsDirective(Token directive);
     Trivia handleEndKeywordsDirective(Token directive);
+    Trivia handlePragmaDirective(Token directive);
     Trivia createSimpleDirective(Token directive);
 
     // Determines whether the else branch of a conditional directive should be taken
@@ -144,6 +146,10 @@ private:
 
     // TimeScale specifier parser
     bool expectTimeScaleSpecifier(Token& token, TimeScaleValue& value);
+
+    // Pragma expression parsers
+    std::pair<PragmaExpressionSyntax*, bool> parsePragmaExpression();
+    std::pair<PragmaExpressionSyntax*, bool> parsePragmaValue();
 
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic { None, Line, File };
