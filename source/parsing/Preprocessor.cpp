@@ -117,6 +117,7 @@ void Preprocessor::setKeywordVersion(KeywordVersion version) {
 void Preprocessor::resetAllDirectives() {
     activeTimeScale = std::nullopt;
     defaultNetType = TokenKind::WireKeyword;
+    unconnectedDrive = TokenKind::Unknown;
 }
 
 std::vector<const DefineDirectiveSyntax*> Preprocessor::getDefinedMacros() const {
@@ -232,8 +233,11 @@ Token Preprocessor::handleDirectives(Token token) {
                         trivia.append(handlePragmaDirective(token));
                         break;
                     case SyntaxKind::UnconnectedDriveDirective:
+                        trivia.append(handleUnconnectedDriveDirective(token));
+                        break;
                     case SyntaxKind::NoUnconnectedDriveDirective:
-                        // TODO: implement unconnected drive
+                        trivia.append(handleNoUnconnectedDriveDirective(token));
+                        break;
                     case SyntaxKind::CellDefineDirective:
                     case SyntaxKind::EndCellDefineDirective:
                         // we don't do anything with celldefine directives
@@ -934,6 +938,32 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::checkNextPragmaToken() {
         return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
     }
     return { nullptr, true };
+}
+
+Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {
+    Token strength;
+    switch (peek().kind) {
+        case TokenKind::Pull0Keyword:
+        case TokenKind::Pull1Keyword:
+            strength = consume();
+            unconnectedDrive = strength.kind;
+            break;
+        default:
+            break;
+    }
+
+    if (!strength) {
+        addDiag(diag::ExpectedDriveStrength, peek().location());
+        strength = Token::createMissing(alloc, TokenKind::Pull0Keyword, peek().location());
+    }
+
+    auto result = alloc.emplace<UnconnectedDriveDirectiveSyntax>(directive, strength);
+    return Trivia(TriviaKind::Directive, result);
+}
+
+Trivia Preprocessor::handleNoUnconnectedDriveDirective(Token directive) {
+    unconnectedDrive = TokenKind::Unknown;
+    return createSimpleDirective(directive);
 }
 
 Trivia Preprocessor::createSimpleDirective(Token directive) {

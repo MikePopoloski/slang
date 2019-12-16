@@ -100,6 +100,10 @@ public:
     /// will return TokenKind::Unknown.
     TokenKind getDefaultNetType() const { return defaultNetType; }
 
+    /// Gets the currently active drive strength to apply to unconnected nets,
+    /// if any has been set by the user. If none is set, this returns TokenKind::Unknown.
+    TokenKind getUnconnectedDrive() const { return unconnectedDrive; }
+
     /// Gets the currently active keyword version in use by the preprocessor.
     KeywordVersion getCurrentKeywordVersion() const { return keywordVersionStack.back(); }
 
@@ -136,6 +140,8 @@ private:
     Trivia handleBeginKeywordsDirective(Token directive);
     Trivia handleEndKeywordsDirective(Token directive);
     Trivia handlePragmaDirective(Token directive);
+    Trivia handleUnconnectedDriveDirective(Token directive);
+    Trivia handleNoUnconnectedDriveDirective(Token directive);
     Trivia createSimpleDirective(Token directive);
 
     // Determines whether the else branch of a conditional directive should be taken
@@ -310,6 +316,7 @@ private:
     std::vector<KeywordVersion> keywordVersionStack;
     optional<TimeScale> activeTimeScale;
     TokenKind defaultNetType = TokenKind::WireKeyword;
+    TokenKind unconnectedDrive = TokenKind::Unknown;
 };
 
 } // namespace slang

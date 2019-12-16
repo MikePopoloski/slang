@@ -1536,8 +1536,7 @@ token directive
 SimpleDirective base=Directive
 
 kindmap<SimpleDirective>
-CellDefineDirective UnconnectedDriveDirective
-NoUnconnectedDriveDirective EndCellDefineDirective EndKeywordsDirective
+CellDefineDirective NoUnconnectedDriveDirective EndCellDefineDirective EndKeywordsDirective
 ResetAllDirective UndefineAllDirective
 
 IncludeDirective base=Directive kind=IncludeDirective
@@ -1592,6 +1591,9 @@ token timePrecision
 
 DefaultNetTypeDirective base=Directive kind=DefaultNetTypeDirective
 token netType
+
+UnconnectedDriveDirective base=Directive kind=UnconnectedDriveDirective
+token strength
 
 LineDirective base=Directive kind=LineDirective
 token lineNumber
