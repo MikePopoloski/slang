@@ -836,6 +836,9 @@ Trivia Preprocessor::handlePragmaDirective(Token directive) {
 }
 
 std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
+    if (auto pair = checkNextPragmaToken(); !pair.second)
+        return pair;
+
     Token token = peek();
     if (token.kind == TokenKind::Identifier) {
         auto name = consume();
@@ -855,45 +858,59 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
     SmallVectorSized<TokenOrSyntax, 4> values;
     Token openParen = consume();
     bool wantComma = false;
-    bool ok = true;
+    bool ok = false;
+
+    // This keeps track of the last real token we've consumed before
+    // breaking from the loop; if there's an error it's possible we've
+    // gone on and parsed more directives into the resulting token,
+    // so this is necessary to correctly place the diagnostic.
+    Token lastToken = openParen;
 
     token = peek();
     while (token.kind != TokenKind::EndOfFile && isOnSameLine(token)) {
         if (wantComma) {
-            if (token.kind == TokenKind::CloseParenthesis)
+            if (token.kind == TokenKind::CloseParenthesis) {
+                ok = true;
                 break;
+            }
 
-            values.append(expect(TokenKind::Comma));
+            Token comma = expect(TokenKind::Comma);
+            values.append(comma);
             wantComma = false;
+            lastToken = comma;
         }
         else {
             auto [expr, succeeded] = parsePragmaExpression();
             values.append(expr);
             wantComma = true;
 
-            if (!succeeded) {
-                ok = false;
+            if (!succeeded)
                 break;
-            }
+
+            lastToken = expr->getLastToken();
         }
         token = peek();
     }
 
-    Token closeParen = expect(TokenKind::CloseParenthesis);
+    token = peek();
+    Token closeParen;
+    if (token.kind == TokenKind::CloseParenthesis && isOnSameLine(token)) {
+        closeParen = consume();
+    }
+    else {
+        closeParen = Token::createExpected(alloc, diagnostics, token, TokenKind::CloseParenthesis,
+                                           lastToken);
+    }
+
     return { alloc.emplace<ParenPragmaExpressionSyntax>(openParen, values.copy(alloc), closeParen),
              ok };
 }
 
 std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
+    if (auto pair = checkNextPragmaToken(); !pair.second)
+        return pair;
+
     Token token = peek();
-    if (!isOnSameLine(token)) {
-        auto loc = lastConsumed.location() + lastConsumed.rawText().length();
-        addDiag(diag::ExpectedPragmaExpression, loc);
-
-        auto expected = Token::createMissing(alloc, TokenKind::Identifier, loc);
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
-    }
-
     if (token.kind == TokenKind::IntegerBase || token.kind == TokenKind::IntegerLiteral) {
         // TODO:
     }
@@ -906,6 +923,17 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
 
     auto expected = Token::createMissing(alloc, TokenKind::Identifier, token.location());
     return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
+}
+
+std::pair<PragmaExpressionSyntax*, bool> Preprocessor::checkNextPragmaToken() {
+    if (!isOnSameLine(peek())) {
+        auto loc = lastConsumed.location() + lastConsumed.rawText().length();
+        addDiag(diag::ExpectedPragmaExpression, loc);
+
+        auto expected = Token::createMissing(alloc, TokenKind::Identifier, loc);
+        return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
+    }
+    return { nullptr, true };
 }
 
 Trivia Preprocessor::createSimpleDirective(Token directive) {

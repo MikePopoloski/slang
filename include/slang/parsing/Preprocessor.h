@@ -150,6 +150,7 @@ private:
     // Pragma expression parsers
     std::pair<PragmaExpressionSyntax*, bool> parsePragmaExpression();
     std::pair<PragmaExpressionSyntax*, bool> parsePragmaValue();
+    std::pair<PragmaExpressionSyntax*, bool> checkNextPragmaToken();
 
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic { None, Line, File };

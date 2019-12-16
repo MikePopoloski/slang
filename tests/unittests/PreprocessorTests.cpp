@@ -1150,7 +1150,7 @@ TEST_CASE("Undef builtin") {
 `undef __slang__
 )";
 
-    std::string result = preprocess(text);
+    preprocess(text);
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::UndefineBuiltinDirective);
 }
@@ -1160,7 +1160,7 @@ TEST_CASE("Trying to redefine directive") {
 `define timescale
 )";
 
-    std::string result = preprocess(text);
+    preprocess(text);
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::InvalidMacroName);
 }
@@ -1170,7 +1170,7 @@ TEST_CASE("Trying to redefine built-in macro") {
 `define __slang__
 )";
 
-    std::string result = preprocess(text);
+    preprocess(text);
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::InvalidMacroName);
 }
@@ -1181,7 +1181,7 @@ TEST_CASE("Redefine macro -- same body") {
 `define FOO(x, y     = 1+1) asdf bar   baz
 )";
 
-    std::string result = preprocess(text);
+    preprocess(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
@@ -1199,7 +1199,7 @@ TEST_CASE("Redefine macro -- different bodies") {
 `define FOO asdf /**/ baz
 )";
 
-    std::string result = preprocess(text);
+    preprocess(text);
     REQUIRE(diagnostics.size() == 9);
     for (int i = 0; i < 9; i++) {
         CHECK(diagnostics[i].code == diag::RedefiningMacro);
@@ -1212,7 +1212,68 @@ TEST_CASE("Macro stringify missing quote") {
 `FOO(1)
 )";
 
-    std::string result = preprocess(text);
+    preprocess(text);
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ExpectedMacroStringifyEnd);
+}
+
+TEST_CASE("Pragma expressions") {
+    auto& text = R"(
+`pragma foo
+`pragma bar asdf
+`pragma bar asdf, blah, foo="asdf"
+`pragma bar "asdf", (asdf, "asdf", asdf="asdf")
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == "\n");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Pragma expressions -- errors") {
+    auto& text = R"(
+`pragma
+    foo
+
+`pragma bar asdf=
+    "asdf"
+
+`pragma bar 2.1
+
+`pragma bar "asdf", (asdf, "asdf", asdf=2.1)
+`pragma bar "asdf", (asdf, "asdf" asdf)
+`pragma bar "asdf", (asdf, "asdf",
+`pragma bar "asdf", (asdf, "asdf"
+    )
+)";
+
+    preprocess(text);
+
+    std::string result = "\n" + reportGlobalDiags();
+    CHECK(result == R"(
+source:2:1: error: expected pragma name
+`pragma
+^
+source:5:18: error: expected pragma expression
+`pragma bar asdf=
+                 ^
+source:8:13: error: expected pragma expression
+`pragma bar 2.1
+            ^
+source:10:41: error: expected pragma expression
+`pragma bar "asdf", (asdf, "asdf", asdf=2.1)
+                                        ^
+source:10:35: error: expected ')'
+`pragma bar "asdf", (asdf, "asdf", asdf=2.1)
+                                  ^
+source:11:34: error: expected ','
+`pragma bar "asdf", (asdf, "asdf" asdf)
+                                 ^
+source:13:34: error: expected ')'
+`pragma bar "asdf", (asdf, "asdf"
+                                 ^
+source:12:35: error: expected ')'
+`pragma bar "asdf", (asdf, "asdf",
+                                  ^
+)");
 }
