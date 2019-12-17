@@ -92,6 +92,18 @@ public:
     /// macros that have been defined.
     void resetAllDirectives();
 
+    /// Increases the preprocessor's view of the depth of parsed design elements,
+    /// such as modules or interfaces. A parser calls this whenever starting to
+    /// parse a new design element so that the preprocessor can enforce rules about
+    /// where directives may appear.
+    void pushDesignElementStack() { designElementDepth++; }
+
+    /// Decreases the preprocessor's view of the depth of parsed design elements,
+    /// such as modules or interfaces. A parser calls this whenever finishing
+    /// parsing a design element so that the preprocessor can enforce rules about
+    /// where directives may appear.
+    void popDesignElementStack() { designElementDepth--; }
+
     /// Gets the currently active time scale value, if any has been set by the user.
     const optional<TimeScale>& getTimeScale() const { return activeTimeScale; }
 
@@ -152,6 +164,9 @@ private:
 
     // TimeScale specifier parser
     bool expectTimeScaleSpecifier(Token& token, TimeScaleValue& value);
+
+    // Reports an error if the given directive occurred inside a design element.
+    void checkOutsideDesignElement(Token directive);
 
     // Pragma expression parsers
     std::pair<PragmaExpressionSyntax*, bool> parsePragmaExpression();
@@ -317,6 +332,7 @@ private:
     optional<TimeScale> activeTimeScale;
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;
+    int designElementDepth = 0;
 };
 
 } // namespace slang

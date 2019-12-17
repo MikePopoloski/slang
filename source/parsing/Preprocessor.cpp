@@ -396,6 +396,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleResetAllDirective(Token directive) {
+    checkOutsideDesignElement(directive);
     resetAllDirectives();
     return createSimpleDirective(directive);
 }
@@ -727,6 +728,8 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
+    checkOutsideDesignElement(directive);
+
     Token netType;
     switch (peek().kind) {
         case TokenKind::WireKeyword:
@@ -786,6 +789,8 @@ Trivia Preprocessor::handleUndefineAllDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
+    checkOutsideDesignElement(directive);
+
     Token versionToken = expect(TokenKind::StringLiteral);
     if (!versionToken.isMissing()) {
         auto versionOpt = getKeywordVersion(versionToken.valueText());
@@ -800,6 +805,8 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
+    checkOutsideDesignElement(directive);
+
     if (keywordVersionStack.size() == 1)
         addDiag(diag::MismatchedEndKeywordsDirective, directive.location());
     else
@@ -941,6 +948,8 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::checkNextPragmaToken() {
 }
 
 Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {
+    checkOutsideDesignElement(directive);
+
     Token strength;
     switch (peek().kind) {
         case TokenKind::Pull0Keyword:
@@ -962,6 +971,7 @@ Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleNoUnconnectedDriveDirective(Token directive) {
+    checkOutsideDesignElement(directive);
     unconnectedDrive = TokenKind::Unknown;
     return createSimpleDirective(directive);
 }
@@ -969,6 +979,11 @@ Trivia Preprocessor::handleNoUnconnectedDriveDirective(Token directive) {
 Trivia Preprocessor::createSimpleDirective(Token directive) {
     auto syntax = alloc.emplace<SimpleDirectiveSyntax>(directive.directiveKind(), directive);
     return Trivia(TriviaKind::Directive, syntax);
+}
+
+void Preprocessor::checkOutsideDesignElement(Token directive) {
+    if (designElementDepth)
+        addDiag(diag::DirectiveInsideDesignElement, directive.location());
 }
 
 Token Preprocessor::peek() {

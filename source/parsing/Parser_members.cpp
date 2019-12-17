@@ -7,6 +7,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
+#include "slang/util/ScopeGuard.h"
 
 namespace slang {
 
@@ -26,10 +27,16 @@ ModuleDeclarationSyntax& Parser::parseModule() {
 }
 
 ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes) {
+    // Tell the preprocessor that we're inside a design element for the duration of this function.
+    auto& pp = getPP();
+    pp.pushDesignElementStack();
+
+    auto guard = ScopeGuard([&pp] { pp.popDesignElementStack(); });
+
     auto& header = parseModuleHeader();
     auto endKind = getModuleEndKind(header.moduleKeyword.kind);
 
-    NodeMetadata meta{ getPP().getDefaultNetType(), getPP().getTimeScale() };
+    NodeMetadata meta{ pp.getDefaultNetType(), pp.getTimeScale() };
 
     Token endmodule;
     auto members =

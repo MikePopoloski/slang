@@ -224,3 +224,26 @@ endmodule : m1;
     CHECK(diagnostics[0].code == diag::ImplicitNotAllowed);
     CHECK(diagnostics[1].code == diag::ExpectedDeclarator);
 }
+
+TEST_CASE("Errors for directives inside design elements") {
+    auto& text = R"(
+`resetall
+
+module m1;
+`resetall
+
+    module n;
+    endmodule
+`default_nettype none
+
+endmodule : m1;
+
+`resetall
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::DirectiveInsideDesignElement);
+    CHECK(diagnostics[1].code == diag::DirectiveInsideDesignElement);
+}

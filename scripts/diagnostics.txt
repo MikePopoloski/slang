@@ -76,6 +76,7 @@ error ExpectedTimeLiteral "expected time literal"
 error ExpectedMacroStringifyEnd "expected closing quote to end macro stringification"
 error ExpectedPragmaName "expected pragma name"
 error ExpectedPragmaExpression "expected pragma expression"
+error DirectiveInsideDesignElement "directive is not allowed inside a design element"
 warning ignored-macro-paste IgnoredMacroPaste "paste token is pointless because it is adjacent to whitespace"
 warning redef-macro RedefiningMacro "macro '{}' redefined"
 
