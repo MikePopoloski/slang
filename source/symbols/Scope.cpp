@@ -188,10 +188,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                                                    syntax.as<FunctionDeclarationSyntax>(), *this));
             break;
         case SyntaxKind::DataDeclaration: {
-            // If this is a simple identifier type, we have no choice but to defer symbol creation
-            // because it could turn out to be a net or a variable.
+            // If this declaration has a named type, we need to defer the creation of the variables
+            // because that type name may actually resolve to a net type or interface instance.
             auto& dataDecl = syntax.as<DataDeclarationSyntax>();
-            if (!getSimpleTypeName(*dataDecl.type).empty()) {
+            if (dataDecl.type->kind == SyntaxKind::NamedType) {
                 auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
                 addMember(*sym);
                 getOrAddDeferredData().addMember(sym);
@@ -482,11 +482,28 @@ void Scope::elaborate() const {
         }
     }
 
-    // Go through deferred members and elaborate them now. We skip generate blocks in
+    // Insert all deferred variables now, before we elaborate any hierarchical instances
+    // that may depend on them.
+    auto deferred = deferredData.getMembers();
+    for (auto symbol : deferred) {
+        auto& node = symbol->as<DeferredMemberSymbol>().node;
+        if (node.kind == SyntaxKind::DataDeclaration) {
+            SmallVectorSized<const ValueSymbol*, 4> symbols;
+            VariableSymbol::fromSyntax(compilation, node.as<DataDeclarationSyntax>(), *this,
+                                       symbols);
+
+            const Symbol* last = symbol;
+            for (auto var : symbols) {
+                insertMember(var, last, true);
+                last = var;
+            }
+        }
+    }
+
+    // Go through deferred instances and elaborate them now. We skip generate blocks in
     // the initial pass because evaluating their conditions may depend on other members
     // that have yet to be elaborated. This implicitly implements the elaboration algorithm
     // described in [23.10.4.1].
-    auto deferred = deferredData.getMembers();
     for (auto symbol : deferred) {
         auto& member = symbol->as<DeferredMemberSymbol>();
         switch (member.node.kind) {
@@ -535,18 +552,6 @@ void Scope::elaborate() const {
                 if (auto connections = deferredData.getPortConnections())
                     PortSymbol::makeConnections(*this, ports, *connections);
 
-                break;
-            }
-            case SyntaxKind::DataDeclaration: {
-                SmallVectorSized<const ValueSymbol*, 4> symbols;
-                VariableSymbol::fromSyntax(compilation, member.node.as<DataDeclarationSyntax>(),
-                                           *this, symbols);
-
-                const Symbol* last = symbol;
-                for (auto var : symbols) {
-                    insertMember(var, last, true);
-                    last = var;
-                }
                 break;
             }
             default:

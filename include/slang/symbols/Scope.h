@@ -106,9 +106,9 @@ public:
                                      span<const ElementSelectSyntax* const> selectors,
                                      const BindContext& context, LookupResult& result);
 
-    /// Gets a specific member at the given zero-based index, expecting it to be of the specified
-    /// type. This expects (and asserts) that the member at the given index is of the specified type
-    /// `T`.
+    /// Gets a specific member at the given zero-based index, expecting it to be of
+    /// the specified type. This expects (and asserts) that the member at the given
+    /// index is of the specified type `T`.
     template<typename T>
     const T& memberAt(uint32_t index) const {
         return std::next(members().begin(), index)->as<T>();
