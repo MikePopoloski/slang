@@ -205,6 +205,22 @@ static string_view getGenerateBlockName(const SyntaxNode& node) {
     return "";
 }
 
+static void addBlockMembers(Compilation& compilation, GenerateBlockSymbol& block,
+                            const SyntaxNode& syntax, bool isInstantiated) {
+    if (!isInstantiated) {
+        compilation.noteUninstantiatedGenerateBlock(syntax);
+        return;
+    }
+
+    if (syntax.kind != SyntaxKind::GenerateBlock) {
+        block.addMembers(syntax);
+    }
+    else {
+        for (auto member : syntax.as<GenerateBlockSyntax>().members)
+            block.addMembers(*member);
+    }
+}
+
 static void createCondGenBlock(Compilation& compilation, const SyntaxNode& syntax,
                                LookupLocation location, const Scope& parent,
                                uint32_t constructIndex, bool isInstantiated,
@@ -237,10 +253,7 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
     compilation.addAttributes(*block, attributes);
     results.append(block);
 
-    if (isInstantiated)
-        block->addMembers(syntax);
-    else
-        compilation.noteUninstantiatedGenerateBlock(syntax);
+    addBlockMembers(compilation, *block, syntax, isInstantiated);
 }
 
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
@@ -357,6 +370,25 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     }
 }
 
+GenerateBlockSymbol& GenerateBlockSymbol::fromSyntax(Compilation& compilation,
+                                                     const GenerateBlockSyntax& syntax,
+                                                     uint32_t constructIndex) {
+    // This overload is only called for the illegal case of a generate block
+    // without a condition attached.
+    string_view name = getGenerateBlockName(syntax);
+    SourceLocation loc = syntax.getFirstToken().location();
+
+    auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc, constructIndex,
+                                                          /* isInstantiated */ true);
+    block->setSyntax(syntax);
+    compilation.addAttributes(*block, syntax.attributes);
+
+    for (auto member : syntax.members)
+        block->addMembers(*member);
+
+    return *block;
+}
+
 void GenerateBlockSymbol::toJson(json& j) const {
     j["constructIndex"] = constructIndex;
     j["isInstantiated"] = isInstantiated;
@@ -432,10 +464,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         block->addMember(*implicitParam);
         block->setSyntax(*syntax.block);
 
-        if (isInstantiated)
-            block->addMembers(*syntax.block);
-        else
-            compilation.noteUninstantiatedGenerateBlock(*syntax.block);
+        addBlockMembers(compilation, *block, *syntax.block, isInstantiated);
 
         implicitParam->setType(compilation.getIntegerType());
         implicitParam->setValue(std::move(value));

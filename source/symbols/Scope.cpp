@@ -165,7 +165,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::NonAnsiPortList:
         case SyntaxKind::IfGenerate:
         case SyntaxKind::CaseGenerate:
-        case SyntaxKind::LoopGenerate: {
+        case SyntaxKind::LoopGenerate:
+        case SyntaxKind::GenerateBlock: {
             auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
             addMember(*sym);
             getOrAddDeferredData().addMember(sym);
@@ -235,10 +236,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             }
             break;
         }
-        case SyntaxKind::GenerateBlock:
-            for (auto member : syntax.as<GenerateBlockSyntax>().members)
-                addMembers(*member);
-            break;
         case SyntaxKind::AlwaysBlock:
         case SyntaxKind::AlwaysCombBlock:
         case SyntaxKind::AlwaysLatchBlock:
@@ -572,6 +569,7 @@ void Scope::elaborate() const {
                 SmallVectorSized<GenerateBlockSymbol*, 8> blocks;
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
                                                 location, *this, constructIndex, true, blocks);
+                constructIndex++;
 
                 const Symbol* last = symbol;
                 for (auto block : blocks) {
@@ -584,6 +582,7 @@ void Scope::elaborate() const {
                 SmallVectorSized<GenerateBlockSymbol*, 8> blocks;
                 GenerateBlockSymbol::fromSyntax(compilation, member.node.as<CaseGenerateSyntax>(),
                                                 location, *this, constructIndex, true, blocks);
+                constructIndex++;
 
                 const Symbol* last = symbol;
                 for (auto block : blocks) {
@@ -597,12 +596,20 @@ void Scope::elaborate() const {
                                  compilation, member.node.as<LoopGenerateSyntax>(),
                                  getInsertionIndex(*symbol), location, *this, constructIndex),
                              symbol, true);
+                constructIndex++;
+                break;
+            case SyntaxKind::GenerateBlock:
+                // This case is invalid according to the spec but the parser only issues a warning
+                // since some existing code does this anyway.
+                insertMember(&GenerateBlockSymbol::fromSyntax(compilation,
+                                                              member.node.as<GenerateBlockSyntax>(),
+                                                              constructIndex),
+                             symbol, true);
+                constructIndex++;
                 break;
             default:
                 break;
         }
-
-        constructIndex++;
     }
 
     // Finally unlink any deferred members we had; we no longer need them.

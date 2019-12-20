@@ -64,6 +64,7 @@ private:
 
 struct CaseGenerateSyntax;
 struct IfGenerateSyntax;
+struct GenerateBlockSyntax;
 
 /// Represents blocks that are instantiated by a loop generate or conditional
 /// generate construct.
@@ -86,6 +87,10 @@ public:
     static void fromSyntax(Compilation& compilation, const CaseGenerateSyntax& syntax,
                            LookupLocation location, const Scope& parent, uint32_t constructIndex,
                            bool isInstantiated, SmallVector<GenerateBlockSymbol*>& results);
+
+    static GenerateBlockSymbol& fromSyntax(Compilation& compilation,
+                                           const GenerateBlockSyntax& syntax,
+                                           uint32_t constructIndex);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenerateBlock; }
 };
