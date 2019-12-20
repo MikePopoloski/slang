@@ -236,8 +236,7 @@ module m1;
     endmodule
 `default_nettype none
 
-endmodule : m1;
-
+endmodule
 `resetall
 )";
 

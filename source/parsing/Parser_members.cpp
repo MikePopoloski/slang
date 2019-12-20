@@ -7,7 +7,6 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
-#include "slang/util/ScopeGuard.h"
 
 namespace slang {
 
@@ -31,8 +30,6 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes) {
     auto& pp = getPP();
     pp.pushDesignElementStack();
 
-    auto guard = ScopeGuard([&pp] { pp.popDesignElementStack(); });
-
     auto& header = parseModuleHeader();
     auto endKind = getModuleEndKind(header.moduleKeyword.kind);
 
@@ -41,6 +38,8 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes) {
     Token endmodule;
     auto members =
         parseMemberList<MemberSyntax>(endKind, endmodule, [this]() { return parseMember(); });
+
+    pp.popDesignElementStack();
 
     auto endName = parseNamedBlockClause();
     checkBlockNames(header.name, endName);
