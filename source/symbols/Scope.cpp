@@ -1354,16 +1354,43 @@ void Scope::reportUndeclared(string_view name, SourceRange range, bitmask<Lookup
         } while (scope);
     }
 
-    if (!usedBeforeDeclared) {
-        auto& diag = result.addDiag(*this, diag::UndeclaredIdentifier, range) << name;
-        if (isHierarchical && (flags & LookupFlags::Constant))
-            diag.addNote(diag::NoteHierarchicalNameInCE, range.start()) << name;
-    }
-    else {
+    if (usedBeforeDeclared) {
         auto& diag = result.addDiag(*this, diag::UsedBeforeDeclared, range);
         diag << name;
         diag.addNote(diag::NoteDeclarationHere, symbol->location);
+        return;
     }
+
+    if ((flags & LookupFlags::Constant) && symbol && symbol->isScope()) {
+        result.addDiag(*this, diag::HierarchicalNotAllowedInConstant, range);
+        return;
+    }
+
+    // Check if this names a definition, in which case we can give a nicer error.
+    auto def = compilation.getDefinition(name, *this);
+    if (def) {
+        string_view kindStr;
+        switch (def->definitionKind) {
+            case DefinitionKind::Module:
+                kindStr = "a module";
+                break;
+            case DefinitionKind::Interface:
+                kindStr = "an interface";
+                break;
+            case DefinitionKind::Program:
+                kindStr = "a program";
+                break;
+        }
+
+        DiagCode code =
+            (flags & LookupFlags::Type) ? diag::DefinitionUsedAsType : diag::DefinitionUsedAsValue;
+        result.addDiag(*this, code, range) << name << kindStr;
+        return;
+    }
+
+    auto& diag = result.addDiag(*this, diag::UndeclaredIdentifier, range) << name;
+    if (isHierarchical && (flags & LookupFlags::Constant))
+        diag.addNote(diag::NoteHierarchicalNameInCE, range.start()) << name;
 }
 
 void Scope::addWildcardImport(const PackageImportItemSyntax& item,

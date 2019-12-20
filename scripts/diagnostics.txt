@@ -292,6 +292,8 @@ error InvalidScopeIndexExpression "invalid hierarchical index expression"
 error ScopeIndexOutOfRange "hierarchical index {} is out of scope's declared range"
 error CouldNotResolveHierarchicalPath "could not resolve hierarchical path name '{}'"
 error UnresolvedForwardTypedef "forward typedef '{}' does not resolve to a data type"
+error DefinitionUsedAsType "'{}' is {} definition but is used like a type"
+error DefinitionUsedAsValue "'{}' is {} definition but is used as a value"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 
 subsystem SysFuncs

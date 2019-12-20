@@ -359,7 +359,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[0].code == diag::HierarchicalNotAllowedInConstant);
 }
 
 TEST_CASE("Useful error when lookup before declared in parent scope") {
@@ -1158,4 +1158,28 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Invalid look up of definition instead of variable") {
+    auto tree = SyntaxTree::fromText(R"(
+module M;
+endmodule
+
+interface I;
+endinterface
+
+module N;
+    int i = M + 1;
+    function I asdf;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::DefinitionUsedAsValue);
+    CHECK(diags[1].code == diag::DefinitionUsedAsType);
 }
