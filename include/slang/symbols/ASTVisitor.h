@@ -13,6 +13,7 @@
 #include "slang/binding/PatternExpressions.h"
 #include "slang/binding/Statements.h"
 #include "slang/symbols/AllTypes.h"
+#include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/DefinitionSymbols.h"

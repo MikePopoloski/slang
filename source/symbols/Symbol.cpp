@@ -9,7 +9,6 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
-#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
@@ -179,53 +178,6 @@ const Scope* Symbol::scopeOrNull() const {
 std::string Symbol::jsonLink(const Symbol& target) {
     return std::to_string(uintptr_t(&target)) + " " +
            (target.isType() ? target.as<Type>().toString() : std::string(target.name));
-}
-
-void AttributeSymbol::toJson(json& j) const {
-    j["value"] = value;
-}
-
-span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
-    Compilation& compilation, span<const AttributeInstanceSyntax* const> syntax) {
-
-    if (syntax.empty())
-        return {};
-
-    BindContext context(compilation.getEmptyUnit(), LookupLocation::max,
-                        BindFlags::Constant | BindFlags::NoAttributes);
-    SmallMap<string_view, size_t, 4> nameMap;
-    SmallVectorSized<const AttributeSymbol*, 8> attrs;
-
-    for (auto inst : syntax) {
-        for (auto spec : inst->specs) {
-            auto name = spec->name.valueText();
-            if (name.empty())
-                continue;
-
-            ConstantValue value;
-            if (!spec->value)
-                value = SVInt(1, 1, false);
-            else {
-                auto constant = Expression::bind(*spec->value->expr, context).constant;
-                value = constant ? *constant : nullptr;
-            }
-
-            auto attr = compilation.emplace<AttributeSymbol>(
-                name, spec->name.location(), *compilation.allocConstant(std::move(value)));
-            attr->setSyntax(*spec);
-
-            if (auto it = nameMap.find(name); it != nameMap.end()) {
-                context.addDiag(diag::DuplicateAttribute, attr->location) << name;
-                attrs[it->second] = attr;
-            }
-            else {
-                attrs.append(attr);
-                nameMap.emplace(name, attrs.size() - 1);
-            }
-        }
-    }
-
-    return attrs.copy(compilation);
 }
 
 ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,

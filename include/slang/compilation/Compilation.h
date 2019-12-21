@@ -19,6 +19,7 @@
 
 namespace slang {
 
+class AttributeSymbol;
 class CompilationUnitSymbol;
 class DefinitionSymbol;
 class Expression;
@@ -153,10 +154,6 @@ public:
     /// even if the design has been finalized, but in that case any instantiations in the
     /// script scope won't affect which modules are determined to be top-level instances.
     CompilationUnitSymbol& createScriptScope();
-
-    /// Gets a reference to an empty compilation unit, which can be useful for binding
-    /// in cases where you don't care about the context.
-    const CompilationUnitSymbol& getEmptyUnit() const { return *emptyUnit; }
 
     /// Gets the source manager associated with the compilation. If no syntax trees have
     /// been added to the design this method will return null.
@@ -333,7 +330,6 @@ private:
 
     Diagnostics diags;
     std::unique_ptr<RootSymbol> root;
-    CompilationUnitSymbol* emptyUnit = nullptr;
     const SourceManager* sourceManager = nullptr;
     TimeScale defaultTimeScale;
     bool finalized = false;

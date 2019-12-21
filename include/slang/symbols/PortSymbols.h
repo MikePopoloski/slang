@@ -12,6 +12,7 @@
 
 namespace slang {
 
+class AttributeSymbol;
 class DefinitionSymbol;
 class ModportSymbol;
 

@@ -36,8 +36,8 @@ struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
 struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
-    DiagnosticVisitor(const Diagnostics& diags, uint32_t errorLimit) :
-        errorLimit(errorLimit), diags(diags) {}
+    DiagnosticVisitor(Compilation& compilation, const Diagnostics& diags, uint32_t errorLimit) :
+        compilation(compilation), errorLimit(errorLimit), diags(diags) {}
 
     template<typename T>
     void handle(const T& symbol) {
@@ -50,7 +50,11 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
                 declaredType->getType();
                 declaredType->getInitializer();
             }
+
+            for (auto attr : compilation.getAttributes(symbol))
+                attr->getValue();
         }
+
         visitDefault(symbol);
     }
     void handle(const ExplicitImportSymbol& symbol) { symbol.importedSymbol(); }
@@ -84,10 +88,21 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
         visitDefault(symbol);
     }
 
-    bool inDef = false;
-    uint32_t errorLimit;
+    void handle(const PortSymbol& symbol) {
+        for (auto attr : symbol.getConnectionAttributes())
+            attr->getValue();
+    }
+
+    void handle(const InterfacePortSymbol& symbol) {
+        for (auto attr : symbol.connectionAttributes)
+            attr->getValue();
+    }
+
+    Compilation& compilation;
     const Diagnostics& diags;
     flat_hash_map<const Symbol*, size_t> instanceCount;
+    uint32_t errorLimit;
+    bool inDef = false;
 };
 
 } // namespace
@@ -200,8 +215,6 @@ Compilation::Compilation(const Bag& options) : options(options.getOrDefault<Comp
     Builtins::registerQueryFuncs(*this);
     Builtins::registerStringMethods(*this);
     Builtins::registerSystemTasks(*this);
-
-    emptyUnit = &createScriptScope();
 }
 
 Compilation::~Compilation() = default;
@@ -415,7 +428,8 @@ void Compilation::addAttributes(const Expression& expr,
 
 void Compilation::addAttributes(const void* ptr,
                                 span<const AttributeInstanceSyntax* const> syntax) {
-    auto symbols = AttributeSymbol::fromSyntax(*this, syntax);
+    // TODO: call this correctly
+    auto symbols = AttributeSymbol::fromSyntax(syntax, createScriptScope(), LookupLocation::max);
     if (symbols.empty())
         return;
 
@@ -484,7 +498,8 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
     // If we haven't already done so, touch every symbol, scope, statement,
     // and expression tree so that we can be sure we have all the diagnostics.
-    DiagnosticVisitor visitor(diags, options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
+    DiagnosticVisitor visitor(*this, diags,
+                              options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
 
     // Go through all diagnostics and build a map from source location / code to the

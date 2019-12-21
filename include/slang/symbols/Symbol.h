@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // Symbol.h
-// Symbols for semantic analysis.
+// Base class for all elaborated symbols.
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
@@ -20,7 +20,6 @@ using json = nlohmann::json;
 class Compilation;
 class Scope;
 class Type;
-struct AttributeInstanceSyntax;
 
 // clang-format off
 #define SYMBOLKIND(x) \
@@ -244,21 +243,6 @@ protected:
 
 private:
     DeclaredType declaredType;
-};
-
-class AttributeSymbol : public Symbol {
-public:
-    const ConstantValue& value;
-
-    AttributeSymbol(string_view name, SourceLocation location, const ConstantValue& value) :
-        Symbol(SymbolKind::Attribute, name, location), value(value) {}
-
-    void toJson(json& j) const;
-
-    static span<const AttributeSymbol* const> fromSyntax(
-        Compilation& compilation, span<const AttributeInstanceSyntax* const> syntax);
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Attribute; }
 };
 
 /// Serialization of arbitrary symbols to JSON.

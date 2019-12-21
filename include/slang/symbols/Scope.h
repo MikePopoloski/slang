@@ -21,6 +21,7 @@ class Compilation;
 class ForwardingTypedefSymbol;
 class NetType;
 class WildcardImportSymbol;
+struct AttributeInstanceSyntax;
 struct NameSyntax;
 struct PackageImportItemSyntax;
 struct PortConnectionSyntax;

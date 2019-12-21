@@ -2,6 +2,7 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/binding/OperatorExpressions.h"
+#include "slang/symbols/AttributeSymbol.h"
 
 TEST_CASE("Nets") {
     auto tree = SyntaxTree::fromText(R"(
@@ -141,10 +142,12 @@ endmodule
 TEST_CASE("Attributes") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
+    localparam param = "str val";
     (* foo, bar = 1 *) (* baz = 1 + 2 * 3 *) wire foo, bar;
 
     (* blah *) n n1((* blah2 *) 0);
 
+    // TODO: (* blah3 = param *);
     (* blah3 *);
 
     function void func;
@@ -169,9 +172,9 @@ endmodule
     auto& root = compilation.getRoot();
     auto attrs = compilation.getAttributes(*root.lookupName("m.bar"));
     REQUIRE(attrs.size() == 3);
-    CHECK(attrs[0]->value.integer() == SVInt(1));
-    CHECK(attrs[1]->value.integer() == SVInt(1));
-    CHECK(attrs[2]->value.integer() == SVInt(7));
+    CHECK(attrs[0]->getValue().integer() == SVInt(1));
+    CHECK(attrs[1]->getValue().integer() == SVInt(1));
+    CHECK(attrs[2]->getValue().integer() == SVInt(7));
 
     auto& n1 = root.lookupName<InstanceSymbol>("m.n1");
     attrs = compilation.getAttributes(n1);
@@ -194,6 +197,9 @@ endmodule
     attrs = compilation.getAttributes(*m.membersOfType<EmptyMemberSymbol>().begin());
     REQUIRE(attrs.size() == 1);
     CHECK(attrs[0]->name == "blah3");
+    
+    // TODO:
+    //CHECK(attrs[0]->getValue().convertToStr().str() == "str val");
 
     auto& block = root.lookupName<StatementBlockSymbol>("m.block");
     auto stmtList = block.getBody().as<StatementList>().list;
@@ -237,7 +243,7 @@ endmodule
     auto& root = compilation.getRoot();
     auto attrs = compilation.getAttributes(*root.lookupName("m.foo"));
     REQUIRE(attrs.size() == 1);
-    CHECK(attrs[0]->value.integer() == SVInt(2));
+    CHECK(attrs[0]->getValue().integer() == SVInt(2));
 }
 
 TEST_CASE("Time units declarations") {
@@ -447,7 +453,7 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ParamHasNoValue);

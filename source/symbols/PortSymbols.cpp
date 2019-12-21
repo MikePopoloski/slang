@@ -13,6 +13,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/AllTypes.h"
+#include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/DefinitionSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -509,7 +510,7 @@ public:
                 if (!std::exchange(hasWildcard, true)) {
                     wildcardRange = conn->sourceRange();
                     wildcardAttrs =
-                        AttributeSymbol::fromSyntax(scope.getCompilation(), conn->attributes);
+                        AttributeSymbol::fromSyntax(conn->attributes, scope, lookupLocation);
                 }
                 else {
                     auto& diag =
@@ -565,7 +566,7 @@ public:
             }
 
             const OrderedPortConnectionSyntax& opc = *orderedConns[orderedIndex++];
-            auto attrs = AttributeSymbol::fromSyntax(scope.getCompilation(), opc.attributes);
+            auto attrs = AttributeSymbol::fromSyntax(opc.attributes, scope, lookupLocation);
             if (opc.expr)
                 port.setConnection(*opc.expr, attrs);
             else
@@ -604,7 +605,7 @@ public:
         const NamedPortConnectionSyntax& conn = *it->second.first;
         it->second.second = true;
 
-        auto attrs = AttributeSymbol::fromSyntax(scope.getCompilation(), conn.attributes);
+        auto attrs = AttributeSymbol::fromSyntax(conn.attributes, scope, lookupLocation);
         if (conn.openParen) {
             // For explicit named port connections, having an empty expression means no connection,
             // so we never take the default value here.
@@ -633,7 +634,7 @@ public:
                 const OrderedPortConnectionSyntax& opc = *orderedConns[orderedIndex];
                 expr = opc.expr;
                 port.connectionAttributes =
-                    AttributeSymbol::fromSyntax(scope.getCompilation(), opc.attributes);
+                    AttributeSymbol::fromSyntax(opc.attributes, scope, lookupLocation);
             }
 
             orderedIndex++;
@@ -663,7 +664,7 @@ public:
         it->second.second = true;
 
         port.connectionAttributes =
-            AttributeSymbol::fromSyntax(scope.getCompilation(), conn.attributes);
+            AttributeSymbol::fromSyntax(conn.attributes, scope, lookupLocation);
 
         if (conn.openParen) {
             // For explicit named port connections, having an empty expression means no connection.

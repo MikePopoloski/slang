@@ -78,6 +78,7 @@ add_library(slang
 	parsing/Token.cpp
 
 	symbols/AllTypes.cpp
+	symbols/AttributeSymbol.cpp
 	symbols/BlockSymbols.cpp
 	symbols/CompilationUnitSymbols.cpp
 	symbols/DeclaredType.cpp
