@@ -183,7 +183,9 @@ target_include_directories(slang PUBLIC ../include/)
 target_include_directories(slang PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(slang SYSTEM PUBLIC ../external/)
 
-install(TARGETS slang LIBRARY DESTINATION lib)
+install(TARGETS slang
+		LIBRARY DESTINATION lib
+		ARCHIVE DESTINATION lib)
 install(DIRECTORY ../include/ DESTINATION include)
 install(DIRECTORY ../external/ DESTINATION include)
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ DESTINATION include/slang/diagnostics)
