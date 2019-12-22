@@ -37,7 +37,7 @@ struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
 // evaluated members have been realized and we have recorded every diagnostic.
 struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
     DiagnosticVisitor(Compilation& compilation, const Diagnostics& diags, uint32_t errorLimit) :
-        compilation(compilation), errorLimit(errorLimit), diags(diags) {}
+        compilation(compilation), diags(diags), errorLimit(errorLimit) {}
 
     template<typename T>
     void handle(const T& symbol) {
