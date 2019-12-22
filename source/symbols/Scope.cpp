@@ -1154,8 +1154,8 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
 }
 
 const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
-                                           SourceRange sourceRange, bitmask<LookupFlags> flags,
-                                           bool errorIfNotFound) const {
+                                           SourceRange sourceRange,
+                                           bitmask<LookupFlags> flags) const {
     if (name.empty())
         return nullptr;
 
@@ -1164,7 +1164,7 @@ const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation loca
     ASSERT(result.selectors.empty());
     unwrapResult(result);
 
-    if (errorIfNotFound && !result.found && !result.hasError())
+    if (!result.found && !result.hasError())
         reportUndeclared(name, sourceRange, flags, false, result);
 
     if (result.hasError())

@@ -419,9 +419,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                 memberSetters.emplace(MemberSetter{ member, &expr });
             }
             else {
-                auto found = context.scope.lookupUnqualifiedName(
-                    name, context.lookupLocation, item->key->sourceRange(), LookupFlags::Type);
-
+                auto found = context.scope.lookupUnqualifiedName(name, LookupFlags::Type);
                 if (found && found->isType()) {
                     auto& expr =
                         bind(found->as<Type>(), *item->expr, nameToken.location(), context);

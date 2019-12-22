@@ -94,11 +94,11 @@ public:
     }
 
     /// Performs an unqualified lookup in this scope, then recursively up the parent
-    /// chain until we reach root or the symbol is found.
+    /// chain until we reach root or the symbol is found. Reports an error if
+    /// the symbol is not found.
     const Symbol* lookupUnqualifiedName(string_view name, LookupLocation location,
                                         SourceRange sourceRange,
-                                        bitmask<LookupFlags> flags = LookupFlags::None,
-                                        bool errorIfNotFound = false) const;
+                                        bitmask<LookupFlags> flags = LookupFlags::None) const;
 
     /// Performs an unqualified lookup in this scope, then recursively up the parent
     /// chain until we reach root or the symbol is found. No errors are reported if
