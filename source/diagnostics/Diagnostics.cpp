@@ -69,6 +69,21 @@ Diagnostic& Diagnostic::operator<<(const ConstantValue& arg) {
     return *this;
 }
 
+Diagnostic& Diagnostic::operator<<(char arg) {
+    args.emplace_back(std::string(1, arg));
+    return *this;
+}
+
+Diagnostic& Diagnostic::operator<<(real_t arg) {
+    args.emplace_back(ConstantValue(arg));
+    return *this;
+}
+
+Diagnostic& Diagnostic::operator<<(shortreal_t arg) {
+    args.emplace_back(ConstantValue(arg));
+    return *this;
+}
+
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
     if (isError(code))
         errorCount++;

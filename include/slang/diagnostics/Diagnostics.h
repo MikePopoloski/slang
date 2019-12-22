@@ -103,6 +103,9 @@ public:
     Diagnostic& operator<<(string_view arg);
     Diagnostic& operator<<(SourceRange arg);
     Diagnostic& operator<<(const ConstantValue& arg);
+    Diagnostic& operator<<(char arg);
+    Diagnostic& operator<<(real_t arg);
+    Diagnostic& operator<<(shortreal_t arg);
 
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>>>
     Diagnostic& operator<<(T arg) {
