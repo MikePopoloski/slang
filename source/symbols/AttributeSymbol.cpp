@@ -106,9 +106,10 @@ span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
     if (syntax.empty())
         return {};
 
-    return createAttributes(syntax, scope, [&symbol](auto& comp, auto name, auto loc, auto& expr) {
-        return comp.template emplace<AttributeSymbol>(name, loc, symbol, expr);
-    });
+    return createAttributes(
+        syntax, scope, [&symbol](auto& comp, auto name, auto loc, auto& exprSyntax) {
+            return comp.template emplace<AttributeSymbol>(name, loc, symbol, exprSyntax);
+        });
 }
 
 span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
@@ -119,8 +120,10 @@ span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
         return {};
 
     return createAttributes(
-        syntax, scope, [&scope, &lookupLocation](auto& comp, auto name, auto loc, auto& expr) {
-            return comp.template emplace<AttributeSymbol>(name, loc, scope, lookupLocation, expr);
+        syntax, scope,
+        [&scope, &lookupLocation](auto& comp, auto name, auto loc, auto& exprSyntax) {
+            return comp.template emplace<AttributeSymbol>(name, loc, scope, lookupLocation,
+                                                          exprSyntax);
         });
 }
 
