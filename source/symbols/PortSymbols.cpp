@@ -710,7 +710,7 @@ private:
         //   error when it is a warning in an explicit named port connection
 
         LookupFlags flags = isWildcard ? LookupFlags::DisallowWildcardImport : LookupFlags::None;
-        auto symbol = scope.lookupUnqualifiedName(port.name, lookupLocation, range, flags);
+        auto symbol = scope.lookupUnqualifiedName(port.name, flags);
         if (!symbol) {
             // If this is a wildcard connection, we're allowed to use the port's default value,
             // if it has one.
@@ -719,6 +719,12 @@ private:
             else
                 scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
             return;
+        }
+
+        if (!symbol->isDeclaredBefore(lookupLocation).value_or(false)) {
+            auto& diag = scope.addDiag(diag::UsedBeforeDeclared, range);
+            diag << port.name;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
         }
 
         auto& portType = port.getType();
@@ -779,10 +785,16 @@ private:
     }
 
     void setImplicitInterface(InterfacePortSymbol& port, SourceRange range) {
-        auto symbol = scope.lookupUnqualifiedName(port.name, lookupLocation, range);
+        auto symbol = scope.lookupUnqualifiedName(port.name);
         if (!symbol) {
             scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
             return;
+        }
+
+        if (!symbol->isDeclaredBefore(lookupLocation).value_or(false)) {
+            auto& diag = scope.addDiag(diag::UsedBeforeDeclared, range);
+            diag << port.name;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
         }
 
         setInterface(port, symbol, range);

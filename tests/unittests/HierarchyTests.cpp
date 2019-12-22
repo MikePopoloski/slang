@@ -745,6 +745,9 @@ endmodule
 
 module test;
 
+    m m9(.*);               // used before declared
+    m m10(.a, .b(0), .c(0));// used before declared
+
     logic a,b,c;
 
     m m1(1, 1, 1);
@@ -787,6 +790,8 @@ endmodule
 
     auto it = diags.begin();
     CHECK((it++)->code == diag::UnknownInterface);
+    CHECK((it++)->code == diag::UsedBeforeDeclared);
+    CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK((it++)->code == diag::UnconnectedNamedPort);
     CHECK((it++)->code == diag::UnconnectedNamedPort);
     CHECK((it++)->code == diag::MixingOrderedAndNamedPorts);

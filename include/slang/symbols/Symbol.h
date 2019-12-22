@@ -9,6 +9,7 @@
 #include <nlohmann/json_fwd.hpp>
 
 #include "slang/symbols/DeclaredType.h"
+#include "slang/symbols/Lookup.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Enum.h"
 #include "slang/util/Util.h"
@@ -136,7 +137,8 @@ public:
     /// given symbol, in the same compilation unit. If it is, this method returns true.
     /// Otherwise it returns false. If the given symbol is not even in the same
     /// compilation unit as this one, returns std::nullopt.
-    optional<bool> isBeforeInCompilationUnit(const Symbol& symbol) const;
+    optional<bool> isDeclaredBefore(const Symbol& symbol) const;
+    optional<bool> isDeclaredBefore(LookupLocation location) const;
 
     void setAttributes(const Scope& scope, span<const AttributeInstanceSyntax* const> syntax);
 

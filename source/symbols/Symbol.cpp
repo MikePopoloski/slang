@@ -141,24 +141,31 @@ void Symbol::getHierarchicalPath(std::string& buffer) const {
         buffer.append("$unit");
 }
 
-optional<bool> Symbol::isBeforeInCompilationUnit(const Symbol& target) const {
+optional<bool> Symbol::isDeclaredBefore(const Symbol& target) const {
+    return isDeclaredBefore(LookupLocation::beforeLexical(target));
+}
+
+optional<bool> Symbol::isDeclaredBefore(LookupLocation ll) const {
+    if (!ll.getScope())
+        return LookupLocation::before(*this) < ll;
+
     // Find a common parent scope for the two symbols. Start with our parent and
     // walk upwards until we find `target`s scope or run into a compilation unit.
     SmallMap<const Scope*, LookupLocation, 8> locMap;
     const Symbol* sym = this;
     const Scope* scope;
     while ((scope = sym->getLexicalScope()) != nullptr &&
-           sym->kind != SymbolKind::CompilationUnit && scope != target.getLexicalScope()) {
+           sym->kind != SymbolKind::CompilationUnit && scope != ll.getScope()) {
         locMap[scope] = LookupLocation::beforeLexical(*sym);
         sym = &scope->asSymbol();
     }
 
-    if (scope == target.getLexicalScope())
-        return LookupLocation::beforeLexical(*sym) < LookupLocation::beforeLexical(target);
+    if (scope == ll.getScope())
+        return LookupLocation::beforeLexical(*sym) < ll;
 
-    // If `target` wasn't in a direct scope of any of our own parents,
-    // repeat the process walking up `target`s scopes.
-    sym = &target;
+    // If ll wasn't in a direct scope of any of our own parents,
+    // repeat the process walking up ll's scopes.
+    sym = &ll.getScope()->asSymbol();
     while ((scope = sym->getLexicalScope()) != nullptr &&
            sym->kind != SymbolKind::CompilationUnit) {
         if (auto it = locMap.find(scope); it != locMap.end())

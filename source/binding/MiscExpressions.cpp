@@ -178,7 +178,7 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
             isBefore = LookupLocation::after(symbol) < frame.lookupLocation;
         else {
             // If the two locations are not in the same compilation unit, assume that it's ok.
-            auto compare = symbol.isBeforeInCompilationUnit(frameScope->asSymbol());
+            auto compare = symbol.isDeclaredBefore(frameScope->asSymbol());
             isBefore = compare.value_or(true);
         }
 
