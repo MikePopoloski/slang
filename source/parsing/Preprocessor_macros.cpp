@@ -607,6 +607,12 @@ span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
             case TokenKind::OpenBracket:
                 delimPairStack.append(TokenKind::CloseBracket);
                 break;
+            case TokenKind::ApostropheOpenBrace:
+                delimPairStack.append(TokenKind::CloseBrace);
+                break;
+            case TokenKind::OpenParenthesisStar:
+                delimPairStack.append(TokenKind::StarCloseParenthesis);
+                break;
             default:
                 break;
         }

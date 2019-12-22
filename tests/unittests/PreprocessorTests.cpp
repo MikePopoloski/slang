@@ -163,6 +163,14 @@ TEST_CASE("Function macro (no tokens)") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Function macro (apostrophe brace list in args)") {
+    auto& text = "`define FOO(x) x\n`FOO('{a, b})";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::ApostropheOpenBrace);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Function macro (simple nesting)") {
     auto& text = "`define BLAHBLAH(x) x\n`define BAR(x) `BLAHBLAH(x)\n`define BAZ(x) "
                  "`BAR(x)\n`define FOO(y) `BAZ(y)\n`FOO(15)";
