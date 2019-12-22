@@ -599,9 +599,8 @@ void Scope::elaborate() const {
             case SyntaxKind::GenerateBlock:
                 // This case is invalid according to the spec but the parser only issues a warning
                 // since some existing code does this anyway.
-                insertMember(&GenerateBlockSymbol::fromSyntax(*this,
-                                                              member.node.as<GenerateBlockSyntax>(),
-                                                              constructIndex),
+                insertMember(&GenerateBlockSymbol::fromSyntax(
+                                 *this, member.node.as<GenerateBlockSyntax>(), constructIndex),
                              symbol, true);
                 constructIndex++;
                 break;
@@ -1170,6 +1169,18 @@ const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation loca
 
     if (result.hasError())
         getCompilation().addDiagnostics(result.getDiagnostics());
+
+    return result.found;
+}
+
+const Symbol* Scope::lookupUnqualifiedName(string_view name, bitmask<LookupFlags> flags) const {
+    if (name.empty())
+        return nullptr;
+
+    LookupResult result;
+    lookupUnqualifiedImpl(name, LookupLocation::max, SourceRange(), flags, result);
+    ASSERT(result.selectors.empty());
+    unwrapResult(result);
 
     return result.found;
 }

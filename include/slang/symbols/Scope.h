@@ -100,6 +100,12 @@ public:
                                         bitmask<LookupFlags> flags = LookupFlags::None,
                                         bool errorIfNotFound = false) const;
 
+    /// Performs an unqualified lookup in this scope, then recursively up the parent
+    /// chain until we reach root or the symbol is found. No errors are reported if
+    /// no symbol can be found.
+    const Symbol* lookupUnqualifiedName(string_view name,
+                                        bitmask<LookupFlags> flags = LookupFlags::None) const;
+
     /// Uses the select syntax elements to select a child element of the given symbol.
     /// If the selection succeeds, returns the selected child symbol. Otherwise, reports
     /// the errors to the given LookupResult object and returns nullptr.

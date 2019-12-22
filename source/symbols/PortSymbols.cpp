@@ -68,9 +68,7 @@ public:
                 const DefinitionSymbol* definition = nullptr;
                 string_view simpleName = getSimpleTypeName(*header.dataType);
                 if (!simpleName.empty()) {
-                    auto found = scope.lookupUnqualifiedName(simpleName, LookupLocation::max,
-                                                             header.dataType->sourceRange(),
-                                                             LookupFlags::Type);
+                    auto found = scope.lookupUnqualifiedName(simpleName, LookupFlags::Type);
 
                     // If we didn't find a valid type, try to find a definition.
                     if (!found || !found->isType())
