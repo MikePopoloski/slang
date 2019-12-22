@@ -29,8 +29,8 @@ enum class TimeScaleMagnitude : uint8_t { One = 1, Ten = 10, Hundred = 100 };
 
 /// A combination of a unit and magnitude for a time scale value.
 struct TimeScaleValue {
-    TimeUnit unit;
-    TimeScaleMagnitude magnitude;
+    TimeUnit unit = TimeUnit::Seconds;
+    TimeScaleMagnitude magnitude = TimeScaleMagnitude::One;
 
     TimeScaleValue() = default;
     TimeScaleValue(TimeUnit unit, TimeScaleMagnitude magnitude) :
