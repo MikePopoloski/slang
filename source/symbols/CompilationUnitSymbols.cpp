@@ -53,9 +53,8 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation,
     }
 
     result->finalizeTimeScale(scope, syntax);
-
     result->setSyntax(syntax);
-    compilation.addAttributes(*result, syntax.attributes);
+    result->setAttributes(scope, syntax.attributes);
     return *result;
 }
 

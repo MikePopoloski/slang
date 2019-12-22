@@ -127,13 +127,13 @@ public:
     const SystemSubroutine* getSystemMethod(SymbolKind typeKind, string_view name) const;
 
     /// Sets the attributes associated with the given symbol.
-    void addAttributes(const Symbol& symbol, span<const AttributeInstanceSyntax* const> syntax);
+    void setAttributes(const Symbol& symbol, span<const AttributeSymbol* const> attributes);
 
     /// Sets the attributes associated with the given statement.
-    void addAttributes(const Statement& stmt, span<const AttributeInstanceSyntax* const> syntax);
+    void setAttributes(const Statement& stmt, span<const AttributeSymbol* const> attributes);
 
     /// Sets the attributes associated with the given expression.
-    void addAttributes(const Expression& expr, span<const AttributeInstanceSyntax* const> syntax);
+    void setAttributes(const Expression& expr, span<const AttributeSymbol* const> attributes);
 
     /// Gets the attributes associated with the given symbol.
     span<const AttributeSymbol* const> getAttributes(const Symbol& symbol) const;
@@ -245,7 +245,6 @@ private:
 
     bool isFinalizing() const { return finalizing; }
 
-    void addAttributes(const void* ptr, span<const AttributeInstanceSyntax* const> syntax);
     span<const AttributeSymbol* const> getAttributes(const void* ptr) const;
 
     // Stored options object.

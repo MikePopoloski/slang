@@ -15,6 +15,9 @@ struct AttributeInstanceSyntax;
 
 class AttributeSymbol : public Symbol {
 public:
+    AttributeSymbol(string_view name, SourceLocation loc, const Symbol& symbol,
+                    const ExpressionSyntax& expr);
+
     AttributeSymbol(string_view name, SourceLocation loc, const Scope& scope,
                     LookupLocation lookupLocation, const ExpressionSyntax& expr);
 
@@ -26,11 +29,16 @@ public:
 
     static span<const AttributeSymbol* const> fromSyntax(
         span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,
+        const Symbol& symbol);
+
+    static span<const AttributeSymbol* const> fromSyntax(
+        span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,
         LookupLocation lookupLocation);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Attribute; }
 
 private:
+    const Symbol* symbol = nullptr;
     const Scope* scope = nullptr;
     const ExpressionSyntax* expr = nullptr;
     mutable const ConstantValue* value = nullptr;

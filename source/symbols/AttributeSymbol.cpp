@@ -16,6 +16,12 @@
 
 namespace slang {
 
+AttributeSymbol::AttributeSymbol(string_view name, SourceLocation loc, const Symbol& symbol,
+                                 const ExpressionSyntax& expr) :
+    Symbol(SymbolKind::Attribute, name, loc),
+    symbol(&symbol), expr(&expr) {
+}
+
 AttributeSymbol::AttributeSymbol(string_view name, SourceLocation loc, const Scope& scope,
                                  LookupLocation lookupLocation, const ExpressionSyntax& expr) :
     Symbol(SymbolKind::Attribute, name, loc),
@@ -28,16 +34,23 @@ AttributeSymbol::AttributeSymbol(string_view name, SourceLocation loc, const Con
 
 const ConstantValue& AttributeSymbol::getValue() const {
     if (!value) {
-        ASSERT(expr);
-        ASSERT(scope);
+        LookupLocation loc = lookupLocation;
+        auto bindScope = scope;
+        if (symbol) {
+            bindScope = symbol->getParentScope();
+            loc = LookupLocation::before(*symbol);
+        }
 
-        BindContext context(*scope, lookupLocation, BindFlags::Constant | BindFlags::NoAttributes);
+        ASSERT(bindScope);
+        ASSERT(expr);
+
+        BindContext context(*bindScope, loc, BindFlags::Constant | BindFlags::NoAttributes);
         auto& bound = Expression::bind(*expr, context);
 
         if (bound.constant)
             value = bound.constant;
         else
-            value = scope->getCompilation().allocConstant(ConstantValue());
+            value = bindScope->getCompilation().allocConstant(ConstantValue());
     }
 
     return *value;
@@ -47,12 +60,9 @@ void AttributeSymbol::toJson(json& j) const {
     j["value"] = getValue();
 }
 
-span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
-    span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,
-    LookupLocation lookupLocation) {
-
-    if (syntax.empty())
-        return {};
+template<typename TFunc>
+static span<const AttributeSymbol* const> createAttributes(
+    span<const AttributeInstanceSyntax* const> syntax, const Scope& scope, TFunc&& factory) {
 
     SmallMap<string_view, size_t, 4> nameMap;
     SmallVectorSized<const AttributeSymbol*, 8> attrs;
@@ -71,8 +81,7 @@ span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
                                                      *comp.allocConstant(std::move(value)));
             }
             else {
-                attr = comp.emplace<AttributeSymbol>(name, spec->name.location(), scope,
-                                                     lookupLocation, *spec->value->expr);
+                attr = factory(comp, name, spec->name.location(), *spec->value->expr);
             }
 
             attr->setSyntax(*spec);
@@ -89,6 +98,30 @@ span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
     }
 
     return attrs.copy(comp);
+}
+
+span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
+    span<const AttributeInstanceSyntax* const> syntax, const Scope& scope, const Symbol& symbol) {
+
+    if (syntax.empty())
+        return {};
+
+    return createAttributes(syntax, scope, [&symbol](auto& comp, auto name, auto loc, auto& expr) {
+        return comp.emplace<AttributeSymbol>(name, loc, symbol, expr);
+    });
+}
+
+span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
+    span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,
+    LookupLocation lookupLocation) {
+
+    if (syntax.empty())
+        return {};
+
+    return createAttributes(
+        syntax, scope, [&scope, &lookupLocation](auto& comp, auto name, auto loc, auto& expr) {
+            return comp.emplace<AttributeSymbol>(name, loc, scope, lookupLocation, expr);
+        });
 }
 
 } // namespace slang

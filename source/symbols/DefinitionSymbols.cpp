@@ -59,7 +59,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
         SemanticFacts::getDefinitionKind(syntax.kind), compilation.getDefaultNetType(syntax));
 
     result->setSyntax(syntax);
-    compilation.addAttributes(*result, syntax.attributes);
+    result->setAttributes(scope, syntax.attributes);
 
     for (auto import : syntax.header->imports)
         result->addMembers(*import);
@@ -153,8 +153,8 @@ void DefinitionSymbol::toJson(json& j) const {
 
 namespace {
 
-Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definition,
-                       const HierarchicalInstanceSyntax& syntax,
+Symbol* createInstance(Compilation& compilation, const Scope& scope,
+                       const DefinitionSymbol& definition, const HierarchicalInstanceSyntax& syntax,
                        span<const ParameterSymbolBase* const> parameters,
                        SmallVector<int32_t>& path,
                        span<const AttributeInstanceSyntax* const> attributes,
@@ -176,7 +176,7 @@ Symbol* createInstance(Compilation& compilation, const DefinitionSymbol& definit
 
     inst->arrayPath = path.copy(compilation);
     inst->setSyntax(syntax);
-    compilation.addAttributes(*inst, attributes);
+    inst->setAttributes(scope, attributes);
     return inst;
 };
 
@@ -192,8 +192,8 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
                              span<const AttributeInstanceSyntax* const> attributes,
                              uint32_t hierarchyDepth) {
     if (it == end) {
-        return createInstance(compilation, definition, instanceSyntax, parameters, path, attributes,
-                              hierarchyDepth);
+        return createInstance(compilation, context.scope, definition, instanceSyntax, parameters,
+                              path, attributes, hierarchyDepth);
     }
 
     // Evaluate the dimensions of the array. If this fails for some reason,

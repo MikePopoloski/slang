@@ -147,8 +147,7 @@ module m;
 
     (* blah *) n n1((* blah2 *) 0);
 
-    // TODO: (* blah3 = param *);
-    (* blah3 *);
+    (* blah3 = param *);
 
     function void func;
     endfunction
@@ -197,9 +196,7 @@ endmodule
     attrs = compilation.getAttributes(*m.membersOfType<EmptyMemberSymbol>().begin());
     REQUIRE(attrs.size() == 1);
     CHECK(attrs[0]->name == "blah3");
-    
-    // TODO:
-    //CHECK(attrs[0]->getValue().convertToStr().str() == "str val");
+    CHECK(attrs[0]->getValue().convertToStr().str() == "str val");
 
     auto& block = root.lookupName<StatementBlockSymbol>("m.block");
     auto stmtList = block.getBody().as<StatementList>().list;

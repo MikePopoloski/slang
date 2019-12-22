@@ -278,7 +278,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     if (operand.bad())
         return badExpr(compilation, result);
 
-    context.addAttributes(*result, syntax.attributes);
+    context.setAttributes(*result, syntax.attributes);
 
     bool good;
     switch (syntax.kind) {
@@ -359,7 +359,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
-    context.addAttributes(*result, syntax.attributes);
+    context.setAttributes(*result, syntax.attributes);
     return *result;
 }
 
@@ -709,7 +709,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
-    context.addAttributes(*result, syntax.attributes);
+    context.setAttributes(*result, syntax.attributes);
     return *result;
 }
 
@@ -878,7 +878,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, result);
     }
 
-    context.addAttributes(*result, syntax.attributes);
+    context.setAttributes(*result, syntax.attributes);
     return *result;
 }
 

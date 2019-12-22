@@ -371,13 +371,13 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
             return structUnion.packed ? PackedStructType::fromSyntax(compilation, structUnion,
                                                                      location, parent, forceSigned)
-                                      : UnpackedStructType::fromSyntax(compilation, structUnion);
+                                      : UnpackedStructType::fromSyntax(parent, structUnion);
         }
         case SyntaxKind::UnionType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
             return structUnion.packed ? PackedUnionType::fromSyntax(compilation, structUnion,
                                                                     location, parent, forceSigned)
-                                      : UnpackedUnionType::fromSyntax(compilation, structUnion);
+                                      : UnpackedUnionType::fromSyntax(parent, structUnion);
         }
         case SyntaxKind::NamedType:
             return lookupNamedType(compilation, *node.as<NamedTypeSyntax>().name, location, parent);

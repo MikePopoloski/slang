@@ -94,7 +94,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         ASSERT(result);
 
         result->syntax = &syntax;
-        comp.addAttributes(*result, syntax.attributes);
+        context.setAttributes(*result, syntax.attributes);
         return *result;
     }
 
@@ -211,7 +211,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
     }
 
     result->syntax = &syntax;
-    comp.addAttributes(*result, syntax.attributes);
+    context.setAttributes(*result, syntax.attributes);
     return *result;
 }
 
@@ -223,7 +223,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                        SmallVector<const StatementBlockSymbol*>& results,
                        bool labelHandled = false) {
     if (!labelHandled && hasSimpleLabel(syntax)) {
-        results.append(&StatementBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
+        results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
         return;
     }
 
@@ -311,11 +311,11 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             if (!forLoop.initializers.empty() &&
                 forLoop.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
 
-                results.append(&StatementBlockSymbol::fromSyntax(scope.getCompilation(), forLoop));
+                results.append(&StatementBlockSymbol::fromSyntax(scope, forLoop));
             }
             else if (syntax.label) {
                 results.append(
-                    &StatementBlockSymbol::fromLabeledStmt(scope.getCompilation(), syntax));
+                    &StatementBlockSymbol::fromLabeledStmt(scope, syntax));
                 return;
             }
             else {

@@ -179,7 +179,7 @@ class UnpackedStructType : public Type, public Scope {
 public:
     explicit UnpackedStructType(Compilation& compilation);
 
-    static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax);
+    static const Type& fromSyntax(const Scope& scope, const StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -202,7 +202,7 @@ class UnpackedUnionType : public Type, public Scope {
 public:
     explicit UnpackedUnionType(Compilation& compilation);
 
-    static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax);
+    static const Type& fromSyntax(const Scope& scope, const StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -279,10 +279,11 @@ public:
     ForwardingTypedefSymbol(string_view name, SourceLocation loc, Category category) :
         Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}
 
-    static const ForwardingTypedefSymbol& fromSyntax(Compilation& compilation,
+    static const ForwardingTypedefSymbol& fromSyntax(const Scope& scope,
                                                      const ForwardTypedefDeclarationSyntax& syntax);
+
     static const ForwardingTypedefSymbol& fromSyntax(
-        Compilation& compilation, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax);
+        const Scope& scope, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getNextForwardDecl() const { return next; }
@@ -307,7 +308,7 @@ public:
         canonical = nullptr;
     }
 
-    static const TypeAliasType& fromSyntax(Compilation& compilation,
+    static const TypeAliasType& fromSyntax(const Scope& scope,
                                            const TypedefDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
@@ -389,7 +390,7 @@ public:
 
     void toJson(json& j) const;
 
-    static NetType& fromSyntax(Compilation& compilation, const NetTypeDeclarationSyntax& syntax);
+    static NetType& fromSyntax(const Scope& scope, const NetTypeDeclarationSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::NetType; }
 

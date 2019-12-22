@@ -684,7 +684,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     }
 
     if (syntax)
-        context.addAttributes(*result, syntax->attributes);
+        context.setAttributes(*result, syntax->attributes);
 
     return *result;
 }
@@ -762,7 +762,7 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
     }
 
     if (syntax)
-        context.addAttributes(*expr, syntax->attributes);
+        context.setAttributes(*expr, syntax->attributes);
 
     return *expr;
 }

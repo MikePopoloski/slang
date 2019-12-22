@@ -16,6 +16,7 @@ class Compilation;
 class EvalContext;
 class Expression;
 class Scope;
+class Statement;
 class Type;
 struct AttributeInstanceSyntax;
 struct ExpressionSyntax;
@@ -87,7 +88,10 @@ public:
 
     Compilation& getCompilation() const;
 
-    void addAttributes(const Expression& expr,
+    void setAttributes(const Statement& stmt,
+                       span<const AttributeInstanceSyntax* const> syntax) const;
+
+    void setAttributes(const Expression& expr,
                        span<const AttributeInstanceSyntax* const> syntax) const;
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;

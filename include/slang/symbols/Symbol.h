@@ -20,6 +20,7 @@ using json = nlohmann::json;
 class Compilation;
 class Scope;
 class Type;
+struct AttributeInstanceSyntax;
 
 // clang-format off
 #define SYMBOLKIND(x) \
@@ -136,6 +137,8 @@ public:
     /// Otherwise it returns false. If the given symbol is not even in the same
     /// compilation unit as this one, returns std::nullopt.
     optional<bool> isBeforeInCompilationUnit(const Symbol& symbol) const;
+
+    void setAttributes(const Scope& scope, span<const AttributeInstanceSyntax* const> syntax);
 
     template<typename T>
     decltype(auto) as() {

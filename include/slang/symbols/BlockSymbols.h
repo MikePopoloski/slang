@@ -27,12 +27,11 @@ public:
     void toJson(json&) const {}
 
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax);
-    static StatementBlockSymbol& fromSyntax(Compilation& compilation,
+    static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const ForLoopStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const ForeachLoopStatementSyntax& syntax);
-    static StatementBlockSymbol& fromLabeledStmt(Compilation& compilation,
-                                                 const StatementSyntax& syntax);
+    static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 
@@ -88,8 +87,7 @@ public:
                            LookupLocation location, const Scope& parent, uint32_t constructIndex,
                            bool isInstantiated, SmallVector<GenerateBlockSymbol*>& results);
 
-    static GenerateBlockSymbol& fromSyntax(Compilation& compilation,
-                                           const GenerateBlockSyntax& syntax,
+    static GenerateBlockSymbol& fromSyntax(const Scope& scope, const GenerateBlockSyntax& syntax,
                                            uint32_t constructIndex);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenerateBlock; }

@@ -170,6 +170,13 @@ optional<bool> Symbol::isBeforeInCompilationUnit(const Symbol& target) const {
     return std::nullopt;
 }
 
+void Symbol::setAttributes(const Scope& scope, span<const AttributeInstanceSyntax* const> syntax) {
+    if (syntax.empty())
+        return;
+
+    scope.getCompilation().setAttributes(*this, AttributeSymbol::fromSyntax(syntax, scope, *this));
+}
+
 const Scope* Symbol::scopeOrNull() const {
     AsScopeVisitor visitor;
     return visit(visitor);

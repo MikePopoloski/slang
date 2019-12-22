@@ -11,6 +11,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
+#include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/Type.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -20,7 +21,16 @@ Compilation& BindContext::getCompilation() const {
     return scope.getCompilation();
 }
 
-void BindContext::addAttributes(const Expression& expr,
+void BindContext::setAttributes(const Statement& stmt,
+                                span<const AttributeInstanceSyntax* const> syntax) const {
+    if (syntax.empty())
+        return;
+
+    getCompilation().setAttributes(stmt,
+                                   AttributeSymbol::fromSyntax(syntax, scope, lookupLocation));
+}
+
+void BindContext::setAttributes(const Expression& expr,
                                 span<const AttributeInstanceSyntax* const> syntax) const {
     if (syntax.empty())
         return;
@@ -30,7 +40,8 @@ void BindContext::addAttributes(const Expression& expr,
         return;
     }
 
-    getCompilation().addAttributes(expr, syntax);
+    getCompilation().setAttributes(expr,
+                                   AttributeSymbol::fromSyntax(syntax, scope, lookupLocation));
 }
 
 Diagnostic& BindContext::addDiag(DiagCode code, SourceLocation location) const {

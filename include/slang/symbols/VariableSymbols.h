@@ -100,7 +100,7 @@ public:
 
     void toJson(json&) const {}
 
-    static void fromSyntax(Compilation& compilation, const NetDeclarationSyntax& syntax,
+    static void fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Net; }

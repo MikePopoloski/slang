@@ -489,7 +489,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
                                                              decl->name.location(), bitWidth);
             variable->setType(type);
             variable->setSyntax(*decl);
-            compilation.addAttributes(*variable, member->attributes);
+            variable->setAttributes(scope, member->attributes);
             members.append(variable);
 
             // Unpacked arrays are disallowed in packed structs.
@@ -551,19 +551,20 @@ ConstantValue UnpackedStructType::getDefaultValueImpl() const {
     return elements;
 }
 
-const Type& UnpackedStructType::fromSyntax(Compilation& compilation,
+const Type& UnpackedStructType::fromSyntax(const Scope& scope,
                                            const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
     uint32_t fieldIndex = 0;
-    auto result = compilation.emplace<UnpackedStructType>(compilation);
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<UnpackedStructType>(comp);
     for (auto member : syntax.members) {
         for (auto decl : member->declarators) {
-            auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(),
-                                                             decl->name.location(), fieldIndex);
+            auto variable = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
+                                                      fieldIndex);
             variable->setDeclaredType(*member->type);
             variable->setFromDeclarator(*decl);
-            compilation.addAttributes(*variable, member->attributes);
+            variable->setAttributes(scope, member->attributes);
 
             result->addMember(*variable);
             fieldIndex++;
@@ -615,7 +616,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
                 compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0u);
             variable->setType(type);
             variable->setSyntax(*decl);
-            compilation.addAttributes(*variable, member->attributes);
+            variable->setAttributes(scope, member->attributes);
             members.append(variable);
 
             // Unpacked arrays are disallowed in packed unions.
@@ -683,18 +684,18 @@ ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
     return it->getType().getDefaultValue();
 }
 
-const Type& UnpackedUnionType::fromSyntax(Compilation& compilation,
-                                          const StructUnionTypeSyntax& syntax) {
+const Type& UnpackedUnionType::fromSyntax(const Scope& scope, const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
-    auto result = compilation.emplace<UnpackedUnionType>(compilation);
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<UnpackedUnionType>(comp);
     for (auto member : syntax.members) {
         for (auto decl : member->declarators) {
             auto variable =
-                compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0u);
+                comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0u);
             variable->setDeclaredType(*member->type);
             variable->setFromDeclarator(*decl);
-            compilation.addAttributes(*variable, member->attributes);
+            variable->setAttributes(scope, member->attributes);
 
             result->addMember(*variable);
         }
@@ -726,7 +727,7 @@ ConstantValue EventType::getDefaultValueImpl() const {
 }
 
 const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
-    Compilation& compilation, const ForwardTypedefDeclarationSyntax& syntax) {
+    const Scope& scope, const ForwardTypedefDeclarationSyntax& syntax) {
 
     Category category;
     switch (syntax.keyword.kind) {
@@ -747,20 +748,22 @@ const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
             break;
     }
 
-    auto result = compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
-                                                               syntax.name.location(), category);
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
+                                                        syntax.name.location(), category);
     result->setSyntax(syntax);
-    compilation.addAttributes(*result, syntax.attributes);
+    result->setAttributes(scope, syntax.attributes);
     return *result;
 }
 
 const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
-    Compilation& compilation, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
+    const Scope& scope, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
 
-    auto result = compilation.emplace<ForwardingTypedefSymbol>(
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<ForwardingTypedefSymbol>(
         syntax.name.valueText(), syntax.name.location(), Category::InterfaceClass);
     result->setSyntax(syntax);
-    compilation.addAttributes(*result, syntax.attributes);
+    result->setAttributes(scope, syntax.attributes);
     return *result;
 }
 
@@ -777,15 +780,15 @@ void ForwardingTypedefSymbol::toJson(json& j) const {
         j["next"] = *next;
 }
 
-const TypeAliasType& TypeAliasType::fromSyntax(Compilation& compilation,
+const TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
                                                const TypedefDeclarationSyntax& syntax) {
     // TODO: interface based typedefs
     // TODO: unpacked dimensions
-    auto result =
-        compilation.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
     result->targetType.setTypeSyntax(*syntax.type);
     result->setSyntax(syntax);
-    compilation.addAttributes(*result, syntax.attributes);
+    result->setAttributes(scope, syntax.attributes);
     return *result;
 }
 
@@ -897,10 +900,11 @@ void NetType::toJson(json& j) const {
         j["target"] = *target;
 }
 
-NetType& NetType::fromSyntax(Compilation& compilation, const NetTypeDeclarationSyntax& syntax) {
-    auto result = compilation.emplace<NetType>(syntax.name.valueText(), syntax.name.location());
+NetType& NetType::fromSyntax(const Scope& scope, const NetTypeDeclarationSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<NetType>(syntax.name.valueText(), syntax.name.location());
     result->setSyntax(syntax);
-    compilation.addAttributes(*result, syntax.attributes);
+    result->setAttributes(scope, syntax.attributes);
 
     // If this is an enum, make sure the declared type is set up before we get added to
     // any scope, so that the enum members get picked up correctly.

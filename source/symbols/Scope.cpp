@@ -154,8 +154,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                         item->package.valueText(), item->item.valueText(), item->item.location());
 
                     import->setSyntax(*item);
+                    import->setAttributes(*this, importDecl.attributes);
                     addMember(*import);
-                    compilation.addAttributes(*import, importDecl.attributes);
                 }
             }
             break;
@@ -178,7 +178,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::ModportDeclaration: {
             SmallVectorSized<const ModportSymbol*, 16> results;
-            ModportSymbol::fromSyntax(compilation, syntax.as<ModportDeclarationSyntax>(), results);
+            ModportSymbol::fromSyntax(*this, syntax.as<ModportDeclarationSyntax>(), results);
             for (auto symbol : results)
                 addMember(*symbol);
             break;
@@ -207,7 +207,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::NetDeclaration: {
             SmallVectorSized<const NetSymbol*, 4> nets;
-            NetSymbol::fromSyntax(compilation, syntax.as<NetDeclarationSyntax>(), nets);
+            NetSymbol::fromSyntax(*this, syntax.as<NetDeclarationSyntax>(), nets);
             for (auto net : nets)
                 addMember(*net);
             break;
@@ -220,7 +220,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 ParameterSymbol::fromSyntax(*this, paramBase->as<ParameterDeclarationSyntax>(),
                                             /* isLocal */ true, /* isPort */ false, params);
                 for (auto param : params) {
-                    compilation.addAttributes(*param, statement.attributes);
+                    param->setAttributes(*this, statement.attributes);
                     addMember(*param);
                 }
             }
@@ -230,7 +230,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                                                 paramBase->as<TypeParameterDeclarationSyntax>(),
                                                 /* isLocal */ true, /* isPort */ false, params);
                 for (auto param : params) {
-                    compilation.addAttributes(*param, statement.attributes);
+                    param->setAttributes(*this, statement.attributes);
                     addMember(*param);
                 }
             }
@@ -256,19 +256,18 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 EmptyMemberSymbol::fromSyntax(compilation, *this, syntax.as<EmptyMemberSyntax>()));
             break;
         case SyntaxKind::TypedefDeclaration:
-            addMember(
-                TypeAliasType::fromSyntax(compilation, syntax.as<TypedefDeclarationSyntax>()));
+            addMember(TypeAliasType::fromSyntax(*this, syntax.as<TypedefDeclarationSyntax>()));
             break;
         case SyntaxKind::ForwardTypedefDeclaration: {
             const auto& symbol = ForwardingTypedefSymbol::fromSyntax(
-                compilation, syntax.as<ForwardTypedefDeclarationSyntax>());
+                *this, syntax.as<ForwardTypedefDeclarationSyntax>());
             addMember(symbol);
             getOrAddDeferredData().addForwardingTypedef(symbol);
             break;
         }
         case SyntaxKind::ForwardInterfaceClassTypedefDeclaration: {
             const auto& symbol = ForwardingTypedefSymbol::fromSyntax(
-                compilation, syntax.as<ForwardInterfaceClassTypedefDeclarationSyntax>());
+                *this, syntax.as<ForwardInterfaceClassTypedefDeclarationSyntax>());
             addMember(symbol);
             getOrAddDeferredData().addForwardingTypedef(symbol);
             break;
@@ -279,21 +278,20 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::ContinuousAssign: {
             SmallVectorSized<const ContinuousAssignSymbol*, 16> results;
-            ContinuousAssignSymbol::fromSyntax(compilation, syntax.as<ContinuousAssignSyntax>(),
-                                               results);
+            ContinuousAssignSymbol::fromSyntax(*this, syntax.as<ContinuousAssignSyntax>(), results);
             for (auto symbol : results)
                 addMember(*symbol);
             break;
         }
         case SyntaxKind::NetTypeDeclaration:
-            addMember(NetType::fromSyntax(compilation, syntax.as<NetTypeDeclarationSyntax>()));
+            addMember(NetType::fromSyntax(*this, syntax.as<NetTypeDeclarationSyntax>()));
             break;
         case SyntaxKind::TimeUnitsDeclaration:
             // These are handled elsewhere; just ignore here.
             break;
         case SyntaxKind::GenvarDeclaration: {
             SmallVectorSized<const GenvarSymbol*, 16> genvars;
-            GenvarSymbol::fromSyntax(compilation, syntax.as<GenvarDeclarationSyntax>(), genvars);
+            GenvarSymbol::fromSyntax(*this, syntax.as<GenvarDeclarationSyntax>(), genvars);
             for (auto genvar : genvars)
                 addMember(*genvar);
             break;
@@ -601,7 +599,7 @@ void Scope::elaborate() const {
             case SyntaxKind::GenerateBlock:
                 // This case is invalid according to the spec but the parser only issues a warning
                 // since some existing code does this anyway.
-                insertMember(&GenerateBlockSymbol::fromSyntax(compilation,
+                insertMember(&GenerateBlockSymbol::fromSyntax(*this,
                                                               member.node.as<GenerateBlockSyntax>(),
                                                               constructIndex),
                              symbol, true);
@@ -1417,9 +1415,9 @@ void Scope::addWildcardImport(const PackageImportItemSyntax& item,
         compilation.emplace<WildcardImportSymbol>(item.package.valueText(), item.item.location());
 
     import->setSyntax(item);
+    import->setAttributes(*this, attributes);
     addMember(*import);
     compilation.trackImport(importDataIndex, *import);
-    compilation.addAttributes(*import, attributes);
 }
 
 void Scope::DeferredMemberData::addMember(Symbol* symbol) {

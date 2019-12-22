@@ -138,7 +138,7 @@ public:
 
     void toJson(json&) const {}
 
-    static void fromSyntax(Compilation& compilation, const ModportDeclarationSyntax& syntax,
+    static void fromSyntax(const Scope& parent, const ModportDeclarationSyntax& syntax,
                            SmallVector<const ModportSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Modport; }
@@ -156,7 +156,7 @@ public:
 
     void toJson(json& j) const;
 
-    static void fromSyntax(Compilation& compilation, const ContinuousAssignSyntax& syntax,
+    static void fromSyntax(const Scope& parent, const ContinuousAssignSyntax& syntax,
                            SmallVector<const ContinuousAssignSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }
@@ -174,7 +174,7 @@ public:
 
     void toJson(json&) const {}
 
-    static void fromSyntax(Compilation& compilation, const GenvarDeclarationSyntax& syntax,
+    static void fromSyntax(const Scope& parent, const GenvarDeclarationSyntax& syntax,
                            SmallVector<const GenvarSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Genvar; }

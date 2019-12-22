@@ -38,8 +38,8 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
 
                 net->getDeclaredType()->copyTypeFrom(declaredType);
                 net->setFromDeclarator(*declarator);
+                net->setAttributes(scope, syntax.attributes);
                 results.append(net);
-                compilation.addAttributes(*net, syntax.attributes);
             }
             return;
         }
@@ -50,8 +50,8 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
                                                             declarator->name.location());
         variable->setDeclaredType(*syntax.type);
         variable->setFromDeclarator(*declarator);
+        variable->setAttributes(scope, syntax.attributes);
         results.append(variable);
-        compilation.addAttributes(*variable, syntax.attributes);
     }
 }
 
@@ -99,20 +99,21 @@ void FieldSymbol::toJson(json& j) const {
     j["offset"] = offset;
 }
 
-void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax& syntax,
+void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results) {
 
     // TODO: other net features
-    const NetType& netType = compilation.getNetType(syntax.netType.kind);
+    auto& comp = scope.getCompilation();
+    const NetType& netType = comp.getNetType(syntax.netType.kind);
 
     for (auto declarator : syntax.declarators) {
-        auto net = compilation.emplace<NetSymbol>(declarator->name.valueText(),
-                                                  declarator->name.location(), netType);
+        auto net = comp.emplace<NetSymbol>(declarator->name.valueText(),
+                                           declarator->name.location(), netType);
 
         net->setDeclaredType(*syntax.type, declarator->dimensions);
         net->setFromDeclarator(*declarator);
+        net->setAttributes(scope, syntax.attributes);
         results.append(net);
-        compilation.addAttributes(*net, syntax.attributes);
     }
 }
 

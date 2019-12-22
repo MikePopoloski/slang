@@ -50,13 +50,12 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind);
     result->binder.setItems(*result, syntax.items, syntax.sourceRange());
     result->setSyntax(syntax);
-
-    comp.addAttributes(*result, syntax.attributes);
+    result->setAttributes(scope, syntax.attributes);
 
     return *result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const ForLoopStatementSyntax& syntax) {
     string_view name;
     SourceLocation loc;
@@ -70,15 +69,17 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
         loc = syntax.forKeyword.location();
     }
 
-    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc,
-                                                            StatementBlockKind::Sequential);
+    auto& comp = scope.getCompilation();
+    auto result =
+        comp.emplace<StatementBlockSymbol>(comp, name, loc, StatementBlockKind::Sequential);
     result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
 
     // If one entry is a variable declaration, they must all be.
     const VariableSymbol* lastVar = nullptr;
     for (auto init : syntax.initializers) {
-        auto& var = VariableSymbol::fromSyntax(compilation,
-                                               init->as<ForVariableDeclarationSyntax>(), lastVar);
+        auto& var =
+            VariableSymbol::fromSyntax(comp, init->as<ForVariableDeclarationSyntax>(), lastVar);
 
         lastVar = &var;
         result->addMember(var);
@@ -87,8 +88,6 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(Compilation& compilation,
     result->binder.setSyntax(*result, syntax);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
-
-    compilation.addAttributes(*result, syntax.attributes);
 
     return *result;
 }
@@ -111,6 +110,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto result =
         comp.emplace<StatementBlockSymbol>(comp, name, loc, StatementBlockKind::Sequential);
     result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
 
     // Get the name of the array variable.
     auto nameSyntax = syntax.loopList->arrayName;
@@ -143,23 +143,21 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
 
-    comp.addAttributes(*result, syntax.attributes);
-
     return *result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(Compilation& compilation,
+StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
                                                             const StatementSyntax& syntax) {
     auto token = syntax.label->name;
     string_view name = token.valueText();
     SourceLocation loc = token.location();
 
-    auto result = compilation.emplace<StatementBlockSymbol>(compilation, name, loc,
-                                                            StatementBlockKind::Sequential);
+    auto& comp = scope.getCompilation();
+    auto result =
+        comp.emplace<StatementBlockSymbol>(comp, name, loc, StatementBlockKind::Sequential);
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true);
     result->setSyntax(syntax);
-
-    compilation.addAttributes(*result, syntax.attributes);
+    result->setAttributes(scope, syntax.attributes);
 
     return *result;
 }
@@ -178,7 +176,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
 
     result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false);
     result->setSyntax(syntax);
-    comp.addAttributes(*result, syntax.attributes);
+    result->setAttributes(scope, syntax.attributes);
 
     additionalBlocks = result->binder.getBlocks();
 
@@ -250,7 +248,7 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
     auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc, constructIndex,
                                                           isInstantiated);
     block->setSyntax(syntax);
-    compilation.addAttributes(*block, attributes);
+    block->setAttributes(parent, attributes);
     results.append(block);
 
     addBlockMembers(compilation, *block, syntax, isInstantiated);
@@ -370,7 +368,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     }
 }
 
-GenerateBlockSymbol& GenerateBlockSymbol::fromSyntax(Compilation& compilation,
+GenerateBlockSymbol& GenerateBlockSymbol::fromSyntax(const Scope& scope,
                                                      const GenerateBlockSyntax& syntax,
                                                      uint32_t constructIndex) {
     // This overload is only called for the illegal case of a generate block
@@ -378,10 +376,11 @@ GenerateBlockSymbol& GenerateBlockSymbol::fromSyntax(Compilation& compilation,
     string_view name = getGenerateBlockName(syntax);
     SourceLocation loc = syntax.getFirstToken().location();
 
-    auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc, constructIndex,
-                                                          /* isInstantiated */ true);
+    auto& comp = scope.getCompilation();
+    auto block = comp.emplace<GenerateBlockSymbol>(comp, name, loc, constructIndex,
+                                                   /* isInstantiated */ true);
     block->setSyntax(syntax);
-    compilation.addAttributes(*block, syntax.attributes);
+    block->setAttributes(scope, syntax.attributes);
 
     for (auto member : syntax.members)
         block->addMembers(*member);
@@ -425,7 +424,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     auto result =
         compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc, constructIndex);
     result->setSyntax(syntax);
-    compilation.addAttributes(*result, syntax.attributes);
+    result->setAttributes(parent, syntax.attributes);
 
     auto genvar = syntax.identifier;
     if (genvar.isMissing())

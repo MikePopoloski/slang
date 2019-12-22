@@ -162,7 +162,7 @@ public:
         port->direction = getDirection(syntax.direction);
         port->setSyntax(syntax);
         port->setDeclaredType(UnsetType);
-        compilation.addAttributes(*port, syntax.attributes);
+        port->setAttributes(scope, syntax.attributes);
 
         if (syntax.expr)
             port->setInitializerSyntax(*syntax.expr, syntax.expr->getFirstToken().location());
@@ -197,7 +197,7 @@ private:
         port->direction = direction;
         port->setSyntax(decl);
         port->setDeclaredType(type, decl.dimensions);
-        compilation.addAttributes(*port, attrs);
+        port->setAttributes(scope, attrs);
 
         if (port->direction == PortDirection::InOut && !netType)
             scope.addDiag(diag::InOutPortCannotBeVariable, port->location) << port->name;
@@ -220,7 +220,7 @@ private:
         // TODO: handle initializers
         symbol->setSyntax(decl);
         symbol->getDeclaredType()->copyTypeFrom(*port->getDeclaredType());
-        compilation.addAttributes(*symbol, attrs);
+        symbol->setAttributes(scope, attrs);
         port->internalSymbol = symbol;
         implicitMembers.emplace(symbol, port);
 
@@ -241,7 +241,7 @@ private:
         port->interfaceDef = iface;
         port->modport = modport;
         port->setSyntax(decl);
-        compilation.addAttributes(*port, attrs);
+        port->setAttributes(scope, attrs);
 
         lastDirection = PortDirection::InOut;
         lastType = &UnsetType;
@@ -321,7 +321,7 @@ public:
                 port->direction = info->direction;
                 port->internalSymbol = info->internalSymbol;
                 port->getDeclaredType()->copyTypeFrom(*info->internalSymbol->getDeclaredType());
-                compilation.addAttributes(*port, info->attrs);
+                port->setAttributes(scope, info->attrs);
                 return port;
             }
             case SyntaxKind::PortConcatenation:
@@ -436,7 +436,7 @@ private:
                            const Symbol* insertionPoint) {
         symbol.setSyntax(decl);
         symbol.setDeclaredType(dataType, decl.dimensions);
-        compilation.addAttributes(symbol, info.attrs);
+        symbol.setAttributes(scope, info.attrs);
         implicitMembers.emplace(&symbol, insertionPoint);
         info.internalSymbol = &symbol;
     }

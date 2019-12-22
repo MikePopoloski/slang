@@ -25,7 +25,7 @@ EmptyMemberSymbol& EmptyMemberSymbol::fromSyntax(Compilation& compilation, const
                                                  const EmptyMemberSyntax& syntax) {
     auto result = compilation.emplace<EmptyMemberSymbol>(syntax.semi.location());
 
-    compilation.addAttributes(*result, syntax.attributes);
+    result->setAttributes(scope, syntax.attributes);
     if (syntax.attributes.empty())
         scope.addDiag(diag::EmptyMember, syntax.sourceRange());
 
@@ -129,7 +129,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
         compilation, nameToken.valueText(), nameToken.location(), lifetime, subroutineKind, parent);
 
     result->setSyntax(syntax);
-    compilation.addAttributes(*result, syntax.attributes);
+    result->setAttributes(parent, syntax.attributes);
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
     if (proto->portList) {
@@ -183,11 +183,11 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
             }
 
             arg->setFromDeclarator(*declarator);
+            arg->setAttributes(*result, portSyntax->attributes);
 
             result->addMember(*arg);
             arguments.append(arg);
             lastDirection = direction;
-            compilation.addAttributes(*arg, portSyntax->attributes);
         }
     }
 
@@ -238,9 +238,10 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                 declarator->name.valueText(), declarator->name.location(), direction);
             arg->setDeclaredType(*header.dataType);
             arg->setFromDeclarator(*declarator);
+            arg->setAttributes(*result, syntax.attributes);
+
             result->addMember(*arg);
             arguments.append(arg);
-            compilation.addAttributes(*arg, syntax.attributes);
         }
     }
 
@@ -268,15 +269,15 @@ ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceL
     Symbol(SymbolKind::Modport, name, loc), Scope(compilation, this) {
 }
 
-void ModportSymbol::fromSyntax(Compilation& compilation, const ModportDeclarationSyntax& syntax,
+void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSyntax& syntax,
                                SmallVector<const ModportSymbol*>& results) {
+    auto& comp = parent.getCompilation();
     for (auto item : syntax.items) {
         // TODO: handle port list
         auto name = item->name;
-        auto symbol =
-            compilation.emplace<ModportSymbol>(compilation, name.valueText(), name.location());
+        auto symbol = comp.emplace<ModportSymbol>(comp, name.valueText(), name.location());
         symbol->setSyntax(*item);
-        compilation.addAttributes(*symbol, syntax.attributes);
+        symbol->setAttributes(parent, syntax.attributes);
         results.append(symbol);
     }
 }
@@ -291,12 +292,12 @@ ContinuousAssignSymbol::ContinuousAssignSymbol(SourceLocation loc, const Express
     Symbol(SymbolKind::ContinuousAssign, "", loc), assign(&assignment) {
 }
 
-void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
-                                        const ContinuousAssignSyntax& syntax,
+void ContinuousAssignSymbol::fromSyntax(const Scope& parent, const ContinuousAssignSyntax& syntax,
                                         SmallVector<const ContinuousAssignSymbol*>& results) {
+    auto& comp = parent.getCompilation();
     for (auto expr : syntax.assignments) {
-        auto symbol = compilation.emplace<ContinuousAssignSymbol>(*expr);
-        compilation.addAttributes(*symbol, syntax.attributes);
+        auto symbol = comp.emplace<ContinuousAssignSymbol>(*expr);
+        symbol->setAttributes(parent, syntax.attributes);
         results.append(symbol);
     }
 }
@@ -325,16 +326,17 @@ GenvarSymbol::GenvarSymbol(string_view name, SourceLocation loc) :
     Symbol(SymbolKind::Genvar, name, loc) {
 }
 
-void GenvarSymbol::fromSyntax(Compilation& compilation, const GenvarDeclarationSyntax& syntax,
+void GenvarSymbol::fromSyntax(const Scope& parent, const GenvarDeclarationSyntax& syntax,
                               SmallVector<const GenvarSymbol*>& results) {
+    auto& comp = parent.getCompilation();
     for (auto id : syntax.identifiers) {
         auto name = id->identifier;
         if (name.valueText().empty())
             continue;
 
-        auto genvar = compilation.emplace<GenvarSymbol>(name.valueText(), name.location());
+        auto genvar = comp.emplace<GenvarSymbol>(name.valueText(), name.location());
         genvar->setSyntax(*id);
-        compilation.addAttributes(*genvar, syntax.attributes);
+        genvar->setAttributes(parent, syntax.attributes);
         results.append(genvar);
     }
 }

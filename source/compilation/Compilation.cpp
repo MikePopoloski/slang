@@ -411,29 +411,19 @@ const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind, string
     return it->second.get();
 }
 
-void Compilation::addAttributes(const Symbol& symbol,
-                                span<const AttributeInstanceSyntax* const> syntax) {
-    addAttributes(static_cast<const void*>(&symbol), syntax);
+void Compilation::setAttributes(const Symbol& symbol,
+                                span<const AttributeSymbol* const> attributes) {
+    attributeMap[&symbol] = attributes;
 }
 
-void Compilation::addAttributes(const Statement& stmt,
-                                span<const AttributeInstanceSyntax* const> syntax) {
-    addAttributes(static_cast<const void*>(&stmt), syntax);
+void Compilation::setAttributes(const Statement& stmt,
+                                span<const AttributeSymbol* const> attributes) {
+    attributeMap[&stmt] = attributes;
 }
 
-void Compilation::addAttributes(const Expression& expr,
-                                span<const AttributeInstanceSyntax* const> syntax) {
-    addAttributes(static_cast<const void*>(&expr), syntax);
-}
-
-void Compilation::addAttributes(const void* ptr,
-                                span<const AttributeInstanceSyntax* const> syntax) {
-    // TODO: call this correctly
-    auto symbols = AttributeSymbol::fromSyntax(syntax, createScriptScope(), LookupLocation::max);
-    if (symbols.empty())
-        return;
-
-    attributeMap[ptr] = symbols;
+void Compilation::setAttributes(const Expression& expr,
+                                span<const AttributeSymbol* const> attributes) {
+    attributeMap[&expr] = attributes;
 }
 
 span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symbol) const {
