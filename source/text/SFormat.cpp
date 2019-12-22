@@ -137,6 +137,7 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
                 type = Arg::Float;
                 break;
             case 't':
+                widthAllowed = true;
                 type = Arg::Float;
                 break;
             case 'c':
