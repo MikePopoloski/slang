@@ -407,15 +407,11 @@ TEST_CASE("Parameter ordering from const func") {
 module M;
     localparam int a = 1;
 
-    if (1) begin
-        if (1) begin
-            function int stuff;
-                return a;
-            endfunction
+    function int stuff;
+        return a;
+    endfunction
 
-            localparam int b = stuff;
-        end
-    end
+    localparam int b = stuff;
 endmodule
 )");
 
@@ -431,15 +427,11 @@ endinterface
 )");
     auto tree2 = SyntaxTree::fromText(R"(
 module M(I i);
-    if (1) begin
-        if (1) begin
-            function int stuff;
-                return i.foo;
-            endfunction
-
-            localparam int b = stuff;
-        end
-    end
+    function int stuff;
+        return i.foo;
+    endfunction
+    
+    localparam int b = stuff;
 endmodule
 
 module top;

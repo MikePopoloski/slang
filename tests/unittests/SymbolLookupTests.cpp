@@ -394,8 +394,8 @@ module m1;
     localparam int foo = 3;
 
     if (1) begin
-        localparam int a = foo;
-        localparam int b = foo();
+        int a = foo;
+        int b = foo();
 
         function int foo;
             return 4;
@@ -410,8 +410,9 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& block = compilation.getRoot().topInstances[0]->memberAt<GenerateBlockSymbol>(1);
-    CHECK(block.find<ParameterSymbol>("a").getValue().integer() == 3);
-    CHECK(block.find<ParameterSymbol>("b").getValue().integer() == 4);
+    EvalContext context(block, EvalFlags::IsScript);
+    CHECK(block.find<VariableSymbol>("a").getInitializer()->eval(context).integer() == 3);
+    CHECK(block.find<VariableSymbol>("b").getInitializer()->eval(context).integer() == 4);
 }
 
 TEST_CASE("Enum method lookup") {

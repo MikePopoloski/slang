@@ -927,7 +927,6 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
     if (!checkConstant(context, symbol, sourceRange))
         return false;
 
-    // TODO: implement all rules here
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return false;
 
@@ -938,6 +937,9 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
 
 bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                                    SourceRange range) {
+    if (context.isScriptEval())
+        return true;
+
     if (subroutine.subroutineKind == SubroutineKind::Task) {
         context.addDiag(diag::NoteTaskNotConstant, range);
         return false;
@@ -945,6 +947,20 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
 
     if (subroutine.getReturnType().isVoid()) {
         context.addDiag(diag::NoteVoidNotConstant, range);
+        return false;
+    }
+
+    for (auto arg : subroutine.arguments) {
+        if (arg->direction != FormalArgumentDirection::In) {
+            context.addDiag(diag::NoteFunctionArgDirection, range);
+            return false;
+        }
+    }
+
+    auto scope = subroutine.getParentScope();
+    ASSERT(scope);
+    if (scope->asSymbol().kind == SymbolKind::GenerateBlock) {
+        context.addDiag(diag::NoteFunctionInsideGenerate, range);
         return false;
     }
 
