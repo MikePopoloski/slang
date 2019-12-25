@@ -710,6 +710,16 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                 expr = &Expression::bind(formal->getType(), arg->as<ExpressionSyntax>(),
                                          arg->getFirstToken().location(), context);
             }
+
+            // Make sure there isn't also a named value for this argument.
+            if (auto it = namedArgs.find(formal->name); it != namedArgs.end()) {
+                auto& diag = context.addDiag(diag::DuplicateArgAssignment,
+                                             it->second.first->name.location());
+                diag << formal->name;
+                diag.addNote(diag::NotePreviousUsage, arg->getFirstToken().location());
+                it->second.second = true;
+                bad = true;
+            }
         }
         else if (auto it = namedArgs.find(formal->name); it != namedArgs.end()) {
             // Mark this argument as used so that we can later detect if
@@ -733,10 +743,10 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         else {
             expr = formal->getInitializer();
             if (!expr) {
-                bad = true;
                 if (namedArgs.empty()) {
                     auto& diag = context.addDiag(diag::TooFewArguments, range);
                     diag << symbol.arguments.size() << orderedArgs.size();
+                    bad = true;
                     break;
                 }
                 else {

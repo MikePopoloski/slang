@@ -515,3 +515,73 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UsedBeforeDeclared);
 }
+
+TEST_CASE("Various subroutine arg styles") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    task read(int j = 0, int k, int data = 1); endtask
+    initial begin
+        read(,5);
+        read(2,5);
+        read(,5,);
+        read(,5,7);
+        read(1,5,2);
+    end
+
+    function void fun(int j = 1, string s = "no"); endfunction
+    initial begin
+        fun(.j(2), .s("yes"));
+        fun(.s("yes"));
+        fun(, "yes");
+        fun(.j(2));
+        fun(.s("yes"), .j(2));
+        fun(.s(), .j());
+        fun(2);
+        fun();
+        fun(2, .s("yes"));
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Various subroutine arg errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void fun(int j, string s = "no"); endfunction
+    initial begin
+        fun(.j(0), .j(1));
+        fun(.j(0), "yes");
+        fun(,);
+        fun(.j(), .s());
+    end
+
+    function void fun2(int j, string s); endfunction
+    initial begin
+        fun2(1);
+        fun2(.j(1));
+        fun2(1, "no", 2);
+        fun2(1, .s("no"), .foo(3));
+        fun2(1, "no", .j(1));
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::DuplicateArgAssignment);
+    CHECK(diags[1].code == diag::MixingOrderedAndNamedArgs);
+    CHECK(diags[2].code == diag::ArgCannotBeEmpty);
+    CHECK(diags[3].code == diag::ArgCannotBeEmpty);
+    CHECK(diags[4].code == diag::TooFewArguments);
+    CHECK(diags[5].code == diag::UnconnectedArg);
+    CHECK(diags[6].code == diag::TooManyArguments);
+    CHECK(diags[7].code == diag::ArgDoesNotExist);
+    CHECK(diags[8].code == diag::DuplicateArgAssignment);
+}
