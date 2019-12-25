@@ -18,6 +18,7 @@
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/StackContainer.h"
 
 namespace {
 
@@ -646,45 +647,140 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
 Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutine& subroutine,
                                        const InvocationExpressionSyntax* syntax, SourceRange range,
                                        const BindContext& context) {
-
     if (subroutine.index() == 1) {
         const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
         return createSystemCall(compilation, systemSubroutine, nullptr, syntax, range, context);
     }
 
+    // Collect all arguments into a list of ordered expressions (which can
+    // optionally be nullptr to indicate an empty argument) and a map of
+    // named argument assignments.
+    SmallVectorSized<const SyntaxNode*, 8> orderedArgs;
+    SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedArgs;
+
+    if (syntax && syntax->arguments) {
+        for (auto arg : syntax->arguments->parameters) {
+            if (arg->kind == SyntaxKind::NamedArgument) {
+                const NamedArgumentSyntax& nas = arg->as<NamedArgumentSyntax>();
+                auto name = nas.name.valueText();
+                if (!name.empty()) {
+                    auto pair = namedArgs.emplace(name, std::make_pair(&nas, false));
+                    if (!pair.second) {
+                        auto& diag =
+                            context.addDiag(diag::DuplicateArgAssignment, nas.name.location());
+                        diag << name;
+                        diag.addNote(diag::NotePreviousUsage,
+                                     pair.first->second.first->name.location());
+                    }
+                }
+            }
+            else {
+                // Once a named argument has been seen, no more ordered arguments are allowed.
+                if (!namedArgs.empty()) {
+                    context.addDiag(diag::MixingOrderedAndNamedArgs,
+                                    arg->getFirstToken().location());
+                    return badExpr(compilation, nullptr);
+                }
+
+                if (arg->kind == SyntaxKind::EmptyArgument)
+                    orderedArgs.append(arg);
+                else
+                    orderedArgs.append(arg->as<OrderedArgumentSyntax>().expr);
+            }
+        }
+    }
+
+    // Now bind all arguments.
+    bool bad = false;
+    uint32_t orderedIndex = 0;
+    SmallVectorSized<const Expression*, 8> boundArgs;
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
 
-    SmallVectorSized<const Expression*, 8> argBuffer;
-    if (syntax && syntax->arguments) {
-        auto actualArgs = syntax->arguments->parameters;
+    for (auto formal : symbol.arguments) {
+        const Expression* expr = nullptr;
+        if (orderedIndex < orderedArgs.size()) {
+            auto arg = orderedArgs[orderedIndex++];
+            if (arg->kind == SyntaxKind::EmptyArgument) {
+                // Empty arguments are allowed as long as a default is provided.
+                expr = formal->getInitializer();
+                if (!expr)
+                    context.addDiag(diag::ArgCannotBeEmpty, arg->sourceRange()) << formal->name;
+            }
+            else {
+                expr = &Expression::bind(formal->getType(), arg->as<ExpressionSyntax>(),
+                                         arg->getFirstToken().location(), context);
+            }
+        }
+        else if (auto it = namedArgs.find(formal->name); it != namedArgs.end()) {
+            // Mark this argument as used so that we can later detect if
+            // any were unused.
+            it->second.second = true;
 
-        // TODO: handle too few args as well, which requires looking at default values
-        auto formalArgs = symbol.arguments;
-        if (formalArgs.size() < actualArgs.size()) {
-            auto& diag = context.addDiag(diag::TooManyArguments, syntax->left->sourceRange());
-            diag << formalArgs.size();
-            diag << actualArgs.size();
-            return badExpr(compilation, nullptr);
+            auto arg = it->second.first->expr;
+            if (!arg) {
+                // Empty arguments are allowed as long as a default is provided.
+                expr = formal->getInitializer();
+                if (!expr) {
+                    context.addDiag(diag::ArgCannotBeEmpty, it->second.first->sourceRange())
+                        << formal->name;
+                }
+            }
+            else {
+                expr = &Expression::bind(formal->getType(), *arg, arg->getFirstToken().location(),
+                                         context);
+            }
+        }
+        else {
+            expr = formal->getInitializer();
+            if (!expr) {
+                bad = true;
+                if (namedArgs.empty()) {
+                    auto& diag = context.addDiag(diag::TooFewArguments, range);
+                    diag << symbol.arguments.size() << orderedArgs.size();
+                    break;
+                }
+                else {
+                    context.addDiag(diag::UnconnectedArg, range) << formal->name;
+                }
+            }
         }
 
-        // TODO: handle named arguments in addition to ordered
-        for (size_t i = 0; i < actualArgs.size(); i++) {
-            const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-            argBuffer.append(&Expression::bind(formalArgs[i]->getType(), *arg.expr,
-                                               arg.getFirstToken().location(), context));
+        if (!expr) {
+            bad = true;
+        }
+        else {
+            bad |= expr->bad();
+            boundArgs.append(expr);
+        }
+    }
+
+    // Make sure there weren't too many ordered arguments provided.
+    if (orderedIndex < orderedArgs.size()) {
+        auto& diag = context.addDiag(diag::TooManyArguments, range);
+        diag << symbol.arguments.size();
+        diag << orderedArgs.size();
+        bad = true;
+    }
+
+    for (const auto& pair : namedArgs) {
+        // We marked all the args that we used, so anything left over is an arg assignment
+        // for a non-existent arg.
+        if (!pair.second.second) {
+            auto& diag = context.addDiag(diag::ArgDoesNotExist, pair.second.first->name.location());
+            diag << pair.second.first->name.valueText();
+            diag << symbol.name;
+            bad = true;
         }
     }
 
     auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(),
-                                                      argBuffer.copy(compilation),
+                                                      boundArgs.copy(compilation),
                                                       context.lookupLocation, range);
-    for (auto arg : result->arguments()) {
-        if (arg->bad())
-            return badExpr(compilation, result);
-    }
-
     if (syntax)
         context.setAttributes(*result, syntax->attributes);
+
+    if (bad)
+        return badExpr(compilation, result);
 
     return *result;
 }

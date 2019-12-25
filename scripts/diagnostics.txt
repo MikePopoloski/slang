@@ -232,6 +232,11 @@ error AssignmentPatternNestedNoMember "member '{}' has nested elements that are 
 error AssignmentPatternMissingElements "not all elements of array are covered by an assignment pattern key"
 error EmptyArgNotAllowed "empty argument not allowed"
 error NamedArgNotAllowed "named argument not allowed"
+error DuplicateArgAssignment "duplicate assignment for argument '{}'"
+error MixingOrderedAndNamedArgs "ordered arguments are not allowed after named arguments"
+error ArgDoesNotExist "argument '{}' does not exist in subroutine '{}'"
+error ArgCannotBeEmpty "argument '{}' cannot be empty because it does not have a default value"
+error UnconnectedArg "argument '{}' is missing a value"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
