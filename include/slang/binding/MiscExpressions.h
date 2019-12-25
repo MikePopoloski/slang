@@ -190,6 +190,9 @@ private:
                                         const InvocationExpressionSyntax* syntax, SourceRange range,
                                         const BindContext& context);
 
+    static bool checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
+                              SourceRange range);
+
     span<const Expression*> arguments_;
     LookupLocation lookupLocation;
 };

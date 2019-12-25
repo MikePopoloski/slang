@@ -432,6 +432,8 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
             returnType = &factory.implicitType(Token(), nullptr);
     }
 
+    // TODO: error if task declares a return type
+
     auto& name = parseName();
 
     FunctionPortListSyntax* portList = nullptr;

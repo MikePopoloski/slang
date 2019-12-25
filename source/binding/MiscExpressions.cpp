@@ -868,6 +868,10 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     if (isSystemCall())
         return std::get<1>(subroutine)->eval(context, arguments());
 
+    const SubroutineSymbol& symbol = *std::get<0>(subroutine);
+    if (!checkConstant(context, symbol, sourceRange))
+        return nullptr;
+
     // Evaluate all argument in the current stack frame.
     SmallVectorSized<ConstantValue, 8> args;
     for (auto arg : arguments()) {
@@ -878,7 +882,6 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     }
 
     // Push a new stack frame, push argument values as locals.
-    const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return nullptr;
 
@@ -910,14 +913,32 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
     if (isSystemCall())
         return std::get<1>(subroutine)->verifyConstant(context, arguments());
 
-    // TODO: implement all rules here
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
+    if (!checkConstant(context, symbol, sourceRange))
+        return false;
+
+    // TODO: implement all rules here
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return false;
 
     bool result = symbol.getBody().verifyConstant(context);
     context.popFrame();
     return result;
+}
+
+bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
+                                   SourceRange range) {
+    if (subroutine.subroutineKind == SubroutineKind::Task) {
+        context.addDiag(diag::NoteTaskNotConstant, range);
+        return false;
+    }
+
+    if (subroutine.getReturnType().isVoid()) {
+        context.addDiag(diag::NoteVoidNotConstant, range);
+        return false;
+    }
+
+    return true;
 }
 
 string_view CallExpression::getSubroutineName() const {

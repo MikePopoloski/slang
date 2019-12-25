@@ -334,6 +334,8 @@ note NoteAssertionFailed "assertion failed"
 note NoteParallelBlockNotConst "parallel blocks are not allowed in constant expressions"
 note NoteExceededMaxCallDepth "constant evaluation exceeded maximum depth of {} calls"
 note NoteExceededMaxSteps "constant evaluation hit maximum step limit; possible infinite loop?"
+note NoteTaskNotConstant "cannot invoke a task in a constant expression"
+note NoteVoidNotConstant "cannot call a void function in a constant expression"
 
 subsystem Meta
 error TooManyErrors "too many errors emitted, stopping now [--error-limit=]"

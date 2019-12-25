@@ -246,15 +246,20 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     }
 
     // The function gets an implicit variable inserted that represents the return value.
-    // TODO: don't do this if returning void; also handle name collisions with this thing
-    auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location);
-    implicitReturnVar->setDeclaredType(*proto->returnType);
-    implicitReturnVar->isCompilerGenerated = true;
-    result->addMember(*implicitReturnVar);
-    result->returnValVar = implicitReturnVar;
+    if (subroutineKind == SubroutineKind::Function) {
+        auto implicitReturnVar =
+            compilation.emplace<VariableSymbol>(result->name, result->location);
+        implicitReturnVar->setDeclaredType(*proto->returnType);
+        implicitReturnVar->isCompilerGenerated = true;
+        result->addMember(*implicitReturnVar);
+        result->returnValVar = implicitReturnVar;
+        result->declaredReturnType.setTypeSyntax(*proto->returnType);
+    }
+    else {
+        result->declaredReturnType.setType(compilation.getVoidType());
+    }
 
     result->arguments = arguments.copy(compilation);
-    result->declaredReturnType.setTypeSyntax(*proto->returnType);
     result->binder.setItems(*result, syntax.items, syntax.sourceRange());
     return *result;
 }
