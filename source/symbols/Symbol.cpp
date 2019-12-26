@@ -145,33 +145,38 @@ optional<bool> Symbol::isDeclaredBefore(const Symbol& target) const {
     return isDeclaredBefore(LookupLocation::beforeLexical(target));
 }
 
-optional<bool> Symbol::isDeclaredBefore(LookupLocation ll) const {
-    if (!ll.getScope())
-        return LookupLocation::before(*this) < ll;
+optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
+    LookupLocation ll = LookupLocation::before(*this);
+    if (!target.getScope())
+        return ll < target;
 
     // Find a common parent scope for the two symbols. Start with our parent and
     // walk upwards until we find `target`s scope or run into a compilation unit.
     SmallMap<const Scope*, LookupLocation, 8> locMap;
     const Symbol* sym = this;
-    const Scope* scope;
-    while ((scope = sym->getLexicalScope()) != nullptr &&
-           sym->kind != SymbolKind::CompilationUnit && scope != ll.getScope()) {
-        locMap[scope] = LookupLocation::beforeLexical(*sym);
+    const Scope* scope = ll.getScope();
+
+    while (sym->kind != SymbolKind::CompilationUnit && scope && scope != target.getScope()) {
+        locMap[scope] = ll;
         sym = &scope->asSymbol();
+        ll = LookupLocation::beforeLexical(*sym);
+        scope = ll.getScope();
     }
 
-    if (scope == ll.getScope())
-        return LookupLocation::beforeLexical(*sym) < ll;
+    if (scope == target.getScope())
+        return ll < target;
 
-    // If ll wasn't in a direct scope of any of our own parents,
-    // repeat the process walking up ll's scopes.
-    sym = &ll.getScope()->asSymbol();
-    while ((scope = sym->getLexicalScope()) != nullptr &&
-           sym->kind != SymbolKind::CompilationUnit) {
+    // If target wasn't in a direct scope of any of our own parents,
+    // repeat the process walking up target's scopes.
+    sym = &target.getScope()->asSymbol();
+    ll = LookupLocation::beforeLexical(*sym);
+
+    while ((scope = ll.getScope()) != nullptr && sym->kind != SymbolKind::CompilationUnit) {
         if (auto it = locMap.find(scope); it != locMap.end())
-            return it->second < LookupLocation::beforeLexical(*sym);
+            return it->second < ll;
 
         sym = &scope->asSymbol();
+        ll = LookupLocation::beforeLexical(*sym);
     }
 
     return std::nullopt;
