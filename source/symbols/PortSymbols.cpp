@@ -721,7 +721,7 @@ private:
             return;
         }
 
-        if (!symbol->isDeclaredBefore(lookupLocation).value_or(false)) {
+        if (!symbol->isDeclaredBefore(lookupLocation).value_or(true)) {
             auto& diag = scope.addDiag(diag::UsedBeforeDeclared, range);
             diag << port.name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
@@ -791,7 +791,7 @@ private:
             return;
         }
 
-        if (!symbol->isDeclaredBefore(lookupLocation).value_or(false)) {
+        if (!symbol->isDeclaredBefore(lookupLocation).value_or(true)) {
             auto& diag = scope.addDiag(diag::UsedBeforeDeclared, range);
             diag << port.name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
