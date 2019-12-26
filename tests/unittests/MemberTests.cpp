@@ -585,3 +585,84 @@ endmodule
     CHECK(diags[7].code == diag::ArgDoesNotExist);
     CHECK(diags[8].code == diag::DuplicateArgAssignment);
 }
+
+
+TEST_CASE("always_comb") {
+    auto tree = SyntaxTree::fromText(R"(
+module module1
+#(
+    parameter int P1 = 4,
+    parameter int P2 = 5
+)
+(
+    input  logic [P1-1:0]   in1,
+    input  logic [P2-1:0]   in2,
+    input  logic [3:0]      in3,
+
+    output logic [P1-1:0]   out1,
+    output logic [P1-1:0]   out2,
+    output logic [P1-1:0]   out3
+);
+
+    always_comb out1 = in1;
+
+    always_comb begin
+        out2 = in2;
+        out3 = in3;
+    end
+
+    logic [7:0] arr1;
+
+endmodule
+)");
+
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
+    const auto& alwaysComb = instance.memberAt<ProceduralBlockSymbol>(14);
+
+    CHECK(alwaysComb.procedureKind == ProceduralBlockKind::AlwaysComb);
+
+    const auto& variable = instance.memberAt<VariableSymbol>(16);
+    CHECK(variable.getType().isIntegral());
+    CHECK(variable.name == "arr1");
+
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Function declaration") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    function static logic [15:0] foo(a, int b, output logic [15:0] u, v, inout w);
+        return a + b;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
+    const auto& foo = instance.memberAt<SubroutineSymbol>(0);
+    CHECK(foo.subroutineKind == SubroutineKind::Function);
+    CHECK(foo.defaultLifetime == VariableLifetime::Static);
+    CHECK(foo.getReturnType().getBitWidth() == 16);
+    CHECK(foo.name == "foo");
+
+    auto args = foo.arguments;
+    REQUIRE(args.size() == 5);
+    CHECK(args[0]->getType().getBitWidth() == 1);
+    CHECK(args[0]->direction == FormalArgumentDirection::In);
+    CHECK(args[1]->getType().getBitWidth() == 32);
+    CHECK(args[1]->direction == FormalArgumentDirection::In);
+    CHECK(args[2]->getType().getBitWidth() == 16);
+    CHECK(args[2]->direction == FormalArgumentDirection::Out);
+    CHECK(args[3]->getType().getBitWidth() == 16);
+    CHECK(args[3]->direction == FormalArgumentDirection::Out);
+    CHECK(args[4]->getType().getBitWidth() == 1);
+    CHECK(args[4]->direction == FormalArgumentDirection::InOut);
+
+    const auto& returnStmt = foo.getBody().as<ReturnStatement>();
+    REQUIRE(returnStmt.kind == StatementKind::Return);
+    CHECK(!returnStmt.expr->bad());
+    CHECK(returnStmt.expr->type->getBitWidth() == 16);
+
+    NO_COMPILATION_ERRORS;
+}
