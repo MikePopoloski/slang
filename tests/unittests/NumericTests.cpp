@@ -586,7 +586,6 @@ TEST_CASE("SVInt misc functions") {
     CHECK("100'b111"_si.countLeadingZeros() == 97);
     CHECK("128'hffff000000000000ffff000000000000"_si.countLeadingOnes() == 16);
     CHECK("128'hffffffffffffffffffffffffffffffff"_si.countLeadingOnes() == 128);
-    CHECK("128'hffff000000000000ffff000000000000"_si.countPopulation() == 32);
     CHECK(clog2("900'd982134098123403498298103"_si) == 80);
     CHECK(clog2(SVInt::Zero) == 0);
 
@@ -622,6 +621,19 @@ TEST_CASE("SVInt misc functions") {
     SVInt a = "8'd2"_si;
     a.flattenUnknowns();
     CHECK(a == "8'd2"_si);
+
+    CHECK("128'hffff000000000000ffff00000000000"_si.countOnes() == 32);
+    CHECK("128'hffff000000000000ffff00000xz0000"_si.countOnes() == 32);
+
+    CHECK("8'b10010001"_si.countZeros() == 5);
+    CHECK("112'hffff00000000ffff00000000000"_si.countZeros() == 80);
+    CHECK("112'hffff00000000ffff00000xz0000"_si.countZeros() == 72);
+
+    CHECK("128'hffff000000000000ffff00000000000"_si.countXs() == 0);
+    CHECK("128'hffff000000000000ffff0zz00xz0000"_si.countXs() == 4);
+
+    CHECK("128'hffff000000000000ffff00000000000"_si.countZs() == 0);
+    CHECK("128'hffff000000000000ffff0zz00xz0000"_si.countZs() == 12);
 }
 
 TEST_CASE("Double conversions") {

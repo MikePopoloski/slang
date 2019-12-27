@@ -898,7 +898,7 @@ logic_t SVInt::reductionXor() const {
 
     // reduction xor basically determines whether the number of set
     // bits in the number is even or odd
-    uint32_t count = countPopulation();
+    uint32_t count = countOnes();
     if (count % 2 == 0)
         return logic_t(0);
 
@@ -1749,14 +1749,67 @@ bitwidth_t SVInt::countLeadingOnesSlowCase() const {
     return count;
 }
 
-bitwidth_t SVInt::countPopulation() const {
-    // don't worry about unknowns in this function; only use it if the number is all known
+bitwidth_t SVInt::countOnes() const {
     if (isSingleWord())
         return slang::countPopulation64(val);
 
     bitwidth_t count = 0;
-    for (uint32_t i = 0; i < getNumWords(); i++)
-        count += slang::countPopulation64(pVal[i]);
+    if (!unknownFlag) {
+        for (uint32_t i = 0; i < getNumWords(); i++)
+            count += slang::countPopulation64(pVal[i]);
+    }
+    else {
+        uint32_t words = getNumWords(bitWidth, false);
+        for (uint32_t i = 0; i < words; i++)
+            count += slang::countPopulation64(pVal[i] & ~pVal[i + words]);
+    }
+
+    return count;
+}
+
+bitwidth_t SVInt::countZeros() const {
+    if (isSingleWord())
+        return bitWidth - slang::countPopulation64(val);
+
+    bitwidth_t count = 0;
+    if (!unknownFlag) {
+        for (uint32_t i = 0; i < getNumWords(); i++)
+            count += slang::countPopulation64(~pVal[i]);
+    }
+    else {
+        uint32_t words = getNumWords(bitWidth, false);
+        for (uint32_t i = 0; i < words; i++)
+            count += slang::countPopulation64(~pVal[i] & ~pVal[i + words]);
+    }
+
+    uint32_t wordBits = bitWidth % BITS_PER_WORD;
+    if (wordBits)
+        count -= BITS_PER_WORD - wordBits;
+
+    return count;
+}
+
+bitwidth_t SVInt::countXs() const {
+    if (!unknownFlag)
+        return 0;
+
+    bitwidth_t count = 0;
+    uint32_t words = getNumWords(bitWidth, false);
+    for (uint32_t i = 0; i < words; i++)
+        count += slang::countPopulation64(~pVal[i] & pVal[i + words]);
+
+    return count;
+}
+
+bitwidth_t SVInt::countZs() const {
+    if (!unknownFlag)
+        return 0;
+
+    bitwidth_t count = 0;
+    uint32_t words = getNumWords(bitWidth, false);
+    for (uint32_t i = 0; i < words; i++)
+        count += slang::countPopulation64(pVal[i] & pVal[i + words]);
+
     return count;
 }
 

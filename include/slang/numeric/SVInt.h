@@ -341,9 +341,17 @@ public:
         return countLeadingOnesSlowCase();
     }
 
-    /// Count the number of set bits in the number. This doesn't do anything special for
-    /// unknown values, so make sure you know what you're doing with it.
-    bitwidth_t countPopulation() const;
+    /// Count the number of 1 bits in the number.
+    bitwidth_t countOnes() const;
+
+    /// Count the number of 0 bits in the number.
+    bitwidth_t countZeros() const;
+
+    /// Count the number of X bits in the number.
+    bitwidth_t countXs() const;
+
+    /// Count the number of Z bits in the number.
+    bitwidth_t countZs() const;
 
     /// Return a subset of the integer's bit range as a new integer.
     SVInt slice(int32_t msb, int32_t lsb) const;
