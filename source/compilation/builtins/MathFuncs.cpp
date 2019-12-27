@@ -74,7 +74,7 @@ public:
         //
         // This array tracks which bit values we've already counted: 0, 1, X, or Z
         bool seen[4]{};
-        int32_t count = 0;
+        uint64_t count = 0;
 
         for (auto arg : args.subspan(1)) {
             ConstantValue v = arg->eval(context);
@@ -108,7 +108,7 @@ public:
             }
         }
 
-        return SVInt(32, uint64_t(count), true);
+        return SVInt(32, count, true);
     }
 };
 
@@ -138,8 +138,8 @@ public:
         // TODO: should support any bitstream type...
         const SVInt& iv = value.integer();
 
-        int32_t count = iv.countOnes();
-        return SVInt(32, uint64_t(count), true);
+        uint64_t count = iv.countOnes();
+        return SVInt(32, count, true);
     }
 };
 

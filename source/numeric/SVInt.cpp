@@ -1580,12 +1580,12 @@ SVInt SVInt::concat(span<SVInt const> operands) {
 }
 
 SVInt SVInt::allocUninitialized(bitwidth_t bits, bool signFlag, bool unknownFlag) {
-    ASSERT(bits > 64 || unknownFlag);
+    ASSERT(bits && (bits > 64 || unknownFlag));
     return SVInt(new uint64_t[getNumWords(bits, unknownFlag)], bits, signFlag, unknownFlag);
 }
 
 SVInt SVInt::allocZeroed(bitwidth_t bits, bool signFlag, bool unknownFlag) {
-    ASSERT(bits > 64 || unknownFlag);
+    ASSERT(bits && (bits > 64 || unknownFlag));
     return SVInt(new uint64_t[getNumWords(bits, unknownFlag)](), bits, signFlag, unknownFlag);
 }
 
