@@ -1120,3 +1120,31 @@ TEST_CASE("Real math functions") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Bit vector functions") {
+    ScriptSession session;
+
+    session.eval("logic [13:0] asdf = 14'b101xz001zx1;");
+    CHECK(session.eval("$countbits(asdf, '1)").integer() == 4);
+    CHECK(session.eval("$countbits(asdf, '1, 0, 1)").integer() == 10);
+    CHECK(session.eval("$countbits(asdf, 'x)").integer() == 2);
+    CHECK(session.eval("$countbits(asdf, 'z, 'z, 'z, 'z)").integer() == 2);
+    CHECK(session.eval("$countbits(asdf, 'z, 'x, '1, '0)").integer() == 14);
+    CHECK(session.eval("$countones(asdf)").integer() == 4);
+
+    session.eval("logic [13:0] bar = 14'b000100xzxz;");
+    session.eval("logic [13:0] baz = 14'b000000xzxz;");
+    CHECK(session.eval("$onehot(asdf)").integer() == 0);
+    CHECK(session.eval("$onehot(bar)").integer() == 1);
+    CHECK(session.eval("$onehot(baz)").integer() == 0);
+
+    CHECK(session.eval("$onehot0(asdf)").integer() == 0);
+    CHECK(session.eval("$onehot0(bar)").integer() == 1);
+    CHECK(session.eval("$onehot0(baz)").integer() == 1);
+
+    CHECK(session.eval("$isunknown(asdf)").integer() == 1);
+    CHECK(session.eval("$isunknown(14'b101010101)").integer() == 0);
+    CHECK(session.eval("$isunknown(14'b101z10101)").integer() == 1);
+
+    NO_SESSION_ERRORS;
+}
