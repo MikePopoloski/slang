@@ -1548,7 +1548,7 @@ SVInt SVInt::concat(span<SVInt const> operands) {
     }
 
     uint32_t words = SVInt::getNumWords(bits, isUnknown);
-    if (words == 1) {
+    if (words == 1 || bits == 0) {
         // The concatenation still fits into a single word.
         bitwidth_t offset = 0;
         uint64_t val = 0;
