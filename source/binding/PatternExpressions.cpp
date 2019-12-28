@@ -164,8 +164,8 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
     uint32_t index = 0;
     SmallVectorSized<const Expression*, 8> elems;
     for (auto item : syntax.items) {
-        auto& expr =
-            Expression::bind(*types[index++], *item, item->getFirstToken().location(), context);
+        auto& expr = Expression::bindRValue(*types[index++], *item,
+                                            item->getFirstToken().location(), context);
         elems.append(&expr);
         bad |= expr.bad();
     }
@@ -186,7 +186,7 @@ Expression& SimpleAssignmentPatternExpression::forArray(
     SmallVectorSized<const Expression*, 8> elems;
     for (auto item : syntax.items) {
         auto& expr =
-            Expression::bind(elementType, *item, item->getFirstToken().location(), context);
+            Expression::bindRValue(elementType, *item, item->getFirstToken().location(), context);
         elems.append(&expr);
         bad |= expr.bad();
     }
@@ -260,7 +260,7 @@ static bool matchMembers(const BindContext& context, const Scope& structScope,
             }
 
             if (type.isSimpleBitVector() && type.isAssignmentCompatible(*defaultSetter->type)) {
-                results.append(&Expression::bind(
+                results.append(&Expression::bindRValue(
                     type, *defaultSyntax, defaultSyntax->getFirstToken().location(), context));
                 continue;
             }
@@ -279,8 +279,8 @@ static bool matchMembers(const BindContext& context, const Scope& structScope,
 
         // Finally, if we have a default then it must now be assignment compatible.
         if (defaultSetter) {
-            results.append(&Expression::bind(type, *defaultSyntax,
-                                             defaultSyntax->getFirstToken().location(), context));
+            results.append(&Expression::bindRValue(
+                type, *defaultSyntax, defaultSyntax->getFirstToken().location(), context));
             continue;
         }
 
@@ -335,8 +335,8 @@ static bool matchElements(const BindContext& context, const Type& elementType,
 
             if (elementType.isSimpleBitVector() &&
                 elementType.isAssignmentCompatible(*defaultSetter->type)) {
-                return &Expression::bind(elementType, *defaultSyntax,
-                                         defaultSyntax->getFirstToken().location(), context);
+                return &Expression::bindRValue(elementType, *defaultSyntax,
+                                               defaultSyntax->getFirstToken().location(), context);
             }
         }
 
@@ -353,8 +353,8 @@ static bool matchElements(const BindContext& context, const Type& elementType,
 
         // Finally, if we have a default then it must now be assignment compatible.
         if (defaultSetter) {
-            return &Expression::bind(elementType, *defaultSyntax,
-                                     defaultSyntax->getFirstToken().location(), context);
+            return &Expression::bindRValue(elementType, *defaultSyntax,
+                                           defaultSyntax->getFirstToken().location(), context);
         }
 
         // Otherwise there's no setter for this element, which is an error.
@@ -411,8 +411,8 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
 
             const Symbol* member = structScope.find(name);
             if (member) {
-                auto& expr = bind(member->as<FieldSymbol>().getType(), *item->expr,
-                                  nameToken.location(), context);
+                auto& expr = bindRValue(member->as<FieldSymbol>().getType(), *item->expr,
+                                        nameToken.location(), context);
                 bad |= expr.bad();
 
                 memberMap.emplace(member, &expr);
@@ -422,7 +422,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                 auto found = context.scope.lookupUnqualifiedName(name, LookupFlags::Type);
                 if (found && found->isType()) {
                     auto& expr =
-                        bind(found->as<Type>(), *item->expr, nameToken.location(), context);
+                        bindRValue(found->as<Type>(), *item->expr, nameToken.location(), context);
                     bad |= expr.bad();
 
                     typeSetters.emplace(TypeSetter{ &found->as<Type>(), &expr });
@@ -439,8 +439,8 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
             const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
                                                context.lookupLocation, context.scope);
             if (typeKey.isSimpleType()) {
-                auto& expr =
-                    bind(typeKey, *item->expr, item->expr->getFirstToken().location(), context);
+                auto& expr = bindRValue(typeKey, *item->expr,
+                                        item->expr->getFirstToken().location(), context);
 
                 typeSetters.emplace(TypeSetter{ &typeKey, &expr });
                 bad |= expr.bad();
@@ -493,8 +493,8 @@ Expression& StructuredAssignmentPatternExpression::forArray(
             const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(),
                                                context.lookupLocation, context.scope);
             if (typeKey.isSimpleType()) {
-                auto& expr =
-                    bind(typeKey, *item->expr, item->expr->getFirstToken().location(), context);
+                auto& expr = bindRValue(typeKey, *item->expr,
+                                        item->expr->getFirstToken().location(), context);
 
                 typeSetters.emplace(TypeSetter{ &typeKey, &expr });
                 bad |= expr.bad();
@@ -522,8 +522,8 @@ Expression& StructuredAssignmentPatternExpression::forArray(
                 continue;
             }
 
-            auto& expr =
-                bind(elementType, *item->expr, item->expr->getFirstToken().location(), context);
+            auto& expr = bindRValue(elementType, *item->expr,
+                                    item->expr->getFirstToken().location(), context);
             bad |= expr.bad();
 
             indexMap.emplace(*index, &expr);
@@ -585,8 +585,8 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
     SmallVectorSized<const Expression*, 8> elems;
     for (size_t i = 0; i < count; i++) {
         for (auto item : syntax.items) {
-            auto& expr =
-                Expression::bind(*types[index++], *item, item->getFirstToken().location(), context);
+            auto& expr = Expression::bindRValue(*types[index++], *item,
+                                                item->getFirstToken().location(), context);
             elems.append(&expr);
             bad |= expr.bad();
         }
@@ -613,8 +613,8 @@ Expression& ReplicatedAssignmentPatternExpression::forArray(
     SmallVectorSized<const Expression*, 8> elems;
     for (size_t i = 0; i < count; i++) {
         for (auto item : syntax.items) {
-            auto& expr =
-                Expression::bind(elementType, *item, item->getFirstToken().location(), context);
+            auto& expr = Expression::bindRValue(elementType, *item,
+                                                item->getFirstToken().location(), context);
             elems.append(&expr);
             bad |= expr.bad();
         }

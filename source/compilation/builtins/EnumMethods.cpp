@@ -71,8 +71,8 @@ public:
         if (argIndex > 0)
             return SystemSubroutine::bindArgument(argIndex, context, syntax);
 
-        return Expression::bind(context.getCompilation().getUnsignedIntType(), syntax,
-                                syntax.getFirstToken().location(), context);
+        return Expression::bindRValue(context.getCompilation().getUnsignedIntType(), syntax,
+                                      syntax.getFirstToken().location(), context);
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args,

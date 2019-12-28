@@ -915,7 +915,7 @@ const Expression* PortSymbol::getConnection() const {
 
             switch (direction) {
                 case PortDirection::In:
-                    conn = &Expression::bind(getType(), *connSyntax, loc, context);
+                    conn = &Expression::bindRValue(getType(), *connSyntax, loc, context);
                     break;
                 case PortDirection::Out:
                     // TODO: require assignable

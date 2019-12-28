@@ -108,8 +108,8 @@ void DeclaredType::resolveAt(const BindContext& context) const {
         bindFlags |= BindFlags::EnumInitializer;
     }
 
-    initializer = &Expression::bind(*targetType, *initializerSyntax, initializerLocation,
-                                    context.resetFlags(bindFlags));
+    initializer = &Expression::bindRValue(*targetType, *initializerSyntax, initializerLocation,
+                                          context.resetFlags(bindFlags));
 }
 
 const Expression* DeclaredType::getInitializer() const {

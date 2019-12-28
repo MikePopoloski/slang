@@ -159,8 +159,8 @@ const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindCon
     return result;
 }
 
-const Expression& Expression::bind(const Type& lhs, const ExpressionSyntax& rhs,
-                                   SourceLocation location, const BindContext& context) {
+const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
+                                         SourceLocation location, const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
     Expression& expr = create(comp, rhs, context, BindFlags::None, &lhs);
 

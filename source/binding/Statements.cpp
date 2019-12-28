@@ -314,8 +314,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                 results.append(&StatementBlockSymbol::fromSyntax(scope, forLoop));
             }
             else if (syntax.label) {
-                results.append(
-                    &StatementBlockSymbol::fromLabeledStmt(scope, syntax));
+                results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
                 return;
             }
             else {
@@ -594,7 +593,7 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
 
     auto& subroutine = scope->asSymbol().as<SubroutineSymbol>();
     auto& expr =
-        Expression::bind(subroutine.getReturnType(), *syntax.returnValue, stmtLoc, context);
+        Expression::bindRValue(subroutine.getReturnType(), *syntax.returnValue, stmtLoc, context);
 
     auto result = compilation.emplace<ReturnStatement>(&expr, syntax.sourceRange());
     if (expr.bad())

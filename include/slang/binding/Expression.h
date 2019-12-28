@@ -125,9 +125,9 @@ public:
     static const Expression& bind(const ExpressionSyntax& syntax, const BindContext& context,
                                   bitmask<BindFlags> extraFlags = BindFlags::None);
 
-    /// Binds an assignment-like expression from the given syntax nodes.
-    static const Expression& bind(const Type& lhs, const ExpressionSyntax& rhs,
-                                  SourceLocation location, const BindContext& context);
+    /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
+    static const Expression& bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
+                                        SourceLocation location, const BindContext& context);
 
     /// Converts the given expression to the specified type, as if the right hand side had been
     /// assigned (without a cast) to a left hand side of the specified type.

@@ -157,7 +157,8 @@ const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const Bi
     if (argIndex >= argTypes.size())
         return SystemSubroutine::bindArgument(argIndex, *ctx, syntax);
 
-    return Expression::bind(*argTypes[argIndex], syntax, syntax.getFirstToken().location(), *ctx);
+    return Expression::bindRValue(*argTypes[argIndex], syntax, syntax.getFirstToken().location(),
+                                  *ctx);
 }
 
 const Type& SimpleSystemSubroutine::checkArguments(const BindContext& context, const Args& args,

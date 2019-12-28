@@ -472,8 +472,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
     // Bind the initialization expression.
     BindContext bindContext(parent, location, BindFlags::Constant);
-    const auto& initial = Expression::bind(compilation.getIntegerType(), *syntax.initialExpr,
-                                           syntax.equals.location(), bindContext);
+    const auto& initial = Expression::bindRValue(compilation.getIntegerType(), *syntax.initialExpr,
+                                                 syntax.equals.location(), bindContext);
     if (!initial.constant)
         return *result;
 
