@@ -134,26 +134,26 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
     if (proto->portList) {
         const DataTypeSyntax* lastType = nullptr;
-        auto lastDirection = FormalArgumentDirection::In;
+        auto lastDirection = ArgumentDirection::In;
 
         for (const FunctionPortSyntax* portSyntax : proto->portList->ports) {
-            FormalArgumentDirection direction;
+            ArgumentDirection direction;
             bool directionSpecified = true;
             switch (portSyntax->direction.kind) {
                 case TokenKind::InputKeyword:
-                    direction = FormalArgumentDirection::In;
+                    direction = ArgumentDirection::In;
                     break;
                 case TokenKind::OutputKeyword:
-                    direction = FormalArgumentDirection::Out;
+                    direction = ArgumentDirection::Out;
                     break;
                 case TokenKind::InOutKeyword:
-                    direction = FormalArgumentDirection::InOut;
+                    direction = ArgumentDirection::InOut;
                     break;
                 case TokenKind::RefKeyword:
                     if (portSyntax->constKeyword)
-                        direction = FormalArgumentDirection::ConstRef;
+                        direction = ArgumentDirection::ConstRef;
                     else
-                        direction = FormalArgumentDirection::Ref;
+                        direction = ArgumentDirection::Ref;
                     break;
                 case TokenKind::Unknown:
                     // Otherwise, we "inherit" the previous argument
@@ -215,19 +215,19 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
         // TODO: const ref is not currently handled by parser
         auto& header = portDecl.header->as<VariablePortHeaderSyntax>();
-        FormalArgumentDirection direction;
+        ArgumentDirection direction;
         switch (header.direction.kind) {
             case TokenKind::InputKeyword:
-                direction = FormalArgumentDirection::In;
+                direction = ArgumentDirection::In;
                 break;
             case TokenKind::OutputKeyword:
-                direction = FormalArgumentDirection::Out;
+                direction = ArgumentDirection::Out;
                 break;
             case TokenKind::InOutKeyword:
-                direction = FormalArgumentDirection::InOut;
+                direction = ArgumentDirection::InOut;
                 break;
             case TokenKind::RefKeyword:
-                direction = FormalArgumentDirection::Ref;
+                direction = ArgumentDirection::Ref;
                 break;
             default:
                 THROW_UNREACHABLE;

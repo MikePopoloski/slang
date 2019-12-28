@@ -952,7 +952,7 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
     }
 
     for (auto arg : subroutine.arguments) {
-        if (arg->direction != FormalArgumentDirection::In) {
+        if (arg->direction != ArgumentDirection::In) {
             context.addDiag(diag::NoteFunctionArgDirection, range);
             return false;
         }

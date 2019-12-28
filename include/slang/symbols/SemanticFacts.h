@@ -23,7 +23,7 @@ ENUM(VariableLifetime, LIFETIME);
 
 #define FORMAL(x) x(In) x(Out) x(InOut) x(Ref) x(ConstRef)
 /// Specifies behavior of an argument passed to a subroutine.
-ENUM(FormalArgumentDirection, FORMAL);
+ENUM(ArgumentDirection, FORMAL);
 #undef FORMAL
 
 #define BLOCK(x) x(Initial) x(Final) x(Always) x(AlwaysComb) x(AlwaysLatch) x(AlwaysFF)

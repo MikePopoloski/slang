@@ -586,7 +586,6 @@ endmodule
     CHECK(diags[8].code == diag::DuplicateArgAssignment);
 }
 
-
 TEST_CASE("always_comb") {
     auto tree = SyntaxTree::fromText(R"(
 module module1
@@ -649,15 +648,15 @@ endmodule
     auto args = foo.arguments;
     REQUIRE(args.size() == 5);
     CHECK(args[0]->getType().getBitWidth() == 1);
-    CHECK(args[0]->direction == FormalArgumentDirection::In);
+    CHECK(args[0]->direction == ArgumentDirection::In);
     CHECK(args[1]->getType().getBitWidth() == 32);
-    CHECK(args[1]->direction == FormalArgumentDirection::In);
+    CHECK(args[1]->direction == ArgumentDirection::In);
     CHECK(args[2]->getType().getBitWidth() == 16);
-    CHECK(args[2]->direction == FormalArgumentDirection::Out);
+    CHECK(args[2]->direction == ArgumentDirection::Out);
     CHECK(args[3]->getType().getBitWidth() == 16);
-    CHECK(args[3]->direction == FormalArgumentDirection::Out);
+    CHECK(args[3]->direction == ArgumentDirection::Out);
     CHECK(args[4]->getType().getBitWidth() == 1);
-    CHECK(args[4]->direction == FormalArgumentDirection::InOut);
+    CHECK(args[4]->direction == ArgumentDirection::InOut);
 
     const auto& returnStmt = foo.getBody().as<ReturnStatement>();
     REQUIRE(returnStmt.kind == StatementKind::Return);

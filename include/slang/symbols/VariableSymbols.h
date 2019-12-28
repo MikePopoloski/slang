@@ -58,14 +58,14 @@ protected:
 /// Represents a formal argument in subroutine (task or function).
 class FormalArgumentSymbol : public VariableSymbol {
 public:
-    FormalArgumentDirection direction = FormalArgumentDirection::In;
+    ArgumentDirection direction = ArgumentDirection::In;
 
     FormalArgumentSymbol() : VariableSymbol(SymbolKind::FormalArgument, "", SourceLocation()) {}
 
     FormalArgumentSymbol(string_view name, SourceLocation loc,
-                         FormalArgumentDirection direction = FormalArgumentDirection::In) :
+                         ArgumentDirection direction = ArgumentDirection::In) :
         VariableSymbol(SymbolKind::FormalArgument, name, loc, VariableLifetime::Automatic,
-                       direction == FormalArgumentDirection::ConstRef),
+                       direction == ArgumentDirection::ConstRef),
         direction(direction) {}
 
     void toJson(json& j) const;
