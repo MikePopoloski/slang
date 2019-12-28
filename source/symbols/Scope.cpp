@@ -1051,8 +1051,8 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
                     scope = nullptr;
                     break;
                 case SymbolKind::ModuleInstance:
+                case SymbolKind::ProgramInstance:
                 case SymbolKind::InterfaceInstance:
-                case SymbolKind::Program:
                     nextInstance = symbol->getParentScope();
                     scope = symbol->getLexicalScope();
                     break;

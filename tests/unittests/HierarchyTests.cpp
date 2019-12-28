@@ -259,6 +259,30 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Program instantiation") {
+    auto tree = SyntaxTree::fromText(R"(
+program p1 #(parameter int foo)
+            (input wire clk,
+             input wire rst);
+    int i;
+    initial begin
+        i = foo;
+    end
+endprogram
+
+module m;
+    logic clk;
+    logic rst;
+
+    p1 #(1) bus(.*);
+endmodule
+)");
+
+    Compilation compilation;
+    evalModule(tree, compilation);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Package declaration") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;

@@ -169,7 +169,10 @@ Symbol* createInstance(Compilation& compilation, const Scope& scope,
             inst = &InterfaceInstanceSymbol::instantiate(compilation, syntax, definition,
                                                          parameters, hierarchyDepth);
             break;
-        case DefinitionKind::Program: // TODO: handle this
+        case DefinitionKind::Program:
+            inst = &ProgramInstanceSymbol::instantiate(compilation, syntax, definition, parameters,
+                                                       hierarchyDepth);
+            break;
         default:
             THROW_UNREACHABLE;
     }
@@ -494,8 +497,8 @@ void InstanceSymbol::toJson(json& j) const {
 bool InstanceSymbol::isKind(SymbolKind kind) {
     switch (kind) {
         case SymbolKind::ModuleInstance:
+        case SymbolKind::ProgramInstance:
         case SymbolKind::InterfaceInstance:
-        case SymbolKind::Program:
             return true;
         default:
             return false;
@@ -588,6 +591,18 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
 
     auto instance = compilation.emplace<ModuleInstanceSymbol>(
         compilation, syntax.name.valueText(), syntax.name.location(), definition, hierarchyDepth);
+    instance->populate(&syntax, parameters);
+    return *instance;
+}
+
+ProgramInstanceSymbol& ProgramInstanceSymbol::instantiate(
+    Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
+    const DefinitionSymbol& definition, span<const ParameterSymbolBase* const> parameters,
+    uint32_t hierarchyDepth) {
+
+    auto instance = compilation.emplace<ProgramInstanceSymbol>(
+        compilation, syntax.name.valueText(), syntax.name.location(), definition, hierarchyDepth);
+
     instance->populate(&syntax, parameters);
     return *instance;
 }

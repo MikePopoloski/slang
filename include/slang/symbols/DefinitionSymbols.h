@@ -104,6 +104,22 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
 };
 
+class ProgramInstanceSymbol : public InstanceSymbol {
+public:
+    ProgramInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                          const DefinitionSymbol& definition, uint32_t hierarchyDepth) :
+        InstanceSymbol(SymbolKind::ProgramInstance, compilation, name, loc, definition,
+                       hierarchyDepth) {}
+
+    static ProgramInstanceSymbol& instantiate(Compilation& compilation,
+                                              const HierarchicalInstanceSyntax& syntax,
+                                              const DefinitionSymbol& definition,
+                                              span<const ParameterSymbolBase* const> parameters,
+                                              uint32_t hierarchyDepth);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ProgramInstance; }
+};
+
 class InterfaceInstanceSymbol : public InstanceSymbol {
 public:
     InterfaceInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,

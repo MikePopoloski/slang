@@ -87,6 +87,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         SYMBOL(InterfacePort);
         SYMBOL(Definition);
         SYMBOL(ModuleInstance);
+        SYMBOL(ProgramInstance);
         SYMBOL(InterfaceInstance);
         SYMBOL(InstanceArray);
         SYMBOL(Package);
@@ -123,7 +124,6 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         TYPE(NetType);
 
         case SymbolKind::ClassType: THROW_UNREACHABLE;
-        case SymbolKind::Program: THROW_UNREACHABLE;
     }
 #undef TYPE
 #undef SYMBOL

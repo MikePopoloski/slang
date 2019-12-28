@@ -59,12 +59,12 @@ struct AttributeInstanceSyntax;
     x(InterfacePort) \
     x(Modport) \
     x(ModuleInstance) \
+    x(ProgramInstance) \
     x(InterfaceInstance) \
     x(InstanceArray) \
     x(Package) \
     x(ExplicitImport) \
     x(WildcardImport) \
-    x(Program) \
     x(Attribute) \
     x(Genvar) \
     x(GenerateBlock) \

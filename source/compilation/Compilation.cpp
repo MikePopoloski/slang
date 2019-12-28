@@ -70,7 +70,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
         visitDefault(symbol);
     }
 
-    void handle(const ModuleInstanceSymbol& symbol) {
+    void handleInstance(const InstanceSymbol& symbol) {
         if (diags.getNumErrors() > errorLimit)
             return;
 
@@ -79,14 +79,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
         visitDefault(symbol);
     }
 
-    void handle(const InterfaceInstanceSymbol& symbol) {
-        if (diags.getNumErrors() > errorLimit)
-            return;
-
-        if (!inDef)
-            instanceCount[&symbol.definition]++;
-        visitDefault(symbol);
-    }
+    void handle(const ModuleInstanceSymbol& symbol) { handleInstance(symbol); }
+    void handle(const ProgramInstanceSymbol& symbol) { handleInstance(symbol); }
+    void handle(const InterfaceInstanceSymbol& symbol) { handleInstance(symbol); }
 
     void handle(const PortSymbol& symbol) {
         for (auto attr : symbol.getConnectionAttributes())

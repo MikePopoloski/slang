@@ -13,7 +13,6 @@
 namespace slang {
 
 class FormalArgumentSymbol;
-class InterfaceInstanceSymbol;
 class PackageSymbol;
 
 struct EmptyMemberSyntax;
