@@ -265,6 +265,9 @@ module Top;
     typedef enum { SDF, BAZ } enum_t;
     parameter enum_t e = BAZ;
 
+    typedef logic [1:0] asdf_t [3];
+    parameter asdf_t p = '{ 1, 2, 3 };
+
 endmodule
 )");
 
@@ -281,6 +284,12 @@ endmodule
     CHECK(barType.isFourState());
 
     CHECK(instance.memberAt<ParameterSymbol>(7).getValue().integer() == 1);
+
+    auto& pVal = instance.find<ParameterSymbol>("p").getValue();
+    CHECK(pVal.elements().size() == 3);
+    CHECK(pVal.elements()[0].integer() == 1);
+    CHECK(pVal.elements()[1].integer() == 2);
+    CHECK(pVal.elements()[2].integer() == 3);
 
     NO_COMPILATION_ERRORS;
 }

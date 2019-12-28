@@ -198,7 +198,7 @@ public:
 
         const Type* t = args[1]->type;
         do {
-            t = &t->as<UnpackedArrayType>().elementType;
+            t = &t->getCanonicalType().as<UnpackedArrayType>().elementType;
         } while (t->isUnpackedArray());
 
         if (!t->isIntegral())

@@ -574,6 +574,8 @@ module m;
     string foo;
     int blah[3];
 
+    typedef int arr_t[3];
+
     initial begin
         $display("asdf", , 5);
         $fdisplay(1, "asdf", , 5);
@@ -585,9 +587,7 @@ module m;
         $readmemh("SDF", blah);
         $readmemb("SDF", blah, 3);
         $readmemh("SDF", blah, 3, 4);
-
-        // TODO: unpacked array non-lvalue
-        $writememh("SDF", blah, 3, 4);
+        $writememh("SDF", arr_t'{1,2,3}, 3, 4);
     end
 endmodule
 )");

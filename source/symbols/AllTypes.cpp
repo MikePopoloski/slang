@@ -783,10 +783,10 @@ void ForwardingTypedefSymbol::toJson(json& j) const {
 const TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
                                                const TypedefDeclarationSyntax& syntax) {
     // TODO: interface based typedefs
-    // TODO: unpacked dimensions
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
     result->targetType.setTypeSyntax(*syntax.type);
+    result->targetType.setDimensionSyntax(syntax.dimensions);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return *result;
