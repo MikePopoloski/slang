@@ -79,6 +79,8 @@ AssertionKind getAssertKind(SyntaxKind kind);
 
 StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax);
 
+ArgumentDirection getArgDirection(PortDirection direction);
+
 } // namespace SemanticFacts
 
 } // namespace slang

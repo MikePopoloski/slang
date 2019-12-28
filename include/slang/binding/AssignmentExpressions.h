@@ -39,6 +39,11 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
+    static Expression& fromComponents(Compilation& compilation, optional<BinaryOperator> op,
+                                      bool nonBlocking, Expression& lhs, Expression& rhs,
+                                      SourceLocation assignLoc, SourceRange sourceRange,
+                                      const BindContext& context);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Assignment; }
 
 private:

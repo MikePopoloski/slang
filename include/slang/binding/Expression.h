@@ -8,6 +8,7 @@
 
 #include "slang/binding/BindContext.h"
 #include "slang/binding/EvalContext.h"
+#include "slang/symbols/SemanticFacts.h"
 
 namespace slang {
 
@@ -125,9 +126,19 @@ public:
     static const Expression& bind(const ExpressionSyntax& syntax, const BindContext& context,
                                   bitmask<BindFlags> extraFlags = BindFlags::None);
 
+    /// Binds the left hand side of an assignment-like expression from the given syntax nodes.
+    static const Expression& bindLValue(const ExpressionSyntax& lhs, const Symbol& rhs,
+                                        SourceRange rhsRange, const BindContext& context);
+
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
     static const Expression& bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                         SourceLocation location, const BindContext& context);
+
+    /// Binds an argument or port connection with the given direction and syntax nodes.
+    static const Expression& bindArgument(const ValueSymbol& arg, SourceRange argRange,
+                                          ArgumentDirection direction,
+                                          const ExpressionSyntax& syntax,
+                                          const BindContext& context);
 
     /// Converts the given expression to the specified type, as if the right hand side had been
     /// assigned (without a cast) to a left hand side of the specified type.

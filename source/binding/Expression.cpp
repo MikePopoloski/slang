@@ -159,6 +159,23 @@ const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindCon
     return result;
 }
 
+const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Symbol& rhs,
+                                         SourceRange rhsRange, const BindContext& context) {
+    Compilation& comp = context.scope.getCompilation();
+    auto& rhsExpr =
+        NamedValueExpression::fromSymbol(context.scope, rhs, /* isHierarchical */ false, rhsRange);
+    if (rhsExpr.bad())
+        return badExpr(comp, nullptr);
+
+    Expression* lhsExpr = &create(comp, lhs, context, BindFlags::None, rhsExpr.type);
+    selfDetermined(context, lhsExpr);
+
+    SourceRange lhsRange = lhs.sourceRange();
+    return AssignmentExpression::fromComponents(comp, std::nullopt, /* nonBlocking */ false,
+                                                *lhsExpr, rhsExpr, lhsRange.start(), lhsRange,
+                                                context);
+}
+
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                          SourceLocation location, const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
@@ -167,6 +184,25 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
     const Expression& result = convertAssignment(context, lhs, expr, location);
     checkBindFlags(result, context);
     return result;
+}
+
+const Expression& Expression::bindArgument(const ValueSymbol& arg, SourceRange argRange,
+                                           ArgumentDirection direction,
+                                           const ExpressionSyntax& syntax,
+                                           const BindContext& context) {
+    switch (direction) {
+        case ArgumentDirection::In:
+            return bindRValue(arg.getType(), syntax, syntax.getFirstToken().location(), context);
+        case ArgumentDirection::Out:
+        case ArgumentDirection::InOut:
+            // TODO: additional restrictions on inout
+            return bindLValue(syntax, arg, argRange, context);
+        case ArgumentDirection::Ref:
+        case ArgumentDirection::ConstRef:
+            // TODO: implement this
+            break;
+    }
+    THROW_UNREACHABLE;
 }
 
 void Expression::checkBindFlags(const Expression& expr, const BindContext& context) {

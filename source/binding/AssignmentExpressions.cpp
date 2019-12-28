@@ -199,32 +199,35 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                 &create(compilation, *syntax.left, context, BindFlags::None, rhs->type);
             selfDetermined(context, lhs);
 
-            auto result = compilation.emplace<AssignmentExpression>(
-                op, isNonBlocking, *lhs->type, *lhs, *rhs, syntax.sourceRange());
-
-            if (rhs->bad())
-                return badExpr(compilation, result);
-
-            return *result;
+            return fromComponents(compilation, op, isNonBlocking, *lhs, *rhs,
+                                  syntax.operatorToken.location(), syntax.sourceRange(), context);
         }
     }
 
     Expression& lhs = selfDetermined(compilation, *syntax.left, context);
     Expression& rhs = create(compilation, *syntax.right, context, BindFlags::None, lhs.type);
 
-    auto result = compilation.emplace<AssignmentExpression>(op, isNonBlocking, *lhs.type, lhs, rhs,
-                                                            syntax.sourceRange());
+    return fromComponents(compilation, op, isNonBlocking, lhs, rhs, syntax.operatorToken.location(),
+                          syntax.sourceRange(), context);
+}
+
+Expression& AssignmentExpression::fromComponents(Compilation& compilation,
+                                                 optional<BinaryOperator> op, bool nonBlocking,
+                                                 Expression& lhs, Expression& rhs,
+                                                 SourceLocation assignLoc, SourceRange sourceRange,
+                                                 const BindContext& context) {
+    auto result = compilation.emplace<AssignmentExpression>(op, nonBlocking, *lhs.type, lhs, rhs,
+                                                            sourceRange);
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
 
     // Make sure we can actually assign to the thing on the lhs.
     // TODO: check for const assignment
-    auto location = syntax.operatorToken.location();
-    if (!context.requireLValue(lhs, location))
+    if (!context.requireLValue(lhs, assignLoc))
         return badExpr(compilation, result);
 
     result->right_ =
-        &convertAssignment(context, *lhs.type, *result->right_, location, lhs.sourceRange);
+        &convertAssignment(context, *lhs.type, *result->right_, assignLoc, lhs.sourceRange);
     if (result->right_->bad())
         return badExpr(compilation, result);
 

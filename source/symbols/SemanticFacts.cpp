@@ -69,6 +69,16 @@ AssertionKind getAssertKind(SyntaxKind kind) {
     }
 }
 
+ArgumentDirection getArgDirection(PortDirection direction) {
+    switch (direction) {
+        case PortDirection::In: return ArgumentDirection::In;
+        case PortDirection::Out: return ArgumentDirection::Out;
+        case PortDirection::InOut: return ArgumentDirection::InOut;
+        case PortDirection::Ref: return ArgumentDirection::Ref;
+        default: THROW_UNREACHABLE;
+    }
+}
+
 // clang-format on
 
 StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax) {
