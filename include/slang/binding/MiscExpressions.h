@@ -217,8 +217,7 @@ public:
 };
 
 /// Represents an empty argument. There's no actual syntax to go along with this,
-/// and the type is always invalid, but we use this as a placeholder to hold the fact
-/// that the argument is empty.
+/// but we use this as a placeholder to hold the fact that the argument is empty.
 class EmptyArgumentExpression : public Expression {
 public:
     EmptyArgumentExpression(const Type& type, SourceRange sourceRange) :

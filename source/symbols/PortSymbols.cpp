@@ -916,7 +916,7 @@ const Expression* PortSymbol::getConnection() const {
             ASSERT(scope);
 
             BindContext context(*scope, LookupLocation::before(*this));
-            conn = &Expression::bindArgument(*this, SemanticFacts::getArgDirection(direction),
+            conn = &Expression::bindArgument(getType(), SemanticFacts::getArgDirection(direction),
                                              *connSyntax, context);
         }
     }

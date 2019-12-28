@@ -707,7 +707,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                     context.addDiag(diag::ArgCannotBeEmpty, arg->sourceRange()) << formal->name;
             }
             else {
-                expr = &Expression::bindArgument(*formal, formal->direction,
+                expr = &Expression::bindArgument(formal->getType(), formal->direction,
                                                  arg->as<ExpressionSyntax>(), context);
             }
 
@@ -736,7 +736,8 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                 }
             }
             else {
-                expr = &Expression::bindArgument(*formal, formal->direction, *arg, context);
+                expr =
+                    &Expression::bindArgument(formal->getType(), formal->direction, *arg, context);
             }
         }
         else {

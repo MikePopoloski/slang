@@ -159,22 +159,24 @@ const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindCon
     return result;
 }
 
-const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Symbol& rhs,
-                                         const BindContext& context) {
+const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
+                                         SourceLocation location, const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
 
-    SourceRange rhsRange{ rhs.location, rhs.location };
-    auto& rhsExpr =
-        NamedValueExpression::fromSymbol(context.scope, rhs, /* isHierarchical */ false, rhsRange);
-    if (rhsExpr.bad())
+    // Create a placeholder expression that will carry the type of the rhs.
+    // Nothing will ever actually look at this expression, it's there only
+    // to fill the space in the created AssignmentExpression.
+    SourceRange rhsRange{ location, location };
+    auto rhsExpr = comp.emplace<EmptyArgumentExpression>(rhs, rhsRange);
+    if (rhsExpr->bad())
         return badExpr(comp, nullptr);
 
-    Expression* lhsExpr = &create(comp, lhs, context, BindFlags::None, rhsExpr.type);
+    Expression* lhsExpr = &create(comp, lhs, context, BindFlags::None, rhsExpr->type);
     selfDetermined(context, lhsExpr);
 
     SourceRange lhsRange = lhs.sourceRange();
     return AssignmentExpression::fromComponents(comp, std::nullopt, /* nonBlocking */ false,
-                                                *lhsExpr, rhsExpr, lhsRange.start(), lhsRange,
+                                                *lhsExpr, *rhsExpr, lhsRange.start(), lhsRange,
                                                 context);
 }
 
@@ -188,16 +190,17 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
     return result;
 }
 
-const Expression& Expression::bindArgument(const ValueSymbol& arg, ArgumentDirection direction,
+const Expression& Expression::bindArgument(const Type& argType, ArgumentDirection direction,
                                            const ExpressionSyntax& syntax,
                                            const BindContext& context) {
+    auto loc = syntax.getFirstToken().location();
     switch (direction) {
         case ArgumentDirection::In:
-            return bindRValue(arg.getType(), syntax, syntax.getFirstToken().location(), context);
+            return bindRValue(argType, syntax, loc, context);
         case ArgumentDirection::Out:
         case ArgumentDirection::InOut:
             // TODO: additional restrictions on inout
-            return bindLValue(syntax, arg, context);
+            return bindLValue(syntax, argType, loc, context);
         case ArgumentDirection::Ref:
         case ArgumentDirection::ConstRef:
             // TODO: implement this
