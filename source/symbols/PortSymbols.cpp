@@ -912,16 +912,12 @@ const Expression* PortSymbol::getConnection() const {
         else {
             // TODO: if port is explicit, check that expression as well
 
-            auto syntax = getSyntax();
-            ASSERT(syntax);
-
             auto scope = getParentScope();
             ASSERT(scope);
 
             BindContext context(*scope, LookupLocation::before(*this));
-            conn = &Expression::bindArgument(*this, syntax->sourceRange(),
-                                             SemanticFacts::getArgDirection(direction), *connSyntax,
-                                             context);
+            conn = &Expression::bindArgument(*this, SemanticFacts::getArgDirection(direction),
+                                             *connSyntax, context);
         }
     }
     return *conn;

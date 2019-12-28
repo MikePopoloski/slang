@@ -160,8 +160,10 @@ const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindCon
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Symbol& rhs,
-                                         SourceRange rhsRange, const BindContext& context) {
+                                         const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
+
+    SourceRange rhsRange{ rhs.location, rhs.location };
     auto& rhsExpr =
         NamedValueExpression::fromSymbol(context.scope, rhs, /* isHierarchical */ false, rhsRange);
     if (rhsExpr.bad())
@@ -186,8 +188,7 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
     return result;
 }
 
-const Expression& Expression::bindArgument(const ValueSymbol& arg, SourceRange argRange,
-                                           ArgumentDirection direction,
+const Expression& Expression::bindArgument(const ValueSymbol& arg, ArgumentDirection direction,
                                            const ExpressionSyntax& syntax,
                                            const BindContext& context) {
     switch (direction) {
@@ -196,7 +197,7 @@ const Expression& Expression::bindArgument(const ValueSymbol& arg, SourceRange a
         case ArgumentDirection::Out:
         case ArgumentDirection::InOut:
             // TODO: additional restrictions on inout
-            return bindLValue(syntax, arg, argRange, context);
+            return bindLValue(syntax, arg, context);
         case ArgumentDirection::Ref:
         case ArgumentDirection::ConstRef:
             // TODO: implement this

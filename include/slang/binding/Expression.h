@@ -128,15 +128,14 @@ public:
 
     /// Binds the left hand side of an assignment-like expression from the given syntax nodes.
     static const Expression& bindLValue(const ExpressionSyntax& lhs, const Symbol& rhs,
-                                        SourceRange rhsRange, const BindContext& context);
+                                        const BindContext& context);
 
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
     static const Expression& bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                         SourceLocation location, const BindContext& context);
 
     /// Binds an argument or port connection with the given direction and syntax nodes.
-    static const Expression& bindArgument(const ValueSymbol& arg, SourceRange argRange,
-                                          ArgumentDirection direction,
+    static const Expression& bindArgument(const ValueSymbol& arg, ArgumentDirection direction,
                                           const ExpressionSyntax& syntax,
                                           const BindContext& context);
 

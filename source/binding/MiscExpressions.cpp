@@ -691,7 +691,6 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     }
 
     // Now bind all arguments.
-    // TODO: handle direction of arguments
     bool bad = false;
     uint32_t orderedIndex = 0;
     SmallVectorSized<const Expression*, 8> boundArgs;
@@ -708,8 +707,8 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                     context.addDiag(diag::ArgCannotBeEmpty, arg->sourceRange()) << formal->name;
             }
             else {
-                expr = &Expression::bindRValue(formal->getType(), arg->as<ExpressionSyntax>(),
-                                               arg->getFirstToken().location(), context);
+                expr = &Expression::bindArgument(*formal, formal->direction,
+                                                 arg->as<ExpressionSyntax>(), context);
             }
 
             // Make sure there isn't also a named value for this argument.
@@ -737,8 +736,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                 }
             }
             else {
-                expr = &Expression::bindRValue(formal->getType(), *arg,
-                                               arg->getFirstToken().location(), context);
+                expr = &Expression::bindArgument(*formal, formal->direction, *arg, context);
             }
         }
         else {
