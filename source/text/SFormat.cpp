@@ -184,23 +184,23 @@ static bool isValidForRaw(const Type& type) {
         return true;
 
     if (type.isUnpackedUnion()) {
-        auto members = type.as<UnpackedUnionType>().members();
-        if (members.begin() == members.end())
-            return false;
-
-        return isValidForRaw(members.begin()->as<FieldSymbol>().getType());
+        auto& uut = type.getCanonicalType().as<UnpackedUnionType>();
+        for (auto& member : uut.members()) {
+            if (!isValidForRaw(member.as<FieldSymbol>().getType()))
+                return false;
+        }
+        return true;
+    }
+    else if (type.isUnpackedStruct()) {
+        auto& ust = type.getCanonicalType().as<UnpackedStructType>();
+        for (auto& member : ust.members()) {
+            if (!isValidForRaw(member.as<FieldSymbol>().getType()))
+                return false;
+        }
+        return true;
     }
 
-    if (!type.isUnpackedStruct())
-        return false;
-
-    auto& ust = type.getCanonicalType().as<UnpackedStructType>();
-    for (auto& member : ust.members()) {
-        if (!isValidForRaw(member.as<FieldSymbol>().getType()))
-            return false;
-    }
-
-    return true;
+    return false;
 }
 
 static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
@@ -392,6 +392,7 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
             // TODO:
             return;
         case 'p':
+            // TODO:
             return;
         case 's':
             formatString(result, arg.convertToStr().str(), options);

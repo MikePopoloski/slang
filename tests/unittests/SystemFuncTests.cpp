@@ -33,6 +33,12 @@ TEST_CASE("Format string - errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int ua[3];
+    string s = "%s";
+    union { logic a; logic b; } foo;
+    union { string a; logic b; } fuz;
+    struct { logic a; logic b; } bar;
+    struct { logic a; string b; } baz;
+    
     initial begin
         $display("asdf %s%d", , 5);
         $display("%s", foo);
@@ -45,17 +51,39 @@ module m;
         $display("%-3.2d", 3);
         $display("%3m");
         $display("%0c");
+        $display("%Q", 1);
+        $display("%u", s);
+        $display("%u", foo);
+        $display("%u", fuz);
+        $display("%z", bar);
+        $display("%z", baz);
+        void'($sformatf(s, "SDF"));
+        void'($sformatf("%9999999999s", "SDF"));
     end
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 
-    /*auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::FormatEmptyArg);*/
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 16);
+    CHECK(diags[0].code == diag::FormatEmptyArg);
+    CHECK(diags[1].code == diag::FormatMismatchedType);
+    CHECK(diags[2].code == diag::FormatUnspecifiedType);
+    CHECK(diags[3].code == diag::FormatRealInt);
+    CHECK(diags[4].code == diag::FormatMismatchedType);
+    CHECK(diags[5].code == diag::FormatSpecifierInvalidWidth);
+    CHECK(diags[6].code == diag::FormatSpecifierInvalidWidth);
+    CHECK(diags[7].code == diag::MissingFormatSpecifier);
+    CHECK(diags[8].code == diag::FormatSpecifierNotFloat);
+    CHECK(diags[9].code == diag::FormatSpecifierWidthNotAllowed);
+    CHECK(diags[10].code == diag::FormatSpecifierWidthNotAllowed);
+    CHECK(diags[11].code == diag::UnknownFormatSpecifier);
+    CHECK(diags[12].code == diag::FormatMismatchedType);
+    CHECK(diags[13].code == diag::FormatMismatchedType);
+    CHECK(diags[14].code == diag::FormatMismatchedType);
+    CHECK(diags[15].code == diag::FormatSpecifierInvalidWidth);
 }
 
 TEST_CASE("String output task - not an lvalue error") {
