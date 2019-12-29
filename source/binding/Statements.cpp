@@ -592,31 +592,39 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
     }
 
     auto& subroutine = scope->asSymbol().as<SubroutineSymbol>();
-    auto& expr =
-        Expression::bindRValue(subroutine.getReturnType(), *syntax.returnValue, stmtLoc, context);
 
-    auto result = compilation.emplace<ReturnStatement>(&expr, syntax.sourceRange());
-    if (expr.bad())
+    const Expression* retExpr = nullptr;
+    if (syntax.returnValue) {
+        retExpr = &Expression::bindRValue(subroutine.getReturnType(), *syntax.returnValue, stmtLoc,
+                                          context);
+    }
+    else if (!subroutine.getReturnType().isVoid()) {
+        context.addDiag(diag::MissingReturnValue, syntax.sourceRange());
+        return badStmt(compilation, nullptr);
+    }
+
+    auto result = compilation.emplace<ReturnStatement>(retExpr, syntax.sourceRange());
+    if (retExpr && retExpr->bad())
         return badStmt(compilation, result);
 
     return *result;
 }
 
 ER ReturnStatement::evalImpl(EvalContext& context) const {
-    // TODO: empty return?
-    const SubroutineSymbol* subroutine = context.topFrame().subroutine;
-    ASSERT(subroutine);
+    if (expr) {
+        const SubroutineSymbol* subroutine = context.topFrame().subroutine;
+        ASSERT(subroutine);
 
-    ConstantValue* storage = context.findLocal(subroutine->returnValVar);
-    ASSERT(storage);
+        ConstantValue* storage = context.findLocal(subroutine->returnValVar);
+        ASSERT(storage);
 
-    *storage = expr->eval(context);
+        *storage = expr->eval(context);
+    }
     return ER::Return;
 }
 
 bool ReturnStatement::verifyConstantImpl(EvalContext& context) const {
-    // TODO: empty return
-    return expr->verifyConstant(context);
+    return !expr || expr->verifyConstant(context);
 }
 
 Statement& BreakStatement::fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,

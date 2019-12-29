@@ -237,6 +237,7 @@ error MixingOrderedAndNamedArgs "ordered arguments are not allowed after named a
 error ArgDoesNotExist "argument '{}' does not exist in subroutine '{}'"
 error ArgCannotBeEmpty "argument '{}' cannot be empty because it does not have a default value"
 error UnconnectedArg "argument '{}' is missing a value"
+error MissingReturnValue "must provide a return value for non-void function"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

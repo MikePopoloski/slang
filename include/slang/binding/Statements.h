@@ -238,7 +238,7 @@ class ReturnStatement : public Statement {
 public:
     const Expression* expr;
 
-    explicit ReturnStatement(const Expression* expr, SourceRange sourceRange) :
+    ReturnStatement(const Expression* expr, SourceRange sourceRange) :
         Statement(StatementKind::Return, sourceRange), expr(expr) {}
 
     EvalResult evalImpl(EvalContext& context) const;
