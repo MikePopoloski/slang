@@ -88,7 +88,7 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
             if (ptr != end && isDecimalDigit(*ptr)) {
                 options.precision = parseUInt(ptr);
                 if (!options.precision) {
-                    onError(diag::FormatSpecifierInvalidWidth, start);
+                    onError(diag::FormatSpecifierInvalidWidth, ptr);
                     return false;
                 }
             }
@@ -481,10 +481,9 @@ bool isArgTypeValid(Arg::Type required, const Type& type) {
             return true;
         case Arg::String:
             return type.canBeStringLike();
-        case Arg::None:
+        default:
             return false;
     }
-    return false;
 }
 
 bool isRealToInt(Arg::Type arg, const Type& type) {

@@ -32,18 +32,30 @@ endmodule
 TEST_CASE("Format string - errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
+    int ua[3];
     initial begin
         $display("asdf %s%d", , 5);
+        $display("%s", foo);
+        $display(ua);
+        $display("%d", 3.2);
+        $display("%d", ua);
+        $display("%9999999999d", 3);
+        $display("%3.9999999999f", 3.2);
+        $display("%", 3);
+        $display("%-3.2d", 3);
+        $display("%3m");
+        $display("%0c");
     end
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 
-    auto& diags = compilation.getAllDiagnostics();
+    /*auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::FormatEmptyArg);
+    CHECK(diags[0].code == diag::FormatEmptyArg);*/
 }
 
 TEST_CASE("String output task - not an lvalue error") {

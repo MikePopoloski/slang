@@ -82,9 +82,14 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
                 specs.clear();
                 auto& lit = arg->as<StringLiteral>();
 
+                // We need to use the raw value here so that we can accurately
+                // report errors for specific format specifiers within the string.
+                string_view fmt = lit.getRawValue();
+                if (fmt.length() >= 2)
+                    fmt = fmt.substr(1, fmt.length() - 2);
+
                 Diagnostics diags;
-                if (!SFormat::parseArgs(lit.getRawValue(), arg->sourceRange.start(), specs,
-                                        diags)) {
+                if (!SFormat::parseArgs(fmt, arg->sourceRange.start() + 1, specs, diags)) {
                     context.scope.addDiags(diags);
                     return false;
                 }

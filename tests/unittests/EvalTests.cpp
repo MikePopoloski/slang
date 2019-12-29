@@ -801,7 +801,7 @@ TEST_CASE("Eval sformatf") {
 
     session.eval("string str = \"blah\";");
     CHECK(sformatf("%s", "\"abc\"") == "abc");
-    CHECK(sformatf("%3s", "\"a\"") == "  a");
+    CHECK(sformatf("%3s%%", "\"a\"") == "  a%");
     CHECK(sformatf("%3s", "\"abc\"") == "abc");
     CHECK(sformatf("%3s", "\"abcdef\"") == "abcdef");
     CHECK(sformatf("%3s", "str") == "blah");
