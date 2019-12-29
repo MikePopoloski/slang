@@ -33,74 +33,75 @@ bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
                      const std::vector<SourceBuffer>& buffers, bool includeComments,
                      bool includeDirectives) {
     BumpAllocator alloc;
+    Diagnostics diagnostics;
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
 
-    bool success = true;
-    for (const SourceBuffer& buffer : buffers) {
-        Diagnostics diagnostics;
-        Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
-        preprocessor.pushSource(buffer);
+    for (auto it = buffers.rbegin(); it != buffers.rend(); it++)
+        preprocessor.pushSource(*it);
 
-        SyntaxPrinter output;
-        output.setIncludeComments(includeComments);
-        output.setIncludeDirectives(includeDirectives);
+    SyntaxPrinter output;
+    output.setIncludeComments(includeComments);
+    output.setIncludeDirectives(includeDirectives);
 
-        while (true) {
-            Token token = preprocessor.next();
-            output.print(token);
-            if (token.kind == TokenKind::EndOfFile)
-                break;
-        }
-
-        if (diagnostics.empty())
-            print("{}:\n", sourceManager.getRawFileName(buffer.id));
-        else {
-            print("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics));
-            success = false;
-        }
-
-        print("==============================\n{}\n", output.str());
+    while (true) {
+        Token token = preprocessor.next();
+        output.print(token);
+        if (token.kind == TokenKind::EndOfFile)
+            break;
     }
-    return success;
+
+    if (diagnostics.getNumErrors()) {
+        print("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics));
+        return false;
+    }
+
+    print("{}\n", output.str());
+    return true;
 }
 
 void printMacros(SourceManager& sourceManager, const Bag& options,
                  const std::vector<SourceBuffer>& buffers) {
     BumpAllocator alloc;
+    Diagnostics diagnostics;
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
 
-    for (const SourceBuffer& buffer : buffers) {
-        Diagnostics diagnostics;
-        Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
-        preprocessor.pushSource(buffer);
+    for (auto it = buffers.rbegin(); it != buffers.rend(); it++)
+        preprocessor.pushSource(*it);
 
-        while (true) {
-            Token token = preprocessor.next();
-            if (token.kind == TokenKind::EndOfFile)
-                break;
-        }
+    while (true) {
+        Token token = preprocessor.next();
+        if (token.kind == TokenKind::EndOfFile)
+            break;
+    }
 
-        for (auto macro : preprocessor.getDefinedMacros()) {
-            SyntaxPrinter printer;
-            printer.setIncludeComments(false);
-            printer.setIncludeTrivia(false);
-            printer.print(macro->name);
+    for (auto macro : preprocessor.getDefinedMacros()) {
+        SyntaxPrinter printer;
+        printer.setIncludeComments(false);
+        printer.setIncludeTrivia(false);
+        printer.print(macro->name);
 
-            printer.setIncludeTrivia(true);
-            if (macro->formalArguments)
-                printer.print(*macro->formalArguments);
-            printer.print(macro->body);
+        printer.setIncludeTrivia(true);
+        if (macro->formalArguments)
+            printer.print(*macro->formalArguments);
+        printer.print(macro->body);
 
-            print("{}\n", printer.str());
-        }
+        print("{}\n", printer.str());
     }
 }
 
 bool runCompiler(SourceManager& sourceManager, const Bag& options,
                  const std::vector<SourceBuffer>& buffers,
                  const std::vector<std::string>& warningOptions, uint32_t errorLimit,
-                 bool onlyParse, const optional<std::string>& astJsonFile) {
+                 bool singleUnit, bool onlyParse, const optional<std::string>& astJsonFile) {
+
     Compilation compilation(options);
-    for (const SourceBuffer& buffer : buffers)
-        compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
+    if (singleUnit) {
+        compilation.addSyntaxTree(SyntaxTree::fromBuffers(buffers, sourceManager, options));
+    }
+    else {
+        for (const SourceBuffer& buffer : buffers)
+            compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
+    }
 
     DiagnosticEngine diagEngine(sourceManager);
     Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
@@ -223,7 +224,9 @@ int driverMain(int argc, TArgs argv) try {
                 "<limit>");
 
     // File list
+    optional<bool> singleUnit;
     std::vector<std::string> sourceFiles;
+    cmdLine.add("--single-unit", singleUnit, "Treat all input files as a single compilation unit");
     cmdLine.setPositional(sourceFiles, "files");
 
     if (!cmdLine.parse(argc, argv)) {
@@ -335,7 +338,8 @@ int driverMain(int argc, TArgs argv) try {
         }
         else {
             anyErrors = !runCompiler(sourceManager, options, buffers, warningOptions,
-                                     errorLimit.value_or(20), onlyParse == true, astJsonFile);
+                                     errorLimit.value_or(20), singleUnit == true, onlyParse == true,
+                                     astJsonFile);
         }
     }
     catch (const std::exception& e) {
