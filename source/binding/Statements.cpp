@@ -1390,8 +1390,8 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
     if (expr.bad())
         return badStmt(compilation, result);
 
-    // TODO: differentiate func call vs task call
-    if (expr.kind != ExpressionKind::Call) {
+    if (expr.kind != ExpressionKind::Call ||
+        expr.as<CallExpression>().getSubroutineKind() == SubroutineKind::Task) {
         context.addDiag(diag::VoidCastFuncCall, expr.sourceRange);
         return badStmt(compilation, result);
     }

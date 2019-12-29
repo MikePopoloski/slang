@@ -977,6 +977,16 @@ string_view CallExpression::getSubroutineName() const {
     return symbol.name;
 }
 
+SubroutineKind CallExpression::getSubroutineKind() const {
+    if (subroutine.index() == 1) {
+        const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
+        return systemSubroutine.kind;
+    }
+
+    const SubroutineSymbol& symbol = *std::get<0>(subroutine);
+    return symbol.subroutineKind;
+}
+
 void CallExpression::toJson(json& j) const {
     if (subroutine.index() == 1) {
         const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
