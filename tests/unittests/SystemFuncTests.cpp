@@ -38,6 +38,8 @@ module m;
     union { string a; logic b; } fuz;
     struct { logic a; logic b; } bar;
     struct { logic a; string b; } baz;
+
+    localparam string fmt = "%3.2d";
     
     initial begin
         $display("asdf %s%d", , 5);
@@ -60,6 +62,7 @@ module m;
         $display("%z%s");
         void'($sformatf(s, "SDF"));
         void'($sformatf("%9999999999s", "SDF"));
+        void'($sformatf(fmt, s));
     end
 endmodule
 )");

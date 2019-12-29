@@ -127,17 +127,20 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
 
 bool SystemSubroutine::checkFormatValues(const BindContext& context, const Args& args) {
     // If the format string is known at compile time, check it for correctness now.
-    if (!args[0]->constant)
+    // Otherwise this will wait until runtime.
+    if (args[0]->kind != ExpressionKind::StringLiteral)
         return true;
 
-    ConstantValue formatStr = args[0]->constant->convertToStr();
-    if (!formatStr)
-        return false;
+    // We need to use the raw value here so that we can accurately
+    // report errors for specific format specifiers within the string.
+    auto& lit = args[0]->as<StringLiteral>();
+    string_view fmt = lit.getRawValue();
+    if (fmt.length() >= 2)
+        fmt = fmt.substr(1, fmt.length() - 2);
 
-    // TODO: if arg[0] isn't a literal, don't print spec ranges
     Diagnostics diags;
     SmallVectorSized<SFormat::Arg, 8> specs;
-    if (!SFormat::parseArgs(formatStr.str(), args[0]->sourceRange.start(), specs, diags)) {
+    if (!SFormat::parseArgs(fmt, args[0]->sourceRange.start() + 1, specs, diags)) {
         context.scope.addDiags(diags);
         return false;
     }
