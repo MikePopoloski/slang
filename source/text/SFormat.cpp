@@ -78,7 +78,7 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
         if (ptr != end && isDecimalDigit(*ptr)) {
             options.width = parseUInt(ptr);
             if (!options.width) {
-                onError(diag::FormatSpecifierInvalidWidth, start);
+                onError(diag::FormatSpecifierInvalidWidth, ptr);
                 return false;
             }
         }
@@ -173,7 +173,10 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
             return false;
         }
 
-        onArg(type, c, options);
+        SourceLocation sl = loc + (start - str.data());
+        SourceRange range{ sl, sl + (ptr - start) };
+
+        onArg(type, c, range, options);
     }
 
     return true;
@@ -419,10 +422,10 @@ static void formatNonArg(std::string& result, char specifier, const Scope& scope
 
 bool parseArgs(string_view formatString, SourceLocation loc, SmallVector<Arg>& args,
                Diagnostics& diags) {
-    auto onArg = [&](Arg::Type type, char c, const FormatOptions&) {
+    auto onArg = [&](Arg::Type type, char c, SourceRange range, const FormatOptions&) {
         if (type == Arg::None)
             return;
-        args.append({ type, c });
+        args.append({ range, type, c });
     };
     return parseFormatString(
         formatString, loc, [](char) {}, onArg, diags);
@@ -435,7 +438,8 @@ optional<std::string> format(string_view formatString, SourceLocation loc,
 
     auto onChar = [&](char c) { result += c; };
 
-    auto onArg = [&](Arg::Type requiredType, char c, const FormatOptions& options) {
+    auto onArg = [&](Arg::Type requiredType, char c, SourceRange specRange,
+                     const FormatOptions& options) {
         if (requiredType == Arg::None) {
             formatNonArg(result, c, scope);
             return;
@@ -449,9 +453,9 @@ optional<std::string> format(string_view formatString, SourceLocation loc,
         auto& [value, type, range] = *argIt;
         if (!isArgTypeValid(requiredType, *type)) {
             if (isRealToInt(requiredType, *type))
-                diags.add(diag::FormatRealInt, range) << c;
+                diags.add(diag::FormatRealInt, range) << c << specRange;
             else
-                diags.add(diag::FormatMismatchedType, range) << *type << c;
+                diags.add(diag::FormatMismatchedType, range) << *type << c << specRange;
         }
         else {
             formatArg(result, value, *type, c, options, diags);

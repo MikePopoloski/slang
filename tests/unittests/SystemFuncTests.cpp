@@ -57,6 +57,7 @@ module m;
         $display("%u", fuz);
         $display("%z", bar);
         $display("%z", baz);
+        $display("%z%s");
         void'($sformatf(s, "SDF"));
         void'($sformatf("%9999999999s", "SDF"));
     end
@@ -67,7 +68,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 16);
+    REQUIRE(diags.size() == 18);
     CHECK(diags[0].code == diag::FormatEmptyArg);
     CHECK(diags[1].code == diag::FormatMismatchedType);
     CHECK(diags[2].code == diag::FormatUnspecifiedType);
@@ -83,7 +84,9 @@ endmodule
     CHECK(diags[12].code == diag::FormatMismatchedType);
     CHECK(diags[13].code == diag::FormatMismatchedType);
     CHECK(diags[14].code == diag::FormatMismatchedType);
-    CHECK(diags[15].code == diag::FormatSpecifierInvalidWidth);
+    CHECK(diags[15].code == diag::FormatNoArgument);
+    CHECK(diags[16].code == diag::FormatNoArgument);
+    CHECK(diags[17].code == diag::FormatSpecifierInvalidWidth);
 }
 
 TEST_CASE("String output task - not an lvalue error") {

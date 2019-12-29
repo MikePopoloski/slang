@@ -69,7 +69,7 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
                 continue;
 
             SFormat::Arg fmtArg = *specIt++;
-            context.addDiag(diag::FormatEmptyArg, arg->sourceRange) << fmtArg.spec;
+            context.addDiag(diag::FormatEmptyArg, arg->sourceRange) << fmtArg.spec << fmtArg.range;
             return false;
         }
 
@@ -105,18 +105,22 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
             SFormat::Arg fmtArg = *specIt++;
             if (!SFormat::isArgTypeValid(fmtArg.type, type)) {
                 if (SFormat::isRealToInt(fmtArg.type, type)) {
-                    context.addDiag(diag::FormatRealInt, arg->sourceRange) << fmtArg.spec;
+                    context.addDiag(diag::FormatRealInt, arg->sourceRange)
+                        << fmtArg.spec << fmtArg.range;
                 }
                 else {
                     context.addDiag(diag::FormatMismatchedType, arg->sourceRange)
-                        << type << fmtArg.spec;
+                        << type << fmtArg.spec << fmtArg.range;
                 }
                 return false;
             }
         }
     }
 
-    // TODO: check for left over specifiers
+    while (specIt != specs.end()) {
+        SFormat::Arg fmtArg = *specIt++;
+        context.addDiag(diag::FormatNoArgument, fmtArg.range) << fmtArg.spec;
+    }
 
     return true;
 }
@@ -130,6 +134,7 @@ bool SystemSubroutine::checkFormatValues(const BindContext& context, const Args&
     if (!formatStr)
         return false;
 
+    // TODO: if arg[0] isn't a literal, don't print spec ranges
     Diagnostics diags;
     SmallVectorSized<SFormat::Arg, 8> specs;
     if (!SFormat::parseArgs(formatStr.str(), args[0]->sourceRange.start(), specs, diags)) {

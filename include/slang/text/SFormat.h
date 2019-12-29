@@ -17,6 +17,7 @@ class Scope;
 namespace SFormat {
 
 struct Arg {
+    SourceRange range;
     enum Type { Integral, Raw, Float, Net, Pattern, Character, String, None } type;
     char spec;
 };
