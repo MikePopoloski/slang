@@ -314,6 +314,7 @@ error InvalidStringArg "value of type {} is not a valid string argument"
 error FormatEmptyArg "empty argument not allowed -- expecting value for '%{}' format specifier"
 error ArrayReductionIntegral "array reduction methods can only be called on unpacked arrays of integral values"
 error BadFinishNum "finish argument must have value of 0, 1, or 2"
+warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 
 subsystem ConstEval
 error ExpressionNotConstant "expression is not constant"

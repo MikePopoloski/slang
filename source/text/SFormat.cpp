@@ -446,10 +446,15 @@ optional<std::string> format(string_view formatString, SourceLocation loc,
         }
 
         auto& [value, type, range] = *argIt;
-        if (!isArgTypeValid(requiredType, *type))
-            diags.add(diag::FormatMismatchedType, range) << *type << c;
-        else
+        if (!isArgTypeValid(requiredType, *type)) {
+            if (isRealToInt(requiredType, *type))
+                diags.add(diag::FormatRealInt, range) << c;
+            else
+                diags.add(diag::FormatMismatchedType, range) << *type << c;
+        }
+        else {
             formatArg(result, value, *type, c, options, diags);
+        }
     };
 
     if (!parseFormatString(formatString, loc, onChar, onArg, diags))
@@ -480,6 +485,10 @@ bool isArgTypeValid(Arg::Type required, const Type& type) {
             return false;
     }
     return false;
+}
+
+bool isRealToInt(Arg::Type arg, const Type& type) {
+    return type.isFloating() && (arg == Arg::Integral || arg == Arg::Character);
 }
 
 } // namespace slang::SFormat

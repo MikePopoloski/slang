@@ -597,7 +597,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Format string - error from empty argument") {
+TEST_CASE("Format string - errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     initial begin

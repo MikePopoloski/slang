@@ -30,6 +30,7 @@ optional<std::string> format(string_view formatString, SourceLocation loc,
                              span<const TypedValue> args, const Scope& scope, Diagnostics& diags);
 
 bool isArgTypeValid(Arg::Type required, const Type& type);
+bool isRealToInt(Arg::Type arg, const Type& type);
 
 } // namespace SFormat
 

@@ -69,7 +69,7 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
                 continue;
 
             SFormat::Arg fmtArg = *specIt++;
-            context.addDiag(diag::FormatEmptyArg, arg->sourceRange) << string_view(&fmtArg.spec, 1);
+            context.addDiag(diag::FormatEmptyArg, arg->sourceRange) << fmtArg.spec;
             return false;
         }
 
@@ -99,8 +99,13 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
         else {
             SFormat::Arg fmtArg = *specIt++;
             if (!SFormat::isArgTypeValid(fmtArg.type, type)) {
-                context.addDiag(diag::FormatMismatchedType, arg->sourceRange)
-                    << type << string_view(&fmtArg.spec, 1);
+                if (SFormat::isRealToInt(fmtArg.type, type)) {
+                    context.addDiag(diag::FormatRealInt, arg->sourceRange) << fmtArg.spec;
+                }
+                else {
+                    context.addDiag(diag::FormatMismatchedType, arg->sourceRange)
+                        << type << fmtArg.spec;
+                }
                 return false;
             }
         }
