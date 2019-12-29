@@ -825,7 +825,7 @@ endmodule
     // Reduce this a bit just to make the tests faster.
     CompilationOptions co;
     co.maxGenerateSteps = 8192;
-    
+
     Bag options;
     options.add(co);
 
@@ -835,4 +835,30 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MaxGenerateStepsExceeded);
+}
+
+TEST_CASE("Single-unit multi-file") {
+    SourceManager& sourceManager = SyntaxTree::getDefaultSourceManager();
+    std::array<SourceBuffer, 2> buffers;
+    buffers[0] = sourceManager.assignText("", R"(
+localparam int foo = 2;
+
+module m;
+endmodule
+)");
+
+    buffers[1] = sourceManager.assignText("", R"(
+module n;
+    int i = foo;
+endmodule
+)");
+
+    auto tree = SyntaxTree::fromBuffers(buffers, sourceManager);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    const RootSymbol& root = compilation.getRoot();
+    REQUIRE(root.topInstances.size() == 2);
 }

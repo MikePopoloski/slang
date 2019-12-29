@@ -33,18 +33,27 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(string_view path, SourceManager
     SourceBuffer buffer = sourceManager.readSource(path);
     if (!buffer)
         return nullptr;
-    return create(sourceManager, buffer, options, false);
+    return create(sourceManager, span(&buffer, 1), options, false);
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromText(string_view text, SourceManager& sourceManager,
                                                  string_view name, const Bag& options) {
-    return create(sourceManager, sourceManager.assignText(name, text), options, true);
+    SourceBuffer buffer = sourceManager.assignText(name, text);
+    if (!buffer)
+        return nullptr;
+    return create(sourceManager, span(&buffer, 1), options, true);
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromBuffer(const SourceBuffer& buffer,
                                                    SourceManager& sourceManager,
                                                    const Bag& options) {
-    return create(sourceManager, buffer, options, false);
+    return create(sourceManager, span(&buffer, 1), options, false);
+}
+
+std::shared_ptr<SyntaxTree> SyntaxTree::fromBuffers(span<const SourceBuffer> buffers,
+                                                    SourceManager& sourceManager,
+                                                    const Bag& options) {
+    return create(sourceManager, buffers, options, false);
 }
 
 SourceManager& SyntaxTree::getDefaultSourceManager() {
@@ -53,19 +62,22 @@ SourceManager& SyntaxTree::getDefaultSourceManager() {
 }
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-                       Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap,
-                       Bag options, Token eof) :
+                       Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap, Bag options,
+                       Token eof) :
     rootNode(root),
     sourceMan(sourceManager), metadataMap(std::move(metadataMap)), alloc(std::move(alloc)),
     diagnosticsBuffer(std::move(diagnostics)), options_(std::move(options)), eof(eof) {
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager, SourceBuffer source,
-                                               const Bag& options, bool guess) {
+std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
+                                               span<const SourceBuffer> source, const Bag& options,
+                                               bool guess) {
     BumpAllocator alloc;
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
-    preprocessor.pushSource(source);
+
+    for (auto it = source.rbegin(); it != source.rend(); it++)
+        preprocessor.pushSource(*it);
 
     Parser parser(preprocessor, options);
 

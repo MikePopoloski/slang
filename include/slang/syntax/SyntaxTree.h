@@ -46,6 +46,10 @@ public:
                                                   SourceManager& sourceManager,
                                                   const Bag& options = {});
 
+    static std::shared_ptr<SyntaxTree> fromBuffers(span<const SourceBuffer> buffers,
+                                                   SourceManager& sourceManager,
+                                                   const Bag& options = {});
+
     /// Gets any diagnostics generated while parsing.
     Diagnostics& diagnostics() { return diagnosticsBuffer; }
 
@@ -89,8 +93,9 @@ private:
                Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap, Bag options,
                Token eof);
 
-    static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager, SourceBuffer source,
-                                              const Bag& options, bool guess);
+    static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
+                                              span<const SourceBuffer> source, const Bag& options,
+                                              bool guess);
 
     SyntaxNode* rootNode;
     SourceManager& sourceMan;
