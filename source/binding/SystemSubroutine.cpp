@@ -111,18 +111,20 @@ bool SystemSubroutine::checkFormatArgs(const BindContext& context, const Args& a
                 else {
                     context.addDiag(diag::FormatMismatchedType, arg->sourceRange)
                         << type << fmtArg.spec << fmtArg.range;
+                    return false;
                 }
-                return false;
             }
         }
     }
 
+    bool ok = true;
     while (specIt != specs.end()) {
         SFormat::Arg fmtArg = *specIt++;
         context.addDiag(diag::FormatNoArgument, fmtArg.range) << fmtArg.spec;
+        ok = false;
     }
 
-    return true;
+    return ok;
 }
 
 bool SystemSubroutine::checkFormatValues(const BindContext& context, const Args& args) {
@@ -145,8 +147,37 @@ bool SystemSubroutine::checkFormatValues(const BindContext& context, const Args&
         return false;
     }
 
-    // TODO: check the rest of the args as well
-    return true;
+    bool ok = true;
+    size_t argIndex = 1;
+    for (auto& fmtArg : specs) {
+        if (argIndex >= args.size()) {
+            context.addDiag(diag::FormatNoArgument, fmtArg.range) << fmtArg.spec;
+            ok = false;
+            continue;
+        }
+
+        const Type& type = *args[argIndex]->type;
+        SourceRange range = args[argIndex]->sourceRange;
+        argIndex++;
+
+        if (!SFormat::isArgTypeValid(fmtArg.type, type)) {
+            if (SFormat::isRealToInt(fmtArg.type, type)) {
+                context.addDiag(diag::FormatRealInt, range) << fmtArg.spec << fmtArg.range;
+            }
+            else {
+                context.addDiag(diag::FormatMismatchedType, range)
+                    << type << fmtArg.spec << fmtArg.range;
+                ok = false;
+            }
+        }
+    }
+
+    if (argIndex < args.size()) {
+        context.addDiag(diag::FormatTooManyArgs, args[argIndex]->sourceRange);
+        ok = false;
+    }
+
+    return ok;
 }
 
 const Type& SystemSubroutine::badArg(const BindContext& context, const Expression& arg) const {
