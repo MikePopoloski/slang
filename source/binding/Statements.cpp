@@ -1005,7 +1005,8 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
         syntax.initializers[0]->kind != SyntaxKind::ForVariableDeclaration) {
 
         for (auto initializer : syntax.initializers) {
-            auto& init = Expression::bind(initializer->as<ExpressionSyntax>(), context);
+            auto& init = Expression::bind(initializer->as<ExpressionSyntax>(), context,
+                                          BindFlags::AssignmentAllowed);
             initializers.append(&init);
             anyBad |= init.bad();
         }
@@ -1014,7 +1015,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
     SmallVectorSized<const Expression*, 2> steps;
     auto& stopExpr = Expression::bind(*syntax.stopExpr, context);
     for (auto step : syntax.steps) {
-        auto& expr = Expression::bind(*step, context);
+        auto& expr = Expression::bind(*step, context, BindFlags::AssignmentAllowed);
         steps.append(&expr);
         anyBad |= expr.bad();
     }
@@ -1351,7 +1352,7 @@ bool ForeverLoopStatement::verifyConstantImpl(EvalContext& context) const {
 Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const ExpressionStatementSyntax& syntax,
                                            const BindContext& context) {
-    auto& expr = Expression::bind(*syntax.expr, context);
+    auto& expr = Expression::bind(*syntax.expr, context, BindFlags::AssignmentAllowed);
     auto result = compilation.emplace<ExpressionStatement>(expr, syntax.sourceRange());
     if (expr.bad())
         return badStmt(compilation, result);

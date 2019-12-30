@@ -837,6 +837,8 @@ module m;
 
     initial i = {j = 1};
 
+    initial if (i = 1) begin end
+
     // This is ok
     initial i = 1 + (j = 1);
 endmodule
@@ -844,11 +846,11 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::AssignmentNotAllowed);
     CHECK(diags[1].code == diag::AssignmentNotAllowed);
     CHECK(diags[2].code == diag::AssignmentRequiresParens);
+    CHECK(diags[3].code == diag::AssignmentRequiresParens);
 }

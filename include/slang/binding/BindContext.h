@@ -55,12 +55,12 @@ enum class BindFlags {
     /// Attributes are disallowed on expressions in this context.
     NoAttributes = 64,
 
-    /// Assignment is allowed in this context This flag is not sticky,
-    /// so it will disappear in nested expressions.
+    /// Assignment is allowed in this context. This flag is cleared
+    /// for nested subexpressions, unless they are directly parenthesized.
     AssignmentAllowed = 128,
 
-    /// Expression is inside a procedural statement, which means assignment
-    /// expressions are allowed inside nested parenthesized expressions.
+    /// Expression is inside a procedural statement. This means that modifying
+    /// variables via assignments and increment/decrement expressions is allowed.
     ProceduralStatement = 256
 };
 BITMASK_DEFINE_MAX_ELEMENT(BindFlags, ProceduralStatement);
