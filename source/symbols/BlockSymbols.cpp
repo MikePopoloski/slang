@@ -22,7 +22,8 @@
 namespace slang {
 
 const Statement& StatementBlockSymbol::getBody() const {
-    return binder.getStatement(BindContext(*this, LookupLocation::max));
+    return binder.getStatement(
+        BindContext(*this, LookupLocation::max, BindFlags::ProceduralStatement));
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
@@ -163,7 +164,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
 }
 
 const Statement& ProceduralBlockSymbol::getBody() const {
-    return binder.getStatement(BindContext(*getParentScope(), LookupLocation::after(*this)));
+    return binder.getStatement(BindContext(*getParentScope(), LookupLocation::after(*this),
+                                           BindFlags::ProceduralStatement));
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
@@ -489,7 +491,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
     BindContext iterContext(iterScope, LookupLocation::max, BindFlags::NoHierarchicalNames);
     const auto& stopExpr = Expression::bind(*syntax.stopExpr, iterContext);
-    const auto& iterExpr = Expression::bind(*syntax.iterationExpr, iterContext);
+    const auto& iterExpr =
+        Expression::bind(*syntax.iterationExpr, iterContext, BindFlags::AssignmentAllowed);
     if (stopExpr.bad() || iterExpr.bad())
         return *result;
 

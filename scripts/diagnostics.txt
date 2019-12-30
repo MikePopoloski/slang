@@ -53,7 +53,6 @@ subsystem Preprocessor
 error CouldNotOpenIncludeFile "could not find or open include file"
 error ExceededMaxIncludeDepth "exceeded max include depth"
 error UnknownDirective "unknown macro or compiler directive '{}'"
-error ExpectedEndOfDirective "expected end of directive (missing newline?)"
 error UnexpectedConditionalDirective "unexpected conditional directive"
 error UnbalancedMacroArgDims "unbalanced macro argument delimiters ((), [], or {{}}); didn't see an end '{}'"
 error ExpectedMacroArgs "expected macro arguments for function-like macro"
@@ -238,6 +237,7 @@ error ArgDoesNotExist "argument '{}' does not exist in subroutine '{}'"
 error ArgCannotBeEmpty "argument '{}' cannot be empty because it does not have a default value"
 error UnconnectedArg "argument '{}' is missing a value"
 error MissingReturnValue "must provide a return value for non-void function"
+error AssignmentNotAllowed "assignment expressions are not allowed in this context"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

@@ -153,6 +153,9 @@ const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance
 
 const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindContext& context,
                                    bitmask<BindFlags> extraFlags) {
+    if (context.flags & BindFlags::ProceduralStatement)
+        extraFlags |= BindFlags::AssignmentAllowed;
+
     const Expression& result =
         selfDetermined(context.scope.getCompilation(), syntax, context, extraFlags);
     checkBindFlags(result, context.resetFlags(extraFlags));
@@ -182,8 +185,12 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                          SourceLocation location, const BindContext& context) {
+    bitmask<BindFlags> extraFlags;
+    if (context.flags & BindFlags::ProceduralStatement)
+        extraFlags = BindFlags::AssignmentAllowed;
+
     Compilation& comp = context.scope.getCompilation();
-    Expression& expr = create(comp, rhs, context, BindFlags::None, &lhs);
+    Expression& expr = create(comp, rhs, context, extraFlags, &lhs);
 
     const Expression& result = convertAssignment(context, lhs, expr, location);
     checkBindFlags(result, context);

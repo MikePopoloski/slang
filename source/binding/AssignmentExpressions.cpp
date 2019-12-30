@@ -173,6 +173,11 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                                              const BinaryExpressionSyntax& syntax,
                                              const BindContext& context) {
+    if ((context.flags & BindFlags::AssignmentAllowed) == 0) {
+        context.addDiag(diag::AssignmentNotAllowed, syntax.sourceRange());
+        return badExpr(compilation, nullptr);
+    }
+
     // TODO: verify that assignment is allowed in this expression context
     optional<BinaryOperator> op;
     if (syntax.kind != SyntaxKind::AssignmentExpression &&

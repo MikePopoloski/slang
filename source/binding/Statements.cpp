@@ -1423,7 +1423,11 @@ bool ExpressionStatement::verifyConstantImpl(EvalContext& context) const {
 Statement& TimedStatement::fromSyntax(Compilation& compilation,
                                       const TimingControlStatementSyntax& syntax,
                                       const BindContext& context, StatementContext& stmtCtx) {
-    auto& timing = TimingControl::bind(*syntax.timingControl, context);
+    // Timing controls are not considered procedural statements when binding expressions.
+    BindContext timingCtx(context);
+    timingCtx.flags &= ~BindFlags::ProceduralStatement;
+
+    auto& timing = TimingControl::bind(*syntax.timingControl, timingCtx);
     auto& stmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<TimedStatement>(timing, stmt, syntax.sourceRange());
 

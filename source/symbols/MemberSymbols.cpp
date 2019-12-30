@@ -109,7 +109,7 @@ void WildcardImportSymbol::toJson(json& j) const {
 }
 
 const Statement& SubroutineSymbol::getBody(EvalContext* evalContext) const {
-    BindContext context(*this, LookupLocation::max);
+    BindContext context(*this, LookupLocation::max, BindFlags::ProceduralStatement);
     context.evalContext = evalContext;
     return binder.getStatement(context);
 }
@@ -317,9 +317,10 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     auto syntax = getSyntax();
     ASSERT(syntax);
 
-    // Parser has ensured that this is a proper variable assignment expression here.
-    assign = &Expression::bind(syntax->as<ExpressionSyntax>(),
-                               BindContext(*scope, LookupLocation::before(*this)));
+    // TODO: parser should ensure that this is a proper variable assignment expression here.
+    BindContext context(*scope, LookupLocation::before(*this));
+    assign =
+        &Expression::bind(syntax->as<ExpressionSyntax>(), context, BindFlags::AssignmentAllowed);
     return *assign;
 }
 

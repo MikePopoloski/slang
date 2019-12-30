@@ -53,9 +53,17 @@ enum class BindFlags {
     EnumInitializer = 32,
 
     /// Attributes are disallowed on expressions in this context.
-    NoAttributes = 64
+    NoAttributes = 64,
+
+    /// Assignment is allowed in this context This flag is not sticky,
+    /// so it will disappear in nested expressions.
+    AssignmentAllowed = 128,
+
+    /// Expression is inside a procedural statement, which means assignment
+    /// expressions are allowed inside nested parenthesized expressions.
+    ProceduralStatement = 256
 };
-BITMASK_DEFINE_MAX_ELEMENT(BindFlags, NoAttributes);
+BITMASK_DEFINE_MAX_ELEMENT(BindFlags, ProceduralStatement);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

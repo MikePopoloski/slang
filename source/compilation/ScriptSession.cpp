@@ -57,7 +57,8 @@ ConstantValue ScriptSession::eval(string_view text) {
 }
 
 ConstantValue ScriptSession::evalExpression(const ExpressionSyntax& expr) {
-    auto& bound = Expression::bind(expr, BindContext(scope, LookupLocation::max));
+    BindContext context(scope, LookupLocation::max, BindFlags::ProceduralStatement);
+    auto& bound = Expression::bind(expr, context);
     return bound.eval(evalContext);
 }
 

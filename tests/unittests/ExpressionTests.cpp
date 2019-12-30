@@ -40,8 +40,9 @@ TEST_CASE("Evaluate assignment expression") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                                         BindContext(scope, LookupLocation::max));
+    auto& bound =
+        Expression::bind(syntax->root().as<ExpressionSyntax>(),
+                         BindContext(scope, LookupLocation::max), BindFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
 
     // Initialize `i` to 1.
@@ -72,8 +73,10 @@ TEST_CASE("Check type propagation") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                                         BindContext(scope, LookupLocation::max));
+    auto& bound =
+        Expression::bind(syntax->root().as<ExpressionSyntax>(),
+                         BindContext(scope, LookupLocation::max), BindFlags::AssignmentAllowed);
+
     REQUIRE(syntax->diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);
@@ -99,8 +102,9 @@ TEST_CASE("Check type propagation 2") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                                         BindContext(scope, LookupLocation::max));
+    auto& bound =
+        Expression::bind(syntax->root().as<ExpressionSyntax>(),
+                         BindContext(scope, LookupLocation::max), BindFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);
@@ -133,8 +137,9 @@ TEST_CASE("Check type propagation real") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                                         BindContext(scope, LookupLocation::max));
+    auto& bound =
+        Expression::bind(syntax->root().as<ExpressionSyntax>(),
+                         BindContext(scope, LookupLocation::max), BindFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
     CHECK(bound.type->getBitWidth() == 20);
 
@@ -743,7 +748,7 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::IndexValueInvalid);
@@ -771,7 +776,7 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpressionNotConstant);
@@ -797,7 +802,7 @@ endmodule
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
-    
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpressionNotConstant);
@@ -819,4 +824,24 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Disallowed assignment contexts") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    int j;
+    assign i = 1 + (j = 1);
+
+    logic [(j = 2) : 0] asdf;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AssignmentNotAllowed);
+    CHECK(diags[1].code == diag::AssignmentNotAllowed);
 }
