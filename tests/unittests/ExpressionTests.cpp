@@ -835,6 +835,8 @@ module m;
 
     logic [(j = 2) : 0] asdf;
 
+    initial i = {j = 1};
+
     // This is ok
     initial i = 1 + (j = 1);
 endmodule
@@ -842,9 +844,11 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::AssignmentNotAllowed);
     CHECK(diags[1].code == diag::AssignmentNotAllowed);
+    CHECK(diags[2].code == diag::AssignmentRequiresParens);
 }

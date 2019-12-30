@@ -238,6 +238,7 @@ error ArgCannotBeEmpty "argument '{}' cannot be empty because it does not have a
 error UnconnectedArg "argument '{}' is missing a value"
 error MissingReturnValue "must provide a return value for non-void function"
 error AssignmentNotAllowed "assignment expressions are not allowed in this context"
+error AssignmentRequiresParens "assignment expressions must be parenthesized"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

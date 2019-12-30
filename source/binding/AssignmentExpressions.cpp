@@ -174,7 +174,10 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
                                              const BinaryExpressionSyntax& syntax,
                                              const BindContext& context) {
     if ((context.flags & BindFlags::AssignmentAllowed) == 0) {
-        context.addDiag(diag::AssignmentNotAllowed, syntax.sourceRange());
+        if (context.flags & BindFlags::ProceduralStatement)
+            context.addDiag(diag::AssignmentRequiresParens, syntax.sourceRange());
+        else
+            context.addDiag(diag::AssignmentNotAllowed, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 
