@@ -834,6 +834,9 @@ module m;
     assign i = 1 + (j = 1);
 
     logic [(j = 2) : 0] asdf;
+
+    // This is ok
+    initial i = 1 + (j = 1);
 endmodule
 )");
 

@@ -343,6 +343,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                                                  syntax.as<IntegerVectorExpressionSyntax>());
             break;
         case SyntaxKind::ParenthesizedExpression:
+            // Parenthesis re-allows assignments if we're in a procedural statement.
+            if (context.flags & BindFlags::ProceduralStatement)
+                extraFlags |= BindFlags::AssignmentAllowed;
+
             result = &create(compilation, *syntax.as<ParenthesizedExpressionSyntax>().expression,
                              context, extraFlags, assignmentTarget);
             break;
