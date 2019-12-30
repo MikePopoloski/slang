@@ -102,7 +102,7 @@ module m;
 
     always @i;
     always @(i);
-    always @((++i / 2) or blah, r, (posedge blah or negedge i), edge i);
+    always @((i / 2) or blah, r, (posedge blah or negedge i), edge i);
 
     always @*;
     always @ *;

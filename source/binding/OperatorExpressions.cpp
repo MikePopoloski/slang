@@ -315,11 +315,16 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             break;
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
+            if ((context.flags & BindFlags::ProceduralStatement) == 0 &&
+                (context.flags & BindFlags::AssignmentAllowed) == 0) {
+                context.addDiag(diag::IncDecNotAllowed, syntax.sourceRange());
+                return badExpr(compilation, result);
+            }
+
             // Supported for both integral and real types. Result is same as input type.
             // The operand must also be an assignable lvalue.
             // TODO: detect and warn for multiple reads and writes of a single variable in an
             // expression
-            // TODO: make sure modifications allowed in this expression
             good = type->isNumeric();
             result->type = type;
             if (!context.requireLValue(operand, syntax.operatorToken.location()))
@@ -351,6 +356,12 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
                                                               operand, syntax.sourceRange());
     if (operand.bad() || !context.requireLValue(operand, syntax.operatorToken.location()))
         return badExpr(compilation, result);
+
+    if ((context.flags & BindFlags::ProceduralStatement) == 0 &&
+        (context.flags & BindFlags::AssignmentAllowed) == 0) {
+        context.addDiag(diag::IncDecNotAllowed, syntax.sourceRange());
+        return badExpr(compilation, result);
+    }
 
     if (!type->isNumeric()) {
         auto& diag = context.addDiag(diag::BadUnaryExpression, syntax.operatorToken.location());

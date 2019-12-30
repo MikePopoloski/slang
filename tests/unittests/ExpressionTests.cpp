@@ -831,13 +831,14 @@ TEST_CASE("Disallowed assignment contexts") {
 module m;
     int i;
     int j;
+    logic [(j = 2) : 0] asdf;
     assign i = 1 + (j = 1);
 
-    logic [(j = 2) : 0] asdf;
-
     initial i = {j = 1};
-
     initial if (i = 1) begin end
+
+    assign i = j++;
+    assign i = ++j;
 
     // This is ok
     initial i = 1 + (j = 1);
@@ -848,9 +849,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::AssignmentNotAllowed);
     CHECK(diags[1].code == diag::AssignmentNotAllowed);
     CHECK(diags[2].code == diag::AssignmentRequiresParens);
     CHECK(diags[3].code == diag::AssignmentRequiresParens);
+    CHECK(diags[4].code == diag::IncDecNotAllowed);
+    CHECK(diags[5].code == diag::IncDecNotAllowed);
 }

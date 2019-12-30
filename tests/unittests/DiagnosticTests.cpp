@@ -140,7 +140,8 @@ TEST_CASE("Diag range within arg and caret within body") {
 
 module m;
     struct { } asdf;
-    int i = `BAR(asdf);
+    int i;
+    initial i = `BAR(asdf);
 endmodule
 )",
                                      "source");
@@ -151,9 +152,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:7:13: error: invalid operand type '<unnamed unpacked struct>' to unary expression
-    int i = `BAR(asdf);
-            ^    ~~~~
+source:8:17: error: invalid operand type '<unnamed unpacked struct>' to unary expression
+    initial i = `BAR(asdf);
+                ^    ~~~~
 source:3:19: note: expanded from macro 'BAR'
 `define BAR(blah) `FOO(blah)
                   ^    ~~~~

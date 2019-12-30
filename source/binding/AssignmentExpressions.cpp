@@ -181,7 +181,6 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, nullptr);
     }
 
-    // TODO: verify that assignment is allowed in this expression context
     optional<BinaryOperator> op;
     if (syntax.kind != SyntaxKind::AssignmentExpression &&
         syntax.kind != SyntaxKind::NonblockingAssignmentExpression) {
