@@ -121,6 +121,13 @@ SourceLocation ParserBase::getLastLocation() {
     return peek().location();
 }
 
+bool ParserBase::haveDiagAtCurrentLoc() {
+    Diagnostics& diags = getDiagnostics();
+    auto location = getLastLocation();
+    return !diags.empty() &&
+           (diags.back().location == location || diags.back().location == peek().location());
+}
+
 void ParserBase::reportMissingList(Token current, TokenKind closeKind, Token& closeToken,
                                    DiagCode code) {
     // If there's already an error here don't report another; otherwise use

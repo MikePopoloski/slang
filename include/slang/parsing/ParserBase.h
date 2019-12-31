@@ -39,6 +39,7 @@ protected:
     Token placeholderToken();
 
     Token getLastConsumed() const;
+    bool haveDiagAtCurrentLoc();
 
     Preprocessor& getPP() { return window.tokenSource; }
 
@@ -178,12 +179,7 @@ protected:
             // an infinite loop. Detect that here and bail out. If parseItem()
             // did not issue a diagnostic on this token, add one now as well.
             if (current == peek()) {
-                Diagnostics& diags = getDiagnostics();
-                auto location = getLastLocation();
-                bool needDiag = diags.empty() || (diags.back().location != location &&
-                                                  diags.back().location != current.location());
-
-                skipToken(needDiag ? std::make_optional(code) : std::nullopt);
+                skipToken(haveDiagAtCurrentLoc() ? std::nullopt : std::make_optional(code));
                 if (IsEnd(peek().kind) || !skipBadTokens<IsExpected, IsEnd>(code))
                     break;
             }

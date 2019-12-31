@@ -117,7 +117,7 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::SpecifyKeyword:
             // TODO: parse these
             break;
-        case TokenKind::Identifier: {
+        case TokenKind::Identifier:
             // Declarations and instantiations have already been handled, so if we reach this point
             // we either have a labeled assertion, or this is some kind of error.
             if (peek(1).kind == TokenKind::Colon) {
@@ -140,8 +140,15 @@ MemberSyntax* Parser::parseMember() {
                     }
                 }
             }
-            break;
-        }
+
+            // If there's a hash symbol here, it's probably a malformed instantiation.
+            // Call into that handler to get a better error message than just skipping
+            // the identifier token.
+            if (peek(1).kind == TokenKind::Hash || peek(1).kind == TokenKind::OpenParenthesis)
+                return &parseHierarchyInstantiation(attributes);
+
+            // Otherwise, assume it's an attempt at a variable declaration.
+            return &parseVariableDeclaration(attributes);
         case TokenKind::AssertKeyword:
         case TokenKind::AssumeKeyword:
         case TokenKind::CoverKeyword:
@@ -245,9 +252,37 @@ span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TPars
 
         auto member = parseFunc();
         if (!member) {
-            // couldn't parse anything, skip a token and try again
-            skipToken(error ? std::nullopt : std::make_optional(diag::ExpectedMember));
+            // Couldn't parse anything, skip a token and try again. If the token we're
+            // skipping is an opening paren / bracket / brace, skip everything up to
+            // the corresponding closing token, otherwise we're pretty much guaranteed
+            // to report a bunch of errors inside it.
+            TokenKind closeKind = getCloseTokenKind(peek().kind);
+            skipToken(error || haveDiagAtCurrentLoc() ? std::nullopt
+                                                      : std::make_optional(diag::ExpectedMember));
             error = true;
+
+            if (closeKind != TokenKind::Unknown) {
+                SmallVectorSized<TokenKind, 16> delimStack;
+                while (true) {
+                    kind = peek().kind;
+                    skipToken(std::nullopt);
+
+                    if (kind == closeKind) {
+                        if (delimStack.empty())
+                            break;
+
+                        closeKind = delimStack.back();
+                        delimStack.pop();
+                    }
+                    else {
+                        TokenKind newCloseKind = getCloseTokenKind(kind);
+                        if (newCloseKind != TokenKind::Unknown) {
+                            delimStack.append(closeKind);
+                            closeKind = newCloseKind;
+                        }
+                    }
+                }
+            }
         }
         else {
             members.append(member);

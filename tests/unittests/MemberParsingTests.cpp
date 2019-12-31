@@ -246,3 +246,25 @@ endmodule
     CHECK(diagnostics[0].code == diag::DirectiveInsideDesignElement);
     CHECK(diagnostics[1].code == diag::DirectiveInsideDesignElement);
 }
+
+TEST_CASE("Module instance -- missing closing paren") {
+    auto& text = R"(
+module m #(parameter int i) ();
+endmodule
+
+module n;
+    m #(.i(3) m1();
+    m #(.i(3)) m2();
+    m (.i(3)) m3();
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 5);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
+    CHECK(diagnostics[1].code == diag::ExpectedToken);
+    CHECK(diagnostics[2].code == diag::ExpectedHierarchicalInstantiation);
+    CHECK(diagnostics[3].code == diag::ExpectedHierarchicalInstantiation);
+    CHECK(diagnostics[4].code == diag::ExpectedHierarchicalInstantiation);
+}

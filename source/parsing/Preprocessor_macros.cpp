@@ -597,25 +597,10 @@ span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
             delimPairStack.pop();
 
         tokens.append(consume());
-        switch (kind) {
-            case TokenKind::OpenParenthesis:
-                delimPairStack.append(TokenKind::CloseParenthesis);
-                break;
-            case TokenKind::OpenBrace:
-                delimPairStack.append(TokenKind::CloseBrace);
-                break;
-            case TokenKind::OpenBracket:
-                delimPairStack.append(TokenKind::CloseBracket);
-                break;
-            case TokenKind::ApostropheOpenBrace:
-                delimPairStack.append(TokenKind::CloseBrace);
-                break;
-            case TokenKind::OpenParenthesisStar:
-                delimPairStack.append(TokenKind::StarCloseParenthesis);
-                break;
-            default:
-                break;
-        }
+
+        TokenKind closeKind = getCloseTokenKind(kind);
+        if (closeKind != TokenKind::Unknown)
+            delimPairStack.append(closeKind);
     }
     return tokens.copy(pp.alloc);
 }

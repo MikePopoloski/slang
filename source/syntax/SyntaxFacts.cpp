@@ -533,6 +533,17 @@ TokenKind getModuleEndKind(TokenKind kind) {
     }
 }
 
+TokenKind getCloseTokenKind(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OpenParenthesis: return TokenKind::CloseParenthesis;
+        case TokenKind::OpenBrace: return TokenKind::CloseBrace;
+        case TokenKind::OpenBracket: return TokenKind::CloseBracket;
+        case TokenKind::ApostropheOpenBrace: return TokenKind::CloseBrace;
+        case TokenKind::OpenParenthesisStar: return TokenKind::StarCloseParenthesis;
+        default: return TokenKind::Unknown;
+    }
+}
+
 bool isNetType(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:
