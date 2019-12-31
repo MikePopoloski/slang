@@ -449,6 +449,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
             auto& diag = parent.addDiag(diag::NotAGenvar, genvar.range());
             diag << genvar.valueText();
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
+            return *result;
         }
     }
 
@@ -529,8 +530,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         }
 
         auto stop = stopExpr.eval(evalContext);
-        if (stop.bad() || !stop.isTrue())
+        if (stop.bad() || !stop.isTrue()) {
+            result->valid = !stop.bad();
             break;
+        }
 
         auto pair = usedValues.emplace(loopVal->integer());
         if (!pair.second) {
@@ -543,8 +546,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         if (!iterExpr.eval(evalContext))
             break;
 
-        if (loopVal->integer().hasUnknown())
+        if (loopVal->integer().hasUnknown()) {
             iterContext.addDiag(diag::GenvarUnknownBits, genvar.range()) << *loopVal;
+            break;
+        }
     }
 
     evalContext.reportDiags(iterContext, syntax.sourceRange());

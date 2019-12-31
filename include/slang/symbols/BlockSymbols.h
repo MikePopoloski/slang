@@ -104,7 +104,8 @@ public:
     };
 
     span<const ArrayEntry> entries;
-    uint32_t constructIndex = 0;
+    uint32_t constructIndex;
+    bool valid = false;
 
     GenerateBlockArraySymbol(Compilation& compilation, string_view name, SourceLocation loc,
                              uint32_t constructIndex) :

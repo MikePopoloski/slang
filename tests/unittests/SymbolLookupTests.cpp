@@ -1184,3 +1184,23 @@ endmodule
     CHECK(diags[0].code == diag::DefinitionUsedAsValue);
     CHECK(diags[1].code == diag::DefinitionUsedAsType);
 }
+
+TEST_CASE("Lookup in invalid generate block") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter int count);
+    for (genvar i = 0; i < count; i++) begin: asdf
+        logic foo;
+    end
+
+    logic i = asdf[0].foo;
+endmodule
+
+module n;
+    m #(.count(2)) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

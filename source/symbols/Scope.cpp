@@ -803,6 +803,9 @@ const Symbol* Scope::selectChild(const Symbol& initialSymbol,
             case SymbolKind::GenerateBlockArray: {
                 bool found = false;
                 auto& array = symbol->as<GenerateBlockArraySymbol>();
+                if (!array.valid)
+                    return nullptr;
+
                 for (auto& entry : array.entries) {
                     if (*entry.index == *index) {
                         found = true;
