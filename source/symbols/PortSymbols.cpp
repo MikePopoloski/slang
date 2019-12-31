@@ -854,9 +854,12 @@ private:
             return;
         }
 
-        // If the dimensions match exactly what the port is expecting make the connection.
         auto portDims = port.getDeclaredRange();
-        if (areDimSizesEqual(portDims, dims)) {
+        if (!portDims)
+            return;
+
+        // If the dimensions match exactly what the port is expecting make the connection.
+        if (areDimSizesEqual(*portDims, dims)) {
             port.connection = symbol;
             return;
         }
@@ -868,7 +871,7 @@ private:
         span<const ConstantRange> dimSpan = dims;
         if (dimSpan.size() >= instanceDims.size() &&
             areDimSizesEqual(dimSpan.subspan(0, instanceDims.size()), instanceDims) &&
-            areDimSizesEqual(dimSpan.subspan(instanceDims.size()), portDims)) {
+            areDimSizesEqual(dimSpan.subspan(instanceDims.size()), *portDims)) {
 
             // It's ok to do the slicing, so pick the correct slice for the connection
             // based on the actual path of the instance we're elaborating.
@@ -885,7 +888,7 @@ private:
             return;
         }
 
-        auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, range);
+        auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, range) << port.name;
         diag.addNote(diag::NoteDeclarationHere, port.location);
     }
 
@@ -1021,7 +1024,7 @@ void PortSymbol::toJson(json& j) const {
         j["externalConnection"] = *ext;
 }
 
-span<const ConstantRange> InterfacePortSymbol::getDeclaredRange() const {
+optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
     if (range)
         return *range;
 
@@ -1036,10 +1039,8 @@ span<const ConstantRange> InterfacePortSymbol::getDeclaredRange() const {
     SmallVectorSized<ConstantRange, 4> buffer;
     for (auto dimSyntax : syntax->as<DeclaratorSyntax>().dimensions) {
         EvaluatedDimension dim = context.evalDimension(*dimSyntax, true);
-        if (!dim.isRange()) {
-            buffer.clear();
-            break;
-        }
+        if (!dim.isRange())
+            return std::nullopt;
 
         buffer.append(dim.range);
     }

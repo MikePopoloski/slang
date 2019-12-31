@@ -84,8 +84,9 @@ public:
     /// Attributes attached to the connection, if any.
     span<const AttributeSymbol* const> connectionAttributes;
 
-    /// Gets the set of dimensions for specifying interface arrays, if applicable.
-    span<const ConstantRange> getDeclaredRange() const;
+    /// Gets the set of dimensions for specifying interface arrays.
+    /// Returns nullopt if an error occurs evaluating the dimensions.
+    optional<span<const ConstantRange>> getDeclaredRange() const;
 
     InterfacePortSymbol(string_view name, SourceLocation loc) :
         Symbol(SymbolKind::InterfacePort, name, loc) {}

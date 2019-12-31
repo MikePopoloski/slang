@@ -393,5 +393,34 @@ endinterface
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DefinitionUsedAsType);
+}
+
+TEST_CASE("Instance array connection error reporting") {
+    auto tree = SyntaxTree::fromText(R"(
+module n #(parameter int count = 1) (input logic foo, I i[asdf-1:0]);
+endmodule
+
+module test #(parameter int count);
+    I i[count-1:0] ();
+    n #(.count(count)) n5(.foo(1), .i);
+endmodule
+
+interface I #(parameter int foo = 1);
+endinterface
+
+module top;
+    test #(2) t1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }
