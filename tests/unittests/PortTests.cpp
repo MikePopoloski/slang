@@ -376,3 +376,22 @@ endinterface
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Malformed interface instance") {
+    auto tree = SyntaxTree::fromText(R"(
+module n(input logic foo, I i);
+endmodule
+
+module test;
+    I i;
+    n n5(.foo(1), .i);
+endmodule
+
+interface I #(parameter int foo = 1);
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

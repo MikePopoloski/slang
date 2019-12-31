@@ -837,7 +837,11 @@ private:
 
         // TODO: handle interface/modport ports as well
         if (child->kind != SymbolKind::InterfaceInstance) {
-            scope.addDiag(diag::NotAnInterface, range) << symbol->name;
+            // If this is a variable with an errored type, an error is already emitted.
+            if (child->kind != SymbolKind::Variable ||
+                !child->as<VariableSymbol>().getType().isError()) {
+                scope.addDiag(diag::NotAnInterface, range) << symbol->name;
+            }
             return;
         }
 
