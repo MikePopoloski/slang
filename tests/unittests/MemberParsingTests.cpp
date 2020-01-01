@@ -220,9 +220,8 @@ endmodule : m1;
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 2);
+    REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ImplicitNotAllowed);
-    CHECK(diagnostics[1].code == diag::ExpectedDeclarator);
 }
 
 TEST_CASE("Errors for directives inside design elements") {

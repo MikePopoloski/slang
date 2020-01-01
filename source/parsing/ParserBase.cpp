@@ -154,22 +154,14 @@ SourceLocation ParserBase::getLastLocation() {
 bool ParserBase::haveDiagAtCurrentLoc() {
     Diagnostics& diags = getDiagnostics();
     auto location = getLastLocation();
-    return !diags.empty() &&
+    return !diags.empty() && diags.getNumErrors() &&
            (diags.back().location == location || diags.back().location == peek().location());
 }
 
 void ParserBase::reportMissingList(Token current, TokenKind closeKind, Token& closeToken,
                                    DiagCode code) {
-    // If there's already an error here don't report another; otherwise use
-    // the provided diagnostic code to report an error.
-    auto location = getLastLocation();
-
-    Diagnostics& diags = getDiagnostics();
-    if (diags.empty() || diags.back().code != diag::ExpectedToken ||
-        (diags.back().location != location && diags.back().location != current.location())) {
-
-        addDiag(code, location);
-    }
+    if (!haveDiagAtCurrentLoc())
+        addDiag(code, getLastLocation());
 
     closeToken = missingToken(closeKind, current.location());
 }

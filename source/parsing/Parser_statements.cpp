@@ -591,7 +591,6 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
 span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
     SmallVectorSized<SyntaxNode*, 16> buffer;
     auto kind = peek().kind;
-    bool error = false;
     bool sawStatement = false;
     bool erroredAboutDecls = false;
 
@@ -612,13 +611,11 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
             sawStatement = true;
         }
         else {
-            skipToken(error ? std::nullopt : std::make_optional(diag::ExpectedStatement));
-            error = true;
+            skipToken(diag::ExpectedStatement);
         }
 
         if (newNode) {
             buffer.append(newNode);
-            error = false;
 
             if (!erroredAboutDecls && !isStmt && sawStatement) {
                 addDiag(diag::DeclarationsAtStart, loc);

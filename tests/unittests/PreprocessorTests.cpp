@@ -1271,9 +1271,6 @@ source:8:13: error: expected pragma expression
 source:10:41: error: expected pragma expression
 `pragma bar "asdf", (asdf, "asdf", asdf=2.1)
                                         ^
-source:10:35: error: expected ')'
-`pragma bar "asdf", (asdf, "asdf", asdf=2.1)
-                                  ^
 source:11:34: error: expected ','
 `pragma bar "asdf", (asdf, "asdf" asdf)
                                  ^

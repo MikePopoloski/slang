@@ -179,7 +179,7 @@ protected:
             // an infinite loop. Detect that here and bail out. If parseItem()
             // did not issue a diagnostic on this token, add one now as well.
             if (current == peek()) {
-                skipToken(haveDiagAtCurrentLoc() ? std::nullopt : std::make_optional(code));
+                skipToken(code);
                 if (IsEnd(peek().kind) || !skipBadTokens<IsExpected, IsEnd>(code))
                     break;
             }
@@ -190,15 +190,12 @@ protected:
     template<bool (*IsExpected)(TokenKind), bool (*IsAbort)(TokenKind)>
     bool skipBadTokens(DiagCode code) {
         auto current = peek();
-        bool first = true;
-
         while (!IsExpected(current.kind)) {
             if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind))
                 return false;
 
-            skipToken(first ? std::make_optional(code) : std::nullopt);
+            skipToken(code);
             current = peek();
-            first = false;
         }
         return true;
     }

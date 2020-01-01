@@ -736,7 +736,8 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
     }
     else if (next != TokenKind::Dot && next != TokenKind::DoubleColon &&
              (options & NameOptions::ExpectingExpression)) {
-        addDiag(diag::ExpectedExpression, peek().location());
+        if (!haveDiagAtCurrentLoc())
+            addDiag(diag::ExpectedExpression, peek().location());
         identifier = Token::createMissing(alloc, TokenKind::Identifier, peek().location());
     }
     else {
