@@ -90,12 +90,42 @@ Token ParserBase::expect(TokenKind kind) {
 }
 
 void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
+    bool haveDiag = haveDiagAtCurrentLoc();
     auto token = peek();
     skippedTokens.append(token);
     window.moveToNext();
 
-    if (diagCode)
+    if (diagCode && !haveDiag)
         addDiag(*diagCode, token.location()) << token.range();
+
+    // If the token we're skipping is an opening paren / bracket / brace,
+    // skip everything up to the corresponding closing token, otherwise we're
+    // pretty much guaranteed to report a bunch of spurious errors inside it.
+    TokenKind skipKind = getSkipToKind(token.kind);
+    if (skipKind != TokenKind::Unknown) {
+        SmallVectorSized<TokenKind, 16> delimStack;
+        while (true) {
+            token = peek();
+            skippedTokens.append(token);
+            window.moveToNext();
+
+            if (token.kind == skipKind ||
+                (skipKind == TokenKind::EndKeyword && isEndKeyword(token.kind))) {
+                if (delimStack.empty())
+                    break;
+
+                skipKind = delimStack.back();
+                delimStack.pop();
+            }
+            else {
+                TokenKind newSkipKind = getSkipToKind(token.kind);
+                if (newSkipKind != TokenKind::Unknown) {
+                    delimStack.append(skipKind);
+                    skipKind = newSkipKind;
+                }
+            }
+        }
+    }
 }
 
 void ParserBase::pushTokens(span<const Token> tokens) {

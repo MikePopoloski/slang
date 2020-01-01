@@ -598,7 +598,7 @@ span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
 
         tokens.append(consume());
 
-        TokenKind closeKind = getCloseTokenKind(kind);
+        TokenKind closeKind = getDelimCloseKind(kind);
         if (closeKind != TokenKind::Unknown)
             delimPairStack.append(closeKind);
     }

@@ -533,7 +533,7 @@ TokenKind getModuleEndKind(TokenKind kind) {
     }
 }
 
-TokenKind getCloseTokenKind(TokenKind kind) {
+TokenKind getDelimCloseKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenParenthesis: return TokenKind::CloseParenthesis;
         case TokenKind::OpenBrace: return TokenKind::CloseBrace;
@@ -541,6 +541,43 @@ TokenKind getCloseTokenKind(TokenKind kind) {
         case TokenKind::ApostropheOpenBrace: return TokenKind::CloseBrace;
         case TokenKind::OpenParenthesisStar: return TokenKind::StarCloseParenthesis;
         default: return TokenKind::Unknown;
+    }
+}
+
+TokenKind getSkipToKind(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OpenParenthesis: return TokenKind::CloseParenthesis;
+        case TokenKind::OpenBrace: return TokenKind::CloseBrace;
+        case TokenKind::OpenBracket: return TokenKind::CloseBracket;
+        case TokenKind::ApostropheOpenBrace: return TokenKind::CloseBrace;
+        case TokenKind::OpenParenthesisStar: return TokenKind::StarCloseParenthesis;
+
+        // For all blocks that have a special end keyword, just return 'end' here.
+        // The caller should explicitly check for any possible end keyword in that case.
+        case TokenKind::BeginKeyword:
+        case TokenKind::CaseKeyword:
+        case TokenKind::CheckerKeyword:
+        case TokenKind::ClassKeyword:
+        case TokenKind::ClockingKeyword:
+        case TokenKind::ConfigKeyword:
+        case TokenKind::FunctionKeyword:
+        case TokenKind::GenerateKeyword:
+        case TokenKind::CoverGroupKeyword:
+        case TokenKind::InterfaceKeyword:
+        case TokenKind::ModuleKeyword:
+        case TokenKind::PackageKeyword:
+        case TokenKind::PrimitiveKeyword:
+        case TokenKind::ProgramKeyword:
+        case TokenKind::PropertyKeyword:
+        case TokenKind::SpecifyKeyword:
+        case TokenKind::SequenceKeyword:
+        case TokenKind::TableKeyword:
+        case TokenKind::TaskKeyword:
+        case TokenKind::ForkKeyword:
+            return TokenKind::EndKeyword;
+
+        default:
+            return TokenKind::Unknown;
     }
 }
 
