@@ -46,6 +46,8 @@ bool isPossibleStatement(TokenKind kind);
 bool isNetType(TokenKind kind);
 bool isPortDirection(TokenKind kind);
 bool isPossibleArgument(TokenKind kind);
+bool isOpenDelimOrKeyword(TokenKind kind);
+bool isCloseDelimOrKeyword(TokenKind kind);
 bool isComma(TokenKind kind);
 bool isSemicolon(TokenKind kind);
 bool isCloseBrace(TokenKind kind);
@@ -85,6 +87,7 @@ bool isPossibleVectorDigit(TokenKind kind);
 bool isPossibleLetPortItem(TokenKind kind);
 bool isPossibleTransSet(TokenKind kind);
 bool isBeforeOrSemicolon(TokenKind kind);
+bool isMatchingDelims(TokenKind openKind, TokenKind closeKind);
 
 template<typename TNode>
 struct TokenOrSyntaxBase : public std::variant<Token, TNode> {

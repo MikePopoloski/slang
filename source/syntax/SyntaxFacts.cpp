@@ -557,6 +557,7 @@ TokenKind getSkipToKind(TokenKind kind) {
         case TokenKind::ClassKeyword: return TokenKind::EndClassKeyword;
         case TokenKind::ClockingKeyword: return TokenKind::EndClockingKeyword;
         case TokenKind::ConfigKeyword: return TokenKind::EndConfigKeyword;
+        case TokenKind::ForkKeyword: return TokenKind::JoinKeyword;
         case TokenKind::FunctionKeyword: return TokenKind::EndFunctionKeyword;
         case TokenKind::GenerateKeyword: return TokenKind::EndGenerateKeyword;
         case TokenKind::CoverGroupKeyword: return TokenKind::EndGroupKeyword;
@@ -812,6 +813,40 @@ bool isEndKeyword(TokenKind kind) {
         default:
             return false;
     }
+}
+
+bool isOpenDelimOrKeyword(TokenKind kind) {
+    return getSkipToKind(kind) != TokenKind::Unknown;
+}
+
+bool isCloseDelimOrKeyword(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::CloseBrace:
+        case TokenKind::CloseBracket:
+        case TokenKind::CloseParenthesis:
+        case TokenKind::StarCloseParenthesis:
+            return true;
+        default:
+            return isEndKeyword(kind);
+    }
+}
+
+bool isMatchingDelims(TokenKind openKind, TokenKind closeKind) {
+    if (getSkipToKind(openKind) == closeKind)
+        return true;
+
+    if (openKind == TokenKind::ForkKeyword) {
+        switch (closeKind) {
+            case TokenKind::JoinKeyword:
+            case TokenKind::JoinAnyKeyword:
+            case TokenKind::JoinNoneKeyword:
+                return true;
+            default:
+                break;
+        }
+    }
+
+    return false;
 }
 
 bool isDeclarationModifier(TokenKind kind) {

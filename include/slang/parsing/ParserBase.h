@@ -213,6 +213,7 @@ private:
 
     Window window;
     SmallVectorSized<Token, 4> skippedTokens;
+    SmallVectorSized<Token, 4> openDelims;
 };
 
 } // namespace slang

@@ -137,6 +137,7 @@ error EndNameNotEmpty "trailing name not allowed on previously unnamed block"
 error DeclarationsAtStart "declaration must come before all statements in the block"
 error VoidNotAllowed "'void' type not allowed"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
+note NoteToMatchThis "to match this '{}'"
 
 subsystem Declarations
 error LocalParamNoInitializer "local parameter is missing an initializer"

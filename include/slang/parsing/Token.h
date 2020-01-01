@@ -181,7 +181,7 @@ public:
 
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
     static Token createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual,
-                                TokenKind expected, Token lastConsumed);
+                                TokenKind expected, Token lastConsumed, Token matchingDelim);
 
 private:
     struct Info;

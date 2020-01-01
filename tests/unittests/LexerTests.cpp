@@ -1,7 +1,7 @@
 #include "Test.h"
+#include "../source/text/CharInfo.h"
 
 #include "slang/syntax/SyntaxPrinter.h"
-#include "../source/text/CharInfo.h"
 
 TEST_CASE("Invalid chars") {
     auto& text = "\x04";
@@ -1098,7 +1098,7 @@ TEST_CASE("Token with lots of trivia") {
 void testExpect(TokenKind kind) {
     diagnostics.clear();
     Token actual(alloc, TokenKind::Identifier, {}, "SDF", SourceLocation(BufferID(1, "asdf"), 5));
-    Token token = Token::createExpected(alloc, diagnostics, actual, kind, Token());
+    Token token = Token::createExpected(alloc, diagnostics, actual, kind, Token(), Token());
 
     CHECK(token.kind == kind);
     CHECK(token.trivia().empty());

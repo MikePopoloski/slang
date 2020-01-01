@@ -635,7 +635,8 @@ Token Preprocessor::MacroParser::expect(TokenKind kind) {
 
     if (buffer[currentIndex].kind != kind) {
         Token last = currentIndex > 0 ? buffer[currentIndex - 1] : Token();
-        return Token::createExpected(pp.alloc, pp.diagnostics, buffer[currentIndex], kind, last);
+        return Token::createExpected(pp.alloc, pp.diagnostics, buffer[currentIndex], kind, last,
+                                     Token());
     }
     return next();
 }

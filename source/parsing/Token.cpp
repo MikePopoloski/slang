@@ -406,7 +406,7 @@ Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation 
 }
 
 Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual,
-                            TokenKind expected, Token lastConsumed) {
+                            TokenKind expected, Token lastConsumed, Token matchingDelim) {
     // Figure out the best place to report this error based on the current
     // token as well as the last real token we consumed.
     SourceLocation location;
@@ -444,9 +444,15 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
             case TokenKind::IncludeFileName:
                 diagnostics.add(diag::ExpectedIncludeFileName, location);
                 break;
-            default:
-                diagnostics.add(diag::ExpectedToken, location) << getTokenKindText(expected);
+            default: {
+                auto& diag = diagnostics.add(diag::ExpectedToken, location);
+                diag << getTokenKindText(expected);
+                if (matchingDelim) {
+                    diag.addNote(diag::NoteToMatchThis, matchingDelim.location())
+                        << getTokenKindText(matchingDelim.kind);
+                }
                 break;
+            }
         }
     }
     return Token::createMissing(alloc, expected, location);

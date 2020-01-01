@@ -66,6 +66,12 @@ Token ParserBase::consume() {
     window.moveToNext();
     if (!skippedTokens.empty())
         prependSkippedTokens(result);
+
+    if (isOpenDelimOrKeyword(result.kind))
+        openDelims.append(result);
+    else if (isCloseDelimOrKeyword(result.kind) && !openDelims.empty())
+        openDelims.pop();
+
     return result;
 }
 
@@ -76,16 +82,27 @@ Token ParserBase::consumeIf(TokenKind kind) {
 }
 
 Token ParserBase::expect(TokenKind kind) {
-    // keep this method small so that it gets inlined
-    auto result = peek();
-    if (result.kind != kind)
-        result = Token::createExpected(alloc, getDiagnostics(), result, kind, window.lastConsumed);
-    else
-        window.moveToNext();
+    if (peek(kind))
+        return consume();
 
-    if (!skippedTokens.empty())
-        prependSkippedTokens(result);
+    // If this needs to be an end delimiter, see if we know the
+    // corresponding open delimiter and if so use that to produce
+    // a better error.
+    Token matchingDelim;
+    if (isCloseDelimOrKeyword(kind) && !openDelims.empty()) {
+        if (isMatchingDelims(openDelims.back().kind, kind)) {
+            matchingDelim = openDelims.back();
+            openDelims.pop();
+        }
+        else {
+            // If we hit this point assume that our stack of delims has
+            // become unbalanced and flush it.
+            openDelims.clear();
+        }
+    }
 
+    Token result = Token::createExpected(alloc, getDiagnostics(), peek(), kind, window.lastConsumed,
+                                         matchingDelim);
     return result;
 }
 

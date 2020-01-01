@@ -910,7 +910,7 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
     }
     else {
         closeParen = Token::createExpected(alloc, diagnostics, token, TokenKind::CloseParenthesis,
-                                           lastToken);
+                                           lastToken, Token());
     }
 
     return { alloc.emplace<ParenPragmaExpressionSyntax>(openParen, values.copy(alloc), closeParen),
@@ -1002,7 +1002,7 @@ Token Preprocessor::consume() {
 Token Preprocessor::expect(TokenKind kind) {
     auto result = peek();
     if (result.kind != kind)
-        return Token::createExpected(alloc, diagnostics, result, kind, lastConsumed);
+        return Token::createExpected(alloc, diagnostics, result, kind, lastConsumed, Token());
 
     lastConsumed = currentToken;
     currentToken = Token();
