@@ -193,8 +193,10 @@ protected:
         bool first = true;
 
         while (!IsExpected(current.kind)) {
-            if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind))
+            if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind) ||
+                isEndKeyword(current.kind)) {
                 return false;
+            }
 
             skipToken(first ? std::make_optional(code) : std::nullopt);
             current = peek();
