@@ -273,6 +273,10 @@ private:
     template<typename TMember, typename TParseFunc>
     span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);
 
+    template<typename IsItemFunc, typename ParseItemFunc>
+    bool parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& itemBuffer,
+                        IsItemFunc&& isItem, ParseItemFunc&& parseItem);
+
     // ---- Lookahead routines, for determining which kind of syntax to parse ----
 
     bool isPortDeclaration();

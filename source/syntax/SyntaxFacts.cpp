@@ -551,31 +551,26 @@ TokenKind getSkipToKind(TokenKind kind) {
         case TokenKind::OpenBracket: return TokenKind::CloseBracket;
         case TokenKind::ApostropheOpenBrace: return TokenKind::CloseBrace;
         case TokenKind::OpenParenthesisStar: return TokenKind::StarCloseParenthesis;
-
-        // For all blocks that have a special end keyword, just return 'end' here.
-        // The caller should explicitly check for any possible end keyword in that case.
-        case TokenKind::BeginKeyword:
-        case TokenKind::CaseKeyword:
-        case TokenKind::CheckerKeyword:
-        case TokenKind::ClassKeyword:
-        case TokenKind::ClockingKeyword:
-        case TokenKind::ConfigKeyword:
-        case TokenKind::FunctionKeyword:
-        case TokenKind::GenerateKeyword:
-        case TokenKind::CoverGroupKeyword:
-        case TokenKind::InterfaceKeyword:
-        case TokenKind::ModuleKeyword:
-        case TokenKind::PackageKeyword:
-        case TokenKind::PrimitiveKeyword:
-        case TokenKind::ProgramKeyword:
-        case TokenKind::PropertyKeyword:
-        case TokenKind::SpecifyKeyword:
-        case TokenKind::SequenceKeyword:
-        case TokenKind::TableKeyword:
-        case TokenKind::TaskKeyword:
-        case TokenKind::ForkKeyword:
-            return TokenKind::EndKeyword;
-
+        case TokenKind::BeginKeyword: return TokenKind::EndKeyword;
+        case TokenKind::CaseKeyword: return TokenKind::EndCaseKeyword;
+        case TokenKind::CheckerKeyword: return TokenKind::EndCheckerKeyword;
+        case TokenKind::ClassKeyword: return TokenKind::EndClassKeyword;
+        case TokenKind::ClockingKeyword: return TokenKind::EndClockingKeyword;
+        case TokenKind::ConfigKeyword: return TokenKind::EndConfigKeyword;
+        case TokenKind::FunctionKeyword: return TokenKind::EndFunctionKeyword;
+        case TokenKind::GenerateKeyword: return TokenKind::EndGenerateKeyword;
+        case TokenKind::CoverGroupKeyword: return TokenKind::EndGroupKeyword;
+        case TokenKind::InterfaceKeyword: return TokenKind::EndInterfaceKeyword;
+        case TokenKind::ModuleKeyword: return TokenKind::EndModuleKeyword;
+        case TokenKind::MacromoduleKeyword: return TokenKind::EndModuleKeyword;
+        case TokenKind::PackageKeyword: return TokenKind::EndPackageKeyword;
+        case TokenKind::PrimitiveKeyword: return TokenKind::EndPrimitiveKeyword;
+        case TokenKind::ProgramKeyword: return TokenKind::EndProgramKeyword;
+        case TokenKind::PropertyKeyword: return TokenKind::EndPropertyKeyword;
+        case TokenKind::SpecifyKeyword: return TokenKind::EndSpecifyKeyword;
+        case TokenKind::SequenceKeyword: return TokenKind::EndSequenceKeyword;
+        case TokenKind::TableKeyword: return TokenKind::EndTableKeyword;
+        case TokenKind::TaskKeyword: return TokenKind::EndTaskKeyword;
         default:
             return TokenKind::Unknown;
     }

@@ -90,8 +90,10 @@ Token ParserBase::expect(TokenKind kind) {
 }
 
 void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
-    bool haveDiag = haveDiagAtCurrentLoc();
     auto token = peek();
+    ASSERT(token.kind != TokenKind::EndOfFile);
+
+    bool haveDiag = haveDiagAtCurrentLoc();
     skippedTokens.append(token);
     window.moveToNext();
 
@@ -102,27 +104,43 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
     // skip everything up to the corresponding closing token, otherwise we're
     // pretty much guaranteed to report a bunch of spurious errors inside it.
     TokenKind skipKind = getSkipToKind(token.kind);
-    if (skipKind != TokenKind::Unknown) {
-        SmallVectorSized<TokenKind, 16> delimStack;
-        while (true) {
-            token = peek();
-            skippedTokens.append(token);
-            window.moveToNext();
+    if (skipKind == TokenKind::Unknown)
+        return;
 
-            if (token.kind == skipKind ||
-                (skipKind == TokenKind::EndKeyword && isEndKeyword(token.kind))) {
+    SmallVectorSized<TokenKind, 16> delimStack;
+    while (true) {
+        token = peek();
+        if (token.kind == TokenKind::EndOfFile)
+            return;
+
+        // If this is an end keyword but not the one we're looking for,
+        // it probably matches something higher in our stack so don't
+        // necessarily consume it.
+        if (isEndKeyword(token.kind)) {
+            while (token.kind != skipKind) {
                 if (delimStack.empty())
-                    break;
+                    return;
 
                 skipKind = delimStack.back();
                 delimStack.pop();
             }
-            else {
-                TokenKind newSkipKind = getSkipToKind(token.kind);
-                if (newSkipKind != TokenKind::Unknown) {
-                    delimStack.append(skipKind);
-                    skipKind = newSkipKind;
-                }
+        }
+
+        skippedTokens.append(token);
+        window.moveToNext();
+
+        if (token.kind == skipKind) {
+            if (delimStack.empty())
+                return;
+
+            skipKind = delimStack.back();
+            delimStack.pop();
+        }
+        else {
+            TokenKind newSkipKind = getSkipToKind(token.kind);
+            if (newSkipKind != TokenKind::Unknown) {
+                delimStack.append(skipKind);
+                skipKind = newSkipKind;
             }
         }
     }

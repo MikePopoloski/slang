@@ -156,6 +156,41 @@ ConditionalStatementSyntax& Parser::parseConditionalStatement(NamedLabelSyntax* 
                                         predicate, closeParen, statement, elseClause);
 }
 
+template<typename IsItemFunc, typename ParseItemFunc>
+bool Parser::parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& itemBuffer,
+                            IsItemFunc&& isItem, ParseItemFunc&& parseItem) {
+    SourceLocation lastDefault;
+    bool errored = false;
+
+    while (true) {
+        auto kind = peek().kind;
+        if (kind == TokenKind::DefaultKeyword) {
+            if (lastDefault && !errored) {
+                auto& diag = addDiag(diag::MultipleDefaultCases, peek().location());
+                diag << getTokenKindText(caseKind);
+                diag.addNote(diag::NotePreviousDefinition, lastDefault);
+                errored = true;
+            }
+
+            lastDefault = peek().location();
+            itemBuffer.append(&parseDefaultCaseItem());
+        }
+        else if (isItem(kind)) {
+            itemBuffer.append(parseItem());
+        }
+        else if (kind == TokenKind::EndOfFile || isEndKeyword(kind)) {
+            break;
+        }
+        else {
+            // no idea what this is; skip it
+            skipToken(errored ? std::nullopt : std::make_optional(diag::ExpectedCaseItem));
+            errored = true;
+        }
+    }
+
+    return errored;
+}
+
 CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrList attributes,
                                                 Token uniqueOrPriority, Token caseKeyword) {
     auto openParen = expect(TokenKind::OpenParenthesis);
@@ -164,27 +199,15 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
 
     Token matchesOrInside;
     SmallVectorSized<CaseItemSyntax*, 16> itemBuffer;
-    SourceLocation lastDefault;
     bool errored = false;
 
     switch (peek().kind) {
         case TokenKind::MatchesKeyword:
             // pattern matching case statement
             matchesOrInside = consume();
-            while (true) {
-                auto kind = peek().kind;
-                if (kind == TokenKind::DefaultKeyword) {
-                    if (lastDefault && !errored) {
-                        auto& diag = addDiag(diag::MultipleDefaultCases, peek().location());
-                        diag << getTokenKindText(caseKeyword.kind);
-                        diag.addNote(diag::NotePreviousDefinition, lastDefault);
-                        errored = true;
-                    }
-
-                    lastDefault = peek().location();
-                    itemBuffer.append(&parseDefaultCaseItem());
-                }
-                else if (isPossiblePattern(kind)) {
+            errored = parseCaseItems(
+                caseKeyword.kind, itemBuffer, [](auto kind) { return isPossiblePattern(kind); },
+                [this] {
                     auto& pattern = parsePattern();
                     Token tripleAnd;
                     ExpressionSyntax* patternExpr = nullptr;
@@ -195,33 +218,17 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
                     }
 
                     auto colon = expect(TokenKind::Colon);
-                    itemBuffer.append(&factory.patternCaseItem(pattern, tripleAnd, patternExpr,
-                                                               colon, parseStatement()));
-                }
-                else {
-                    // no idea what this is; break out and clean up
-                    break;
-                }
-            }
+                    return &factory.patternCaseItem(pattern, tripleAnd, patternExpr, colon,
+                                                    parseStatement());
+                });
             break;
-
         case TokenKind::InsideKeyword:
             // range checking case statement
             matchesOrInside = consume();
-            while (true) {
-                auto kind = peek().kind;
-                if (kind == TokenKind::DefaultKeyword) {
-                    if (lastDefault && !errored) {
-                        auto& diag = addDiag(diag::MultipleDefaultCases, peek().location());
-                        diag << getTokenKindText(caseKeyword.kind);
-                        diag.addNote(diag::NotePreviousDefinition, lastDefault);
-                        errored = true;
-                    }
-
-                    lastDefault = peek().location();
-                    itemBuffer.append(&parseDefaultCaseItem());
-                }
-                else if (isPossibleOpenRangeElement(kind)) {
+            errored = parseCaseItems(
+                caseKeyword.kind, itemBuffer,
+                [](auto kind) { return isPossibleOpenRangeElement(kind); },
+                [this] {
                     Token colon;
                     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
@@ -229,50 +236,26 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
                         buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
                         diag::ExpectedOpenRangeElement,
                         [this] { return &parseOpenRangeElement(); });
-                    itemBuffer.append(
-                        &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
-                }
-                else {
-                    // no idea what this is; break out and clean up
-                    break;
-                }
-            }
+                    return &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement());
+                });
             break;
-
         default:
             // normal case statement
-            while (true) {
-                auto kind = peek().kind;
-                if (kind == TokenKind::DefaultKeyword) {
-                    if (lastDefault && !errored) {
-                        auto& diag = addDiag(diag::MultipleDefaultCases, peek().location());
-                        diag << getTokenKindText(caseKeyword.kind);
-                        diag.addNote(diag::NotePreviousDefinition, lastDefault);
-                        errored = true;
-                    }
-
-                    lastDefault = peek().location();
-                    itemBuffer.append(&parseDefaultCaseItem());
-                }
-                else if (isPossibleExpression(kind)) {
+            errored = parseCaseItems(
+                caseKeyword.kind, itemBuffer, [](auto kind) { return isPossibleExpression(kind); },
+                [this] {
                     Token colon;
                     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
                     parseList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                         buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
                         diag::ExpectedExpression, [this] { return &parseExpression(); });
-                    itemBuffer.append(
-                        &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
-                }
-                else {
-                    // no idea what this is; break out and clean up
-                    break;
-                }
-            }
+                    return &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement());
+                });
             break;
     }
 
-    if (itemBuffer.empty()) {
+    if (itemBuffer.empty() && !errored) {
         addDiag(diag::CaseStatementEmpty, caseKeyword.location())
             << getTokenKindText(caseKeyword.kind);
     }
