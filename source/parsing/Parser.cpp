@@ -38,14 +38,11 @@ SyntaxNode& Parser::parseGuess() {
     }
 
     // Now try to parse as a statement.
-    auto& diagnostics = getDiagnostics();
     auto& statement = parseStatement(/* allowEmpty */ true);
 
     // It might not have been a statement at all, in which case try a whole compilation unit
-    if (statement.kind == SyntaxKind::EmptyStatement && !diagnostics.empty() &&
-        diagnostics.back().code == diag::ExpectedStatement) {
-
-        diagnostics.pop();
+    if (statement.kind == SyntaxKind::EmptyStatement &&
+        statement.as<EmptyStatementSyntax>().semicolon.isMissing()) {
         auto& unit = parseCompilationUnit();
 
         // If there's only one member, pull it out for convenience

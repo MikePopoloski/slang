@@ -190,12 +190,15 @@ protected:
     template<bool (*IsExpected)(TokenKind), bool (*IsAbort)(TokenKind)>
     bool skipBadTokens(DiagCode code) {
         auto current = peek();
+        bool first = true;
+
         while (!IsExpected(current.kind)) {
             if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind))
                 return false;
 
-            skipToken(code);
+            skipToken(first ? std::make_optional(code) : std::nullopt);
             current = peek();
+            first = false;
         }
         return true;
     }

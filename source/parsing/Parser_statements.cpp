@@ -127,7 +127,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
         return factory.expressionStatement(label, attributes, expr, expect(TokenKind::Semicolon));
     }
 
-    addDiag(diag::ExpectedStatement, peek().location());
+    // This is an error case but we'll let someone higher on the stack deal with issuing the error.
     return factory.emptyStatement(label, attributes,
                                   missingToken(TokenKind::Semicolon, peek().location()));
 }
@@ -591,6 +591,7 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
 span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
     SmallVectorSized<SyntaxNode*, 16> buffer;
     auto kind = peek().kind;
+    bool errored = false;
     bool sawStatement = false;
     bool erroredAboutDecls = false;
 
@@ -611,11 +612,13 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
             sawStatement = true;
         }
         else {
-            skipToken(diag::ExpectedStatement);
+            skipToken(errored ? std::nullopt : std::make_optional(diag::ExpectedStatement));
+            errored = true;
         }
 
         if (newNode) {
             buffer.append(newNode);
+            errored = false;
 
             if (!erroredAboutDecls && !isStmt && sawStatement) {
                 addDiag(diag::DeclarationsAtStart, loc);

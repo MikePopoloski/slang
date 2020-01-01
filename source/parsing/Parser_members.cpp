@@ -243,6 +243,7 @@ MemberSyntax* Parser::parseMember() {
 template<typename TMember, typename TParseFunc>
 span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc) {
     SmallVectorSized<TMember*, 16> members;
+    bool errored = false;
 
     while (true) {
         auto kind = peek().kind;
@@ -250,10 +251,14 @@ span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TPars
             break;
 
         auto member = parseFunc();
-        if (member)
+        if (member) {
             members.append(member);
-        else
-            skipToken(diag::ExpectedMember);
+            errored = false;
+        }
+        else {
+            skipToken(errored ? std::nullopt : std::make_optional(diag::ExpectedMember));
+            errored = true;
+        }
     }
 
     endToken = expect(endKind);
