@@ -19,6 +19,7 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/CommandLine.h"
+#include "slang/util/OS.h"
 #include "slang/util/String.h"
 #include "slang/util/Version.h"
 
@@ -92,7 +93,8 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
 bool runCompiler(SourceManager& sourceManager, const Bag& options,
                  const std::vector<SourceBuffer>& buffers,
                  const std::vector<std::string>& warningOptions, uint32_t errorLimit,
-                 bool singleUnit, bool onlyParse, const optional<std::string>& astJsonFile) {
+                 bool singleUnit, bool onlyParse, bool showColors,
+                 const optional<std::string>& astJsonFile) {
 
     Compilation compilation(options);
     if (singleUnit) {
@@ -108,6 +110,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
     diagEngine.setErrorLimit(errorLimit);
 
     auto client = std::make_shared<TextDiagnosticClient>();
+    client->setColorsEnabled(showColors);
     diagEngine.addClient(client);
 
     for (auto& diag : optionDiags)
@@ -215,9 +218,14 @@ int driverMain(int argc, TArgs argv) try {
                 "<limit>");
 
     // Diagnostics control
+    optional<bool> colorDiags;
     optional<uint32_t> errorLimit;
     std::vector<std::string> warningOptions;
     cmdLine.add("-W", warningOptions, "Control the specified warning", "<warning>");
+    cmdLine.add("--color-diagnostics", colorDiags,
+                "Always print diagnostics in color."
+                "If this option is unset, colors will be enabled if a color-capable "
+                "terminal is detected.");
     cmdLine.add("--error-limit", errorLimit,
                 "Limit on the number of errors that will be printed. Setting this to zero will "
                 "disable the limit.",
@@ -328,6 +336,12 @@ int driverMain(int argc, TArgs argv) try {
         return 4;
     }
 
+    bool showColors;
+    if (colorDiags)
+        showColors = *colorDiags;
+    else
+        showColors = OS::fileSupportsColors(stdout);
+
     try {
         if (onlyPreprocess == true) {
             anyErrors = !runPreprocessor(sourceManager, options, buffers, includeComments == true,
@@ -339,7 +353,7 @@ int driverMain(int argc, TArgs argv) try {
         else {
             anyErrors = !runCompiler(sourceManager, options, buffers, warningOptions,
                                      errorLimit.value_or(20), singleUnit == true, onlyParse == true,
-                                     astJsonFile);
+                                     showColors, astJsonFile);
         }
     }
     catch (const std::exception& e) {

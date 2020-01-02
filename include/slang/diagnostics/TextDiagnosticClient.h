@@ -17,6 +17,8 @@ public:
     TextDiagnosticClient();
     ~TextDiagnosticClient();
 
+    void setColorsEnabled(bool enabled);
+
     void report(const ReportedDiagnostic& diagnostic) override;
 
     void clear();
@@ -25,7 +27,7 @@ public:
 private:
     std::unique_ptr<FormatBuffer> buffer;
 
-    void formatDiag(SourceLocation loc, span<const SourceRange> ranges, string_view severity,
+    void formatDiag(SourceLocation loc, span<const SourceRange> ranges, DiagnosticSeverity severity,
                     string_view message, string_view optionName);
 };
 

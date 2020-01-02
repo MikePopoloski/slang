@@ -110,6 +110,7 @@ add_library(slang
 	util/BumpAllocator.cpp
 	util/CommandLine.cpp
 	util/Hash.cpp
+	util/OS.cpp
 	util/String.cpp
 )
 

@@ -14,10 +14,37 @@
 
 namespace slang {
 
+static constexpr auto noteColor = fmt::terminal_color::bright_black;
+static constexpr auto warningColor = fmt::terminal_color::bright_yellow;
+static constexpr auto errorColor = fmt::terminal_color::bright_red;
+static constexpr auto fatalColor = fmt::terminal_color::bright_red;
+static constexpr auto highlightColor = fmt::terminal_color::bright_green;
+static constexpr auto filenameColor = fmt::terminal_color::cyan;
+static constexpr auto locationColor = fmt::terminal_color::bright_cyan;
+
+static fmt::terminal_color getSeverityColor(DiagnosticSeverity severity) {
+    switch (severity) {
+        case DiagnosticSeverity::Note:
+            return noteColor;
+        case DiagnosticSeverity::Warning:
+            return warningColor;
+        case DiagnosticSeverity::Error:
+            return errorColor;
+        case DiagnosticSeverity::Fatal:
+            return fatalColor;
+        default:
+            return fmt::terminal_color::black;
+    }
+}
+
 TextDiagnosticClient::TextDiagnosticClient() : buffer(std::make_unique<FormatBuffer>()) {
 }
 
 TextDiagnosticClient::~TextDiagnosticClient() = default;
+
+void TextDiagnosticClient::setColorsEnabled(bool enabled) {
+    buffer->setColorsEnabled(enabled);
+}
 
 void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     if (diag.shouldShowIncludeStack) {
@@ -42,7 +69,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
 
         std::string str;
         od.symbol->getHierarchicalPath(str);
-        buffer->append(str);
+        buffer->append(fmt::emphasis::bold, str);
         buffer->append("\n"sv);
     }
 
@@ -51,7 +78,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     engine->mapSourceRanges(diag.location, diag.ranges, mappedRanges);
 
     // Write the diagnostic.
-    formatDiag(diag.location, mappedRanges, getSeverityString(diag.severity), diag.formattedMessage,
+    formatDiag(diag.location, mappedRanges, diag.severity, diag.formattedMessage,
                engine->getOptionName(diag.originalDiagnostic.code));
 
     // Write out macro expansions, if we have any, in reverse order.
@@ -65,7 +92,8 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
 
         SmallVectorSized<SourceRange, 8> macroRanges;
         engine->mapSourceRanges(loc, diag.ranges, macroRanges);
-        formatDiag(sourceManager->getFullyOriginalLoc(loc), macroRanges, "note"sv, name, "");
+        formatDiag(sourceManager->getFullyOriginalLoc(loc), macroRanges, DiagnosticSeverity::Note,
+                   name, "");
     }
 }
 
@@ -112,43 +140,50 @@ static void highlightRange(SourceRange range, SourceLocation caretLoc, size_t co
 }
 
 void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange> ranges,
-                                      string_view severity, string_view message,
+                                      DiagnosticSeverity severity, string_view message,
                                       string_view optionName) {
-    if (loc == SourceLocation::NoLocation) {
-        buffer->format("{}: {}", severity, message);
-        if (!optionName.empty())
-            buffer->format(" [-W{}]", optionName);
-        buffer->append("\n"sv);
-        return;
+    size_t col = 0;
+    if (loc != SourceLocation::NoLocation) {
+        col = sourceManager->getColumnNumber(loc);
+        buffer->append(fg(filenameColor), sourceManager->getFileName(loc));
+        buffer->append(":");
+        buffer->format(fg(locationColor), "{}:{}", sourceManager->getLineNumber(loc), col);
+        buffer->append(": ");
     }
 
-    size_t col = sourceManager->getColumnNumber(loc);
-    buffer->format("{}:{}:{}: {}: {}", sourceManager->getFileName(loc),
-                   sourceManager->getLineNumber(loc), col, severity, message);
+    buffer->format(fg(getSeverityColor(severity)), "{}: ", getSeverityString(severity));
+
+    if (severity != DiagnosticSeverity::Note)
+        buffer->format(fmt::text_style(fmt::emphasis::bold), "{}", message);
+    else
+        buffer->append(message);
 
     if (!optionName.empty())
         buffer->format(" [-W{}]", optionName);
 
-    string_view line = getSourceLine(loc, col);
-    if (!line.empty()) {
-        buffer->format("\n{}\n", line);
+    if (loc != SourceLocation::NoLocation) {
+        string_view line = getSourceLine(loc, col);
+        if (!line.empty()) {
+            buffer->format("\n{}\n", line);
 
-        // Highlight any ranges and print the caret location.
-        std::string highlight(std::max(line.length(), col), ' ');
+            // Highlight any ranges and print the caret location.
+            std::string highlight(std::max(line.length(), col), ' ');
 
-        // handle tabs to get proper alignment on a terminal
-        for (size_t i = 0; i < line.length(); ++i) {
-            if (line[i] == '\t')
-                highlight[i] = '\t';
+            // handle tabs to get proper alignment on a terminal
+            for (size_t i = 0; i < line.length(); ++i) {
+                if (line[i] == '\t')
+                    highlight[i] = '\t';
+            }
+
+            for (SourceRange range : ranges)
+                highlightRange(range, loc, col, line, highlight);
+
+            highlight[col - 1] = '^';
+            highlight.erase(highlight.find_last_not_of(' ') + 1);
+            buffer->append(fg(highlightColor), highlight);
         }
-
-        for (SourceRange range : ranges)
-            highlightRange(range, loc, col, line, highlight);
-
-        highlight[col - 1] = '^';
-        highlight.erase(highlight.find_last_not_of(' ') + 1);
-        buffer->append(highlight);
     }
+
     buffer->append("\n"sv);
 }
 
