@@ -61,26 +61,28 @@ ENUM(SubroutineKind, SRK);
 ENUM(AssertionKind, ASK);
 #undef ASK
 
-namespace SemanticFacts {
+class SemanticFacts {
+public:
+    /// Interprets a keyword token as a variable lifetime value.
+    static std::optional<VariableLifetime> getVariableLifetime(Token token);
 
-/// Interprets a keyword token as a variable lifetime value.
-std::optional<VariableLifetime> getVariableLifetime(Token token);
+    /// Interprets a token type as a port direction value.
+    static PortDirection getPortDirection(TokenKind kind);
 
-/// Interprets a token type as a port direction value.
-PortDirection getPortDirection(TokenKind kind);
+    static ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind);
 
-ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind);
+    static DefinitionKind getDefinitionKind(SyntaxKind kind);
 
-DefinitionKind getDefinitionKind(SyntaxKind kind);
+    static EdgeKind getEdgeKind(TokenKind kind);
 
-EdgeKind getEdgeKind(TokenKind kind);
+    static AssertionKind getAssertKind(SyntaxKind kind);
 
-AssertionKind getAssertKind(SyntaxKind kind);
+    static StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax);
 
-StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax);
+    static ArgumentDirection getArgDirection(PortDirection direction);
 
-ArgumentDirection getArgDirection(PortDirection direction);
-
-} // namespace SemanticFacts
+private:
+    SemanticFacts() = default;
+};
 
 } // namespace slang

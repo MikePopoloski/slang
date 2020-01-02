@@ -27,8 +27,6 @@ struct MacroActualArgumentSyntax;
 struct MacroFormalArgumentSyntax;
 struct PragmaExpressionSyntax;
 
-string_view getDirectiveText(SyntaxKind kind);
-
 /// Contains various options that can control preprocessing behavior.
 struct PreprocessorOptions {
     /// The maximum depth of the include stack; further attempts to include

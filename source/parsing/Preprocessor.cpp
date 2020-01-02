@@ -15,7 +15,7 @@
 
 namespace slang {
 
-SyntaxKind getDirectiveKind(string_view directive);
+using LF = LexerFacts;
 
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
                            Diagnostics& diagnostics, const Bag& options_) :
@@ -23,7 +23,7 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
     alloc(alloc), diagnostics(diagnostics), options(options_.getOrDefault<PreprocessorOptions>()),
     lexerOptions(options_.getOrDefault<LexerOptions>()) {
 
-    keywordVersionStack.push_back(getDefaultKeywordVersion());
+    keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
     resetAllDirectives();
     undefineAll();
 }
@@ -31,7 +31,7 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
 Preprocessor::Preprocessor(const Preprocessor& other) :
     sourceManager(other.sourceManager), alloc(other.alloc), diagnostics(other.diagnostics) {
 
-    keywordVersionStack.push_back(getDefaultKeywordVersion());
+    keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
 }
 
 void Preprocessor::pushSource(string_view source, string_view name) {
@@ -412,7 +412,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     if (name.isMissing())
         bad = true;
     else {
-        if (getDirectiveKind(name.valueText()) != SyntaxKind::MacroUsage) {
+        if (LF::getDirectiveKind(name.valueText()) != SyntaxKind::MacroUsage) {
             addDiag(diag::InvalidMacroName, name.location());
             bad = true;
         }
@@ -793,7 +793,7 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
 
     Token versionToken = expect(TokenKind::StringLiteral);
     if (!versionToken.isMissing()) {
-        auto versionOpt = getKeywordVersion(versionToken.valueText());
+        auto versionOpt = LF::getKeywordVersion(versionToken.valueText());
         if (!versionOpt)
             addDiag(diag::UnrecognizedKeywordVersion, versionToken.location());
         else

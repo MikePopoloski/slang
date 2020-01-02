@@ -3,6 +3,8 @@
 
 #include "slang/syntax/SyntaxPrinter.h"
 
+using LF = LexerFacts;
+
 TEST_CASE("Invalid chars") {
     auto& text = "\x04";
     Token token = lexToken(text);
@@ -666,7 +668,7 @@ TEST_CASE("Too many errors") {
 }
 
 void testKeyword(TokenKind kind) {
-    auto text = getTokenKindText(kind);
+    auto text = LF::getTokenKindText(kind);
     Token token = lexToken(text);
 
     CHECK(token.kind == kind);
@@ -928,7 +930,7 @@ TEST_CASE("All Keywords") {
 }
 
 void testPunctuation(TokenKind kind) {
-    string_view text = getTokenKindText(kind);
+    string_view text = LF::getTokenKindText(kind);
     Token token = lexToken(text);
 
     CHECK(token.kind == kind);
@@ -1024,7 +1026,7 @@ TEST_CASE("All Punctuation") {
 }
 
 void testDirectivePunctuation(TokenKind kind) {
-    string_view text = getTokenKindText(kind);
+    string_view text = LF::getTokenKindText(kind);
 
     diagnostics.clear();
     auto buffer = getSourceManager().assignText(text);
@@ -1105,7 +1107,7 @@ void testExpect(TokenKind kind) {
     CHECK(token.location().offset() == 5);
     CHECK(token.isMissing());
 
-    if (!isKeyword(kind)) {
+    if (!LF::isKeyword(kind)) {
         CHECK(token.valueText().empty());
         CHECK(token.rawText().empty());
     }

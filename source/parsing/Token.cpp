@@ -8,6 +8,7 @@
 
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/util/BumpAllocator.h"
 
@@ -223,7 +224,7 @@ string_view Token::valueText() const {
 }
 
 string_view Token::rawText() const {
-    string_view text = getTokenKindText(kind);
+    string_view text = LexerFacts::getTokenKindText(kind);
     if (!text.empty())
         return text;
 
@@ -446,10 +447,10 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
                 break;
             default: {
                 auto& diag = diagnostics.add(diag::ExpectedToken, location);
-                diag << getTokenKindText(expected);
+                diag << LexerFacts::getTokenKindText(expected);
                 if (matchingDelim) {
                     diag.addNote(diag::NoteToMatchThis, matchingDelim.location())
-                        << getTokenKindText(matchingDelim.kind);
+                        << LexerFacts::getTokenKindText(matchingDelim.kind);
                 }
                 break;
             }

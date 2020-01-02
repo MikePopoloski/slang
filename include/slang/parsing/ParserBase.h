@@ -8,6 +8,7 @@
 
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/parsing/Token.h"
+#include "slang/syntax/SyntaxFacts.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
@@ -194,7 +195,7 @@ protected:
 
         while (!IsExpected(current.kind)) {
             if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind) ||
-                isEndKeyword(current.kind)) {
+                SyntaxFacts::isEndKeyword(current.kind)) {
                 return false;
             }
 

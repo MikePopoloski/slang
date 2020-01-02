@@ -12,6 +12,7 @@
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/Scope.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxFacts.h"
 
 namespace slang {
 
@@ -22,7 +23,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     // This might actually be a net declaration with a user defined net type. That can only
     // be true if the data type syntax is a simple identifier, so if we see that it is,
     // perform a lookup and see what comes back.
-    string_view simpleName = getSimpleTypeName(*syntax.type);
+    string_view simpleName = SyntaxFacts::getSimpleTypeName(*syntax.type);
     if (!simpleName.empty()) {
         auto result = scope.lookupUnqualifiedName(simpleName);
         if (result && result->kind == SymbolKind::NetType) {

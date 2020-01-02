@@ -21,7 +21,7 @@ static_assert(std::numeric_limits<double>::is_iec559, "SystemVerilog requires IE
 
 namespace slang {
 
-SyntaxKind getDirectiveKind(string_view directive);
+using LF = LexerFacts;
 
 Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics,
              LexerOptions options) :
@@ -165,7 +165,8 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
         sourceBuffer = sourceEnd - 1;
 
         triviaBuffer.append(Trivia(TriviaKind::DisabledText, lexeme()));
-        return Token(alloc, TokenKind::EndOfFile, triviaBuffer.copy(alloc), token.rawText(), token.location());
+        return Token(alloc, TokenKind::EndOfFile, triviaBuffer.copy(alloc), token.rawText(),
+                     token.location());
     }
 
     return token;
@@ -453,7 +454,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
 
             // might be a keyword
             TokenKind kind;
-            if (getKeywordTable(keywordVersion)->lookup(lexeme(), kind))
+            if (LF::getKeywordTable(keywordVersion)->lookup(lexeme(), kind))
                 return create(kind);
 
             return create(TokenKind::Identifier);
@@ -674,7 +675,7 @@ Token Lexer::lexDollarSign() {
 
     // otherwise, we have a system identifier
     // check for system keywords
-    TokenKind kind = getSystemKeywordKind(lexeme());
+    TokenKind kind = LF::getSystemKeywordKind(lexeme());
     if (kind != TokenKind::Unknown)
         return create(kind);
 
@@ -698,7 +699,7 @@ Token Lexer::lexDirective() {
         return create(TokenKind::Unknown);
     }
 
-    SyntaxKind directive = getDirectiveKind(lexeme().substr(1));
+    SyntaxKind directive = LF::getDirectiveKind(lexeme().substr(1));
     if (!onNewLine && directive == SyntaxKind::IncludeDirective)
         addDiag(diag::IncludeNotFirstOnLine, startingOffset);
 

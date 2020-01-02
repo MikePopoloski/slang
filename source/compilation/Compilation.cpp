@@ -163,7 +163,7 @@ Compilation::Compilation(const Bag& options) : options(options.getOrDefault<Comp
 
 #define MAKE_NETTYPE(type)                                               \
     knownNetTypes[TokenKind::type##Keyword] = std::make_unique<NetType>( \
-        NetType::type, getTokenKindText(TokenKind::type##Keyword), *logicType)
+        NetType::type, LexerFacts::getTokenKindText(TokenKind::type##Keyword), *logicType)
 
     MAKE_NETTYPE(Wire);
     MAKE_NETTYPE(WAnd);

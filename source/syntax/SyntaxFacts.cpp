@@ -4,13 +4,13 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "slang/parsing/Token.h"
+#include "slang/syntax/SyntaxFacts.h"
+
 #include "slang/syntax/AllSyntax.h"
-#include "slang/syntax/SyntaxNode.h"
 
 namespace slang {
 
-string_view getSimpleTypeName(const DataTypeSyntax& syntax) {
+string_view SyntaxFacts::getSimpleTypeName(const DataTypeSyntax& syntax) {
     if (syntax.kind == SyntaxKind::NamedType) {
         auto& namedType = syntax.as<NamedTypeSyntax>();
         if (namedType.name->kind == SyntaxKind::IdentifierName)
@@ -20,7 +20,7 @@ string_view getSimpleTypeName(const DataTypeSyntax& syntax) {
 }
 
 // clang-format off
-SyntaxKind getUnaryPrefixExpression(TokenKind kind) {
+SyntaxKind SyntaxFacts::getUnaryPrefixExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::Plus: return SyntaxKind::UnaryPlusExpression;
         case TokenKind::Minus: return SyntaxKind::UnaryMinusExpression;
@@ -54,7 +54,7 @@ SyntaxKind getUnaryPrefixExpression(TokenKind kind) {
     }
 }
 
-SyntaxKind getUnaryPostfixExpression(TokenKind kind) {
+SyntaxKind SyntaxFacts::getUnaryPostfixExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::DoublePlus: return SyntaxKind::PostincrementExpression;
         case TokenKind::DoubleMinus: return SyntaxKind::PostdecrementExpression;
@@ -62,7 +62,7 @@ SyntaxKind getUnaryPostfixExpression(TokenKind kind) {
     }
 }
 
-SyntaxKind getLiteralExpression(TokenKind kind) {
+SyntaxKind SyntaxFacts::getLiteralExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::StringLiteral: return SyntaxKind::StringLiteralExpression;
         case TokenKind::IntegerLiteral: return SyntaxKind::IntegerLiteralExpression;
@@ -76,7 +76,7 @@ SyntaxKind getLiteralExpression(TokenKind kind) {
     }
 }
 
-SyntaxKind getBinaryExpression(TokenKind kind) {
+SyntaxKind SyntaxFacts::getBinaryExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::Plus: return SyntaxKind::AddExpression;
         case TokenKind::Minus: return SyntaxKind::SubtractExpression;
@@ -141,7 +141,7 @@ SyntaxKind getBinaryExpression(TokenKind kind) {
     }
 }
 
-SyntaxKind getKeywordNameExpression(TokenKind kind) {
+SyntaxKind SyntaxFacts::getKeywordNameExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::UnitSystemName: return SyntaxKind::UnitScope;
         case TokenKind::RootSystemName: return SyntaxKind::RootScope;
@@ -157,7 +157,7 @@ SyntaxKind getKeywordNameExpression(TokenKind kind) {
     }
 }
 
-bool isSpecialMethodName(SyntaxKind kind) {
+bool SyntaxFacts::isSpecialMethodName(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::ArrayUniqueMethod:
         case SyntaxKind::ArrayAndMethod:
@@ -170,7 +170,7 @@ bool isSpecialMethodName(SyntaxKind kind) {
         }
     }
 
-int getPrecedence(SyntaxKind kind) {
+int SyntaxFacts::getPrecedence(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::AlwaysPropertyExpression:
         case SyntaxKind::SAlwaysPropertyExpression:
@@ -286,7 +286,7 @@ int getPrecedence(SyntaxKind kind) {
     }
 }
 
-bool isRightAssociative(SyntaxKind kind) {
+bool SyntaxFacts::isRightAssociative(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::LogicalImplicationExpression:
         case SyntaxKind::LogicalEquivalenceExpression:
@@ -307,7 +307,7 @@ bool isRightAssociative(SyntaxKind kind) {
     }
 }
 
-bool isPossibleDataType(TokenKind kind) {
+bool SyntaxFacts::isPossibleDataType(TokenKind kind) {
     switch (kind) {
         case TokenKind::BitKeyword:
         case TokenKind::LogicKeyword:
@@ -342,7 +342,7 @@ bool isPossibleDataType(TokenKind kind) {
     }
 }
 
-bool isPossibleExpression(TokenKind kind) {
+bool SyntaxFacts::isPossibleExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::TaggedKeyword:
         case TokenKind::StringLiteral:
@@ -400,7 +400,7 @@ bool isPossibleExpression(TokenKind kind) {
     return false;
 }
 
-bool isPossibleStatement(TokenKind kind) {
+bool SyntaxFacts::isPossibleStatement(TokenKind kind) {
     switch (kind) {
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
@@ -459,7 +459,7 @@ bool isPossibleStatement(TokenKind kind) {
     }
 }
 
-SyntaxKind getIntegerType(TokenKind kind) {
+SyntaxKind SyntaxFacts::getIntegerType(TokenKind kind) {
     switch (kind) {
         case TokenKind::BitKeyword: return SyntaxKind::BitType;
         case TokenKind::LogicKeyword: return SyntaxKind::LogicType;
@@ -474,7 +474,7 @@ SyntaxKind getIntegerType(TokenKind kind) {
     }
 }
 
-SyntaxKind getKeywordType(TokenKind kind) {
+SyntaxKind SyntaxFacts::getKeywordType(TokenKind kind) {
     switch (kind) {
         case TokenKind::ShortRealKeyword: return SyntaxKind::ShortRealType;
         case TokenKind::RealKeyword: return SyntaxKind::RealType;
@@ -488,7 +488,7 @@ SyntaxKind getKeywordType(TokenKind kind) {
     }
 }
 
-SyntaxKind getProceduralBlockKind(TokenKind kind) {
+SyntaxKind SyntaxFacts::getProceduralBlockKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::InitialKeyword: return SyntaxKind::InitialBlock;
         case TokenKind::FinalKeyword: return SyntaxKind::FinalBlock;
@@ -500,7 +500,7 @@ SyntaxKind getProceduralBlockKind(TokenKind kind) {
     }
 }
 
-SyntaxKind getModuleHeaderKind(TokenKind kind) {
+SyntaxKind SyntaxFacts::getModuleHeaderKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::ModuleKeyword: return SyntaxKind::ModuleHeader;
         case TokenKind::MacromoduleKeyword: return SyntaxKind::ModuleHeader;
@@ -511,7 +511,7 @@ SyntaxKind getModuleHeaderKind(TokenKind kind) {
     }
 }
 
-SyntaxKind getModuleDeclarationKind(TokenKind kind) {
+SyntaxKind SyntaxFacts::getModuleDeclarationKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::ModuleKeyword: return SyntaxKind::ModuleDeclaration;
         case TokenKind::MacromoduleKeyword: return SyntaxKind::ModuleDeclaration;
@@ -522,7 +522,7 @@ SyntaxKind getModuleDeclarationKind(TokenKind kind) {
     }
 }
 
-TokenKind getModuleEndKind(TokenKind kind) {
+TokenKind SyntaxFacts::getModuleEndKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::ModuleKeyword: return TokenKind::EndModuleKeyword;
         case TokenKind::MacromoduleKeyword: return TokenKind::EndModuleKeyword;
@@ -533,7 +533,7 @@ TokenKind getModuleEndKind(TokenKind kind) {
     }
 }
 
-TokenKind getDelimCloseKind(TokenKind kind) {
+TokenKind SyntaxFacts::getDelimCloseKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenParenthesis: return TokenKind::CloseParenthesis;
         case TokenKind::OpenBrace: return TokenKind::CloseBrace;
@@ -544,7 +544,7 @@ TokenKind getDelimCloseKind(TokenKind kind) {
     }
 }
 
-TokenKind getSkipToKind(TokenKind kind) {
+TokenKind SyntaxFacts::getSkipToKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenParenthesis: return TokenKind::CloseParenthesis;
         case TokenKind::OpenBrace: return TokenKind::CloseBrace;
@@ -577,7 +577,7 @@ TokenKind getSkipToKind(TokenKind kind) {
     }
 }
 
-bool isNetType(TokenKind kind) {
+bool SyntaxFacts::isNetType(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:
         case TokenKind::Supply1Keyword:
@@ -597,7 +597,7 @@ bool isNetType(TokenKind kind) {
     }
 }
 
-bool isPortDirection(TokenKind kind) {
+bool SyntaxFacts::isPortDirection(TokenKind kind) {
     switch (kind) {
         case TokenKind::InputKeyword:
         case TokenKind::OutputKeyword:
@@ -609,7 +609,7 @@ bool isPortDirection(TokenKind kind) {
     }
 }
 
-bool isPossibleArgument(TokenKind kind) {
+bool SyntaxFacts::isPossibleArgument(TokenKind kind) {
     // allow a comma here to handle cases like:  foo(, 3);
     switch (kind) {
         case TokenKind::Dot:
@@ -620,7 +620,7 @@ bool isPossibleArgument(TokenKind kind) {
     }
 }
 
-bool isPossibleNonAnsiPort(TokenKind kind) {
+bool SyntaxFacts::isPossibleNonAnsiPort(TokenKind kind) {
     switch (kind) {
         case TokenKind::Dot:
         case TokenKind::Comma:
@@ -632,7 +632,7 @@ bool isPossibleNonAnsiPort(TokenKind kind) {
     }
 }
 
-bool isPossibleAnsiPort(TokenKind kind) {
+bool SyntaxFacts::isPossibleAnsiPort(TokenKind kind) {
     switch (kind) {
         case TokenKind::InterconnectKeyword:
         case TokenKind::InterfaceKeyword:
@@ -651,7 +651,7 @@ bool isPossibleAnsiPort(TokenKind kind) {
     }
 }
 
-bool isPossibleModportPort(TokenKind kind) {
+bool SyntaxFacts::isPossibleModportPort(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenParenthesisStar:
         case TokenKind::InputKeyword:
@@ -668,7 +668,7 @@ bool isPossibleModportPort(TokenKind kind) {
     }
 }
 
-bool isPossibleFunctionPort(TokenKind kind) {
+bool SyntaxFacts::isPossibleFunctionPort(TokenKind kind) {
     switch (kind) {
         case TokenKind::Identifier:
         case TokenKind::Comma:
@@ -685,39 +685,39 @@ bool isPossibleFunctionPort(TokenKind kind) {
     }
 }
 
-bool isComma(TokenKind kind) {
+bool SyntaxFacts::isComma(TokenKind kind) {
     return kind == TokenKind::Comma;
 }
 
-bool isSemicolon(TokenKind kind) {
+bool SyntaxFacts::isSemicolon(TokenKind kind) {
     return kind == TokenKind::Semicolon;
 }
 
-bool isCloseBrace(TokenKind kind) {
+bool SyntaxFacts::isCloseBrace(TokenKind kind) {
     return kind == TokenKind::CloseBrace;
 }
 
-bool isIdentifierOrComma(TokenKind kind) {
+bool SyntaxFacts::isIdentifierOrComma(TokenKind kind) {
     return kind == TokenKind::Identifier || kind == TokenKind::Comma;
 }
 
-bool isPossibleExpressionOrComma(TokenKind kind) {
+bool SyntaxFacts::isPossibleExpressionOrComma(TokenKind kind) {
     return kind == TokenKind::Comma || isPossibleExpression(kind);
 }
 
-bool isPossibleExpressionOrCommaOrDefault(TokenKind kind) {
+bool SyntaxFacts::isPossibleExpressionOrCommaOrDefault(TokenKind kind) {
     return kind == TokenKind::Comma || kind == TokenKind::DefaultKeyword || isPossibleExpression(kind);
 }
 
-bool isPossibleExpressionOrTripleAnd(TokenKind kind) {
+bool SyntaxFacts::isPossibleExpressionOrTripleAnd(TokenKind kind) {
     return kind == TokenKind::TripleAnd || isPossibleExpression(kind);
 }
 
-bool isPossibleForInitializer(TokenKind kind) {
+bool SyntaxFacts::isPossibleForInitializer(TokenKind kind) {
     return kind == TokenKind::Comma || kind == TokenKind::VarKeyword || isPossibleExpression(kind);
 }
 
-bool isPossibleOpenRangeElement(TokenKind kind) {
+bool SyntaxFacts::isPossibleOpenRangeElement(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenBracket:
         case TokenKind::Comma:
@@ -727,7 +727,7 @@ bool isPossibleOpenRangeElement(TokenKind kind) {
     }
 }
 
-bool isPossiblePattern(TokenKind kind) {
+bool SyntaxFacts::isPossiblePattern(TokenKind kind) {
     switch (kind) {
         case TokenKind::Dot:
         case TokenKind::DotStar:
@@ -738,7 +738,7 @@ bool isPossiblePattern(TokenKind kind) {
     }
 }
 
-bool isPossibleDelayOrEventControl(TokenKind kind) {
+bool SyntaxFacts::isPossibleDelayOrEventControl(TokenKind kind) {
     switch (kind) {
         case TokenKind::Hash:
         case TokenKind::At:
@@ -749,7 +749,7 @@ bool isPossibleDelayOrEventControl(TokenKind kind) {
     }
 }
 
-bool isPossibleParameter(TokenKind kind) {
+bool SyntaxFacts::isPossibleParameter(TokenKind kind) {
     switch (kind) {
         case TokenKind::ParameterKeyword:
         case TokenKind::LocalParamKeyword:
@@ -761,7 +761,7 @@ bool isPossibleParameter(TokenKind kind) {
     }
 }
 
-bool isPossiblePortConnection(TokenKind kind) {
+bool SyntaxFacts::isPossiblePortConnection(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenParenthesisStar:
         case TokenKind::DotStar:
@@ -773,7 +773,7 @@ bool isPossiblePortConnection(TokenKind kind) {
     }
 }
 
-bool isPossibleVectorDigit(TokenKind kind) {
+bool SyntaxFacts::isPossibleVectorDigit(TokenKind kind) {
     switch (kind) {
         case TokenKind::IntegerLiteral:
         case TokenKind::Question:
@@ -785,7 +785,7 @@ bool isPossibleVectorDigit(TokenKind kind) {
     }
 }
 
-bool isEndKeyword(TokenKind kind) {
+bool SyntaxFacts::isEndKeyword(TokenKind kind) {
     switch (kind) {
         case TokenKind::EndKeyword:
         case TokenKind::EndCaseKeyword:
@@ -815,11 +815,11 @@ bool isEndKeyword(TokenKind kind) {
     }
 }
 
-bool isOpenDelimOrKeyword(TokenKind kind) {
+bool SyntaxFacts::isOpenDelimOrKeyword(TokenKind kind) {
     return getSkipToKind(kind) != TokenKind::Unknown;
 }
 
-bool isCloseDelimOrKeyword(TokenKind kind) {
+bool SyntaxFacts::isCloseDelimOrKeyword(TokenKind kind) {
     switch (kind) {
         case TokenKind::CloseBrace:
         case TokenKind::CloseBracket:
@@ -831,7 +831,7 @@ bool isCloseDelimOrKeyword(TokenKind kind) {
     }
 }
 
-bool isMatchingDelims(TokenKind openKind, TokenKind closeKind) {
+bool SyntaxFacts::isMatchingDelims(TokenKind openKind, TokenKind closeKind) {
     if (getSkipToKind(openKind) == closeKind)
         return true;
 
@@ -849,7 +849,7 @@ bool isMatchingDelims(TokenKind openKind, TokenKind closeKind) {
     return false;
 }
 
-bool isDeclarationModifier(TokenKind kind) {
+bool SyntaxFacts::isDeclarationModifier(TokenKind kind) {
     switch (kind) {
         case TokenKind::ConstKeyword:
         case TokenKind::VarKeyword:
@@ -861,7 +861,7 @@ bool isDeclarationModifier(TokenKind kind) {
     }
 }
 
-bool isMemberQualifier(TokenKind kind) {
+bool SyntaxFacts::isMemberQualifier(TokenKind kind) {
     switch (kind) {
         case TokenKind::ConstKeyword:
         case TokenKind::RandKeyword:
@@ -878,7 +878,7 @@ bool isMemberQualifier(TokenKind kind) {
     }
 }
 
-bool isDriveStrength(TokenKind kind) {
+bool SyntaxFacts::isDriveStrength(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:
         case TokenKind::Strong0Keyword:
@@ -896,7 +896,7 @@ bool isDriveStrength(TokenKind kind) {
     }
 }
 
-bool isChargeStrength(TokenKind kind) {
+bool SyntaxFacts::isChargeStrength(TokenKind kind) {
     switch (kind) {
         case TokenKind::SmallKeyword:
         case TokenKind::MediumKeyword:
@@ -907,27 +907,28 @@ bool isChargeStrength(TokenKind kind) {
     }
 }
 
-bool isEndOfParenList(TokenKind kind) {
+bool SyntaxFacts::isEndOfParenList(TokenKind kind) {
     return kind == TokenKind::CloseParenthesis || kind == TokenKind::Semicolon;
 }
 
-bool isEndOfBracedList(TokenKind kind) {
+bool SyntaxFacts::isEndOfBracedList(TokenKind kind) {
     return kind == TokenKind::CloseBrace || kind == TokenKind::Semicolon;
 }
 
-bool isEndOfBracketedList(TokenKind kind) {
+bool SyntaxFacts::isEndOfBracketedList(TokenKind kind) {
     return kind == TokenKind::CloseBracket || kind == TokenKind::Semicolon;
 }
 
-bool isEndOfCaseItem(TokenKind kind) {
+bool SyntaxFacts::isEndOfCaseItem(TokenKind kind) {
     return kind == TokenKind::Colon || kind == TokenKind::Semicolon;
 }
 
-bool isEndOfConditionalPredicate(TokenKind kind) {
-    return kind == TokenKind::Question || kind == TokenKind::CloseParenthesis || kind == TokenKind::BeginKeyword || kind == TokenKind::Semicolon;
+bool SyntaxFacts::isEndOfConditionalPredicate(TokenKind kind) {
+    return kind == TokenKind::Question || kind == TokenKind::CloseParenthesis ||
+        kind == TokenKind::BeginKeyword || kind == TokenKind::Semicolon;
 }
 
-bool isEndOfAttribute(TokenKind kind) {
+bool SyntaxFacts::isEndOfAttribute(TokenKind kind) {
     switch (kind) {
         case TokenKind::StarCloseParenthesis:
             // these indicate a missing *) somewhere
@@ -946,11 +947,11 @@ bool isEndOfAttribute(TokenKind kind) {
     }
 }
 
-bool isEndOfParameterList(TokenKind kind) {
+bool SyntaxFacts::isEndOfParameterList(TokenKind kind) {
     return kind == TokenKind::CloseParenthesis || kind == TokenKind::OpenParenthesis || kind == TokenKind::Semicolon;
 }
 
-bool isEndOfTransSet(TokenKind kind) {
+bool SyntaxFacts::isEndOfTransSet(TokenKind kind) {
     switch (kind) {
         case TokenKind::Semicolon:
         case TokenKind::CloseParenthesis:
@@ -963,7 +964,7 @@ bool isEndOfTransSet(TokenKind kind) {
     }
 }
 
-bool isNotInType(TokenKind kind) {
+bool SyntaxFacts::isNotInType(TokenKind kind) {
     switch (kind) {
         case TokenKind::Semicolon:
         case TokenKind::EndOfFile:
@@ -973,11 +974,11 @@ bool isNotInType(TokenKind kind) {
     }
 }
 
-bool isNotInPortReference(TokenKind kind) {
+bool SyntaxFacts::isNotInPortReference(TokenKind kind) {
     return kind == TokenKind::Semicolon || kind == TokenKind::EndOfFile;
 }
 
-bool isNotInConcatenationExpr(TokenKind kind) {
+bool SyntaxFacts::isNotInConcatenationExpr(TokenKind kind) {
     switch (kind) {
         case TokenKind::Semicolon:
         case TokenKind::EndOfFile:
@@ -994,15 +995,15 @@ bool isNotInConcatenationExpr(TokenKind kind) {
     }
 }
 
-bool isPossibleLetPortItem(TokenKind kind) {
+bool SyntaxFacts::isPossibleLetPortItem(TokenKind kind) {
     return kind == TokenKind::OpenParenthesisStar || kind == TokenKind::UntypedKeyword || isPossibleDataType(kind);
 }
 
-bool isNotInParameterList(TokenKind kind) {
+bool SyntaxFacts::isNotInParameterList(TokenKind kind) {
     return kind == TokenKind::OpenParenthesis || kind == TokenKind::Semicolon || kind == TokenKind::EndOfFile;
 }
 
-bool isPossiblePropertyPortItem(TokenKind kind) {
+bool SyntaxFacts::isPossiblePropertyPortItem(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenParenthesisStar:
         case TokenKind::LocalKeyword:
@@ -1015,7 +1016,7 @@ bool isPossiblePropertyPortItem(TokenKind kind) {
     }
 }
 
-bool isPossibleTransSet(TokenKind kind) {
+bool SyntaxFacts::isPossibleTransSet(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenParenthesis:
         case TokenKind::Comma:
@@ -1027,7 +1028,7 @@ bool isPossibleTransSet(TokenKind kind) {
     }
 }
 
-bool isBeforeOrSemicolon(TokenKind kind) {
+bool SyntaxFacts::isBeforeOrSemicolon(TokenKind kind) {
     return kind == TokenKind::Semicolon || kind == TokenKind::BeforeKeyword;
 }
 

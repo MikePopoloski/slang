@@ -12,6 +12,8 @@
 
 namespace slang {
 
+using SF = SyntaxFacts;
+
 ParserBase::ParserBase(Preprocessor& preprocessor) :
     alloc(preprocessor.getAllocator()), window(preprocessor) {
 }
@@ -67,9 +69,9 @@ Token ParserBase::consume() {
     if (!skippedTokens.empty())
         prependSkippedTokens(result);
 
-    if (isOpenDelimOrKeyword(result.kind))
+    if (SF::isOpenDelimOrKeyword(result.kind))
         openDelims.append(result);
-    else if (isCloseDelimOrKeyword(result.kind) && !openDelims.empty())
+    else if (SF::isCloseDelimOrKeyword(result.kind) && !openDelims.empty())
         openDelims.pop();
 
     return result;
@@ -89,8 +91,8 @@ Token ParserBase::expect(TokenKind kind) {
     // corresponding open delimiter and if so use that to produce
     // a better error.
     Token matchingDelim;
-    if (isCloseDelimOrKeyword(kind) && !openDelims.empty()) {
-        if (isMatchingDelims(openDelims.back().kind, kind)) {
+    if (SF::isCloseDelimOrKeyword(kind) && !openDelims.empty()) {
+        if (SF::isMatchingDelims(openDelims.back().kind, kind)) {
             matchingDelim = openDelims.back();
             openDelims.pop();
         }
@@ -120,7 +122,7 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
     // If the token we're skipping is an opening paren / bracket / brace,
     // skip everything up to the corresponding closing token, otherwise we're
     // pretty much guaranteed to report a bunch of spurious errors inside it.
-    TokenKind skipKind = getSkipToKind(token.kind);
+    TokenKind skipKind = SF::getSkipToKind(token.kind);
     if (skipKind == TokenKind::Unknown)
         return;
 
@@ -133,7 +135,7 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
         // If this is an end keyword but not the one we're looking for,
         // it probably matches something higher in our stack so don't
         // necessarily consume it.
-        if (isEndKeyword(token.kind)) {
+        if (SF::isEndKeyword(token.kind)) {
             while (token.kind != skipKind) {
                 if (delimStack.empty())
                     return;
@@ -154,7 +156,7 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
             delimStack.pop();
         }
         else {
-            TokenKind newSkipKind = getSkipToKind(token.kind);
+            TokenKind newSkipKind = SF::getSkipToKind(token.kind);
             if (newSkipKind != TokenKind::Unknown) {
                 delimStack.append(skipKind);
                 skipKind = newSkipKind;
@@ -203,7 +205,7 @@ void ParserBase::reportMissingList(Token current, TokenKind closeKind, Token& cl
 
 void ParserBase::reportMisplacedSeparator() {
     auto& diag = addDiag(diag::MisplacedTrailingSeparator, window.lastConsumed.location());
-    diag << getTokenKindText(window.lastConsumed.kind);
+    diag << LexerFacts::getTokenKindText(window.lastConsumed.kind);
 }
 
 void ParserBase::Window::addNew() {

@@ -13,6 +13,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -837,7 +838,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
 
     if (isInside && condition != Condition::Normal) {
         context.addDiag(diag::CaseInsideKeyword, syntax.matchesOrInside.range())
-            << getTokenKindText(keyword) << syntax.caseKeyword.range();
+            << LexerFacts::getTokenKindText(keyword) << syntax.caseKeyword.range();
         bad = true;
     }
     else if (isInside) {

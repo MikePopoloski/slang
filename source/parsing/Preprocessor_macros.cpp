@@ -7,10 +7,13 @@
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxFacts.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/String.h"
 
 namespace slang {
+
+using LF = LexerFacts;
 
 Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
     string_view name = directive.valueText().substr(1);
@@ -293,7 +296,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
 
     // now add each body token, substituting arguments as necessary
     for (auto& token : body) {
-        if (token.kind != TokenKind::Identifier && !isKeyword(token.kind) &&
+        if (token.kind != TokenKind::Identifier && !LF::isKeyword(token.kind) &&
             (token.kind != TokenKind::Directive ||
              token.directiveKind() != SyntaxKind::MacroUsage)) {
 
@@ -559,7 +562,7 @@ MacroActualArgumentSyntax* Preprocessor::MacroParser::parseActualArgument() {
 
 MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
     Token arg = peek();
-    if (arg.kind == TokenKind::Identifier || isKeyword(arg.kind))
+    if (arg.kind == TokenKind::Identifier || LF::isKeyword(arg.kind))
         consume();
     else
         arg = expect(TokenKind::Identifier);
@@ -584,7 +587,7 @@ span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
         if (kind == TokenKind::EndOfFile || (!allowNewlines && !isOnSameLine(peek()))) {
             if (!delimPairStack.empty()) {
                 pp.addDiag(diag::UnbalancedMacroArgDims, tokens.back().location())
-                    << getTokenKindText(delimPairStack.back());
+                    << LF::getTokenKindText(delimPairStack.back());
             }
             break;
         }
@@ -598,7 +601,7 @@ span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
 
         tokens.append(consume());
 
-        TokenKind closeKind = getDelimCloseKind(kind);
+        TokenKind closeKind = SyntaxFacts::getDelimCloseKind(kind);
         if (closeKind != TokenKind::Unknown)
             delimPairStack.append(closeKind);
     }

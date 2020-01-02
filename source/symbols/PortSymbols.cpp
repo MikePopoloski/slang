@@ -18,6 +18,7 @@
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxFacts.h"
 #include "slang/util/StackContainer.h"
 
 namespace slang {
@@ -66,7 +67,7 @@ public:
                 // It's possible that this is actually an interface port if the data type is just an
                 // identifier. The only way to know is to do a lookup and see what comes back.
                 const DefinitionSymbol* definition = nullptr;
-                string_view simpleName = getSimpleTypeName(*header.dataType);
+                string_view simpleName = SyntaxFacts::getSimpleTypeName(*header.dataType);
                 if (!simpleName.empty()) {
                     auto found = scope.lookupUnqualifiedName(simpleName, LookupFlags::Type);
 

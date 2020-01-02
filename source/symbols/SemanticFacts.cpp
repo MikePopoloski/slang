@@ -8,10 +8,10 @@
 
 #include "slang/syntax/AllSyntax.h"
 
-namespace slang::SemanticFacts {
+namespace slang {
 
 // clang-format off
-std::optional<VariableLifetime> getVariableLifetime(Token token) {
+std::optional<VariableLifetime> SemanticFacts::getVariableLifetime(Token token) {
     switch (token.kind) {
         case TokenKind::AutomaticKeyword: return VariableLifetime::Automatic;
         case TokenKind::StaticKeyword: return VariableLifetime::Static;
@@ -20,7 +20,7 @@ std::optional<VariableLifetime> getVariableLifetime(Token token) {
     }
 }
 
-PortDirection getPortDirection(TokenKind kind) {
+PortDirection SemanticFacts::getPortDirection(TokenKind kind) {
     switch (kind) {
         case TokenKind::InputKeyword: return PortDirection::In;
         case TokenKind::InOutKeyword: return PortDirection::InOut;
@@ -30,7 +30,7 @@ PortDirection getPortDirection(TokenKind kind) {
     }
 }
 
-ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind) {
+ProceduralBlockKind SemanticFacts::getProceduralBlockKind(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::AlwaysBlock: return ProceduralBlockKind::Always;
         case SyntaxKind::AlwaysCombBlock: return ProceduralBlockKind::AlwaysComb;
@@ -42,7 +42,7 @@ ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind) {
     }
 }
 
-DefinitionKind getDefinitionKind(SyntaxKind kind) {
+DefinitionKind SemanticFacts::getDefinitionKind(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::ModuleDeclaration: return DefinitionKind::Module;
         case SyntaxKind::InterfaceDeclaration: return DefinitionKind::Interface;
@@ -51,7 +51,7 @@ DefinitionKind getDefinitionKind(SyntaxKind kind) {
     }
 }
 
-EdgeKind getEdgeKind(TokenKind kind) {
+EdgeKind SemanticFacts::getEdgeKind(TokenKind kind) {
     switch (kind) {
         case TokenKind::EdgeKeyword: return EdgeKind::BothEdges;
         case TokenKind::PosEdgeKeyword: return EdgeKind::PosEdge;
@@ -60,7 +60,7 @@ EdgeKind getEdgeKind(TokenKind kind) {
     }
 }
 
-AssertionKind getAssertKind(SyntaxKind kind) {
+AssertionKind SemanticFacts::getAssertKind(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::ImmediateAssertStatement: return AssertionKind::Assert;
         case SyntaxKind::ImmediateAssumeStatement: return AssertionKind::Assume;
@@ -69,7 +69,7 @@ AssertionKind getAssertKind(SyntaxKind kind) {
     }
 }
 
-ArgumentDirection getArgDirection(PortDirection direction) {
+ArgumentDirection SemanticFacts::getArgDirection(PortDirection direction) {
     switch (direction) {
         case PortDirection::In: return ArgumentDirection::In;
         case PortDirection::Out: return ArgumentDirection::Out;
@@ -81,7 +81,7 @@ ArgumentDirection getArgDirection(PortDirection direction) {
 
 // clang-format on
 
-StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax) {
+StatementBlockKind SemanticFacts::getStatementBlockKind(const BlockStatementSyntax& syntax) {
     if (syntax.kind == SyntaxKind::SequentialBlockStatement)
         return StatementBlockKind::Sequential;
 
@@ -96,4 +96,4 @@ StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax) {
     }
 }
 
-} // namespace slang::SemanticFacts
+} // namespace slang

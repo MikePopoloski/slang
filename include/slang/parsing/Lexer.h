@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Token.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
@@ -41,7 +42,7 @@ public:
     /// Lexes the next token from the source code.
     /// This will never return a null pointer; at the end of the buffer,
     /// an infinite stream of EndOfFile tokens will be generated
-    Token lex(KeywordVersion keywordVersion = getDefaultKeywordVersion());
+    Token lex(KeywordVersion keywordVersion = LexerFacts::getDefaultKeywordVersion());
 
     /// Concatenates two tokens together; used for macro pasting.
     static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);

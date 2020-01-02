@@ -12,6 +12,7 @@
 #include "slang/parsing/ParserBase.h"
 #include "slang/parsing/Token.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxFacts.h"
 #include "slang/util/Bag.h"
 
 namespace slang {
@@ -82,7 +83,7 @@ struct ParserOptions {
 };
 
 /// Implements a full syntax parser for SystemVerilog.
-class Parser : ParserBase {
+class Parser : ParserBase, SyntaxFacts {
 public:
     explicit Parser(Preprocessor& preprocessor, const Bag& options = {});
 

@@ -10,7 +10,6 @@
 #include "slang/numeric/Time.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
-#include "slang/util/StringTable.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -207,31 +206,6 @@ private:
 
 static_assert(sizeof(Token) == 16);
 static_assert(std::is_trivially_copyable_v<Token>);
-
-/// Different restricted sets of keywords that can be set using the
-/// `begin_keywords directive. The values of the enum correspond to indexes to
-/// allKeywords[] in LexerFacts.cpp
-enum class KeywordVersion : uint8_t {
-    v1364_1995 = 0,
-    v1364_2001_noconfig = 1,
-    v1364_2001 = 2,
-    v1364_2005 = 3,
-    v1800_2005 = 4,
-    v1800_2009 = 5,
-    v1800_2012 = 6,
-    v1800_2017 = 7,
-};
-
-TokenKind getSystemKeywordKind(string_view text);
-string_view getTokenKindText(TokenKind kind);
-KeywordVersion getDefaultKeywordVersion();
-optional<KeywordVersion> getKeywordVersion(string_view text);
-const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
-
-/// This checks all keywords, regardless of the current keyword table.  Should
-/// only be used when it is ok to get a false positive for a keyword that may
-/// not currently be in the keyword table (such as handling macro arguments).
-bool isKeyword(TokenKind kind);
 
 enum class TokenKind : uint16_t {
     // general

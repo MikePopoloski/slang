@@ -1,5 +1,7 @@
 #include "Test.h"
 
+using LF = LexerFacts;
+
 TEST_CASE("Empty string") {
     auto& text = "";
     auto& expr = parseExpression(text);
@@ -102,10 +104,10 @@ TEST_CASE("Wildcard expression") {
 }
 
 void testPrefixUnary(TokenKind kind) {
-    auto text = std::string(getTokenKindText(kind)) + "a";
+    auto text = std::string(LF::getTokenKindText(kind)) + "a";
     auto& expr = parseExpression(text);
 
-    REQUIRE(expr.kind == getUnaryPrefixExpression(kind));
+    REQUIRE(expr.kind == SyntaxFacts::getUnaryPrefixExpression(kind));
     CHECK(expr.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
     auto& us = expr.as<PrefixUnaryExpressionSyntax>();
@@ -130,10 +132,10 @@ TEST_CASE("Unary prefix operators") {
 }
 
 void testPostfixUnary(TokenKind kind) {
-    auto text = "a" + std::string(getTokenKindText(kind));
+    auto text = "a" + std::string(LF::getTokenKindText(kind));
     auto& expr = parseExpression(text);
 
-    REQUIRE(expr.kind == getUnaryPostfixExpression(kind));
+    REQUIRE(expr.kind == SyntaxFacts::getUnaryPostfixExpression(kind));
     CHECK(expr.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
     auto& us = expr.as<PostfixUnaryExpressionSyntax>();
@@ -147,10 +149,10 @@ TEST_CASE("Unary postfix operators") {
 }
 
 void testBinaryOperator(TokenKind kind) {
-    auto text = "a " + std::string(getTokenKindText(kind)) + " 4";
+    auto text = "a " + std::string(LF::getTokenKindText(kind)) + " 4";
     auto& expr = parseExpression(text);
 
-    REQUIRE(expr.kind == getBinaryExpression(kind));
+    REQUIRE(expr.kind == SyntaxFacts::getBinaryExpression(kind));
     CHECK(expr.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
     auto& us = expr.as<BinaryExpressionSyntax>();

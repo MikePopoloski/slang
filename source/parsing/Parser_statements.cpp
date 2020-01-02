@@ -5,6 +5,7 @@
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Parser.h"
 
 namespace slang {
@@ -34,7 +35,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
                 }
                 default: {
                     addDiag(diag::ExpectedIfOrCase, peek(1).location())
-                        << getTokenKindText(peek().kind);
+                        << LexerFacts::getTokenKindText(peek().kind);
                     skipToken(std::nullopt);
                     return factory.emptyStatement(
                         label, attributes, missingToken(TokenKind::Semicolon, peek().location()));
@@ -167,7 +168,7 @@ bool Parser::parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& it
         if (kind == TokenKind::DefaultKeyword) {
             if (lastDefault && !errored) {
                 auto& diag = addDiag(diag::MultipleDefaultCases, peek().location());
-                diag << getTokenKindText(caseKind);
+                diag << LexerFacts::getTokenKindText(caseKind);
                 diag.addNote(diag::NotePreviousDefinition, lastDefault);
                 errored = true;
             }
@@ -257,7 +258,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
 
     if (itemBuffer.empty() && !errored) {
         addDiag(diag::CaseStatementEmpty, caseKeyword.location())
-            << getTokenKindText(caseKeyword.kind);
+            << LexerFacts::getTokenKindText(caseKeyword.kind);
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);

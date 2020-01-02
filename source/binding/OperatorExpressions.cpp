@@ -11,6 +11,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -164,7 +165,7 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
     if ((!wildcard && type->isAggregate()) || (wildcard && !type->isIntegral())) {
         if (!bad) {
             context.addDiag(diag::BadSetMembershipType, valueRes.sourceRange)
-                << *type << getTokenKindText(keyword);
+                << *type << LexerFacts::getTokenKindText(keyword);
             bad = true;
         }
     }
@@ -190,13 +191,13 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         else if (bt.isAggregate()) {
             // Aggregates are just never allowed in membership expressions.
             context.addDiag(diag::BadSetMembershipType, expr.sourceRange)
-                << bt << getTokenKindText(keyword);
+                << bt << LexerFacts::getTokenKindText(keyword);
             bad = true;
         }
         else {
             // Couldn't find a common type.
             context.addDiag(diag::NoCommonComparisonType, expr.sourceRange)
-                << getTokenKindText(keyword) << bt << *type;
+                << LexerFacts::getTokenKindText(keyword) << bt << *type;
             bad = true;
         }
     };
@@ -217,7 +218,7 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         if (wildcard) {
             if (!bt->isIntegral()) {
                 context.addDiag(diag::BadSetMembershipType, bound->sourceRange)
-                    << *bt << getTokenKindText(keyword);
+                    << *bt << LexerFacts::getTokenKindText(keyword);
                 bad = true;
             }
             else {

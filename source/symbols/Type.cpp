@@ -9,6 +9,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/TypePrinter.h"
@@ -347,7 +348,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                 // Error but don't fail out; just remove the dims and keep trucking
                 auto& diag = parent.addDiag(diag::PackedDimsOnPredefinedType,
                                             its.dimensions[0]->openBracket.location());
-                diag << getTokenKindText(its.keyword.kind);
+                diag << LexerFacts::getTokenKindText(its.keyword.kind);
             }
 
             if (!its.signing)

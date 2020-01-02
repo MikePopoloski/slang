@@ -4,7 +4,8 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/parsing/Token.h"
+#include "slang/parsing/LexerFacts.h"
+
 #include "slang/syntax/SyntaxNode.h"
 
 namespace slang {
@@ -362,7 +363,7 @@ const static StringTable<TokenKind> allKeywords[8] =
 } };
 
 // clang-format on
-bool isKeyword(TokenKind kind) {
+bool LexerFacts::isKeyword(TokenKind kind) {
     switch (kind) {
         case TokenKind::OneStep:
         case TokenKind::AcceptOnKeyword:
@@ -619,37 +620,37 @@ bool isKeyword(TokenKind kind) {
     }
 }
 
-TokenKind getSystemKeywordKind(string_view text) {
+TokenKind LexerFacts::getSystemKeywordKind(string_view text) {
     TokenKind kind;
     if (systemIdentifierKeywords.lookup(text, kind))
         return kind;
     return TokenKind::Unknown;
 }
 
-SyntaxKind getDirectiveKind(string_view directive) {
+SyntaxKind LexerFacts::getDirectiveKind(string_view directive) {
     SyntaxKind kind;
     if (directiveTable.lookup(directive, kind))
         return kind;
     return SyntaxKind::MacroUsage;
 }
 
-KeywordVersion getDefaultKeywordVersion() {
+KeywordVersion LexerFacts::getDefaultKeywordVersion() {
     return KeywordVersion::v1800_2017;
 }
 
-optional<KeywordVersion> getKeywordVersion(string_view text) {
+optional<KeywordVersion> LexerFacts::getKeywordVersion(string_view text) {
     KeywordVersion version;
     if (keywordVersionTable.lookup(text, version))
         return version;
     return std::nullopt;
 }
 
-const StringTable<TokenKind>* getKeywordTable(KeywordVersion version) {
+const StringTable<TokenKind>* LexerFacts::getKeywordTable(KeywordVersion version) {
     return &allKeywords[(uint8_t)version];
 }
 
 // clang-format off
-string_view getDirectiveText(SyntaxKind kind) {
+string_view LexerFacts::getDirectiveText(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::BeginKeywordsDirective: return "`begin_keywords";
         case SyntaxKind::CellDefineDirective: return "`celldefine";
@@ -675,7 +676,7 @@ string_view getDirectiveText(SyntaxKind kind) {
     }
 }
 
-string_view getTokenKindText(TokenKind kind) {
+string_view LexerFacts::getTokenKindText(TokenKind kind) {
     switch (kind) {
         // punctuation
         case TokenKind::Apostrophe: return "'";

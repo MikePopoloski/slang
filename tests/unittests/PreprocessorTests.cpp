@@ -38,7 +38,7 @@ TEST_CASE("System include file") {
 }
 
 void testDirective(SyntaxKind kind) {
-    string_view text = getDirectiveText(kind);
+    string_view text = LexerFacts::getDirectiveText(kind);
 
     diagnostics.clear();
     auto buffer = getSourceManager().assignText(text);
@@ -75,7 +75,7 @@ TEST_CASE("Directives") {
     testDirective(SyntaxKind::UndefDirective);
     testDirective(SyntaxKind::UndefineAllDirective);
 
-    CHECK(getDirectiveText(SyntaxKind::Unknown) == "");
+    CHECK(LexerFacts::getDirectiveText(SyntaxKind::Unknown) == "");
 }
 
 TEST_CASE("Macro define (simple)") {
