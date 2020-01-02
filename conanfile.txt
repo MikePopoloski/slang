@@ -1,7 +1,7 @@
 [requires]
 Catch2/2.9.2@catchorg/stable
 jsonformoderncpp/3.7.0@vthiery/stable
-fmt/6.0.0@_/_
+fmt/6.1.1@_/_
 
 [generators]
 cmake

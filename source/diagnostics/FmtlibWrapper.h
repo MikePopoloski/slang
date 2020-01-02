@@ -66,7 +66,7 @@ public:
     flat_hash_set<const Type*> seenTypes;
 };
 
-using FormatContext = BasicFormatContext<fmt::internal::buffer_range<char>::iterator>;
+using FormatContext = BasicFormatContext<std::back_insert_iterator<fmt::internal::buffer<char>>>;
 
 template<typename Range>
 class ArgFormatter : public fmt::internal::arg_formatter_base<Range> {
@@ -76,7 +76,7 @@ private:
     using context_type = BasicFormatContext<typename base::iterator>;
 
     context_type& ctx_;
-    fmt::basic_parse_context<char_type>* parse_ctx_;
+    fmt::basic_format_parse_context<char_type>* parse_ctx_;
 
 public:
     using range = Range;
@@ -84,7 +84,7 @@ public:
     using format_specs = typename base::format_specs;
 
     explicit ArgFormatter(context_type& ctx,
-                          fmt::basic_parse_context<char_type>* parse_ctx = nullptr,
+                          fmt::basic_format_parse_context<char_type>* parse_ctx = nullptr,
                           format_specs* spec = nullptr) :
         base(Range(ctx.out()), spec, ctx.locale()),
         ctx_(ctx), parse_ctx_(parse_ctx) {}
@@ -151,9 +151,9 @@ private:
     template<typename Context>
     void handle_specs(Context& ctx) {
         fmt::internal::handle_dynamic_spec<fmt::internal::width_checker>(
-            specs_.width, specs_.width_ref, ctx, format_str_);
+            specs_.width, specs_.width_ref, ctx);
         fmt::internal::handle_dynamic_spec<fmt::internal::precision_checker>(
-            specs_.precision, specs_.precision_ref, ctx, format_str_);
+            specs_.precision, specs_.precision_ref, ctx);
     }
 
     fmt::internal::dynamic_format_specs<char> specs_;

@@ -45,8 +45,8 @@ error ValueMustNotBeUnknown "value must not have any unknown bits"
 error ValueMustBePositive "value must be positive"
 error ValueExceedsMaxBitWidth "value exceeds maximum vector width ({} bits)"
 error ValueOutOfRange "{} is out of allowed range ({} to {})"
-warning real-underflow RealLiteralUnderflow "value of real literal is too small; minimum is {}"
-warning real-overflow RealLiteralOverflow "value of real literal is too large; maximum is {}"
+warning real-underflow RealLiteralUnderflow "value of real literal is too small; minimum is {:.5e}"
+warning real-overflow RealLiteralOverflow "value of real literal is too large; maximum is {:.5e}"
 warning literal-overflow VectorLiteralOverflow "vector literal too large for the given number of bits"
 
 subsystem Preprocessor

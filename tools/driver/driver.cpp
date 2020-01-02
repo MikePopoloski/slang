@@ -405,7 +405,8 @@ std::wstring convert(const char* s) {
 
 template<typename... Args>
 void print(string_view format, const Args&... args) {
-    fmt::vprint(widen(format), fmt::make_format_args<fmt::wformat_context>(convert(args)...));
+    fmt::vprint(fmt::to_string_view(widen(format)),
+                fmt::make_format_args<fmt::wformat_context>(convert(args)...));
 }
 
 int wmain(int argc, wchar_t** argv) {
