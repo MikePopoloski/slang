@@ -10,9 +10,12 @@
 
 namespace slang {
 
+class FormatBuffer;
+
 class TextDiagnosticClient : public DiagnosticClient {
 public:
-    TextDiagnosticClient() {}
+    TextDiagnosticClient();
+    ~TextDiagnosticClient();
 
     void report(const ReportedDiagnostic& diagnostic) override;
 
@@ -20,7 +23,7 @@ public:
     std::string getString() const;
 
 private:
-    FormatBuffer buffer;
+    std::unique_ptr<FormatBuffer> buffer;
 
     void formatDiag(SourceLocation loc, span<const SourceRange> ranges, string_view severity,
                     string_view message, string_view optionName);

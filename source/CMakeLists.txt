@@ -174,7 +174,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 endif()
 
 target_link_libraries(slang PUBLIC CONAN_PKG::jsonformoderncpp)
-target_link_libraries(slang PUBLIC CONAN_PKG::fmt)
+target_link_libraries(slang PRIVATE CONAN_PKG::fmt)
 
 find_package(Threads)
 target_link_libraries(slang PUBLIC ${CMAKE_THREAD_LIBS_INIT})

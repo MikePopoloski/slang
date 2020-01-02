@@ -6,13 +6,14 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/EvalContext.h"
 
+#include "../text/FormatBuffer.h"
+
 #include "slang/binding/BindContext.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
-#include "slang/text/FormatBuffer.h"
 
 namespace slang {
 

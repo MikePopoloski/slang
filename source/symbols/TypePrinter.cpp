@@ -6,59 +6,66 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/TypePrinter.h"
 
+#include "../text/FormatBuffer.h"
+
 #include "slang/symbols/ASTVisitor.h"
 
 namespace slang {
 
+TypePrinter::TypePrinter() : buffer(std::make_unique<FormatBuffer>()) {
+}
+
+TypePrinter::~TypePrinter() = default;
+
 void TypePrinter::append(const Type& type) {
     if (options.addSingleQuotes)
-        buffer.append("'");
+        buffer->append("'");
     type.visit(*this, "");
     if (options.addSingleQuotes)
-        buffer.append("'");
+        buffer->append("'");
 }
 
 std::string TypePrinter::toString() const {
-    return buffer.str();
+    return buffer->str();
 }
 
 void TypePrinter::visit(const ScalarType& type, string_view) {
     // clang-format off
     switch (type.scalarKind) {
-        case ScalarType::Bit: buffer.append("bit"); break;
-        case ScalarType::Logic: buffer.append("logic"); break;
-        case ScalarType::Reg: buffer.append("reg"); break;
+        case ScalarType::Bit: buffer->append("bit"); break;
+        case ScalarType::Logic: buffer->append("logic"); break;
+        case ScalarType::Reg: buffer->append("reg"); break;
         default: THROW_UNREACHABLE;
     }
     // clang-format on
 
     if (type.isSigned)
-        buffer.append(" signed");
+        buffer->append(" signed");
 }
 
 void TypePrinter::visit(const PredefinedIntegerType& type, string_view) {
     // clang-format off
     switch (type.integerKind) {
-        case PredefinedIntegerType::ShortInt: buffer.append("shortint"); break;
-        case PredefinedIntegerType::Int: buffer.append("int"); break;
-        case PredefinedIntegerType::LongInt: buffer.append("longint"); break;
-        case PredefinedIntegerType::Byte: buffer.append("byte"); break;
-        case PredefinedIntegerType::Integer: buffer.append("integer"); break;
-        case PredefinedIntegerType::Time: buffer.append("time"); break;
+        case PredefinedIntegerType::ShortInt: buffer->append("shortint"); break;
+        case PredefinedIntegerType::Int: buffer->append("int"); break;
+        case PredefinedIntegerType::LongInt: buffer->append("longint"); break;
+        case PredefinedIntegerType::Byte: buffer->append("byte"); break;
+        case PredefinedIntegerType::Integer: buffer->append("integer"); break;
+        case PredefinedIntegerType::Time: buffer->append("time"); break;
         default: THROW_UNREACHABLE;
     }
     // clang-format on
 
     if (type.isSigned != PredefinedIntegerType::isDefaultSigned(type.integerKind))
-        buffer.append(type.isSigned ? " signed" : " unsigned");
+        buffer->append(type.isSigned ? " signed" : " unsigned");
 }
 
 void TypePrinter::visit(const FloatingType& type, string_view) {
     // clang-format off
     switch (type.floatKind) {
-        case FloatingType::Real: buffer.append("real"); break;
-        case FloatingType::ShortReal: buffer.append("shortreal"); break;
-        case FloatingType::RealTime: buffer.append("realtime"); break;
+        case FloatingType::Real: buffer->append("real"); break;
+        case FloatingType::ShortReal: buffer->append("shortreal"); break;
+        case FloatingType::RealTime: buffer->append("realtime"); break;
         default: THROW_UNREACHABLE;
     }
     // clang-format on
@@ -69,29 +76,29 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
         printScope(type.getParentScope());
 
         if (overrideName.empty())
-            buffer.append("<unnamed enum>");
+            buffer->append("<unnamed enum>");
         else
-            buffer.append(overrideName);
+            buffer->append(overrideName);
     }
     else {
-        buffer.append("enum{");
+        buffer->append("enum{");
 
         bool first = true;
         for (const auto& member : type.values()) {
             if (!first)
-                buffer.append(",");
+                buffer->append(",");
 
             // TODO: write value with correct prefix
-            buffer.format("{}={}", member.name,
-                          member.getValue().integer().toString(LiteralBase::Decimal));
+            buffer->format("{}={}", member.name,
+                           member.getValue().integer().toString(LiteralBase::Decimal));
             first = false;
         }
-        buffer.append("}");
+        buffer->append("}");
 
         // TODO: print scope name
         // TODO: print system name
         if (!overrideName.empty())
-            buffer.append(overrideName);
+            buffer->append(overrideName);
     }
 }
 
@@ -108,7 +115,7 @@ void TypePrinter::visit(const PackedArrayType& type, string_view) {
 
     curr->elementType.visit(*this, "");
     for (auto& range : dims)
-        buffer.format("[{}:{}]", range.left, range.right);
+        buffer->format("[{}:{}]", range.left, range.right);
 }
 
 void TypePrinter::visit(const PackedStructType& type, string_view overrideName) {
@@ -116,21 +123,21 @@ void TypePrinter::visit(const PackedStructType& type, string_view overrideName) 
         printScope(type.getParentScope());
 
         if (overrideName.empty())
-            buffer.append("<unnamed packed struct>");
+            buffer->append("<unnamed packed struct>");
         else
-            buffer.append(overrideName);
+            buffer->append(overrideName);
     }
     else {
-        buffer.append("struct packed");
+        buffer->append("struct packed");
         if (type.isSigned)
-            buffer.append(" signed");
+            buffer->append(" signed");
 
         appendMembers(type);
         printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())
-            buffer.append(overrideName);
+            buffer->append(overrideName);
     }
 }
 
@@ -139,21 +146,21 @@ void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
         printScope(type.getParentScope());
 
         if (overrideName.empty())
-            buffer.append("<unnamed packed union>");
+            buffer->append("<unnamed packed union>");
         else
-            buffer.append(overrideName);
+            buffer->append(overrideName);
     }
     else {
-        buffer.append("union packed");
+        buffer->append("union packed");
         if (type.isSigned)
-            buffer.append(" signed");
+            buffer->append(" signed");
 
         appendMembers(type);
         printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())
-            buffer.append(overrideName);
+            buffer->append(overrideName);
     }
 }
 
@@ -169,23 +176,23 @@ void TypePrinter::visit(const UnpackedArrayType& type, string_view) {
     }
 
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        buffer.append("unpacked array ");
+        buffer->append("unpacked array ");
         for (auto& range : dims) {
             if (!range.isLittleEndian() && range.lower() == 0)
-                buffer.format("[{}]", range.width());
+                buffer->format("[{}]", range.width());
             else
-                buffer.format("[{}:{}]", range.left, range.right);
+                buffer->format("[{}:{}]", range.left, range.right);
         }
 
-        buffer.append(" of ");
+        buffer->append(" of ");
         append(curr->elementType);
     }
     else {
         append(curr->elementType);
-        buffer.append("$");
+        buffer->append("$");
 
         for (auto& range : dims)
-            buffer.format("[{}:{}]", range.left, range.right);
+            buffer->format("[{}:{}]", range.left, range.right);
     }
 }
 
@@ -193,18 +200,18 @@ void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
         if (overrideName.empty())
-            buffer.append("<unnamed unpacked struct>");
+            buffer->append("<unnamed unpacked struct>");
         else
-            buffer.append(overrideName);
+            buffer->append(overrideName);
     }
     else {
-        buffer.append("struct");
+        buffer->append("struct");
         appendMembers(type);
         printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())
-            buffer.append(overrideName);
+            buffer->append(overrideName);
     }
 }
 
@@ -212,39 +219,39 @@ void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName)
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
         if (overrideName.empty())
-            buffer.append("<unnamed unpacked union>");
+            buffer->append("<unnamed unpacked union>");
         else
-            buffer.append(overrideName);
+            buffer->append(overrideName);
     }
     else {
-        buffer.append("union");
+        buffer->append("union");
         appendMembers(type);
         printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())
-            buffer.append(overrideName);
+            buffer->append(overrideName);
     }
 }
 
 void TypePrinter::visit(const VoidType&, string_view) {
-    buffer.append("void");
+    buffer->append("void");
 }
 
 void TypePrinter::visit(const NullType&, string_view) {
-    buffer.append("null");
+    buffer->append("null");
 }
 
 void TypePrinter::visit(const CHandleType&, string_view) {
-    buffer.append("chandle");
+    buffer->append("chandle");
 }
 
 void TypePrinter::visit(const StringType&, string_view) {
-    buffer.append("string");
+    buffer->append("string");
 }
 
 void TypePrinter::visit(const EventType&, string_view) {
-    buffer.append("event");
+    buffer->append("event");
 }
 
 void TypePrinter::visit(const TypeAliasType& type, string_view) {
@@ -252,17 +259,17 @@ void TypePrinter::visit(const TypeAliasType& type, string_view) {
 }
 
 void TypePrinter::visit(const ErrorType&, string_view) {
-    buffer.append("<error>");
+    buffer->append("<error>");
 }
 
 void TypePrinter::appendMembers(const Scope& scope) {
-    buffer.append("{");
+    buffer->append("{");
     for (auto& member : scope.members()) {
         auto& var = member.as<VariableSymbol>();
         append(var.getType());
-        buffer.format(" {};", var.name);
+        buffer->format(" {};", var.name);
     }
-    buffer.append("}");
+    buffer->append("}");
 }
 
 void TypePrinter::printScope(const Scope* scope) {
@@ -273,11 +280,11 @@ void TypePrinter::printScope(const Scope* scope) {
     auto& sym = scope->asSymbol();
     sym.getHierarchicalPath(str);
 
-    buffer.append(str);
+    buffer->append(str);
     if (sym.kind == SymbolKind::Package || sym.kind == SymbolKind::ClassType)
-        buffer.append("::");
+        buffer->append("::");
     else
-        buffer.append(".");
+        buffer->append(".");
 }
 
 } // namespace slang

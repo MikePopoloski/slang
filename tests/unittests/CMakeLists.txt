@@ -22,6 +22,7 @@ add_executable(unittests
 )
 
 target_link_libraries(unittests PRIVATE slang CONAN_PKG::Catch2)
+target_link_libraries(unittests PRIVATE CONAN_PKG::fmt)
 
 if(CI_BUILD)
 	message("Running CI build")

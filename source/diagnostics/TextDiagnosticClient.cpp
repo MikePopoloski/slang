@@ -6,11 +6,18 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/TextDiagnosticClient.h"
 
+#include "../text/Formatbuffer.h"
+
 #include "slang/symbols/Symbol.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {
+
+TextDiagnosticClient::TextDiagnosticClient() : buffer(std::make_unique<FormatBuffer>()) {
+}
+
+TextDiagnosticClient::~TextDiagnosticClient() = default;
 
 void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     if (diag.shouldShowIncludeStack) {
@@ -20,8 +27,8 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
         // Show the stack in reverse. TODO: make this a reverse iterator
         for (int i = int(includeStack.size()) - 1; i >= 0; i--) {
             SourceLocation loc = includeStack[size_t(i)];
-            buffer.format("in file included from {}:{}:\n", sourceManager->getFileName(loc),
-                          sourceManager->getLineNumber(loc));
+            buffer->format("in file included from {}:{}:\n", sourceManager->getFileName(loc),
+                           sourceManager->getLineNumber(loc));
         }
     }
 
@@ -29,14 +36,14 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
     auto& od = diag.originalDiagnostic;
     if (od.coalesceCount && od.symbol) {
         if (od.coalesceCount == 1)
-            buffer.append("  in instance: "sv);
+            buffer->append("  in instance: "sv);
         else
-            buffer.format("  in {} instances, e.g. ", *od.coalesceCount);
+            buffer->format("  in {} instances, e.g. ", *od.coalesceCount);
 
         std::string str;
         od.symbol->getHierarchicalPath(str);
-        buffer.append(str);
-        buffer.append("\n"sv);
+        buffer->append(str);
+        buffer->append("\n"sv);
     }
 
     // Get all highlight ranges mapped into the reported location of the diagnostic.
@@ -63,11 +70,11 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
 }
 
 void TextDiagnosticClient::clear() {
-    buffer.clear();
+    buffer->clear();
 }
 
 std::string TextDiagnosticClient::getString() const {
-    return buffer.str();
+    return buffer->str();
 }
 
 static void highlightRange(SourceRange range, SourceLocation caretLoc, size_t col,
@@ -108,23 +115,23 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange
                                       string_view severity, string_view message,
                                       string_view optionName) {
     if (loc == SourceLocation::NoLocation) {
-        buffer.format("{}: {}", severity, message);
+        buffer->format("{}: {}", severity, message);
         if (!optionName.empty())
-            buffer.format(" [-W{}]", optionName);
-        buffer.append("\n"sv);
+            buffer->format(" [-W{}]", optionName);
+        buffer->append("\n"sv);
         return;
     }
 
     size_t col = sourceManager->getColumnNumber(loc);
-    buffer.format("{}:{}:{}: {}: {}", sourceManager->getFileName(loc),
-                  sourceManager->getLineNumber(loc), col, severity, message);
+    buffer->format("{}:{}:{}: {}: {}", sourceManager->getFileName(loc),
+                   sourceManager->getLineNumber(loc), col, severity, message);
 
     if (!optionName.empty())
-        buffer.format(" [-W{}]", optionName);
+        buffer->format(" [-W{}]", optionName);
 
     string_view line = getSourceLine(loc, col);
     if (!line.empty()) {
-        buffer.format("\n{}\n", line);
+        buffer->format("\n{}\n", line);
 
         // Highlight any ranges and print the caret location.
         std::string highlight(std::max(line.length(), col), ' ');
@@ -140,9 +147,9 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, span<const SourceRange
 
         highlight[col - 1] = '^';
         highlight.erase(highlight.find_last_not_of(' ') + 1);
-        buffer.append(highlight);
+        buffer->append(highlight);
     }
-    buffer.append("\n"sv);
+    buffer->append("\n"sv);
 }
 
 } // namespace slang

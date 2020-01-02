@@ -7,7 +7,6 @@
 #pragma once
 
 #include "slang/diagnostics/DiagnosticEngine.h"
-#include "slang/text/FormatBuffer.h"
 #include "slang/util/Util.h"
 
 namespace slang {

@@ -7,9 +7,10 @@
 #pragma once
 
 #include "slang/symbols/AllTypes.h"
-#include "slang/text/FormatBuffer.h"
 
 namespace slang {
+
+class FormatBuffer;
 
 struct TypePrintingOptions {
     bool printAKA = false;
@@ -23,6 +24,9 @@ struct TypePrintingOptions {
 
 class TypePrinter {
 public:
+    TypePrinter();
+    ~TypePrinter();
+
     void setOptions(const TypePrintingOptions& options_) { options = options_; }
 
     void append(const Type& type);
@@ -54,7 +58,7 @@ private:
     void appendMembers(const Scope& scope);
     void printScope(const Scope* scope);
 
-    FormatBuffer buffer;
+    std::unique_ptr<FormatBuffer> buffer;
     TypePrintingOptions options;
 };
 

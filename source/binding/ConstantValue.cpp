@@ -6,10 +6,9 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/ConstantValue.h"
 
+#include "../text/FormatBuffer.h"
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
-
-#include "slang/text/FormatBuffer.h"
 
 namespace slang {
 
@@ -269,24 +268,24 @@ std::ostream& operator<<(std::ostream& os, const ConstantRange& cr) {
 
 ConstantValue LValue::load() const {
     return std::visit(
-        [](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>)
-            ->ConstantValue {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<T, std::monostate>)
-                    return ConstantValue();
-                else if constexpr (std::is_same_v<T, ConstantValue*>)
-                    return *arg;
-                else if constexpr (std::is_same_v<T, CVRange>)
-                    return arg.cv->getSlice(arg.range.upper(), arg.range.lower());
-                else if constexpr (std::is_same_v<T, Concat>) {
-                    SmallVectorSized<SVInt, 4> vals;
-                    for (auto& elem : arg)
-                        vals.append(elem.load().integer());
-                    return SVInt::concat(vals);
-                }
-                else
-                    static_assert(always_false<T>::value, "Missing case");
-            },
+        [](auto&& arg) noexcept(
+            !std::is_same_v<std::decay_t<decltype(arg)>, Concat>) -> ConstantValue {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::monostate>)
+                return ConstantValue();
+            else if constexpr (std::is_same_v<T, ConstantValue*>)
+                return *arg;
+            else if constexpr (std::is_same_v<T, CVRange>)
+                return arg.cv->getSlice(arg.range.upper(), arg.range.lower());
+            else if constexpr (std::is_same_v<T, Concat>) {
+                SmallVectorSized<SVInt, 4> vals;
+                for (auto& elem : arg)
+                    vals.append(elem.load().integer());
+                return SVInt::concat(vals);
+            }
+            else
+                static_assert(always_false<T>::value, "Missing case");
+        },
         value);
 }
 
@@ -345,26 +344,27 @@ void LValue::store(const ConstantValue& newValue) {
 
 LValue LValue::selectRange(ConstantRange range) const {
     return std::visit(
-        [&range](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>)
-            ->LValue {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<T, std::monostate>)
-                    return nullptr;
-                else if constexpr (std::is_same_v<T, ConstantValue*>)
-                    return LValue(*arg, range);
-                else if constexpr (std::is_same_v<T, CVRange>)
-                    return LValue(*arg.cv, arg.range.subrange(range));
-                else if constexpr (std::is_same_v<T, Concat>)
-                    THROW_UNREACHABLE;
-                else
-                    static_assert(always_false<T>::value, "Missing case");
-            },
+        [&range](auto&& arg) noexcept(
+            !std::is_same_v<std::decay_t<decltype(arg)>, Concat>) -> LValue {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::monostate>)
+                return nullptr;
+            else if constexpr (std::is_same_v<T, ConstantValue*>)
+                return LValue(*arg, range);
+            else if constexpr (std::is_same_v<T, CVRange>)
+                return LValue(*arg.cv, arg.range.subrange(range));
+            else if constexpr (std::is_same_v<T, Concat>)
+                THROW_UNREACHABLE;
+            else
+                static_assert(always_false<T>::value, "Missing case");
+        },
         value);
 }
 
 LValue LValue::selectIndex(int32_t index) const {
     return std::visit(
-        [index](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>)->LValue {
+        [index](auto&& arg) noexcept(
+            !std::is_same_v<std::decay_t<decltype(arg)>, Concat>) -> LValue {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return nullptr;
