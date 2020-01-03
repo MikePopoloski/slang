@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/TextDiagnosticClient.h"
 
-#include "../text/Formatbuffer.h"
+#include "../text/FormatBuffer.h"
 
 #include "slang/symbols/Symbol.h"
 #include "slang/syntax/AllSyntax.h"
