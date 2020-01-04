@@ -62,9 +62,42 @@ public:
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
+class ValuePlusArgsFunction : public SystemSubroutine {
+public:
+    ValuePlusArgsFunction() : SystemSubroutine("$value$plusargs", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 2, 2))
+            return comp.getErrorType();
+
+        const Type& ft = *args[0]->type;
+        if (!ft.canBeStringLike()) {
+            context.addDiag(diag::InvalidStringArg, args[0]->sourceRange) << ft;
+            return comp.getErrorType();
+        }
+
+        if (!context.requireLValue(*args[1], args[1]->sourceRange.start()))
+            return comp.getErrorType();
+
+        // TODO: if the first argument is known at compile time, do more specific
+        // checking of the second argument.
+        const Type& st = *args[1]->type;
+        if (!st.canBeStringLike() && !st.isFloating())
+            return badArg(context, *args[1]);
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&) const final { return nullptr; }
+    bool verifyConstant(EvalContext&, const Args&) const final { return false; }
+};
+
 void registerMiscSystemFuncs(Compilation& c) {
 #define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(SFormat);
+    REGISTER(ValuePlusArgs);
 #undef REGISTER
 }
 

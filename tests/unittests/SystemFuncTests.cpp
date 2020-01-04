@@ -173,6 +173,12 @@ TEST_CASE("Utility system functions") {
     Compilation compilation;
     auto& scope = compilation.createScriptScope();
 
+    auto declare = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        scope.getCompilation().addSyntaxTree(tree);
+        scope.addMembers(tree->root());
+    };
+
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
         BindContext context(scope, LookupLocation::max);
@@ -202,6 +208,11 @@ TEST_CASE("Utility system functions") {
     CHECK(typeof("$fflush(3)") == "void");
     CHECK(typeof("$fflush()") == "void");
     CHECK(typeof("$feof(3)") == "int");
+
+    // [21.6] Command line input
+    declare("int i;");
+    CHECK(typeof("$test$plusargs(\"HELLO\")") == "int");
+    CHECK(typeof("$value$plusargs(\"HELLO=%d\", i)") == "int");
 
     NO_COMPILATION_ERRORS;
 }
