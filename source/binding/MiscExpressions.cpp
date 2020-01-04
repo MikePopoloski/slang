@@ -803,7 +803,8 @@ Expression& CallExpression::fromSystemMethod(Compilation& compilation, const Exp
     auto subroutine = compilation.getSystemMethod(type.kind, selector.name);
     if (!subroutine) {
         if (syntax) {
-            context.addDiag(diag::UnknownSystemMethod, selector.nameRange) << selector.name;
+            context.addDiag(diag::UnknownSystemMethod, selector.nameRange)
+                << selector.name << *expr.type;
         }
         else {
             auto& diag = context.addDiag(diag::InvalidMemberAccess, selector.dotLocation);
