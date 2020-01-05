@@ -1270,15 +1270,14 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     // [23.7.1] If we are starting with a colon separator, always do a downwards name
     // resolution.
     if (colonParts) {
-        // If the prefix name can be resolved normally, we have a class scope, otherwise it's a
-        // package lookup.
-        if (!result.found) {
-            result.found = compilation.getPackage(name);
+        // If the prefix name resolved normally to a class object, use that. Otherwise we need
+        // to look for a package with the corresponding name.
+        // TODO: handle the class scope check here
 
-            if (!result.found) {
-                result.addDiag(*this, diag::UnknownClassOrPackage, nameToken.range()) << name;
-                return;
-            }
+        result.found = compilation.getPackage(name);
+        if (!result.found) {
+            result.addDiag(*this, diag::UnknownClassOrPackage, nameToken.range()) << name;
+            return;
         }
 
         // We can't do upwards name resolution if colon access is involved, so always return

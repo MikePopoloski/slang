@@ -1204,3 +1204,20 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Package lookup with other symbol of same name") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int x;
+endpackage
+
+module m;
+    enum { p = 1 } sdf;
+    int i = p::x;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
