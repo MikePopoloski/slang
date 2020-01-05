@@ -456,6 +456,23 @@ endmodule
     CHECK(diags[0].code == diag::ParamHasNoValue);
 }
 
+TEST_CASE("Type parameters default -- no error") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type foo_t = bit) ();
+    foo_t f;
+    initial f[0] = 1;
+endmodule
+
+module top;
+    m #(.foo_t(logic[3:0])) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Functions -- body params") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
