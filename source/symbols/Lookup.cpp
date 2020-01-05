@@ -26,9 +26,9 @@ LookupLocation LookupLocation::after(const Symbol& symbol) {
 LookupLocation LookupLocation::beforeLexical(const Symbol& symbol) {
     if (InstanceSymbol::isKind(symbol.kind)) {
         auto& def = symbol.as<InstanceSymbol>().definition;
-        return LookupLocation(def.getParentScope(), (uint32_t)def.getIndex() + 1);
+        return LookupLocation(def.getParentScope(), (uint32_t)def.getIndex());
     }
-    return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex() + 1);
+    return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex());
 }
 
 bool LookupLocation::operator<(const LookupLocation& other) const {

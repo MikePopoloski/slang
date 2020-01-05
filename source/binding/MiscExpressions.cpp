@@ -173,17 +173,9 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
         }
     }
     else {
-        bool isBefore;
-        auto frameScope = frame.lookupLocation.getScope();
-        if (!frameScope || symbol.getParentScope() == frameScope)
-            isBefore = LookupLocation::after(symbol) < frame.lookupLocation;
-        else {
-            // If the two locations are not in the same compilation unit, assume that it's ok.
-            auto compare = symbol.isDeclaredBefore(frameScope->asSymbol());
-            isBefore = compare.value_or(true);
-        }
-
-        if (!isBefore) {
+        // If the two locations are not in the same compilation unit, assume that it's ok.
+        auto compare = symbol.isDeclaredBefore(frame.lookupLocation);
+        if (!compare.value_or(true)) {
             context.addDiag(diag::NoteIdUsedInCEBeforeDecl, sourceRange) << symbol.name;
             context.addDiag(diag::NoteDeclarationHere, symbol.location);
             return false;

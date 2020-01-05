@@ -362,6 +362,23 @@ endmodule
     CHECK(diags[0].code == diag::HierarchicalNotAllowedInConstant);
 }
 
+TEST_CASE("Lookup location for constant function call") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    typedef enum { SDF = 1 } asdf_t;
+    parameter int i = foo();
+
+    function int foo;
+        return SDF;
+    endfunction
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Useful error when lookup before declared in parent scope") {
     auto tree = SyntaxTree::fromText(R"(
 module m1;
