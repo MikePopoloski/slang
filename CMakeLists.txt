@@ -10,6 +10,7 @@ option(FUZZ_TARGET "Enables changes to make binaries easier to fuzz test" OFF)
 option(SLANG_INCLUDE_TESTS "Include test targets in the build" ON)
 option(SLANG_INCLUDE_DOCS "Include documentation targets in the build" OFF)
 option(BUILD_SHARED_LIBS "Generate a shared library instead of static" OFF)
+set(DOXYGENPY_PATH "" CACHE STRING "When building docs, the path to doxygen.py tool")
 
 set(SLANG_SANITIZERS "" CACHE STRING "List of Clang sanitizers to include in build")
 
