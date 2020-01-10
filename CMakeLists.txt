@@ -57,14 +57,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         string(REGEX REPLACE "/debug" "/DEBUG:FASTLINK" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
         add_compile_options(/DDEBUG)
     else()
-        add_compile_options(/GS-)    # Disable buffer overrun checks
+        add_compile_options(/GS-)   # Disable buffer overrun checks
         add_compile_options(/GL)    # Whole program optimization
         add_compile_options(/Zi)    # Generate debug info even in release
 
-        set(REL_LINK_FLAGS "/LTCG /DEBUG:FULL /INCREMENTAL:NO /OPT:REF /OPT:ICF")
-        set(CMAKE_EXE_LINKER_FLAGS "${MAKE_EXE_LINKER_FLAGS} ${REL_LINK_FLAGS}")
-        set(CMAKE_SHARED_LINKER_FLAGS "${MAKE_SHARED_LINKER_FLAGS} ${REL_LINK_FLAGS}")
-        set(CMAKE_STATIC_LINKER_FLAGS "${MAKE_SHARED_LINKER_FLAGS} /LTCG")
+        set(REL_LINK_FLAGS "/LTCG /DEBUG:FULL /OPT:REF /OPT:ICF /INCREMENTAL:NO")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${REL_LINK_FLAGS}")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${REL_LINK_FLAGS}")
+        set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /LTCG")
     endif()
 
     if(SLANG_MSVC_W4)
