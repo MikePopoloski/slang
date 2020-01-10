@@ -10,6 +10,6 @@ target_link_libraries(rewriter PRIVATE slang)
 target_link_libraries(rewriter PRIVATE CONAN_PKG::fmt)
 
 if(FUZZ_TARGET)
-	message("Tweaking driver for fuzz testing")
-	target_compile_definitions(driver PRIVATE FUZZ_TARGET)
+    message("Tweaking driver for fuzz testing")
+    target_compile_definitions(driver PRIVATE FUZZ_TARGET)
 endif()

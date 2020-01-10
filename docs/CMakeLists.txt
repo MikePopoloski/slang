@@ -19,6 +19,6 @@ add_custom_command(OUTPUT ${DOXYGEN_INDEX_FILE}
                    COMMAND ${Python_EXECUTABLE} ${DOXYGENPY_PATH} ${DOXYFILE_OUT}
                    MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
                    COMMENT "Generating docs"
-				   VERBATIM)
+                   VERBATIM)
 
 add_custom_target(docs ALL DEPENDS ${DOXYGEN_INDEX_FILE})
