@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+# This script deletes the given directory and everything within it.
+# cmake makes this difficult so here we are.
+import sys
+import shutil
+
+def main():
+    shutil.rmtree(sys.argv[1])
+
+if __name__ == "__main__":
+    main()

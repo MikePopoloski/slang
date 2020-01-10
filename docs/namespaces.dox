@@ -1,0 +1,11 @@
+/** @dir slang
+@brief Namspace @ref slang
+*/
+
+/** @dir slang/numeric
+@brief Numeric-related utility types
+*/
+
+/** @namespace slang
+@brief Root namespace
+*/

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Takes an input text file containing the SystemVerilog language grammar
 # and converts it to nice linked markdown.
 
