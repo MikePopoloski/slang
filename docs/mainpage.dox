@@ -1,0 +1,54 @@
+/** @mainpage slang
+
+slang is a software library that provides various components for lexing,
+parsing, type checking, and elaborating SystemVerilog code. It comes with
+an executable tool that can compile and lint any SystemVerilog project,
+but it is also intended to be usable as a front end for synthesis tools,
+simulators, linters, code editors, and refactoring tools.
+
+@section mainpage-features Features
+
+-   Fully parse, analyze, and elaborate all SystemVerilog features - see for current status
+-   Be robust about compilation, no matter how broken the source text. This makes the compiler
+    usable in editor highlighting and completion scenarios, where the code is likely to be broken
+    because the user is still writing it.
+-   The parse tree should round trip back to the original source, making it easy to write refactoring
+    and code generation tools.
+-   Provide great error messages, ala clang.
+-   Be fast and robust in the face of production-scale projects.
+
+@section mainpage-getting-started Getting started
+
+@section mainpage-try Try it out
+
+Experiment with parsing, type checking, and error detection live on the web (this tool is inspired by
+Matt Godbolt's excellent Compiler Explorer). It's still pretty rough but useful for exploring the
+interactive behavior of the toolchain.
+
+@section mainpage-contact Contact & support
+
+@section mainpage-license License
+
+slang is licensed under the MIT license:
+
+>   Copyright (c) 2015-2020 Michael Popoloski
+>
+>   Permission is hereby granted, free of charge, to any person obtaining a copy
+>   of this software and associated documentation files (the "Software"), to deal
+>   in the Software without restriction, including without limitation the rights
+>   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+>   copies of the Software, and to permit persons to whom the Software is
+>   furnished to do so, subject to the following conditions:
+>
+>   The above copyright notice and this permission notice shall be included in
+>   all copies or substantial portions of the Software.
+>
+>   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+>   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+>   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+>   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+>   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+>   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+>   THE SOFTWARE.
+
+*/

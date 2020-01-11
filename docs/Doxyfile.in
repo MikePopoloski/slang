@@ -13,6 +13,15 @@
 # TAG += value [value, ...]
 # Values that contain spaces should be placed between quotes (\" \").
 
+##! M_LINKS_NAVBAR1 = \
+##!  "user-manual getting-started command-line-ref language-support" \
+##!  "developer-guide building"
+##! M_LINKS_NAVBAR2 = \
+##!  "namespaces" \
+##!  "annotated" \
+##!  "files" \
+##!  "<a href="http://sv-lang.com/">Try It</a>"
+
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
