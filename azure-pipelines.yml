@@ -76,8 +76,7 @@ jobs:
 
   - task: VSBuild@1
     inputs:
-      solution: build/slang.sln
-      msbuildArgs: "/t:INSTALL"
+      solution: build/INSTALL.vcxproj
       platform: x64
       configuration: Release
       maximumCpuCount: true
