@@ -62,7 +62,7 @@ jobs:
   - script: |
       mkdir build
       cd build
-      cmake -DCMAKE_CXX_COMPILER=$(compiler) -DCI_BUILD=ON $(flags) -DCMAKE_INSTALL_PREFIX=~/slang ..
+      cmake -DCMAKE_CXX_COMPILER=$(compiler) -DCI_BUILD=ON $(flags) -DCMAKE_INSTALL_PREFIX=$(Build.StagingDirectory)/slang/ ..
       make install -j8
     displayName: 'Build (Linux)'
     condition: variables.isLinux
@@ -70,7 +70,7 @@ jobs:
   - script: |
       mkdir build
       cd build
-      cmake -G "Visual Studio 16 2019" -DCMAKE_INSTALL_PREFIX=%USERPROFILE%/slang ..
+      cmake -G "Visual Studio 16 2019" -DCMAKE_INSTALL_PREFIX=$(Build.StagingDirectory)/slang/ ..
     displayName: 'Generate VS Solution'
     condition: variables.isWindows
 
@@ -115,14 +115,14 @@ jobs:
   - task: PublishPipelineArtifact@0
     inputs:
       artifactName: 'SLANG_ZIP_LINUX'
-      targetPath: '~/slang/'
+      targetPath: $(Build.StagingDirectory)/slang/
     displayName: Publish Linux Zip
     condition: variables.isGCC
 
   - task: PublishPipelineArtifact@0
     inputs:
       artifactName: 'SLANG_ZIP_WIN'
-      targetPath: '%USERPROFILE%/slang'
+      targetPath: $(Build.StagingDirectory)/slang/
     displayName: Publish Windows Zip
     condition: variables.isWindows
 
