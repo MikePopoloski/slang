@@ -112,18 +112,34 @@ jobs:
     displayName: 'Upload code coverage'
     condition: variables.isClang
 
+  - task: ArchiveFiles@2
+    inputs:
+      rootFolderOrFile: $(Build.StagingDirectory)/slang/
+      archiveType: tar
+      archiveFile: $(Build.StagingDirectory)/slang-linux.tar.gz
+    displayName: Archive Linux Build
+    condition: variables.isGCC
+
+  - task: ArchiveFiles@2
+    inputs:
+      rootFolderOrFile: $(Build.StagingDirectory)/slang/
+      archiveType: zip
+      archiveFile: $(Build.StagingDirectory)/slang-windows.zip
+    displayName: Archive Windows Build
+    condition: variables.isWindows
+
   - task: PublishPipelineArtifact@0
     inputs:
-      artifactName: 'SLANG_ZIP_LINUX'
-      targetPath: $(Build.StagingDirectory)/slang/
-    displayName: Publish Linux Zip
+      artifactName: 'SLANG_ARTIFACT_LINUX'
+      targetPath: $(Build.StagingDirectory)/slang-linux.tar.gz
+    displayName: Publish Linux Build
     condition: variables.isGCC
 
   - task: PublishPipelineArtifact@0
     inputs:
-      artifactName: 'SLANG_ZIP_WIN'
-      targetPath: $(Build.StagingDirectory)/slang/
-    displayName: Publish Windows Zip
+      artifactName: 'SLANG_ARTIFACT_WIN'
+      targetPath: $(Build.StagingDirectory)/slang-windows.zip
+    displayName: Publish Windows Build
     condition: variables.isWindows
 
 - job: UpdateGithubRelease
@@ -133,12 +149,12 @@ jobs:
   steps:
   - task: DownloadPipelineArtifact@0
     inputs:
-      artifactName: 'SLANG_ZIP_LINUX'
+      artifactName: 'SLANG_ARTIFACT_LINUX'
       targetPath: $(Build.ArtifactStagingDirectory)
 
   - task: DownloadPipelineArtifact@0
     inputs:
-      artifactName: 'SLANG_ZIP_WIN'
+      artifactName: 'SLANG_ARTIFACT_WIN'
       targetPath: $(Build.ArtifactStagingDirectory)
 
   - task: GitHubRelease@0
@@ -147,7 +163,11 @@ jobs:
       gitHubConnection: github.com_MikePopoloski
       repositoryName: MikePopoloski/slang
       action: edit
+      title: Nightly
       tag: nightly
+      releaseNotesFile: $(Build.SourcesDirectory)/scripts/nightly-release-notes.md
       target: '$(Build.SourceVersion)'
-      assets: $(Build.ArtifactStagingDirectory)/*.zip
+      assets: |
+        $(Build.ArtifactStagingDirectory)/*.zip
+        $(Build.ArtifactStagingDirectory)/*.tar.gz
       isPreRelease: true
