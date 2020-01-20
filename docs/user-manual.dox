@@ -1,4 +1,62 @@
 /** @page user-manual User manual
-@brief Instructions on how to use the slang tool as an end-user 
+@brief Instructions on how to use the slang tool as an end-user
+
+@section quick-start Quick start
+
+The `slang` binary runs a full compilation of given SystemVerilog source files.
+Eventually it will produce a full simulation binary as output, but for now it
+serves as a checker of source code syntax, types, and various language rules.
+
+Running it on one or more valid SystemVerilog files will produce no output, and
+will return zero:
+@code{.sv}
+// test1.sv
+module m;
+	struct { logic a; } s;
+	int i = s.a + 1;
+	initial $display("%d", i);
+endmodule
+@endcode
+@code{.ansi}
+> slang test.sv
+> echo $?
+0
+@endcode
+
+Running it on a file with errors will produce nicely formatted diagnostic output:
+@code{.sv}
+// test2.sv
+module m;
+	struct { logic a; } s;
+	int i = s + 1;
+	initial $display("%d", i);
+endmodule
+@endcode
+@code{.ansi}
+[0;36m../test.sv[0m:[1;36m3:12[0m: [1;31merror: [0m[1;37minvalid operands to binary expression ('<unnamed unpacked struct>' and 'int')[0m
+        int i = s + 1;
+[1;32m                ~ ^ ~[0m
+@endcode
+
+@section compilation-units Compilation units
+
+By default `slang` treats all input files as separate SystemVerilog compilation units.
+This is the preferred method both because it keeps the code logically separate (it doesn't
+require a specific ordering of files on the command line in order to compile correctly) and
+because internally the tool can parse files in parallel if it knows they don't have to be
+parsed in a specific order.
+
+If you have an older project where file ordering does matter, you can pass the `--single-unit`
+option to have all input files treated as a single compilation unit.
+
+@section built-in-macros Built-in macros
+
+There are a handful of slang-specific predefined macros that you can reference in your code:
+Name | Value
+---- | -----
+\`__slang__ | 1
+\`__slang_major__ | *slang major version number*
+\`__slang_minor__ | *slang minor version number*
+\`__slang_rev__ | *slang git revision number*
 
 */

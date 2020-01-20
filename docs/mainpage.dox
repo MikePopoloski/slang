@@ -19,13 +19,28 @@ simulators, linters, code editors, and refactoring tools.
 
 @section mainpage-getting-started Getting started
 
+You can download prebuilt binaries for Windows and Linux for the
+[latest release](https://github.com/MikePopoloski/slang/releases/latest) or the
+[nightly pre-release](https://github.com/MikePopoloski/slang/releases/tag/nightly).
+You can run the included tool on your code right out of the box; check out the
+@ref user-manual for more information about how it works.
+
+If you're looking to use slang as a library, please read through the @ref developer-guide.
+
+Instructions on building slang from source are here: @ref building
+
 @section mainpage-try Try it out
 
-Experiment with parsing, type checking, and error detection live on the web (this tool is inspired by
-Matt Godbolt's excellent Compiler Explorer). It's still pretty rough but useful for exploring the
-interactive behavior of the toolchain.
+Experiment with parsing, type checking, and error detection [live on the web](http://sv-lang.com/)
+(this tool is inspired by Matt Godbolt's excellent Compiler Explorer). It's still
+pretty rough but useful for exploring the interactive behavior of the toolchain.
 
 @section mainpage-contact Contact & support
+
+If you encounter a bug, have questions, or want to contribute, please get in touch
+by opening a GitHub issue or posting a message on Gitter:
+-	GitHub --- https://github.com/MikePopoloski/slang
+-	Gitter chat --- https://gitter.im/MikePopoloski/slang
 
 @section mainpage-license License
 

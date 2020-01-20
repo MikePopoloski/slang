@@ -1,4 +1,340 @@
 /** @page language-support Language support
 @brief Overview of supported language features
 
+@tableofcontents
+
+This is a rough attempt at giving an overview of which SystemVerilog features
+slang supports, and those which it does not. This is not a promise that features
+marked "supported" are bug-free, but should imply that any such bugs are as of yet
+unknown to me and should be reported if discovered.
+
+Features are expressed via references to chapters and sections within the
+IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
+
+@section elaboration Elaboration
+
+## Chapters 1-5
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-dim}} 1 | Overview | N/A
+{{m-dim}} 2 | Normative references | N/A
+{{m-dim}} 3 | Design and verification building blocks | N/A
+{{m-dim}} 4 | Scheduling semantics | N/A
+{{m-success}} 5 | Lexical conventions | v0.2
+
+## 6. Data types
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 6.2 | Data types | v0.2
+{{m-success}} 6.5 | Nets and variables | v0.2
+{{m-warning}} 6.6 | Net types | partial
+{{m-warning}} 6.7 | Net declarations | partial
+{{m-success}} 6.8 | Variable declarations | v0.2
+{{m-success}} 6.9 | Vector declarations | v0.2
+{{m-danger}}  6.10 | Implicit declarations | no
+{{m-success}} 6.11 | Integer types | v0.2
+{{m-success}} 6.12 | Real types | v0.2
+{{m-success}} 6.13 | Void type | v0.2
+{{m-danger}}  6.14 | Chandle types | no
+{{m-danger}}  6.15 | Classes | no
+{{m-success}} 6.16 | Strings | v0.2
+{{m-danger}}  6.17 | Events | no
+{{m-success}} 6.18 | User-defined types | v0.2
+{{m-success}} 6.19 | Enumerations | v0.2
+{{m-success}} 6.20.2 | Value parameters | v0.2
+{{m-success}} 6.20.3 | Type parameters | v0.2
+{{m-success}} 6.20.4 | Local parameters | v0.2
+{{m-danger}}  6.20.5 | Specify parameters | no
+{{m-danger}}  6.20.6 | Const constants | no
+{{m-danger}}  6.21 | Scope and lifetime | no
+{{m-success}} 6.22 | Type compatibility | v0.2
+{{m-danger}}  6.22.6 | Matching nettypes | no
+{{m-danger}}  6.23 | Type operator | no
+{{m-success}} 6.24.1 | Static casting | v0.2
+{{m-danger}}  6.24.2 | Dynamic casting | no
+{{m-danger}}  6.24.3 | Bit-stream casting | no
+
+## 7. Aggregate data types
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 7.2 | Structures | v0.2
+{{m-warning}} 7.3 | Unions | partial
+{{m-success}} 7.4 | Packed and unpacked arrays | v0.2
+{{m-danger}}  7.5 | Dynamic arrays | no
+{{m-success}} 7.6 | Array assignments | v0.2
+{{m-success}} 7.7 | Arrays as arguments to subroutines | v0.2
+{{m-danger}}  7.8 | Associative arrays | no
+{{m-danger}}  7.9 | Associative array methods | no
+{{m-danger}}  7.10 | Queues | no
+{{m-warning}} 7.11 | Array querying functions | partial
+{{m-warning}} 7.12 | Array manipulation methods | partial
+
+## 8. Classes
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 8.3 | Syntax | v0.2
+{{m-danger}}  8.4 | Objects | no
+{{m-danger}}  8.5 | Object properties | no
+{{m-danger}}  8.6 | Object methods | no
+{{m-danger}}  8.7 | Constructors | no
+{{m-danger}}  8.8 | Typed constructor calls | no
+{{m-danger}}  8.9 | Static class properties | no
+{{m-danger}}  8.10 | Static methods | no
+{{m-danger}}  8.11 | This | no
+{{m-danger}}  8.12 | Assignment, renaming, and copying | no
+{{m-danger}}  8.13 | Inheritance and subclasses | no
+{{m-danger}}  8.14 | Overriden members | no
+{{m-danger}}  8.15 | Super | no
+{{m-danger}}  8.16 | Casting | no
+{{m-danger}}  8.17 | Chaining constructors | no
+{{m-danger}}  8.18 | Data hiding and encapsulation | no
+{{m-danger}}  8.19 | Constant class properties | no
+{{m-danger}}  8.20 | Virtual methods | no
+{{m-danger}}  8.21 | Abstract classes and pure virtual methods | no
+{{m-danger}}  8.23 | Class scope resolution operator | no
+{{m-danger}}  8.24 | Out-of-block declarations | no
+{{m-danger}}  8.25 | Parameterized classes | no
+{{m-danger}}  8.26 | Interface classes | no
+{{m-danger}}  8.27 | Typedef class | no
+
+## 9. Processes
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 9.2 | Structured procedures | v0.2
+{{m-success}} 9.3 | Block statements | v0.2
+{{m-warning}} 9.4 | Procedural timing controls | partial
+{{m-danger}}  9.6 | Process control | no
+{{m-danger}}  9.7 | Fine-grain process control | no
+
+## 10. Assignment statements
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-warning}} 10.3 | Continuous assignments | partial
+{{m-success}} 10.4 | Procedural assignments | v0.2
+{{m-success}} 10.5 | Variable declarations assignment | v0.2
+{{m-danger}}  10.6 | Procedural continuous assignments | no
+{{m-success}} 10.7 | Assignment extension and truncation | v0.2
+{{m-success}} 10.8 | Assignment-like contexts | v0.2
+{{m-warning}} 10.9 | Assignment patterns | partial
+{{m-danger}}  10.10 | Unpacked array concatenation | no
+{{m-danger}}  10.11 | Net aliasing | no
+
+## 11. Operators and expressions
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 11.3 | Operators | v0.2
+{{m-success}} 11.4 | Operator descriptions | v0.2
+{{m-danger}}  11.4.14 | Streaming operators | no
+{{m-success}} 11.5 | Operands | v0.2
+{{m-success}} 11.6 | Expression bit lengths | v0.2
+{{m-success}} 11.7 | Signed expressions | v0.2
+{{m-success}} 11.8 | Expression evaluation rules | v0.2
+{{m-danger}}  11.9 | Tagged union expressions | no
+{{m-warning}} 11.10 | String literal expressions | partial
+{{m-danger}}  11.11 | Min/typ/max expressions | no
+{{m-danger}}  11.12 | Let construct | no
+
+## 12. Procedural programming statements
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 12.4 | Conditional if-else statement | v0.2
+{{m-success}} 12.5 | Case statement | v0.2
+{{m-danger}}  12.6 | Pattern matching conditional statements | no
+{{m-success}} 12.7 | Loop statements | v0.2
+{{m-success}} 12.8 | Jump statements | v0.2
+
+## 13. Tasks and functions
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 13.3 | Tasks | v0.2
+{{m-success}} 13.4 | Functions | v0.2
+{{m-warning}} 13.5 | Subroutine calls and argument passing | partial
+{{m-danger}}  13.6 | Import and export functions | no
+{{m-success}} 13.7 | Task and function names | v0.2
+
+## 14. Clocking blocks
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-danger}}  14.3 | Clocking block declaration | no
+{{m-danger}}  14.4 | Input and output skews | no
+{{m-danger}}  14.5 | Hierarchical expressions | no
+{{m-danger}}  14.6 | Signals in multiple clocking blocks | no
+{{m-danger}}  14.7 | Clocking block scope and lifetime | no
+{{m-danger}}  14.10 | Clocking block events | no
+{{m-danger}}  14.11 | Cycle delay | no
+{{m-danger}}  14.12 | Default clocking | no
+{{m-danger}}  14.13 | Input sampling | no
+{{m-danger}}  14.14 | Global clocking | no
+{{m-danger}}  14.16 | Synchronous drives | no
+
+## 15. Interprocess synchronization and communication
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-danger}}  15.3 | Semaphores | no
+{{m-danger}}  15.4 | Mailboxes | no
+{{m-danger}}  15.5 | Named events | no
+
+## 16. Assertions
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 16.3 | Immediate assertions | v0.2
+{{m-warning}} 16.4 | Deferred assertions | partial
+{{m-danger}}  16.5 | Concurrent assertions overview | no
+{{m-danger}}  16.6 | Boolean expression | no
+{{m-danger}}  16.7 | Sequences | no
+{{m-danger}}  16.8 | Declaring sequences | no
+{{m-danger}}  16.9 | Sequence operations | no
+{{m-danger}}  16.10 | Local variables | no
+{{m-danger}}  16.11 | Calling subroutines on match of sequence | no
+{{m-danger}}  16.12 | Declaring properties | no
+{{m-danger}}  16.13 | Multiclock support | no
+{{m-danger}}  16.14 | Concurrent assertions | no
+{{m-danger}}  16.15 | Disable iff resolution | no
+{{m-danger}}  16.16 | Clock resolution | no
+{{m-danger}}  16.17 | Expect statement | no
+
+## Chapters 17-19
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-danger}}  17 | Checkers | no
+{{m-danger}}  18 | Constrained random value generation | no
+{{m-danger}}  19 | Functional coverage | no
+
+## 20. Utility system tasks and system functions
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 20.2 | Simulation control tasks | v0.2
+{{m-success}} 20.3 | Simulation time functions | v0.2
+{{m-danger}}  20.4 | Timescale tasks | no
+{{m-success}} 20.5 | Conversion functions | v0.2
+{{m-warning}} 20.6 | Data query functions | partial
+{{m-warning}} 20.7 | Array query functions | partial
+{{m-success}} 20.8 | Math functions | v0.2
+{{m-success}} 20.9 | Bit vector system functions | v0.2
+{{m-success}} 20.10 | Severity tasks | v0.2
+{{m-danger}}  20.11 | Elaboration tasks | no
+{{m-danger}}  20.12 | Assertion control tasks | no
+{{m-danger}}  20.13 | Sampled value system functions | no
+{{m-danger}}  20.14 | Coverage control functions | no
+{{m-warning}} 20.15 | Probabilistic distribution functions | partial
+{{m-danger}}  20.16 | Stochastic analysis tasks and functions | no
+{{m-danger}}  20.17 | PLA modeling tasks | no
+{{m-danger}}  20.18 | Miscellaneous tasks and functions | no
+
+## 21. Input/output system tasks and system functions
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 21.2 | Display system tasks | v0.2
+{{m-warning}} 21.3 | File I/O tasks and functions | partial
+{{m-success}} 21.4 | Loading memory array data from file | v0.2
+{{m-success}} 21.5 | Writing memory array data to file | v0.2
+{{m-success}} 21.6 | Command line input | v0.2
+{{m-warning}} 21.7 | Value change dump files | partial
+
+## 22. Compiler directives
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 22.3 | \`resetall | v0.2
+{{m-success}} 22.4 | \`include | v0.2
+{{m-success}} 22.5 | \`define, \`undef, and \`undefineall | v0.2
+{{m-success}} 22.6 | \`ifdef, \`else, \`elsif, \`endif, \`ifndef | v0.2
+{{m-success}} 22.7 | \`timescale | v0.2
+{{m-success}} 22.8 | \`default_nettype | v0.2
+{{m-warning}} 22.9 | \`unconnected_drive and \`nounconnected_drive | partial
+{{m-success}} 22.10 | \`celldefine and \`endcelldefine | v0.2
+{{m-warning}} 22.11 | \`pragma | partial
+{{m-success}} 22.12 | \`line | v0.2
+{{m-success}} 22.13 | \`__FILE__ and \`__LINE__ | v0.2
+{{m-success}} 22.14 | \`begin_keywords, \`end_keywords | v0.2
+
+## 23. Modules and hierarchy
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 23.2 | Module definitions | v0.2
+{{m-success}} 23.3 | Module instances | v0.2
+{{m-danger}}  23.4 | Nested modules | no
+{{m-danger}}  23.5 | Extern modules | no
+{{m-success}} 23.6 | Hierarchical names | v0.2
+{{m-success}} 23.7 | Member selects and hierarchical names | v0.2
+{{m-warning}} 23.8 | Upwards name referencing | partial
+{{m-success}} 23.9 | Scope rules | v0.2
+{{m-success}} 23.10 | Overriding module parameters | v0.2
+{{m-danger}}  23.10.1 | defparam statement | no
+{{m-danger}}  23.11 | Binding auxiliary code to scopes or instances | no
+
+## 24. Programs
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-warning}} 24.3 | The program construct | partial
+{{m-danger}}  24.5 | Blocking tasks in cycle/event mode | no
+{{m-danger}}  24.6 | Programwide space and anonymous programs | no
+{{m-danger}}  24.7 | Program control tasks | no
+
+## 25. Interfaces
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 25.3 | Interface syntax | v0.2
+{{m-success}} 25.4 | Ports in interfaces | v0.2
+{{m-warning}} 25.5 | Modports | partial
+{{m-danger}}  25.6 | Interfaces and specify blocks | no
+{{m-warning}} 25.7 | Tasks and functions in interfaces | partial
+{{m-success}} 25.8 | Parameterized interfaces | v0.2
+{{m-danger}}  25.9 | Virtual interfaces | no
+{{m-warning}} 25.10 | Access to interface objects | partial
+
+## 26. Packages
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 26.2 | Package declarations | v0.2
+{{m-success}} 26.3 | Referencing data in packages | v0.2
+{{m-success}} 26.4 | Using packages in module headers | v0.2
+{{m-success}} 26.5 | Search order rules | v0.2
+{{m-danger}}  26.6 | Exporting imported names from packages | no
+{{m-danger}}  26.7 | The std built-in package | no
+
+## 27. Generate constructs
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 27.3 | Generate construct syntax | v0.2
+{{m-success}} 27.4 | Loop generate constructs | v0.2
+{{m-success}} 27.5 | Conditional generate constructs | v0.2
+{{m-danger}}  27.6 | External names for unnamed generate blocks | no
+
+## Chapters 28-34
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-danger}}  28 | Gate-level and switch-level modeling | no
+{{m-danger}}  29 | User defined primitives | no
+{{m-danger}}  30 | Specify blocks | no
+{{m-danger}}  31 | Timing checks | no
+{{m-danger}}  32 | Backannotation using the standard delay format | no
+{{m-danger}}  33 | Configuring the contents of a design | no
+{{m-danger}}  34 | Protected envelopes | no
+
+@section simulation Simulation
+
+Simulation is not yet supported at all, but it will be at some point in the future.
+
 */
