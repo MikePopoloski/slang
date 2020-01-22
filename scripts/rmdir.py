@@ -5,7 +5,7 @@ import sys
 import shutil
 
 def main():
-    shutil.rmtree(sys.argv[1])
+    shutil.rmtree(sys.argv[1], ignore_errors=True)
 
 if __name__ == "__main__":
     main()
