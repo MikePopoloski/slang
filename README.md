@@ -19,7 +19,7 @@ Still under heavy construction!
 * Be fast and robust in the face of production-scale projects.
 
 ### Try It Out
-Experiment with parsing, type checking, and error detection live [on the web](http://sv-lang.com/) (this tool is inspired by Matt Godbolt's excellent [Compiler Explorer](https://godbolt.org/)). It's still pretty rough but useful for exploring the interactive behavior of the toolchain.
+Experiment with parsing, type checking, and error detection live [on the web](http://sv-lang.com/explore/) (this tool is inspired by Matt Godbolt's excellent [Compiler Explorer](https://godbolt.org/)). It's still pretty rough but useful for exploring the interactive behavior of the toolchain.
 
 ### Build Instructions
 
