@@ -157,6 +157,13 @@ jobs:
       artifactName: 'SLANG_ARTIFACT_WIN'
       targetPath: $(Build.ArtifactStagingDirectory)
 
+  - script: |
+      git push --delete origin nightly
+      git tag -d nightly
+      git tag nightly
+      git push origin nightly
+    displayName: 'Retag nightly release'
+
   - task: GitHubRelease@0
     displayName: "Update Github Release"
     inputs:
