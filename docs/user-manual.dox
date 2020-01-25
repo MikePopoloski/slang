@@ -1,6 +1,8 @@
 /** @page user-manual User manual
 @brief Instructions on how to use the slang tool as an end-user
 
+@tableofcontents
+
 @section quick-start Quick start
 
 The `slang` binary runs a full compilation of given SystemVerilog source files.
@@ -9,6 +11,7 @@ serves as a checker of source code syntax, types, and various language rules.
 
 Running it on one or more valid SystemVerilog files will produce no output, and
 will return zero:
+
 @code{.sv}
 // test1.sv
 module m;
@@ -17,6 +20,7 @@ module m;
 	initial $display("%d", i);
 endmodule
 @endcode
+
 @code{.ansi}
 > slang test.sv
 > echo $?
@@ -24,6 +28,7 @@ endmodule
 @endcode
 
 Running it on a file with errors will produce nicely formatted diagnostic output:
+
 @code{.sv}
 // test2.sv
 module m;
@@ -32,6 +37,7 @@ module m;
 	initial $display("%d", i);
 endmodule
 @endcode
+
 @code{.ansi}
 [0;36m../test.sv[0m:[1;36m3:12[0m: [1;31merror: [0m[1;37minvalid operands to binary expression ('<unnamed unpacked struct>' and 'int')[0m
         int i = s + 1;

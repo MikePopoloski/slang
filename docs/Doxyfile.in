@@ -17,10 +17,17 @@
 ##!  "user-manual command-line-ref language-support" \
 ##!  "developer-guide building"
 ##! M_LINKS_NAVBAR2 = \
-##!  "namespaces" \
-##!  "annotated" \
-##!  "files" \
-##!  "<a href="http://sv-lang.com/explore/">Try It</a>"
+##!  "api-reference namespaces annotated files" \
+##!  "<a href="http://sv-lang.com/explore/">Try It</a>" \
+##!  "<a href="https://github.com/MikePopoloski/slang">GitHub</a>"
+
+##! M_PAGE_FINE_PRINT = \
+##!  <p>slang SystemVerilog language services. Copyright (C) 2015-2020 Michael Popoloski.</br> \
+##!  Code is <a href="https://github.com/MikePopoloski/slang">available on GitHub</a> under the MIT license.</p>
+
+##! M_SEARCH_DOWNLOAD_BINARY = YES
+##! M_SEARCH_BASE_URL = http://sv-lang.com/
+##! M_SEARCH_EXTERNAL_URL = "https://google.com/search?q=site:sv-lang.com+{query}"
 
 #---------------------------------------------------------------------------
 # Project related configuration options
@@ -2032,7 +2039,7 @@ XML_OUTPUT             = xml
 # The default value is: YES.
 # This tag requires that the tag GENERATE_XML is set to YES.
 
-XML_PROGRAMLISTING     = YES
+XML_PROGRAMLISTING     = NO
 
 # If the XML_NS_MEMB_FILE_SCOPE tag is set to YES, doxygen will include
 # namespace members in file scope as well, matching the HTML output.

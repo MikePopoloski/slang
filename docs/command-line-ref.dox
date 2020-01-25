@@ -1,4 +1,176 @@
 /** @page command-line-ref Command line reference
 @brief Reference information about all command line options
 
+@tableofcontents
+
+@section general General
+
+`-h,--help`
+
+Display help text about command line options and exit.
+
+`-v,--version`
+
+Display slang version information and exit.
+
+`positional arguments`
+
+Paths to files that should be included in the compilation.
+
+`--single-unit`
+
+Causes the tool to treat all input files as being part of a single compilation unit.
+By default all files are considered to be separate compilation units and ordering between them
+does not matter. When this option is provided, all files are concatenated together, in order, to
+produce a single compilation unit.
+
+@section Actions
+
+These options control what action the tool will perform when run.
+They are mutually exclusive. If none of these are provided, the default
+action is to elaborate the design, print any diagnostics, and exit.
+
+`-E,--preprocess`
+
+Treat all files as a single input file (as if `--single-unit` had been passed),
+run the preprocessor on them, and then print the preprocessed text to stdout.
+If errors occur during preprocessing, they will be printed instead of the preprocessed text.
+
+`--macros-only`
+
+Run the preprocessor on all input files, print out any macros that are discovered, and exit.
+No diagnostics will be printed.
+
+`--parse-only`
+
+Perform parsing of all input files but don't perform type checking and elaboration.
+All diagnostics encountered will be printed.
+
+@section include-paths Include paths and macros
+
+`-I,--include-directory <dir>`
+
+Add the given directory path to the list of directories searched by \`include directives that use
+quotes to specify the path.
+
+`--isystem <dir>`
+
+Add the given directory path to the list of directories searched by \`include directives that use
+angle brackets to specify the path.
+
+`-D,--define-macro <macro>=<value>`
+
+Define \<macro\> to \<value\> (or `1` if \<value\> is ommitted) at the start of all source files.
+Example:
+
+@code{.ansi}
+slang -DFOO=2 -DBAR=asdf -D BAZ=3
+@endcode
+
+`-U,--undefine-macro <macro>`
+
+Undefine the given macro at the start of all source files.
+
+@section preprocessor Preprocessor
+
+`--comments`
+
+When running in preprocessor-only mode (using `-E`) include comments in the preprocessed output text.
+
+`--directives`
+
+When running in preprocessor-only mode (using `-E`) include directives in the preprocessed output text.
+
+`--max-include-depth <depth>`
+
+Set the maximum depth of nested include files. Exceeding this limit will cause an error.
+The default is 1024.
+
+@section parsing Parsing
+
+`--max-parse-depth <depth>`
+
+Set the maximum depth of nested language elements. This is a measure of the depth of the parsing
+stack, which is checked against this limit to avoid stack overflows. The default is 1024.
+
+`--max-lexer-errors <depth>`
+
+Set the maximum number of errors that can occur during lexing before the rest of the file is skipped.
+The default is 64.
+
+@section json-output JSON output
+
+`--ast-json <file>`
+
+Dump the compiled AST in JSON format to the specified file, or '-' for stdout.
+
+@section Compilation limits
+
+`--max-hierarchy-depth <depth>`
+
+Set the maximum depth of the design hierarchy. Used to detect infinite
+module instantiation recursion. The default is 512.
+
+`--max-generate-steps <steps>`
+
+Set the maximum number of steps that can occur during generate block evaluation
+before giving up. Used to detect infinite generate loops. The default is 65535.
+
+`--max-constexpr-depth <depth>`
+
+Set the maximum depth of the constant evaluation call stack. Used to detect
+infinite recursion during constant evaluation. The default is 256.
+
+`--max-constexpr-steps <steps>`
+
+Set the maximum number of steps that can occur during constant evaluation
+before giving up. Used to detect infinite constant evaluation loops.
+The default is 100000.
+
+`--constexpr-backtrace-limit <limit>`
+
+Set the maximum number of frames to show when printing a constant evaluation
+backtrace in diagnostics; the rest will be abbreviated to avoid spamming output.
+The default is 10.
+
+@section diag-control Diagnostic control
+
+`--color-diagnostics`
+
+Always print diagnostics in color. If this option is unset, colors will be enabled
+if a color-capable terminal is detected.
+
+`--error-limit`
+
+Set a limit on the number of errors that will be printed. Setting this to zero will
+disable the limit. The default is 64.
+
+`-Wfoo`
+
+Enable warning "foo". See TODO for a complete list of warnings that can be enabled this way.
+
+`-Wno-foo`
+
+Disable warning "foo".
+
+`-Wnone`
+
+Disable all warnings.
+
+`-Weverything`
+
+Enable all warnings.
+
+`-Werror`
+
+Treat all warnings as errors.
+
+`-Werror=foo`
+
+Treat warning "foo" as an error.
+
+`-Wno-error=foo`
+
+Turn warning "foo" into a warning even if `-Werror` is specified.
+
 */
