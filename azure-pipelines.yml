@@ -157,11 +157,18 @@ jobs:
       artifactName: 'SLANG_ARTIFACT_WIN'
       targetPath: $(Build.ArtifactStagingDirectory)
 
+  - task: InstallSSHKey@0
+    inputs:
+      knownHostsEntry: github.com,140.82.113.4 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==
+      sshPublicKey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC/jl1BgNf6YqGtHn+0yfl9zBKuc6nCPJP9rNh77zmnF4eLx4rbEwxrJooHatfAx+k312NAkgfM0YcUUKV4bl2FZC1dNXmOOKjm8ozCvDa46YrNqC+hBhmtq0ab4fksOj77GpFizTedDQZePccEjg5xHCtjwNth/ijA5ycltcJGRy7bcryYGxMIc0T9sb4nI/ti7XmRnsLbKhtK2iDU3DIQGMWSJgJeOlExgNO9sld5x2BaKYth2gagLho23KXGt6WM+lKgJ1Kb/Uw5InElDhdDTDfY6+Kj8g87z2BlpnWW/RtrIXEOd6/Uzdcm4tTOYEDAnp978QXoxO+TywMY1/o7
+      sshPassphrase: $(RSA_PASS)
+      sshKeySecureFile: slang-build-rsa
+
   - script: |
-      git push --delete https://$(GITBUILD_TOKEN)@github.com/MikePopoloski/slang.git nightly
+      git push --delete git@github.com/MikePopoloski/slang.git nightly
       git tag -d nightly
       git tag nightly
-      git push https://$(GITBUILD_TOKEN)@github.com/MikePopoloski/slang.git nightly
+      git push git@github.com/MikePopoloski/slang.git nightly
     displayName: 'Retag nightly release'
 
   - task: GitHubRelease@0
