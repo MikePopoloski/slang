@@ -158,10 +158,10 @@ jobs:
       targetPath: $(Build.ArtifactStagingDirectory)
 
   - script: |
-      git push --delete origin nightly
+      git push --delete https://$(GITBUILD_TOKEN)@github.com/MikePopoloski/slang.git nightly
       git tag -d nightly
       git tag nightly
-      git push origin nightly
+      git push https://$(GITBUILD_TOKEN)@github.com/MikePopoloski/slang.git nightly
     displayName: 'Retag nightly release'
 
   - task: GitHubRelease@0
