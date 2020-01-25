@@ -165,11 +165,10 @@ jobs:
       sshKeySecureFile: slang-build-rsa
 
   - script: |
-      ssh -vvvT git@github.com
-      git push --delete git@github.com/MikePopoloski/slang.git nightly
+      git push --delete ssh://git@github.com/MikePopoloski/slang.git nightly
       git tag -d nightly
       git tag nightly
-      git push git@github.com/MikePopoloski/slang.git nightly
+      git push ssh://git@github.com/MikePopoloski/slang.git nightly
     displayName: 'Retag nightly release'
 
   - task: GitHubRelease@0
