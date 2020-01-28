@@ -18,7 +18,7 @@
 ##!  "developer-guide building"
 ##! M_LINKS_NAVBAR2 = \
 ##!  "api-reference namespaces annotated files" \
-##!  "<a href="http://sv-lang.com/explore/">Try It</a>" \
+##!  "<a href="https://sv-lang.com/explore/">Try It</a>" \
 ##!  "<a href="https://github.com/MikePopoloski/slang">GitHub</a>"
 
 ##! M_PAGE_FINE_PRINT = \
@@ -26,7 +26,7 @@
 ##!  Code is <a href="https://github.com/MikePopoloski/slang">available on GitHub</a> under the MIT license.</p>
 
 ##! M_SEARCH_DOWNLOAD_BINARY = YES
-##! M_SEARCH_BASE_URL = http://sv-lang.com/
+##! M_SEARCH_BASE_URL = https://sv-lang.com/
 ##! M_SEARCH_EXTERNAL_URL = "https://google.com/search?q=site:sv-lang.com+{query}"
 
 #---------------------------------------------------------------------------

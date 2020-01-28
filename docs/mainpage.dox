@@ -32,7 +32,7 @@ Instructions on building slang from source are here: @ref building
 
 @section mainpage-try Try it out
 
-Experiment with parsing, type checking, and error detection [live on the web](http://sv-lang.com/explore/)
+Experiment with parsing, type checking, and error detection [live on the web](https://sv-lang.com/explore/)
 (this tool is inspired by Matt Godbolt's excellent Compiler Explorer). It's still
 pretty rough but useful for exploring the interactive behavior of the toolchain.
 
