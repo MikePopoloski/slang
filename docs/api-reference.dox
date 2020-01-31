@@ -1,4 +1,19 @@
 /** @page api-reference API Reference
 @brief Documentation for the public slang C++ API
 
+The @ref slang root namespace contains most of the entry points for using the library.
+See the individual listing pages for a complete reference, but some useful starting
+points for exploration are:
+
+- The @ref slang::SyntaxTree class is a convenient way to parse a source file (or some source
+text in memory) into syntax nodes.
+- The @ref slang::SyntaxVisitor class can be used to walk a syntax tree.
+- The @ref slang::SyntaxRewriter class is a SyntaxVisitor with helper methods for rewriting
+syntax nodes into some new form (which would be useful for refactoring tools).
+- The @ref slang::Compilation class is the main entry point for type checking and elaboration.
+- The @ref slang::SemanticModel class can be used to get semantic information about a particular
+syntax node without necessarily compiling the whole design.
+- The @ref slang::ScriptSession is a high level code interpreter; you can give it some source
+code and it will return a constant value that is the result of executing that code.
+
 */

@@ -104,7 +104,7 @@ The default is 64.
 
 Dump the compiled AST in JSON format to the specified file, or '-' for stdout.
 
-@section Compilation limits
+@section compilation-limits Compilation limits
 
 `--max-hierarchy-depth <depth>`
 

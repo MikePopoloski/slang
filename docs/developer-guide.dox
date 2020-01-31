@@ -1,4 +1,15 @@
 /** @page developer-guide Developer guide
 @brief Information on the internals of slang and its use as a library
 
+slang is designed first and foremost as a collection of software libraries that
+can be used, in whole or in part, in other projects. Those might include things
+like linting tools, code editor completion, code generation as part of a build,
+automated refactoring tools, runtime JITing or interpretation, simulators,
+and synthesis tools.
+
+This section tries to give an overview of the slang libraries and codebase,
+and serves as a starting point for learning to use it in your own projects.
+
+- @ref building - Instructions for obtaining and building the library
+
 */
