@@ -20,7 +20,7 @@ class BindContext;
 class SubroutineSymbol;
 
 enum class EvalFlags : uint8_t { None = 0, IsScript = 1, IsVerifying = 2 };
-BITMASK_DEFINE_MAX_ELEMENT(EvalFlags, IsVerifying);
+BITMASK(EvalFlags, IsVerifying);
 
 /// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining

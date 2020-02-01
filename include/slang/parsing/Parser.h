@@ -39,7 +39,7 @@ enum class ExpressionOptions {
     /// In a constraint block context, the -> operator has special meaning.
     ConstraintContext = 8
 };
-BITMASK_DEFINE_MAX_ELEMENT(ExpressionOptions, ConstraintContext);
+BITMASK(ExpressionOptions, ConstraintContext);
 
 /// Various options for parsing names.
 enum class NameOptions {
@@ -58,7 +58,7 @@ enum class NameOptions {
     /// We are expecting an expression while parsing this name.
     ExpectingExpression = 8
 };
-BITMASK_DEFINE_MAX_ELEMENT(NameOptions, ExpectingExpression);
+BITMASK(NameOptions, ExpectingExpression);
 
 /// Various options for parsing types.
 enum class TypeOptions {
@@ -71,7 +71,7 @@ enum class TypeOptions {
     /// Allow void types.
     AllowVoid = 2
 };
-BITMASK_DEFINE_MAX_ELEMENT(TypeOptions, AllowVoid);
+BITMASK(TypeOptions, AllowVoid);
 
 } // namespace detail
 

@@ -15,6 +15,7 @@
 #include <utility>     // for many random utility functions
 
 #include "slang/util/Assert.h"
+#include "slang/util/Enum.h"
 #include "slang/util/NotNull.h"
 
 using std::byte;
@@ -40,6 +41,3 @@ using namespace std::literals;
 #define span_FEATURE_COMPARISON 0
 #include <span.hpp>
 using nonstd::span;
-
-#include <bitmask.hpp>
-using bitmask_lib::bitmask;

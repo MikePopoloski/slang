@@ -63,7 +63,7 @@ enum class BindFlags {
     /// variables via assignments and increment/decrement expressions is allowed.
     ProceduralStatement = 256
 };
-BITMASK_DEFINE_MAX_ELEMENT(BindFlags, ProceduralStatement);
+BITMASK(BindFlags, ProceduralStatement);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

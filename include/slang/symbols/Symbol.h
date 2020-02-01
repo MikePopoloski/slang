@@ -11,7 +11,6 @@
 #include "slang/symbols/DeclaredType.h"
 #include "slang/symbols/Lookup.h"
 #include "slang/text/SourceLocation.h"
-#include "slang/util/Enum.h"
 #include "slang/util/Util.h"
 
 namespace slang {

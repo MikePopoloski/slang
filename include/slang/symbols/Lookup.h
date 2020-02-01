@@ -39,7 +39,7 @@ enum class LookupFlags {
     /// Don't search through wildcard imports to satisfy the lookup.
     DisallowWildcardImport = 8
 };
-BITMASK_DEFINE_MAX_ELEMENT(LookupFlags, DisallowWildcardImport);
+BITMASK(LookupFlags, DisallowWildcardImport);
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.

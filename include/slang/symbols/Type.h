@@ -33,7 +33,7 @@ enum class IntegralFlags : uint8_t {
     /// more useful messaging.
     Reg = 4
 };
-BITMASK_DEFINE_MAX_ELEMENT(IntegralFlags, Reg);
+BITMASK(IntegralFlags, Reg);
 
 /// Base class for all data types in SystemVerilog.
 ///

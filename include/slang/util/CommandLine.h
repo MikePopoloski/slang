@@ -8,6 +8,7 @@
 
 #include <map>
 #include <variant>
+#include <vector>
 
 #include "slang/util/Util.h"
 

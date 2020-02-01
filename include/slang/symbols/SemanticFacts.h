@@ -10,7 +10,6 @@
 
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxNode.h"
-#include "slang/util/Enum.h"
 
 namespace slang {
 
