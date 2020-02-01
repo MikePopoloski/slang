@@ -8,7 +8,7 @@ def writefile(path, contents):
     try:
         with open(path, 'r') as f:
             existing = f.read()
-    except:
+    except OSError:
         existing = ''
 
     if existing != contents:
@@ -213,7 +213,7 @@ def createallheader(path, diags):
 
 '''
 
-    for k,v in sorted(diags.items()):
+    for k in sorted(diags.keys()):
         output += '#include "slang/diagnostics/{}Diags.h"\n'.format(k)
 
     output += '\n'

@@ -12,7 +12,7 @@ namespace slang::Builtins {
 
 class StringLenMethod : public SimpleSystemSubroutine {
 public:
-    StringLenMethod(Compilation& comp) :
+    explicit StringLenMethod(Compilation& comp) :
         SimpleSystemSubroutine("len", SubroutineKind::Function, 0, {}, comp.getIntType(), true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args) const final {
@@ -26,7 +26,7 @@ public:
 
 class StringPutcMethod : public SimpleSystemSubroutine {
 public:
-    StringPutcMethod(Compilation& comp) :
+    explicit StringPutcMethod(Compilation& comp) :
         SimpleSystemSubroutine("putc", SubroutineKind::Function, 2,
                                { &comp.getIntType(), &comp.getByteType() }, comp.getVoidType(),
                                true) {}
@@ -52,7 +52,7 @@ public:
 
 class StringGetcMethod : public SimpleSystemSubroutine {
 public:
-    StringGetcMethod(Compilation& comp) :
+    explicit StringGetcMethod(Compilation& comp) :
         SimpleSystemSubroutine("getc", SubroutineKind::Function, 1, { &comp.getIntType() },
                                comp.getByteType(), true) {}
 
@@ -141,7 +141,7 @@ private:
 
 class StringSubstrMethod : public SimpleSystemSubroutine {
 public:
-    StringSubstrMethod(Compilation& comp) :
+    explicit StringSubstrMethod(Compilation& comp) :
         SimpleSystemSubroutine("substr", SubroutineKind::Function, 2,
                                { &comp.getIntType(), &comp.getIntType() }, comp.getStringType(),
                                true) {}
@@ -189,7 +189,7 @@ private:
 
 class StringAtoRealMethod : public SimpleSystemSubroutine {
 public:
-    StringAtoRealMethod(Compilation& comp) :
+    explicit StringAtoRealMethod(Compilation& comp) :
         SimpleSystemSubroutine("atoreal", SubroutineKind::Function, 0, {}, comp.getRealType(),
                                true) {}
 
@@ -230,7 +230,7 @@ private:
 
 class StringRealtoAMethod : public SimpleSystemSubroutine {
 public:
-    StringRealtoAMethod(Compilation& comp) :
+    explicit StringRealtoAMethod(Compilation& comp) :
         SimpleSystemSubroutine("realtoa", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getVoidType(), true) {}
 

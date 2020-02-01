@@ -12,7 +12,7 @@ namespace slang::Builtins {
 
 class ArrayReductionMethod : public SystemSubroutine {
 public:
-    ArrayReductionMethod(const std::string& name) :
+    explicit ArrayReductionMethod(const std::string& name) :
         SystemSubroutine(name, SubroutineKind::Function) {}
 
     const Type& checkArguments(const BindContext& context, const Args& args,

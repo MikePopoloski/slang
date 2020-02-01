@@ -49,7 +49,7 @@ private:
 
 class RtoIFunction : public SimpleSystemSubroutine {
 public:
-    RtoIFunction(Compilation& comp) :
+    explicit RtoIFunction(Compilation& comp) :
         SimpleSystemSubroutine("$rtoi", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getIntegerType(), false) {}
 
@@ -64,7 +64,7 @@ public:
 
 class ItoRFunction : public SimpleSystemSubroutine {
 public:
-    ItoRFunction(Compilation& comp) :
+    explicit ItoRFunction(Compilation& comp) :
         SimpleSystemSubroutine("$itor", SubroutineKind::Function, 1, { &comp.getIntegerType() },
                                comp.getRealType(), false) {}
 
@@ -80,7 +80,7 @@ public:
 
 class RealToBitsFunction : public SimpleSystemSubroutine {
 public:
-    RealToBitsFunction(Compilation& comp) :
+    explicit RealToBitsFunction(Compilation& comp) :
         SimpleSystemSubroutine("$realtobits", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getType(64, IntegralFlags::Unsigned), false) {}
 
@@ -99,7 +99,7 @@ public:
 
 class BitsToRealFunction : public SimpleSystemSubroutine {
 public:
-    BitsToRealFunction(Compilation& comp) :
+    explicit BitsToRealFunction(Compilation& comp) :
         SimpleSystemSubroutine("$bitstoreal", SubroutineKind::Function, 1,
                                { &comp.getType(64, IntegralFlags::Unsigned) }, comp.getRealType(),
                                false) {}
@@ -120,7 +120,7 @@ public:
 
 class ShortRealToBitsFunction : public SimpleSystemSubroutine {
 public:
-    ShortRealToBitsFunction(Compilation& comp) :
+    explicit ShortRealToBitsFunction(Compilation& comp) :
         SimpleSystemSubroutine("$shortrealtobits", SubroutineKind::Function, 1,
                                { &comp.getShortRealType() },
                                comp.getType(32, IntegralFlags::Unsigned), false) {}
@@ -140,7 +140,7 @@ public:
 
 class BitsToShortRealFunction : public SimpleSystemSubroutine {
 public:
-    BitsToShortRealFunction(Compilation& comp) :
+    explicit BitsToShortRealFunction(Compilation& comp) :
         SimpleSystemSubroutine("$bitstoshortreal", SubroutineKind::Function, 1,
                                { &comp.getType(32, IntegralFlags::Unsigned) },
                                comp.getShortRealType(), false) {}

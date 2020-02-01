@@ -152,7 +152,7 @@ private:
 
 class EnumNumMethod : public SimpleSystemSubroutine {
 public:
-    EnumNumMethod(Compilation& comp) :
+    explicit EnumNumMethod(Compilation& comp) :
         SimpleSystemSubroutine("num", SubroutineKind::Function, 0, {}, comp.getIntType(),
                                /* isMethod */ true, /* allowNonConst */ true) {}
 
@@ -165,7 +165,7 @@ public:
 
 class EnumNameMethod : public SimpleSystemSubroutine {
 public:
-    EnumNameMethod(Compilation& comp) :
+    explicit EnumNameMethod(Compilation& comp) :
         SimpleSystemSubroutine("name", SubroutineKind::Function, 0, {}, comp.getStringType(),
                                true) {}
 

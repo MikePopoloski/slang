@@ -12,7 +12,8 @@ namespace slang::Builtins {
 
 class SystemTaskBase : public SystemSubroutine {
 public:
-    SystemTaskBase(const std::string& name) : SystemSubroutine(name, SubroutineKind::Task) {}
+    explicit SystemTaskBase(const std::string& name) :
+        SystemSubroutine(name, SubroutineKind::Task) {}
     ConstantValue eval(EvalContext&, const Args&) const final { return nullptr; }
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
