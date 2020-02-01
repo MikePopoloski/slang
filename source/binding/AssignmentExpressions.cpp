@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // AssignmentExpressions.cpp
-// Definitions for assignment-related expressions.
+// Definitions for assignment-related expressions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/AssignmentExpressions.h"
 

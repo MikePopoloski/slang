@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // BindContext.cpp
-// Expression binding context.
+// Expression binding context
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/BindContext.h"
 

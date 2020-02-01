@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // Preprocessor_macros.cpp
-// Macro-related preprocessor support.
+// Macro-related preprocessor support
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

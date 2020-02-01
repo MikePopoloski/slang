@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Lookup.cpp
-// Contains symbol lookup-related definitions.
+// Contains symbol lookup-related definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/Lookup.h"
 

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // ParameterSymbols.cpp
-// Contains parameter-related symbol definitions.
+// Contains parameter-related symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/ParameterSymbols.h"
 

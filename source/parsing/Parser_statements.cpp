@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Parser_statements.cpp
-// Statement-related parsing methods.
+// Statement-related parsing methods
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/LexerFacts.h"

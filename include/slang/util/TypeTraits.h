@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// TypeTraits.h
-// Various type trait template helpers.
+//! @file TypeTraits.h
+//! @brief Various type trait template helpers
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

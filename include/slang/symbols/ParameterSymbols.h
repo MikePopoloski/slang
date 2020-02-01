@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// ParameterSymbols.h
-// Contains parameter-related symbol definitions.
+//! @file ParameterSymbols.h
+//! @brief Contains parameter-related symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

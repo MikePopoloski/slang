@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // LexerFacts.cpp
-// Random lexer-related utility functions.
+// Random lexer-related utility functions
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

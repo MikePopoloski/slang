@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // ConstantValue.cpp
-// Compile-time constant representation.
+// Compile-time constant representation
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/ConstantValue.h"
 

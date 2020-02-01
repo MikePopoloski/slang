@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// String.h
-// Various string utilities.
+//! @file String.h
+//! @brief Various string utilities
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

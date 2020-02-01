@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// CommandLine.h
-// Command line argument parsing support.
+//! @file CommandLine.h
+//! @brief Command line argument parsing support
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// Time.h
-// Contains various time-related utilities and functions.
+//! @file Time.h
+//! @brief Contains various time-related utilities and functions
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

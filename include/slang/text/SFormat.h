@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SFormat.h
-// SystemVerilog string formatting routines.
+//! @file SFormat.h
+//! @brief SystemVerilog string formatting routines
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

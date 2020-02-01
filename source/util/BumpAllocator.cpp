@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // BumpAllocator.cpp
-// Fast allocator based on pointer bumping.
+// Fast allocator based on pointer bumping
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/util/BumpAllocator.h"
 

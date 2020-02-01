@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // EnumMethods.cpp
-// Built-in methods on enums.
+// Built-in methods on enums
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"

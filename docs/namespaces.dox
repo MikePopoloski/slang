@@ -2,8 +2,40 @@
 @brief Namspace @ref slang
 */
 
+/** @dir slang/binding
+@brief Expression and statement definitions
+*/
+
+/** @dir slang/compilation
+@brief Top-level compilation types
+*/
+
+/** @dir slang/diagnostics
+@brief Diagnostic definitions
+*/
+
 /** @dir slang/numeric
 @brief Numeric-related utility types
+*/
+
+/** @dir slang/parsing
+@brief Lexing, preprocessing, and parsing functionality
+*/
+
+/** @dir slang/symbols
+@brief Symbol definitions
+*/
+
+/** @dir slang/syntax
+@brief Syntax tree manipulation
+*/
+
+/** @dir slang/text
+@brief Source file and text manipulation
+*/
+
+/** @dir slang/util
+@brief Various generic utility types
 */
 
 /** @namespace slang

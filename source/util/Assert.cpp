@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Assert.cpp
-// Contains assert-related utilities.
+// Contains assert-related utilities
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/util/Assert.h"
 

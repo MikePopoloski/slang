@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // BlockSymbols.cpp
-// Contains block-related hierarchy symbol definitions.
+// Contains block-related hierarchy symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/BlockSymbols.h"
 

@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // Lexer.cpp
-// Source file lexer.
+// Source file lexer
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// Preprocessor.h
-// SystemVerilog preprocessor and directive support.
+//! @file Preprocessor.h
+//! @brief SystemVerilog preprocessor and directive support
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

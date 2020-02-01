@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // MiscExpressions.cpp
-// Definitions for miscellaneous expressions.
+// Definitions for miscellaneous expressions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/MiscExpressions.h"
 

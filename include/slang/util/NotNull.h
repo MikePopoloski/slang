@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// NotNull.h
-// Contains the not_null pointer utility class.
+//! @file NotNull.h
+//! @brief Contains the not_null pointer utility class
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

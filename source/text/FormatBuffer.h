@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // FormatBuffer.h
-// Internal string formatting helper class.
+// Internal string formatting helper class
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

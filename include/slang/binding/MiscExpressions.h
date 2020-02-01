@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// MiscExpressions.h
-// Definitions for miscellaneous expressions.
+//! @file MiscExpressions.h
+//! @brief Definitions for miscellaneous expressions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // SyntaxTree.cpp
-// Top-level parser interface.
+// Top-level parser interface
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/syntax/SyntaxTree.h"
 

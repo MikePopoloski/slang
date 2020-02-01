@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // SemanticFacts.cpp
-// Semantic enums and conversion methods.
+// Semantic enums and conversion methods
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/SemanticFacts.h"
 

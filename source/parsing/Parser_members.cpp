@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Parser_members.cpp
-// Member-related parsing methods.
+// Member-related parsing methods
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Parser.h"

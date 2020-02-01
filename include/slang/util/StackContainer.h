@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// StackContainer.h
-// Stack allocated containers.
+//! @file StackContainer.h
+//! @brief Stack allocated containers
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

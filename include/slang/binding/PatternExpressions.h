@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// PatternExpressions.h
-// Definitions for pattern expressions.
+//! @file PatternExpressions.h
+//! @brief Definitions for pattern expressions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

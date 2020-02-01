@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// TimeScaleSymbolBase.h
-// Shared timescale helper class.
+//! @file TimeScaleSymbolBase.h
+//! @brief Shared timescale helper class
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

@@ -90,10 +90,10 @@ def main():
 
 def createheader(path, subsys, diags):
     output = '''//------------------------------------------------------------------------------
-// {}Diags.h
-// Generated diagnostic enums for the {} subsystem.
+//! @file {}Diags.h
+//! @brief Generated diagnostic enums for the {} subsystem
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -116,9 +116,9 @@ namespace slang::diag {{
 def createsource(path, diags, groups):
     output = '''//------------------------------------------------------------------------------
 // DiagCode.cpp
-// Generated diagnostic helpers.
+// Generated diagnostic helpers
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/AllDiags.h"
 
@@ -204,10 +204,10 @@ const DiagGroup* findDefaultDiagGroup(string_view name) {
 
 def createallheader(path, diags):
     output = '''//------------------------------------------------------------------------------
-// AllDiags.h
-// Combined header that includes all subsystem-specific diagnostic headers.
+//! @file AllDiags.h
+//! @brief Combined header that includes all subsystem-specific diagnostic headers
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

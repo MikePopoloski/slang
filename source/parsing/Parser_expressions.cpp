@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Parser_expressions.cpp
-// Expression-related parsing methods.
+// Expression-related parsing methods
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/ParserDiags.h"

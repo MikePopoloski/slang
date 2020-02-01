@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // ArrayMethods.cpp
-// Built-in methods on arrays.
+// Built-in methods on arrays
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"

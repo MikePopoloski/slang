@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// OS.h
-// Operating system-specific utilities.
+//! @file OS.h
+//! @brief Operating system-specific utilities
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

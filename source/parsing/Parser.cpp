@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Parser.cpp
-// SystemVerilog language parser.
+// SystemVerilog language parser
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/parsing/Parser.h"
 

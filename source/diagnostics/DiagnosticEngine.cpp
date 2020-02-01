@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// DiagnosticEngine.h
-// Primary interface for managing diagnostic reporting.
+// DiagnosticEngine.cpp
+// Primary interface for managing diagnostic reporting
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/DiagnosticEngine.h"
 

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Hash.cpp
-// General hashing algorithms.
+// General hashing algorithms
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/util/Hash.h"
 

@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// SyntaxPrinter.h
-// Support for printing syntax nodes and tokens.
+//! @file SyntaxPrinter.h
+//! @brief Support for printing syntax nodes and tokens
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

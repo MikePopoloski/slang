@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// Token.h
-// Contains Token class and related helpers.
+//! @file Token.h
+//! @brief Contains the Token class and related helpers
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// ParserBase.h
-// Base class for parsing.
+//! @file ParserBase.h
+//! @brief Base class for parsing
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

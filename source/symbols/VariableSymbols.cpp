@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // VariableSymbols.cpp
-// Contains variable-related symbol definitions.
+// Contains variable-related symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/VariableSymbols.h"
 

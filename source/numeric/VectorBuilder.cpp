@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // VectorBuilder.cpp
-// Helper type to construct SVInt instances.
+// Helper type to construct SVInt instances
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/numeric/VectorBuilder.h"
 

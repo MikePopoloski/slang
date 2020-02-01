@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Statements.cpp
-// Statement creation and analysis.
+// Statement creation and analysis
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/Statements.h"
 

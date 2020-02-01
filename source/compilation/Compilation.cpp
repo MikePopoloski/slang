@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Compilation.cpp
-// Central manager for compilation processes.
+// Central manager for compilation processes
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/compilation/Compilation.h"
 

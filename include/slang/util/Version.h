@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Version.h
-// Library build-time version information.
+//! @file Version.h
+//! @brief Library build-time version information
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

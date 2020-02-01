@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // TimingControl.cpp
-// Timing control creation and analysis.
+// Timing control creation and analysis
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/TimingControl.h"
 

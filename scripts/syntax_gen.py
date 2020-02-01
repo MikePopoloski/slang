@@ -35,10 +35,10 @@ def main():
     cppf = open(os.path.join(args.dir, "AllSyntax.cpp"), 'w')
 
     outf.write('''//------------------------------------------------------------------------------
-// AllSyntax.h
-// All generated syntax node data structures.
+//! @file AllSyntax.h
+//! @brief All generated syntax node data structures
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -55,9 +55,9 @@ namespace slang {
 
     cppf.write('''//------------------------------------------------------------------------------
 // AllSyntax.cpp
-// All generated syntax node data structures.
+// All generated syntax node data structures
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/syntax/AllSyntax.h"
 
@@ -304,10 +304,10 @@ string_view toString(SyntaxKind kind) {
 
     outf = open(os.path.join(headerdir, "SyntaxKind.h"), 'w')
     outf.write('''//------------------------------------------------------------------------------
-// SyntaxKind.h
-// Generated SyntaxKind enum.
+//! @file SyntaxKind.h
+//! @brief Generated SyntaxKind enum
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

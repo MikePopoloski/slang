@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// ASTVisitor.h
-// AST traversal.
+//! @file ASTVisitor.h
+//! @brief AST traversal
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

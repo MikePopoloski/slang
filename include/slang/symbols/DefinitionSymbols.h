@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// DefinitionSymbols.h
-// Contains definition-related symbol definitions.
+//! @file DefinitionSymbols.h
+//! @brief Contains definition-related symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // SyntaxNode.cpp
-// Base class and utilities for syntax nodes.
+// Base class and utilities for syntax nodes
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/syntax/SyntaxNode.h"
 

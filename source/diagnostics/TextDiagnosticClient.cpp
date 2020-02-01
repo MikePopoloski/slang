@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // TextDiagnosticClient.cpp
-// Diagnostic client that formats to a text string.
+// Diagnostic client that formats to a text string
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/TextDiagnosticClient.h"
 

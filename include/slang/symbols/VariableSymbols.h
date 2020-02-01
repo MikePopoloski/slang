@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// VariableSymbols.h
-// Contains variable-related symbol definitions.
+//! @file VariableSymbols.h
+//! @brief Contains variable-related symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// TypePrinter.h
-// Type printing utilities.
+//! @file TypePrinter.h
+//! @brief Type printing utilities
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

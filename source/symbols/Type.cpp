@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Type.cpp
-// Base class for all expression types.
+// Base class for all expression types
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/Type.h"
 

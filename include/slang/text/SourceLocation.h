@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SourceLocation.h
-// Source element location tracking.
+//! @file SourceLocation.h
+//! @brief Source element location tracking
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Compilation.h
-// Central manager for compilation processes.
+//! @file Compilation.h
+//! @brief Central manager for compilation processes
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

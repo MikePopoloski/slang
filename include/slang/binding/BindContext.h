@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// BindContext.h
-// Expression binding context.
+//! @file BindContext.h
+//! @brief Expression binding context
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

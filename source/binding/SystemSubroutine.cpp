@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // SystemSubroutine.cpp
-// System-defined subroutine handling.
+// System-defined subroutine handling
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/SystemSubroutine.h"
 

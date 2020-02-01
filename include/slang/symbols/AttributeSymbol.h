@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// AttributeSymbol.h
-// Symbol definition for source attributes.
+//! @file AttributeSymbol.h
+//! @brief Symbol definition for source attributes
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

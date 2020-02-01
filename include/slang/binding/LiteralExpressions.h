@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// LiteralExpressions.h
-// Definitions for literal expressions.
+//! @file LiteralExpressions.h
+//! @brief Definitions for literal expressions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

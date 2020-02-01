@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // TypePrinter.cpp
-// Type printing utilities.
+// Type printing utilities
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/TypePrinter.h"
 

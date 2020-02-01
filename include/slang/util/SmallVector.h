@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SmallVector.h
-// Implements fast resizable array template.
+//! @file SmallVector.h
+//! @brief Implements fast resizable array template
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

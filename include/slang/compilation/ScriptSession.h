@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// ScriptSession.h
-// High-level interface to the compiler tools to evaluate snippets of code.
+//! @file ScriptSession.h
+//! @brief High-level interface to the compiler tools to evaluate snippets of code
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

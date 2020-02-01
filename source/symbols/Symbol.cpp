@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Symbol.h
-// Symbols for semantic analysis.
+// Symbol.cpp
+// Symbols for semantic analysis
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/Symbol.h"
 

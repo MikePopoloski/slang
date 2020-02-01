@@ -2,7 +2,7 @@
 // FmtlibWrapper.h
 // Interfacing junk to glue fmtlib to DiagnosticWriter
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

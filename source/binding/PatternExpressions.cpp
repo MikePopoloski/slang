@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // PatternExpressions.cpp
-// Definitions for pattern expressions.
+// Definitions for pattern expressions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/PatternExpressions.h"
 

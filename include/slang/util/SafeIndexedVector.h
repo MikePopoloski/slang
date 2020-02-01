@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SafeIndexedVector.h
-// Type-safe indexed container.
+//! @file SafeIndexedVector.h
+//! @brief Type-safe indexed container
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

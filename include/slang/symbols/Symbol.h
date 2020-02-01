@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Symbol.h
-// Base class for all elaborated symbols.
+//! @file Symbol.h
+//! @brief Base class for all elaborated symbols
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

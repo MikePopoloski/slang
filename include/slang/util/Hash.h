@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Hash.h
-// General hashing algorithms.
+//! @file Hash.h
+//! @brief General hashing algorithms
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

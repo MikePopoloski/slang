@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Iterator.h
-// Helper classes for working with iterators.
+//! @file Iterator.h
+//! @brief Helper classes for working with iterators
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

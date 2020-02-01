@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Type.h
-// Base class for all expression types.
+//! @file Type.h
+//! @brief Base class for all expression types
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

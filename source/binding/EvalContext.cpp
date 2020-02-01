@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // EvalContext.cpp
-// Expression evaluation context.
+// Expression evaluation context
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/EvalContext.h"
 

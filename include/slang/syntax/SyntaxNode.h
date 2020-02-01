@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SyntaxNode.h
-// Base class and utilities for syntax nodes.
+//! @file SyntaxNode.h
+//! @brief Base class and utilities for syntax nodes
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

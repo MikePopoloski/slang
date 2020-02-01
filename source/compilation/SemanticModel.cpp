@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // SemanticModel.cpp
-// Query semantic information for a syntax tree.
+// Query semantic information for a syntax tree
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/compilation/SemanticModel.h"
 

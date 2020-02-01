@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Statements.h
-// Statement creation and analysis.
+//! @file Statements.h
+//! @brief Statement creation and analysis
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

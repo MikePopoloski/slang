@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // LiteralExpressions.cpp
-// Definitions for literal expressions.
+// Definitions for literal expressions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/LiteralExpressions.h"
 

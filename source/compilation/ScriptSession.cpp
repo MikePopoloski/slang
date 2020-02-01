@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // ScriptSession.cpp
-// High-level interface to the compiler tools to evaluate snippets of code.
+// High-level interface to the compiler tools to evaluate snippets of code
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/compilation/ScriptSession.h"
 

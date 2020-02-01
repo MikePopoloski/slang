@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // SyntaxPrinter.cpp
-// Support for printing syntax nodes and tokens.
+// Support for printing syntax nodes and tokens
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

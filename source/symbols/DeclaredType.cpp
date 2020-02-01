@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// DeclaredType.h
-// Glue logic between symbols and their declared types.
+// DeclaredType.cpp
+// Glue logic between symbols and their declared types
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/DeclaredType.h"
 

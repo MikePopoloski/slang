@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // AttributeSymbol.cpp
-// Symbol definition for source attributes.
+// Symbol definition for source attributes
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/AttributeSymbol.h"
 

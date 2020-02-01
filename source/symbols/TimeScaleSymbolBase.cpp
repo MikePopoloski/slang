@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // TimeScaleSymbolBase.cpp
-// Shared timescale helper class.
+// Shared timescale helper class
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/TimeScaleSymbolBase.h"
 

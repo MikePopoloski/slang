@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// TextDiagnosticClient.h
-// Diagnostic client that formats to a text string.
+//! @file TextDiagnosticClient.h
+//! @brief Diagnostic client that formats to a text string
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

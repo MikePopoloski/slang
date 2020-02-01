@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Diagnostics.cpp
-// Diagnostic tracking and reporting.
+// Diagnostic tracking and reporting
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/Diagnostics.h"
 

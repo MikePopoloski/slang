@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// MemberSymbols.h
-// Contains member-related symbol definitions.
+//! @file MemberSymbols.h
+//! @brief Contains member-related symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

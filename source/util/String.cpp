@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // String.cpp
-// Various string utilities.
+// Various string utilities
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/util/String.h"
 

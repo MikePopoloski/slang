@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// OperatorExpressions.h
-// Definitions for operator expressions.
+//! @file OperatorExpressions.h
+//! @brief Definitions for operator expressions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

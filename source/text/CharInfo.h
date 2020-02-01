@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // CharInfo.h
-// Various character-related utilities.
+// Various character-related utilities
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

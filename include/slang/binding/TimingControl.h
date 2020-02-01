@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// TimingControl.h
-// Timing control creation and analysis.
+//! @file TimingControl.h
+//! @brief Timing control creation and analysis
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

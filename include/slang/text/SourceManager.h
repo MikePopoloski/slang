@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SourceManager.h
-// Source file management.
+//! @file SourceManager.h
+//! @brief Source file management
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

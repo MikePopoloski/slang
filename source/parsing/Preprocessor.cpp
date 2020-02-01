@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // Preprocessor.cpp
-// SystemVerilog preprocessor and directive support.
+// SystemVerilog preprocessor and directive support
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

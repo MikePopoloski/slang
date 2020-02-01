@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Bag.h
-// General container of arbitrary objects, keyed by type.
+//! @file Bag.h
+//! @brief General container of arbitrary objects, keyed by type
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

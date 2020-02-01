@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// DiagnosticClient.h
-// Client interface for diagnostic rendering.
+//! @file DiagnosticClient.h
+//! @brief Client interface for diagnostic rendering
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

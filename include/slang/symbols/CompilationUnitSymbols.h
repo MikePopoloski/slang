@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// CompilationUnitSymbols.h
-// Contains compilation unit-related symbol definitions.
+//! @file CompilationUnitSymbols.h
+//! @brief Contains compilation unit-related symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

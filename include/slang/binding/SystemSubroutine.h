@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SystemSubroutine.h
-// System-defined subroutine handling.
+//! @file SystemSubroutine.h
+//! @brief System-defined subroutine handling
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// BlockSymbols.h
-// Contains block-related hierarchy symbol definitions.
+//! @file BlockSymbols.h
+//! @brief Contains block-related hierarchy symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

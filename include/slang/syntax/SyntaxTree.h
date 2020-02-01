@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SyntaxTree.h
-// Top-level parser interface.
+//! @file SyntaxTree.h
+//! @brief Top-level parser interface
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

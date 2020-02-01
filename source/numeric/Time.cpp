@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // Time.cpp
-// Contains various time-related utilities and functions.
+// Contains various time-related utilities and functions
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

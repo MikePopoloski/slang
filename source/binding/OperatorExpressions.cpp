@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // OperatorExpressions.cpp
-// Definitions for operator expressions.
+// Definitions for operator expressions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/OperatorExpressions.h"
 

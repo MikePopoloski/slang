@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // AllTypes.cpp
-// All type symbol definitions.
+// All type symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/AllTypes.h"
 

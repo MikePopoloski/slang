@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// Version.cpp.in
-// Input file for build-time version source generation.
+// Version.cpp
+// Input file for build-time version source generation
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------

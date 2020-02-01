@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// LexerFacts.h
-// Random lexer-related utility functions.
+//! @file LexerFacts.h
+//! @brief Random lexer-related utility functions
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------

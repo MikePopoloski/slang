@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SyntaxFacts.cpp
-// Various syntax-related utility methods.
+//! @file SyntaxFacts.h
+//! @brief Various syntax-related utility methods
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

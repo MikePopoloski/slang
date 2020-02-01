@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// VectorBuilder.h
-// Helper type to construct SVInt instances.
+//! @file VectorBuilder.h
+//! @brief Helper type to construct SVInt instances
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

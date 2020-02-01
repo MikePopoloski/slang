@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// AllTypes.h
-// All type symbol definitions.
+//! @file AllTypes.h
+//! @brief All type symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

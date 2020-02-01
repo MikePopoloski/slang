@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // SVIntHelpers.h
-// Contains internal helper functions for SVInt implementations.
+// Contains internal helper functions for SVInt implementations
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

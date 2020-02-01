@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // PortSymbols.cpp
-// Contains port-related symbol definitions.
+// Contains port-related symbol definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/PortSymbols.h"
 

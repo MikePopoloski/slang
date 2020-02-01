@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SemanticModel.h
-// Query semantic information for a syntax tree.
+//! @file SemanticModel.h
+//! @brief Query semantic information for a syntax tree
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

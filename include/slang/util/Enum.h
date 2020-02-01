@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Enum.h
-// Various enum utilities.
+//! @file Enum.h
+//! @brief Various enum utilities
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

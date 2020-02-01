@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Parser.h
-// SystemVerilog language parser.
+//! @file Parser.h
+//! @brief SystemVerilog language parser
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Scope.cpp
-// Base class for symbols that represent lexical scopes.
+// Base class for symbols that represent lexical scopes
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/symbols/Scope.h"
 

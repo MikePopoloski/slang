@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// ConstantValue.h
-// Compile-time constant representation.
+//! @file ConstantValue.h
+//! @brief Compile-time constant representation
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

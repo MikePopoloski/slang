@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Assert.h
-// Contains assert-related utilities.
+//! @file Assert.h
+//! @brief Contains assert-related utilities
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

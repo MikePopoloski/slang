@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Lookup.h
-// Contains symbol lookup-related definitions.
+//! @file Lookup.h
+//! @brief Contains symbol lookup-related definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

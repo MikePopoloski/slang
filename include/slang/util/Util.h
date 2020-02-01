@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Util.h
-// Various utility functions and basic types used throughout the library.
+//! @file Util.h
+//! @brief Various utility functions and basic types used throughout the library
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

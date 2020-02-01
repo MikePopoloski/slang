@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // SyntaxVisitor.cpp
-// Syntax tree visitor support.
+// Syntax tree visitor support
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/syntax/SyntaxVisitor.h"
 

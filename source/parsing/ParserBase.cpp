@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // ParserBase.cpp
-// Base class for parsing.
+// Base class for parsing
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/parsing/ParserBase.h"
 

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // SVInt.cpp
-// Arbitrary precision integer support.
+// Arbitrary precision integer support
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/numeric/SVInt.h"
 

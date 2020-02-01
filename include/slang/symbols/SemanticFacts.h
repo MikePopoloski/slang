@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// SemanticFacts.h
-// Semantic enums and conversion methods.
+//! @file SemanticFacts.h
+//! @brief Semantic enums and conversion methods
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

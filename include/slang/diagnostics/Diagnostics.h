@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Diagnostics.h
-// Diagnostic definitions.
+//! @file Diagnostics.h
+//! @brief Diagnostic definitions
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 

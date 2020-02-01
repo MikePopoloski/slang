@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Expression.cpp
-// Expression creation and analysis.
+// Expression creation and analysis
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/binding/Expression.h"
 

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // SourceManager.cpp
-// Source file management.
+// Source file management
 //
-// File is under the MIT license; see LICENSE for details.
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #include "slang/text/SourceManager.h"
 
