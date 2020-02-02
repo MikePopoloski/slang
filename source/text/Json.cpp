@@ -152,7 +152,7 @@ void JsonWriter::endValue() {
 size_t JsonWriter::findLastComma() const {
     size_t size = buffer->size();
     if (pretty) {
-        while (size && buffer->data()[size - 1] == ' ' || buffer->data()[size - 1] == '\n')
+        while (size && (buffer->data()[size - 1] == ' ' || buffer->data()[size - 1] == '\n'))
             size--;
     }
 
