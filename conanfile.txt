@@ -1,6 +1,5 @@
 [requires]
 Catch2/2.11.1@catchorg/stable
-jsonformoderncpp/3.7.0@vthiery/stable
 fmt/6.1.2
 
 [generators]

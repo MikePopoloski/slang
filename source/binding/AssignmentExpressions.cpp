@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/AssignmentExpressions.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/binding/OperatorExpressions.h"
 #include "slang/compilation/Compilation.h"
@@ -259,14 +257,6 @@ bool AssignmentExpression::verifyConstantImpl(EvalContext& context) const {
     return left().verifyConstant(context) && right().verifyConstant(context);
 }
 
-void AssignmentExpression::toJson(json& j) const {
-    j["left"] = left();
-    j["right"] = right();
-    j["isNonBlocking"] = isNonBlocking();
-    if (op)
-        j["op"] = toString(*op);
-}
-
 void AssignmentExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("left", left());
     serializer.write("right", right());
@@ -375,10 +365,6 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
 
 bool ConversionExpression::verifyConstantImpl(EvalContext& context) const {
     return operand().verifyConstant(context);
-}
-
-void ConversionExpression::toJson(json& j) const {
-    j["operand"] = operand();
 }
 
 void ConversionExpression::serializeTo(ASTSerializer& serializer) const {

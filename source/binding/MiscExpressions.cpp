@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/MiscExpressions.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -186,11 +184,6 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
-void NamedValueExpression::toJson(json& j) const {
-    j["symbol"] = Symbol::jsonLink(symbol);
-    j["isHierarchical"] = isHierarchical;
-}
-
 void NamedValueExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("symbol", symbol);
     serializer.write("isHierarchical", isHierarchical);
@@ -278,11 +271,6 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
 
 bool ElementSelectExpression::verifyConstantImpl(EvalContext& context) const {
     return value().verifyConstant(context) && selector().verifyConstant(context);
-}
-
-void ElementSelectExpression::toJson(json& j) const {
-    j["value"] = value();
-    j["selector"] = selector();
 }
 
 void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
@@ -527,13 +515,6 @@ ConstantRange RangeSelectExpression::getIndexedRange(RangeSelectionKind kind, in
     return result;
 }
 
-void RangeSelectExpression::toJson(json& j) const {
-    j["selectionKind"] = toString(selectionKind);
-    j["value"] = value();
-    j["left"] = left();
-    j["right"] = right();
-}
-
 void RangeSelectExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("selectionKind", toString(selectionKind));
     serializer.write("value", value());
@@ -628,11 +609,6 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
 
 bool MemberAccessExpression::verifyConstantImpl(EvalContext& context) const {
     return value().verifyConstant(context);
-}
-
-void MemberAccessExpression::toJson(json& j) const {
-    j["field"] = Symbol::jsonLink(field);
-    j["value"] = value();
 }
 
 void MemberAccessExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1001,20 +977,6 @@ SubroutineKind CallExpression::getSubroutineKind() const {
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     return symbol.subroutineKind;
-}
-
-void CallExpression::toJson(json& j) const {
-    if (subroutine.index() == 1) {
-        const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
-        j["subroutine"] = systemSubroutine.name;
-    }
-    else {
-        const SubroutineSymbol& symbol = *std::get<0>(subroutine);
-        j["subroutine"] = Symbol::jsonLink(symbol);
-
-        for (auto arg : arguments())
-            j["arguments"].push_back(*arg);
-    }
 }
 
 void CallExpression::serializeTo(ASTSerializer& serializer) const {

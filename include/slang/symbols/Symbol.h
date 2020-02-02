@@ -6,16 +6,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <nlohmann/json_fwd.hpp>
-
 #include "slang/symbols/DeclaredType.h"
 #include "slang/symbols/Lookup.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
 
 namespace slang {
-
-using json = nlohmann::json;
 
 class ASTSerializer;
 class Compilation;
@@ -171,8 +167,6 @@ public:
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
-    static std::string jsonLink(const Symbol& target);
-
 protected:
     Symbol(SymbolKind kind, string_view name, SourceLocation location) :
         kind(kind), name(name), location(location) {}
@@ -249,8 +243,5 @@ protected:
 private:
     DeclaredType declaredType;
 };
-
-/// Serialization of arbitrary symbols to JSON.
-void to_json(json& j, const Symbol& symbol);
 
 } // namespace slang

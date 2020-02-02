@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/AllTypes.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/binding/ConstantValue.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/TypesDiags.h"
@@ -396,11 +394,6 @@ void EnumValueSymbol::setValue(ConstantValue newValue) {
     value = scope->getCompilation().allocConstant(std::move(newValue));
 }
 
-void EnumValueSymbol::toJson(json& j) const {
-    if (value)
-        j["value"] = *value;
-}
-
 void EnumValueSymbol::serializeTo(ASTSerializer& serializer) const {
     if (value)
         serializer.write("value", *value);
@@ -780,12 +773,6 @@ void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl
         next->addForwardDecl(decl);
 }
 
-void ForwardingTypedefSymbol::toJson(json& j) const {
-    j["category"] = toString(category);
-    if (next)
-        j["next"] = *next;
-}
-
 void ForwardingTypedefSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("category", toString(category));
     if (next)
@@ -865,12 +852,6 @@ ConstantValue TypeAliasType::getDefaultValueImpl() const {
     return targetType.getType().getDefaultValue();
 }
 
-void TypeAliasType::toJson(json& j) const {
-    j["target"] = targetType.getType();
-    if (firstForward)
-        j["forward"] = *firstForward;
-}
-
 void TypeAliasType::serializeTo(ASTSerializer& serializer) const {
     serializer.write("target", targetType.getType());
     if (firstForward)
@@ -910,12 +891,6 @@ const SubroutineSymbol* NetType::getResolutionFunction() const {
     if (!isResolved)
         resolve();
     return resolver;
-}
-
-void NetType::toJson(json& j) const {
-    j["type"] = getDataType();
-    if (auto target = getAliasTarget())
-        j["target"] = *target;
 }
 
 void NetType::serializeTo(ASTSerializer& serializer) const {

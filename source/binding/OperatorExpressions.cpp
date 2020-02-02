@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/OperatorExpressions.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -521,11 +519,6 @@ bool UnaryExpression::verifyConstantImpl(EvalContext& context) const {
     return operand().verifyConstant(context);
 }
 
-void UnaryExpression::toJson(json& j) const {
-    j["op"] = toString(op);
-    j["operand"] = operand();
-}
-
 void UnaryExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("op", toString(op));
     serializer.write("operand", operand());
@@ -812,12 +805,6 @@ bool BinaryExpression::verifyConstantImpl(EvalContext& context) const {
     return left().verifyConstant(context) && right().verifyConstant(context);
 }
 
-void BinaryExpression::toJson(json& j) const {
-    j["op"] = toString(op);
-    j["left"] = left();
-    j["right"] = right();
-}
-
 void BinaryExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("op", toString(op));
     serializer.write("left", left());
@@ -976,12 +963,6 @@ bool ConditionalExpression::verifyConstantImpl(EvalContext& context) const {
            pred().verifyConstant(context);
 }
 
-void ConditionalExpression::toJson(json& j) const {
-    j["pred"] = pred();
-    j["left"] = left();
-    j["right"] = right();
-}
-
 void ConditionalExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("pred", pred());
     serializer.write("left", left());
@@ -1076,12 +1057,6 @@ bool InsideExpression::verifyConstantImpl(EvalContext& context) const {
     }
 
     return true;
-}
-
-void InsideExpression::toJson(json& j) const {
-    j["left"] = left();
-    for (auto elem : rangeList())
-        j["rangeList"].push_back(*elem);
 }
 
 void InsideExpression::serializeTo(ASTSerializer& serializer) const {
@@ -1240,11 +1215,6 @@ bool ConcatenationExpression::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
-void ConcatenationExpression::toJson(json& j) const {
-    for (auto op : operands())
-        j["operands"].push_back(*op);
-}
-
 void ConcatenationExpression::serializeTo(ASTSerializer& serializer) const {
     if (!operands().empty()) {
         serializer.startArray("operands");
@@ -1361,11 +1331,6 @@ bool ReplicationExpression::verifyConstantImpl(EvalContext& context) const {
     return count().verifyConstant(context) && concat().verifyConstant(context);
 }
 
-void ReplicationExpression::toJson(json& j) const {
-    j["count"] = count();
-    j["concat"] = concat();
-}
-
 void ReplicationExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("count", count());
     serializer.write("concat", concat());
@@ -1417,11 +1382,6 @@ ConstantValue OpenRangeExpression::checkInside(EvalContext& context,
     cvl = evalBinaryOperator(BinaryOperator::GreaterThanEqual, val, cvl);
     cvr = evalBinaryOperator(BinaryOperator::LessThanEqual, val, cvr);
     return evalLogicalOp(BinaryOperator::LogicalAnd, cvl.integer(), cvr.integer());
-}
-
-void OpenRangeExpression::toJson(json& j) const {
-    j["left"] = left();
-    j["right"] = right();
 }
 
 void OpenRangeExpression::serializeTo(ASTSerializer& serializer) const {

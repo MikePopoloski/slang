@@ -8,7 +8,6 @@
 
 #include "../text/FormatBuffer.h"
 #include <fmt/format.h>
-#include <nlohmann/json.hpp>
 
 namespace slang {
 
@@ -224,10 +223,6 @@ ConstantValue ConstantValue::convertToStr() const {
     }
 
     return result;
-}
-
-void to_json(json& j, const ConstantValue& cv) {
-    j = cv.toString();
 }
 
 std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {

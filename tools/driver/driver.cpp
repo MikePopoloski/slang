@@ -8,15 +8,16 @@
 #include <fmt/format.h>
 #include <fstream>
 #include <iostream>
-#include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Preprocessor.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/text/Json.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/CommandLine.h"
 #include "slang/util/OS.h"
@@ -128,8 +129,13 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
     print("{}", client->getString());
 
     if (astJsonFile) {
-        json output = compilation.getRoot();
-        writeToFile(*astJsonFile, output.dump(2));
+        JsonWriter writer;
+        writer.setPrettyPrint(true);
+
+        ASTSerializer serializer(writer);
+        serializer.serialize(compilation.getRoot());
+
+        writeToFile(*astJsonFile, writer.view());
     }
 
     return diagEngine.getNumErrors() == 0;

@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/PatternExpressions.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -140,11 +138,6 @@ bool AssignmentPatternExpressionBase::verifyConstantImpl(EvalContext& context) c
             return false;
     }
     return true;
-}
-
-void AssignmentPatternExpressionBase::toJson(json& j) const {
-    for (auto elem : elements())
-        j["elements"].push_back(*elem);
 }
 
 void AssignmentPatternExpressionBase::serializeTo(ASTSerializer& serializer) const {
@@ -555,10 +548,6 @@ Expression& StructuredAssignmentPatternExpression::forArray(
     return *result;
 }
 
-void StructuredAssignmentPatternExpression::toJson(json&) const {
-    // TODO:
-}
-
 void StructuredAssignmentPatternExpression::serializeTo(ASTSerializer&) const {
     // TODO:
 }
@@ -646,11 +635,6 @@ Expression& ReplicatedAssignmentPatternExpression::forArray(
         return badExpr(comp, result);
 
     return *result;
-}
-
-void ReplicatedAssignmentPatternExpression::toJson(json& j) const {
-    j["count"] = count();
-    AssignmentPatternExpressionBase::toJson(j);
 }
 
 void ReplicatedAssignmentPatternExpression::serializeTo(ASTSerializer& serializer) const {

@@ -28,7 +28,6 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
@@ -52,7 +51,6 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
@@ -75,7 +73,6 @@ public:
     bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
@@ -97,7 +94,6 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
@@ -117,7 +113,6 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);

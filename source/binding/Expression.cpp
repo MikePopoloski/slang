@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/Expression.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -71,23 +69,6 @@ struct VerifyVisitor {
     }
 
     bool visitInvalid(const Expression&, EvalContext&) { return false; }
-};
-
-struct ToJsonVisitor {
-    template<typename T>
-    void visit(const T& expr, json& j) {
-        j["kind"] = toString(expr.kind);
-        j["type"] = *expr.type;
-
-        if (expr.constant)
-            j["constant"] = *expr.constant;
-
-        if constexpr (!std::is_same_v<Expression, T>) {
-            expr.toJson(j);
-        }
-    }
-
-    void visitInvalid(const Expression& expr, json& j) { visit(expr.as<InvalidExpression>(), j); }
 };
 
 } // namespace
@@ -300,11 +281,6 @@ bool Expression::isImplicitString() const {
         default:
             return false;
     }
-}
-
-void to_json(json& j, const Expression& expr) {
-    ToJsonVisitor visitor;
-    expr.visit(visitor, j);
 }
 
 Expression& Expression::create(Compilation& compilation, const ExpressionSyntax& syntax,
@@ -674,11 +650,6 @@ Expression& Expression::selfDetermined(Compilation& compilation, const Expressio
 
 Expression& Expression::badExpr(Compilation& compilation, const Expression* expr) {
     return *compilation.emplace<InvalidExpression>(expr, compilation.getErrorType());
-}
-
-void InvalidExpression::toJson(json& j) const {
-    if (child)
-        j["child"] = *child;
 }
 
 void InvalidExpression::serializeTo(ASTSerializer& serializer) const {

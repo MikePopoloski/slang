@@ -210,9 +210,6 @@ public:
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
-    /// Serialization of arbitrary expressions to JSON.
-    friend void to_json(json& j, const Expression& expr);
-
 protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
@@ -276,7 +273,6 @@ public:
     InvalidExpression(const Expression* child, const Type& type) :
         Expression(ExpressionKind::Invalid, type, SourceRange()), child(child) {}
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Invalid; }

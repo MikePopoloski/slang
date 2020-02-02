@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/BlockSymbols.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -184,10 +182,6 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     additionalBlocks = result->binder.getBlocks();
 
     return *result;
-}
-
-void ProceduralBlockSymbol::toJson(json& j) const {
-    j["procedureKind"] = toString(procedureKind);
 }
 
 void ProceduralBlockSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -395,11 +389,6 @@ GenerateBlockSymbol& GenerateBlockSymbol::fromSyntax(const Scope& scope,
     return *block;
 }
 
-void GenerateBlockSymbol::toJson(json& j) const {
-    j["constructIndex"] = constructIndex;
-    j["isInstantiated"] = isInstantiated;
-}
-
 void GenerateBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("constructIndex", constructIndex);
     serializer.write("isInstantiated", isInstantiated);
@@ -573,10 +562,6 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     }
 
     return *result;
-}
-
-void GenerateBlockArraySymbol::toJson(json& j) const {
-    j["constructIndex"] = constructIndex;
 }
 
 void GenerateBlockArraySymbol::serializeTo(ASTSerializer& serializer) const {

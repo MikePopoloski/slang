@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/LiteralExpressions.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/Type.h"
@@ -165,10 +163,6 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
 
 ConstantValue StringLiteral::evalImpl(EvalContext&) const {
     return *intStorage;
-}
-
-void StringLiteral::toJson(json& j) const {
-    j["literal"] = value;
 }
 
 void StringLiteral::serializeTo(ASTSerializer& serializer) const {

@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/ParameterSymbols.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -78,13 +76,6 @@ void ParameterSymbol::setValue(ConstantValue value) {
     auto scope = getParentScope();
     ASSERT(scope);
     overriden = scope->getCompilation().allocConstant(std::move(value));
-}
-
-void ParameterSymbol::toJson(json& j) const {
-    j["value"] = getValue();
-    j["isLocal"] = isLocalParam();
-    j["isPort"] = isPortParam();
-    j["isBody"] = isBodyParam();
 }
 
 void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -159,13 +150,6 @@ const Type& TypeParameterSymbol::getTypeAlias() const {
 
     typeAlias = alias;
     return *typeAlias;
-}
-
-void TypeParameterSymbol::toJson(json& j) const {
-    j["type"] = targetType.getType();
-    j["isLocal"] = isLocalParam();
-    j["isPort"] = isPortParam();
-    j["isBody"] = isBodyParam();
 }
 
 void TypeParameterSymbol::serializeTo(ASTSerializer& serializer) const {

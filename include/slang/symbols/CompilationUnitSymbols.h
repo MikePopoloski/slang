@@ -22,7 +22,6 @@ public:
     void addMembers(const SyntaxNode& syntax);
 
     TimeScale getTimeScale() const { return timeScale; }
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CompilationUnit; }
@@ -41,7 +40,6 @@ public:
                   const NetType& defaultNetType);
 
     TimeScale getTimeScale() const { return timeScale; }
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static PackageSymbol& fromSyntax(Compilation& compilation,
@@ -59,7 +57,6 @@ public:
     explicit RootSymbol(Compilation& compilation) :
         Symbol(SymbolKind::Root, "$root", SourceLocation()), Scope(compilation, this) {}
 
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Root; }

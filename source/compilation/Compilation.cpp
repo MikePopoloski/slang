@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/Compilation.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/parsing/Preprocessor.h"

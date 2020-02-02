@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/MemberSymbols.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -74,14 +72,6 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
     return import;
 }
 
-void ExplicitImportSymbol::toJson(json& j) const {
-    if (auto pkg = package())
-        j["package"] = jsonLink(*pkg);
-
-    if (auto sym = importedSymbol())
-        j["import"] = jsonLink(*sym);
-}
-
 void ExplicitImportSymbol::serializeTo(ASTSerializer& serializer) const {
     if (auto pkg = package())
         serializer.writeLink("package", *pkg);
@@ -110,11 +100,6 @@ const PackageSymbol* WildcardImportSymbol::getPackage() const {
         }
     }
     return *package;
-}
-
-void WildcardImportSymbol::toJson(json& j) const {
-    if (auto pkg = getPackage())
-        j["package"] = jsonLink(*pkg);
 }
 
 void WildcardImportSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -278,12 +263,6 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-void SubroutineSymbol::toJson(json& j) const {
-    j["returnType"] = getReturnType();
-    j["defaultLifetime"] = toString(defaultLifetime);
-    j["subroutineKind"] = subroutineKind;
-}
-
 void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("returnType", getReturnType());
     serializer.write("defaultLifetime", toString(defaultLifetime));
@@ -342,10 +321,6 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     assign =
         &Expression::bind(syntax->as<ExpressionSyntax>(), context, BindFlags::AssignmentAllowed);
     return *assign;
-}
-
-void ContinuousAssignSymbol::toJson(json& j) const {
-    j["assignment"] = getAssignment();
 }
 
 void ContinuousAssignSymbol::serializeTo(ASTSerializer& serializer) const {

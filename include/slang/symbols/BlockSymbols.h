@@ -24,7 +24,6 @@ public:
     void setTemporaryParent(const Scope& scope, SymbolIndex index) { setParent(scope, index); }
     const Statement& getBody() const;
 
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax);
@@ -50,7 +49,6 @@ public:
         Symbol(SymbolKind::ProceduralBlock, "", loc), procedureKind(procedureKind) {}
 
     const Statement& getBody() const;
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static ProceduralBlockSymbol& fromSyntax(
@@ -79,7 +77,6 @@ public:
         Symbol(SymbolKind::GenerateBlock, name, loc),
         Scope(compilation, this), constructIndex(constructIndex), isInstantiated(isInstantiated) {}
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
@@ -115,7 +112,6 @@ public:
         Symbol(SymbolKind::GenerateBlockArray, name, loc),
         Scope(compilation, this), constructIndex(constructIndex) {}
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     /// Creates a generate block array from the given loop-generate syntax node.

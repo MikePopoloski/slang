@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/Symbol.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
@@ -30,46 +28,6 @@ struct AsScopeVisitor {
         else {
             (void)symbol;
             return nullptr;
-        }
-    }
-};
-
-struct ToJsonVisitor {
-    template<typename T>
-    void visit(const T& symbol, json& j) {
-        if constexpr (std::is_base_of_v<Type, T> && !std::is_same_v<TypeAliasType, T>) {
-            j = symbol.toString();
-        }
-        else {
-            j["name"] = std::string(symbol.name);
-            j["kind"] = toString(symbol.kind);
-            j["addr"] = uintptr_t(&symbol);
-
-            auto scope = symbol.getParentScope();
-            if (scope) {
-                for (auto attr : scope->getCompilation().getAttributes(symbol))
-                    j["attributes"].push_back(*attr);
-            }
-
-            if constexpr (std::is_base_of_v<ValueSymbol, T>) {
-                j["type"] = symbol.getType();
-
-                auto& value = symbol.getConstantValue();
-                if (value)
-                    j["value"] = value;
-
-                if (auto init = symbol.getInitializer())
-                    j["initializer"] = *init;
-            }
-
-            if constexpr (std::is_base_of_v<Scope, T>) {
-                for (const auto& member : symbol.members())
-                    j["members"].push_back(member);
-            }
-
-            if constexpr (!std::is_same_v<Symbol, T>) {
-                symbol.toJson(j);
-            }
         }
     }
 };
@@ -194,11 +152,6 @@ const Scope* Symbol::scopeOrNull() const {
     return visit(visitor);
 }
 
-std::string Symbol::jsonLink(const Symbol& target) {
-    return std::to_string(uintptr_t(&target)) + " " +
-           (target.isType() ? target.as<Type>().toString() : std::string(target.name));
-}
-
 ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
                          bitmask<DeclaredTypeFlags> flags) :
     Symbol(kind, name, location),
@@ -220,11 +173,6 @@ bool ValueSymbol::isKind(SymbolKind kind) {
         default:
             return VariableSymbol::isKind(kind);
     }
-}
-
-void to_json(json& j, const Symbol& symbol) {
-    ToJsonVisitor visitor;
-    symbol.visit(visitor, j);
 }
 
 } // namespace slang

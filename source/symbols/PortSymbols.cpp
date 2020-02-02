@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/PortSymbols.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -1013,19 +1011,6 @@ void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> po
     builder.finalize();
 }
 
-void PortSymbol::toJson(json& j) const {
-    j["direction"] = toString(direction);
-
-    if (internalSymbol)
-        j["internalSymbol"] = jsonLink(*internalSymbol);
-
-    if (defaultValue)
-        j["default"] = *defaultValue;
-
-    if (auto ext = getConnection())
-        j["externalConnection"] = *ext;
-}
-
 void PortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("direction", toString(direction));
 
@@ -1062,15 +1047,6 @@ optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() cons
 
     range = buffer.copy(scope->getCompilation());
     return *range;
-}
-
-void InterfacePortSymbol::toJson(json& j) const {
-    if (interfaceDef)
-        j["interfaceDef"] = jsonLink(*interfaceDef);
-    if (modport)
-        j["modport"] = jsonLink(*modport);
-    if (connection)
-        j["connection"] = jsonLink(*connection);
 }
 
 void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {

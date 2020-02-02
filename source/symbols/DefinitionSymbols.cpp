@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/DefinitionSymbols.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/binding/BindContext.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -146,10 +144,6 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
     result->finalizeTimeScale(scope, syntax);
     result->parameters = parameters.copy(compilation);
     return *result;
-}
-
-void DefinitionSymbol::toJson(json& j) const {
-    j["definitionKind"] = toString(definitionKind);
 }
 
 void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -495,10 +489,6 @@ InstanceSymbol::InstanceSymbol(SymbolKind kind, Compilation& compilation, string
     portMap(compilation.allocSymbolMap()) {
 }
 
-void InstanceSymbol::toJson(json& j) const {
-    j["definition"] = jsonLink(definition);
-}
-
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("definition", definition);
 }
@@ -626,10 +616,6 @@ InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
 
     instance->populate(&syntax, parameters);
     return *instance;
-}
-
-void InstanceArraySymbol::toJson(json& j) const {
-    j["range"] = range.toString();
 }
 
 void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {

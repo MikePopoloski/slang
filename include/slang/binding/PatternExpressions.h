@@ -18,7 +18,6 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const;
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
 protected:
@@ -94,7 +93,6 @@ public:
         memberSetters(memberSetters), typeSetters(typeSetters), indexSetters(indexSetters),
         defaultSetter(defaultSetter) {}
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& forStruct(Compilation& compilation,
@@ -126,7 +124,6 @@ public:
 
     const Expression& count() const { return *count_; }
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& forStruct(Compilation& compilation,

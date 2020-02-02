@@ -1,5 +1,4 @@
 #include "Test.h"
-#include <nlohmann/json.hpp>
 
 #include "slang/binding/OperatorExpressions.h"
 #include "slang/symbols/ASTSerializer.h"

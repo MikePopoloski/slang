@@ -40,7 +40,6 @@ public:
                                            SourceRange range) const;
 
     TimeScale getTimeScale() const { return timeScale; }
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static DefinitionSymbol& fromSyntax(Compilation& compilation,
@@ -66,7 +65,6 @@ public:
         return *portMap;
     }
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
@@ -148,7 +146,6 @@ public:
         Symbol(SymbolKind::InstanceArray, name, loc),
         Scope(compilation, this), elements(elements), range(range) {}
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }

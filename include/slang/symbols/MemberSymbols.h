@@ -24,7 +24,6 @@ public:
     explicit EmptyMemberSymbol(SourceLocation location) :
         Symbol(SymbolKind::EmptyMember, "", location) {}
 
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static EmptyMemberSymbol& fromSyntax(Compilation& compilation, const Scope& scope,
@@ -45,7 +44,6 @@ public:
     }
 
     // enum members will be exposed in their containing enum
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TransparentMember; }
@@ -64,7 +62,6 @@ public:
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ExplicitImport; }
@@ -88,7 +85,6 @@ public:
 
     const PackageSymbol* getPackage() const;
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::WildcardImport; }
@@ -120,7 +116,6 @@ public:
     const Statement& getBody(EvalContext* evalContext = nullptr) const;
     const Type& getReturnType() const { return declaredReturnType.getType(); }
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static SubroutineSymbol& fromSyntax(Compilation& compilation,
@@ -140,7 +135,6 @@ class ModportSymbol : public Symbol, public Scope {
 public:
     ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static void fromSyntax(const Scope& parent, const ModportDeclarationSyntax& syntax,
@@ -159,7 +153,6 @@ public:
 
     const Expression& getAssignment() const;
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(const Scope& parent, const ContinuousAssignSyntax& syntax,
@@ -178,7 +171,6 @@ class GenvarSymbol : public Symbol {
 public:
     GenvarSymbol(string_view name, SourceLocation loc);
 
-    void toJson(json&) const {}
     void serializeTo(ASTSerializer&) const {}
 
     static void fromSyntax(const Scope& parent, const GenvarDeclarationSyntax& syntax,

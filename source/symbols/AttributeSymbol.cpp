@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/AttributeSymbol.h"
 
-#include <nlohmann/json.hpp>
-
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -55,10 +53,6 @@ const ConstantValue& AttributeSymbol::getValue() const {
     }
 
     return *value;
-}
-
-void AttributeSymbol::toJson(json& j) const {
-    j["value"] = getValue();
 }
 
 void AttributeSymbol::serializeTo(ASTSerializer& serializer) const {

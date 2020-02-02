@@ -45,7 +45,6 @@ public:
     const ConstantValue& getValue() const;
     void setValue(ConstantValue value);
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
@@ -69,7 +68,6 @@ public:
 
     const Type& getTypeAlias() const;
 
-    void toJson(json& j) const;
     void serializeTo(ASTSerializer& serializer) const;
 
 private:

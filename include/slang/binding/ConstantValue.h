@@ -6,15 +6,13 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <variant>
+#include <vector>
 
 #include "slang/numeric/SVInt.h"
 
 namespace slang {
-
-using json = nlohmann::json;
 
 /// Represents an IEEE754 double precision floating point number.
 /// This is a separate type from `double` to make it less likely that
@@ -107,7 +105,6 @@ public:
 
     static const ConstantValue Invalid;
 
-    friend void to_json(json& j, const ConstantValue& cv);
     friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
 
 private:
