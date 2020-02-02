@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/Type.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -168,6 +169,10 @@ ConstantValue StringLiteral::evalImpl(EvalContext&) const {
 
 void StringLiteral::toJson(json& j) const {
     j["literal"] = value;
+}
+
+void StringLiteral::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("literal", value);
 }
 
 } // namespace slang

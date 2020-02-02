@@ -41,6 +41,7 @@ public:
 
     TimeScale getTimeScale() const { return timeScale; }
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static DefinitionSymbol& fromSyntax(Compilation& compilation,
                                         const ModuleDeclarationSyntax& syntax, const Scope& scope);
@@ -66,6 +67,7 @@ public:
     }
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            LookupLocation location, const Scope& scope,
@@ -147,6 +149,7 @@ public:
         Scope(compilation, this), elements(elements), range(range) {}
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }
 };

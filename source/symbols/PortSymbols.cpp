@@ -12,6 +12,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/DefinitionSymbols.h"
@@ -1025,6 +1026,19 @@ void PortSymbol::toJson(json& j) const {
         j["externalConnection"] = *ext;
 }
 
+void PortSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("direction", toString(direction));
+
+    if (internalSymbol)
+        serializer.writeLink("internalSymbol", *internalSymbol);
+
+    if (defaultValue)
+        serializer.write("default", *defaultValue);
+
+    if (auto ext = getConnection())
+        serializer.write("externalConnection", *ext);
+}
+
 optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
     if (range)
         return *range;
@@ -1057,6 +1071,15 @@ void InterfacePortSymbol::toJson(json& j) const {
         j["modport"] = jsonLink(*modport);
     if (connection)
         j["connection"] = jsonLink(*connection);
+}
+
+void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {
+    if (interfaceDef)
+        serializer.writeLink("interfaceDef", *interfaceDef);
+    if (modport)
+        serializer.writeLink("modport", *modport);
+    if (connection)
+        serializer.writeLink("connection", *connection);
 }
 
 } // namespace slang

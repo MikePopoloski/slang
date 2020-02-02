@@ -13,6 +13,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -81,6 +82,14 @@ void ExplicitImportSymbol::toJson(json& j) const {
         j["import"] = jsonLink(*sym);
 }
 
+void ExplicitImportSymbol::serializeTo(ASTSerializer& serializer) const {
+    if (auto pkg = package())
+        serializer.writeLink("package", *pkg);
+
+    if (auto sym = importedSymbol())
+        serializer.writeLink("import", *sym);
+}
+
 const PackageSymbol* WildcardImportSymbol::getPackage() const {
     if (!package) {
         const Scope* scope = getParentScope();
@@ -106,6 +115,11 @@ const PackageSymbol* WildcardImportSymbol::getPackage() const {
 void WildcardImportSymbol::toJson(json& j) const {
     if (auto pkg = getPackage())
         j["package"] = jsonLink(*pkg);
+}
+
+void WildcardImportSymbol::serializeTo(ASTSerializer& serializer) const {
+    if (auto pkg = getPackage())
+        serializer.writeLink("package", *pkg);
 }
 
 const Statement& SubroutineSymbol::getBody(EvalContext* evalContext) const {
@@ -270,6 +284,12 @@ void SubroutineSymbol::toJson(json& j) const {
     j["subroutineKind"] = subroutineKind;
 }
 
+void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("returnType", getReturnType());
+    serializer.write("defaultLifetime", toString(defaultLifetime));
+    serializer.write("subroutineKind", toString(subroutineKind));
+}
+
 ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
     Symbol(SymbolKind::Modport, name, loc), Scope(compilation, this) {
 }
@@ -326,6 +346,10 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
 
 void ContinuousAssignSymbol::toJson(json& j) const {
     j["assignment"] = getAssignment();
+}
+
+void ContinuousAssignSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("assignment", getAssignment());
 }
 
 GenvarSymbol::GenvarSymbol(string_view name, SourceLocation loc) :

@@ -29,6 +29,7 @@ public:
         VariableSymbol(SymbolKind::Variable, name, loc, lifetime, isConst) {}
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     /// Constructs all variable symbols specified by the given syntax node. Note that
     /// this might actually construct net symbols if the data type syntax refers to
@@ -69,6 +70,7 @@ public:
         direction(direction) {}
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::FormalArgument; }
 };
@@ -84,6 +86,7 @@ public:
         VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic), offset(offset) {}
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Field; }
 };
@@ -99,6 +102,7 @@ public:
         ValueSymbol(SymbolKind::Net, name, loc), netType(netType) {}
 
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static void fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results);

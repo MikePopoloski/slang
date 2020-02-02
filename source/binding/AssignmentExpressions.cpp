@@ -13,6 +13,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/Type.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -266,6 +267,14 @@ void AssignmentExpression::toJson(json& j) const {
         j["op"] = toString(*op);
 }
 
+void AssignmentExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("left", left());
+    serializer.write("right", right());
+    serializer.write("isNonBlocking", isNonBlocking());
+    if (op)
+        serializer.write("op", toString(*op));
+}
+
 Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const CastExpressionSyntax& syntax,
                                              const BindContext& context) {
@@ -370,6 +379,10 @@ bool ConversionExpression::verifyConstantImpl(EvalContext& context) const {
 
 void ConversionExpression::toJson(json& j) const {
     j["operand"] = operand();
+}
+
+void ConversionExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("operand", operand());
 }
 
 } // namespace slang

@@ -50,6 +50,7 @@ public:
     span<const AttributeSymbol* const> getConnectionAttributes() const { return connAttrs; }
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(
         const PortListSyntax& syntax, const Scope& scope, SmallVector<Symbol*>& results,
@@ -92,6 +93,7 @@ public:
         Symbol(SymbolKind::InterfacePort, name, loc) {}
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfacePort; }
 

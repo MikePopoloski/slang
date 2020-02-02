@@ -12,6 +12,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/Type.h"
 #include "slang/syntax/AllSyntax.h"
@@ -678,6 +679,11 @@ Expression& Expression::badExpr(Compilation& compilation, const Expression* expr
 void InvalidExpression::toJson(json& j) const {
     if (child)
         j["child"] = *child;
+}
+
+void InvalidExpression::serializeTo(ASTSerializer& serializer) const {
+    if (child)
+        serializer.write("child", *child);
 }
 
 } // namespace slang

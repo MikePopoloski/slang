@@ -2,7 +2,9 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/binding/OperatorExpressions.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AttributeSymbol.h"
+#include "slang/text/Json.h"
 
 TEST_CASE("Nets") {
     auto tree = SyntaxTree::fromText(R"(
@@ -135,8 +137,12 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     // This basic test just makes sure that JSON dumping doesn't crash.
-    json output = compilation.getRoot();
-    output.dump();
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+
+    ASTSerializer serializer(writer);
+    serializer.serialize(compilation.getRoot());
+    writer.view();
 }
 
 TEST_CASE("Attributes") {

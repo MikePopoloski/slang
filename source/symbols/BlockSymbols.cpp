@@ -13,6 +13,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -187,6 +188,10 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
 
 void ProceduralBlockSymbol::toJson(json& j) const {
     j["procedureKind"] = toString(procedureKind);
+}
+
+void ProceduralBlockSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("procedureKind", toString(procedureKind));
 }
 
 static string_view getGenerateBlockName(const SyntaxNode& node) {
@@ -395,6 +400,11 @@ void GenerateBlockSymbol::toJson(json& j) const {
     j["isInstantiated"] = isInstantiated;
 }
 
+void GenerateBlockSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("constructIndex", constructIndex);
+    serializer.write("isInstantiated", isInstantiated);
+}
+
 static uint64_t getGenerateLoopCount(const Scope& parent) {
     uint64_t count = 0;
     const Scope* cur = &parent;
@@ -567,6 +577,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
 void GenerateBlockArraySymbol::toJson(json& j) const {
     j["constructIndex"] = constructIndex;
+}
+
+void GenerateBlockArraySymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("constructIndex", constructIndex);
 }
 
 } // namespace slang

@@ -29,6 +29,7 @@ public:
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& fromSyntax(Compilation& compilation,
@@ -52,6 +53,7 @@ public:
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 
@@ -74,6 +76,7 @@ public:
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 
@@ -95,6 +98,7 @@ public:
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 
@@ -114,6 +118,7 @@ public:
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 

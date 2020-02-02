@@ -161,10 +161,9 @@ decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
     THROW_UNREACHABLE;
 }
 
-namespace detail {
-
 template<typename TExpression, typename TVisitor, typename... Args>
-decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... args) {
+decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor& visitor,
+                                           Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case ExpressionKind::k: return visitor.visit(\
                         *static_cast<std::conditional_t<std::is_const_v<TExpression>, const n*, n*>>(expr),\
@@ -202,16 +201,14 @@ decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... a
     THROW_UNREACHABLE;
 }
 
-} // namespace detail
-
 template<typename TVisitor, typename... Args>
 decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) const {
-    return detail::visitExpression(this, visitor, std::forward<Args>(args)...);
+    return visitExpression(this, visitor, std::forward<Args>(args)...);
 }
 
 template<typename TVisitor, typename... Args>
 decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) {
-    return detail::visitExpression(this, visitor, std::forward<Args>(args)...);
+    return visitExpression(this, visitor, std::forward<Args>(args)...);
 }
 
 } // namespace slang

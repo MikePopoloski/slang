@@ -11,6 +11,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -144,6 +145,15 @@ bool AssignmentPatternExpressionBase::verifyConstantImpl(EvalContext& context) c
 void AssignmentPatternExpressionBase::toJson(json& j) const {
     for (auto elem : elements())
         j["elements"].push_back(*elem);
+}
+
+void AssignmentPatternExpressionBase::serializeTo(ASTSerializer& serializer) const {
+    if (!elements().empty()) {
+        serializer.startArray("elements");
+        for (auto elem : elements())
+            serializer.serialize(*elem);
+        serializer.endArray();
+    }
 }
 
 Expression& SimpleAssignmentPatternExpression::forStruct(
@@ -549,6 +559,10 @@ void StructuredAssignmentPatternExpression::toJson(json&) const {
     // TODO:
 }
 
+void StructuredAssignmentPatternExpression::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
 const Expression& ReplicatedAssignmentPatternExpression::bindReplCount(
     Compilation& comp, const ExpressionSyntax& syntax, const BindContext& context, size_t& count) {
 
@@ -637,6 +651,11 @@ Expression& ReplicatedAssignmentPatternExpression::forArray(
 void ReplicatedAssignmentPatternExpression::toJson(json& j) const {
     j["count"] = count();
     AssignmentPatternExpressionBase::toJson(j);
+}
+
+void ReplicatedAssignmentPatternExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("count", count());
+    AssignmentPatternExpressionBase::serializeTo(serializer);
 }
 
 } // namespace slang

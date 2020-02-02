@@ -39,6 +39,8 @@ public:
         }
     }
 
+    char back() const { return data()[size() - 1]; }
+
     void pop_back() { resize(size() - 1); }
 
     void setColorsEnabled(bool enabled) { showColors = enabled; }

@@ -25,6 +25,7 @@ public:
     const Statement& getBody() const;
 
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
@@ -50,6 +51,7 @@ public:
 
     const Statement& getBody() const;
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static ProceduralBlockSymbol& fromSyntax(
         const Scope& scope, const ProceduralBlockSyntax& syntax,
@@ -78,6 +80,7 @@ public:
         Scope(compilation, this), constructIndex(constructIndex), isInstantiated(isInstantiated) {}
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                            LookupLocation location, const Scope& parent, uint32_t constructIndex,
@@ -113,6 +116,7 @@ public:
         Scope(compilation, this), constructIndex(constructIndex) {}
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     /// Creates a generate block array from the given loop-generate syntax node.
     static GenerateBlockArraySymbol& fromSyntax(Compilation& compilation,

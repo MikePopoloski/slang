@@ -19,6 +19,7 @@ public:
     bool verifyConstantImpl(EvalContext&) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
 protected:
     AssignmentPatternExpressionBase(ExpressionKind kind, const Type& type,
@@ -94,6 +95,7 @@ public:
         defaultSetter(defaultSetter) {}
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& forStruct(Compilation& compilation,
                                  const StructuredAssignmentPatternSyntax& syntax,
@@ -125,6 +127,7 @@ public:
     const Expression& count() const { return *count_; }
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& forStruct(Compilation& compilation,
                                  const ReplicatedAssignmentPatternSyntax& syntax,

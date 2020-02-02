@@ -26,6 +26,7 @@ public:
     const ConstantValue& getValue() const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static span<const AttributeSymbol* const> fromSyntax(
         span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,

@@ -23,6 +23,7 @@ public:
 
     TimeScale getTimeScale() const { return timeScale; }
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CompilationUnit; }
 
@@ -41,6 +42,7 @@ public:
 
     TimeScale getTimeScale() const { return timeScale; }
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static PackageSymbol& fromSyntax(Compilation& compilation,
                                      const ModuleDeclarationSyntax& syntax, const Scope& scope);
@@ -58,6 +60,7 @@ public:
         Symbol(SymbolKind::Root, "$root", SourceLocation()), Scope(compilation, this) {}
 
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Root; }
 };

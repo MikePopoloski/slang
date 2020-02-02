@@ -11,6 +11,7 @@
 #include "slang/binding/ConstantValue.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/TypesDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypePrinter.h"
 #include "slang/syntax/AllSyntax.h"
@@ -400,6 +401,11 @@ void EnumValueSymbol::toJson(json& j) const {
         j["value"] = *value;
 }
 
+void EnumValueSymbol::serializeTo(ASTSerializer& serializer) const {
+    if (value)
+        serializer.write("value", *value);
+}
+
 PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
     IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(),
                  elementType.getBitWidth() * range.width(), elementType.isSigned(),
@@ -780,6 +786,12 @@ void ForwardingTypedefSymbol::toJson(json& j) const {
         j["next"] = *next;
 }
 
+void ForwardingTypedefSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("category", toString(category));
+    if (next)
+        serializer.write("next", *next);
+}
+
 const TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
                                                const TypedefDeclarationSyntax& syntax) {
     // TODO: interface based typedefs
@@ -859,6 +871,12 @@ void TypeAliasType::toJson(json& j) const {
         j["forward"] = *firstForward;
 }
 
+void TypeAliasType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("target", targetType.getType());
+    if (firstForward)
+        serializer.write("forward", *firstForward);
+}
+
 NetType::NetType(NetKind netKind, string_view name, const Type& dataType) :
     Symbol(SymbolKind::NetType, name, SourceLocation()), netKind(netKind), declaredType(*this),
     isResolved(true) {
@@ -898,6 +916,12 @@ void NetType::toJson(json& j) const {
     j["type"] = getDataType();
     if (auto target = getAliasTarget())
         j["target"] = *target;
+}
+
+void NetType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("type", getDataType());
+    if (auto target = getAliasTarget())
+        serializer.write("target", *target);
 }
 
 NetType& NetType::fromSyntax(const Scope& scope, const NetTypeDeclarationSyntax& syntax) {

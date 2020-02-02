@@ -193,7 +193,7 @@ public:
     /// Checks whether the scope is empty (has no members).
     [[nodiscard]] bool empty() const {
         ensureElaborated();
-        return firstMember != nullptr;
+        return firstMember == nullptr;
     }
 
     /// Gets an iterator to the members contained in the scope.

@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include "slang/compilation/Compilation.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/Scope.h"
 #include "slang/syntax/AllSyntax.h"
@@ -88,14 +89,29 @@ void VariableSymbol::toJson(json& j) const {
     j["isConst"] = isConst;
 }
 
+void VariableSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("lifetime", toString(lifetime));
+    serializer.write("isConst", isConst);
+}
+
 void FormalArgumentSymbol::toJson(json& j) const {
     VariableSymbol::toJson(j);
     j["direction"] = toString(direction);
 }
 
+void FormalArgumentSymbol::serializeTo(ASTSerializer& serializer) const {
+    VariableSymbol::serializeTo(serializer);
+    serializer.write("direction", toString(direction));
+}
+
 void FieldSymbol::toJson(json& j) const {
     VariableSymbol::toJson(j);
     j["offset"] = offset;
+}
+
+void FieldSymbol::serializeTo(ASTSerializer& serializer) const {
+    VariableSymbol::serializeTo(serializer);
+    serializer.write("offset", offset);
 }
 
 void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,

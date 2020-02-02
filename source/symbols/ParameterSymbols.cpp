@@ -10,6 +10,7 @@
 
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -86,6 +87,13 @@ void ParameterSymbol::toJson(json& j) const {
     j["isBody"] = isBodyParam();
 }
 
+void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("value", getValue());
+    serializer.write("isLocal", isLocalParam());
+    serializer.write("isPort", isPortParam());
+    serializer.write("isBody", isBodyParam());
+}
+
 TypeParameterSymbol::TypeParameterSymbol(string_view name, SourceLocation loc, bool isLocal,
                                          bool isPort) :
     Symbol(SymbolKind::TypeParameter, name, loc),
@@ -158,6 +166,13 @@ void TypeParameterSymbol::toJson(json& j) const {
     j["isLocal"] = isLocalParam();
     j["isPort"] = isPortParam();
     j["isBody"] = isBodyParam();
+}
+
+void TypeParameterSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("type", targetType.getType());
+    serializer.write("isLocal", isLocalParam());
+    serializer.write("isPort", isPortParam());
+    serializer.write("isBody", isBodyParam());
 }
 
 } // namespace slang

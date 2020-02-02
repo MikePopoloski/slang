@@ -31,6 +31,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const PrefixUnaryExpressionSyntax& syntax,
@@ -69,6 +70,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const BindContext& context);
@@ -104,6 +106,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const ConditionalExpressionSyntax& syntax,
@@ -135,6 +138,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, const InsideExpressionSyntax& syntax,
                                   const BindContext& context);
@@ -163,6 +167,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const ConcatenationExpressionSyntax& syntax,
@@ -193,6 +198,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const MultipleConcatenationExpressionSyntax& syntax,
@@ -230,6 +236,7 @@ public:
     ConstantValue checkInside(EvalContext& context, const ConstantValue& val) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& comp, const OpenRangeExpressionSyntax& syntax,
                                   const BindContext& context);

@@ -17,6 +17,7 @@ namespace slang {
 
 using json = nlohmann::json;
 
+class ASTSerializer;
 class Compilation;
 class Scope;
 class Type;

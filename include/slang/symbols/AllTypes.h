@@ -118,6 +118,7 @@ public:
     void setValue(ConstantValue value);
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static EnumValueSymbol& fromSyntax(Compilation& compilation, const DeclaratorSyntax& syntax,
                                        const Type& type, optional<int32_t> index);
@@ -289,6 +290,7 @@ public:
     const ForwardingTypedefSymbol* getNextForwardDecl() const { return next; }
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ForwardingTypedef; }
 
@@ -321,6 +323,7 @@ public:
     ConstantValue getDefaultValueImpl() const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeAlias; }
 
@@ -389,6 +392,7 @@ public:
     bool isBuiltIn() const { return netKind != UserDefined; }
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static NetType& fromSyntax(const Scope& scope, const NetTypeDeclarationSyntax& syntax);
 

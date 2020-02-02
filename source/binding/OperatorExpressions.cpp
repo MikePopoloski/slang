@@ -12,6 +12,7 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/parsing/LexerFacts.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -525,6 +526,11 @@ void UnaryExpression::toJson(json& j) const {
     j["operand"] = operand();
 }
 
+void UnaryExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("op", toString(op));
+    serializer.write("operand", operand());
+}
+
 Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                                          const BinaryExpressionSyntax& syntax,
                                          const BindContext& context) {
@@ -812,6 +818,12 @@ void BinaryExpression::toJson(json& j) const {
     j["right"] = right();
 }
 
+void BinaryExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("op", toString(op));
+    serializer.write("left", left());
+    serializer.write("right", right());
+}
+
 Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
                                               const ConditionalExpressionSyntax& syntax,
                                               const BindContext& context,
@@ -970,6 +982,12 @@ void ConditionalExpression::toJson(json& j) const {
     j["right"] = right();
 }
 
+void ConditionalExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("pred", pred());
+    serializer.write("left", left());
+    serializer.write("right", right());
+}
+
 Expression& InsideExpression::fromSyntax(Compilation& compilation,
                                          const InsideExpressionSyntax& syntax,
                                          const BindContext& context) {
@@ -1064,6 +1082,17 @@ void InsideExpression::toJson(json& j) const {
     j["left"] = left();
     for (auto elem : rangeList())
         j["rangeList"].push_back(*elem);
+}
+
+void InsideExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("left", left());
+
+    if (!rangeList().empty()) {
+        serializer.startArray("rangeList");
+        for (auto elem : rangeList())
+            serializer.serialize(*elem);
+        serializer.endArray();
+    }
 }
 
 Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
@@ -1216,6 +1245,15 @@ void ConcatenationExpression::toJson(json& j) const {
         j["operands"].push_back(*op);
 }
 
+void ConcatenationExpression::serializeTo(ASTSerializer& serializer) const {
+    if (!operands().empty()) {
+        serializer.startArray("operands");
+        for (auto op : operands())
+            serializer.serialize(*op);
+        serializer.endArray();
+    }
+}
+
 Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
                                               const MultipleConcatenationExpressionSyntax& syntax,
                                               const BindContext& context) {
@@ -1328,6 +1366,11 @@ void ReplicationExpression::toJson(json& j) const {
     j["concat"] = concat();
 }
 
+void ReplicationExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("count", count());
+    serializer.write("concat", concat());
+}
+
 Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
                                             const OpenRangeExpressionSyntax& syntax,
                                             const BindContext& context) {
@@ -1379,6 +1422,11 @@ ConstantValue OpenRangeExpression::checkInside(EvalContext& context,
 void OpenRangeExpression::toJson(json& j) const {
     j["left"] = left();
     j["right"] = right();
+}
+
+void OpenRangeExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("left", left());
+    serializer.write("right", right());
 }
 
 UnaryOperator Expression::getUnaryOperator(SyntaxKind kind) {

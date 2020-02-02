@@ -27,6 +27,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSymbol(const Scope& scope, const Symbol& symbol, bool isHierarchical,
                                   SourceRange sourceRange);
@@ -53,6 +54,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
                                   const ExpressionSyntax& syntax, SourceRange fullRange,
@@ -89,6 +91,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
                                   const RangeSelectSyntax& syntax, SourceRange fullRange,
@@ -127,6 +130,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSelector(Compilation& compilation, Expression& expr,
                                     const LookupResult::MemberSelector& selector,
@@ -168,6 +172,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const InvocationExpressionSyntax& syntax,
@@ -210,6 +215,7 @@ public:
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static Expression& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                   const BindContext& context);
@@ -228,6 +234,7 @@ public:
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void toJson(json&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::EmptyArgument; }
 };

@@ -78,6 +78,7 @@ add_library(slang
     parsing/Token.cpp
 
     symbols/AllTypes.cpp
+    symbols/ASTSerializer.cpp
     symbols/AttributeSymbol.cpp
     symbols/BlockSymbols.cpp
     symbols/CompilationUnitSymbols.cpp
@@ -102,6 +103,7 @@ add_library(slang
     syntax/SyntaxTree.cpp
     syntax/SyntaxVisitor.cpp
 
+    text/Json.cpp
     text/SFormat.cpp
     text/SourceManager.cpp
 

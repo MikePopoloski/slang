@@ -12,6 +12,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/Type.h"
@@ -149,6 +150,10 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
 
 void DefinitionSymbol::toJson(json& j) const {
     j["definitionKind"] = toString(definitionKind);
+}
+
+void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("definitionKind", toString(definitionKind));
 }
 
 namespace {
@@ -494,6 +499,10 @@ void InstanceSymbol::toJson(json& j) const {
     j["definition"] = jsonLink(definition);
 }
 
+void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("definition", definition);
+}
+
 bool InstanceSymbol::isKind(SymbolKind kind) {
     switch (kind) {
         case SymbolKind::ModuleInstance:
@@ -621,6 +630,10 @@ InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
 
 void InstanceArraySymbol::toJson(json& j) const {
     j["range"] = range.toString();
+}
+
+void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("range", range.toString());
 }
 
 } // namespace slang

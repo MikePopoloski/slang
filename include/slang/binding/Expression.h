@@ -12,6 +12,7 @@
 
 namespace slang {
 
+class ASTSerializer;
 class Type;
 struct AssignmentPatternExpressionSyntax;
 struct ElementSelectExpressionSyntax;
@@ -260,6 +261,9 @@ protected:
         Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context,
         bitmask<BindFlags> extraFlags = BindFlags::None);
     struct PropagationVisitor;
+
+    template<typename TExpression, typename TVisitor, typename... Args>
+    decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... args) const;
 };
 
 /// Represents an invalid expression, which is usually generated and inserted
@@ -273,6 +277,7 @@ public:
         Expression(ExpressionKind::Invalid, type, SourceRange()), child(child) {}
 
     void toJson(json& j) const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Invalid; }
 

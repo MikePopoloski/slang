@@ -11,6 +11,7 @@
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 
@@ -58,6 +59,10 @@ const ConstantValue& AttributeSymbol::getValue() const {
 
 void AttributeSymbol::toJson(json& j) const {
     j["value"] = getValue();
+}
+
+void AttributeSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("value", getValue());
 }
 
 template<typename TFunc>

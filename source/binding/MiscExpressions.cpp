@@ -13,6 +13,7 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/Type.h"
@@ -190,6 +191,11 @@ void NamedValueExpression::toJson(json& j) const {
     j["isHierarchical"] = isHierarchical;
 }
 
+void NamedValueExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("symbol", symbol);
+    serializer.write("isHierarchical", isHierarchical);
+}
+
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                                 const ExpressionSyntax& syntax,
                                                 SourceRange fullRange, const BindContext& context) {
@@ -277,6 +283,11 @@ bool ElementSelectExpression::verifyConstantImpl(EvalContext& context) const {
 void ElementSelectExpression::toJson(json& j) const {
     j["value"] = value();
     j["selector"] = selector();
+}
+
+void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("value", value());
+    serializer.write("selector", selector());
 }
 
 Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
@@ -523,6 +534,13 @@ void RangeSelectExpression::toJson(json& j) const {
     j["right"] = right();
 }
 
+void RangeSelectExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("selectionKind", toString(selectionKind));
+    serializer.write("value", value());
+    serializer.write("left", left());
+    serializer.write("right", right());
+}
+
 Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expression& expr,
                                                  const LookupResult::MemberSelector& selector,
                                                  const InvocationExpressionSyntax* invocation,
@@ -615,6 +633,11 @@ bool MemberAccessExpression::verifyConstantImpl(EvalContext& context) const {
 void MemberAccessExpression::toJson(json& j) const {
     j["field"] = Symbol::jsonLink(field);
     j["value"] = value();
+}
+
+void MemberAccessExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("field", field);
+    serializer.write("value", value());
 }
 
 Expression& CallExpression::fromSyntax(Compilation& compilation,
@@ -991,6 +1014,24 @@ void CallExpression::toJson(json& j) const {
 
         for (auto arg : arguments())
             j["arguments"].push_back(*arg);
+    }
+}
+
+void CallExpression::serializeTo(ASTSerializer& serializer) const {
+    if (subroutine.index() == 1) {
+        const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
+        serializer.write("subroutine", systemSubroutine.name);
+    }
+    else {
+        const SubroutineSymbol& symbol = *std::get<0>(subroutine);
+        serializer.writeLink("subroutine", symbol);
+
+        if (!arguments().empty()) {
+            serializer.startArray("arguments");
+            for (auto arg : arguments())
+                serializer.serialize(*arg);
+            serializer.endArray();
+        }
     }
 }
 
