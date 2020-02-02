@@ -112,6 +112,13 @@ jobs:
     displayName: 'Upload code coverage'
     condition: variables.isClang
 
+  - script: |
+      cd $(Build.StagingDirectory)/slang/
+      strip --strip-unneeded bin/*
+      strip --strip-unneeded lib/*
+    displayName: 'Strip binaries'
+    condition: variables.isGCC
+
   - task: ArchiveFiles@2
     inputs:
       rootFolderOrFile: $(Build.StagingDirectory)/slang/
