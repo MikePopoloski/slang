@@ -773,8 +773,8 @@ private:
                 for (auto& sel : result.selectors)
                     selectors.append(std::get<0>(sel));
 
-                symbol = Scope::selectChild(*symbol, selectors, BindContext(scope, lookupLocation),
-                                            result);
+                symbol = Lookup::selectChild(*symbol, selectors, BindContext(scope, lookupLocation),
+                                             result);
             }
         }
 

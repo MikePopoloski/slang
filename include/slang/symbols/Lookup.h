@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file Lookup.h
-//! @brief Contains symbol lookup-related definitions
+//! @brief Symbol lookup logic
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
@@ -12,10 +12,13 @@
 
 namespace slang {
 
+class BindContext;
 class Scope;
 class Symbol;
 class SystemSubroutine;
 struct ElementSelectSyntax;
+struct NameSyntax;
+struct ScopedNameSyntax;
 
 enum class SymbolIndex : uint32_t;
 
@@ -106,6 +109,38 @@ struct LookupResult {
 
 private:
     Diagnostics diagnostics;
+};
+
+class Lookup {
+public:
+    static void general(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
+                        bitmask<LookupFlags> flags, LookupResult& result);
+
+    static const Symbol* unqualified(const Scope& scope, string_view name,
+                                     bitmask<LookupFlags> flags);
+
+    static const Symbol* unqualifiedAt(const Scope& scope, string_view name,
+                                       LookupLocation location, SourceRange sourceRange,
+                                       bitmask<LookupFlags> flags);
+
+    static const Symbol* selectChild(const Symbol& symbol,
+                                     span<const ElementSelectSyntax* const> selectors,
+                                     const BindContext& context, LookupResult& result);
+
+private:
+    Lookup() = default;
+
+    static void unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
+                                SourceRange sourceRange, bitmask<LookupFlags> flags,
+                                LookupResult& result);
+
+    static void qualified(const Scope& scope, const ScopedNameSyntax& syntax,
+                          LookupLocation location, bitmask<LookupFlags> flags,
+                          LookupResult& result);
+
+    static void reportUndeclared(const Scope& scope, string_view name, SourceRange range,
+                                 bitmask<LookupFlags> flags, bool isHierarchical,
+                                 LookupResult& result);
 };
 
 } // namespace slang

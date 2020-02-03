@@ -239,6 +239,8 @@ public:
 private:
     // These functions are called by Scopes to create and track various members.
     friend class Scope;
+    friend class Lookup;
+
     Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
     void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
     span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);

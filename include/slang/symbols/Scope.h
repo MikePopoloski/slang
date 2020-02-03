@@ -26,7 +26,6 @@ struct NameSyntax;
 struct PackageImportItemSyntax;
 struct PortConnectionSyntax;
 struct PortDeclarationSyntax;
-struct ScopedNameSyntax;
 
 using SymbolMap = flat_hash_map<string_view, const Symbol*>;
 
@@ -105,13 +104,6 @@ public:
     /// no symbol can be found.
     const Symbol* lookupUnqualifiedName(string_view name,
                                         bitmask<LookupFlags> flags = LookupFlags::None) const;
-
-    /// Uses the select syntax elements to select a child element of the given symbol.
-    /// If the selection succeeds, returns the selected child symbol. Otherwise, reports
-    /// the errors to the given LookupResult object and returns nullptr.
-    static const Symbol* selectChild(const Symbol& symbol,
-                                     span<const ElementSelectSyntax* const> selectors,
-                                     const BindContext& context, LookupResult& result);
 
     /// Gets a specific member at the given zero-based index, expecting it to be of
     /// the specified type. This expects (and asserts) that the member at the given
@@ -209,6 +201,13 @@ public:
         return { firstMember, nullptr };
     }
 
+    const SymbolMap& getNameMap() const {
+        ensureElaborated();
+        return *nameMap;
+    }
+
+    span<const WildcardImportSymbol* const> getWildcardImports() const;
+
 protected:
     Scope(Compilation& compilation_, const Symbol* thisSym_);
 
@@ -298,20 +297,6 @@ private:
     // Elaborates all deferred members and then releases the entry from the
     // Compilation object's sideband table.
     void elaborate() const;
-
-    // Performs an unqualified lookup in this scope, then recursively up the parent
-    // chain until we reach root or the symbol is found.
-    void lookupUnqualifiedImpl(string_view name, LookupLocation location, SourceRange sourceRange,
-                               bitmask<LookupFlags> flags, LookupResult& result) const;
-
-    // Performs a qualified lookup in this scope using all of the various language rules for name
-    // resolution.
-    void lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
-                         bitmask<LookupFlags> flags, LookupResult& result) const;
-
-    // Reports an error for an undeclared identifier.
-    void reportUndeclared(string_view name, SourceRange range, bitmask<LookupFlags> flags,
-                          bool isHierarchical, LookupResult& result) const;
 
     // Handles name conflicts between symbols in the scope.
     void handleNameConflict(const Symbol& member, const Symbol*& existing,
