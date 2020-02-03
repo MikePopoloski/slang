@@ -1238,3 +1238,32 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Lookup with typo correction") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int someInt;
+endpackage
+
+module m;
+    import p::*;
+    int something;
+    int foo = someIn;
+endmodule
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:9:15: error: use of undeclared identifier 'someIn'; did you mean 'someInt'?
+    int foo = someIn;
+              ^~~~~~
+source:3:9: note: declared here
+    int someInt;
+        ^
+)");
+}

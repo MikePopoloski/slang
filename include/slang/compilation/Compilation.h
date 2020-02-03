@@ -59,6 +59,11 @@ struct CompilationOptions {
     /// The maximum number of errors that can be found before we short circuit
     /// the tree walking process.
     uint32_t errorLimit = 64;
+
+    /// The maximum number of times we'll attempt to do typo correction before
+    /// giving up. This is to prevent very slow compilation times if the
+    /// source text is hopelessly broken.
+    uint32_t typoCorrectionLimit = 32;
 };
 
 /// A centralized location for creating and caching symbols. This includes
@@ -246,6 +251,8 @@ private:
     span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
 
     bool isFinalizing() const { return finalizing; }
+    bool doTypoCorrection() const { return typoCorrections < options.typoCorrectionLimit; }
+    void didTypoCorrection() { typoCorrections++; }
 
     span<const AttributeSymbol* const> getAttributes(const void* ptr) const;
 
@@ -335,6 +342,7 @@ private:
     TimeScale defaultTimeScale;
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()
+    uint32_t typoCorrections = 0;
 
     optional<Diagnostics> cachedParseDiagnostics;
     optional<Diagnostics> cachedSemanticDiagnostics;

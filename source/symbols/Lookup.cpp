@@ -20,6 +20,7 @@
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/String.h"
 
 namespace slang {
 
@@ -773,44 +774,84 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
     if (result.sawBadImport)
         return;
 
-    // Attempt to give a more helpful error if the symbol exists in scope but is declared after
-    // the lookup location. Only do this if the symbol is of the kind we were expecting to find.
-    const Symbol* symbol = nullptr;
+    // The symbol wasn't found, so this is an error. The only question is how helpful we can
+    // make that error. Let's try to find the closest named symbol in all reachable scopes,
+    // including package imports, to provide a "did you mean" diagnostic. If along the way
+    // we happen to actually find the symbol but it's declared later in the source text,
+    // we will use that to issue a "used before declared" diagnostic.
+    auto& comp = initialScope.getCompilation();
+    const Symbol* actualSym = nullptr;
+    const Symbol* closestSym = nullptr;
+    int bestDistance = INT_MAX;
     bool usedBeforeDeclared = false;
-    if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {
-        auto scope = &initialScope;
-        do {
-            symbol = scope->find(name);
-            if (symbol) {
-                if (flags & LookupFlags::Type) {
-                    usedBeforeDeclared =
-                        symbol->isType() || symbol->kind == SymbolKind::TypeParameter;
-                }
-                else {
-                    usedBeforeDeclared = symbol->isValue() ||
-                                         symbol->kind == SymbolKind::InstanceArray ||
-                                         symbol->kind == SymbolKind::InterfaceInstance;
-                }
+    auto scope = &initialScope;
+    do {
+        // This lambda returns true if the given symbol is a viable candidate
+        // for the kind of lookup that was being performed.
+        auto isViable = [flags](const Symbol& sym) {
+            if (flags & LookupFlags::Type)
+                return sym.isType() || sym.kind == SymbolKind::TypeParameter;
+
+            return sym.isValue() || sym.kind == SymbolKind::InstanceArray ||
+                   sym.kind == SymbolKind::InterfaceInstance;
+        };
+
+        if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {
+            actualSym = scope->find(name);
+            if (actualSym) {
+                usedBeforeDeclared = isViable(*actualSym);
                 break;
             }
+        }
 
-            scope = scope->asSymbol().getLexicalScope();
-        } while (scope);
-    }
+        // Only check for typos if that functionality is enabled -- it can be
+        // disabled by config or if we've tried too many times to correct typos.
+        if (comp.doTypoCorrection()) {
+            auto checkMembers = [&](const Scope& toCheck) {
+                for (auto& member : toCheck.members()) {
+                    if (member.name.empty() || !isViable(member))
+                        continue;
 
+                    int dist =
+                        editDistance(member.name, name, /* allowReplacements */ true, bestDistance);
+                    if (dist < bestDistance) {
+                        closestSym = &member;
+                        bestDistance = dist;
+                    }
+                }
+            };
+
+            // Check the current scope.
+            checkMembers(*scope);
+
+            // Also search in package imports.
+            for (auto import : scope->getWildcardImports()) {
+                auto package = import->getPackage();
+                if (package)
+                    checkMembers(*package);
+            }
+        }
+
+        scope = scope->asSymbol().getLexicalScope();
+    } while (scope);
+
+    // If we found the actual named symbol and it's viable for our kind of lookup,
+    // report a diagnostic about it being used before declared.
     if (usedBeforeDeclared) {
         auto& diag = result.addDiag(initialScope, diag::UsedBeforeDeclared, range);
         diag << name;
-        diag.addNote(diag::NoteDeclarationHere, symbol->location);
+        diag.addNote(diag::NoteDeclarationHere, actualSym->location);
         return;
     }
 
-    if ((flags & LookupFlags::Constant) && symbol && symbol->isScope()) {
+    // Otherwise, if we found the symbol but it wasn't viable becaues we're in a
+    // constant context, tell the user not to use hierarchical names here.
+    if ((flags & LookupFlags::Constant) && actualSym && actualSym->isScope()) {
         result.addDiag(initialScope, diag::HierarchicalNotAllowedInConstant, range);
         return;
     }
 
-    // Check if this names a definition, in which case we can give a nicer error.
+    // Otherwise, check if this names a definition, in which case we can give a nicer error.
     auto def = initialScope.getCompilation().getDefinition(name, initialScope);
     if (def) {
         string_view kindStr;
@@ -832,6 +873,19 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
         return;
     }
 
+    // Count the number of times we've performed typo correction.
+    comp.didTypoCorrection();
+
+    // See if we found a viable symbol with a name that's somewhat close to the one we wanted.
+    // If we did, assume that the user made a typo and report it.
+    if (closestSym && bestDistance > 0 && name.length() / bestDistance >= 3) {
+        auto& diag = result.addDiag(initialScope, diag::TypoIdentifier, range);
+        diag << name << closestSym->name;
+        diag.addNote(diag::NoteDeclarationHere, closestSym->location);
+        return;
+    }
+
+    // We couldn't make any senes of this, just report a simple error about a missing identifier.
     auto& diag = result.addDiag(initialScope, diag::UndeclaredIdentifier, range) << name;
     if (isHierarchical && (flags & LookupFlags::Constant))
         diag.addNote(diag::NoteHierarchicalNameInCE, range.start()) << name;
