@@ -113,15 +113,23 @@ private:
 
 class Lookup {
 public:
-    static void general(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
-                        bitmask<LookupFlags> flags, LookupResult& result);
+    /// Performs a full fledged name lookup starting in the current scope, following all
+    /// SystemVerilog rules for qualified or unqualified name resolution.
+    static void name(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
+                     bitmask<LookupFlags> flags, LookupResult& result);
 
+    /// Performs an unqualified lookup in this scope, then recursively up the parent
+    /// chain until we reach root or the symbol is found. No errors are reported if
+    /// no symbol can be found.
     static const Symbol* unqualified(const Scope& scope, string_view name,
-                                     bitmask<LookupFlags> flags);
+                                     bitmask<LookupFlags> flags = LookupFlags::None);
 
+    /// Performs an unqualified lookup in this scope, then recursively up the parent
+    /// chain until we reach root or the symbol is found. Reports an error if
+    /// the symbol is not found.
     static const Symbol* unqualifiedAt(const Scope& scope, string_view name,
                                        LookupLocation location, SourceRange sourceRange,
-                                       bitmask<LookupFlags> flags);
+                                       bitmask<LookupFlags> flags = LookupFlags::None);
 
     static const Symbol* selectChild(const Symbol& symbol,
                                      span<const ElementSelectSyntax* const> selectors,

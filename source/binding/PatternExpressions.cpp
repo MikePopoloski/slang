@@ -422,7 +422,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
                 memberSetters.emplace(MemberSetter{ member, &expr });
             }
             else {
-                auto found = context.scope.lookupUnqualifiedName(name, LookupFlags::Type);
+                auto found = Lookup::unqualified(context.scope, name, LookupFlags::Type);
                 if (found && found->isType()) {
                     auto& expr =
                         bindRValue(found->as<Type>(), *item->expr, nameToken.location(), context);

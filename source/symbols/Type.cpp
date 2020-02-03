@@ -438,7 +438,7 @@ void Type::resolveCanonical() const {
 const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& syntax,
                                   LookupLocation location, const Scope& parent) {
     LookupResult result;
-    parent.lookupName(syntax, location, LookupFlags::Type, result);
+    Lookup::name(parent, syntax, location, LookupFlags::Type, result);
 
     if (result.hasError())
         compilation.addDiagnostics(result.getDiagnostics());

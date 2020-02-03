@@ -508,7 +508,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         flags |= LookupFlags::Constant;
 
     LookupResult result;
-    context.scope.lookupName(syntax, context.lookupLocation, flags, result);
+    Lookup::name(context.scope, syntax, context.lookupLocation, flags, result);
 
     if (result.hasError()) {
         // If we failed to find the symbol because of restrictions on hierarchical names

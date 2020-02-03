@@ -440,7 +440,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     // If the loop initializer has a `genvar` keyword, we can use the name directly
     // Otherwise we need to do a lookup to make sure we have the actual genvar somewhere.
     if (!syntax.genvar) {
-        auto symbol = parent.lookupUnqualifiedName(genvar.valueText(), location, genvar.range());
+        auto symbol = Lookup::unqualifiedAt(parent, genvar.valueText(), location, genvar.range());
         if (!symbol)
             return *result;
 

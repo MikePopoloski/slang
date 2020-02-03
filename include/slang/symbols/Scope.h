@@ -70,11 +70,6 @@ public:
     }
 
     /// Performs a full fledged name lookup starting in the current scope, following all
-    /// SystemVerilog rules for qualified or unqualified name resolution.
-    void lookupName(const NameSyntax& syntax, LookupLocation location, bitmask<LookupFlags> flags,
-                    LookupResult& result) const;
-
-    /// Performs a full fledged name lookup starting in the current scope, following all
     /// SystemVerilog rules for qualified or unqualified name resolution. The name to look up
     /// is parsed from the given input string.
     const Symbol* lookupName(string_view name, LookupLocation location = LookupLocation::max,
@@ -91,19 +86,6 @@ public:
         ASSERT(sym);
         return sym->as<T>();
     }
-
-    /// Performs an unqualified lookup in this scope, then recursively up the parent
-    /// chain until we reach root or the symbol is found. Reports an error if
-    /// the symbol is not found.
-    const Symbol* lookupUnqualifiedName(string_view name, LookupLocation location,
-                                        SourceRange sourceRange,
-                                        bitmask<LookupFlags> flags = LookupFlags::None) const;
-
-    /// Performs an unqualified lookup in this scope, then recursively up the parent
-    /// chain until we reach root or the symbol is found. No errors are reported if
-    /// no symbol can be found.
-    const Symbol* lookupUnqualifiedName(string_view name,
-                                        bitmask<LookupFlags> flags = LookupFlags::None) const;
 
     /// Gets a specific member at the given zero-based index, expecting it to be of
     /// the specified type. This expects (and asserts) that the member at the given

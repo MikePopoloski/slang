@@ -337,8 +337,8 @@ void unwrapResult(LookupResult& result) {
 
 } // namespace
 
-void Lookup::general(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
-                     bitmask<LookupFlags> flags, LookupResult& result) {
+void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
+                  bitmask<LookupFlags> flags, LookupResult& result) {
     Token nameToken;
     const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
     switch (syntax.kind) {

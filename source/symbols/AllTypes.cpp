@@ -937,7 +937,7 @@ void NetType::resolve() const {
     if (declSyntax.type->kind == SyntaxKind::NamedType) {
         LookupResult result;
         const NameSyntax& nameSyntax = *declSyntax.type->as<NamedTypeSyntax>().name;
-        scope->lookupName(nameSyntax, LookupLocation::before(*this), LookupFlags::Type, result);
+        Lookup::name(*scope, nameSyntax, LookupLocation::before(*this), LookupFlags::Type, result);
 
         if (result.found && result.found->kind == SymbolKind::NetType) {
             if (result.hasError())

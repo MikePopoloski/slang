@@ -24,7 +24,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     // perform a lookup and see what comes back.
     string_view simpleName = SyntaxFacts::getSimpleTypeName(*syntax.type);
     if (!simpleName.empty()) {
-        auto result = scope.lookupUnqualifiedName(simpleName);
+        auto result = Lookup::unqualified(scope, simpleName);
         if (result && result->kind == SymbolKind::NetType) {
             const NetType& netType = result->as<NetType>();
             netType.getAliasTarget(); // force resolution of target

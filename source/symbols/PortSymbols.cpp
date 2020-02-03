@@ -68,7 +68,7 @@ public:
                 const DefinitionSymbol* definition = nullptr;
                 string_view simpleName = SyntaxFacts::getSimpleTypeName(*header.dataType);
                 if (!simpleName.empty()) {
-                    auto found = scope.lookupUnqualifiedName(simpleName, LookupFlags::Type);
+                    auto found = Lookup::unqualified(scope, simpleName, LookupFlags::Type);
 
                     // If we didn't find a valid type, try to find a definition.
                     if (!found || !found->isType())
@@ -710,7 +710,7 @@ private:
         //   error when it is a warning in an explicit named port connection
 
         LookupFlags flags = isWildcard ? LookupFlags::DisallowWildcardImport : LookupFlags::None;
-        auto symbol = scope.lookupUnqualifiedName(port.name, flags);
+        auto symbol = Lookup::unqualified(scope, port.name, flags);
         if (!symbol) {
             // If this is a wildcard connection, we're allowed to use the port's default value,
             // if it has one.
@@ -760,7 +760,7 @@ private:
         }
 
         LookupResult result;
-        scope.lookupName(expr->as<NameSyntax>(), lookupLocation, LookupFlags::None, result);
+        Lookup::name(scope, expr->as<NameSyntax>(), lookupLocation, LookupFlags::None, result);
         if (result.hasError())
             scope.getCompilation().addDiagnostics(result.getDiagnostics());
 
@@ -785,7 +785,7 @@ private:
     }
 
     void setImplicitInterface(InterfacePortSymbol& port, SourceRange range) {
-        auto symbol = scope.lookupUnqualifiedName(port.name);
+        auto symbol = Lookup::unqualified(scope, port.name);
         if (!symbol) {
             scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
             return;

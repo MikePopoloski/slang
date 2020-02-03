@@ -328,25 +328,10 @@ const Symbol* Scope::find(string_view name) const {
     }
 }
 
-void Scope::lookupName(const NameSyntax& syntax, LookupLocation location,
-                       bitmask<LookupFlags> flags, LookupResult& result) const {
-    Lookup::general(*this, syntax, location, flags, result);
-}
-
-const Symbol* Scope::lookupUnqualifiedName(string_view name, LookupLocation location,
-                                           SourceRange sourceRange,
-                                           bitmask<LookupFlags> flags) const {
-    return Lookup::unqualifiedAt(*this, name, location, sourceRange, flags);
-}
-
-const Symbol* Scope::lookupUnqualifiedName(string_view name, bitmask<LookupFlags> flags) const {
-    return Lookup::unqualified(*this, name, flags);
-}
-
 const Symbol* Scope::lookupName(string_view name, LookupLocation location,
                                 bitmask<LookupFlags> flags) const {
     LookupResult result;
-    lookupName(compilation.parseName(name), location, flags, result);
+    Lookup::name(*this, compilation.parseName(name), location, flags, result);
     ASSERT(result.selectors.empty());
     return result.found;
 }
