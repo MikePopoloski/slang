@@ -878,7 +878,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
 
     // See if we found a viable symbol with a name that's somewhat close to the one we wanted.
     // If we did, assume that the user made a typo and report it.
-    if (closestSym && bestDistance > 0 && name.length() / bestDistance >= 3) {
+    if (closestSym && bestDistance > 0 && name.length() / size_t(bestDistance) >= 3) {
         auto& diag = result.addDiag(initialScope, diag::TypoIdentifier, range);
         diag << name << closestSym->name;
         diag.addNote(diag::NoteDeclarationHere, closestSym->location);
