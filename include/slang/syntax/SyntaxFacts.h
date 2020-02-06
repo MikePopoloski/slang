@@ -54,6 +54,7 @@ public:
     static bool isPossibleDelayOrEventControl(TokenKind kind);
     static bool isEndKeyword(TokenKind kind);
     static bool isDeclarationModifier(TokenKind kind);
+    static bool isLifetimeModifier(TokenKind kind);
     static bool isMemberQualifier(TokenKind kind);
     static bool isDriveStrength(TokenKind kind);
     static bool isChargeStrength(TokenKind kind);
@@ -81,6 +82,7 @@ public:
     static bool isPossibleTransSet(TokenKind kind);
     static bool isBeforeOrSemicolon(TokenKind kind);
     static bool isMatchingDelims(TokenKind openKind, TokenKind closeKind);
+    static bool isModifierAllowedAfter(TokenKind mod, TokenKind prev);
 
     static string_view getSimpleTypeName(const DataTypeSyntax& syntax);
 

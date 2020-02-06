@@ -861,6 +861,16 @@ bool SyntaxFacts::isDeclarationModifier(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isLifetimeModifier(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::StaticKeyword:
+        case TokenKind::AutomaticKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool SyntaxFacts::isMemberQualifier(TokenKind kind) {
     switch (kind) {
         case TokenKind::ConstKeyword:
@@ -1030,6 +1040,18 @@ bool SyntaxFacts::isPossibleTransSet(TokenKind kind) {
 
 bool SyntaxFacts::isBeforeOrSemicolon(TokenKind kind) {
     return kind == TokenKind::Semicolon || kind == TokenKind::BeforeKeyword;
+}
+
+bool SyntaxFacts::isModifierAllowedAfter(TokenKind mod, TokenKind prev) {
+    switch (mod) {
+        case TokenKind::ConstKeyword: return false;
+        case TokenKind::VarKeyword: return prev == TokenKind::ConstKeyword;
+        case TokenKind::StaticKeyword:
+        case TokenKind::AutomaticKeyword:
+            return prev == TokenKind::VarKeyword || prev == TokenKind::ConstKeyword;
+        default:
+            return false;
+    }
 }
 
 // clang-format on

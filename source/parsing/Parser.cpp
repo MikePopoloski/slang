@@ -671,15 +671,51 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
             break;
     }
 
-    bool hasVar = false;
     SmallVectorSized<Token, 4> modifiers;
-    auto kind = peek().kind;
-    while (isDeclarationModifier(kind)) {
-        // TODO: error on bad combination / ordering
-        modifiers.append(consume());
-        if (kind == TokenKind::VarKeyword)
+    SmallMap<TokenKind, Token, 4> modifierSet;
+    Token lastLifetime;
+    bool hasVar = false;
+    bool errorDup = false;
+    bool errorLifetime = false;
+    bool errorOrdering = false;
+
+    while (isDeclarationModifier(peek().kind)) {
+        Token t = consume();
+        modifiers.append(t);
+        if (t.kind == TokenKind::VarKeyword)
             hasVar = true;
-        kind = peek().kind;
+
+        if (auto [it, inserted] = modifierSet.emplace(t.kind, t); !inserted) {
+            if (!errorDup) {
+                auto& diag = addDiag(diag::DuplicateDeclModifier, t.location());
+                diag << LexerFacts::getTokenKindText(t.kind) << t.range() << it->second.range();
+                errorDup = true;
+            }
+            continue;
+        }
+
+        if (SyntaxFacts::isLifetimeModifier(t.kind)) {
+            if (lastLifetime) {
+                if (!errorLifetime) {
+                    auto& diag = addDiag(diag::DeclModifierConflict, t.location());
+                    diag << LexerFacts::getTokenKindText(t.kind) << t.range();
+                    diag << LexerFacts::getTokenKindText(lastLifetime.kind) << lastLifetime.range();
+                    errorLifetime = true;
+                }
+                continue;
+            }
+            lastLifetime = t;
+        }
+
+        if (!errorOrdering && modifiers.size() > 1) {
+            Token prev = modifiers[modifiers.size() - 2];
+            if (!SyntaxFacts::isModifierAllowedAfter(t.kind, prev.kind)) {
+                auto& diag = addDiag(diag::DeclModifierOrdering, t.location());
+                diag << LexerFacts::getTokenKindText(t.kind) << t.range();
+                diag << LexerFacts::getTokenKindText(prev.kind) << prev.range();
+                errorOrdering = true;
+            }
+        }
     }
 
     auto& dataType = parseDataType(hasVar ? TypeOptions::AllowImplicit : TypeOptions::None);

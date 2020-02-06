@@ -267,3 +267,20 @@ endmodule
     CHECK(diagnostics[3].code == diag::ExpectedHierarchicalInstantiation);
     CHECK(diagnostics[4].code == diag::ExpectedHierarchicalInstantiation);
 }
+
+TEST_CASE("Decl modifier errors") {
+    auto& text = R"(
+module m;
+    const static const const int i = 1;
+    var static automatic j = 2;
+    static var const k = 3;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+    
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::DuplicateDeclModifier);
+    CHECK(diagnostics[1].code == diag::DeclModifierConflict);
+    CHECK(diagnostics[2].code == diag::DeclModifierOrdering);
+}
