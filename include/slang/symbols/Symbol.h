@@ -72,7 +72,9 @@ struct AttributeInstanceSyntax;
     x(FormalArgument) \
     x(Field) \
     x(Subroutine) \
-    x(ContinuousAssign)
+    x(ContinuousAssign) \
+    x(Gate) \
+    x(GateArray)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)

@@ -165,7 +165,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::IfGenerate:
         case SyntaxKind::CaseGenerate:
         case SyntaxKind::LoopGenerate:
-        case SyntaxKind::GenerateBlock: {
+        case SyntaxKind::GenerateBlock:
+        case SyntaxKind::GateInstantiation: {
             auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
             addMember(*sym);
             getOrAddDeferredData().addMember(sym);
@@ -519,6 +520,19 @@ void Scope::elaborate() const {
                 InstanceSymbol::fromSyntax(compilation,
                                            member.node.as<HierarchyInstantiationSyntax>(), location,
                                            *this, instances);
+
+                const Symbol* last = symbol;
+                for (auto instance : instances) {
+                    insertMember(instance, last, true);
+                    last = instance;
+                }
+                break;
+            }
+            case SyntaxKind::GateInstantiation: {
+                SmallVectorSized<const Symbol*, 8> instances;
+                LookupLocation location = LookupLocation::before(*symbol);
+                GateSymbol::fromSyntax(compilation, member.node.as<GateInstantiationSyntax>(),
+                                       location, *this, instances);
 
                 const Symbol* last = symbol;
                 for (auto instance : instances) {

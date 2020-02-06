@@ -105,6 +105,8 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         SYMBOL(Modport);
         SYMBOL(ContinuousAssign);
         SYMBOL(Genvar);
+        SYMBOL(Gate);
+        SYMBOL(GateArray);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);

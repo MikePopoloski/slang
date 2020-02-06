@@ -531,7 +531,7 @@ DriveStrengthSyntax* Parser::parseDriveStrength() {
     auto expectStrength = [&] {
         Token next = peek();
         if (isDriveStrength(next.kind))
-            return next;
+            return consume();
 
         addDiag(diag::ExpectedNetStrength, next.location());
         return missingToken(TokenKind::Supply0Keyword, next.location());

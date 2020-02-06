@@ -346,4 +346,98 @@ void GenvarSymbol::fromSyntax(const Scope& parent, const GenvarDeclarationSyntax
     }
 }
 
+namespace {
+
+GateSymbol* createGate(Compilation& compilation, const Scope& scope, GateType gateType,
+                       const GateInstanceSyntax& syntax,
+                       span<const AttributeInstanceSyntax* const> attributes) {
+    string_view name;
+    SourceLocation loc;
+    if (syntax.decl) {
+        name = syntax.decl->name.valueText();
+        loc = syntax.decl->name.location();
+    }
+    else {
+        name = "";
+        loc = syntax.getFirstToken().location();
+    }
+
+    // TODO: ports!
+
+    GateSymbol* gate = compilation.emplace<GateSymbol>(name, loc, gateType);
+    gate->setSyntax(syntax);
+    gate->setAttributes(scope, attributes);
+    return gate;
+};
+
+using DimIterator = span<VariableDimensionSyntax*>::iterator;
+
+Symbol* recurseGateArray(Compilation& compilation, GateType gateType,
+                         const GateInstanceSyntax& instance, const BindContext& context,
+                         DimIterator it, DimIterator end,
+                         span<const AttributeInstanceSyntax* const> attributes) {
+    if (it == end)
+        return createGate(compilation, context.scope, gateType, instance, attributes);
+
+    // Evaluate the dimensions of the array. If this fails for some reason,
+    // make up an empty array so that we don't get further errors when
+    // things try to reference this symbol.
+    auto nameToken = instance.decl->name;
+    EvaluatedDimension dim = context.evalDimension(**it, true);
+    if (!dim.isRange()) {
+        return compilation.emplace<GateArraySymbol>(compilation, nameToken.valueText(),
+                                                    nameToken.location(),
+                                                    span<const Symbol* const>{}, ConstantRange());
+    }
+
+    ++it;
+
+    ConstantRange range = dim.range;
+    SmallVectorSized<const Symbol*, 8> elements;
+    for (int32_t i = range.lower(); i <= range.upper(); i++) {
+        auto symbol =
+            recurseGateArray(compilation, gateType, instance, context, it, end, attributes);
+        symbol->name = "";
+        elements.append(symbol);
+    }
+
+    auto result = compilation.emplace<GateArraySymbol>(compilation, nameToken.valueText(),
+                                                       nameToken.location(),
+                                                       elements.copy(compilation), range);
+    for (auto element : elements)
+        result->addMember(*element);
+
+    return result;
+}
+
+} // namespace
+
+void GateSymbol::fromSyntax(Compilation& compilation, const GateInstantiationSyntax& syntax,
+                            LookupLocation location, const Scope& scope,
+                            SmallVector<const Symbol*>& results) {
+    // TODO: strengths and delays
+    auto gateType = SemanticFacts::getGateType(syntax.gateType.kind);
+
+    BindContext context(scope, location, BindFlags::Constant);
+    for (auto instance : syntax.instances) {
+        if (!instance->decl) {
+            results.append(createGate(compilation, scope, gateType, *instance, syntax.attributes));
+        }
+        else {
+            auto dims = instance->decl->dimensions;
+            auto symbol = recurseGateArray(compilation, gateType, *instance, context, dims.begin(),
+                                           dims.end(), syntax.attributes);
+            results.append(symbol);
+        }
+    }
+}
+
+void GateSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("gateType", toString(gateType));
+}
+
+void GateArraySymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("range", range.toString());
+}
+
 } // namespace slang

@@ -1586,7 +1586,11 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
 
 GateInstantiationSyntax& Parser::parseGateInstantiation(AttrList attributes) {
     auto type = consume();
-    auto strength = parseDriveStrength(); // TODO: also pulldown strength
+
+    DriveStrengthSyntax* strength = nullptr;
+    if (peek(TokenKind::OpenParenthesis) && isDriveStrength(peek(1).kind))
+        strength = parseDriveStrength(); // TODO: also pulldown strength
+
     auto delay = parseDelay3();
 
     Token semi;
