@@ -227,6 +227,8 @@ private:
     TimingControlSyntax* parseDelay3();
     HierarchyInstantiationSyntax& parseHierarchyInstantiation(AttrList attributes);
     HierarchicalInstanceSyntax& parseHierarchicalInstance();
+    GateInstantiationSyntax& parseGateInstantiation(AttrList attributes);
+    GateInstanceSyntax& parseGateInstance();
     PortConnectionSyntax& parsePortConnection();
     FunctionPortSyntax& parseFunctionPort();
     FunctionPrototypeSyntax& parseFunctionPrototype(bool allowTasks = true);

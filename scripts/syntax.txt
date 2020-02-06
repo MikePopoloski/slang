@@ -1119,6 +1119,23 @@ ParameterValueAssignment? parameters
 separated_list<HierarchicalInstance> instances
 token semi
 
+GateInstanceName kind=GateInstanceName
+token name
+list<VariableDimension> dimensions
+
+GateInstance kind=GateInstance
+GateInstanceName? decl
+token openParen
+separated_list<Expression> connections
+token closeParen
+
+GateInstantiation base=Member kind=GateInstantiation
+token gateType
+DriveStrength? strength
+TimingControl? delay
+separated_list<GateInstance> instances
+token semi
+
 FunctionPort kind=FunctionPort
 list<AttributeInstance> attributes
 token constKeyword

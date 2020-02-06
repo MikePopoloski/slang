@@ -228,6 +228,9 @@ MemberSyntax* Parser::parseMember() {
             break;
     }
 
+    if (isGateType(peek().kind))
+        return &parseGateInstantiation(attributes);
+
     // if we got attributes but don't know what comes next, we have some kind of nonsense
     if (!attributes.empty()) {
         return &factory.emptyMember(
@@ -1553,7 +1556,6 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(AttrList attributes)
 }
 
 HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attributes) {
-
     auto type = expect(TokenKind::Identifier);
     auto parameters = parseParameterValueAssignment();
 
@@ -1580,6 +1582,40 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
         [this] { return &parsePortConnection(); });
 
     return factory.hierarchicalInstance(name, dimensions, openParen, items, closeParen);
+}
+
+GateInstantiationSyntax& Parser::parseGateInstantiation(AttrList attributes) {
+    auto type = consume();
+    auto strength = parseDriveStrength(); // TODO: also pulldown strength
+    auto delay = parseDelay3();
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> items;
+    parseList<isPossibleGateInstance, isSemicolon>(
+        items, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
+        diag::ExpectedGateInstance, [this] { return &parseGateInstance(); });
+
+    return factory.gateInstantiation(attributes, type, strength, delay, items.copy(alloc), semi);
+}
+
+GateInstanceSyntax& Parser::parseGateInstance() {
+    GateInstanceNameSyntax* decl = nullptr;
+    if (peek(TokenKind::Identifier)) {
+        auto name = expect(TokenKind::Identifier);
+        auto dimensions = parseDimensionList();
+        decl = &factory.gateInstanceName(name, dimensions);
+    }
+
+    Token openParen;
+    Token closeParen;
+    span<TokenOrSyntax> items;
+
+    parseList<isPossibleExpressionOrComma, isEndOfParenList>(
+        TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, items,
+        closeParen, RequireItems::True, diag::ExpectedPortConnection,
+        [this] { return &parseExpression(); });
+
+    return factory.gateInstance(decl, openParen, items, closeParen);
 }
 
 } // namespace slang

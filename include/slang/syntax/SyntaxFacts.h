@@ -52,12 +52,14 @@ public:
     static bool isPossibleOpenRangeElement(TokenKind kind);
     static bool isPossiblePattern(TokenKind kind);
     static bool isPossibleDelayOrEventControl(TokenKind kind);
+    static bool isPossibleGateInstance(TokenKind kind);
     static bool isEndKeyword(TokenKind kind);
     static bool isDeclarationModifier(TokenKind kind);
     static bool isLifetimeModifier(TokenKind kind);
     static bool isMemberQualifier(TokenKind kind);
     static bool isDriveStrength(TokenKind kind);
     static bool isChargeStrength(TokenKind kind);
+    static bool isGateType(TokenKind kind);
     static bool isEndOfParenList(TokenKind kind);
     static bool isEndOfBracedList(TokenKind kind);
     static bool isEndOfBracketedList(TokenKind kind);

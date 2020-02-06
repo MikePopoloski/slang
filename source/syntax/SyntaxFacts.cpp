@@ -749,6 +749,17 @@ bool SyntaxFacts::isPossibleDelayOrEventControl(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isPossibleGateInstance(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Identifier:
+        case TokenKind::OpenParenthesis:
+        case TokenKind::Comma:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool SyntaxFacts::isPossibleParameter(TokenKind kind) {
     switch (kind) {
         case TokenKind::ParameterKeyword:
@@ -911,6 +922,40 @@ bool SyntaxFacts::isChargeStrength(TokenKind kind) {
         case TokenKind::SmallKeyword:
         case TokenKind::MediumKeyword:
         case TokenKind::LargeKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SyntaxFacts::isGateType(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::CmosKeyword:
+        case TokenKind::RcmosKeyword:
+        case TokenKind::NmosKeyword:
+        case TokenKind::PmosKeyword:
+        case TokenKind::RnmosKeyword:
+        case TokenKind::RpmosKeyword:
+        case TokenKind::BufIf0Keyword:
+        case TokenKind::BufIf1Keyword:
+        case TokenKind::NotIf0Keyword:
+        case TokenKind::NotIf1Keyword:
+        case TokenKind::AndKeyword:
+        case TokenKind::NandKeyword:
+        case TokenKind::OrKeyword:
+        case TokenKind::NorKeyword:
+        case TokenKind::XorKeyword:
+        case TokenKind::XnorKeyword:
+        case TokenKind::BufKeyword:
+        case TokenKind::NotKeyword:
+        case TokenKind::TranIf0Keyword:
+        case TokenKind::TranIf1Keyword:
+        case TokenKind::RtranIf0Keyword:
+        case TokenKind::RtranIf1Keyword:
+        case TokenKind::TranKeyword:
+        case TokenKind::RtranKeyword:
+        case TokenKind::PullDownKeyword:
+        case TokenKind::PullUpKeyword:
             return true;
         default:
             return false;
