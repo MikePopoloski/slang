@@ -1244,6 +1244,8 @@ token semi
 
 ContinuousAssign base=Member kind=ContinuousAssign
 token assign
+DriveStrength? strength
+TimingControl? delay
 separated_list<Expression> assignments
 token semi
 

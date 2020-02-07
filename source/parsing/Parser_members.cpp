@@ -795,16 +795,17 @@ MemberSyntax* Parser::parseClassMember() {
 }
 
 ContinuousAssignSyntax& Parser::parseContinuousAssign(AttrList attributes) {
-    // TODO: timing control
     auto assign = consume();
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    auto strength = parseDriveStrength();
+    auto delay = parseDelay3();
 
     Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
     parseList<isPossibleExpressionOrComma, isSemicolon>(
         buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
         diag::ExpectedVariableAssignment, [this] { return &parseExpression(); });
 
-    return factory.continuousAssign(attributes, assign, buffer.copy(alloc), semi);
+    return factory.continuousAssign(attributes, assign, strength, delay, buffer.copy(alloc), semi);
 }
 
 DefParamAssignmentSyntax& Parser::parseDefParamAssignment() {
@@ -820,9 +821,9 @@ DefParamAssignmentSyntax& Parser::parseDefParamAssignment() {
 
 DefParamSyntax& Parser::parseDefParam(AttrList attributes) {
     auto defparam = consume();
-    SmallVectorSized<TokenOrSyntax, 8> buffer;
 
     Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
     parseList<isPossibleExpressionOrComma, isSemicolon>(
         buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
         diag::ExpectedVariableAssignment, [this] { return &parseDefParamAssignment(); });
