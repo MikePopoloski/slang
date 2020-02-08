@@ -82,6 +82,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
     void handle(const InterfaceInstanceSymbol& symbol) { handleInstance(symbol); }
 
     void handle(const PortSymbol& symbol) {
+        symbol.getConnection();
         for (auto attr : symbol.getConnectionAttributes())
             attr->getValue();
     }
