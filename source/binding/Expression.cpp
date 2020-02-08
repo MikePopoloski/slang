@@ -637,16 +637,16 @@ void Expression::findPotentiallyImplicitNets(const ExpressionSyntax& expr,
         Visitor(const BindContext& context, SmallVector<Token>& results) :
             context(context), results(results) {}
 
-        void handle(const NameSyntax& syntax) {
-            if (syntax.kind != SyntaxKind::IdentifierName)
+        void handle(const NameSyntax& nameSyntax) {
+            if (nameSyntax.kind != SyntaxKind::IdentifierName)
                 return;
 
             LookupResult result;
-            Lookup::name(context.scope, syntax, LookupLocation::max, LookupFlags::NoUndeclaredError,
-                         result);
+            Lookup::name(context.scope, nameSyntax, LookupLocation::max,
+                         LookupFlags::NoUndeclaredError, result);
 
             if (!result.found && !result.hasError())
-                results.append(syntax.as<IdentifierNameSyntax>().identifier);
+                results.append(nameSyntax.as<IdentifierNameSyntax>().identifier);
         }
 
         const BindContext& context;
