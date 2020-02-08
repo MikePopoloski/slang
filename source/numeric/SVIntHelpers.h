@@ -520,7 +520,6 @@ static void clearBits(uint64_t* dest, uint32_t destOffset, uint32_t length) {
 
 template<typename TVal, int ExpBits, int MantissaBits, int Bias>
 static SVInt fromIEEE754(bitwidth_t bits, TVal value, bool isSigned) {
-    // TODO: use bit_cast once we have C++20
     uint64_t ival = 0;
     memcpy(&ival, &value, sizeof(TVal));
 
@@ -667,7 +666,6 @@ static TVal toIEEE754(SVInt value) {
     uint64_t sign = neg ? (1ull << (FullBits - 1)) : 0;
     uint64_t ival = sign | ((exp + Bias) << MantissaBits) | (mantissa & MantissaMask);
 
-    // TODO: make this bit_cast once we have C++20
     TVal result;
     memcpy(&result, &ival, sizeof(TVal));
     return result;

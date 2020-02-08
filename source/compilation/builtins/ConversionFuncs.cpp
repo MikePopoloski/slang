@@ -89,11 +89,7 @@ public:
         if (!val)
             return nullptr;
 
-        // TODO: bit_cast
-        double d = val.real();
-        uint64_t result;
-        memcpy(&result, &d, sizeof(uint64_t));
-        return SVInt(64, result, false);
+        return SVInt(64, bit_cast<uint64_t>(val.real()), false);
     }
 };
 
@@ -109,12 +105,8 @@ public:
         if (!val)
             return nullptr;
 
-        // TODO: bit_cast
         uint64_t i = val.integer().as<uint64_t>().value_or(0);
-        double result;
-        memcpy(&result, &i, sizeof(double));
-
-        return real_t(result);
+        return real_t(bit_cast<double>(i));
     }
 };
 
@@ -130,11 +122,7 @@ public:
         if (!val)
             return nullptr;
 
-        // TODO: bit_cast
-        float f = val.shortReal();
-        uint32_t result;
-        memcpy(&result, &f, sizeof(uint32_t));
-        return SVInt(32, result, false);
+        return SVInt(32, bit_cast<uint32_t>(val.shortReal()), false);
     }
 };
 
@@ -150,12 +138,8 @@ public:
         if (!val)
             return nullptr;
 
-        // TODO: bit_cast
         uint32_t i = val.integer().as<uint32_t>().value_or(0);
-        float result;
-        memcpy(&result, &i, sizeof(float));
-
-        return shortreal_t(result);
+        return shortreal_t(bit_cast<float>(i));
     }
 };
 
