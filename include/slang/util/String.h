@@ -11,7 +11,7 @@
 namespace slang {
 
 /// Converts a span of characters into a string_view.
-inline string_view to_string_view(span<char> text) {
+inline string_view toStringView(span<char> text) {
     return string_view(text.data(), text.size());
 }
 

@@ -140,7 +140,7 @@ void JsonWriter::writeQuoted(string_view str) {
     }
 
     vec.append('"');
-    buffer->append(to_string_view(vec));
+    buffer->append(toStringView(vec));
 }
 
 void JsonWriter::endValue() {

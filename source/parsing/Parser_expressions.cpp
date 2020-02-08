@@ -354,7 +354,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
         next = peek();
     } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
-    string_view rawText = count == 1 ? first.rawText() : to_string_view(text.copy(alloc));
+    string_view rawText = count == 1 ? first.rawText() : toStringView(text.copy(alloc));
 
     Token valToken(alloc, TokenKind::IntegerLiteral, first.trivia(), rawText, first.location(),
                    vectorBuilder.finish());

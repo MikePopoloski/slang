@@ -488,7 +488,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
             string_view fileName = sourceManager.getFileName(loc);
             text.appendRange(fileName);
 
-            string_view rawText = to_string_view(text.copy(alloc));
+            string_view rawText = toStringView(text.copy(alloc));
             Token token(alloc, TokenKind::StringLiteral, {}, rawText, loc, fileName);
             expansion.append(token, loc);
             break;
@@ -497,7 +497,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
             size_t lineNum = sourceManager.getLineNumber(loc);
             text.appendRange(std::to_string(lineNum)); // not the most efficient, but whatever
 
-            string_view rawText = to_string_view(text.copy(alloc));
+            string_view rawText = toStringView(text.copy(alloc));
             Token token(alloc, TokenKind::IntegerLiteral, {}, rawText, loc, lineNum);
             expansion.append(token, loc);
             break;

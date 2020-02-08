@@ -356,7 +356,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
                 text.append('>');
 
                 fileName = Token(alloc, TokenKind::IncludeFileName, fileName.trivia(),
-                                 to_string_view(text.copy(alloc)), fileName.location());
+                                 toStringView(text.copy(alloc)), fileName.location());
                 break;
             }
 
