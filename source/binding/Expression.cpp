@@ -14,6 +14,7 @@
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/Type.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxVisitor.h"
 
 namespace {
 
@@ -627,6 +628,33 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
         default:
             THROW_UNREACHABLE;
     }
+}
+
+void Expression::findPotentiallyImplicitNets(const ExpressionSyntax& expr,
+                                             const BindContext& context,
+                                             SmallVector<Token>& results) {
+    struct Visitor : public SyntaxVisitor<Visitor> {
+        Visitor(const BindContext& context, SmallVector<Token>& results) :
+            context(context), results(results) {}
+
+        void handle(const NameSyntax& syntax) {
+            if (syntax.kind != SyntaxKind::IdentifierName)
+                return;
+
+            LookupResult result;
+            Lookup::name(context.scope, syntax, LookupLocation::max, LookupFlags::NoUndeclaredError,
+                         result);
+
+            if (!result.found && !result.hasError())
+                results.append(syntax.as<IdentifierNameSyntax>().identifier);
+        }
+
+        const BindContext& context;
+        SmallVector<Token>& results;
+    };
+
+    Visitor visitor(context, results);
+    expr.visit(visitor);
 }
 
 void Expression::contextDetermined(const BindContext& context, Expression*& expr,

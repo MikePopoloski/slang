@@ -767,6 +767,10 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
 void Lookup::reportUndeclared(const Scope& initialScope, string_view name, SourceRange range,
                               bitmask<LookupFlags> flags, bool isHierarchical,
                               LookupResult& result) {
+    // If the user doesn't want an error, don't give him one.
+    if ((flags & LookupFlags::NoUndeclaredError) != 0)
+        return;
+
     // If we observed a wildcard import we couldn't resolve, we shouldn't report an
     // error for undeclared identifier because maybe it's supposed to come from that package.
     // In particular it's important that we do this because when we first look at a

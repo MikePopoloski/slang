@@ -701,3 +701,39 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Implicit nets") {
+    auto tree = SyntaxTree::fromText(R"(
+module n(input logic a, output b);
+endmodule
+
+module m;
+    n n1(asdf, asdf);
+    n n2(.a(asdf), .b(foobar));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Implicit nets -- default_nettype none") {
+    auto tree = SyntaxTree::fromText(R"(
+module n(input logic a, output b);
+endmodule
+
+`default_nettype none
+module m;
+    n n1(asdf, asdf);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+}

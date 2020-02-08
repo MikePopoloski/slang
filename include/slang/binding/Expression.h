@@ -170,6 +170,13 @@ public:
                                           span<const ExpressionSyntax* const> expressions,
                                           SmallVector<const Expression*>& results);
 
+    /// This method finds all unqualified name references in the given expression and attempts
+    /// to look them up in the given context. If they can't be found, their name tokens are
+    /// returned in the given @a results vector.
+    static void findPotentiallyImplicitNets(const ExpressionSyntax& expr,
+                                            const BindContext& context,
+                                            SmallVector<Token>& results);
+
     /// Indicates whether the expression is invalid.
     bool bad() const;
 

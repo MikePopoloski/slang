@@ -40,9 +40,13 @@ enum class LookupFlags {
     AllowDeclaredAfter = 4,
 
     /// Don't search through wildcard imports to satisfy the lookup.
-    DisallowWildcardImport = 8
+    DisallowWildcardImport = 8,
+
+    /// Don't report an error if the lookup is for a simple identifier that
+    /// cannot be found.
+    NoUndeclaredError = 16
 };
-BITMASK(LookupFlags, DisallowWildcardImport);
+BITMASK(LookupFlags, NoUndeclaredError);
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.

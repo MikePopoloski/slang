@@ -6,14 +6,16 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/DefinitionSymbols.h"
 
-#include "slang/binding/BindContext.h"
+#include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/AllTypes.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/Type.h"
+#include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 
@@ -219,9 +221,6 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
                                            context, it, end, path, attributes, hierarchyDepth);
         path.pop();
 
-        if (!symbol)
-            return nullptr;
-
         symbol->name = "";
         elements.append(symbol);
     }
@@ -229,7 +228,6 @@ Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& d
     auto result = compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
                                                            nameToken.location(),
                                                            elements.copy(compilation), range);
-
     for (auto element : elements)
         result->addMember(*element);
 
@@ -254,6 +252,43 @@ Scope& createTempInstance(Compilation& compilation, const DefinitionSymbol& def)
         tempDef.addMembers(*import);
 
     return tempDef;
+}
+
+void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindContext& context,
+                        const NetType& netType, SmallSet<string_view, 8>& implicitNetNames,
+                        SmallVector<const Symbol*>& results) {
+    // If no default nettype is set, we don't create implicit nets.
+    if (netType.isError())
+        return;
+
+    for (auto conn : instance.connections) {
+        const ExpressionSyntax* expr = nullptr;
+        switch (conn->kind) {
+            case SyntaxKind::OrderedPortConnection:
+                expr = conn->as<OrderedPortConnectionSyntax>().expr;
+                break;
+            case SyntaxKind::NamedPortConnection:
+                expr = conn->as<NamedPortConnectionSyntax>().expr;
+                break;
+            default:
+                break;
+        }
+
+        if (!expr)
+            continue;
+
+        SmallVectorSized<Token, 8> implicitNets;
+        Expression::findPotentiallyImplicitNets(*expr, context, implicitNets);
+
+        for (Token t : implicitNets) {
+            if (implicitNetNames.emplace(t.valueText()).second) {
+                auto& comp = context.getCompilation();
+                auto net = comp.emplace<NetSymbol>(t.valueText(), t.location(), netType);
+                net->setType(comp.getLogicType());
+                results.append(net);
+            }
+        }
+    }
 }
 
 } // namespace
@@ -470,14 +505,20 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         parent = &s->asSymbol();
     }
 
+    // We have to check each port connection expression for any names that can't be resolved,
+    // which represent implicit nets that need to be created now.
+    SmallSet<string_view, 8> implicitNetNames;
+    auto& netType = scope.getDefaultNetType();
+
     for (auto instanceSyntax : syntax.instances) {
+        createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
+
         SmallVectorSized<int32_t, 4> path;
         auto dims = instanceSyntax->dimensions;
         auto symbol =
             recurseInstanceArray(compilation, *definition, *instanceSyntax, parameters, context,
                                  dims.begin(), dims.end(), path, syntax.attributes, hierarchyDepth);
-        if (symbol)
-            results.append(symbol);
+        results.append(symbol);
     }
 }
 

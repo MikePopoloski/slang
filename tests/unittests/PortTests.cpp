@@ -1,6 +1,5 @@
 #include "Test.h"
 
-
 TEST_CASE("Module ANSI ports") {
     auto tree = SyntaxTree::fromText(R"(
 module mh0 (wire x); endmodule
@@ -117,7 +116,7 @@ module m6(I.bar bar); endmodule
         auto& port = def->getPortMap().at(portName)->as<InterfacePortSymbol>(); \
         REQUIRE(port.interfaceDef);                                             \
         CHECK(port.interfaceDef->name == (ifaceName));                          \
-        if (*(modportName)) {                                                     \
+        if (*(modportName)) {                                                   \
             REQUIRE(port.modport);                                              \
             CHECK(port.modport->name == (modportName));                         \
         }                                                                       \
@@ -367,7 +366,7 @@ endmodule
     CHECK((it++)->code == diag::DuplicatePortConnection);
     CHECK((it++)->code == diag::InterfacePortNotConnected);
     CHECK((it++)->code == diag::InterfacePortInvalidExpression);
-    CHECK((it++)->code == diag::UndeclaredIdentifier);
+    CHECK((it++)->code == diag::NotAnInterface);
     CHECK((it++)->code == diag::NotAnInterface);
     CHECK((it++)->code == diag::InterfacePortTypeMismatch);
     CHECK((it++)->code == diag::PortConnDimensionsMismatch);
