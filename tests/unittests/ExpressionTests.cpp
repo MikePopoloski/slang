@@ -576,7 +576,7 @@ TEST_CASE("Crazy long hex literal") {
 
 TEST_CASE("Simple assignment patterns") {
     auto tree = SyntaxTree::fromText(R"(
-module n(int frob[3]);
+module n(input int frob[3]);
 endmodule
 
 module m;
@@ -621,7 +621,7 @@ endmodule
 
 TEST_CASE("Replicated assignment patterns") {
     auto tree = SyntaxTree::fromText(R"(
-module n(int frob[3]);
+module n(input int frob[3]);
 endmodule
 
 module m;
@@ -667,7 +667,7 @@ endmodule
 
 TEST_CASE("Structured assignment patterns") {
     auto tree = SyntaxTree::fromText(R"(
-module n(int frob[3]);
+module n(input int frob[3]);
 endmodule
 
 module m;

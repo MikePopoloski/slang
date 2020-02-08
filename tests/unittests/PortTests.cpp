@@ -265,6 +265,24 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+
+TEST_CASE("Simple port connections") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input int a, b, c);
+endmodule
+
+module test;
+    logic foo;
+    m m1(foo, bar(), 1 + 2);
+    function int bar(); return 1; endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Module port connections") {
     auto tree = SyntaxTree::fromText(R"(
 module m(input logic a, b, c);
@@ -293,7 +311,7 @@ endmodule
 module test;
 
     m m9(.*);               // used before declared
-    m m10(.a, .b(0), .c(0));// used before declared
+    m m10(.a, .b(0), .c(c));// used before declared
 
     logic a,b,c;
 
@@ -337,6 +355,7 @@ endmodule
 
     auto it = diags.begin();
     CHECK((it++)->code == diag::UnknownInterface);
+    CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK((it++)->code == diag::UsedBeforeDeclared);
     CHECK((it++)->code == diag::UnconnectedNamedPort);

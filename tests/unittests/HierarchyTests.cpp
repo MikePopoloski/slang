@@ -396,7 +396,7 @@ TEST_CASE("Interface port param") {
 interface I #(parameter int i) ();
 endinterface
 
-module M(I iface, logic [iface.i - 1 : 0] foo);
+module M(I iface, input logic [iface.i - 1 : 0] foo);
     localparam int j = $bits(foo);
 endmodule
 
@@ -426,7 +426,7 @@ endinterface
 module N;
 endmodule
 
-module M(I iface, logic [iface.i - 1 : 0] foo);
+module M(I iface, input logic [iface.i - 1 : 0] foo);
     localparam int j = $bits(foo);
     if (j == 17) begin : asdf
         N n();

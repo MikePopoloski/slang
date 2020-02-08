@@ -477,6 +477,13 @@ private:
     }
 };
 
+LookupLocation getConnectionLookupLocation(const Symbol& instance) {
+    // This needs to be a lookup for the instance's parent in the hierarchy, not its lexical
+    // location. Usually all lookups want the lexical location, so we have to specifically ask
+    // for the parent here.
+    return LookupLocation(instance.getParentScope(), (uint32_t)instance.getIndex() + 1);
+}
+
 class PortConnectionBuilder {
 public:
     PortConnectionBuilder(const Scope& childScope, const Scope& instanceScope,
@@ -484,11 +491,7 @@ public:
         scope(instanceScope),
         instance(childScope.asSymbol().as<InstanceSymbol>()) {
 
-        // This needs to be a lookup for the instance's parent in the hierarchy, not its lexical
-        // location. Usually all lookups want the lexical location, so we have to specifically ask
-        // for the parent here.
-        lookupLocation =
-            LookupLocation(instance.getParentScope(), (uint32_t)instance.getIndex() + 1);
+        lookupLocation = getConnectionLookupLocation(instance);
 
         bool hasConnections = false;
         for (auto conn : portConnections) {
@@ -923,7 +926,8 @@ const Expression* PortSymbol::getConnection() const {
             auto scope = getParentScope();
             ASSERT(scope);
 
-            BindContext context(*scope, LookupLocation::before(*this));
+            LookupLocation lookupLocation = getConnectionLookupLocation(scope->asSymbol());
+            BindContext context(*lookupLocation.getScope(), lookupLocation);
             conn = &Expression::bindArgument(getType(), SemanticFacts::getArgDirection(direction),
                                              *connSyntax, context);
         }
@@ -940,7 +944,7 @@ void PortSymbol::setConnection(const Expression* expr,
 
 void PortSymbol::setConnection(const ExpressionSyntax& syntax,
                                span<const AttributeSymbol* const> attributes) {
-    conn = nullptr;
+    conn.reset();
     connSyntax = &syntax;
     connAttrs = attributes;
 }
