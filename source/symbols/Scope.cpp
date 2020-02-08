@@ -567,6 +567,7 @@ void Scope::elaborate() const {
                     insertMember(var, last, true);
                     last = var;
                 }
+                break;
             }
             default:
                 break;
