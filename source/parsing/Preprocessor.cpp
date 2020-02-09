@@ -21,7 +21,7 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
                            Diagnostics& diagnostics, const Bag& options_) :
     sourceManager(sourceManager),
     alloc(alloc), diagnostics(diagnostics), options(options_.getOrDefault<PreprocessorOptions>()),
-    lexerOptions(options_.getOrDefault<LexerOptions>()) {
+    lexerOptions(options_.getOrDefault<LexerOptions>()), numberParser(diagnostics, alloc) {
 
     keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
     resetAllDirectives();
@@ -29,7 +29,8 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
 }
 
 Preprocessor::Preprocessor(const Preprocessor& other) :
-    sourceManager(other.sourceManager), alloc(other.alloc), diagnostics(other.diagnostics) {
+    sourceManager(other.sourceManager), alloc(other.alloc), diagnostics(other.diagnostics),
+    numberParser(diagnostics, alloc) {
 
     keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
 }
@@ -923,8 +924,21 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
 
     Token token = peek();
     if (token.kind == TokenKind::IntegerBase || token.kind == TokenKind::IntegerLiteral) {
-        // TODO:
+        PragmaExpressionSyntax* expr;
+        auto result = numberParser.parseInteger(*this);
+        if (result.isSimple) {
+            expr = alloc.emplace<SimplePragmaExpressionSyntax>(result.value);
+        }
+        else {
+            expr =
+                alloc.emplace<NumberPragmaExpressionSyntax>(result.size, result.base, result.value);
+        }
+
+        return { expr, true };
     }
+
+    // TODO: real literals
+    // TODO: handle keywords
 
     if (token.kind == TokenKind::Identifier || token.kind == TokenKind::StringLiteral) {
         return { alloc.emplace<SimplePragmaExpressionSyntax>(consume()), true };
@@ -945,6 +959,13 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::checkNextPragmaToken() {
         return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
     }
     return { nullptr, true };
+}
+
+void Preprocessor::handleExponentSplit(Token token, size_t offset) {
+    // This is called by NumberParser to handle an error case, for example
+    // in the snippet 'h 3e+2 the +2 is not part of the number. We should
+    // just report an error and move on.
+    addDiag(diag::ExpectedPragmaExpression, token.location() + offset);
 }
 
 Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {

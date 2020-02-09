@@ -1229,7 +1229,8 @@ TEST_CASE("Pragma expressions") {
     auto& text = R"(
 `pragma foo
 `pragma bar asdf
-`pragma bar asdf, blah, foo="asdf"
+`pragma bar 32 'd 1
+`pragma bar asdf='h ff, blah=2, foo="asdf"
 `pragma bar "asdf", (asdf, "asdf", asdf="asdf")
 )";
 
@@ -1253,6 +1254,8 @@ TEST_CASE("Pragma expressions -- errors") {
 `pragma bar "asdf", (asdf, "asdf",
 `pragma bar "asdf", (asdf, "asdf"
     )
+
+`pragma bar 'h 3e+2
 )";
 
     preprocess(text);
@@ -1280,5 +1283,8 @@ source:13:34: error: expected ')'
 source:12:35: error: expected ')'
 `pragma bar "asdf", (asdf, "asdf",
                                   ^
+source:16:18: error: expected pragma expression
+`pragma bar 'h 3e+2
+                 ^
 )");
 }

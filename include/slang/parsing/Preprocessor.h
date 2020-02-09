@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include "slang/parsing/Lexer.h"
+#include "slang/parsing/NumberParser.h"
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/text/SourceLocation.h"
@@ -331,6 +332,13 @@ private:
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;
     int designElementDepth = 0;
+
+    // Parser for numeric literals in pragma expressions.
+    NumberParser numberParser;
+    friend class NumberParser;
+
+    // Called by NumberParser to handle an error condition.
+    void handleExponentSplit(Token token, size_t offset);
 };
 
 } // namespace slang
