@@ -9,7 +9,6 @@
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
-#include "slang/util/String.h"
 
 namespace slang {
 
@@ -291,75 +290,11 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
 }
 
 ExpressionSyntax& Parser::parseIntegerExpression() {
-    Token sizeToken;
-    Token baseToken;
-    bitwidth_t sizeBits = 0;
+    auto result = numberParser.parseInteger(*this);
+    if (result.isSimple)
+        return factory.literalExpression(SyntaxKind::IntegerLiteralExpression, result.value);
 
-    auto token = consume();
-    if (token.kind == TokenKind::IntegerBase)
-        baseToken = token;
-    else {
-        const SVInt& tokenValue = token.intValue();
-        if (!peek(TokenKind::IntegerBase)) {
-            if (tokenValue > INT32_MAX)
-                addDiag(diag::SignedIntegerOverflow, token.location());
-            return factory.literalExpression(SyntaxKind::IntegerLiteralExpression, token);
-        }
-
-        sizeToken = token;
-        baseToken = consume();
-
-        if (tokenValue == 0) {
-            addDiag(diag::LiteralSizeIsZero, token.location());
-        }
-        else if (tokenValue > SVInt::MAX_BITS) {
-            sizeBits = SVInt::MAX_BITS;
-            addDiag(diag::LiteralSizeTooLarge, token.location()) << (int)SVInt::MAX_BITS;
-        }
-        else {
-            sizeBits = tokenValue.as<bitwidth_t>().value();
-        }
-    }
-
-    // at this point we expect to see vector digits, but they could be split out into other token
-    // types because of hex literals
-    auto first = peek();
-    if (!isPossibleVectorDigit(first.kind)) {
-        addDiag(diag::ExpectedVectorDigits, first.location());
-        return factory.integerVectorExpression(
-            sizeToken, baseToken, missingToken(TokenKind::IntegerLiteral, first.location()));
-    }
-
-    Token next = first;
-    NumericTokenFlags baseFlags = baseToken.numericFlags();
-    SmallVectorSized<char, 64> text;
-    int count = 0;
-
-    vectorBuilder.start(baseFlags.base(), sizeBits, baseFlags.isSigned(), first.location());
-    do {
-        count++;
-        text.appendRange(next.rawText());
-        consume();
-
-        int index = vectorBuilder.append(next);
-        if (index >= 0) {
-            // This handles a really obnoxious case: 'h 3e+2
-            // The second token is initially lexed as a real literal, but we need to split
-            // it apart here now that we know it's a hex literal and put the remaining (new)
-            // tokens back on the parser's stack.
-            handleExponentSplit(next, (size_t)index);
-            break;
-        }
-
-        next = peek();
-    } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
-
-    string_view rawText = count == 1 ? first.rawText() : toStringView(text.copy(alloc));
-
-    Token valToken(alloc, TokenKind::IntegerLiteral, first.trivia(), rawText, first.location(),
-                   vectorBuilder.finish());
-
-    return factory.integerVectorExpression(sizeToken, baseToken, valToken);
+    return factory.integerVectorExpression(result.size, result.base, result.value);
 }
 
 void Parser::handleExponentSplit(Token token, size_t offset) {

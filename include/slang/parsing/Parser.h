@@ -8,7 +8,7 @@
 
 #include <flat_hash_map.hpp>
 
-#include "slang/numeric/VectorBuilder.h"
+#include "slang/parsing/NumberParser.h"
 #include "slang/parsing/ParserBase.h"
 #include "slang/parsing/Token.h"
 #include "slang/syntax/AllSyntax.h"
@@ -341,8 +341,9 @@ private:
     // Map of metadata for previously parsed nodes.
     MetadataMap metadataMap;
 
-    // Scratch space for building up integer vector literals.
-    VectorBuilder vectorBuilder;
+    // Helper class for parsing out numeric literals.
+    NumberParser numberParser;
+    friend class NumberParser;
 
     // The current depth of recursion in the parser.
     size_t recursionDepth = 0;

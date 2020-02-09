@@ -1,15 +1,15 @@
 //------------------------------------------------------------------------------
-// VectorBuilder.cpp
-// Helper type to construct SVInt instances
+// NumberParser.cpp
+// Helper type to construct numeric tokens
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/numeric/VectorBuilder.h"
+#include "slang/parsing/NumberParser.h"
 
 #include "../text/CharInfo.h"
 
 #include "slang/diagnostics/LexerDiags.h"
-#include "slang/diagnostics/NumericDiags.h"
+#include "slang/util/String.h"
 
 namespace slang {
 
@@ -27,23 +27,38 @@ static logic_t getLogicCharValue(char c) {
     }
 }
 
-VectorBuilder::VectorBuilder(Diagnostics& diagnostics) : diagnostics(diagnostics) {
+NumberParser::NumberParser(Diagnostics& diagnostics, BumpAllocator& alloc) :
+    diagnostics(diagnostics), alloc(alloc) {
 }
 
-void VectorBuilder::start(LiteralBase base, bitwidth_t size, bool isSigned,
-                          SourceLocation location) {
-    literalBase = base;
-    sizeBits = size;
-    firstLocation = location;
-
-    signFlag = isSigned;
+void NumberParser::startVector(Token baseToken, Token sizeToken) {
     hasUnknown = false;
     valid = true;
-    first = true;
     digits.clear();
+
+    NumericTokenFlags baseFlags = baseToken.numericFlags();
+    literalBase = baseFlags.base();
+    signFlag = baseFlags.isSigned();
+
+    sizeBits = 0;
+    if (sizeToken) {
+        const SVInt& sizeVal = sizeToken.intValue();
+        if (sizeVal == 0) {
+            addDiag(diag::LiteralSizeIsZero, sizeToken.location());
+        }
+        else if (sizeVal > SVInt::MAX_BITS) {
+            sizeBits = SVInt::MAX_BITS;
+            addDiag(diag::LiteralSizeTooLarge, sizeToken.location()) << (int)SVInt::MAX_BITS;
+        }
+        else {
+            sizeBits = sizeVal.as<bitwidth_t>().value();
+        }
+    }
 }
 
-int VectorBuilder::append(Token token) {
+int NumberParser::append(Token token, bool isFirst) {
+    text.appendRange(token.rawText());
+
     // If we've had an error thus far, don't bother doing anything else that
     // might just add more errors on the pile.
     if (!valid)
@@ -54,36 +69,36 @@ int VectorBuilder::append(Token token) {
     valid = false;
 
     // underscore as the first char is not allowed
-    string_view text = token.rawText();
+    string_view chars = token.rawText();
     SourceLocation location = token.location();
-    if (first && text.length() && text[0] == '_') {
-        diagnostics.add(diag::DigitsLeadingUnderscore, location);
+    if (isFirst && chars.length() && chars[0] == '_') {
+        addDiag(diag::DigitsLeadingUnderscore, location);
         return -1;
     }
 
     int index = 0;
     switch (literalBase) {
         case LiteralBase::Binary:
-            for (char c : text) {
+            for (char c : chars) {
                 if (isLogicDigit(c))
                     addDigit(getLogicCharValue(c), 2);
                 else if (isBinaryDigit(c))
                     addDigit(logic_t(getDigitValue(c)), 2);
                 else if (c != '_') {
-                    diagnostics.add(diag::BadBinaryDigit, location + index);
+                    addDiag(diag::BadBinaryDigit, location + index);
                     return -1;
                 }
                 index++;
             }
             break;
         case LiteralBase::Octal:
-            for (char c : text) {
+            for (char c : chars) {
                 if (isLogicDigit(c))
                     addDigit(getLogicCharValue(c), 8);
                 else if (isOctalDigit(c))
                     addDigit(logic_t(getDigitValue(c)), 8);
                 else if (c != '_') {
-                    diagnostics.add(diag::BadOctalDigit, location + index);
+                    addDiag(diag::BadOctalDigit, location + index);
                     return -1;
                 }
                 index++;
@@ -95,9 +110,9 @@ int VectorBuilder::append(Token token) {
             // this means that we should only ever see one token here in practice, unless there's
             // an error. Optimize for this case and just suck the decimal value that's already
             // been computed out of the token itself.
-            if (first) {
-                if (text.length() == 1 && isLogicDigit(text[0])) {
-                    addDigit(getLogicCharValue(text[0]), 10);
+            if (isFirst) {
+                if (chars.length() == 1 && isLogicDigit(chars[0])) {
+                    addDigit(getLogicCharValue(chars[0]), 10);
                     break;
                 }
 
@@ -108,36 +123,35 @@ int VectorBuilder::append(Token token) {
             }
 
             // As mentioned above, this loop is just for checking errors.
-            for (char c : text) {
+            for (char c : chars) {
                 if (isLogicDigit(c) || isDecimalDigit(c)) {
                     if (hasUnknown) {
-                        diagnostics.add(diag::DecimalDigitMultipleUnknown, location + index);
+                        addDiag(diag::DecimalDigitMultipleUnknown, location + index);
                         return -1;
                     }
 
                     hasUnknown = isLogicDigit(c);
                 }
                 else if (c != '_') {
-                    diagnostics.add(diag::BadDecimalDigit, location + index);
+                    addDiag(diag::BadDecimalDigit, location + index);
                     return -1;
                 }
                 index++;
             }
             break;
         case LiteralBase::Hex:
-            for (char c : text) {
+            for (char c : chars) {
                 if (isLogicDigit(c))
                     addDigit(getLogicCharValue(c), 16);
                 else if (isHexDigit(c))
                     addDigit(logic_t(getHexDigitValue(c)), 16);
                 else if (c == '+' || c == '-') {
                     // This is ok, this was initially lexed as a real token with exponent.
-                    first = false;
                     valid = true;
                     return index;
                 }
                 else if (c != '_') {
-                    diagnostics.add(diag::BadHexDigit, location + index);
+                    addDiag(diag::BadHexDigit, location + index);
                     return -1;
                 }
                 index++;
@@ -147,14 +161,19 @@ int VectorBuilder::append(Token token) {
             THROW_UNREACHABLE;
     }
 
-    first = false;
     valid = true;
     return -1;
 }
 
-SVInt VectorBuilder::finish() {
+Token NumberParser::finishValue(Token firstToken, bool singleToken) {
+    auto createResult = [&](auto&& val) {
+        return Token(alloc, TokenKind::IntegerLiteral, firstToken.trivia(),
+                     singleToken ? firstToken.rawText() : toStringView(text.copy(alloc)),
+                     firstLocation, std::move(val));
+    };
+
     if (!valid)
-        return 0;
+        return createResult(0);
 
     if (literalBase == LiteralBase::Decimal) {
         // If we added an x or z, fall through to the general handler below.
@@ -174,7 +193,7 @@ SVInt VectorBuilder::finish() {
             }
             else if (width != sizeBits) {
                 if (width > sizeBits)
-                    diagnostics.add(diag::VectorLiteralOverflow, firstLocation);
+                    addDiag(diag::VectorLiteralOverflow, firstLocation);
 
                 result = decimalValue.resize(sizeBits);
             }
@@ -183,7 +202,7 @@ SVInt VectorBuilder::finish() {
             }
 
             result.setSigned(signFlag);
-            return result;
+            return createResult(result);
         }
     }
 
@@ -221,8 +240,7 @@ SVInt VectorBuilder::finish() {
             if (sizeBits == 0) {
                 if (bits > SVInt::MAX_BITS) {
                     bits = SVInt::MAX_BITS;
-                    diagnostics.add(diag::LiteralSizeTooLarge, firstLocation)
-                        << (int)SVInt::MAX_BITS;
+                    addDiag(diag::LiteralSizeTooLarge, firstLocation) << (int)SVInt::MAX_BITS;
                 }
 
                 sizeBits = std::max(32u, bits);
@@ -230,15 +248,16 @@ SVInt VectorBuilder::finish() {
             else {
                 // We should warn about overflow here, but the spec says it is valid and
                 // the literal gets truncated. Definitely a warning though.
-                diagnostics.add(diag::VectorLiteralOverflow, firstLocation);
+                addDiag(diag::VectorLiteralOverflow, firstLocation);
             }
         }
     }
 
-    return SVInt::fromDigits(sizeBits ? sizeBits : 32, literalBase, signFlag, hasUnknown, digits);
+    return createResult(
+        SVInt::fromDigits(sizeBits ? sizeBits : 32, literalBase, signFlag, hasUnknown, digits));
 }
 
-void VectorBuilder::addDigit(logic_t digit, int maxValue) {
+void NumberParser::addDigit(logic_t digit, int maxValue) {
     // Leading zeros obviously don't count towards our bit limit, so
     // only count them if we've seen other non-zero digits
     if (digit.value != 0 || digits.size() != 0) {
@@ -248,6 +267,23 @@ void VectorBuilder::addDigit(logic_t digit, int maxValue) {
         else
             ASSERT(digit.value < maxValue);
     }
+}
+
+Diagnostic& NumberParser::addDiag(DiagCode code, SourceLocation location) {
+    return diagnostics.add(code, location);
+}
+
+NumberParser::IntResult NumberParser::reportMissingDigits(Token sizeToken, Token baseToken,
+                                                          Token first) {
+    // If we issued this error in response to seeing an EOF token, back up and put
+    // the error on the last consumed token instead.
+    SourceLocation errLoc = first.location();
+    if (first.kind == TokenKind::EndOfFile)
+        errLoc = baseToken.location() + baseToken.rawText().size();
+
+    addDiag(diag::ExpectedVectorDigits, errLoc);
+    return IntResult::vector(sizeToken, baseToken,
+                             Token::createMissing(alloc, TokenKind::IntegerLiteral, errLoc));
 }
 
 } // namespace slang

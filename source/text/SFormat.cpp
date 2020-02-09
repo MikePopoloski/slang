@@ -18,7 +18,7 @@ namespace slang::SFormat {
 
 static optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
     size_t pos;
-    auto result = strToUInt(string_view(ptr, end - ptr), &pos);
+    auto result = strToUInt(string_view(ptr, size_t(end - ptr)), &pos);
     if (result)
         ptr += pos;
 

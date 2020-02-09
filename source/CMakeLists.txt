@@ -64,10 +64,10 @@ add_library(slang
 
     numeric/SVInt.cpp
     numeric/Time.cpp
-    numeric/VectorBuilder.cpp
 
     parsing/Lexer.cpp
     parsing/LexerFacts.cpp
+    parsing/NumberParser.cpp
     parsing/Parser.cpp
     parsing/Parser_expressions.cpp
     parsing/Parser_members.cpp

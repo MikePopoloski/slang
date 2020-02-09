@@ -13,7 +13,7 @@ namespace slang {
 
 Parser::Parser(Preprocessor& preprocessor, const Bag& options) :
     ParserBase::ParserBase(preprocessor), factory(alloc),
-    parseOptions(options.getOrDefault<ParserOptions>()), vectorBuilder(getDiagnostics()) {
+    parseOptions(options.getOrDefault<ParserOptions>()), numberParser(getDiagnostics(), alloc) {
 }
 
 SyntaxNode& Parser::parseGuess() {
