@@ -9,6 +9,7 @@
 #include <climits>     // for type size macros
 #include <cstddef>     // for std::byte
 #include <cstdint>     // for sized integer types
+#include <cstring>     // for memcpy
 #include <new>         // for placement new
 #include <optional>    // for std::optional
 #include <string_view> // for std::string_view
