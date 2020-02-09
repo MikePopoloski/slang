@@ -8,6 +8,7 @@
 
 #include <fmt/format.h>
 
+#include "slang/util/String.h"
 #include "slang/util/StringTable.h"
 
 namespace slang {
@@ -42,7 +43,9 @@ string_view timeUnitToSuffix(TimeUnit unit) {
 
 TimeScaleValue::TimeScaleValue(string_view str) {
     size_t idx;
-    int i = std::stoi(std::string(str), &idx);
+    optional<int> i = strToInt(str, &idx);
+    if (!i)
+        throw std::invalid_argument("Not a valid timescale magnitude");
 
     while (idx < str.size() && str[idx] == ' ')
         idx++;
@@ -51,7 +54,7 @@ TimeScaleValue::TimeScaleValue(string_view str) {
     if (idx >= str.size() || !suffixToTimeUnit(str.substr(idx), u))
         throw std::invalid_argument("Time value suffix is missing or invalid");
 
-    auto tv = fromLiteral(double(i), u);
+    auto tv = fromLiteral(double(*i), u);
     if (!tv)
         throw std::invalid_argument("Invalid time scale value");
 

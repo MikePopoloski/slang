@@ -846,8 +846,8 @@ Token Lexer::lexNumericLiteral() {
 
     if (!floatChars.empty()) {
         // We have a floating point result. Let the standard library do the heavy lifting of
-        // converting and rounding correctly.
-        // TODO: change to use std::from_chars once it's available.
+        // converting and rounding correctly. Note that we depend on this code returning
+        // 0 for underflow and +inf for overflow.
         floatChars.append('\0');
 
         char* end;

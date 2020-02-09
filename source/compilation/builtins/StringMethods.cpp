@@ -7,6 +7,7 @@
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/util/String.h"
 
 namespace slang::Builtins {
 
@@ -178,8 +179,7 @@ public:
         std::string str = cv.str();
         str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
 
-        // TODO: use from_chars and disallow prefix
-        long result = strtol(str.c_str(), nullptr, base);
+        int result = strToInt(str, nullptr, base).value_or(0);
         return SVInt(32, uint64_t(result), true);
     }
 
@@ -201,8 +201,7 @@ public:
         std::string str = cv.str();
         str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
 
-        // TODO: use from_chars
-        double result = strtod(str.c_str(), nullptr);
+        double result = strToDouble(str).value_or(0.0);
         return real_t(result);
     }
 };
@@ -240,15 +239,7 @@ public:
         if (!strCv || !valCv)
             return nullptr;
 
-        // TODO: use std::to_chars
-        double value = valCv.real();
-        size_t sz = (size_t)snprintf(nullptr, 0, "%f", value);
-
-        std::string result(sz + 1, '\0');
-        snprintf(result.data(), sz + 1, "%f", value);
-        result.pop_back();
-
-        strCv.store(std::move(result));
+        strCv.store(std::to_string(valCv.real()));
         return nullptr;
     }
 };

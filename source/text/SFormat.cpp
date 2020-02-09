@@ -12,20 +12,17 @@
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/util/String.h"
 
 namespace slang::SFormat {
 
-static optional<uint32_t> parseUInt(const char*& ptr) {
-    // TODO: use std::from_chars and disallow prefix
-    char* end;
-    errno = 0;
-    unsigned long val = strtoul(ptr, &end, 10);
+static optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
+    size_t pos;
+    auto result = strToUInt(string_view(ptr, end - ptr), &pos);
+    if (result)
+        ptr += pos;
 
-    if (ptr == end || errno == ERANGE || val > UINT32_MAX)
-        return std::nullopt;
-
-    ptr = end;
-    return uint32_t(val);
+    return result;
 }
 
 struct FormatOptions {
@@ -76,7 +73,7 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
         }
 
         if (ptr != end && isDecimalDigit(*ptr)) {
-            options.width = parseUInt(ptr);
+            options.width = parseUInt(ptr, end);
             if (!options.width) {
                 onError(diag::FormatSpecifierInvalidWidth, ptr);
                 return false;
@@ -86,7 +83,7 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
         if (ptr != end && *ptr == '.') {
             ptr++;
             if (ptr != end && isDecimalDigit(*ptr)) {
-                options.precision = parseUInt(ptr);
+                options.precision = parseUInt(ptr, end);
                 if (!options.precision) {
                     onError(diag::FormatSpecifierInvalidWidth, ptr);
                     return false;
@@ -258,24 +255,25 @@ static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
 
 static void formatFloat(std::string& result, double value, char specifier,
                         const FormatOptions& options) {
-    // TODO: use std::to_chars
-    std::string fmt = "%";
+    SmallVectorSized<char, 8> fmt;
+    fmt.append('%');
     if (options.leftJustify)
-        fmt.push_back('-');
+        fmt.append('-');
     if (options.zeroPad)
-        fmt.push_back('0');
+        fmt.append('0');
     if (options.width)
-        fmt.append(std::to_string(*options.width));
+        uintToStr(fmt, *options.width);
     if (options.precision) {
-        fmt.push_back('.');
-        fmt.append(std::to_string(*options.precision));
+        fmt.append('.');
+        uintToStr(fmt, *options.precision);
     }
-    fmt.push_back(specifier);
+    fmt.append(specifier);
+    fmt.append('\0');
 
     size_t cur = result.size();
-    size_t sz = (size_t)snprintf(nullptr, 0, fmt.c_str(), value);
+    size_t sz = (size_t)snprintf(nullptr, 0, fmt.data(), value);
     result.resize(cur + sz + 1);
-    snprintf(result.data() + cur, sz + 1, fmt.c_str(), value);
+    snprintf(result.data() + cur, sz + 1, fmt.data(), value);
     result.pop_back();
 }
 

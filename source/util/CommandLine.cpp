@@ -480,15 +480,10 @@ static optional<double> parseDouble(string_view name, string_view value, std::st
         return {};
     }
 
-    // TODO: use from_chars
-    char* end;
-    std::string copy(value);
-    double val = strtod(copy.c_str(), &end);
-
-    if (end != copy.c_str() + copy.size()) {
+    size_t pos;
+    optional<double> val = strToDouble(value, &pos);
+    if (!val || pos != value.size())
         error = fmt::format("invalid value '{}' for float argument '{}'", value, name);
-        return {};
-    }
 
     return val;
 }

@@ -495,7 +495,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
         }
         case MacroIntrinsic::Line: {
             size_t lineNum = sourceManager.getLineNumber(loc);
-            text.appendRange(std::to_string(lineNum)); // not the most efficient, but whatever
+            uintToStr(text, lineNum);
 
             string_view rawText = toStringView(text.copy(alloc));
             Token token(alloc, TokenKind::IntegerLiteral, {}, rawText, loc, lineNum);

@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -14,6 +15,13 @@ namespace slang {
 inline string_view toStringView(span<char> text) {
     return string_view(text.data(), text.size());
 }
+
+void uintToStr(SmallVector<char>& buffer, uint32_t value);
+void uintToStr(SmallVector<char>& buffer, uint64_t value);
+
+optional<int32_t> strToInt(string_view str, size_t* pos = nullptr, int base = 10);
+optional<uint32_t> strToUInt(string_view str, size_t* pos = nullptr, int base = 10);
+optional<double> strToDouble(string_view str, size_t* pos = nullptr);
 
 /// Determines the number of edits to the left string that are required to
 /// change it into the right string.

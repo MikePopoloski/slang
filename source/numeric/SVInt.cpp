@@ -12,6 +12,7 @@
 #include <stdexcept>
 
 #include "slang/util/Hash.h"
+#include "slang/util/String.h"
 
 namespace slang {
 
@@ -668,7 +669,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
 
     // append the bit size, unless we're a signed 32-bit base 10 integer
     if (includeBase) {
-        buffer.appendRange(std::to_string(bitWidth));
+        uintToStr(buffer, bitWidth);
         buffer.append('\'');
         if (signFlag)
             buffer.append('s');

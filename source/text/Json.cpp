@@ -126,7 +126,7 @@ void JsonWriter::writeQuoted(string_view str) {
                 if (c >= 0x00 and c <= 0x1f) {
                     // print character c as \uxxxx
                     char buf[5];
-                    sprintf(buf, "%04x", int(c));
+                    snprintf(buf, sizeof(buf), "%04x", int(c));
                     vec.append('\\');
                     vec.append('u');
                     vec.appendRange(buf, buf + 4);
