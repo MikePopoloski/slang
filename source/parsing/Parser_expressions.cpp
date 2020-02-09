@@ -4,7 +4,6 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
@@ -181,21 +180,8 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             break;
         }
         case TokenKind::RealLiteral: {
-            // have to check for overflow here, now that we know this is actually a real
-            auto literal = consume();
-            if (literal.numericFlags().outOfRange()) {
-                if (literal.realValue() == 0) {
-                    addDiag(diag::RealLiteralUnderflow, literal.location())
-                        << real_t(std::numeric_limits<double>::denorm_min());
-                }
-                else {
-                    ASSERT(!std::isfinite(literal.realValue()));
-                    addDiag(diag::RealLiteralOverflow, literal.location())
-                        << real_t(std::numeric_limits<double>::max());
-                }
-            }
-
-            expr = &factory.literalExpression(SyntaxKind::RealLiteralExpression, literal);
+            expr = &factory.literalExpression(SyntaxKind::RealLiteralExpression,
+                                              numberParser.parseReal(*this));
             break;
         }
         case TokenKind::IntegerLiteral:

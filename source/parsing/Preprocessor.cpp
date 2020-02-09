@@ -852,7 +852,7 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
         return pair;
 
     Token token = peek();
-    if (token.kind == TokenKind::Identifier) {
+    if (token.kind == TokenKind::Identifier || LexerFacts::isKeyword(token.kind)) {
         auto name = consume();
         if (peek().kind == TokenKind::Equals) {
             auto equals = consume();
@@ -937,10 +937,13 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
         return { expr, true };
     }
 
-    // TODO: real literals
-    // TODO: handle keywords
+    if (token.kind == TokenKind::RealLiteral) {
+        auto result = numberParser.parseReal(*this);
+        return { alloc.emplace<SimplePragmaExpressionSyntax>(result), true };
+    }
 
-    if (token.kind == TokenKind::Identifier || token.kind == TokenKind::StringLiteral) {
+    if (token.kind == TokenKind::Identifier || token.kind == TokenKind::StringLiteral ||
+        LexerFacts::isKeyword(token.kind)) {
         return { alloc.emplace<SimplePragmaExpressionSyntax>(consume()), true };
     }
 

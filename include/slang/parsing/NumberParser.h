@@ -85,6 +85,24 @@ public:
         return IntResult::vector(sizeToken, baseToken, finishValue(first, count == 1));
     }
 
+    template<typename TStream>
+    Token parseReal(TStream& stream) {
+        // have to check for overflow here, now that we know this is actually a real
+        auto literal = stream.consume();
+        if (literal.numericFlags().outOfRange()) {
+            if (literal.realValue() == 0) {
+                addDiag(diag::RealLiteralUnderflow, literal.location())
+                    << real_t(std::numeric_limits<double>::denorm_min());
+            }
+            else {
+                ASSERT(!std::isfinite(literal.realValue()));
+                addDiag(diag::RealLiteralOverflow, literal.location())
+                    << real_t(std::numeric_limits<double>::max());
+            }
+        }
+        return literal;
+    }
+
 private:
     void startVector(Token baseToken, Token sizeToken);
     int append(Token token, bool isFirst);

@@ -1230,7 +1230,7 @@ TEST_CASE("Pragma expressions") {
 `pragma foo
 `pragma bar asdf
 `pragma bar 32 'd 1
-`pragma bar asdf='h ff, blah=2, foo="asdf"
+`pragma bar asdf='h ff, blah=2, foo="asdf", begin, bar=end
 `pragma bar "asdf", (asdf, "asdf", asdf="asdf")
 )";
 
@@ -1247,9 +1247,9 @@ TEST_CASE("Pragma expressions -- errors") {
 `pragma bar asdf=
     "asdf"
 
-`pragma bar 2.1
+`pragma bar [
 
-`pragma bar "asdf", (asdf, "asdf", asdf=2.1)
+`pragma bar "asdf", (asdf, "asdf", asdf=[)
 `pragma bar "asdf", (asdf, "asdf" asdf)
 `pragma bar "asdf", (asdf, "asdf",
 `pragma bar "asdf", (asdf, "asdf"
@@ -1269,10 +1269,10 @@ source:5:18: error: expected pragma expression
 `pragma bar asdf=
                  ^
 source:8:13: error: expected pragma expression
-`pragma bar 2.1
+`pragma bar [
             ^
 source:10:41: error: expected pragma expression
-`pragma bar "asdf", (asdf, "asdf", asdf=2.1)
+`pragma bar "asdf", (asdf, "asdf", asdf=[)
                                         ^
 source:11:34: error: expected ','
 `pragma bar "asdf", (asdf, "asdf" asdf)
