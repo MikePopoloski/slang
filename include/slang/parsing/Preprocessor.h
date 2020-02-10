@@ -26,6 +26,7 @@ struct MacroActualArgumentListSyntax;
 struct MacroFormalArgumentListSyntax;
 struct MacroActualArgumentSyntax;
 struct MacroFormalArgumentSyntax;
+struct PragmaDirectiveSyntax;
 struct PragmaExpressionSyntax;
 
 /// Contains various options that can control preprocessing behavior.
@@ -172,6 +173,15 @@ private:
     std::pair<PragmaExpressionSyntax*, bool> parsePragmaValue();
     std::pair<PragmaExpressionSyntax*, bool> checkNextPragmaToken();
 
+    // Pragma action handlers
+    void applyPragma(const PragmaDirectiveSyntax& pragma);
+    void applyProtectPragma(const PragmaDirectiveSyntax& pragma);
+    void applyResetPragma(const PragmaDirectiveSyntax& pragma);
+    void applyResetAllPragma(const PragmaDirectiveSyntax& pragma);
+    void applyOncePragma(const PragmaDirectiveSyntax& pragma);
+    void applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma);
+    void ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t count);
+
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic { None, Line, File };
 
@@ -237,6 +247,7 @@ private:
     bool peek(TokenKind kind) { return peek().kind == kind; }
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
+    Diagnostic& addDiag(DiagCode code, SourceRange range);
 
     // This is a small collection of state used to keep track of where we are in a tree of
     // nested conditional directives.

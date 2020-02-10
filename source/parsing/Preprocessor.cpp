@@ -177,7 +177,7 @@ Token Preprocessor::handleDirectives(Token token) {
                 SmallVectorSized<Token, 2> tokens;
                 tokens.append(token);
                 trivia.append(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
-                addDiag(diag::MacroOpsOutsideDefinition, token.location());
+                addDiag(diag::MacroOpsOutsideDefinition, token.range());
                 break;
             }
             case TokenKind::Directive:
@@ -377,7 +377,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     string_view path = fileName.valueText();
     if (path.length() < 3) {
         if (!fileName.isMissing())
-            addDiag(diag::ExpectedIncludeFileName, fileName.location());
+            addDiag(diag::ExpectedIncludeFileName, fileName.range());
     }
     else {
         // remove delimiters
@@ -385,9 +385,9 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         path = path.substr(1, path.length() - 2);
         SourceBuffer buffer = sourceManager.readHeader(path, directive.location(), isSystem);
         if (!buffer.id)
-            addDiag(diag::CouldNotOpenIncludeFile, fileName.location());
+            addDiag(diag::CouldNotOpenIncludeFile, fileName.range());
         else if (lexerStack.size() >= options.maxIncludeDepth)
-            addDiag(diag::ExceededMaxIncludeDepth, fileName.location());
+            addDiag(diag::ExceededMaxIncludeDepth, fileName.range());
         else
             pushSource(buffer);
     }
@@ -414,7 +414,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         bad = true;
     else {
         if (LF::getDirectiveKind(name.valueText()) != SyntaxKind::MacroUsage) {
-            addDiag(diag::InvalidMacroName, name.location());
+            addDiag(diag::InvalidMacroName, name.range());
             bad = true;
         }
 
@@ -496,11 +496,11 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 
     if (auto it = macros.find(name.valueText()); it != macros.end()) {
         if (it->second.builtIn) {
-            addDiag(diag::InvalidMacroName, name.location());
+            addDiag(diag::InvalidMacroName, name.range());
             bad = true;
         }
         else if (!bad && it->second.valid() && !isSameMacro(*result, *it->second.syntax)) {
-            auto& diag = addDiag(diag::RedefiningMacro, name.location());
+            auto& diag = addDiag(diag::RedefiningMacro, name.range());
             diag << name.valueText();
             diag.addNote(diag::NotePreviousDefinition, it->second.syntax->name.location());
         }
@@ -629,7 +629,7 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
     // pop the active branch off the stack
     bool taken = true;
     if (branchStack.empty())
-        addDiag(diag::UnexpectedConditionalDirective, directive.location());
+        addDiag(diag::UnexpectedConditionalDirective, directive.range());
     else {
         branchStack.pop_back();
         if (!branchStack.empty() && !branchStack.back().currentActive)
@@ -649,7 +649,7 @@ bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value)
         if (suffix.kind != TokenKind::Identifier || !isOnSameLine(suffix) ||
             !suffixToTimeUnit(suffix.rawText(), unit)) {
 
-            addDiag(diag::ExpectedTimeLiteral, token.location());
+            addDiag(diag::ExpectedTimeLiteral, token.range());
             return false;
         }
 
@@ -670,7 +670,7 @@ bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value)
 
     auto checked = TimeScaleValue::fromLiteral(token.realValue(), token.numericFlags().unit());
     if (!checked) {
-        addDiag(diag::InvalidTimeScaleSpecifier, token.location());
+        addDiag(diag::InvalidTimeScaleSpecifier, token.range());
         return false;
     }
 
@@ -689,7 +689,7 @@ Trivia Preprocessor::handleTimeScaleDirective(Token directive) {
     if (success) {
         // Precision must be equal to or smaller than the unit (i.e. more precise).
         if (precision > unit) {
-            auto& diag = addDiag(diag::InvalidTimeScalePrecision, precisionToken.location());
+            auto& diag = addDiag(diag::InvalidTimeScalePrecision, precisionToken.range());
             diag << unitToken.range() << precisionToken.range();
         }
         else {
@@ -716,7 +716,7 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
         if (!levNum || (levNum != 0 && levNum != 1 && levNum != 2)) {
             // We don't actually use the level for anything, but the spec allows
             // only the values 0,1,2
-            addDiag(diag::InvalidLineDirectiveLevel, level.location());
+            addDiag(diag::InvalidLineDirectiveLevel, level.range());
         }
         else if (lineNum) {
             // We should only notify the source manager about the line directive if it
@@ -776,7 +776,7 @@ Trivia Preprocessor::handleUndefDirective(Token directive) {
             if (!it->second.builtIn)
                 macros.erase(it);
             else
-                addDiag(diag::UndefineBuiltinDirective, nameToken.location());
+                addDiag(diag::UndefineBuiltinDirective, nameToken.range());
         }
     }
 
@@ -796,7 +796,7 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
     if (!versionToken.isMissing()) {
         auto versionOpt = LF::getKeywordVersion(versionToken.valueText());
         if (!versionOpt)
-            addDiag(diag::UnrecognizedKeywordVersion, versionToken.location());
+            addDiag(diag::UnrecognizedKeywordVersion, versionToken.range());
         else
             keywordVersionStack.push_back(*versionOpt);
     }
@@ -809,7 +809,7 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
     checkOutsideDesignElement(directive);
 
     if (keywordVersionStack.size() == 1)
-        addDiag(diag::MismatchedEndKeywordsDirective, directive.location());
+        addDiag(diag::MismatchedEndKeywordsDirective, directive.range());
     else
         keywordVersionStack.pop_back();
 
@@ -826,6 +826,7 @@ Trivia Preprocessor::handlePragmaDirective(Token directive) {
     Token name = consume();
     Token token = peek();
     bool wantComma = false;
+    bool ok = true;
 
     while (token.kind != TokenKind::EndOfFile && isOnSameLine(token)) {
         if (wantComma) {
@@ -837,13 +838,18 @@ Trivia Preprocessor::handlePragmaDirective(Token directive) {
             args.append(expr);
             wantComma = true;
 
-            if (!succeeded)
+            if (!succeeded) {
+                ok = false;
                 break;
+            }
         }
         token = peek();
     }
 
     auto result = alloc.emplace<PragmaDirectiveSyntax>(directive, name, args.copy(alloc));
+    if (ok)
+        applyPragma(*result);
+
     return Trivia(TriviaKind::Directive, result);
 }
 
@@ -1007,7 +1013,95 @@ Trivia Preprocessor::createSimpleDirective(Token directive) {
 
 void Preprocessor::checkOutsideDesignElement(Token directive) {
     if (designElementDepth)
-        addDiag(diag::DirectiveInsideDesignElement, directive.location());
+        addDiag(diag::DirectiveInsideDesignElement, directive.range());
+}
+
+void Preprocessor::applyPragma(const PragmaDirectiveSyntax& pragma) {
+    string_view name = pragma.name.valueText();
+    if (name == "protect") {
+        applyProtectPragma(pragma);
+        return;
+    }
+
+    if (name == "reset") {
+        applyResetPragma(pragma);
+        return;
+    }
+
+    if (name == "resetall") {
+        applyResetAllPragma(pragma);
+        return;
+    }
+
+    if (name == "once") {
+        applyOncePragma(pragma);
+        return;
+    }
+
+    if (name == "diagnostic") {
+        applyDiagnosticPragma(pragma);
+        return;
+    }
+
+    // Otherwise, if the pragma is unknown warn and ignore.
+    addDiag(diag::UnknownPragma, pragma.name.range()) << name;
+}
+
+void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma) {
+    addDiag(diag::WarnNotYetSupported, pragma.name.range());
+}
+
+void Preprocessor::applyResetPragma(const PragmaDirectiveSyntax&) {
+    // TODO: implement
+}
+
+void Preprocessor::applyResetAllPragma(const PragmaDirectiveSyntax& pragma) {
+    ensurePragmaArgs(pragma, 0);
+
+    // TODO: reset all
+}
+
+void Preprocessor::applyOncePragma(const PragmaDirectiveSyntax& pragma) {
+    ensurePragmaArgs(pragma, 0);
+
+    // TODO: mark once
+}
+
+void Preprocessor::applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma) {
+    if (pragma.args.empty()) {
+        Token last = pragma.getLastToken();
+        addDiag(diag::ExpectedDiagPragmaArg, last.location() + last.rawText().length());
+        return;
+    }
+
+    for (auto arg : pragma.args) {
+        if (arg->kind == SyntaxKind::SimplePragmaExpression) {
+            auto& simple = arg->as<SimplePragmaExpressionSyntax>();
+            string_view action = simple.value.rawText();
+            if (action == "push") {
+                // TODO:
+            }
+            else if (action == "pop") {
+                // TODO:
+            }
+            else {
+                addDiag(diag::UnknownDiagPragmaArg, simple.value.range()) << action;
+            }
+        }
+        else if (arg->kind == SyntaxKind::NameValuePragmaExpression) {
+            // TODO:
+        }
+        else {
+            addDiag(diag::ExpectedDiagPragmaArg, arg->sourceRange());
+        }
+    }
+}
+
+void Preprocessor::ensurePragmaArgs(const PragmaDirectiveSyntax& pragma, size_t count) {
+    if (pragma.args.size() > count) {
+        auto& diag = addDiag(diag::ExtraPragmaArgs, pragma.args[count]->getFirstToken().location());
+        diag << pragma.name.valueText();
+    }
 }
 
 Token Preprocessor::peek() {
@@ -1035,6 +1129,10 @@ Token Preprocessor::expect(TokenKind kind) {
 
 Diagnostic& Preprocessor::addDiag(DiagCode code, SourceLocation location) {
     return diagnostics.add(code, location);
+}
+
+Diagnostic& Preprocessor::addDiag(DiagCode code, SourceRange range) {
+    return diagnostics.add(code, range);
 }
 
 bool Preprocessor::isOnSameLine(Token token) {

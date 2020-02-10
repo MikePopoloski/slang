@@ -1236,7 +1236,9 @@ TEST_CASE("Pragma expressions") {
 
     std::string result = preprocess(text);
     CHECK(result == "\n");
-    CHECK_DIAGNOSTICS_EMPTY;
+
+    for (auto& diag : diagnostics)
+        CHECK(diag.code == diag::UnknownPragma);
 }
 
 TEST_CASE("Pragma expressions -- errors") {
@@ -1283,8 +1285,14 @@ source:13:34: error: expected ')'
 source:12:35: error: expected ')'
 `pragma bar "asdf", (asdf, "asdf",
                                   ^
+source:11:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
+`pragma bar "asdf", (asdf, "asdf" asdf)
+        ^~~
 source:16:18: error: expected pragma expression
 `pragma bar 'h 3e+2
                  ^
+source:16:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
+`pragma bar 'h 3e+2
+        ^~~
 )");
 }

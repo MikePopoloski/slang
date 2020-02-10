@@ -79,6 +79,10 @@ error ExpectedPragmaExpression "expected pragma expression"
 error DirectiveInsideDesignElement "directive is not allowed inside a design element"
 warning ignored-macro-paste IgnoredMacroPaste "paste token is pointless because it is adjacent to whitespace"
 warning redef-macro RedefiningMacro "macro '{}' redefined"
+warning unknown-pragma UnknownPragma "unknown pragma '{}'"
+warning extra-pragma-args ExtraPragmaArgs "too many arguments provided for pragma '{}'"
+warning expected-diag-arg ExpectedDiagPragmaArg "expected diagnostic pragma argument"
+warning unknown-diag-arg UnknownDiagPragmaArg "unknown diagnostic pragma argument '{}'"
 
 subsystem Parser
 error ExpectedIdentifier "expected identifier"
@@ -363,6 +367,6 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 group default = { real-underflow real-overflow literal-overflow ignored-macro-paste case-gen-dup
                   case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
                   dup-import redef-macro nonstandard-generate pointless-void-cast unused-result
-                  not-supported }
+                  not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg }
 
 group extra = { empty-member empty-stmt }
