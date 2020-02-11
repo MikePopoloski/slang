@@ -275,6 +275,7 @@ public:
         // All port declarations in the scope have been collected; index them for easy lookup.
         for (auto [port, insertionPoint] : portDeclarations) {
             for (auto decl : port->declarators) {
+                // TODO: handle initializer
                 if (auto name = decl->name; !name.isMissing()) {
                     auto result =
                         portInfos.emplace(name.valueText(), PortInfo{ decl, port->attributes });
