@@ -509,8 +509,10 @@ DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
             // before deciding which one we're looking at.
             uint32_t index = 0;
             if (scanQualifiedName(index) && scanDimensionList(index) &&
-                peek(index).kind == TokenKind::Identifier)
+                peek(index).kind == TokenKind::Identifier) {
                 return factory.namedType(parseName());
+            }
+
             return factory.implicitType(Token(), nullptr);
         }
     }

@@ -737,3 +737,18 @@ endmodule
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Implicit param with unpacked dimensions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter foo[3] = '{1,2,3};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnpackedArrayParamType);
+}

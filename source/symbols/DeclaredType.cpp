@@ -8,6 +8,7 @@
 
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
@@ -65,10 +66,13 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
 
     if (typeSyntax->kind == SyntaxKind::ImplicitType &&
         (flags & DeclaredTypeFlags::InferImplicit) != 0) {
-        // TODO: handle unpacked dimensions here?
-        // TODO: make sure errors are issued elsewhere for when implicit is not allowed
-        if (!initializerSyntax)
+        if (dimensions) {
+            scope.addDiag(diag::UnpackedArrayParamType, dimensions->sourceRange());
             type = &comp.getErrorType();
+        }
+        else if (!initializerSyntax) {
+            type = &comp.getErrorType();
+        }
         else {
             initializer = &Expression::bind(*initializerSyntax, initializerContext);
             type = initializer->type;
