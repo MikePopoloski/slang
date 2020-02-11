@@ -728,37 +728,32 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
     return factory.dataDeclaration(attributes, modifiers.copy(alloc), dataType, declarators, semi);
 }
 
-DeclaratorSyntax& Parser::parseDeclarator() {
+DeclaratorSyntax& Parser::parseDeclarator(bool allowMinTypMax) {
     auto name = expect(TokenKind::Identifier);
     auto dimensions = parseDimensionList();
 
     EqualsValueClauseSyntax* initializer = nullptr;
     if (peek(TokenKind::Equals)) {
         auto equals = consume();
-        initializer = &factory.equalsValueClause(equals, parseMinTypMaxExpression());
+        initializer = &factory.equalsValueClause(equals, allowMinTypMax ? parseMinTypMaxExpression()
+                                                                        : parseExpression());
     }
 
     return factory.declarator(name, dimensions, initializer);
 }
 
-span<TokenOrSyntax> Parser::parseOneDeclarator() {
-    SmallVectorSized<TokenOrSyntax, 2> buffer;
-    buffer.append(&parseDeclarator());
-    return buffer.copy(alloc);
-}
-
 template<bool (*IsEnd)(TokenKind)>
-span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end) {
+span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end, bool allowMinTypMax) {
     SmallVectorSized<TokenOrSyntax, 4> buffer;
-    parseList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end,
-                                          RequireItems::True, diag::ExpectedDeclarator,
-                                          [this] { return &parseDeclarator(); });
+    parseList<isIdentifierOrComma, IsEnd>(
+        buffer, endKind, TokenKind::Comma, end, RequireItems::True, diag::ExpectedDeclarator,
+        [this, allowMinTypMax] { return &parseDeclarator(allowMinTypMax); });
 
     return buffer.copy(alloc);
 }
 
-span<TokenOrSyntax> Parser::parseDeclarators(Token& semi) {
-    return parseDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
+span<TokenOrSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypMax) {
+    return parseDeclarators<isSemicolon>(TokenKind::Semicolon, semi, allowMinTypMax);
 }
 
 Parser::AttrList Parser::parseAttributes() {
@@ -858,9 +853,12 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
         // Otherwise we're in a parameter port list and should just parse one.
         span<TokenOrSyntax> decls;
         if (semi)
-            decls = parseDeclarators(*semi);
-        else
-            decls = parseOneDeclarator();
+            decls = parseDeclarators(*semi, /* allowMinTypMax */ true);
+        else {
+            SmallVectorSized<TokenOrSyntax, 2> buffer;
+            buffer.append(&parseDeclarator(/* allowMinTypMax */ true));
+            decls = buffer.copy(alloc);
+        }
 
         return factory.parameterDeclaration(keyword, type, decls);
     }

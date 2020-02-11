@@ -148,8 +148,8 @@ private:
     NameSyntax& parseName(bitmask<NameOptions> options);
     NameSyntax& parseNamePart(bitmask<NameOptions> options);
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
-    ArgumentListSyntax& parseArgumentList();
-    ArgumentSyntax& parseArgument();
+    ArgumentListSyntax& parseArgumentList(bool allowMinTypMax = false);
+    ArgumentSyntax& parseArgument(bool allowMinTypMax);
     PatternSyntax& parsePattern();
     AssignmentPatternExpressionSyntax& parseAssignmentPatternExpression(DataTypeSyntax* type);
     AssignmentPatternItemSyntax& parseAssignmentPatternItem(ExpressionSyntax* key);
@@ -244,8 +244,7 @@ private:
     ClassDeclarationSyntax& parseClassDeclaration(AttrList attributes, Token virtualOrInterface);
     MemberSyntax* parseClassMember();
     ContinuousAssignSyntax& parseContinuousAssign(AttrList attributes);
-    DeclaratorSyntax& parseDeclarator();
-    span<TokenOrSyntax> parseOneDeclarator();
+    DeclaratorSyntax& parseDeclarator(bool allowMinTypMax = false);
     MemberSyntax* parseCoverageMember();
     BlockEventExpressionSyntax& parseBlockEventExpression();
     WithClauseSyntax* parseWithClause();
@@ -270,8 +269,9 @@ private:
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>
-    span<TokenOrSyntax> parseDeclarators(TokenKind endKind, Token& end);
-    span<TokenOrSyntax> parseDeclarators(Token& semi);
+    span<TokenOrSyntax> parseDeclarators(TokenKind endKind, Token& end,
+                                         bool allowMinTypMax = false);
+    span<TokenOrSyntax> parseDeclarators(Token& semi, bool allowMinTypMax = false);
 
     template<typename TMember, typename TParseFunc>
     span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);
