@@ -166,6 +166,16 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     }
 
     selfDetermined(context, result);
+
+    // If this is an enum initializer and we just discard unknown bits by
+    // implicitly converting to a 2-state result, the standard says we
+    // should declare this an error.
+    if ((context.flags & BindFlags::EnumInitializer) != 0 && !type.isFourState() && expr.constant &&
+        expr.constant->isInteger() && expr.constant->integer().hasUnknown()) {
+        context.addDiag(diag::EnumValueUnknownBits, expr.sourceRange) << *expr.constant << type;
+        return badExpr(compilation, result);
+    }
+
     return *result;
 }
 

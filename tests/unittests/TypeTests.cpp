@@ -107,7 +107,7 @@ endmodule
 TEST_CASE("Enum value errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    //enum bit [2:0] { A, B = 'x } e1;            // unknown not allowed
+    enum bit [2:0] { A, B = 'x } e1;            // unknown not allowed
     enum logic [2:0] { C, D = 'x, E } e2;       // incremented 'x not allowed
     enum logic [2:0] { F, G = 3'b111, H } e3;   // overflow
     enum logic [2:0] { I = 2, J = 1, K } e4;    // reuse of value
@@ -125,19 +125,18 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 10);
-    // TODO: re-enable once implemented
-    // CHECK(diags[0].code == diag::EnumValueUnknownBits);
-    CHECK(diags[0].code == diag::EnumIncrementUnknown);
-    CHECK(diags[1].code == diag::EnumValueOverflow);
-    CHECK(diags[2].code == diag::EnumValueDuplicate);
+    REQUIRE(diags.size() == 11);
+    CHECK(diags[0].code == diag::EnumValueUnknownBits);
+    CHECK(diags[1].code == diag::EnumIncrementUnknown);
+    CHECK(diags[2].code == diag::EnumValueOverflow);
     CHECK(diags[3].code == diag::EnumValueDuplicate);
-    CHECK(diags[4].code == diag::ExpectedDeclarator);
-    CHECK(diags[5].code == diag::ValueMustBePositive);
+    CHECK(diags[4].code == diag::EnumValueDuplicate);
+    CHECK(diags[5].code == diag::ExpectedDeclarator);
     CHECK(diags[6].code == diag::ValueMustBePositive);
-    CHECK(diags[7].code == diag::EnumRangeMultiDimensional);
-    CHECK(diags[8].code == diag::EnumValueOverflow);
-    CHECK(diags[9].code == diag::EnumIncrementUnknown);
+    CHECK(diags[7].code == diag::ValueMustBePositive);
+    CHECK(diags[8].code == diag::EnumRangeMultiDimensional);
+    CHECK(diags[9].code == diag::EnumValueOverflow);
+    CHECK(diags[10].code == diag::EnumIncrementUnknown);
 }
 
 TEST_CASE("Enum assignment exception") {

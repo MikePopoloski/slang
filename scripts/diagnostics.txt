@@ -229,6 +229,7 @@ error InvalidMemberAccess "invalid member access for type {}"
 error ExpressionNotCallable "expression is not callable"
 error NotBooleanConvertible "value of type {} is not convertible to a boolean predicate"
 error EnumValueSizeMismatch "expression width of {} does not exactly match declared enum type width of {}"
+error EnumValueUnknownBits "value of {} is invalid for enum with base type {}"
 error NoCommonComparisonType "{} expression of type {} is not comparable to common type {}"
 error AssignmentPatternNoContext "assignment pattern target type cannot be deduced in this context"
 error BadAssignmentPatternType "invalid target type {} for assignment pattern"
@@ -271,7 +272,6 @@ warning unused-result UnusedResult "ignoring return value of '{}', cast to void 
 
 subsystem Types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"
-error EnumValueUnknownBits "value of {} is invalid for enum with base type {}"
 error EnumValueOverflow "incrementing previous value {} would overflow enum base type {}"
 error EnumIncrementUnknown "cannot increment previous value {} because it has unknown bits"
 error EnumValueDuplicate "redefinition of enum value {}"
