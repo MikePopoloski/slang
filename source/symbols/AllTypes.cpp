@@ -238,7 +238,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     allOnes.setAllOnes();
 
     SVInt one(bitWidth, 1, cb->isSigned());
-    SVInt previous;
+    ConstantValue previous;
     SourceRange previousRange;
     bool first = true;
 
@@ -248,25 +248,24 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
     // Enum values must be unique; this set and lambda are used to check that.
     SmallMap<SVInt, SourceLocation, 8> usedValues;
-    auto checkValue = [&usedValues, &scope](const SVInt& value, SourceLocation loc) {
+    auto checkValue = [&usedValues, &scope](const ConstantValue& cv, SourceLocation loc) {
+        if (!cv)
+            return;
+
+        auto& value = cv.integer();
         auto pair = usedValues.emplace(value, loc);
         if (!pair.second) {
             auto& diag = scope.addDiag(diag::EnumValueDuplicate, loc) << value;
             diag.addNote(diag::NotePreviousDefinition, pair.first->second);
-            return false;
         }
-        return true;
     };
 
     // For enumerands that have an initializer, set it up appropriately.
     auto setInitializer = [&](EnumValueSymbol& ev, const EqualsValueClauseSyntax& initializer) {
         ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
-        auto& cv = ev.getConstantValue();
-        if (!cv)
-            return;
 
         first = false;
-        previous = cv.integer();
+        previous = ev.getConstantValue();
         previousRange = ev.getInitializer()->sourceRange;
 
         checkValue(previous, previousRange.start());
@@ -280,22 +279,28 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             value = SVInt(bitWidth, 0, cb->isSigned());
             first = false;
         }
-        else if (previous.hasUnknown()) {
-            auto& diag = scope.addDiag(diag::EnumIncrementUnknown, loc);
-            diag << previous << *base << previousRange;
-            return;
-        }
-        else if (previous == allOnes) {
-            auto& diag = scope.addDiag(diag::EnumValueOverflow, loc);
-            diag << previous << *base << previousRange;
+        else if (!previous) {
             return;
         }
         else {
-            value = previous + one;
+            auto& prev = previous.integer();
+            if (prev.hasUnknown()) {
+                auto& diag = scope.addDiag(diag::EnumIncrementUnknown, loc);
+                diag << prev << *base << previousRange;
+                previous = nullptr;
+                return;
+            }
+            else if (prev == allOnes) {
+                auto& diag = scope.addDiag(diag::EnumValueOverflow, loc);
+                diag << prev << *base << previousRange;
+                previous = nullptr;
+                return;
+            }
+
+            value = prev + one;
         }
 
-        if (!checkValue(value, loc))
-            return;
+        checkValue(value, loc);
 
         ev.setValue(value);
         previous = std::move(value);

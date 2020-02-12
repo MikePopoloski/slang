@@ -189,6 +189,22 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Enum -- bad value propagation") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module m #(parameter int foo)();
+    enum { ASDF = foo, BAR } baz;
+    I i[BAR]();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Packed structs") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
