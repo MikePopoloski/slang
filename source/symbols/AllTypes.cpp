@@ -198,7 +198,7 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& bas
                    LookupLocation lookupLocation, const Scope& scope) :
     IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(), baseType_.isSigned(),
                  baseType_.isFourState()),
-    Scope(compilation, this), baseType(baseType_) {
+    Scope(compilation, this), baseType(baseType_), systemId(compilation.getNextEnumSystemId()) {
 
     // Enum types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
@@ -458,7 +458,7 @@ PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth
                                    bool isFourState, SourceLocation loc,
                                    LookupLocation lookupLocation, const Scope& scope) :
     IntegralType(SymbolKind::PackedStructType, "", loc, bitWidth, isSigned, isFourState),
-    Scope(compilation, this) {
+    Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
 
     // Struct types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
@@ -550,7 +550,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
 UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation loc,
                                        LookupLocation lookupLocation, const Scope& scope) :
     Type(SymbolKind::UnpackedStructType, "", loc),
-    Scope(compilation, this) {
+    Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
 
     // Struct types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
@@ -601,7 +601,7 @@ PackedUnionType::PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, 
                                  bool isFourState, SourceLocation loc,
                                  LookupLocation lookupLocation, const Scope& scope) :
     IntegralType(SymbolKind::PackedUnionType, "", loc, bitWidth, isSigned, isFourState),
-    Scope(compilation, this) {
+    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()) {
 
     // Union types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
@@ -697,7 +697,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
 UnpackedUnionType::UnpackedUnionType(Compilation& compilation, SourceLocation loc,
                                      LookupLocation lookupLocation, const Scope& scope) :
     Type(SymbolKind::UnpackedUnionType, "", loc),
-    Scope(compilation, this) {
+    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()) {
 
     // Union types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name

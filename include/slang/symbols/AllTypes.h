@@ -96,6 +96,7 @@ struct EnumTypeSyntax;
 class EnumType : public IntegralType, public Scope {
 public:
     const Type& baseType;
+    int systemId;
 
     EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType,
              LookupLocation lookupLocation, const Scope& scope);
@@ -165,6 +166,8 @@ struct StructUnionTypeSyntax;
 /// Represents a packed structure of members.
 class PackedStructType : public IntegralType, public Scope {
 public:
+    int systemId;
+
     PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState,
                      SourceLocation loc, LookupLocation lookupLocation, const Scope& scope);
 
@@ -177,6 +180,8 @@ public:
 /// Represents an unpacked structure of members.
 class UnpackedStructType : public Type, public Scope {
 public:
+    int systemId;
+
     UnpackedStructType(Compilation& compilation, SourceLocation loc, LookupLocation lookupLocation,
                        const Scope& scope);
 
@@ -191,6 +196,8 @@ public:
 /// Represents a packed union of members.
 class PackedUnionType : public IntegralType, public Scope {
 public:
+    int systemId;
+
     PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState,
                     SourceLocation loc, LookupLocation lookupLocation, const Scope& scope);
 
@@ -203,6 +210,8 @@ public:
 /// Represents an unpacked union of members.
 class UnpackedUnionType : public Type, public Scope {
 public:
+    int systemId;
+
     UnpackedUnionType(Compilation& compilation, SourceLocation loc, LookupLocation lookupLocation,
                       const Scope& scope);
 

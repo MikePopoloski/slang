@@ -241,6 +241,10 @@ public:
     /// which modules are considered "top level".
     void noteUninstantiatedGenerateBlock(const SyntaxNode& node);
 
+    int getNextEnumSystemId() { return nextEnumSystemId++; }
+    int getNextStructSystemId() { return nextStructSystemId++; }
+    int getNextUnionSystemId() { return nextUnionSystemId++; }
+
 private:
     // These functions are called by Scopes to create and track various members.
     friend class Scope;
@@ -343,6 +347,9 @@ private:
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()
     uint32_t typoCorrections = 0;
+    int nextEnumSystemId = 1;
+    int nextStructSystemId = 1;
+    int nextUnionSystemId = 1;
 
     optional<Diagnostics> cachedParseDiagnostics;
     optional<Diagnostics> cachedSemanticDiagnostics;
