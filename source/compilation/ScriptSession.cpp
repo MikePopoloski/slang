@@ -46,6 +46,10 @@ ConstantValue ScriptSession::eval(string_view text) {
             }
             return nullptr;
         }
+        case SyntaxKind::CompilationUnit:
+            for (auto member : node.as<CompilationUnitSyntax>().members)
+                scope.addMembers(*member);
+            return nullptr;
         default:
             if (ExpressionSyntax::isKind(node.kind))
                 return evalExpression(node.as<ExpressionSyntax>());
