@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include "slang/compilation/ScriptSession.h"
+
 TEST_CASE("Enum declaration") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
@@ -645,4 +647,38 @@ TEST_CASE("Type equivalence") {
     CHECK(!equiv("E", "A"));
 
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("$typename") {
+    ScriptSession session;
+
+    session.eval(R"(
+typedef bit node;
+node [2:0] X;
+int signed Y;
+package A;
+    enum {A,B,C=99} X;
+    typedef bit [9:1'b1] word;
+endpackage : A
+import A::*;
+module top;
+    if (1) begin : foo
+        typedef struct {node A,B;} AB_t;
+        AB_t AB[10];
+        struct {node A,B;} bar;
+    end
+endmodule
+)");
+
+    auto tn = [&](auto& name) { return session.eval("$typename("s + name + ")"s).str(); };
+
+    CHECK(tn("node") == "bit");
+    CHECK(tn("X") == "bit[2:0]");
+    CHECK(tn("Y") == "int");
+    // TODO: CHECK(tn("A::X") == "enum{A=32'sd0,B=32'sd1,C=32'sd99}A::e$1");
+    CHECK(tn("A::word") == "bit[9:1]");
+    CHECK(tn("top.foo.AB") == "struct{bit A;bit B;}top.foo.AB_t$[0:9]");
+    CHECK(tn("top.foo.bar") == "struct{bit A;bit B;}top.foo.s$2");
+
+    NO_SESSION_ERRORS;
 }

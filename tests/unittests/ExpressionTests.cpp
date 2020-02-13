@@ -208,11 +208,11 @@ TEST_CASE("Expression types") {
     // Literals / misc
     CHECK(typeof("\"asdfg\"") == "bit[39:0]");
     CHECK(typeof("reg1 + reg2") == "reg");
-    CHECK(typeof("e1") == "enum{EVAL1=0,EVAL2=1}");
+    CHECK(typeof("e1") == "enum{EVAL1=0,EVAL2=1}e$1");
 
     // Unary operators
     CHECK(typeof("+i") == "int");
-    CHECK(typeof("-sp") == "struct packed{logic a;bit b;}");
+    CHECK(typeof("-sp") == "struct packed{logic a;bit b;}s$1");
     CHECK(typeof("!r") == "bit");
     CHECK(typeof("~r") == "<error>");
     CHECK(typeof("&l") == "logic");
@@ -263,16 +263,16 @@ TEST_CASE("Expression types") {
     CHECK(typeof("i ? arr2 : arr3") == "bit[7:0]$[2:0]");
     CHECK(typeof("i ? arr1: arr2") == "<error>");
     CHECK(typeof("arr2 ? 1 : 0") == "<error>");
-    CHECK(typeof("i ? EVAL1 : EVAL2") == "enum{EVAL1=0,EVAL2=1}");
-    CHECK(typeof("b1 ? e1 : e1") == "enum{EVAL1=0,EVAL2=1}");
-    CHECK(typeof("ig4 ? e1 : EVAL1") == "enum{EVAL1=0,EVAL2=1}");
+    CHECK(typeof("i ? EVAL1 : EVAL2") == "enum{EVAL1=0,EVAL2=1}e$1");
+    CHECK(typeof("b1 ? e1 : e1") == "enum{EVAL1=0,EVAL2=1}e$1");
+    CHECK(typeof("ig4 ? e1 : EVAL1") == "enum{EVAL1=0,EVAL2=1}e$1");
 
     // Member access
     declare("struct packed { logic [13:0] a; bit b; } foo;");
     declare("struct packed { logic [13:0] a; bit b; } [3:0] spPackedArray;");
     declare("union { logic [13:0] a; int b; } upUnion;");
     CHECK(typeof("foo.a") == "logic[13:0]");
-    CHECK(typeof("spPackedArray") == "struct packed{logic[13:0] a;bit b;}[3:0]");
+    CHECK(typeof("spPackedArray") == "struct packed{logic[13:0] a;bit b;}s$5[3:0]");
     CHECK(typeof("spPackedArray[0].a") == "logic[13:0]");
     CHECK(typeof("upUnion.a") == "logic[13:0]");
     CHECK(typeof("upUnion.b") == "int");

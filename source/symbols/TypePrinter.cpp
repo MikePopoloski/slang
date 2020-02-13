@@ -12,6 +12,22 @@
 
 namespace slang {
 
+static std::string getLexicalPath(const Scope* scope) {
+    if (!scope || scope->asSymbol().kind == SymbolKind::CompilationUnit)
+        return "";
+
+    std::string str;
+    auto& sym = scope->asSymbol();
+    sym.getLexicalPath(str);
+
+    if (sym.kind == SymbolKind::Package || sym.kind == SymbolKind::ClassType)
+        str.append("::");
+    else
+        str.push_back('.');
+
+    return str;
+}
+
 TypePrinter::TypePrinter() : buffer(std::make_unique<FormatBuffer>()) {
 }
 
@@ -95,10 +111,12 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
         }
         buffer->append("}");
 
-        // TODO: print scope name
-        // TODO: print system name
         if (!overrideName.empty())
             buffer->append(overrideName);
+        else {
+            printScope(type.getParentScope());
+            buffer->format("e${}", type.systemId);
+        }
     }
 }
 
@@ -120,7 +138,7 @@ void TypePrinter::visit(const PackedArrayType& type, string_view) {
 
 void TypePrinter::visit(const PackedStructType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        //printScope(type.getParentScope());
+        // printScope(type.getParentScope());
 
         if (overrideName.empty())
             buffer->append("<unnamed packed struct>");
@@ -133,17 +151,19 @@ void TypePrinter::visit(const PackedStructType& type, string_view overrideName) 
             buffer->append(" signed");
 
         appendMembers(type);
-        //printScope(type.getParentScope());
 
-        // TODO: print system name
         if (!overrideName.empty())
             buffer->append(overrideName);
+        else {
+            printScope(type.getParentScope());
+            buffer->format("s${}", type.systemId);
+        }
     }
 }
 
 void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        //printScope(type.getParentScope());
+        // printScope(type.getParentScope());
 
         if (overrideName.empty())
             buffer->append("<unnamed packed union>");
@@ -156,11 +176,13 @@ void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
             buffer->append(" signed");
 
         appendMembers(type);
-        //printScope(type.getParentScope());
 
-        // TODO: print system name
         if (!overrideName.empty())
             buffer->append(overrideName);
+        else {
+            printScope(type.getParentScope());
+            buffer->format("u${}", type.systemId);
+        }
     }
 }
 
@@ -198,7 +220,7 @@ void TypePrinter::visit(const UnpackedArrayType& type, string_view) {
 
 void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        //printScope(type.getParentScope());
+        // printScope(type.getParentScope());
         if (overrideName.empty())
             buffer->append("<unnamed unpacked struct>");
         else
@@ -207,17 +229,19 @@ void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName
     else {
         buffer->append("struct");
         appendMembers(type);
-        //printScope(type.getParentScope());
 
-        // TODO: print system name
         if (!overrideName.empty())
             buffer->append(overrideName);
+        else {
+            printScope(type.getParentScope());
+            buffer->format("s${}", type.systemId);
+        }
     }
 }
 
 void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        //printScope(type.getParentScope());
+        // printScope(type.getParentScope());
         if (overrideName.empty())
             buffer->append("<unnamed unpacked union>");
         else
@@ -226,11 +250,13 @@ void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName)
     else {
         buffer->append("union");
         appendMembers(type);
-        //printScope(type.getParentScope());
 
-        // TODO: print system name
         if (!overrideName.empty())
             buffer->append(overrideName);
+        else {
+            printScope(type.getParentScope());
+            buffer->format("u${}", type.systemId);
+        }
     }
 }
 
@@ -254,8 +280,18 @@ void TypePrinter::visit(const EventType&, string_view) {
     buffer->append("event");
 }
 
-void TypePrinter::visit(const TypeAliasType& type, string_view) {
-    type.targetType.getType().visit(*this, type.name);
+void TypePrinter::visit(const TypeAliasType& type, string_view overrideName) {
+    if (!overrideName.empty()) {
+        type.targetType.getType().visit(*this, overrideName);
+    }
+    else if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+        type.targetType.getType().visit(*this, type.name);
+    }
+    else {
+        std::string path = getLexicalPath(type.getParentScope());
+        path.append(type.name);
+        type.targetType.getType().visit(*this, path);
+    }
 }
 
 void TypePrinter::visit(const ErrorType&, string_view) {
@@ -273,18 +309,7 @@ void TypePrinter::appendMembers(const Scope& scope) {
 }
 
 void TypePrinter::printScope(const Scope* scope) {
-    if (!scope)
-        return;
-
-    std::string str;
-    auto& sym = scope->asSymbol();
-    sym.getHierarchicalPath(str);
-
-    buffer->append(str);
-    if (sym.kind == SymbolKind::Package || sym.kind == SymbolKind::ClassType)
-        buffer->append("::");
-    else
-        buffer->append(".");
+    buffer->append(getLexicalPath(scope));
 }
 
 } // namespace slang

@@ -202,10 +202,10 @@ endmodule
     checkPort("test", "f", PortDirection::Ref, wire, "logic");
 
     checkPort("test", "g", PortDirection::In, nullptr, "logic");
-    checkPort("test", "h", PortDirection::In, nullptr, "struct{logic f;}");
+    checkPort("test", "h", PortDirection::In, nullptr, "struct{logic f;}test.s$2");
     checkPort("test", "i", PortDirection::Out, wire, "logic[2:0]");
     checkPort("test", "j", PortDirection::Out, wire, "logic");
-    checkPort("test", "k", PortDirection::In, nullptr, "struct{logic f;}");
+    checkPort("test", "k", PortDirection::In, nullptr, "struct{logic f;}test.s$1");
     checkPort("test", "l", PortDirection::In, nullptr, "logic[1:0]$[0:1]");
     checkPort("test", "m", PortDirection::In, nullptr, "logic[2:0]");
     checkPort("test", "n", PortDirection::In, nullptr, "logic$[0:2]");

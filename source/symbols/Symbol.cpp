@@ -99,6 +99,29 @@ void Symbol::getHierarchicalPath(std::string& buffer) const {
         buffer.append("$unit");
 }
 
+static void getLexicalPathImpl(const Symbol& symbol, std::string& buffer) {
+    if (symbol.getLexicalScope()) {
+        auto& parent = symbol.getLexicalScope()->asSymbol();
+        if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
+            getLexicalPathImpl(parent, buffer);
+
+            if (!symbol.name.empty()) {
+                if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType)
+                    buffer.append("::");
+                else
+                    buffer.append(".");
+            }
+        }
+    }
+
+    if (!symbol.name.empty())
+        buffer.append(symbol.name);
+}
+
+void Symbol::getLexicalPath(std::string& buffer) const {
+    getLexicalPathImpl(*this, buffer);
+}
+
 optional<bool> Symbol::isDeclaredBefore(const Symbol& target) const {
     return isDeclaredBefore(LookupLocation::beforeLexical(target));
 }
