@@ -36,9 +36,17 @@ TypePrinter::~TypePrinter() = default;
 void TypePrinter::append(const Type& type) {
     if (options.addSingleQuotes)
         buffer->append("'");
-    type.visit(*this, "");
+
+    if (options.printAKA && type.kind == SymbolKind::TypeAlias)
+        buffer->append(type.name);
+    else
+        type.visit(*this, ""sv);
+
     if (options.addSingleQuotes)
         buffer->append("'");
+
+    if (options.printAKA && type.kind == SymbolKind::TypeAlias)
+        printAKA(type);
 }
 
 std::string TypePrinter::toString() const {
@@ -207,10 +215,10 @@ void TypePrinter::visit(const UnpackedArrayType& type, string_view) {
         }
 
         buffer->append(" of ");
-        append(curr->elementType);
+        curr->elementType.visit(*this, ""sv);
     }
     else {
-        append(curr->elementType);
+        curr->elementType.visit(*this, ""sv);
         buffer->append("$");
 
         for (auto& range : dims)
@@ -315,6 +323,26 @@ void TypePrinter::printScope(const Scope* scope) {
         return;
 
     buffer->append(getLexicalPath(scope));
+}
+
+void TypePrinter::printAKA(const Type& type) {
+    // Only print the AKA if the target type has a real name.
+    // The typedefs can chain, so we want to walk down the chain
+    // and take the last named type we see.
+    const Type* target = &type;
+    while (target->isAlias()) {
+        const Type& newTarget = target->as<TypeAliasType>().targetType.getType();
+        if (newTarget.name.empty() && !newTarget.isArray())
+            break;
+
+        target = &newTarget;
+    }
+
+    if (target != &type) {
+        buffer->append(" (aka '");
+        target->visit(*this, ""sv);
+        buffer->append("')");
+    }
 }
 
 } // namespace slang

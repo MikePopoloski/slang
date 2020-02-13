@@ -473,8 +473,8 @@ endmodule
     CHECK(diags[3].code == diag::ValueMustBePositive);
     CHECK(diags[4].code == diag::PackedMemberNotIntegral);
 
-    CHECK(report(diags) ==
-          R"(source:2:20: error: value must not have any unknown bits
+    CHECK("\n" + report(diags) == R"(
+source:2:20: error: value must not have any unknown bits
 module Top(logic f[3'b1x0],
                    ^~~~~~
 source:3:14: error: value must be positive
@@ -486,9 +486,39 @@ source:4:14: error: 72'hffffffffffffffffff is out of allowed range (-2147483648 
 source:5:14: error: value must be positive
            i[0]);
              ^
-source:7:27: error: packed members must be of integral type (type is 'unpacked array [3] of 'logic'')
+source:7:27: error: packed members must be of integral type (type is 'unpacked array [3] of logic')
     struct packed { logic j[3]; } foo;
                           ^~~~
+)");
+}
+
+TEST_CASE("Typedef AKA in diagnostics") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { logic a; } asdf;
+    typedef asdf blah;
+    blah b;
+    int i = b;
+
+    typedef logic[3:0] test1;
+    typedef test1 test2[3];
+    test2 t;
+    chandle j = t;
+endmodule
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK("\n" + report(diags) == R"(
+source:6:11: error: value of type 'blah' (aka 'asdf') cannot be assigned to type 'int'
+    int i = b;
+          ^ ~
+source:11:15: error: value of type 'test2' (aka 'unpacked array [3] of logic[3:0]') cannot be assigned to type 'chandle'
+    chandle j = t;
+              ^ ~
 )");
 }
 

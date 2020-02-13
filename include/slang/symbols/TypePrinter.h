@@ -13,9 +13,9 @@ namespace slang {
 class FormatBuffer;
 
 struct TypePrintingOptions {
-    bool printAKA = false;
     bool addSingleQuotes = false;
     bool elideScopeNames = false;
+    bool printAKA = false;
 
     enum AnonymousTypeStyle { SystemName, FriendlyName } anonymousTypeStyle = SystemName;
 
@@ -57,6 +57,7 @@ public:
 private:
     void appendMembers(const Scope& scope);
     void printScope(const Scope* scope);
+    void printAKA(const Type& type);
 
     std::unique_ptr<FormatBuffer> buffer;
     TypePrintingOptions options;

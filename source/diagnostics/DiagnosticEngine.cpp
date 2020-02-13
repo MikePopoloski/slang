@@ -29,6 +29,7 @@ DiagnosticEngine::DiagnosticEngine(const SourceManager& sourceManager) :
     typePrintingOptions = std::make_unique<TypePrintingOptions>();
     typePrintingOptions->addSingleQuotes = true;
     typePrintingOptions->elideScopeNames = true;
+    typePrintingOptions->printAKA = true;
     typePrintingOptions->anonymousTypeStyle = TypePrintingOptions::FriendlyName;
 }
 
