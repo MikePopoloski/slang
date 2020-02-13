@@ -675,7 +675,7 @@ endmodule
     CHECK(tn("node") == "bit");
     CHECK(tn("X") == "bit[2:0]");
     CHECK(tn("Y") == "int");
-    // TODO: CHECK(tn("A::X") == "enum{A=32'sd0,B=32'sd1,C=32'sd99}A::e$1");
+    CHECK(tn("A::X") == "enum{A=32'sd0,B=32'sd1,C=32'sd99}A::e$1");
     CHECK(tn("A::word") == "bit[9:1]");
     CHECK(tn("top.foo.AB") == "struct{bit A;bit B;}top.foo.AB_t$[0:9]");
     CHECK(tn("top.foo.bar") == "struct{bit A;bit B;}top.foo.s$2");

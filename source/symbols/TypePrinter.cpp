@@ -104,9 +104,9 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
             if (!first)
                 buffer->append(",");
 
-            // TODO: write value with correct prefix
+            auto& value = member.getValue().integer();
             buffer->format("{}={}", member.name,
-                           member.getValue().integer().toString(LiteralBase::Decimal));
+                           value.toString(LiteralBase::Decimal, /* includeBase */ true));
             first = false;
         }
         buffer->append("}");
@@ -138,7 +138,7 @@ void TypePrinter::visit(const PackedArrayType& type, string_view) {
 
 void TypePrinter::visit(const PackedStructType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        // printScope(type.getParentScope());
+        printScope(type.getParentScope());
 
         if (overrideName.empty())
             buffer->append("<unnamed packed struct>");
@@ -163,7 +163,7 @@ void TypePrinter::visit(const PackedStructType& type, string_view overrideName) 
 
 void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        // printScope(type.getParentScope());
+        printScope(type.getParentScope());
 
         if (overrideName.empty())
             buffer->append("<unnamed packed union>");
@@ -220,7 +220,8 @@ void TypePrinter::visit(const UnpackedArrayType& type, string_view) {
 
 void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        // printScope(type.getParentScope());
+        printScope(type.getParentScope());
+
         if (overrideName.empty())
             buffer->append("<unnamed unpacked struct>");
         else
@@ -241,7 +242,8 @@ void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName
 
 void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        // printScope(type.getParentScope());
+        printScope(type.getParentScope());
+
         if (overrideName.empty())
             buffer->append("<unnamed unpacked union>");
         else
@@ -284,7 +286,7 @@ void TypePrinter::visit(const TypeAliasType& type, string_view overrideName) {
     if (!overrideName.empty()) {
         type.targetType.getType().visit(*this, overrideName);
     }
-    else if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+    else if (options.elideScopeNames) {
         type.targetType.getType().visit(*this, type.name);
     }
     else {
@@ -309,6 +311,9 @@ void TypePrinter::appendMembers(const Scope& scope) {
 }
 
 void TypePrinter::printScope(const Scope* scope) {
+    if (options.elideScopeNames)
+        return;
+
     buffer->append(getLexicalPath(scope));
 }
 
