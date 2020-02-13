@@ -370,15 +370,17 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                                         forceSigned);
         case SyntaxKind::StructType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
-            return structUnion.packed ? PackedStructType::fromSyntax(compilation, structUnion,
-                                                                     location, parent, forceSigned)
-                                      : UnpackedStructType::fromSyntax(parent, structUnion);
+            return structUnion.packed
+                       ? PackedStructType::fromSyntax(compilation, structUnion, location, parent,
+                                                      forceSigned)
+                       : UnpackedStructType::fromSyntax(parent, location, structUnion);
         }
         case SyntaxKind::UnionType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
-            return structUnion.packed ? PackedUnionType::fromSyntax(compilation, structUnion,
-                                                                    location, parent, forceSigned)
-                                      : UnpackedUnionType::fromSyntax(parent, structUnion);
+            return structUnion.packed
+                       ? PackedUnionType::fromSyntax(compilation, structUnion, location, parent,
+                                                     forceSigned)
+                       : UnpackedUnionType::fromSyntax(parent, location, structUnion);
         }
         case SyntaxKind::NamedType:
             return lookupNamedType(compilation, *node.as<NamedTypeSyntax>().name, location, parent);

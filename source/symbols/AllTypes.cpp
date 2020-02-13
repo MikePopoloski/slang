@@ -195,7 +195,7 @@ ConstantValue FloatingType::getDefaultValueImpl() const {
 }
 
 EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType_,
-                   LookupLocation lookupLocation) :
+                   LookupLocation lookupLocation, const Scope& scope) :
     IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(), baseType_.isSigned(),
                  baseType_.isFourState()),
     Scope(compilation, this), baseType(baseType_) {
@@ -203,9 +203,7 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& bas
     // Enum types don't live as members of the parent scope (they're "owned" by the declaration
     // containing them) but we hook up the parent pointer so that it can participate in name
     // lookups.
-    auto scope = lookupLocation.getScope();
-    ASSERT(scope);
-    setParent(*scope, lookupLocation.getIndex());
+    setParent(scope, lookupLocation.getIndex());
 }
 
 const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
@@ -242,8 +240,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     SourceRange previousRange;
     bool first = true;
 
-    auto resultType =
-        compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base, location);
+    auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base,
+                                                    location, scope);
     resultType->setSyntax(syntax);
 
     // Enum values must be unique; this set and lambda are used to check that.
@@ -457,10 +455,15 @@ ConstantValue UnpackedArrayType::getDefaultValueImpl() const {
 }
 
 PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
-                                   bool isFourState) :
-    IntegralType(SymbolKind::PackedStructType, "", SourceLocation(), bitWidth, isSigned,
-                 isFourState),
+                                   bool isFourState, SourceLocation loc,
+                                   LookupLocation lookupLocation, const Scope& scope) :
+    IntegralType(SymbolKind::PackedStructType, "", loc, bitWidth, isSigned, isFourState),
     Scope(compilation, this) {
+
+    // Struct types don't live as members of the parent scope (they're "owned" by the declaration
+    // containing them) but we hook up the parent pointer so that it can participate in name
+    // lookups.
+    setParent(scope, lookupLocation.getIndex());
 }
 
 const Type& PackedStructType::fromSyntax(Compilation& compilation,
@@ -520,8 +523,9 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
     if (!bitWidth)
         return compilation.getErrorType();
 
-    auto structType =
-        compilation.emplace<PackedStructType>(compilation, bitWidth, isSigned, isFourState);
+    auto structType = compilation.emplace<PackedStructType>(
+        compilation, bitWidth, isSigned, isFourState, syntax.keyword.location(), location, scope);
+
     for (auto member : make_reverse_range(members))
         structType->addMember(*member);
 
@@ -543,8 +547,15 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-UnpackedStructType::UnpackedStructType(Compilation& compilation) :
-    Type(SymbolKind::UnpackedStructType, "", SourceLocation()), Scope(compilation, this) {
+UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation loc,
+                                       LookupLocation lookupLocation, const Scope& scope) :
+    Type(SymbolKind::UnpackedStructType, "", loc),
+    Scope(compilation, this) {
+
+    // Struct types don't live as members of the parent scope (they're "owned" by the declaration
+    // containing them) but we hook up the parent pointer so that it can participate in name
+    // lookups.
+    setParent(scope, lookupLocation.getIndex());
 }
 
 ConstantValue UnpackedStructType::getDefaultValueImpl() const {
@@ -555,13 +566,15 @@ ConstantValue UnpackedStructType::getDefaultValueImpl() const {
     return elements;
 }
 
-const Type& UnpackedStructType::fromSyntax(const Scope& scope,
+const Type& UnpackedStructType::fromSyntax(const Scope& scope, LookupLocation location,
                                            const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
     uint32_t fieldIndex = 0;
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<UnpackedStructType>(comp);
+    auto result =
+        comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), location, scope);
+
     for (auto member : syntax.members) {
         for (auto decl : member->declarators) {
             auto variable = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
@@ -585,10 +598,15 @@ const Type& UnpackedStructType::fromSyntax(const Scope& scope,
 }
 
 PackedUnionType::PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
-                                 bool isFourState) :
-    IntegralType(SymbolKind::PackedUnionType, "", SourceLocation(), bitWidth, isSigned,
-                 isFourState),
+                                 bool isFourState, SourceLocation loc,
+                                 LookupLocation lookupLocation, const Scope& scope) :
+    IntegralType(SymbolKind::PackedUnionType, "", loc, bitWidth, isSigned, isFourState),
     Scope(compilation, this) {
+
+    // Union types don't live as members of the parent scope (they're "owned" by the declaration
+    // containing them) but we hook up the parent pointer so that it can participate in name
+    // lookups.
+    setParent(scope, lookupLocation.getIndex());
 }
 
 const Type& PackedUnionType::fromSyntax(Compilation& compilation,
@@ -652,8 +670,9 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
     if (!bitWidth)
         return compilation.getErrorType();
 
-    auto unionType =
-        compilation.emplace<PackedUnionType>(compilation, bitWidth, isSigned, isFourState);
+    auto unionType = compilation.emplace<PackedUnionType>(
+        compilation, bitWidth, isSigned, isFourState, syntax.keyword.location(), location, scope);
+
     for (auto member : members)
         unionType->addMember(*member);
 
@@ -675,8 +694,15 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-UnpackedUnionType::UnpackedUnionType(Compilation& compilation) :
-    Type(SymbolKind::UnpackedUnionType, "", SourceLocation()), Scope(compilation, this) {
+UnpackedUnionType::UnpackedUnionType(Compilation& compilation, SourceLocation loc,
+                                     LookupLocation lookupLocation, const Scope& scope) :
+    Type(SymbolKind::UnpackedUnionType, "", loc),
+    Scope(compilation, this) {
+
+    // Union types don't live as members of the parent scope (they're "owned" by the declaration
+    // containing them) but we hook up the parent pointer so that it can participate in name
+    // lookups.
+    setParent(scope, lookupLocation.getIndex());
 }
 
 ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
@@ -688,11 +714,13 @@ ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
     return it->getType().getDefaultValue();
 }
 
-const Type& UnpackedUnionType::fromSyntax(const Scope& scope, const StructUnionTypeSyntax& syntax) {
+const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation location,
+                                          const StructUnionTypeSyntax& syntax) {
     ASSERT(!syntax.packed);
 
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<UnpackedUnionType>(comp);
+    auto result = comp.emplace<UnpackedUnionType>(comp, syntax.keyword.location(), location, scope);
+
     for (auto member : syntax.members) {
         for (auto decl : member->declarators) {
             auto variable =

@@ -1267,3 +1267,17 @@ source:3:9: note: declared here
         ^
 )");
 }
+
+TEST_CASE("Typedef / struct member lookup bug") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef logic[1:0] asdf;
+    struct { asdf a; } blah;
+    localparam int i = $bits(blah.a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

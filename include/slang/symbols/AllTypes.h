@@ -98,7 +98,7 @@ public:
     const Type& baseType;
 
     EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType,
-             LookupLocation lookupLocation);
+             LookupLocation lookupLocation, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope, bool forceSigned);
@@ -165,8 +165,8 @@ struct StructUnionTypeSyntax;
 /// Represents a packed structure of members.
 class PackedStructType : public IntegralType, public Scope {
 public:
-    PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
-                     bool isFourState);
+    PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState,
+                     SourceLocation loc, LookupLocation lookupLocation, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope, bool forceSigned);
@@ -177,9 +177,11 @@ public:
 /// Represents an unpacked structure of members.
 class UnpackedStructType : public Type, public Scope {
 public:
-    explicit UnpackedStructType(Compilation& compilation);
+    UnpackedStructType(Compilation& compilation, SourceLocation loc, LookupLocation lookupLocation,
+                       const Scope& scope);
 
-    static const Type& fromSyntax(const Scope& scope, const StructUnionTypeSyntax& syntax);
+    static const Type& fromSyntax(const Scope& scope, LookupLocation location,
+                                  const StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -189,7 +191,8 @@ public:
 /// Represents a packed union of members.
 class PackedUnionType : public IntegralType, public Scope {
 public:
-    PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState);
+    PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState,
+                    SourceLocation loc, LookupLocation lookupLocation, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope, bool forceSigned);
@@ -200,9 +203,11 @@ public:
 /// Represents an unpacked union of members.
 class UnpackedUnionType : public Type, public Scope {
 public:
-    explicit UnpackedUnionType(Compilation& compilation);
+    UnpackedUnionType(Compilation& compilation, SourceLocation loc, LookupLocation lookupLocation,
+                      const Scope& scope);
 
-    static const Type& fromSyntax(const Scope& scope, const StructUnionTypeSyntax& syntax);
+    static const Type& fromSyntax(const Scope& scope, LookupLocation location,
+                                  const StructUnionTypeSyntax& syntax);
 
     ConstantValue getDefaultValueImpl() const;
 

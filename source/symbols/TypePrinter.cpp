@@ -120,7 +120,7 @@ void TypePrinter::visit(const PackedArrayType& type, string_view) {
 
 void TypePrinter::visit(const PackedStructType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        printScope(type.getParentScope());
+        //printScope(type.getParentScope());
 
         if (overrideName.empty())
             buffer->append("<unnamed packed struct>");
@@ -133,7 +133,7 @@ void TypePrinter::visit(const PackedStructType& type, string_view overrideName) 
             buffer->append(" signed");
 
         appendMembers(type);
-        printScope(type.getParentScope());
+        //printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())
@@ -143,7 +143,7 @@ void TypePrinter::visit(const PackedStructType& type, string_view overrideName) 
 
 void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        printScope(type.getParentScope());
+        //printScope(type.getParentScope());
 
         if (overrideName.empty())
             buffer->append("<unnamed packed union>");
@@ -156,7 +156,7 @@ void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
             buffer->append(" signed");
 
         appendMembers(type);
-        printScope(type.getParentScope());
+        //printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())
@@ -198,7 +198,7 @@ void TypePrinter::visit(const UnpackedArrayType& type, string_view) {
 
 void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        printScope(type.getParentScope());
+        //printScope(type.getParentScope());
         if (overrideName.empty())
             buffer->append("<unnamed unpacked struct>");
         else
@@ -207,7 +207,7 @@ void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName
     else {
         buffer->append("struct");
         appendMembers(type);
-        printScope(type.getParentScope());
+        //printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())
@@ -217,7 +217,7 @@ void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName
 
 void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        printScope(type.getParentScope());
+        //printScope(type.getParentScope());
         if (overrideName.empty())
             buffer->append("<unnamed unpacked union>");
         else
@@ -226,7 +226,7 @@ void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName)
     else {
         buffer->append("union");
         appendMembers(type);
-        printScope(type.getParentScope());
+        //printScope(type.getParentScope());
 
         // TODO: print system name
         if (!overrideName.empty())
