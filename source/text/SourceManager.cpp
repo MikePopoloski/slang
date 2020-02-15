@@ -7,7 +7,7 @@
 #include "slang/text/SourceManager.h"
 
 #if !defined(_MSC_VER)
-#include <sys/stat.h>
+#    include <sys/stat.h>
 #endif
 
 #include <fstream>
@@ -391,6 +391,27 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
         full = fs::path(widen(info->data->name)).replace_filename(linePath);
 
     info->lineDirectives.emplace_back(full.u8string(), sourceLineNum, lineNum, level);
+}
+
+void SourceManager::addDiagnosticDirective(SourceLocation location, string_view name,
+                                           DiagnosticSeverity severity) {
+    SourceLocation fileLocation = getFullyExpandedLoc(location);
+
+    std::unique_lock lock(mut);
+
+    size_t offset = fileLocation.offset();
+    auto& vec = diagDirectives[fileLocation.buffer()];
+    if (vec.empty() || offset >= vec.back().offset)
+        vec.emplace_back(name, offset, severity);
+    else {
+        // Keep the list in sorted order. Typically new additions should be at the end,
+        // in which case we'll hit the condition above, but just in case we will do the
+        // full search and insert here.
+        vec.emplace(
+            std::upper_bound(vec.begin(), vec.end(), offset,
+                             [](size_t offset, auto& diag) { return offset < diag.offset; }),
+            name, offset, severity);
+    }
 }
 
 SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer) {

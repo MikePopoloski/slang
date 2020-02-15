@@ -108,6 +108,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
 
     DiagnosticEngine diagEngine(sourceManager);
     Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
+    Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
     diagEngine.setErrorLimit(errorLimit);
 
     auto client = std::make_shared<TextDiagnosticClient>();
@@ -115,6 +116,9 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
     diagEngine.addClient(client);
 
     for (auto& diag : optionDiags)
+        diagEngine.issue(diag);
+
+    for (auto& diag : pragmaDiags)
         diagEngine.issue(diag);
 
     if (onlyParse) {

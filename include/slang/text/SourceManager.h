@@ -23,6 +23,8 @@ namespace fs = std::filesystem;
 
 namespace slang {
 
+enum class DiagnosticSeverity;
+
 /// SourceManager - Handles loading and tracking source files.
 ///
 /// The source manager abstracts away the differences between
@@ -137,22 +139,52 @@ public:
     /// Adds a line directive at the given location.
     void addLineDirective(SourceLocation location, size_t lineNum, string_view name, uint8_t level);
 
+    /// Adds a diagnostic directive at the given location.
+    void addDiagnosticDirective(SourceLocation location, string_view name,
+                                DiagnosticSeverity severity);
+
+    /// Stores information specified in a `pragma diagnostic directive, which alters the
+    /// currently active set of diagnostic mappings.
+    struct DiagnosticDirectiveInfo {
+        /// The name of the diagnostic being controlled.
+        string_view name;
+
+        /// Offset in the source where the directive occurred.
+        size_t offset;
+
+        /// The new severity the diagnostic should have.
+        DiagnosticSeverity severity;
+
+        DiagnosticDirectiveInfo(string_view name, size_t offset,
+                                DiagnosticSeverity severity) noexcept :
+            name(name),
+            offset(offset), severity(severity) {}
+    };
+
+    /// Visits each buffer that contains diagnostic directives and invokes the provided
+    /// callback with the first argument being the buffer and the second being an
+    /// iterable collection of DiagnosticDirectiveInfos.
+    template<typename Func>
+    void visitDiagnosticDirectives(Func&& func) const {
+        for (auto& [buffer, directives] : diagDirectives)
+            func(buffer, directives);
+    }
+
 private:
     // Stores information specified in a `line directive, which alters the
     // line number and file name that we report in diagnostics.
     struct LineDirectiveInfo {
-        const std::string name;       // File name set by directive
-        const size_t lineInFile;      // Actual file line where directive occurred
-        const size_t lineOfDirective; // Line number set by directive
-        const uint8_t level;          // Level of directive. Either 0, 1, or 2.
+        std::string name;       // File name set by directive
+        size_t lineInFile;      // Actual file line where directive occurred
+        size_t lineOfDirective; // Line number set by directive
+        uint8_t level;          // Level of directive. Either 0, 1, or 2.
 
         LineDirectiveInfo(std::string&& fname, size_t lif, size_t lod, uint8_t level) noexcept :
             name(std::move(fname)), lineInFile(lif), lineOfDirective(lod), level(level) {}
     };
 
     // Stores actual file contents and metadata; only one per loaded file
-    class FileData {
-    public:
+    struct FileData {
         const std::string name;          // name of the file
         const std::vector<char> mem;     // file contents
         std::vector<size_t> lineOffsets; // cache of compute line offsets
@@ -167,7 +199,7 @@ private:
     struct FileInfo {
         FileData* data = nullptr;
         SourceLocation includedFrom;
-        std::vector<LineDirectiveInfo> lineDirectives; // cache of line directives
+        std::vector<LineDirectiveInfo> lineDirectives;
 
         FileInfo() {}
         FileInfo(FileData* data, SourceLocation includedFrom) :
@@ -222,6 +254,9 @@ private:
 
     // uniquified backing memory for directories
     std::set<fs::path> directories;
+
+    // map from buffer to diagnostic directive lists
+    flat_hash_map<BufferID, std::vector<DiagnosticDirectiveInfo>> diagDirectives;
 
     std::atomic<uint32_t> unnamedBufferCount = 0;
 

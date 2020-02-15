@@ -1078,18 +1078,63 @@ void Preprocessor::applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma) {
         if (arg->kind == SyntaxKind::SimplePragmaExpression) {
             auto& simple = arg->as<SimplePragmaExpressionSyntax>();
             string_view action = simple.value.rawText();
-            if (action == "push") {
-                // TODO:
+            if (simple.value.kind == TokenKind::Identifier && action == "push") {
+                sourceManager.addDiagnosticDirective(simple.value.location(), "__push__",
+                                                     DiagnosticSeverity::Ignored);
             }
-            else if (action == "pop") {
-                // TODO:
+            else if (simple.value.kind == TokenKind::Identifier && action == "pop") {
+                sourceManager.addDiagnosticDirective(simple.value.location(), "__pop__",
+                                                     DiagnosticSeverity::Ignored);
             }
             else {
                 addDiag(diag::UnknownDiagPragmaArg, simple.value.range()) << action;
             }
         }
         else if (arg->kind == SyntaxKind::NameValuePragmaExpression) {
-            // TODO:
+            auto& nvp = arg->as<NameValuePragmaExpressionSyntax>();
+
+            DiagnosticSeverity severity;
+            string_view text = nvp.name.valueText();
+            if (text == "ignore")
+                severity = DiagnosticSeverity::Ignored;
+            else if (text == "warn")
+                severity = DiagnosticSeverity::Warning;
+            else if (text == "error")
+                severity = DiagnosticSeverity::Error;
+            else if (text == "fatal")
+                severity = DiagnosticSeverity::Fatal;
+            else {
+                addDiag(diag::ExpectedDiagPragmaLevel, nvp.name.range());
+                continue;
+            }
+
+            auto setDirective = [&](const PragmaExpressionSyntax& expr) {
+                if (expr.kind == SyntaxKind::SimplePragmaExpression) {
+                    auto& simple = expr.as<SimplePragmaExpressionSyntax>();
+                    if (simple.value.kind == TokenKind::StringLiteral) {
+                        sourceManager.addDiagnosticDirective(simple.value.location(),
+                                                             simple.value.valueText(), severity);
+                    }
+                    else {
+                        addDiag(diag::ExpectedDiagPragmaArg, simple.value.range());
+                    }
+                }
+                else {
+                    addDiag(diag::ExpectedDiagPragmaArg, expr.sourceRange());
+                }
+            };
+
+            if (nvp.value->kind == SyntaxKind::SimplePragmaExpression) {
+                setDirective(*nvp.value);
+            }
+            else if (nvp.value->kind == SyntaxKind::ParenPragmaExpression) {
+                auto& paren = nvp.value->as<ParenPragmaExpressionSyntax>();
+                for (auto value : paren.values)
+                    setDirective(*value);
+            }
+            else {
+                addDiag(diag::ExpectedDiagPragmaArg, nvp.value->sourceRange());
+            }
         }
         else {
             addDiag(diag::ExpectedDiagPragmaArg, arg->sourceRange());

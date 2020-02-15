@@ -59,7 +59,11 @@ void DiagnosticEngine::setSeverity(const DiagGroup& group, DiagnosticSeverity se
         setSeverity(diag, severity);
 }
 
-DiagnosticSeverity DiagnosticEngine::getSeverity(DiagCode code) const {
+DiagnosticSeverity DiagnosticEngine::getSeverity(DiagCode code, SourceLocation location) const {
+    // Check if we have an in-source severity configured.
+    if (auto sev = findMappedSeverity(code, location); sev.has_value())
+        return *sev;
+
     if (auto it = severityTable.find(code); it != severityTable.end())
         return it->second;
 
@@ -155,7 +159,7 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
     if (issuedOverLimitErr)
         return;
 
-    DiagnosticSeverity severity = getSeverity(diagnostic.code);
+    DiagnosticSeverity severity = getSeverity(diagnostic.code, diagnostic.location);
     switch (severity) {
         case DiagnosticSeverity::Ignored:
             return;
@@ -400,6 +404,11 @@ std::string DiagnosticEngine::reportAll(const SourceManager& sourceManager,
     return client->getString();
 }
 
+// TODO: remove once we have C++20
+static bool startsWith(string_view str, string_view prefix) {
+    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+};
+
 Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options) {
     // By default, start with all warnings disabled except the default group.
     setIgnoreAllWarnings(true);
@@ -415,11 +424,6 @@ Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options)
             auto& diag = diags.add(diag::UnknownWarningOption, SourceLocation::NoLocation);
             diag << std::string(errorPrefix) + std::string(name);
         }
-    };
-
-    // TODO: remove once we have C++20
-    auto startsWith = [](string_view str, string_view prefix) {
-        return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
     };
 
     for (auto& arg : options) {
@@ -451,6 +455,87 @@ Diagnostics DiagnosticEngine::setWarningOptions(span<const std::string> options)
     }
 
     return diags;
+}
+
+Diagnostics DiagnosticEngine::setMappingsFromPragmas() {
+    Diagnostics diags;
+
+    sourceManager.visitDiagnosticDirectives([&](BufferID buffer, auto& directives) {
+        // Store the state of diagnostics each time the user pushes,
+        // and restore the state when they pop.
+        std::vector<flat_hash_map<DiagCode, DiagnosticSeverity>> mappingStack;
+        mappingStack.emplace_back();
+
+        auto noteDiag = [&](DiagCode code, auto& directive) {
+            diagMappings[code][buffer].emplace_back(directive.offset, directive.severity);
+            mappingStack.back()[code] = directive.severity;
+        };
+
+        for (const SourceManager::DiagnosticDirectiveInfo& directive : directives) {
+            auto name = directive.name;
+            if (name == "__push__") {
+                mappingStack.emplace_back(mappingStack.back());
+            }
+            else if (name == "__pop__") {
+                // If the stack size is 1, push was never called, so just ignore.
+                if (mappingStack.size() <= 1)
+                    continue;
+
+                // Any directives that were set revert to their previous values.
+                // If there is no previous value, they go back to the default (unset).
+                auto& prev = mappingStack[mappingStack.size() - 2];
+                for (auto [code, _] : mappingStack.back()) {
+                    auto& mappings = diagMappings[code][buffer];
+                    if (auto it = prev.find(code); it != prev.end())
+                        mappings.emplace_back(directive.offset, it->second);
+                    else
+                        mappings.emplace_back(directive.offset, std::nullopt);
+                }
+                mappingStack.pop_back();
+            }
+            else {
+                if (startsWith(name, "-W"sv))
+                    name = name.substr(2);
+
+                if (auto group = findDiagGroup(name)) {
+                    for (auto code : group->getDiags())
+                        noteDiag(code, directive);
+                }
+                else if (auto code = findFromOptionName(name)) {
+                    noteDiag(code, directive);
+                }
+                else {
+                    auto& diag = diags.add(diag::UnknownWarningOption,
+                                           SourceLocation(buffer, directive.offset));
+                    diag << name;
+                }
+            }
+        }
+    });
+
+    return diags;
+}
+
+optional<DiagnosticSeverity> DiagnosticEngine::findMappedSeverity(DiagCode code,
+                                                                  SourceLocation location) const {
+    auto byCode = diagMappings.find(code);
+    if (byCode == diagMappings.end())
+        return std::nullopt;
+
+    SourceLocation fileLoc = sourceManager.getFullyExpandedLoc(location);
+    auto byBuffer = byCode->second.find(fileLoc.buffer());
+    if (byBuffer == byCode->second.end())
+        return std::nullopt;
+
+    const std::vector<DiagnosticMapping>& mappings = byBuffer->second;
+    auto byOffset = std::lower_bound(
+        mappings.begin(), mappings.end(), fileLoc.offset(),
+        [](const DiagnosticMapping& mapping, size_t off) { return mapping.offset < off; });
+
+    if (byOffset == mappings.begin())
+        return std::nullopt;
+
+    return (--byOffset)->severity;
 }
 
 } // namespace slang

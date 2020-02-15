@@ -114,8 +114,9 @@ public:
     /// Sets the severity for all of diagnostics in the given group.
     void setSeverity(const DiagGroup& group, DiagnosticSeverity severity);
 
-    /// Gets the severity currently mapped for the given diagnostic.
-    DiagnosticSeverity getSeverity(DiagCode code) const;
+    /// Gets the severity currently mapped for the given diagnostic, at the given
+    /// location in the source code.
+    DiagnosticSeverity getSeverity(DiagCode code, SourceLocation location) const;
 
     /// Sets the message to use for the given diagnostic. If this is a built-in
     /// diagnostic this will essentially override its default message. Otherwise
@@ -157,6 +158,11 @@ public:
     /// the options are returned via the diagnostics set.
     Diagnostics setWarningOptions(span<const std::string> options);
 
+    /// Sets diagnostic options from the `pragma diagnostic entries in all of the various
+    /// source files tracked by the engine's source manager. Any errors encountered
+    /// while applying options are returned via the diagnostics set.
+    Diagnostics setMappingsFromPragmas();
+
     /// A helper function that takes a set of source ranges and translates them
     /// to be relevant to the given context location. For normal file ranges
     /// this doesn't do anything, but ranges within macro expansions get adjusted
@@ -173,22 +179,56 @@ public:
     static std::string reportAll(const SourceManager& sourceManager, span<const Diagnostic> diags);
 
 private:
+    // An entry added by `pragma diagnostic at the given source offset which
+    // sets a diagnostic to the given severity.
+    struct DiagnosticMapping {
+        size_t offset = 0;
+        optional<DiagnosticSeverity> severity;
+
+        DiagnosticMapping(size_t offset, optional<DiagnosticSeverity> severity) noexcept :
+            offset(offset), severity(severity) {}
+    };
+
+    optional<DiagnosticSeverity> findMappedSeverity(DiagCode code, SourceLocation location) const;
     void issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity);
 
+    // The source manager used to resolve locations into file names.
     const SourceManager& sourceManager;
+
+    // Various options that control type printing in diagnostics.
     std::unique_ptr<TypePrintingOptions> typePrintingOptions;
+
+    // A global mapping from diagnostic to a configured severity it should have.
     flat_hash_map<DiagCode, DiagnosticSeverity> severityTable;
+
+    // A global mapping from diagnostic to the message it should display.
     flat_hash_map<DiagCode, std::string> messageTable;
+
+    // A set of buffers for which we have reported an include stack,
+    // so that we don't do it more than once.
     flat_hash_set<BufferID> reportedIncludeStack;
+
+    // A map from diagnostic -> source file -> list of in-source diagnostic mappings.
+    // These correspond to `pragma diagnostic entries in the source code.
+    flat_hash_map<DiagCode, flat_hash_map<BufferID, std::vector<DiagnosticMapping>>> diagMappings;
+
+    // A list of all registered clients that receive issued diagnostics.
     std::vector<std::shared_ptr<DiagnosticClient>> clients;
+
+    // Tracking for the number of errors and warnings we've issued.
     int numErrors = 0;
     int numWarnings = 0;
+
+    // Configurable controls for when and how we issue diagnostics.
     int errorLimit = 0;
     bool ignoreAllWarnings = false;
     bool ignoreAllNotes = false;
     bool warningsAsErrors = false;
     bool errorsAsFatal = false;
     bool fatalsAsErrors = false;
+
+    // Tracking for whether we've already issued an error for going over
+    // the configured error limit (we only want to do that once).
     bool issuedOverLimitErr = false;
 };
 

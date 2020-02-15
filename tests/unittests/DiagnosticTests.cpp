@@ -1,6 +1,7 @@
 #include "Test.h"
 
 #include "slang/diagnostics/DiagnosticClient.h"
+#include "slang/diagnostics/TextDiagnosticClient.h"
 
 TEST_CASE("Diagnostic Line Number") {
     auto& text = "`include \"foofile\"\nident";
@@ -310,7 +311,7 @@ module m;
     int j = (b) `PASS([1]);
 endmodule
 )",
-"source");
+                                     "source");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -370,7 +371,7 @@ module m;
 `include "fake-include1.svh"
 endmodule
 )",
-"source");
+                                     "source");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
@@ -419,10 +420,10 @@ TEST_CASE("DiagnosticEngine stuff") {
     CHECK(engine.getNumErrors() == 1);
     CHECK(engine.getNumWarnings() == 2);
     CHECK(engine.getMessage(diag::ExpectedClosingQuote) == "foobar");
-    
+
     engine.clearMappings();
     CHECK(engine.getMessage(diag::ExpectedClosingQuote) == "missing closing quote");
-    CHECK(engine.getSeverity(diag::ExpectedClosingQuote) == DiagnosticSeverity::Error);
+    CHECK(engine.getSeverity(diag::ExpectedClosingQuote, {}) == DiagnosticSeverity::Error);
 
     engine.clearCounts();
     CHECK(client->count == 3);
@@ -473,15 +474,9 @@ TEST_CASE("DiagnosticEngine stuff") {
 }
 
 TEST_CASE("DiagnosticEngine::setWarningOptions") {
-    auto options = std::vector {
-        "everything"s,
-        "none"s,
-        "error"s,
-        "error=case-gen-dup"s,
-        "no-error=empty-member"s,
-        "empty-stmt"s,
-        "no-extra"s,
-        "asdf"s
+    auto options = std::vector{
+        "everything"s, "none"s,     "error"s, "error=case-gen-dup"s, "no-error=empty-member"s,
+        "empty-stmt"s, "no-extra"s, "asdf"s
     };
 
     DiagnosticEngine engine(getSourceManager());
@@ -490,4 +485,47 @@ TEST_CASE("DiagnosticEngine::setWarningOptions") {
 
     std::string msg = DiagnosticEngine::reportAll(getSourceManager(), diags);
     CHECK(msg == "warning: unknown warning option '-Wasdf' [-Wunknown-warning-option]\n");
+}
+
+TEST_CASE("Diagnostic Pragmas") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    ; // warn
+`pragma diagnostic ignore="-Wempty-member"
+    ; // hidden
+`pragma diagnostic push
+    ; // also hidden
+`pragma diagnostic error="-Wempty-member"
+    ; // error
+`pragma diagnostic warn="-Wempty-member"
+    ; // warn
+`pragma diagnostic pop
+`pragma diagnostic pop  // does nothing
+    ; // hidden again
+endmodule
+)",
+                                     "source");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    DiagnosticEngine engine(tree->sourceManager());
+    Diagnostics pragmaDiags = engine.setMappingsFromPragmas();
+    CHECK(pragmaDiags.empty());
+
+    auto client = std::make_shared<TextDiagnosticClient>();
+    engine.addClient(client);
+    for (auto& diag : compilation.getAllDiagnostics())
+        engine.issue(diag);
+
+    CHECK("\n"s + client->getString() == R"(
+source:3:5: warning: empty member has no effect [-Wempty-member]
+    ; // warn
+    ^
+source:9:5: error: empty member has no effect [-Wempty-member]
+    ; // error
+    ^
+source:11:5: warning: empty member has no effect [-Wempty-member]
+    ; // warn
+    ^
+)");
 }
