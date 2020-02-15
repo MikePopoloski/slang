@@ -502,6 +502,10 @@ module m;
 `pragma diagnostic pop
 `pragma diagnostic pop  // does nothing
     ; // hidden again
+
+`pragma diagnostic fatal="empty-member" // ok to not use -W
+`pragma diagnostic ignore=("default", "empty-member")
+    ; // ignored
 endmodule
 )",
                                      "source");

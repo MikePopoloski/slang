@@ -870,8 +870,44 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
         return { alloc.emplace<SimplePragmaExpressionSyntax>(name), true };
     }
 
-    if (token.kind != TokenKind::OpenParenthesis)
-        return parsePragmaValue();
+    return parsePragmaValue();
+}
+
+std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
+    if (auto pair = checkNextPragmaToken(); !pair.second)
+        return pair;
+
+    Token token = peek();
+    if (token.kind == TokenKind::IntegerBase || token.kind == TokenKind::IntegerLiteral) {
+        PragmaExpressionSyntax* expr;
+        auto result = numberParser.parseInteger(*this);
+        if (result.isSimple) {
+            expr = alloc.emplace<SimplePragmaExpressionSyntax>(result.value);
+        }
+        else {
+            expr =
+                alloc.emplace<NumberPragmaExpressionSyntax>(result.size, result.base, result.value);
+        }
+
+        return { expr, true };
+    }
+
+    if (token.kind == TokenKind::RealLiteral) {
+        auto result = numberParser.parseReal(*this);
+        return { alloc.emplace<SimplePragmaExpressionSyntax>(result), true };
+    }
+
+    if (token.kind == TokenKind::Identifier || token.kind == TokenKind::StringLiteral ||
+        LexerFacts::isKeyword(token.kind)) {
+        return { alloc.emplace<SimplePragmaExpressionSyntax>(consume()), true };
+    }
+
+    if (token.kind != TokenKind::OpenParenthesis) {
+        addDiag(diag::ExpectedPragmaExpression, token.location());
+
+        auto expected = Token::createMissing(alloc, TokenKind::Identifier, token.location());
+        return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
+    }
 
     SmallVectorSized<TokenOrSyntax, 4> values;
     Token openParen = consume();
@@ -922,41 +958,6 @@ std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
 
     return { alloc.emplace<ParenPragmaExpressionSyntax>(openParen, values.copy(alloc), closeParen),
              ok };
-}
-
-std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaValue() {
-    if (auto pair = checkNextPragmaToken(); !pair.second)
-        return pair;
-
-    Token token = peek();
-    if (token.kind == TokenKind::IntegerBase || token.kind == TokenKind::IntegerLiteral) {
-        PragmaExpressionSyntax* expr;
-        auto result = numberParser.parseInteger(*this);
-        if (result.isSimple) {
-            expr = alloc.emplace<SimplePragmaExpressionSyntax>(result.value);
-        }
-        else {
-            expr =
-                alloc.emplace<NumberPragmaExpressionSyntax>(result.size, result.base, result.value);
-        }
-
-        return { expr, true };
-    }
-
-    if (token.kind == TokenKind::RealLiteral) {
-        auto result = numberParser.parseReal(*this);
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(result), true };
-    }
-
-    if (token.kind == TokenKind::Identifier || token.kind == TokenKind::StringLiteral ||
-        LexerFacts::isKeyword(token.kind)) {
-        return { alloc.emplace<SimplePragmaExpressionSyntax>(consume()), true };
-    }
-
-    addDiag(diag::ExpectedPragmaExpression, token.location());
-
-    auto expected = Token::createMissing(alloc, TokenKind::Identifier, token.location());
-    return { alloc.emplace<SimplePragmaExpressionSyntax>(expected), false };
 }
 
 std::pair<PragmaExpressionSyntax*, bool> Preprocessor::checkNextPragmaToken() {
