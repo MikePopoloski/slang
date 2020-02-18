@@ -857,3 +857,18 @@ endmodule
     CHECK(diags[4].code == diag::IncDecNotAllowed);
     CHECK(diags[5].code == diag::IncDecNotAllowed);
 }
+
+TEST_CASE("Type operator") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [3:0] a;
+    logic [4:0] b;
+    var type(a + b) foo = a + b;
+    int i = type(int)'(a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

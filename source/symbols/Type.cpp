@@ -390,9 +390,14 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                 compilation, SyntaxKind::LogicType, implicit.dimensions,
                 implicit.signing.kind == TokenKind::SignedKeyword || forceSigned, location, parent);
         }
+        case SyntaxKind::TypeReference: {
+            BindContext context(parent, location, BindFlags::NoHierarchicalNames);
+            auto& expr = Expression::bind(*node.as<TypeReferenceSyntax>().expr, context,
+                                          BindFlags::AllowDataType);
+            return *expr.type;
+        }
         case SyntaxKind::PropertyType:
         case SyntaxKind::SequenceType:
-        case SyntaxKind::TypeReference:
         case SyntaxKind::Untyped:
         case SyntaxKind::VirtualInterfaceType:
             parent.addDiag(diag::NotYetSupported, node.sourceRange());
