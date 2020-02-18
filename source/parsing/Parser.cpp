@@ -721,6 +721,8 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
     }
 
     auto& dataType = parseDataType(hasVar ? TypeOptions::AllowImplicit : TypeOptions::None);
+    if (dataType.kind == SyntaxKind::TypeReference && !hasVar)
+        addDiag(diag::TypeRefDeclVar, dataType.getFirstToken().location());
 
     Token semi;
     auto declarators = parseDeclarators(semi);
@@ -963,6 +965,22 @@ bool Parser::isVariableDeclaration() {
             auto next = peek(++index).kind;
             return next != TokenKind::Apostrophe && next != TokenKind::ApostropheOpenBrace;
         }
+
+        // if this is the type operator it's technically not allowed to be a variable
+        // declaration without a "var" prefix, but we'll try to allow it anyway and
+        // diagnose it later with a better error message.
+        case TokenKind::TypeKeyword: {
+            if (peek(++index).kind != TokenKind::OpenParenthesis)
+                return false;
+
+            index++;
+            if (!scanTypePart<isNotInType>(index, TokenKind::OpenParenthesis,
+                                           TokenKind::CloseParenthesis)) {
+                return false;
+            }
+            return peek(index).kind == TokenKind::Identifier;
+        }
+
         default:
             break;
     }

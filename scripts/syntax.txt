@@ -612,7 +612,7 @@ token keyword
 
 kindmap<KeywordType>
 ShortRealType RealType RealTimeType StringType CHandleType EventType
-VoidType TypeType Untyped PropertyType SequenceType
+VoidType Untyped PropertyType SequenceType
 
 NamedType base=DataType kind=NamedType
 Name name

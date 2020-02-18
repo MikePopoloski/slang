@@ -145,6 +145,7 @@ error VoidNotAllowed "'void' type not allowed"
 error DuplicateDeclModifier "duplicate '{}' modifier in declaration"
 error DeclModifierOrdering "modifier '{}' must come before '{}' in a declaration"
 error DeclModifierConflict "modifier '{}' cannot be used together with '{}' in a declaration"
+error TypeRefDeclVar "a type reference cannot be used in a variable declaration without a preceeding 'var' keyword"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 note NoteToMatchThis "to match this '{}'"
 

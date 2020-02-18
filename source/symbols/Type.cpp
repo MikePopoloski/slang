@@ -393,7 +393,6 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::PropertyType:
         case SyntaxKind::SequenceType:
         case SyntaxKind::TypeReference:
-        case SyntaxKind::TypeType:
         case SyntaxKind::Untyped:
         case SyntaxKind::VirtualInterfaceType:
             parent.addDiag(diag::NotYetSupported, node.sourceRange());

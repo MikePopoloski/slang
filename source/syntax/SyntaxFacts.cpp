@@ -483,7 +483,6 @@ SyntaxKind SyntaxFacts::getKeywordType(TokenKind kind) {
         case TokenKind::CHandleKeyword: return SyntaxKind::CHandleType;
         case TokenKind::EventKeyword: return SyntaxKind::EventType;
         case TokenKind::VoidKeyword: return SyntaxKind::VoidType;
-        case TokenKind::TypeKeyword: return SyntaxKind::TypeType;
         default: return SyntaxKind::Unknown;
     }
 }

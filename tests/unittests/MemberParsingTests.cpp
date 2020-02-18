@@ -284,3 +284,18 @@ endmodule
     CHECK(diagnostics[1].code == diag::DeclModifierConflict);
     CHECK(diagnostics[2].code == diag::DeclModifierOrdering);
 }
+
+TEST_CASE("Type operator data decl without var -- error") {
+    auto& text = R"(
+module m;
+    logic [3:0] a;
+    logic [4:0] b;
+    type(a + b) foo = a + b;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::TypeRefDeclVar);
+}
