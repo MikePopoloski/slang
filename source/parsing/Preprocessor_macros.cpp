@@ -34,7 +34,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         // If we see a parenthesis next, let's assume they tried to invoke a function-like macro
         // and skip over the tokens.
         if (peek(TokenKind::OpenParenthesis))
-            return MacroParser(*this).parseActualArgumentList();
+            return MacroParser(*this).parseActualArgumentList(directive);
         return nullptr;
     }
 
@@ -44,7 +44,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     // parse arguments if necessary
     MacroActualArgumentListSyntax* actualArgs = nullptr;
     if (macro.needsArgs()) {
-        actualArgs = MacroParser(*this).parseActualArgumentList();
+        actualArgs = MacroParser(*this).parseActualArgumentList(directive);
         if (!actualArgs)
             return nullptr;
     }
@@ -262,10 +262,6 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
 
     for (size_t i = 0; i < formalList.size(); i++) {
         auto formal = formalList[i];
-        auto name = formal->name.valueText();
-        if (name.empty())
-            continue;
-
         const TokenList* tokenList = nullptr;
         if (actualList.size() > i) {
             // if our actual argument is empty and we have a default, take that
@@ -283,7 +279,9 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
             }
         }
 
-        argumentMap.emplace(name, ArgTokens(*tokenList));
+        auto name = formal->name.valueText();
+        if (!name.empty())
+            argumentMap.emplace(name, ArgTokens(*tokenList));
     }
 
     Token endOfArgs = actualArgs->getLastToken();
@@ -452,7 +450,7 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens,
         // parse arguments if necessary
         MacroActualArgumentListSyntax* actualArgs = nullptr;
         if (macro.needsArgs()) {
-            actualArgs = parser.parseActualArgumentList();
+            actualArgs = parser.parseActualArgumentList(token);
             if (!actualArgs)
                 return false;
         }
@@ -523,10 +521,10 @@ MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentLis
                                                            expect(TokenKind::CloseParenthesis));
 }
 
-MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentList() {
+MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentList(Token prevToken) {
     // macro has arguments, so we expect to see them here
     if (!peek(TokenKind::OpenParenthesis)) {
-        pp.addDiag(diag::ExpectedMacroArgs, peek().location());
+        pp.addDiag(diag::ExpectedMacroArgs, prevToken.location() + prevToken.rawText().length());
         return nullptr;
     }
 

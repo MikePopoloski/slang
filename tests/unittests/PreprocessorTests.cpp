@@ -287,6 +287,16 @@ TEST_CASE("Macro stringify whitespace") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Macro stringify useless concatenation") {
+    auto& text = "`define FOO(x) `\"``x`\" \n`FOO(a)";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "a");
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::IgnoredMacroPaste);
+}
+
 TEST_CASE("Macro define with missing paren") {
     auto& text = "`define FOO(asdf asdfasdf";
     Token token = lexToken(text);
@@ -667,6 +677,27 @@ source:4:15: error: unknown macro or compiler directive '`bar'
    `FOO(      `bar      )   asdfasdfasdfasdfasdfasdfsadfasdfasdfasdfasdf
               ^
 )");
+}
+
+TEST_CASE("Macro invalid argument handling") {
+    auto& text = R"(
+`define FOO(a) a
+`define BAR(a) a
+`define BAZ(=)
+`define BOZ(a=(
+
+`BAR(`FOO)
+`BAR(`FOO(1, 2))
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 5);
+    CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
+    CHECK(diagnostics[1].code == diag::UnbalancedMacroArgDims);
+    CHECK(diagnostics[2].code == diag::ExpectedToken);
+    CHECK(diagnostics[3].code == diag::ExpectedMacroArgs);
+    CHECK(diagnostics[4].code == diag::TooManyActualMacroArgs);
 }
 
 TEST_CASE("Macro op outside define") {
@@ -1295,4 +1326,16 @@ source:16:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 `pragma bar 'h 3e+2
         ^~~
 )");
+}
+
+TEST_CASE("Unknown function-like macro") {
+    auto& text = R"(
+`FOO(a, b)
+bar
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == "\nbar\n");
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::UnknownDirective);
 }

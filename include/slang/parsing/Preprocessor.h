@@ -283,7 +283,7 @@ private:
         // a macro replacement list.
         Token next();
 
-        MacroActualArgumentListSyntax* parseActualArgumentList();
+        MacroActualArgumentListSyntax* parseActualArgumentList(Token prevToken);
         MacroFormalArgumentListSyntax* parseFormalArgumentList();
 
     private:
