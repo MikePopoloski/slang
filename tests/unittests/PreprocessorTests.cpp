@@ -903,6 +903,28 @@ TEST_CASE("Nested ifdef and macros") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Ifdef error cases") {
+    auto& text = R"(
+`ifdef FOO
+`else
+`else
+`endif
+
+`endif
+`else
+
+`ifdef BAR
+)";
+    
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::UnexpectedConditionalDirective);
+    CHECK(diagnostics[1].code == diag::UnexpectedConditionalDirective);
+    CHECK(diagnostics[2].code == diag::UnexpectedConditionalDirective);
+    CHECK(diagnostics[3].code == diag::MissingEndIfDirective);
+}
+
 TEST_CASE("LINE Directive") {
     auto& text = "`__LINE__";
     Token token = lexToken(text);
@@ -1140,6 +1162,37 @@ TEST_CASE("timescale directive") {
     CHECK(!diagnostics.empty());
 }
 
+TokenKind lexDefaultNetType(string_view text) {
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token);
+    return preprocessor.getDefaultNetType();
+}
+
+TEST_CASE("default_nettype directive") {
+    CHECK(lexDefaultNetType("`default_nettype wire") == TokenKind::WireKeyword);
+    CHECK(lexDefaultNetType("`default_nettype uwire") == TokenKind::UWireKeyword);
+    CHECK(lexDefaultNetType("`default_nettype wand") == TokenKind::WAndKeyword);
+    CHECK(lexDefaultNetType("`default_nettype wor") == TokenKind::WOrKeyword);
+    CHECK(lexDefaultNetType("`default_nettype tri") == TokenKind::TriKeyword);
+    CHECK(lexDefaultNetType("`default_nettype tri0") == TokenKind::Tri0Keyword);
+    CHECK(lexDefaultNetType("`default_nettype tri1") == TokenKind::Tri1Keyword);
+    CHECK(lexDefaultNetType("`default_nettype triand") == TokenKind::TriAndKeyword);
+    CHECK(lexDefaultNetType("`default_nettype trior") == TokenKind::TriOrKeyword);
+    CHECK(lexDefaultNetType("`default_nettype trireg") == TokenKind::TriRegKeyword);
+    CHECK(lexDefaultNetType("`default_nettype none") == TokenKind::Unknown);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    CHECK(lexDefaultNetType("`default_nettype foo") == TokenKind::WireKeyword);
+    CHECK(!diagnostics.empty());
+    CHECK(lexDefaultNetType("`default_nettype module") == TokenKind::WireKeyword);
+    CHECK(!diagnostics.empty());
+}
+
 TEST_CASE("macro-defined include file") {
     auto& text = "`define FILE <include.svh>\n"
                  "`include `FILE";
@@ -1178,10 +1231,13 @@ TEST_CASE("Preprocessor API") {
     CHECK(pp.isDefined("__LINE__"));
     CHECK(!pp.undefine("FOO"));
 
-    pp.predefine("FOO");
+    pp.predefine("FOO 1 2");
     CHECK(pp.isDefined("FOO"));
     CHECK(pp.undefine("FOO"));
     CHECK(!pp.isDefined("FOO"));
+
+    pp.setKeywordVersion(KeywordVersion::v1364_2001);
+    CHECK(pp.getDefinedMacros().size() == 4);
 }
 
 TEST_CASE("Undef builtin") {
@@ -1261,8 +1317,9 @@ TEST_CASE("Pragma expressions") {
 `pragma foo
 `pragma bar asdf
 `pragma bar 32 'd 1
+`pragma bar 3.14159, foo=6.28
 `pragma bar asdf='h ff, blah=2, foo="asdf", begin, bar=end
-`pragma bar "asdf", (asdf, "asdf", asdf="asdf")
+`pragma bar "asdf", (asdf, /* stuff */ "asdf", asdf="asdf")
 )";
 
     std::string result = preprocess(text);
@@ -1289,6 +1346,8 @@ TEST_CASE("Pragma expressions -- errors") {
     )
 
 `pragma bar 'h 3e+2
+`pragma /* asdf
+*/ asdf
 )";
 
     preprocess(text);
@@ -1322,10 +1381,34 @@ source:11:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 source:16:18: error: expected pragma expression
 `pragma bar 'h 3e+2
                  ^
+source:17:1: error: expected pragma name
+`pragma /* asdf
+^
 source:16:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 `pragma bar 'h 3e+2
         ^~~
 )");
+}
+
+TEST_CASE("Pragma diagnostic errors") {
+    auto& text = R"(
+`pragma diagnostic
+`pragma diagnostic foo
+`pragma diagnostic 3'd3
+`pragma diagnostic foo=3'd3
+`pragma diagnostic ignore=3'd3
+`pragma diagnostic ignore=foo
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 6);
+    CHECK(diagnostics[0].code == diag::ExpectedDiagPragmaArg);
+    CHECK(diagnostics[1].code == diag::ExpectedDiagPragmaArg);
+    CHECK(diagnostics[2].code == diag::ExpectedDiagPragmaLevel);
+    CHECK(diagnostics[3].code == diag::ExpectedDiagPragmaArg);
+    CHECK(diagnostics[4].code == diag::UnknownDiagPragmaArg);
+    CHECK(diagnostics[5].code == diag::ExpectedDiagPragmaArg);
 }
 
 TEST_CASE("Unknown function-like macro") {

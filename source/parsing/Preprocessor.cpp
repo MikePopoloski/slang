@@ -576,6 +576,7 @@ bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf,
 
     branch.currentActive = taken;
     branch.anyTaken |= taken;
+    branch.hasElse = !isElseIf;
     return taken;
 }
 
@@ -588,8 +589,10 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
 
             // EoF or conditional directive stops the skipping process
             bool done = false;
-            if (token.kind == TokenKind::EndOfFile)
+            if (token.kind == TokenKind::EndOfFile) {
+                addDiag(diag::MissingEndIfDirective, directive.range());
                 done = true;
+            }
             else if (token.kind == TokenKind::Directive) {
                 switch (token.directiveKind()) {
                     case SyntaxKind::IfDefDirective:
@@ -1125,16 +1128,13 @@ void Preprocessor::applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma) {
                 }
             };
 
-            if (nvp.value->kind == SyntaxKind::SimplePragmaExpression) {
-                setDirective(*nvp.value);
-            }
-            else if (nvp.value->kind == SyntaxKind::ParenPragmaExpression) {
+            if (nvp.value->kind == SyntaxKind::ParenPragmaExpression) {
                 auto& paren = nvp.value->as<ParenPragmaExpressionSyntax>();
                 for (auto value : paren.values)
                     setDirective(*value);
             }
             else {
-                addDiag(diag::ExpectedDiagPragmaArg, nvp.value->sourceRange());
+                setDirective(*nvp.value);
             }
         }
         else {
