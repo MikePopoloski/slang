@@ -15,6 +15,7 @@ namespace slang {
 class Compilation;
 class EvalContext;
 class Expression;
+class InstanceSymbol;
 class Scope;
 class Statement;
 class Type;
@@ -88,6 +89,10 @@ public:
     /// If this is set, it means that the binding was forced by the evaluation and
     /// we can use that information for more informative error messages.
     EvalContext* evalContext = nullptr;
+
+    /// If the expression being bound is for an instance port connection, this is
+    /// a pointer to that instance; otherwise, it's nullptr.
+    const InstanceSymbol* instance = nullptr;
 
     BindContext(const Scope& scope, LookupLocation lookupLocation,
                 bitmask<BindFlags> flags = BindFlags::None) :

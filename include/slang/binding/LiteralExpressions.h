@@ -33,6 +33,7 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& fromSyntax(Compilation& compilation,
                                   const IntegerVectorExpressionSyntax& syntax);
+    static Expression& fromConstant(Compilation& compilation, const SVInt& value);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::IntegerLiteral; }
 

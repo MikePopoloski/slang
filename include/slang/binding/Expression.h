@@ -13,6 +13,7 @@
 namespace slang {
 
 class ASTSerializer;
+class InstanceSymbol;
 class Type;
 struct AssignmentPatternExpressionSyntax;
 struct ElementSelectExpressionSyntax;
@@ -252,6 +253,9 @@ protected:
                                              const AssignmentPatternExpressionSyntax& syntax,
                                              const BindContext& context,
                                              const Type* assignmentTarget);
+
+    static Expression* tryConnectPortArray(const BindContext& context, const Type& type,
+                                           Expression& expr, const InstanceSymbol& instance);
 
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 

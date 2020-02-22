@@ -255,6 +255,7 @@ error MissingReturnValue "must provide a return value for non-void function"
 error AssignmentNotAllowed "assignment expressions are not allowed in this context"
 error IncDecNotAllowed "increment and decrement expressions are not allowed in this context"
 error AssignmentRequiresParens "assignment expressions must be parenthesized"
+error PortConnArrayMismatch "cannot connect {} to each port of type {} in '{}'"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

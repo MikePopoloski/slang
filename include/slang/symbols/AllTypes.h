@@ -156,6 +156,9 @@ public:
                                   LookupLocation location, const Scope& scope,
                                   const SyntaxList<VariableDimensionSyntax>& dimensions);
 
+    static const Type& fromDims(Compilation& compilation, const Type& elementType,
+                                span<const ConstantRange> dimensions);
+
     ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnpackedArrayType; }

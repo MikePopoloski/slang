@@ -450,6 +450,19 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
     return *result;
 }
 
+const Type& UnpackedArrayType::fromDims(Compilation& compilation, const Type& elementType,
+                                        span<const ConstantRange> dimensions) {
+    if (elementType.isError())
+        return elementType;
+
+    const Type* result = &elementType;
+    size_t count = dimensions.size();
+    for (size_t i = 0; i < count; i++)
+        result = compilation.emplace<UnpackedArrayType>(*result, dimensions[count - i - 1]);
+
+    return *result;
+}
+
 ConstantValue UnpackedArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>(range.width(), elementType.getDefaultValue());
 }

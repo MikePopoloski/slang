@@ -7,12 +7,14 @@
 #include "slang/binding/AssignmentExpressions.h"
 
 #include "slang/binding/LiteralExpressions.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/binding/OperatorExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/symbols/Type.h"
+#include "slang/symbols/AllTypes.h"
+#include "slang/symbols/DefinitionSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace {
@@ -105,6 +107,84 @@ Expression& Expression::implicitConversion(const BindContext& context, const Typ
                                                                          result->sourceRange);
 }
 
+Expression* Expression::tryConnectPortArray(const BindContext& context, const Type& type,
+                                            Expression& expr, const InstanceSymbol& instance) {
+    auto& comp = context.getCompilation();
+    auto& ct = expr.type->getCanonicalType();
+    if (ct.kind == SymbolKind::UnpackedArrayType) {
+        SmallVectorSized<ConstantRange, 8> connDims;
+        const Type* elemType = ct.getFullArrayBounds(connDims);
+        ASSERT(elemType);
+
+        SmallVectorSized<ConstantRange, 8> instanceDims;
+        instance.getArrayDimensions(instanceDims);
+
+        // If we don't have enough connections dims to satisfy all of the
+        // instance dims, give up now.
+        if (connDims.size() < instanceDims.size())
+            return nullptr;
+
+        span<const ConstantRange> extraDims = connDims;
+        extraDims = extraDims.subspan(instanceDims.size());
+        if (!extraDims.empty())
+            elemType = &UnpackedArrayType::fromDims(comp, *elemType, extraDims);
+
+        // Element types must be equivalent and all array dimension sizes must match
+        bool bad = false;
+        if (!type.isEquivalent(*elemType)) {
+            bad = true;
+        }
+        else {
+            for (size_t i = 0; i < instanceDims.size(); i++) {
+                if (connDims[i].width() != instanceDims[i].width()) {
+                    bad = true;
+                    break;
+                }
+            }
+        }
+
+        if (bad) {
+            auto& diag = context.addDiag(diag::PortConnArrayMismatch, expr.sourceRange);
+            diag << *expr.type << type;
+
+            string_view name = instance.getArrayName();
+            if (name.empty())
+                diag << "<unknown>"sv;
+            else {
+                diag << name;
+                if (instance.location)
+                    diag << SourceRange{ instance.location, instance.location + name.length() };
+            }
+
+            return &badExpr(comp, &expr);
+        }
+
+        // Select each element of the connection array based on the index of
+        // the instance in the instance array path. Elements get matched
+        // left index to left index.
+        Expression* result = &expr;
+        for (size_t i = 0; i < instance.arrayPath.size(); i++) {
+            // First translate the path index since it's relative to that particular
+            // array's declared range.
+            int32_t index = instanceDims[i].translateIndex(instance.arrayPath[i]);
+
+            // Now translate back to be relative to the connection type's declared range.
+            if (!connDims[i].isLittleEndian())
+                index = connDims[i].upper() - index;
+            else
+                index = connDims[i].lower() + index;
+
+            result = &ElementSelectExpression::fromConstant(comp, *result, index, context);
+            if (result->bad())
+                break;
+        }
+
+        return result;
+    }
+
+    return nullptr;
+}
+
 Expression& Expression::convertAssignment(const BindContext& context, const Type& type,
                                           Expression& expr, SourceLocation location,
                                           optional<SourceRange> lhsRange) {
@@ -126,6 +206,16 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             result = &implicitConversion(context, type, *result);
             selfDetermined(context, result);
             return *result;
+        }
+
+        // If this is a port connection to an array of instances, check if the provided
+        // expression represents an array that should be sliced on a per-instance basis.
+        if (context.instance && !context.instance->arrayPath.empty()) {
+            Expression* result = tryConnectPortArray(context, type, expr, *context.instance);
+            if (result) {
+                selfDetermined(context, result);
+                return *result;
+            }
         }
 
         DiagCode code =

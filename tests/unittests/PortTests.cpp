@@ -376,6 +376,27 @@ endmodule
     CHECK(bar.getValue().integer() == 42);
 }
 
+TEST_CASE("Instance array port connections") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic a[5]);
+endmodule
+
+module test;
+
+    logic a[5];
+    m m1(.a(a));
+    
+    logic b[3][4][5];
+    m m2 [3][4] (.a(b));
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Implicit interface ports") {
     auto tree = SyntaxTree::fromText(R"(
 module n(input logic foo, I i);

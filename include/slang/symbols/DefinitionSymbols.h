@@ -65,6 +65,14 @@ public:
         return *portMap;
     }
 
+    /// If this instance is part of an array, walk upward to find the array's name.
+    /// Otherwise returns the name of the instance itself.
+    string_view getArrayName() const;
+
+    /// Gets the set of dimensions describing the instance array that contains this instance.
+    /// If this instance is not part of an array, does not add any dimensions to the given list.
+    void getArrayDimensions(SmallVector<ConstantRange>& dimensions) const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
@@ -145,6 +153,10 @@ public:
                         span<const Symbol* const> elements, ConstantRange range) :
         Symbol(SymbolKind::InstanceArray, name, loc),
         Scope(compilation, this), elements(elements), range(range) {}
+
+    /// If this array is part of a multidimensional array, walk upward to find
+    /// the root array's name. Otherwise returns the name of this symbol itself.
+    string_view getArrayName() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

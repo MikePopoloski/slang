@@ -197,6 +197,11 @@ public:
     /// the string type itself as well as byte arrays and all integral types.
     bool canBeStringLike() const;
 
+    /// If this is an array type (packed or unpacked) gets the full set of dimensions
+    /// that describe the array, and returns the element type of the array.
+    /// Otherwise, returns nullptr.
+    const Type* getFullArrayBounds(SmallVector<ConstantRange>& dimensions) const;
+
     std::string toString() const;
 
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,

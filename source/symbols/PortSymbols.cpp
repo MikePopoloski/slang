@@ -881,10 +881,17 @@ private:
             // It's ok to do the slicing, so pick the correct slice for the connection
             // based on the actual path of the instance we're elaborating.
             for (size_t i = 0; i < instance.arrayPath.size(); i++) {
-                auto& array = symbol->as<InstanceArraySymbol>();
+                // First translate the path index since it's relative to that particular
+                // array's declared range.
                 int32_t index = instanceDims[i].translateIndex(instance.arrayPath[i]);
+
+                // Now translate back to be relative to the connecting interface's declared range.
+                // Note that we want this to be zero based because we're going to index into
+                // the actual span of elements, so we only need to flip the index if the range
+                // is not little endian.
+                auto& array = symbol->as<InstanceArraySymbol>();
                 if (!array.range.isLittleEndian())
-                    index = array.range.upper() - index;
+                    index = array.range.upper() - index; // TODO: check this
 
                 symbol = array.elements[size_t(index)];
             }
@@ -927,8 +934,13 @@ const Expression* PortSymbol::getConnection() const {
             auto scope = getParentScope();
             ASSERT(scope);
 
-            LookupLocation lookupLocation = getConnectionLookupLocation(scope->asSymbol());
+            auto& parentSym = scope->asSymbol();
+            LookupLocation lookupLocation = getConnectionLookupLocation(parentSym);
             BindContext context(*lookupLocation.getScope(), lookupLocation);
+
+            if (InstanceSymbol::isKind(parentSym.kind))
+                context.instance = &parentSym.as<InstanceSymbol>();
+
             conn = &Expression::bindArgument(getType(), SemanticFacts::getArgDirection(direction),
                                              *connSyntax, context);
         }

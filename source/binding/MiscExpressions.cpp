@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/MiscExpressions.h"
 
+#include "slang/binding/LiteralExpressions.h"
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -217,6 +218,22 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
             return badExpr(compilation, result);
         }
     }
+
+    return *result;
+}
+
+Expression& ElementSelectExpression::fromConstant(Compilation& compilation, Expression& value,
+                                                  int32_t index, const BindContext& context) {
+    Expression* indexExpr = &IntegerLiteral::fromConstant(compilation, index);
+    selfDetermined(context, indexExpr);
+
+    const Type& resultType = getIndexedType(compilation, context, *value.type,
+                                            indexExpr->sourceRange, value.sourceRange, false);
+
+    auto result = compilation.emplace<ElementSelectExpression>(resultType, value, *indexExpr,
+                                                               value.sourceRange);
+    if (value.bad() || indexExpr->bad() || result->bad())
+        return badExpr(compilation, result);
 
     return *result;
 }

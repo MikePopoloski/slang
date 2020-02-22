@@ -54,6 +54,14 @@ Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
                                                 syntax.sourceRange());
 }
 
+Expression& IntegerLiteral::fromConstant(Compilation& compilation, const SVInt& value) {
+    SVInt val = value.resize(32);
+    val.setSigned(true);
+
+    return *compilation.emplace<IntegerLiteral>(compilation, compilation.getIntType(),
+                                                std::move(val), true, SourceRange());
+}
+
 ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
     SVInt result = getValue();
     ASSERT(result.getBitWidth() == type->getBitWidth());

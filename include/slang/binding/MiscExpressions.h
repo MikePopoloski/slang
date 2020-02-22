@@ -58,6 +58,9 @@ public:
                                   const ExpressionSyntax& syntax, SourceRange fullRange,
                                   const BindContext& context);
 
+    static Expression& fromConstant(Compilation& compilation, Expression& value, int32_t index,
+                                    const BindContext& context);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
 
 private:

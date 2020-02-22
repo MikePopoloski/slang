@@ -530,6 +530,29 @@ InstanceSymbol::InstanceSymbol(SymbolKind kind, Compilation& compilation, string
     portMap(compilation.allocSymbolMap()) {
 }
 
+static void getInstanceArrayDimensions(const InstanceArraySymbol& array,
+                                       SmallVector<ConstantRange>& dimensions) {
+    auto scope = array.getParentScope();
+    if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
+        getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
+
+    dimensions.append(array.range);
+}
+
+string_view InstanceSymbol::getArrayName() const {
+    auto scope = getParentScope();
+    if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
+        return scope->asSymbol().as<InstanceArraySymbol>().getArrayName();
+
+    return name;
+}
+
+void InstanceSymbol::getArrayDimensions(SmallVector<ConstantRange>& dimensions) const {
+    auto scope = getParentScope();
+    if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
+        getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
+}
+
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("definition", definition);
 }
@@ -657,6 +680,14 @@ InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
 
     instance->populate(&syntax, parameters);
     return *instance;
+}
+
+string_view InstanceArraySymbol::getArrayName() const {
+    auto scope = getParentScope();
+    if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
+        return scope->asSymbol().as<InstanceArraySymbol>().getArrayName();
+
+    return name;
 }
 
 void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {

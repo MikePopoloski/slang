@@ -130,16 +130,10 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
 
 void TypePrinter::visit(const PackedArrayType& type, string_view) {
     SmallVectorSized<ConstantRange, 8> dims;
-    const PackedArrayType* curr = &type;
-    while (true) {
-        dims.append(curr->range);
-        if (!curr->elementType.isPackedArray())
-            break;
+    const Type* elemType = type.getFullArrayBounds(dims);
+    ASSERT(elemType);
 
-        curr = &curr->elementType.getCanonicalType().as<PackedArrayType>();
-    }
-
-    curr->elementType.visit(*this, "");
+    elemType->visit(*this, "");
     for (auto& range : dims)
         buffer->format("[{}:{}]", range.left, range.right);
 }
@@ -196,14 +190,8 @@ void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
 
 void TypePrinter::visit(const UnpackedArrayType& type, string_view) {
     SmallVectorSized<ConstantRange, 8> dims;
-    const UnpackedArrayType* curr = &type;
-    while (true) {
-        dims.append(curr->range);
-        if (!curr->elementType.isUnpackedArray())
-            break;
-
-        curr = &curr->elementType.getCanonicalType().as<UnpackedArrayType>();
-    }
+    const Type* elemType = type.getFullArrayBounds(dims);
+    ASSERT(elemType);
 
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         buffer->append("unpacked array ");
@@ -215,10 +203,10 @@ void TypePrinter::visit(const UnpackedArrayType& type, string_view) {
         }
 
         buffer->append(" of ");
-        curr->elementType.visit(*this, ""sv);
+        elemType->visit(*this, ""sv);
     }
     else {
-        curr->elementType.visit(*this, ""sv);
+        elemType->visit(*this, ""sv);
         buffer->append("$");
 
         for (auto& range : dims)
