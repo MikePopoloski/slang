@@ -97,6 +97,9 @@ public:
                                   const RangeSelectSyntax& syntax, SourceRange fullRange,
                                   const BindContext& context);
 
+    static Expression& fromConstant(Compilation& compilation, Expression& value,
+                                    ConstantRange range, const BindContext& context);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
 
 private:

@@ -431,6 +431,36 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     return *result;
 }
 
+Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expression& value,
+                                                ConstantRange range, const BindContext& context) {
+    Expression* left = &IntegerLiteral::fromConstant(compilation, range.left);
+    selfDetermined(context, left);
+
+    Expression* right = &IntegerLiteral::fromConstant(compilation, range.right);
+    selfDetermined(context, right);
+
+    auto result = compilation.emplace<RangeSelectExpression>(RangeSelectionKind::Simple,
+                                                             compilation.getErrorType(), value,
+                                                             *left, *right, value.sourceRange);
+    if (value.bad() || left->bad() || right->bad())
+        return badExpr(compilation, result);
+
+    const Type& elementType = getIndexedType(compilation, context, *value.type, value.sourceRange,
+                                             value.sourceRange, true);
+    if (elementType.isError())
+        return badExpr(compilation, result);
+
+    ConstantRange valueRange = value.type->getArrayRange();
+    ASSERT(range.isLittleEndian() == valueRange.isLittleEndian());
+
+    if (value.type->isUnpackedArray())
+        result->type = compilation.emplace<UnpackedArrayType>(elementType, range);
+    else
+        result->type = compilation.emplace<PackedArrayType>(elementType, range);
+
+    return *result;
+}
+
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = value().eval(context);
     ConstantValue cl = left().eval(context);

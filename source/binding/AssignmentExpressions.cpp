@@ -99,7 +99,6 @@ Expression& Expression::implicitConversion(const BindContext& context, const Typ
     ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
            (targetType.isString() && expr.isImplicitString()) ||
            (targetType.isEnum() && isSameEnum(expr, targetType)));
-    ASSERT(!targetType.isEquivalent(*expr.type));
 
     Expression* result = &expr;
     selfDetermined(context, result);
@@ -107,82 +106,137 @@ Expression& Expression::implicitConversion(const BindContext& context, const Typ
                                                                          result->sourceRange);
 }
 
-Expression* Expression::tryConnectPortArray(const BindContext& context, const Type& type,
+Expression* Expression::tryConnectPortArray(const BindContext& context, const Type& portType,
                                             Expression& expr, const InstanceSymbol& instance) {
+    // This lambda is shared code for reporting an error and returning an invalid expression.
     auto& comp = context.getCompilation();
-    auto& ct = expr.type->getCanonicalType();
-    if (ct.kind == SymbolKind::UnpackedArrayType) {
-        SmallVectorSized<ConstantRange, 8> connDims;
-        const Type* elemType = ct.getFullArrayBounds(connDims);
-        ASSERT(elemType);
+    auto bad = [&]() {
+        auto& diag = context.addDiag(diag::PortConnArrayMismatch, expr.sourceRange);
+        diag << *expr.type << portType;
 
-        SmallVectorSized<ConstantRange, 8> instanceDims;
-        instance.getArrayDimensions(instanceDims);
-
-        // If we don't have enough connections dims to satisfy all of the
-        // instance dims, give up now.
-        if (connDims.size() < instanceDims.size())
-            return nullptr;
-
-        span<const ConstantRange> extraDims = connDims;
-        extraDims = extraDims.subspan(instanceDims.size());
-        if (!extraDims.empty())
-            elemType = &UnpackedArrayType::fromDims(comp, *elemType, extraDims);
-
-        // Element types must be equivalent and all array dimension sizes must match
-        bool bad = false;
-        if (!type.isEquivalent(*elemType)) {
-            bad = true;
-        }
+        string_view name = instance.getArrayName();
+        if (name.empty())
+            diag << "<unknown>"sv;
         else {
-            for (size_t i = 0; i < instanceDims.size(); i++) {
-                if (connDims[i].width() != instanceDims[i].width()) {
-                    bad = true;
-                    break;
-                }
-            }
+            diag << name;
+            if (instance.location)
+                diag << SourceRange{ instance.location, instance.location + name.length() };
         }
 
-        if (bad) {
-            auto& diag = context.addDiag(diag::PortConnArrayMismatch, expr.sourceRange);
-            diag << *expr.type << type;
+        return &badExpr(comp, &expr);
+    };
 
-            string_view name = instance.getArrayName();
-            if (name.empty())
-                diag << "<unknown>"sv;
-            else {
-                diag << name;
-                if (instance.location)
-                    diag << SourceRange{ instance.location, instance.location + name.length() };
-            }
+    // Collect all of the dimensions of the instance array that owns the provided instance, ex:
+    // MyMod instArray [3][4] (.conn(vec));
+    //                 ^~~~~~  // these guys
+    SmallVectorSized<ConstantRange, 8> instanceDimVec;
+    instance.getArrayDimensions(instanceDimVec);
 
-            return &badExpr(comp, &expr);
-        }
+    span<const ConstantRange> instanceDims = instanceDimVec;
+    span<const int32_t> arrayPath = instance.arrayPath;
+
+    // If the connection has any unpacked dimensions, match them up with
+    // the leading instance dimensions now.
+    Expression* result = &expr;
+    const Type* ct = &expr.type->getCanonicalType();
+    if (ct->kind == SymbolKind::UnpackedArrayType) {
+        SmallVectorSized<ConstantRange, 8> unpackedDimVec;
+        ct = ct->getFullArrayBounds(unpackedDimVec);
+        ASSERT(ct);
 
         // Select each element of the connection array based on the index of
         // the instance in the instance array path. Elements get matched
         // left index to left index.
-        Expression* result = &expr;
-        for (size_t i = 0; i < instance.arrayPath.size(); i++) {
-            // First translate the path index since it's relative to that particular
-            // array's declared range.
-            int32_t index = instanceDims[i].translateIndex(instance.arrayPath[i]);
+        span<const ConstantRange> unpackedDims = unpackedDimVec;
+        size_t common = std::min(instanceDims.size(), unpackedDims.size());
+        for (size_t i = 0; i < common; i++) {
+            if (unpackedDims[i].width() != instanceDims[i].width())
+                return bad();
+
+            // To select the right element, translate the path index since it's
+            // relative to that particular array's declared range.
+            int32_t index = instanceDims[i].translateIndex(arrayPath[i]);
 
             // Now translate back to be relative to the connection type's declared range.
-            if (!connDims[i].isLittleEndian())
-                index = connDims[i].upper() - index;
+            if (!unpackedDims[i].isLittleEndian())
+                index = unpackedDims[i].upper() - index;
             else
-                index = connDims[i].lower() + index;
+                index = unpackedDims[i].lower() + index;
 
             result = &ElementSelectExpression::fromConstant(comp, *result, index, context);
             if (result->bad())
-                break;
+                return result;
         }
 
-        return result;
+        unpackedDims = unpackedDims.subspan(common);
+        instanceDims = instanceDims.subspan(common);
+        arrayPath = arrayPath.subspan(common);
+
+        // If there are still unpacked dims left, we will have consumed
+        // all of the instance dims and whatever is left should match
+        // the actual port type to connect.
+        if (!unpackedDims.empty()) {
+            if (!portType.isEquivalent(UnpackedArrayType::fromDims(comp, *ct, unpackedDims)))
+                return bad();
+
+            ASSERT(instanceDims.empty());
+            ASSERT(arrayPath.empty());
+            return result;
+        }
+
+        // If there are no instance dims left, just make sure the remaining type matches
+        // the port and we're good to go.
+        if (instanceDims.empty())
+            return portType.isEquivalent(*ct) ? result : bad();
+
+        // Otherwise, if there are instance dimemsions left there needs to be packed dimensions
+        // in the connection to match up with them.
+        if (ct->kind != SymbolKind::PackedArrayType)
+            return bad();
+    }
+    else if (ct->kind != SymbolKind::PackedArrayType) {
+        return nullptr;
     }
 
-    return nullptr;
+    // If we reach this point we're looking at a packed array connection; if there were
+    // any unpacked dimensions we already stripped them off and accounted for them.
+    // The port type must be integral since we're assigning a packed array.
+    if (!portType.isIntegral())
+        return bad();
+
+    // The width of the port times the number of instances must match the number of bits
+    // we have remaining in the connection.
+    bitwidth_t numInstances = 1;
+    for (auto& dim : instanceDims)
+        numInstances *= dim.width();
+
+    bitwidth_t portWidth = portType.getBitWidth();
+    if (numInstances * portWidth != ct->getBitWidth())
+        return bad();
+
+    // Convert the port expression to a simple bit vector so that we can select
+    // bit ranges from it -- the range select expression works on the declared
+    // range of the packed array so a multidimensional wouldn't work correctly
+    // without this conversion.
+    result = &implicitConversion(context, comp.getType(portWidth, result->type->getIntegralFlags()),
+                                 *result);
+
+    // We have enough bits to assign each port on each instance, so now we just need
+    // to pick the right ones. The spec says we start with all right hand indices
+    // to match the rightmost part select, iterating through the rightmost dimension first.
+    // We know none of these operations will overflow because we already checked that
+    // the full size matches the incoming connection above.
+    int32_t offset = 0;
+    for (size_t i = 0; i < arrayPath.size(); i++) {
+        if (i > 0)
+            offset *= int32_t(instanceDims[i - 1].width());
+        offset += instanceDims[i].translateIndex(arrayPath[i]);
+    }
+
+    int32_t width = int32_t(portWidth);
+    offset *= width;
+    ConstantRange range{ offset + width - 1, offset };
+    return &RangeSelectExpression::fromConstant(comp, *result, range, context);
 }
 
 Expression& Expression::convertAssignment(const BindContext& context, const Type& type,

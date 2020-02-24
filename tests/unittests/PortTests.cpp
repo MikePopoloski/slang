@@ -381,6 +381,12 @@ TEST_CASE("Instance array port connections") {
 module m(input logic a[5]);
 endmodule
 
+module n(input logic c[3][4][5]);
+endmodule
+
+module o(input logic [1:0] d);
+endmodule
+
 module test;
 
     logic a[5];
@@ -388,6 +394,12 @@ module test;
     
     logic b[3][4][5];
     m m2 [3][4] (.a(b));
+
+    logic c[3][4][5];
+    n n1 [1][9][3:0] (.c(c));
+
+    logic [7:6][2:4] d [2][2:1];
+    o o1 [1:0][2][3] (.d(d));
 
 endmodule
 )");
