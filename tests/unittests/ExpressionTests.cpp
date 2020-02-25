@@ -214,6 +214,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("+i") == "int");
     CHECK(typeof("-sp") == "struct packed{logic a;bit b;}s$1");
     CHECK(typeof("!r") == "bit");
+    CHECK(typeof("~l") == "logic[7:0]");
     CHECK(typeof("~r") == "<error>");
     CHECK(typeof("&l") == "logic");
     CHECK(typeof("~^b1") == "bit");

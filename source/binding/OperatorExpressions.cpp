@@ -296,10 +296,9 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             selfDetermined(context, result->operand_);
             break;
         case SyntaxKind::UnaryBitwiseNotExpression:
-            // Supported for integral only. Result type is always a single bit.
+            // Supported for integral only. Result is same as input type.
             good = type->isIntegral();
-            result->type =
-                type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
+            result->type = type;
             break;
         case SyntaxKind::UnaryBitwiseAndExpression:
         case SyntaxKind::UnaryBitwiseOrExpression:
