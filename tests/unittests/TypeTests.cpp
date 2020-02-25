@@ -712,3 +712,33 @@ endmodule
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Identical enums in different compilation units") {
+    // It's expected that this should work, even though technically
+    // the enums are defined in different compilation units and therefore
+    // would not strictly be considered matching.
+    auto tree1 = SyntaxTree::fromText(R"(
+typedef enum logic [3:0] {
+    A = 3, B = 7, EF = 6
+} foo_t;
+
+module m(input foo_t f);
+endmodule
+)");
+
+    auto tree2 = SyntaxTree::fromText(R"(
+typedef enum logic [3:0] {
+    A = 3, B = 7, EF = 6
+} foo_t;
+
+module top;
+    foo_t f = EF;
+    m m1(.f(f));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    NO_COMPILATION_ERRORS;
+}

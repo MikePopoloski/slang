@@ -34,6 +34,44 @@ struct GetDefaultVisitor {
     }
 };
 
+bool isSameEnum(const EnumType& le, const EnumType& re) {
+    auto ls = le.getParentScope();
+    auto rs = re.getParentScope();
+    if (!ls || !rs)
+        return false;
+
+    if (ls->asSymbol().kind != SymbolKind::CompilationUnit)
+        return false;
+
+    if (rs->asSymbol().kind != SymbolKind::CompilationUnit)
+        return false;
+
+    if (!le.baseType.isMatching(re.baseType))
+        return false;
+
+    auto rr = re.values();
+    auto rit = rr.begin();
+    for (auto& value : le.values()) {
+        if (rit == rr.end())
+            return false;
+
+        if (value.name != rit->name)
+            return false;
+
+        auto& lv = value.getValue();
+        auto& rv = rit->getValue();
+        if (lv.bad() || rv.bad())
+            return false;
+
+        if (lv.integer() != rv.integer())
+            return false;
+
+        rit++;
+    }
+
+    return rit == rr.end();
+}
+
 } // namespace
 
 bitwidth_t Type::getBitWidth() const {
@@ -225,6 +263,13 @@ bool Type::isMatching(const Type& rhs) const {
         auto& ra = r->as<UnpackedArrayType>();
         return la.range == ra.range && la.elementType.isMatching(ra.elementType);
     }
+
+    // This is not specified in the standard but people naturally expect it to work:
+    // if an enum is declared in an include file and included in multiple compilation
+    // units, they will have separate instantiations but should probably still be
+    // considered as matching each other.
+    if (l->kind == SymbolKind::EnumType && r->kind == SymbolKind::EnumType)
+        return isSameEnum(l->as<EnumType>(), r->as<EnumType>());
 
     return false;
 }
