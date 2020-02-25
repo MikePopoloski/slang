@@ -251,6 +251,7 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
 
     // Upward lookups can match either a scope name, or a module definition name (on any of the
     // instances). Imports are not considered.
+    const Symbol* firstMatch = nullptr;
     const Scope* scope = &context.scope;
     while (true) {
         const Scope* nextInstance = nullptr;
@@ -273,6 +274,13 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
             }
 
             if (symbol) {
+                // Keep track of the first match we find; if it turns out we can't
+                // resolve all of the name parts we'll move on and try elsewhere,
+                // but at the end if we couldn't find a full match we'll use this to
+                // provide a better error.
+                if (!firstMatch)
+                    firstMatch = symbol;
+
                 result.clear();
                 result.found = symbol;
 
@@ -291,6 +299,13 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
             switch (symbol->kind) {
                 case SymbolKind::Root:
                     result.clear();
+                    if (firstMatch) {
+                        // If we did find a match at some point, repeat that
+                        // lookup to provide a real error message.
+                        result.found = firstMatch;
+                        lookupDownward(nameParts, nameToken, selectors, context, result, flags);
+                        return false;
+                    }
                     return true;
                 case SymbolKind::Definition:
                     result.clear();
