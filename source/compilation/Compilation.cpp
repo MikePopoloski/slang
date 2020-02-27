@@ -34,13 +34,18 @@ struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
 struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
-    DiagnosticVisitor(Compilation& compilation, const Diagnostics& diags, uint32_t errorLimit) :
-        compilation(compilation), diags(diags), errorLimit(errorLimit) {}
+    DiagnosticVisitor(Compilation& compilation, const size_t& numErrors, uint32_t errorLimit) :
+        compilation(compilation), numErrors(numErrors), errorLimit(errorLimit) {}
 
     template<typename T>
     void handle(const T& symbol) {
-        if (diags.getNumErrors() > errorLimit)
-            return;
+        handleDefault(symbol);
+    }
+
+    template<typename T>
+    bool handleDefault(const T& symbol) {
+        if (numErrors > errorLimit)
+            return false;
 
         if constexpr (std::is_base_of_v<Symbol, T>) {
             auto declaredType = symbol.getDeclaredType();
@@ -54,27 +59,43 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
         }
 
         visitDefault(symbol);
+        return true;
     }
-    void handle(const ExplicitImportSymbol& symbol) { symbol.importedSymbol(); }
-    void handle(const WildcardImportSymbol& symbol) { symbol.getPackage(); }
-    void handle(const ContinuousAssignSymbol& symbol) { symbol.getAssignment(); }
+
+    void handle(const ExplicitImportSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.importedSymbol();
+    }
+
+    void handle(const WildcardImportSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.getPackage();
+    }
+
+    void handle(const ContinuousAssignSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.getAssignment();
+    }
 
     void handle(const DefinitionSymbol& symbol) {
-        if (diags.getNumErrors() > errorLimit)
+        if (numErrors > errorLimit)
             return;
 
         auto guard = ScopeGuard([saved = inDef, this] { inDef = saved; });
         inDef = true;
-        visitDefault(symbol);
+        handleDefault(symbol);
     }
 
     void handleInstance(const InstanceSymbol& symbol) {
-        if (diags.getNumErrors() > errorLimit)
+        if (numErrors > errorLimit)
             return;
 
         if (!inDef)
             instanceCount[&symbol.definition]++;
-        visitDefault(symbol);
+        handleDefault(symbol);
     }
 
     void handle(const ModuleInstanceSymbol& symbol) { handleInstance(symbol); }
@@ -82,21 +103,43 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
     void handle(const InterfaceInstanceSymbol& symbol) { handleInstance(symbol); }
 
     void handle(const PortSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
         symbol.getConnection();
         for (auto attr : symbol.getConnectionAttributes())
             attr->getValue();
     }
 
     void handle(const InterfacePortSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
         for (auto attr : symbol.connectionAttributes)
             attr->getValue();
     }
 
+    void handle(const GenerateBlockSymbol& symbol) {
+        if (!symbol.isInstantiated)
+            return;
+
+        handleDefault(symbol);
+    }
+
     Compilation& compilation;
-    const Diagnostics& diags;
+    const size_t& numErrors;
     flat_hash_map<const Symbol*, size_t> instanceCount;
     uint32_t errorLimit;
     bool inDef = false;
+};
+
+const Symbol* getInstanceOrDef(const Symbol* symbol) {
+    while (symbol && symbol->kind != SymbolKind::Definition &&
+           !InstanceSymbol::isKind(symbol->kind)) {
+        auto scope = symbol->getParentScope();
+        symbol = scope ? &scope->asSymbol() : nullptr;
+    }
+    return symbol;
 };
 
 } // namespace
@@ -117,7 +160,9 @@ void registerSystemTasks(Compilation&);
 
 namespace slang {
 
-Compilation::Compilation(const Bag& options) : options(options.getOrDefault<CompilationOptions>()) {
+Compilation::Compilation(const Bag& options) :
+    options(options.getOrDefault<CompilationOptions>()), tempDiag({}, {}) {
+
     // Construct all built-in types.
     bitType = emplace<ScalarType>(ScalarType::Bit);
     logicType = emplace<ScalarType>(ScalarType::Logic);
@@ -482,37 +527,9 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
     // If we haven't already done so, touch every symbol, scope, statement,
     // and expression tree so that we can be sure we have all the diagnostics.
-    DiagnosticVisitor visitor(*this, diags,
+    DiagnosticVisitor visitor(*this, numErrors,
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
-
-    // Go through all diagnostics and build a map from source location / code to the
-    // actual diagnostic. The purpose is to find duplicate diagnostics issued by several
-    // instantiations and collapse them down to one output for the user.
-    flat_hash_map<std::tuple<DiagCode, SourceLocation>,
-                  std::pair<const Diagnostic*, std::vector<const Diagnostic*>>>
-        diagMap;
-
-    auto isSuppressed = [](const Symbol* symbol) {
-        while (symbol) {
-            if (symbol->kind == SymbolKind::GenerateBlock &&
-                !symbol->as<GenerateBlockSymbol>().isInstantiated)
-                return true;
-
-            auto scope = symbol->getParentScope();
-            symbol = scope ? &scope->asSymbol() : nullptr;
-        }
-        return false;
-    };
-
-    auto getInstanceOrDef = [](const Symbol* symbol) {
-        while (symbol && symbol->kind != SymbolKind::Definition &&
-               !InstanceSymbol::isKind(symbol->kind)) {
-            auto scope = symbol->getParentScope();
-            symbol = scope ? &scope->asSymbol() : nullptr;
-        }
-        return symbol;
-    };
 
     auto isInsideDef = [](const Symbol* symbol) {
         while (true) {
@@ -527,39 +544,15 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         }
     };
 
-    for (auto& diag : diags) {
-        // Filter out diagnostics that came from inside an uninstantiated generate block.
-        ASSERT(diag.symbol);
-        if (isSuppressed(diag.symbol))
-            continue;
-
-        auto inst = getInstanceOrDef(diag.symbol);
-
-        // Coalesce diagnostics that are at the same source location and have the same code.
-        if (auto it = diagMap.find({ diag.code, diag.location }); it != diagMap.end()) {
-            it->second.second.push_back(&diag);
-            if (inst && inst->kind == SymbolKind::Definition)
-                it->second.first = &diag;
-        }
-        else {
-            std::pair<const Diagnostic*, std::vector<const Diagnostic*>> newEntry;
-            newEntry.second.push_back(&diag);
-            if (inst && inst->kind == SymbolKind::Definition)
-                newEntry.first = &diag;
-
-            diagMap.emplace(std::make_tuple(diag.code, diag.location), std::move(newEntry));
-        }
-    }
-
     Diagnostics results;
     for (auto& pair : diagMap) {
         // Figure out which diagnostic from this group to issue.
         // If any of them are inside a definition (as opposed to one or more instances), issue
         // the one for the definition without embellishment. Otherwise, pick the first instance
         // and include a note about where the diagnostic occurred in the hierarchy.
-        auto& [definition, diagList] = pair.second;
-        if (definition) {
-            results.append(*definition);
+        auto& [diagList, definitionIndex] = pair.second;
+        if (definitionIndex < diagList.size()) {
+            results.append(diagList[definitionIndex]);
             continue;
         }
 
@@ -569,8 +562,8 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         const Symbol* inst = nullptr;
         size_t count = 0;
 
-        for (auto d : diagList) {
-            auto symbol = getInstanceOrDef(d->symbol);
+        for (auto& diag : diagList) {
+            auto symbol = getInstanceOrDef(diag.symbol);
             if (!symbol || !symbol->getParentScope())
                 continue;
 
@@ -581,7 +574,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             count++;
             auto& parent = symbol->getParentScope()->asSymbol();
             if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
-                found = d;
+                found = &diag;
                 inst = symbol;
             }
         }
@@ -595,7 +588,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             results.append(std::move(diag));
         }
         else {
-            results.append(*diagList.front());
+            results.append(diagList.front());
         }
     }
 
@@ -620,7 +613,56 @@ const Diagnostics& Compilation::getAllDiagnostics() {
 }
 
 void Compilation::addDiagnostics(const Diagnostics& diagnostics) {
-    diags.appendRange(diagnostics);
+    for (auto& diag : diagnostics)
+        addDiag(diag);
+}
+
+Diagnostic& Compilation::addDiag(Diagnostic diag) {
+    auto isSuppressed = [](const Symbol* symbol) {
+        while (symbol) {
+            if (symbol->kind == SymbolKind::GenerateBlock &&
+                !symbol->as<GenerateBlockSymbol>().isInstantiated)
+                return true;
+
+            auto scope = symbol->getParentScope();
+            symbol = scope ? &scope->asSymbol() : nullptr;
+        }
+        return false;
+    };
+
+    // Filter out diagnostics that came from inside an uninstantiated generate block.
+    ASSERT(diag.symbol);
+    ASSERT(diag.location);
+    if (isSuppressed(diag.symbol)) {
+        tempDiag = std::move(diag);
+        return tempDiag;
+    }
+
+    auto inst = getInstanceOrDef(diag.symbol);
+
+    // Coalesce diagnostics that are at the same source location and have the same code.
+    if (auto it = diagMap.find({ diag.code, diag.location }); it != diagMap.end()) {
+        auto& [diagList, defIndex] = it->second;
+        diagList.emplace_back(std::move(diag));
+        if (inst && inst->kind == SymbolKind::Definition)
+            defIndex = diagList.size() - 1;
+        return diagList.back();
+    }
+
+    if (diag.isError())
+        numErrors++;
+
+    std::pair<std::vector<Diagnostic>, size_t> newEntry;
+    newEntry.first.push_back(std::move(diag));
+    if (inst && inst->kind == SymbolKind::Definition)
+        newEntry.second = 0;
+    else
+        newEntry.second = SIZE_MAX;
+
+    auto [it, inserted] =
+        diagMap.emplace(std::make_tuple(diag.code, diag.location), std::move(newEntry));
+    auto& [diagList, defIndex] = it->second;
+    return diagList.back();
 }
 
 const NetType& Compilation::getDefaultNetType(const ModuleDeclarationSyntax& decl) const {

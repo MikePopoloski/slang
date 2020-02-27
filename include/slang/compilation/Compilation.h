@@ -260,6 +260,8 @@ private:
 
     span<const AttributeSymbol* const> getAttributes(const void* ptr) const;
 
+    Diagnostic& addDiag(Diagnostic diag);
+
     // Stored options object.
     CompilationOptions options;
 
@@ -340,9 +342,18 @@ private:
     // A set of all generate block syntax nodes that have ever been visited.
     flat_hash_set<const SyntaxNode*> visitedGenBlocks;
 
-    Diagnostics diags;
+    // A map from diag code + location to the diagnostics that have occurred at that location.
+    // This is used to collapse duplicate diagnostics across instantiations into a single report.
+    // The value is a pair, with the first element being a list of all other diagnostics at that
+    // code + location and the second being the index of the last diagnostic of that kind that
+    // came from a DefinitionSymbol.
+    using DiagMap = flat_hash_map<std::tuple<DiagCode, SourceLocation>,
+                                  std::pair<std::vector<Diagnostic>, size_t>>;
+    DiagMap diagMap;
+
     std::unique_ptr<RootSymbol> root;
     const SourceManager* sourceManager = nullptr;
+    size_t numErrors = 0; // total number of errors inserted into the diagMap
     TimeScale defaultTimeScale;
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()
@@ -350,6 +361,11 @@ private:
     int nextEnumSystemId = 1;
     int nextStructSystemId = 1;
     int nextUnionSystemId = 1;
+
+    // This is storage for a temporary diagnostic that is being constructed.
+    // Typically this is done in-place within the diagMap, but for diagnostics
+    // that have been surpressed we need space to return *something* to the caller.
+    Diagnostic tempDiag;
 
     optional<Diagnostics> cachedParseDiagnostics;
     optional<Diagnostics> cachedSemanticDiagnostics;

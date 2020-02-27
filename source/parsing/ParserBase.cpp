@@ -191,7 +191,7 @@ SourceLocation ParserBase::getLastLocation() {
 bool ParserBase::haveDiagAtCurrentLoc() {
     Diagnostics& diags = getDiagnostics();
     auto location = getLastLocation();
-    return !diags.empty() && diags.getNumErrors() &&
+    return !diags.empty() && diags.back().isError() &&
            (diags.back().location == location || diags.back().location == peek().location());
 }
 

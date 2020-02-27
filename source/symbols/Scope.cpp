@@ -94,18 +94,20 @@ TimeScale Scope::getTimeScale() const {
 }
 
 Diagnostic& Scope::addDiag(DiagCode code, SourceLocation location) const {
-    return compilation.diags.add(*thisSym, code, location);
+    return compilation.addDiag(Diagnostic(*thisSym, code, location));
 }
 
 Diagnostic& Scope::addDiag(DiagCode code, SourceRange sourceRange) const {
-    return compilation.diags.add(*thisSym, code, sourceRange);
+    Diagnostic diag(*thisSym, code, sourceRange.start());
+    diag << sourceRange;
+    return compilation.addDiag(std::move(diag));
 }
 
 void Scope::addDiags(const Diagnostics& diags) const {
     for (auto& diag : diags) {
         Diagnostic copy = diag;
         copy.symbol = thisSym;
-        compilation.diags.append(copy);
+        compilation.addDiag(copy);
     }
 }
 

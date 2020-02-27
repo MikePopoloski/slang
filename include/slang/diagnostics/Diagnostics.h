@@ -93,6 +93,10 @@ public:
     /// Constructs a new Diagnostic entry with the given symbol, code and location.
     Diagnostic(const Symbol& source, DiagCode code, SourceLocation location) noexcept;
 
+    /// Returns true if this diagnostic's code is intrinsically considered an error,
+    /// regardless of what severity mapping rules might be in place.
+    bool isError() const;
+
     /// Adds a new note to the diagnostic at the given source location.
     Diagnostic& addNote(DiagCode code, SourceLocation location);
     Diagnostic& addNote(const Diagnostic& diag);
@@ -122,7 +126,7 @@ public:
 };
 
 /// A collection of diagnostics.
-class Diagnostics : private SmallVectorSized<Diagnostic, 2> {
+class Diagnostics : public SmallVectorSized<Diagnostic, 2> {
 public:
     Diagnostics() = default;
     Diagnostics(Diagnostics&& other) noexcept = default;
@@ -139,30 +143,8 @@ public:
     /// Adds a new diagnostic to the collection, highlighting the given source range.
     Diagnostic& add(const Symbol& source, DiagCode code, SourceRange range);
 
-    void append(const Diagnostic& other);
-    void append(Diagnostic&& other);
-    void appendRange(const Diagnostics& other);
-
-    void pop();
-    void clear();
-
     /// Sorts the diagnostics in the collection based on source file and line number.
     void sort(const SourceManager& sourceManager);
-
-    /// Gets the number of errors that have been added to the collection.
-    uint32_t getNumErrors() const { return errorCount; }
-
-    using SmallVectorSized::back;
-    using SmallVectorSized::begin;
-    using SmallVectorSized::data;
-    using SmallVectorSized::empty;
-    using SmallVectorSized::end;
-    using SmallVectorSized::front;
-    using SmallVectorSized::size;
-    using SmallVectorSized::operator[];
-
-private:
-    uint32_t errorCount = 0;
 };
 
 class DiagGroup {

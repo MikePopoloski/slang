@@ -52,9 +52,12 @@ bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
             break;
     }
 
-    if (diagnostics.getNumErrors()) {
-        print("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics));
-        return false;
+    // Only print diagnostics if actual errors occurred.
+    for (auto& diag : diagnostics) {
+        if (diag.isError()) {
+            print("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics));
+            return false;
+        }
     }
 
     print("{}\n", output.str());

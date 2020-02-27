@@ -422,9 +422,9 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     // one as well since it will just lead to lots of spam and the first error is
     // probably the thing that actually caused the issue.
     bool report = true;
-    if (!diagnostics.empty() && diagnostics.getNumErrors()) {
+    if (!diagnostics.empty()) {
         const Diagnostic& diag = diagnostics.back();
-        if (diag.location == location || diag.location == actual.location())
+        if (diag.isError() && (diag.location == location || diag.location == actual.location()))
             report = false;
     }
 
