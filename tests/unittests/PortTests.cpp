@@ -387,6 +387,9 @@ endmodule
 module o(input logic [1:0] d);
 endmodule
 
+module p(input logic e);
+endmodule
+
 module test;
 
     logic a[5];
@@ -401,12 +404,65 @@ module test;
     logic [7:6][2:4] d [2][2:1];
     o o1 [1:0][2][3] (.d(d));
 
+    logic [2:4][8:9][7:6] d2;
+    o o2 [2:0][2] (.d(d2));
+
+    logic e[3][4];
+    p p1 [3][4] (.e(e));
+
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Instance array port connection errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input logic a[5]);
+endmodule
+
+module n(input string c);
+endmodule
+
+module o(input logic [3:0] d);
+endmodule
+
+module test;
+
+    logic b[3][4][5];
+    m m1 [2][4] (.a(b));
+
+    logic b2[2][4][4];
+    m m2 [2][4] (.a(b2));
+
+    string b3[2][4];
+    m m3 [2][4][5] (.a(b3));
+
+    string s;
+    m m4 [2][4][5] (.a(s));
+
+    logic [3:0] c;
+    n n1 [2] (.c(c));
+
+    logic [3:0][1:0][1:0] d;
+    o o1 [2][4] (.d(d));
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::PortConnArrayMismatch);
+    CHECK(diags[1].code == diag::PortConnArrayMismatch);
+    CHECK(diags[2].code == diag::PortConnArrayMismatch);
+    CHECK(diags[3].code == diag::BadAssignment);
+    CHECK(diags[4].code == diag::PortConnArrayMismatch);
+    CHECK(diags[5].code == diag::PortConnArrayMismatch);
 }
 
 TEST_CASE("Implicit interface ports") {

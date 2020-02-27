@@ -165,7 +165,7 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
 
             result = &ElementSelectExpression::fromConstant(comp, *result, index, context);
             if (result->bad())
-                return result;
+                return result;  // probably unreachable
         }
 
         unpackedDims = unpackedDims.subspan(common);
@@ -249,27 +249,32 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     if (type.isError())
         return badExpr(compilation, &expr);
 
+    Expression* result = &expr;
     const Type* rt = expr.type;
+    if (type.isEquivalent(*rt)) {
+        selfDetermined(context, result);
+        return *result;
+    }
+
+    // If this is a port connection to an array of instances, check if the provided
+    // expression represents an array that should be sliced on a per-instance basis.
+    if (context.instance && !context.instance->arrayPath.empty()) {
+        Expression* conn = tryConnectPortArray(context, type, expr, *context.instance);
+        if (conn) {
+            selfDetermined(context, conn);
+            return *conn;
+        }
+    }
+
     if (!type.isAssignmentCompatible(*rt)) {
         // String literals have a type of integer, but are allowed to implicitly convert to the
         // string type. See comments on isSameEnum for why that's here as well.
         if ((type.isString() && expr.isImplicitString()) ||
             (type.isEnum() && isSameEnum(expr, type))) {
 
-            Expression* result = &expr;
             result = &implicitConversion(context, type, *result);
             selfDetermined(context, result);
             return *result;
-        }
-
-        // If this is a port connection to an array of instances, check if the provided
-        // expression represents an array that should be sliced on a per-instance basis.
-        if (context.instance && !context.instance->arrayPath.empty()) {
-            Expression* result = tryConnectPortArray(context, type, expr, *context.instance);
-            if (result) {
-                selfDetermined(context, result);
-                return *result;
-            }
         }
 
         DiagCode code =
@@ -281,12 +286,6 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
 
         diag << expr.sourceRange;
         return badExpr(compilation, &expr);
-    }
-
-    Expression* result = &expr;
-    if (type.isEquivalent(*rt)) {
-        selfDetermined(context, result);
-        return *result;
     }
 
     if (type.isNumeric() && rt->isNumeric()) {
