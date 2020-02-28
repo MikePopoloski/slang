@@ -689,28 +689,30 @@ bool VariableDeclStatement::verifyConstantImpl(EvalContext& context) const {
 Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
                                             const ConditionalStatementSyntax& syntax,
                                             const BindContext& context, StatementContext& stmtCtx) {
+    bool bad = false;
     auto& conditions = syntax.predicate->conditions;
-    if (conditions.size() == 0)
-        return badStmt(compilation, nullptr);
-
-    if (conditions.size() > 1) {
+    if (conditions.size() == 0) {
+        bad = true;
+    }
+    else if (conditions.size() > 1) {
         context.addDiag(diag::NotYetSupported, conditions[1]->sourceRange());
-        return badStmt(compilation, nullptr);
+        bad = true;
     }
-
-    if (conditions[0]->matchesClause) {
+    else if (conditions[0]->matchesClause) {
         context.addDiag(diag::NotYetSupported, conditions[0]->matchesClause->sourceRange());
-        return badStmt(compilation, nullptr);
+        bad = true;
     }
 
-    auto& cond = Expression::bind(*conditions[0]->expr, context);
-    if (cond.bad() || !context.requireBooleanConvertible(cond))
-        return badStmt(compilation, nullptr);
-
-    // If the condition is constant, we know which branch will be taken.
     BindFlags ifFlags = BindFlags::None;
     BindFlags elseFlags = BindFlags::None;
+    auto& cond = Expression::bind(*conditions[0]->expr, context);
+    bad |= cond.bad();
+
+    if (!bad && !context.requireBooleanConvertible(cond))
+        bad = true;
+
     if (cond.constant) {
+        // If the condition is constant, we know which branch will be taken.
         if (cond.constant->isTrue())
             elseFlags = BindFlags::UnevaluatedBranch;
         else
@@ -726,7 +728,7 @@ Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
 
     auto result =
         compilation.emplace<ConditionalStatement>(cond, ifTrue, ifFalse, syntax.sourceRange());
-    if (ifTrue.bad() || (ifFalse && ifFalse->bad()))
+    if (bad || ifTrue.bad() || (ifFalse && ifFalse->bad()))
         return badStmt(compilation, result);
 
     return *result;
@@ -757,9 +759,10 @@ bool ConditionalStatement::verifyConstantImpl(EvalContext& context) const {
 
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
                                      const BindContext& context, StatementContext& stmtCtx) {
+    bool bad = false;
     if (syntax.matchesOrInside.kind == TokenKind::MatchesKeyword) {
         context.addDiag(diag::NotYetSupported, syntax.matchesOrInside.range());
-        return badStmt(compilation, nullptr);
+        bad = true;
     }
 
     Condition condition;
@@ -798,7 +801,6 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     SmallVectorSized<const ExpressionSyntax*, 8> expressions;
     SmallVectorSized<const Statement*, 8> statements;
     const Statement* defStmt = nullptr;
-    bool bad = false;
 
     // TODO: check for cases we statically know we can never hit
     for (auto item : syntax.items) {
@@ -1140,15 +1142,16 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
                                             const ForeachLoopStatementSyntax& syntax,
                                             const BindContext& context, StatementContext& stmtCtx) {
     auto guard = stmtCtx.enterLoop();
+    bool bad = false;
 
     // Find the array over which we are looping. Make sure it's actually an array.
     auto& arrayRef = Expression::bind(*syntax.loopList->arrayName, context);
-    if (arrayRef.bad())
-        return badStmt(compilation, nullptr);
-
-    if (arrayRef.kind != ExpressionKind::NamedValue || !arrayRef.type->isArray()) {
+    if (arrayRef.bad()) {
+        bad = true;
+    }
+    else if (arrayRef.kind != ExpressionKind::NamedValue || !arrayRef.type->isArray()) {
         context.addDiag(diag::NotAnArray, arrayRef.sourceRange);
-        return badStmt(compilation, nullptr);
+        bad = true;
     }
 
     SmallVectorSized<ConstantRange, 4> dims;
@@ -1162,27 +1165,31 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
             type = &ct.as<PackedArrayType>().elementType;
     }
 
-    if (syntax.loopList->loopVariables.size() > dims.size()) {
-        context.addDiag(diag::TooManyForeachVars, syntax.loopList->loopVariables.sourceRange())
-            << *arrayRef.type;
-        return badStmt(compilation, nullptr);
-    }
-
-    // Find a reference to all of our loop variables, which should always be
-    // in the parent block symbol.
     SmallVectorSized<ConstantRange, 4> filteredDims;
     SmallVectorSized<const ValueSymbol*, 4> loopVars;
-    auto dimIt = dims.begin();
-    for (auto loopVar : syntax.loopList->loopVariables) {
-        if (loopVar->kind != SyntaxKind::EmptyIdentifierName) {
-            auto& idName = loopVar->as<IdentifierNameSyntax>();
-            auto sym = context.scope.find(idName.identifier.valueText());
-            if (sym) {
-                loopVars.append(&sym->as<ValueSymbol>());
-                filteredDims.append(*dimIt);
-            }
+
+    if (syntax.loopList->loopVariables.size() > dims.size()) {
+        if (!bad) {
+            context.addDiag(diag::TooManyForeachVars, syntax.loopList->loopVariables.sourceRange())
+                << *arrayRef.type;
+            bad = true;
         }
-        dimIt++;
+    }
+    else {
+        // Find a reference to all of our loop variables, which should always be
+        // in the parent block symbol.
+        auto dimIt = dims.begin();
+        for (auto loopVar : syntax.loopList->loopVariables) {
+            if (loopVar->kind != SyntaxKind::EmptyIdentifierName) {
+                auto& idName = loopVar->as<IdentifierNameSyntax>();
+                auto sym = context.scope.find(idName.identifier.valueText());
+                if (sym) {
+                    loopVars.append(&sym->as<ValueSymbol>());
+                    filteredDims.append(*dimIt);
+                }
+            }
+            dimIt++;
+        }
     }
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
@@ -1190,7 +1197,7 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
         arrayRef, filteredDims.copy(compilation), loopVars.copy(compilation), bodyStmt,
         syntax.sourceRange());
 
-    if (bodyStmt.bad())
+    if (bad || bodyStmt.bad())
         return badStmt(compilation, result);
     return *result;
 }
@@ -1459,8 +1466,10 @@ Statement& AssertionStatement::fromSyntax(Compilation& compilation,
                                           const BindContext& context, StatementContext& stmtCtx) {
     AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
     auto& cond = Expression::bind(*syntax.expr->expression, context);
-    if (cond.bad() || !context.requireBooleanConvertible(cond))
-        return badStmt(compilation, nullptr);
+    bool bad = cond.bad();
+
+    if (!bad && !context.requireBooleanConvertible(cond))
+        bad = true;
 
     const Statement* ifTrue = nullptr;
     const Statement* ifFalse = nullptr;
@@ -1477,14 +1486,16 @@ Statement& AssertionStatement::fromSyntax(Compilation& compilation,
     if (isDeferred)
         isFinal = syntax.delay->finalKeyword.valid();
 
-    if (assertKind == AssertionKind::Cover && ifFalse)
+    if (assertKind == AssertionKind::Cover && ifFalse) {
         context.addDiag(diag::CoverStmtNoFail, syntax.action->elseClause->sourceRange());
+        bad = true;
+    }
 
     // TODO: add checking for requirements on deferred assertion actions
 
     auto result = compilation.emplace<AssertionStatement>(
         assertKind, cond, ifTrue, ifFalse, isDeferred, isFinal, syntax.sourceRange());
-    if ((ifTrue && ifTrue->bad()) || (ifFalse && ifFalse->bad()))
+    if (bad || (ifTrue && ifTrue->bad()) || (ifFalse && ifFalse->bad()))
         return badStmt(compilation, result);
 
     return *result;

@@ -634,3 +634,29 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnusedResult);
 }
+
+TEST_CASE("Else statement with implicit for loop block") {
+    auto tree = SyntaxTree::fromText(R"(
+interface Iface;
+    logic foo;
+endinterface
+
+module m(Iface i);
+    always begin
+        if (i.foo) begin
+        end
+        else begin
+            for (int i = 0; i < 10; i++) begin
+            end
+        end
+
+        for (int i = 0; i < 5; i++) begin
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
