@@ -22,6 +22,10 @@ void ASTSerializer::serialize(const Expression& expr) {
     expr.visit(*this);
 }
 
+void ASTSerializer::serialize(const Statement &statement) {
+    statement.visit(*this);
+}
+
 void ASTSerializer::write(string_view name, string_view value) {
     writer.writeProperty(name);
     writer.writeValue(value);
@@ -62,6 +66,11 @@ void ASTSerializer::write(string_view name, const Expression& value) {
     serialize(value);
 }
 
+void ASTSerializer::write(string_view name, const Statement &value) {
+    writer.writeProperty(name);
+    serialize(value);
+}
+
 void ASTSerializer::writeLink(string_view name, const Symbol& value) {
     writer.writeProperty(name);
     writer.writeValue(std::to_string(uintptr_t(&value)) + " " +
@@ -77,6 +86,15 @@ void ASTSerializer::endArray() {
     writer.endArray();
 }
 
+void ASTSerializer::startObject(string_view name) {
+    writer.writeProperty(name);
+    writer.startObject();
+}
+
+void ASTSerializer::endObject() {
+    writer.endObject();
+}
+
 template<typename T>
 void ASTSerializer::visit(const T& elem) {
     if constexpr (std::is_base_of_v<Expression, T>) {
@@ -88,6 +106,16 @@ void ASTSerializer::visit(const T& elem) {
             write("constant", *elem.constant);
 
         if constexpr (!std::is_same_v<Expression, T>) {
+            elem.serializeTo(*this);
+        }
+
+        writer.endObject();
+    } else if constexpr(std::is_base_of_v<Statement, T>) {
+        (void)(elem);
+        writer.startObject();
+        write("kind", toString(elem.kind));
+
+        if constexpr (!std::is_same_v<Statement, T>) {
             elem.serializeTo(*this);
         }
 
@@ -143,6 +171,10 @@ void ASTSerializer::visit(const T& elem) {
 
 void ASTSerializer::visitInvalid(const Expression& expr) {
     visit(expr.as<InvalidExpression>());
+}
+
+void ASTSerializer::visitInvalid(const slang::Statement& statement) {
+    visit(statement.as<InvalidStatement>());
 }
 
 } // namespace slang

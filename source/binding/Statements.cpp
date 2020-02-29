@@ -14,6 +14,7 @@
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/parsing/LexerFacts.h"
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -54,6 +55,11 @@ struct VerifyVisitor {
 namespace slang {
 
 const InvalidStatement InvalidStatement::Instance(nullptr);
+
+void InvalidStatement::serializeTo(ASTSerializer& serializer) const {
+    if (child)
+        serializer.write("child", *child);
+}
 
 ER Statement::eval(EvalContext& context) const {
     EvalVisitor visitor;
@@ -528,8 +534,21 @@ bool StatementList::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
+void StatementList::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("list");
+    for (auto const& stmt : list) {
+        serializer.serialize(*stmt);
+    }
+    serializer.endArray();
+}
+
 BlockStatement::BlockStatement(const StatementBlockSymbol& block, SourceRange sourceRange) :
     Statement(StatementKind::Block, sourceRange), blockKind(block.blockKind), block(&block) {
+}
+
+void BlockStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("blockKind", toString(blockKind));
+    serializer.write("list", *list);
 }
 
 Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
@@ -628,6 +647,10 @@ bool ReturnStatement::verifyConstantImpl(EvalContext& context) const {
     return !expr || expr->verifyConstant(context);
 }
 
+void ReturnStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", *expr);
+}
+
 Statement& BreakStatement::fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
                                       const BindContext& context, StatementContext& stmtCtx) {
     auto result = compilation.emplace<BreakStatement>(syntax.sourceRange());
@@ -684,6 +707,10 @@ bool VariableDeclStatement::verifyConstantImpl(EvalContext& context) const {
             return false;
     }
     return true;
+}
+
+void VariableDeclStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("symbol", symbol);
 }
 
 Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
@@ -757,6 +784,12 @@ bool ConditionalStatement::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
+void ConditionalStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("cond", cond);
+    serializer.write("ifTrue", ifTrue);
+    serializer.write("ifFalse", ifFalse);
+}
+
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
                                      const BindContext& context, StatementContext& stmtCtx) {
     bool bad = false;
@@ -765,34 +798,34 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
         bad = true;
     }
 
-    Condition condition;
+    CaseStatementCondition condition;
     switch (syntax.caseKeyword.kind) {
         case TokenKind::CaseKeyword:
-            condition = Condition::Normal;
+            condition = CaseStatementCondition::Normal;
             break;
         case TokenKind::CaseXKeyword:
-            condition = Condition::WildcardXOrZ;
+            condition = CaseStatementCondition::WildcardXOrZ;
             break;
         case TokenKind::CaseZKeyword:
-            condition = Condition::WildcardJustZ;
+            condition = CaseStatementCondition::WildcardJustZ;
             break;
         default:
             THROW_UNREACHABLE;
     }
 
-    Check check;
+    CaseStatementCheck check;
     switch (syntax.uniqueOrPriority.kind) {
         case TokenKind::Unknown:
-            check = Check::None;
+            check = CaseStatementCheck::None;
             break;
         case TokenKind::UniqueKeyword:
-            check = Check::Unique;
+            check = CaseStatementCheck::Unique;
             break;
         case TokenKind::Unique0Keyword:
-            check = Check::Unique0;
+            check = CaseStatementCheck::Unique0;
             break;
         case TokenKind::PriorityKeyword:
-            check = Check::Priority;
+            check = CaseStatementCheck::Priority;
             break;
         default:
             THROW_UNREACHABLE;
@@ -838,13 +871,13 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                                                   !isInside && keyword != TokenKind::CaseKeyword,
                                                   isInside, *syntax.expr, expressions, bound);
 
-    if (isInside && condition != Condition::Normal) {
+    if (isInside && condition != CaseStatementCondition::Normal) {
         context.addDiag(diag::CaseInsideKeyword, syntax.matchesOrInside.range())
             << LexerFacts::getTokenKindText(keyword) << syntax.caseKeyword.range();
         bad = true;
     }
     else if (isInside) {
-        condition = Condition::Inside;
+        condition = CaseStatementCondition::Inside;
     }
 
     SmallVectorSized<ItemGroup, 8> items;
@@ -881,9 +914,9 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     return *result;
 }
 
-static bool checkMatch(CaseStatement::Condition condition, const ConstantValue& cvl,
+static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cvl,
                        const ConstantValue& cvr) {
-    if (condition == CaseStatement::Condition::Inside) {
+    if (condition == CaseStatementCondition::Inside) {
         // Unpacked arrays get unwrapped into their members for comparison.
         if (cvr.isUnpacked()) {
             for (auto& elem : cvr.elements()) {
@@ -898,10 +931,10 @@ static bool checkMatch(CaseStatement::Condition condition, const ConstantValue& 
         if (cvl.isInteger() && cvr.isInteger())
             return (bool)condWildcardEqual(cvl.integer(), cvr.integer());
     }
-    else if (condition != CaseStatement::Condition::Normal) {
+    else if (condition != CaseStatementCondition::Normal) {
         const SVInt& l = cvl.integer();
         const SVInt& r = cvr.integer();
-        if (condition == CaseStatement::Condition::WildcardJustZ)
+        if (condition == CaseStatementCondition::WildcardJustZ)
             return caseZWildcardEqual(l, r);
         else
             return caseXWildcardEqual(l, r);
@@ -917,7 +950,7 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
 
     const Statement* matchedStmt = nullptr;
     SourceRange matchRange;
-    bool unique = check == Check::Unique || check == Check::Unique0;
+    bool unique = check == CaseStatementCheck::Unique || check == CaseStatementCheck::Unique0;
 
     for (auto& group : items) {
         for (auto item : group.expressions) {
@@ -967,9 +1000,9 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
     if (matchedStmt)
         return matchedStmt->eval(context);
 
-    if (check == Check::Priority || check == Check::Unique) {
+    if (check == CaseStatementCheck::Priority || check == CaseStatementCheck::Unique) {
         auto& diag = context.addDiag(diag::NoteNoCaseItemsMatched, expr.sourceRange);
-        diag << (check == Check::Priority ? "priority"sv : "unique"sv);
+        diag << (check == CaseStatementCheck::Priority ? "priority"sv : "unique"sv);
         diag << cv;
     }
 
@@ -993,6 +1026,27 @@ bool CaseStatement::verifyConstantImpl(EvalContext& context) const {
         return defaultCase->verifyConstant(context);
 
     return true;
+}
+
+void CaseStatement::serializeTo(ASTSerializer &serializer) const {
+    serializer.write("condition", toString(condition));
+    serializer.write("check", toString(check));
+    serializer.startArray("items");
+    for (auto const &item: items) {
+        serializer.startArray("expressions");
+        for (auto const &ex: item.expressions) {
+            serializer.serialize(*ex);
+        }
+        serializer.endArray();
+        serializer.startObject("stmt");
+        serializer.serialize(*item.stmt);
+        serializer.endObject();
+    }
+    // default case
+    if (defaultCase) {
+        serializer.write("defaultCase", *defaultCase);
+    }
+    serializer.endArray();
 }
 
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
@@ -1083,6 +1137,24 @@ bool ForLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return body.verifyConstant(context);
 }
 
+void ForLoopStatement::serializeTo(ASTSerializer &serializer) const {
+    serializer.startArray("initializers");
+    for (auto const &ini: initializers) {
+        serializer.serialize(*ini);
+    }
+    serializer.endArray();
+
+    serializer.write("stopExpr", *stopExpr);
+
+    serializer.startArray("steps");
+    for (auto const &step: steps) {
+        serializer.serialize(*step);
+    }
+    serializer.endArray();
+
+    serializer.write("body", body);
+}
+
 Statement& RepeatLoopStatement::fromSyntax(Compilation& compilation,
                                            const LoopStatementSyntax& syntax,
                                            const BindContext& context, StatementContext& stmtCtx) {
@@ -1136,6 +1208,11 @@ ER RepeatLoopStatement::evalImpl(EvalContext& context) const {
 
 bool RepeatLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return count.verifyConstant(context) && body.verifyConstant(context);
+}
+
+void RepeatLoopStatement::serializeTo(ASTSerializer &serializer) const {
+    serializer.write("count", count);
+    serializer.write("body", body);
 }
 
 Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
@@ -1239,6 +1316,24 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, span<const Constant
     return ER::Success;
 }
 
+void ForeachLoopStatement::serializeTo(ASTSerializer &serializer) const {
+    serializer.write("arrayRef", arrayRef);
+
+    serializer.startArray("loopRanges");
+    for (auto const &r: loopRanges) {
+        serializer.write("range", r.toString());
+    }
+    serializer.endArray();
+
+    serializer.startArray("loopVariables");
+    for (auto const &v: loopVariables) {
+        serializer.serialize(*v);
+    }
+    serializer.endArray();
+
+    serializer.write("body", body);
+}
+
 Statement& WhileLoopStatement::fromSyntax(Compilation& compilation,
                                           const LoopStatementSyntax& syntax,
                                           const BindContext& context, StatementContext& stmtCtx) {
@@ -1280,6 +1375,11 @@ ER WhileLoopStatement::evalImpl(EvalContext& context) const {
 
 bool WhileLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return cond.verifyConstant(context) && body.verifyConstant(context);
+}
+
+void WhileLoopStatement::serializeTo(ASTSerializer &serializer) const {
+    serializer.write("cond", cond);
+    serializer.write("body", body);
 }
 
 Statement& DoWhileLoopStatement::fromSyntax(Compilation& compilation,
@@ -1326,6 +1426,11 @@ bool DoWhileLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return cond.verifyConstant(context) && body.verifyConstant(context);
 }
 
+void DoWhileLoopStatement::serializeTo(ASTSerializer &serializer) const {
+    serializer.write("cond", cond);
+    serializer.write("body", body);
+}
+
 Statement& ForeverLoopStatement::fromSyntax(Compilation& compilation,
                                             const ForeverStatementSyntax& syntax,
                                             const BindContext& context, StatementContext& stmtCtx) {
@@ -1355,6 +1460,10 @@ ER ForeverLoopStatement::evalImpl(EvalContext& context) const {
 
 bool ForeverLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return body.verifyConstant(context);
+}
+
+void ForeverLoopStatement::serializeTo(ASTSerializer &serializer) const {
+    serializer.write("body", body);
 }
 
 Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
@@ -1429,6 +1538,10 @@ bool ExpressionStatement::verifyConstantImpl(EvalContext& context) const {
     return expr.verifyConstant(context);
 }
 
+void ExpressionStatement::serializeTo(ASTSerializer &serializer) const {
+    serializer.write("expr", expr);
+}
+
 Statement& TimedStatement::fromSyntax(Compilation& compilation,
                                       const TimingControlStatementSyntax& syntax,
                                       const BindContext& context, StatementContext& stmtCtx) {
@@ -1459,6 +1572,12 @@ bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
 
     context.addDiag(diag::NoteTimedStmtNotConst, sourceRange);
     return false;
+}
+
+void TimedStatement::serializeTo(ASTSerializer &serializer) const {
+    // TODO: add serialization method for timing
+    serializer.write("timing", toString(timing.kind));
+    serializer.write("stmt", stmt);
 }
 
 Statement& AssertionStatement::fromSyntax(Compilation& compilation,
@@ -1538,6 +1657,16 @@ bool AssertionStatement::verifyConstantImpl(EvalContext& context) const {
     }
 
     return true;
+}
+
+
+void AssertionStatement::serializeTo(ASTSerializer &serializer) const {
+    serializer.write("cond", cond);
+    if (ifTrue) serializer.write("ifTrue", *ifTrue);
+    if (ifFalse) serializer.write("ifFalse", *ifFalse);
+    serializer.write("assertionKind", toString(assertionKind));
+    serializer.write("isDeferred", isDeferred);
+    serializer.write("isFinal", isFinal);
 }
 
 } // namespace slang

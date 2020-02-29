@@ -43,6 +43,21 @@ struct StatementSyntax;
     x(Assertion)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
+
+#define CONDITION(x) \
+ x(Normal) \
+ x(WildcardXOrZ) \
+ x(WildcardJustZ) \
+ x(Inside)
+ENUM(CaseStatementCondition, CONDITION)
+#undef CONDITION
+#define CHECK(x) \
+ x(None) \
+ x(Unique) \
+ x(Unique0) \
+ x(Priority)
+ENUM(CaseStatementCheck, CHECK)
+#undef CHECK
 // clang-format on
 
 /// The base class for all statements in SystemVerilog.
@@ -176,6 +191,8 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Invalid; }
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static const InvalidStatement Instance;
 };
 
@@ -187,6 +204,8 @@ public:
 
     EvalResult evalImpl(EvalContext&) const { return EvalResult::Success; }
     bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Empty; }
 };
@@ -201,6 +220,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::List; }
 };
@@ -221,6 +242,8 @@ public:
     const Statement& getStatements() const;
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static Statement& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
@@ -247,6 +270,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const ReturnStatementSyntax& syntax,
                                  const BindContext& context);
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::Return; }
 };
 
@@ -263,6 +288,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
 
+    void serializeTo(const ASTSerializer&) const {}
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::Break; }
 };
 
@@ -277,6 +304,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
 
+    void serializeTo(const ASTSerializer&) const {}
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::Continue; }
 };
 
@@ -289,6 +318,8 @@ public:
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::VariableDeclaration; }
 };
@@ -312,6 +343,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const ConditionalStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::Conditional; }
 };
 
@@ -324,17 +357,14 @@ public:
         not_null<const Statement*> stmt;
     };
 
-    enum class Condition { Normal, WildcardXOrZ, WildcardJustZ, Inside };
-    enum class Check { None, Unique, Unique0, Priority };
-
     const Expression& expr;
     span<ItemGroup const> items;
     const Statement* defaultCase = nullptr;
-    Condition condition;
-    Check check;
+    CaseStatementCondition condition;
+    CaseStatementCheck check;
 
-    CaseStatement(Condition condition, Check check, const Expression& expr,
-                  span<ItemGroup const> items, const Statement* defaultCase,
+    CaseStatement(CaseStatementCondition condition, CaseStatementCheck check,
+                  const Expression& expr, span<ItemGroup const> items, const Statement* defaultCase,
                   SourceRange sourceRange) :
         Statement(StatementKind::Case, sourceRange),
         expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
@@ -344,6 +374,8 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Case; }
 };
@@ -367,6 +399,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const ForLoopStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForLoop; }
 };
 
@@ -385,6 +419,8 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::RepeatLoop; }
 };
@@ -410,6 +446,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const ForeachLoopStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
 
 private:
@@ -431,6 +469,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const LoopStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::WhileLoop; }
 };
 
@@ -450,6 +490,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const DoWhileStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::DoWhileLoop; }
 };
 
@@ -467,6 +509,8 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation, const ForeverStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeverLoop; }
 };
@@ -491,6 +535,8 @@ public:
                                  const VoidCastedCallStatementSyntax& syntax,
                                  const BindContext& context);
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }
 };
 
@@ -510,6 +556,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation,
                                  const TimingControlStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Timed; }
 };
@@ -538,6 +586,8 @@ public:
     static Statement& fromSyntax(Compilation& compilation,
                                  const ImmediateAssertionStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Assertion; }
 };
