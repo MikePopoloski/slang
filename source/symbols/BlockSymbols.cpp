@@ -186,6 +186,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
 
 void ProceduralBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("procedureKind", toString(procedureKind));
+    serializer.write("body", getBody());
 }
 
 static string_view getGenerateBlockName(const SyntaxNode& node) {
