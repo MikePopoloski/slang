@@ -15,7 +15,7 @@
 
 ##! M_LINKS_NAVBAR1 = \
 ##!  "user-manual command-line-ref language-support" \
-##!  "developer-guide building"
+##!  "developer-guide building commoncomp sourcemanagement diagnostics parsing"
 ##! M_LINKS_NAVBAR2 = \
 ##!  "api-reference namespaces annotated files" \
 ##!  "<a href="https://sv-lang.com/explore/">Try It</a>" \
