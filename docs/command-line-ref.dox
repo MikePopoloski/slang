@@ -71,7 +71,7 @@ slang -DFOO=2 -DBAR=asdf -D BAZ=3
 
 Undefine the given macro at the start of all source files.
 
-@section preprocessor Preprocessor
+@section clr-preprocessor Preprocessor
 
 `--comments`
 
@@ -86,7 +86,7 @@ When running in preprocessor-only mode (using `-E`) include directives in the pr
 Set the maximum depth of nested include files. Exceeding this limit will cause an error.
 The default is 1024.
 
-@section parsing Parsing
+@section clr-parsing Parsing
 
 `--max-parse-depth <depth>`
 

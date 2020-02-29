@@ -3,12 +3,51 @@
 
 @section sourceman Source Manager
 
+The slang::SourceManager class is responsible for loading and storing all
+source code that will be parsed or compiled. All of the source is stored in
+memory until the SourceManager is destroyed; because the rest of the library
+only uses string_views that point into this memory, you must keep the
+SourceManager alive until you're fully done with all parsing and compilation.
 
+The SourceManager operates on "buffers", which are groups of source code.
+Source files are one kind of buffer, which can be added to the manager via
+the slang::SourceManager::readSource method. It returns a slang::SourceBuffer
+which contains a unique slang::BufferID for that buffer plus a pointer to the
+actual source text.
+
+@code{.cpp}
+SourceManager sm;
+SourceBuffer buffer = sm.readSource("path/to/mySource.sv");
+@endcode
+
+In addition to reading source from disk, you can also pass source in directly
+via the slang::SourceManager::assignText method.
+
+@code{.cpp}
+SourceManager sm;
+SourceBuffer buffer = sm.assignText("module m; endmodule");
+@endcode
+
+Besides files, macro expansions are the other kind of buffer that can be
+tracked by the manager. Each macro expansion constitutes a new buffer, and
+tracks both where the original macro text came from as well as where the
+expansion is occurring.
 
 @section sourceloc Source Locations
 
 It's important to be able to concisely represent locations in the user's
 original source code so that accurate diagnostics can be issued.
-The slang::SourceLocation class is used for this purpose.
+The slang::SourceLocation class is used for this purpose. It combines a
+BufferID with a byte offset representing the location within that buffer.
+
+SourceLocation is designed to be compact; in release mode it consumes only
+8 bytes. In order to learn useful things about that location you need the
+SourceManager that originally created it. SourceManager has many methods
+for querying information about source locations; see the API reference for
+more details.
+
+In debug builds each SourceLocation includes the textual name of the buffer
+with which it is associated, to ease inspection when viewing locations in
+a debugger.
 
 */
