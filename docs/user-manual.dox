@@ -1,9 +1,9 @@
-/** @page user-manual User manual
+/** @page user-manual User Manual
 @brief Instructions on how to use the slang tool as an end-user
 
 @tableofcontents
 
-@section quick-start Quick start
+@section quick-start Quick Start
 
 The `slang` binary runs a full compilation of given SystemVerilog source files.
 Eventually it will produce a full simulation binary as output, but for now it
@@ -44,7 +44,7 @@ endmodule
 [1;32m                ~ ^ ~[0m
 @endcode
 
-@section compilation-units Compilation units
+@section compilation-units Compilation Units
 
 By default `slang` treats all input files as separate SystemVerilog compilation units.
 This is the preferred method both because it keeps the code logically separate (it doesn't
@@ -55,7 +55,7 @@ parsed in a specific order.
 If you have an older project where file ordering does matter, you can pass the `--single-unit`
 option to have all input files treated as a single compilation unit.
 
-@section built-in-macros Built-in macros
+@section built-in-macros Built-in Macros
 
 There are a handful of slang-specific predefined macros that you can reference in your code:
 Name | Value

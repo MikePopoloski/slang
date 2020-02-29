@@ -1,4 +1,4 @@
-/** @page developer-guide Developer guide
+/** @page developer-guide Developer Guide
 @brief Information on the internals of slang and its use as a library
 
 slang is designed first and foremost as a collection of software libraries that
@@ -12,7 +12,7 @@ and serves as a starting point for learning to use it in your own projects.
 
 - @ref building - Instructions for obtaining and building the library
 - @ref commoncomp - Overview of shared code and practices used throughout the library
-- @ref sourcemanagement - APIS for loading and managing source code for compilation
+- @ref sourcemanagement - APIs for loading and managing source code for compilation
 - @ref diagnostics - APIs that support issuing diagnostics
 - @ref parsing - APIs for parsing SystemVerilog source code
 

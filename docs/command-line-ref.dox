@@ -1,4 +1,4 @@
-/** @page command-line-ref Command line reference
+/** @page command-line-ref Command Line Reference
 @brief Reference information about all command line options
 
 @tableofcontents
@@ -98,13 +98,13 @@ stack, which is checked against this limit to avoid stack overflows. The default
 Set the maximum number of errors that can occur during lexing before the rest of the file is skipped.
 The default is 64.
 
-@section json-output JSON output
+@section json-output JSON Output
 
 `--ast-json <file>`
 
 Dump the compiled AST in JSON format to the specified file, or '-' for stdout.
 
-@section compilation-limits Compilation limits
+@section compilation-limits Compilation Limits
 
 `--max-hierarchy-depth <depth>`
 
@@ -133,7 +133,7 @@ Set the maximum number of frames to show when printing a constant evaluation
 backtrace in diagnostics; the rest will be abbreviated to avoid spamming output.
 The default is 10.
 
-@section diag-control Diagnostic control
+@section diag-control Diagnostic Control
 
 `--color-diagnostics`
 

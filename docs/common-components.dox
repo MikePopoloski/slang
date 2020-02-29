@@ -1,4 +1,4 @@
-/** @page commoncomp Common components
+/** @page commoncomp Common Components
 @brief Overview of shared code and practices used throughout the library
 
 @section conventions Conventions
@@ -68,7 +68,7 @@ once into memory and then never copied or manipulated again; all strings from
 that point forward are represented by std::string_view instances that point into
 that stored source.
 
-@section other Other useful components
+@section other Other Useful Components
 
 Some other useful components to know:
 - The slang::not_null template decorates pointers that can be assumed to never

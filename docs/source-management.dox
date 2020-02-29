@@ -1,4 +1,14 @@
-/** @page sourcemanagement Source management
-@brief APIS for loading and managing source code for compilation
+/** @page sourcemanagement Source Management
+@brief APIs for loading and managing source code for compilation
+
+@section sourceman Source Manager
+
+
+
+@section sourceloc Source Locations
+
+It's important to be able to concisely represent locations in the user's
+original source code so that accurate diagnostics can be issued.
+The slang::SourceLocation class is used for this purpose.
 
 */

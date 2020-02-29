@@ -18,7 +18,7 @@ simulators, linters, code editors, and refactoring tools.
 -   Provide great error messages, ala clang.
 -   Be fast and robust in the face of production-scale projects.
 
-@section mainpage-getting-started Getting started
+@section mainpage-getting-started Getting Started
 
 You can download prebuilt binaries for Windows and Linux for the
 [latest release](https://github.com/MikePopoloski/slang/releases/latest) or the
@@ -30,13 +30,13 @@ If you're looking to use slang as a library, please read through the @ref develo
 
 Instructions on building slang from source are here: @ref building
 
-@section mainpage-try Try it out
+@section mainpage-try Try It Out
 
 Experiment with parsing, type checking, and error detection [live on the web](https://sv-lang.com/explore/)
 (this tool is inspired by Matt Godbolt's excellent Compiler Explorer). It's still
 pretty rough but useful for exploring the interactive behavior of the toolchain.
 
-@section mainpage-contact Contact & support
+@section mainpage-contact Contact & Support
 
 If you encounter a bug, have questions, or want to contribute, please get in touch
 by opening a GitHub issue or posting a message on Gitter:

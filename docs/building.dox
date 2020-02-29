@@ -1,9 +1,9 @@
-/** @page building Building & installation
+/** @page building Building & Installation
 @brief Instructions for building and installing the slang library and tools
 
 @tableofcontents
 
-@section source Getting the source
+@section source Getting the Source
 
 All source code is hosted on [GitHub](https://github.com/MikePopoloski/slang)
 
@@ -15,7 +15,7 @@ slang requires the following dependencies in order to build:
 - [CMake](https://cmake.org/) (3.12 or later)
 - C++17 compatible compiler
 
-@section building-start Quick start
+@section building-start Quick Start
 
 Instructions on quickly getting a build going for common platforms.
 
@@ -55,7 +55,7 @@ make install
 VisualStudio 2019 has built-in support for cmake; simply open the slang root folder
 and press build.
 
-@section build-options Build options
+@section build-options Build Options
 
 Besides the built-in cmake options, there are slang-specific options that may be
 set to customize the build:
@@ -71,7 +71,7 @@ CI_BUILD | Enable additional longer-running tests for automated builds | OFF
 SLANG_MSVC_W4 | Enable /W4 for MSVC builds | ON
 SLANG_MSVC_STATIC_RUNTIME | Enable linking to the MSVC static runtime | ON
 
-@section build-scripts Build scripts
+@section build-scripts Build Scripts
 
 This section documents scripts that are invoked during the build that may be of
 general interest or useful to know if you're modifying how the build works.
@@ -92,7 +92,7 @@ during the build into generated C++ classes by the `syntax_gen.py` script.
 Diagnostics, similarly to syntax nodes, are expressed in the `scripts/diagnostics.txt`
 file and processed into C++ definitions by the `diagnostic_gen.py` script.
 
-@section doc-builds Building documentation
+@section doc-builds Building Documentation
 
 This section contains instructions for building the documentation.
 
