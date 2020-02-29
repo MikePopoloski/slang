@@ -44,20 +44,20 @@ struct StatementSyntax;
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
 
-#define CONDITION(x) \
+#define CASE_CONDITION(x) \
  x(Normal) \
  x(WildcardXOrZ) \
  x(WildcardJustZ) \
  x(Inside)
-ENUM(CaseStatementCondition, CONDITION)
-#undef CONDITION
-#define CHECK(x) \
+ENUM(CaseStatementCondition, CASE_CONDITION)
+#undef CASE_CONDITION
+#define CASE_CHECK(x) \
  x(None) \
  x(Unique) \
  x(Unique0) \
  x(Priority)
-ENUM(CaseStatementCheck, CHECK)
-#undef CHECK
+ENUM(CaseStatementCheck, CASE_CHECK)
+#undef CASE_CHECK
 // clang-format on
 
 /// The base class for all statements in SystemVerilog.
