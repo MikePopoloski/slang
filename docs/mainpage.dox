@@ -9,7 +9,7 @@ simulators, linters, code editors, and refactoring tools.
 @section mainpage-features Features
 
 -   Fully parse, analyze, and elaborate all SystemVerilog features -
-	see @ref language-support for current status
+    see @ref language-support for current status.
 -   Be robust about compilation, no matter how broken the source text. This makes the compiler
     usable in editor highlighting and completion scenarios, where the code is likely to be broken
     because the user is still writing it.
@@ -42,6 +42,9 @@ If you encounter a bug, have questions, or want to contribute, please get in tou
 by opening a GitHub issue or posting a message on Gitter:
 -	GitHub --- https://github.com/MikePopoloski/slang
 -	Gitter chat --- https://gitter.im/MikePopoloski/slang
+
+Contributions are welcome, whether they be in the form of bug reports, comments,
+suggestions, documentation improvements, or full fledged new features via pull requests.
 
 @section mainpage-license License
 
