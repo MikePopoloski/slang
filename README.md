@@ -12,7 +12,7 @@ slang is a software library that provides various components for lexing, parsing
 Full documentation is available on the website: https://sv-lang.com
 
 ### Features
--   Fully parse, analyze, and elaborate all SystemVerilog features - see [this page](https://sv-lang.com/language-support.html) for current status
+-   Fully parse, analyze, and elaborate all SystemVerilog features - see [this page](https://sv-lang.com/language-support.html) for current status.
 -   Be robust about compilation, no matter how broken the source text. This makes the compiler usable in editor highlighting and completion scenarios, where the code is likely to be broken because the user is still writing it.
 -   The parse tree should round trip back to the original source, making it easy to write refactoring and code generation tools.
 -   Provide great error messages, ala clang.
@@ -24,7 +24,7 @@ You can download prebuilt binaries for Windows and Linux for the latest release 
 
 If you're looking to use slang as a library, please read through the [developer guide](https://sv-lang.com/developer-guide.html).
 
-Instructions on building slang from source are here: https://sv-lang.com/building.html
+Instructions on building slang from source are [here](https://sv-lang.com/building.html).
 
 ### Try It Out
 Experiment with parsing, type checking, and error detection live [on the web](https://sv-lang.com/explore/) (this tool is inspired by Matt Godbolt's excellent [Compiler Explorer](https://godbolt.org/)). It's still pretty rough but useful for exploring the interactive behavior of the toolchain.
