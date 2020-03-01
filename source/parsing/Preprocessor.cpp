@@ -1055,14 +1055,30 @@ void Preprocessor::applyProtectPragma(const PragmaDirectiveSyntax& pragma) {
     addDiag(diag::WarnNotYetSupported, pragma.name.range());
 }
 
-void Preprocessor::applyResetPragma(const PragmaDirectiveSyntax&) {
-    // TODO: implement
+void Preprocessor::applyResetPragma(const PragmaDirectiveSyntax& pragma) {
+    // Just check that we know about the names being reset, and warn if we don't.
+    for (auto arg : pragma.args) {
+        if (arg->kind == SyntaxKind::SimplePragmaExpression) {
+            auto& simple = arg->as<SimplePragmaExpressionSyntax>();
+            if (simple.value.kind == TokenKind::Identifier) {
+                string_view name = simple.value.rawText();
+                if (!name.empty() && name != "protect" && name != "once" && name != "diagnostic")
+                    addDiag(diag::UnknownPragma, simple.value.range()) << name;
+
+                // Nothing to do here, we don't support any pragmas that can be reset.
+                continue;
+            }
+        }
+
+        // Otherwise this isn't even a pragma name, so it's ill-formed.
+        addDiag(diag::ExpectedPragmaName, arg->sourceRange());
+    }
 }
 
 void Preprocessor::applyResetAllPragma(const PragmaDirectiveSyntax& pragma) {
+    // Nothing to do here, we don't support any pragmas that can be reset.
+    // Just check that there aren't any extraneous arguments.
     ensurePragmaArgs(pragma, 0);
-
-    // TODO: reset all
 }
 
 void Preprocessor::applyOncePragma(const PragmaDirectiveSyntax& pragma) {

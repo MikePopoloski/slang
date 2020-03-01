@@ -1320,6 +1320,8 @@ TEST_CASE("Pragma expressions") {
 `pragma bar 3.14159, foo=6.28
 `pragma bar asdf='h ff, blah=2, foo="asdf", begin, bar=end
 `pragma bar "asdf", (asdf, /* stuff */ "asdf", asdf="asdf")
+`pragma reset protect
+`pragma resetall
 )";
 
     std::string result = preprocess(text);
@@ -1348,6 +1350,9 @@ TEST_CASE("Pragma expressions -- errors") {
 `pragma bar 'h 3e+2
 `pragma /* asdf
 */ asdf
+
+`pragma reset (asdf, asdf), foo
+`pragma resetall asdf, asdf
 )";
 
     preprocess(text);
@@ -1387,6 +1392,15 @@ source:17:1: error: expected pragma name
 source:16:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 `pragma bar 'h 3e+2
         ^~~
+source:21:18: warning: too many arguments provided for pragma 'resetall' [-Wextra-pragma-args]
+`pragma resetall asdf, asdf
+                 ^
+source:20:15: error: expected pragma name
+`pragma reset (asdf, asdf), foo
+              ^~~~~~~~~~~~
+source:20:29: warning: unknown pragma 'foo' [-Wunknown-pragma]
+`pragma reset (asdf, asdf), foo
+                            ^~~
 )");
 }
 
