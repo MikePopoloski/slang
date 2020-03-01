@@ -337,6 +337,10 @@ private:
     // A buffer used to hold tokens while we're busy consuming them for directives.
     SmallVectorSized<Token, 16> scratchTokenBuffer;
 
+    // A set of files (identified by a pointer to the start of their text buffer) that
+    // have been marked `pragma once so that we avoid trying to include them more than once.
+    flat_hash_set<const char*> includeOnceHeaders;
+
     /// Various state set by preprocessor directives.
     std::vector<KeywordVersion> keywordVersionStack;
     optional<TimeScale> activeTimeScale;

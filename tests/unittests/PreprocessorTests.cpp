@@ -37,6 +37,42 @@ TEST_CASE("System include file") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Double include, no pragma once") {
+    auto& text = R"(
+`include "local.svh"
+`include "local.svh"
+)";
+    auto& expected = R"(
+// Just a test string
+"test string"
+// Just a test string
+"test string"
+)";
+
+    std::string result = preprocess(text);
+    result.erase(std::remove(result.begin(), result.end(), '\r'), result.end());
+
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Double include, with pragma once") {
+    auto& text = R"(
+`include "include_once.svh"
+`include "include_once.svh"
+)";
+    auto& expected = R"(
+// Just a test string
+"test string"
+)";
+
+    std::string result = preprocess(text);
+    result.erase(std::remove(result.begin(), result.end(), '\r'), result.end());
+
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 void testDirective(SyntaxKind kind) {
     string_view text = LexerFacts::getDirectiveText(kind);
 
@@ -1353,6 +1389,7 @@ TEST_CASE("Pragma expressions -- errors") {
 
 `pragma reset (asdf, asdf), foo
 `pragma resetall asdf, asdf
+`pragma once asdf
 )";
 
     preprocess(text);
@@ -1392,6 +1429,9 @@ source:17:1: error: expected pragma name
 source:16:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 `pragma bar 'h 3e+2
         ^~~
+source:22:14: warning: too many arguments provided for pragma 'once' [-Wextra-pragma-args]
+`pragma once asdf
+             ^
 source:21:18: warning: too many arguments provided for pragma 'resetall' [-Wextra-pragma-args]
 `pragma resetall asdf, asdf
                  ^

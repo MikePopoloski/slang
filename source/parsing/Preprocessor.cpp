@@ -388,7 +388,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             addDiag(diag::CouldNotOpenIncludeFile, fileName.range());
         else if (lexerStack.size() >= options.maxIncludeDepth)
             addDiag(diag::ExceededMaxIncludeDepth, fileName.range());
-        else
+        else if (includeOnceHeaders.find(buffer.data.data()) == includeOnceHeaders.end())
             pushSource(buffer);
     }
 
@@ -1084,7 +1084,9 @@ void Preprocessor::applyResetAllPragma(const PragmaDirectiveSyntax& pragma) {
 void Preprocessor::applyOncePragma(const PragmaDirectiveSyntax& pragma) {
     ensurePragmaArgs(pragma, 0);
 
-    // TODO: mark once
+    auto text = sourceManager.getSourceText(pragma.directive.location().buffer());
+    if (!text.empty())
+        includeOnceHeaders.emplace(text.data());
 }
 
 void Preprocessor::applyDiagnosticPragma(const PragmaDirectiveSyntax& pragma) {
