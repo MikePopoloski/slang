@@ -296,12 +296,34 @@ ContinuousAssignSymbol::ContinuousAssignSymbol(SourceLocation loc, const Express
     Symbol(SymbolKind::ContinuousAssign, "", loc), assign(&assignment) {
 }
 
-void ContinuousAssignSymbol::fromSyntax(const Scope& parent, const ContinuousAssignSyntax& syntax,
+void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
+                                        const ContinuousAssignSyntax& syntax, const Scope& scope,
+                                        LookupLocation location,
                                         SmallVector<const Symbol*>& results) {
-    auto& comp = parent.getCompilation();
+    BindContext context(scope, location);
+    auto& netType = scope.getDefaultNetType();
+
     for (auto expr : syntax.assignments) {
-        auto symbol = comp.emplace<ContinuousAssignSymbol>(*expr);
-        symbol->setAttributes(parent, syntax.attributes);
+        // If not explicitly disabled, check for net references on the lhs of each
+        // assignment that should create implicit nets.
+        if (!netType.isError()) {
+            // The expression here should always be an assignment expression unless
+            // the program is already ill-formed (diagnosed by the parser).
+            if (expr->kind == SyntaxKind::AssignmentExpression) {
+                SmallVectorSized<Token, 8> implicitNets;
+                Expression::findPotentiallyImplicitNets(*expr->as<BinaryExpressionSyntax>().left,
+                                                        context, implicitNets);
+
+                for (Token t : implicitNets) {
+                    auto net = compilation.emplace<NetSymbol>(t.valueText(), t.location(), netType);
+                    net->setType(compilation.getLogicType());
+                    results.append(net);
+                }
+            }
+        }
+
+        auto symbol = compilation.emplace<ContinuousAssignSymbol>(*expr);
+        symbol->setAttributes(scope, syntax.attributes);
         results.append(symbol);
     }
 }

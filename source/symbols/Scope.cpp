@@ -168,7 +168,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::CaseGenerate:
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::GenerateBlock:
-        case SyntaxKind::GateInstantiation: {
+        case SyntaxKind::GateInstantiation:
+        case SyntaxKind::ContinuousAssign: {
             auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
             addMember(*sym);
             getOrAddDeferredData().addMember(sym);
@@ -278,13 +279,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             for (auto member : syntax.as<GenerateRegionSyntax>().members)
                 addMembers(*member);
             break;
-        case SyntaxKind::ContinuousAssign: {
-            SmallVectorSized<const Symbol*, 16> results;
-            ContinuousAssignSymbol::fromSyntax(*this, syntax.as<ContinuousAssignSyntax>(), results);
-            for (auto symbol : results)
-                addMember(*symbol);
-            break;
-        }
         case SyntaxKind::NetTypeDeclaration:
             addMember(NetType::fromSyntax(*this, syntax.as<NetTypeDeclarationSyntax>()));
             break;
@@ -491,6 +485,13 @@ void Scope::elaborate() const {
         }
     }
 
+    auto insertMembers = [this](auto& members, const Symbol* at) {
+        for (auto member : members) {
+            insertMember(member, at, true);
+            at = member;
+        }
+    };
+
     // Go through deferred instances and elaborate them now. We skip generate blocks in
     // the initial pass because evaluating their conditions may depend on other members
     // that have yet to be elaborated. This implicitly implements the elaboration algorithm
@@ -505,12 +506,7 @@ void Scope::elaborate() const {
                 InstanceSymbol::fromSyntax(compilation,
                                            member.node.as<HierarchyInstantiationSyntax>(), location,
                                            *this, instances);
-
-                const Symbol* last = symbol;
-                for (auto instance : instances) {
-                    insertMember(instance, last, true);
-                    last = instance;
-                }
+                insertMembers(instances, symbol);
                 break;
             }
             case SyntaxKind::GateInstantiation: {
@@ -518,12 +514,7 @@ void Scope::elaborate() const {
                 LookupLocation location = LookupLocation::before(*symbol);
                 GateSymbol::fromSyntax(compilation, member.node.as<GateInstantiationSyntax>(),
                                        location, *this, instances);
-
-                const Symbol* last = symbol;
-                for (auto instance : instances) {
-                    insertMember(instance, last, true);
-                    last = instance;
-                }
+                insertMembers(instances, symbol);
                 break;
             }
             case SyntaxKind::AnsiPortList:
@@ -563,12 +554,16 @@ void Scope::elaborate() const {
                 SmallVectorSized<const ValueSymbol*, 4> symbols;
                 VariableSymbol::fromSyntax(compilation, member.node.as<DataDeclarationSyntax>(),
                                            *this, symbols);
-
-                const Symbol* last = symbol;
-                for (auto var : symbols) {
-                    insertMember(var, last, true);
-                    last = var;
-                }
+                insertMembers(symbols, symbol);
+                break;
+            }
+            case SyntaxKind::ContinuousAssign: {
+                SmallVectorSized<const Symbol*, 4> symbols;
+                LookupLocation location = LookupLocation::before(*symbol);
+                ContinuousAssignSymbol::fromSyntax(compilation,
+                                                   member.node.as<ContinuousAssignSyntax>(), *this,
+                                                   location, symbols);
+                insertMembers(symbols, symbol);
                 break;
             }
             default:

@@ -710,6 +710,8 @@ endmodule
 module m;
     n n1(asdf, asdf);
     n n2(.a(asdf), .b(foobar));
+
+    assign foo = 1, bar = 2;
 endmodule
 )");
 
@@ -726,6 +728,8 @@ endmodule
 `default_nettype none
 module m;
     n n1(asdf, asdf);
+
+    assign foo = 1;
 endmodule
 )");
 
@@ -733,9 +737,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
 }
 
 TEST_CASE("Implicit param with unpacked dimensions") {
