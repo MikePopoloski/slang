@@ -154,85 +154,96 @@ void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
 
 namespace {
 
-Symbol* createInstance(Compilation& compilation, const Scope& scope,
-                       const DefinitionSymbol& definition, const HierarchicalInstanceSyntax& syntax,
-                       span<const ParameterSymbolBase* const> parameters,
-                       SmallVector<int32_t>& path,
-                       span<const AttributeInstanceSyntax* const> attributes,
-                       uint32_t hierarchyDepth) {
-    InstanceSymbol* inst;
-    switch (definition.definitionKind) {
-        case DefinitionKind::Module:
-            inst = &ModuleInstanceSymbol::instantiate(compilation, syntax, definition, parameters,
-                                                      hierarchyDepth);
-            break;
-        case DefinitionKind::Interface:
-            inst = &InterfaceInstanceSymbol::instantiate(compilation, syntax, definition,
-                                                         parameters, hierarchyDepth);
-            break;
-        case DefinitionKind::Program:
-            inst = &ProgramInstanceSymbol::instantiate(compilation, syntax, definition, parameters,
-                                                       hierarchyDepth);
-            break;
-        default:
-            THROW_UNREACHABLE;
+class InstanceBuilder {
+public:
+    InstanceBuilder(const BindContext& context, const DefinitionSymbol& definition,
+                    span<const ParameterSymbolBase* const> parameters,
+                    span<const AttributeInstanceSyntax* const> attributes,
+                    uint32_t hierarchyDepth) :
+        compilation(context.getCompilation()),
+        context(context), definition(definition), parameters(parameters), attributes(attributes),
+        hierarchyDepth(hierarchyDepth) {}
+
+    Symbol* create(const HierarchicalInstanceSyntax& syntax) {
+        path.clear();
+
+        auto dims = syntax.dimensions;
+        return recurse(syntax, dims.begin(), dims.end());
     }
 
-    inst->arrayPath = path.copy(compilation);
-    inst->setSyntax(syntax);
-    inst->setAttributes(scope, attributes);
-    return inst;
+private:
+    using DimIterator = span<VariableDimensionSyntax*>::iterator;
+
+    Compilation& compilation;
+    const BindContext& context;
+    const DefinitionSymbol& definition;
+    SmallVectorSized<int32_t, 4> path;
+    span<const ParameterSymbolBase* const> parameters;
+    span<const AttributeInstanceSyntax* const> attributes;
+    uint32_t hierarchyDepth;
+
+    Symbol* createInstance(const HierarchicalInstanceSyntax& syntax) {
+        InstanceSymbol* inst;
+        switch (definition.definitionKind) {
+            case DefinitionKind::Module:
+                inst = &ModuleInstanceSymbol::instantiate(compilation, syntax, definition,
+                                                          parameters, hierarchyDepth);
+                break;
+            case DefinitionKind::Interface:
+                inst = &InterfaceInstanceSymbol::instantiate(compilation, syntax, definition,
+                                                             parameters, hierarchyDepth);
+                break;
+            case DefinitionKind::Program:
+                inst = &ProgramInstanceSymbol::instantiate(compilation, syntax, definition,
+                                                           parameters, hierarchyDepth);
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+
+        inst->arrayPath = path.copy(compilation);
+        inst->setSyntax(syntax);
+        inst->setAttributes(context.scope, attributes);
+        return inst;
+    }
+
+    Symbol* recurse(const HierarchicalInstanceSyntax& syntax, DimIterator it, DimIterator end) {
+        if (it == end)
+            return createInstance(syntax);
+
+        // Evaluate the dimensions of the array. If this fails for some reason,
+        // make up an empty array so that we don't get further errors when
+        // things try to reference this symbol.
+        auto nameToken = syntax.name;
+        EvaluatedDimension dim = context.evalDimension(**it, true);
+        if (!dim.isRange()) {
+            return compilation.emplace<InstanceArraySymbol>(
+                compilation, nameToken.valueText(), nameToken.location(),
+                span<const Symbol* const>{}, ConstantRange());
+        }
+
+        ++it;
+
+        ConstantRange range = dim.range;
+        SmallVectorSized<const Symbol*, 8> elements;
+        for (int32_t i = range.lower(); i <= range.upper(); i++) {
+            path.append(i);
+            auto symbol = recurse(syntax, it, end);
+            path.pop();
+
+            symbol->name = "";
+            elements.append(symbol);
+        }
+
+        auto result = compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
+                                                               nameToken.location(),
+                                                               elements.copy(compilation), range);
+        for (auto element : elements)
+            result->addMember(*element);
+
+        return result;
+    }
 };
-
-// TODO: clean this up
-
-using DimIterator = span<VariableDimensionSyntax*>::iterator;
-
-Symbol* recurseInstanceArray(Compilation& compilation, const DefinitionSymbol& definition,
-                             const HierarchicalInstanceSyntax& instanceSyntax,
-                             span<const ParameterSymbolBase* const> parameters,
-                             const BindContext& context, DimIterator it, DimIterator end,
-                             SmallVector<int32_t>& path,
-                             span<const AttributeInstanceSyntax* const> attributes,
-                             uint32_t hierarchyDepth) {
-    if (it == end) {
-        return createInstance(compilation, context.scope, definition, instanceSyntax, parameters,
-                              path, attributes, hierarchyDepth);
-    }
-
-    // Evaluate the dimensions of the array. If this fails for some reason,
-    // make up an empty array so that we don't get further errors when
-    // things try to reference this symbol.
-    auto nameToken = instanceSyntax.name;
-    EvaluatedDimension dim = context.evalDimension(**it, true);
-    if (!dim.isRange()) {
-        return compilation.emplace<InstanceArraySymbol>(
-            compilation, nameToken.valueText(), nameToken.location(), span<const Symbol* const>{},
-            ConstantRange());
-    }
-
-    ++it;
-
-    ConstantRange range = dim.range;
-    SmallVectorSized<const Symbol*, 8> elements;
-    for (int32_t i = range.lower(); i <= range.upper(); i++) {
-        path.append(i);
-        auto symbol = recurseInstanceArray(compilation, definition, instanceSyntax, parameters,
-                                           context, it, end, path, attributes, hierarchyDepth);
-        path.pop();
-
-        symbol->name = "";
-        elements.append(symbol);
-    }
-
-    auto result = compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
-                                                           nameToken.location(),
-                                                           elements.copy(compilation), range);
-    for (auto element : elements)
-        result->addMember(*element);
-
-    return result;
-}
 
 Scope& createTempInstance(Compilation& compilation, const DefinitionSymbol& def) {
     // Construct a temporary scope that has the right parent to house instance parameters
@@ -510,15 +521,11 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = scope.getDefaultNetType();
 
+    InstanceBuilder builder(context, *definition, parameters, syntax.attributes, hierarchyDepth);
+
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
-
-        SmallVectorSized<int32_t, 4> path;
-        auto dims = instanceSyntax->dimensions;
-        auto symbol =
-            recurseInstanceArray(compilation, *definition, *instanceSyntax, parameters, context,
-                                 dims.begin(), dims.end(), path, syntax.attributes, hierarchyDepth);
-        results.append(symbol);
+        results.append(builder.create(*instanceSyntax));
     }
 }
 
