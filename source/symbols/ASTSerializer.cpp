@@ -22,7 +22,7 @@ void ASTSerializer::serialize(const Expression& expr) {
     expr.visit(*this);
 }
 
-void ASTSerializer::serialize(const Statement &statement) {
+void ASTSerializer::serialize(const Statement& statement) {
     statement.visit(*this);
 }
 
@@ -66,7 +66,7 @@ void ASTSerializer::write(string_view name, const Expression& value) {
     serialize(value);
 }
 
-void ASTSerializer::write(string_view name, const Statement &value) {
+void ASTSerializer::write(string_view name, const Statement& value) {
     writer.writeProperty(name);
     serialize(value);
 }
@@ -110,8 +110,8 @@ void ASTSerializer::visit(const T& elem) {
         }
 
         writer.endObject();
-    } else if constexpr(std::is_base_of_v<Statement, T>) {
-        (void)(elem);
+    }
+    else if constexpr (std::is_base_of_v<Statement, T>) {
         writer.startObject();
         write("kind", toString(elem.kind));
 

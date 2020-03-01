@@ -63,7 +63,7 @@ private:
     void visit(const T& symbol);
 
     void visitInvalid(const Expression& expr);
-    void visitInvalid(const Statement &statement);
+    void visitInvalid(const Statement& statement);
 
     JsonWriter& writer;
 };
