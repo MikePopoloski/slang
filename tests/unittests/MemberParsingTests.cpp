@@ -299,3 +299,17 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::TypeRefDeclVar);
 }
+
+TEST_CASE("Invalid continuous assignment") {
+    auto& text = R"(
+module m;
+    int i;
+    assign i += 4;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedContinuousAssignment);
+}

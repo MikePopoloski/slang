@@ -316,10 +316,10 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     auto syntax = getSyntax();
     ASSERT(syntax);
 
-    // TODO: parser should ensure that this is a proper variable assignment expression here.
     BindContext context(*scope, LookupLocation::before(*this));
     assign =
         &Expression::bind(syntax->as<ExpressionSyntax>(), context, BindFlags::AssignmentAllowed);
+
     return *assign;
 }
 

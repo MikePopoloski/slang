@@ -803,7 +803,14 @@ ContinuousAssignSyntax& Parser::parseContinuousAssign(AttrList attributes) {
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     parseList<isPossibleExpressionOrComma, isSemicolon>(
         buffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-        diag::ExpectedVariableAssignment, [this] { return &parseExpression(); });
+        diag::ExpectedContinuousAssignment, [this] {
+            auto& expr = parseExpression();
+            if (expr.kind != SyntaxKind::AssignmentExpression) {
+                addDiag(diag::ExpectedContinuousAssignment, expr.getFirstToken().location())
+                    << expr.sourceRange();
+            }
+            return &expr;
+        });
 
     return factory.continuousAssign(attributes, assign, strength, delay, buffer.copy(alloc), semi);
 }
