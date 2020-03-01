@@ -26,9 +26,11 @@ public:
     span<const ParameterSymbolBase* const> parameters;
     DefinitionKind definitionKind;
     const NetType& defaultNetType;
+    UnconnectedDrive unconnectedDrive;
 
     DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     DefinitionKind definitionKind, const NetType& defaultNetType);
+                     DefinitionKind definitionKind, const NetType& defaultNetType,
+                     UnconnectedDrive unconnectedDrive);
 
     const SymbolMap& getPortMap() const {
         ensureElaborated();

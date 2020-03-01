@@ -951,7 +951,7 @@ TEST_CASE("Ifdef error cases") {
 
 `ifdef BAR
 )";
-    
+
     preprocess(text);
 
     REQUIRE(diagnostics.size() == 4);
@@ -1226,6 +1226,27 @@ TEST_CASE("default_nettype directive") {
     CHECK(lexDefaultNetType("`default_nettype foo") == TokenKind::WireKeyword);
     CHECK(!diagnostics.empty());
     CHECK(lexDefaultNetType("`default_nettype module") == TokenKind::WireKeyword);
+    CHECK(!diagnostics.empty());
+}
+
+TokenKind lexUnconnectedDrive(string_view text) {
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token);
+    return preprocessor.getUnconnectedDrive();
+}
+
+TEST_CASE("unconnected_drive directive") {
+    CHECK(lexUnconnectedDrive("`unconnected_drive pull0") == TokenKind::Pull0Keyword);
+    CHECK(lexUnconnectedDrive("`unconnected_drive pull1") == TokenKind::Pull1Keyword);
+    CHECK(lexUnconnectedDrive("`nounconnected_drive") == TokenKind::Unknown);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    CHECK(lexUnconnectedDrive("`unconnected_drive asdf") == TokenKind::Unknown);
     CHECK(!diagnostics.empty());
 }
 

@@ -33,7 +33,7 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes) {
     auto& header = parseModuleHeader();
     auto endKind = getModuleEndKind(header.moduleKeyword.kind);
 
-    NodeMetadata meta{ pp.getDefaultNetType(), pp.getTimeScale() };
+    NodeMetadata meta{ pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale() };
 
     Token endmodule;
     auto members =

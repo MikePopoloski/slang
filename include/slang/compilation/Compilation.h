@@ -33,6 +33,7 @@ struct CompilationUnitSyntax;
 struct ModuleDeclarationSyntax;
 
 enum class IntegralFlags : uint8_t;
+enum class UnconnectedDrive;
 
 /// Contains various options that can control compilation behavior.
 struct CompilationOptions {
@@ -182,6 +183,10 @@ public:
     /// Gets the default net type that was in place at the time the given declaration was parsed.
     const NetType& getDefaultNetType(const ModuleDeclarationSyntax& decl) const;
 
+    /// Gets the unconnected drive setting that was in place at the time the given declaration was
+    /// parsed.
+    UnconnectedDrive getUnconnectedDrive(const ModuleDeclarationSyntax& decl) const;
+
     /// Gets the time scale that was put in place by a preprocessor directive at the time
     /// the given declaration was parsed. Returns nullopt if there was no such directive.
     optional<TimeScale> getDirectiveTimeScale(const ModuleDeclarationSyntax& decl) const;
@@ -325,6 +330,9 @@ private:
 
     // Map from syntax nodes to parse-time metadata about time scale directives.
     flat_hash_map<const ModuleDeclarationSyntax*, TimeScale> timeScaleDirectiveMap;
+
+    // Map from syntax nodes to parse-time metadata about unconnected drive settings.
+    flat_hash_map<const ModuleDeclarationSyntax*, UnconnectedDrive> unconnectedDriveMap;
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the definitions name table.

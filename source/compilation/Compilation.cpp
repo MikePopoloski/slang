@@ -275,6 +275,17 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         auto decl = &node->as<ModuleDeclarationSyntax>();
         defaultNetTypeMap.emplace(decl, &getNetType(meta.defaultNetType));
 
+        switch (meta.unconnectedDrive) {
+            case TokenKind::Pull0Keyword:
+                unconnectedDriveMap.emplace(decl, UnconnectedDrive::Pull0);
+                break;
+            case TokenKind::Pull1Keyword:
+                unconnectedDriveMap.emplace(decl, UnconnectedDrive::Pull1);
+                break;
+            default:
+                break;
+        }
+
         if (meta.timeScale)
             timeScaleDirectiveMap.emplace(decl, *meta.timeScale);
     }
@@ -670,6 +681,13 @@ const NetType& Compilation::getDefaultNetType(const ModuleDeclarationSyntax& dec
     if (it == defaultNetTypeMap.end())
         return getNetType(TokenKind::Unknown);
     return *it->second;
+}
+
+UnconnectedDrive Compilation::getUnconnectedDrive(const ModuleDeclarationSyntax& decl) const {
+    auto it = unconnectedDriveMap.find(&decl);
+    if (it == unconnectedDriveMap.end())
+        return UnconnectedDrive::None;
+    return it->second;
 }
 
 optional<TimeScale> Compilation::getDirectiveTimeScale(const ModuleDeclarationSyntax& decl) const {

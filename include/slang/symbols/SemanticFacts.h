@@ -45,6 +45,11 @@ ENUM(PortDirection, PORT);
 ENUM(DefinitionKind, DEF);
 #undef DEF
 
+#define UD(x) x(None) x(Pull0) x(Pull1)
+/// Specifies possible unconnected drive settings.
+ENUM(UnconnectedDrive, UD);
+#undef UD
+
 #define EDGE(x) x(None) x(PosEdge) x(NegEdge) x(BothEdges)
 /// Specifies possible edge kinds.
 ENUM(EdgeKind, EDGE);

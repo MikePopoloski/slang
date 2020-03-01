@@ -21,10 +21,11 @@
 namespace slang {
 
 DefinitionSymbol::DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                                   DefinitionKind definitionKind, const NetType& defaultNetType) :
+                                   DefinitionKind definitionKind, const NetType& defaultNetType,
+                                   UnconnectedDrive unconnectedDrive) :
     Symbol(SymbolKind::Definition, name, loc),
     Scope(compilation, this), definitionKind(definitionKind), defaultNetType(defaultNetType),
-    portMap(compilation.allocSymbolMap()) {
+    unconnectedDrive(unconnectedDrive), portMap(compilation.allocSymbolMap()) {
 }
 
 const ModportSymbol* DefinitionSymbol::getModportOrError(string_view modport, const Scope& scope,
@@ -56,7 +57,8 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
     auto nameToken = syntax.header->name;
     auto result = compilation.emplace<DefinitionSymbol>(
         compilation, nameToken.valueText(), nameToken.location(),
-        SemanticFacts::getDefinitionKind(syntax.kind), compilation.getDefaultNetType(syntax));
+        SemanticFacts::getDefinitionKind(syntax.kind), compilation.getDefaultNetType(syntax),
+        compilation.getUnconnectedDrive(syntax));
 
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
