@@ -156,7 +156,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(const Scope& parent, const ContinuousAssignSyntax& syntax,
-                           SmallVector<const ContinuousAssignSymbol*>& results);
+                           SmallVector<const Symbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }
 

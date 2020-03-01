@@ -279,7 +279,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMembers(*member);
             break;
         case SyntaxKind::ContinuousAssign: {
-            SmallVectorSized<const ContinuousAssignSymbol*, 16> results;
+            SmallVectorSized<const Symbol*, 16> results;
             ContinuousAssignSymbol::fromSyntax(*this, syntax.as<ContinuousAssignSyntax>(), results);
             for (auto symbol : results)
                 addMember(*symbol);

@@ -11,7 +11,6 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/symbols/AllTypes.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/Type.h"

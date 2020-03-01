@@ -8,8 +8,8 @@
 
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/symbols/AllTypes.h"
 #include "slang/symbols/Scope.h"
+#include "slang/symbols/Type.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
 

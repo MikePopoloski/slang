@@ -297,7 +297,7 @@ ContinuousAssignSymbol::ContinuousAssignSymbol(SourceLocation loc, const Express
 }
 
 void ContinuousAssignSymbol::fromSyntax(const Scope& parent, const ContinuousAssignSyntax& syntax,
-                                        SmallVector<const ContinuousAssignSymbol*>& results) {
+                                        SmallVector<const Symbol*>& results) {
     auto& comp = parent.getCompilation();
     for (auto expr : syntax.assignments) {
         auto symbol = comp.emplace<ContinuousAssignSymbol>(*expr);
