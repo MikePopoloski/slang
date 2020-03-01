@@ -537,7 +537,8 @@ bool StatementList::verifyConstantImpl(EvalContext& context) const {
 void StatementList::serializeTo(ASTSerializer& serializer) const {
     serializer.startArray("list");
     for (auto const& stmt : list) {
-        serializer.serialize(*stmt);
+        if (stmt)
+            serializer.serialize(*stmt);
     }
     serializer.endArray();
 }
@@ -548,7 +549,9 @@ BlockStatement::BlockStatement(const StatementBlockSymbol& block, SourceRange so
 
 void BlockStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("blockKind", toString(blockKind));
-    serializer.write("list", *list);
+    if (block)
+        serializer.writeLink("block", *block);
+    serializer.write("body", getStatements());
 }
 
 Statement& BlockStatement::fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax,
@@ -648,7 +651,8 @@ bool ReturnStatement::verifyConstantImpl(EvalContext& context) const {
 }
 
 void ReturnStatement::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("expr", *expr);
+    if (expr)
+        serializer.write("expr", *expr);
 }
 
 Statement& BreakStatement::fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
@@ -710,7 +714,7 @@ bool VariableDeclStatement::verifyConstantImpl(EvalContext& context) const {
 }
 
 void VariableDeclStatement::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("symbol", symbol);
+    serializer.writeLink("symbol", symbol);
 }
 
 Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
@@ -787,7 +791,8 @@ bool ConditionalStatement::verifyConstantImpl(EvalContext& context) const {
 void ConditionalStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("cond", cond);
     serializer.write("ifTrue", ifTrue);
-    serializer.write("ifFalse", ifFalse);
+    if (ifFalse)
+        serializer.write("ifFalse", *ifFalse);
 }
 
 Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStatementSyntax& syntax,
@@ -1028,21 +1033,26 @@ bool CaseStatement::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
-void CaseStatement::serializeTo(ASTSerializer &serializer) const {
+void CaseStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("condition", toString(condition));
     serializer.write("check", toString(check));
     serializer.startArray("items");
-    for (auto const &item: items) {
+    for (auto const& item : items) {
+        serializer.startObject("item");
+
         serializer.startArray("expressions");
-        for (auto const &ex: item.expressions) {
-            serializer.serialize(*ex);
+        for (auto const& ex : item.expressions) {
+            if (ex)
+                serializer.serialize(*ex);
         }
         serializer.endArray();
+
         serializer.startObject("stmt");
         serializer.serialize(*item.stmt);
         serializer.endObject();
+
+        serializer.endObject();
     }
-    // default case
     if (defaultCase) {
         serializer.write("defaultCase", *defaultCase);
     }
@@ -1137,18 +1147,21 @@ bool ForLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return body.verifyConstant(context);
 }
 
-void ForLoopStatement::serializeTo(ASTSerializer &serializer) const {
+void ForLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.startArray("initializers");
-    for (auto const &ini: initializers) {
-        serializer.serialize(*ini);
+    for (auto const& ini : initializers) {
+        if (ini)
+            serializer.serialize(*ini);
     }
     serializer.endArray();
 
-    serializer.write("stopExpr", *stopExpr);
+    if (stopExpr)
+        serializer.write("stopExpr", *stopExpr);
 
     serializer.startArray("steps");
-    for (auto const &step: steps) {
-        serializer.serialize(*step);
+    for (auto const& step : steps) {
+        if (step)
+            serializer.serialize(*step);
     }
     serializer.endArray();
 
@@ -1210,7 +1223,7 @@ bool RepeatLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return count.verifyConstant(context) && body.verifyConstant(context);
 }
 
-void RepeatLoopStatement::serializeTo(ASTSerializer &serializer) const {
+void RepeatLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("count", count);
     serializer.write("body", body);
 }
@@ -1316,18 +1329,19 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, span<const Constant
     return ER::Success;
 }
 
-void ForeachLoopStatement::serializeTo(ASTSerializer &serializer) const {
+void ForeachLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("arrayRef", arrayRef);
 
     serializer.startArray("loopRanges");
-    for (auto const &r: loopRanges) {
+    for (auto const& r : loopRanges) {
         serializer.write("range", r.toString());
     }
     serializer.endArray();
 
     serializer.startArray("loopVariables");
-    for (auto const &v: loopVariables) {
-        serializer.serialize(*v);
+    for (auto const& v : loopVariables) {
+        if (v)
+            serializer.serialize(*v);
     }
     serializer.endArray();
 
@@ -1377,7 +1391,7 @@ bool WhileLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return cond.verifyConstant(context) && body.verifyConstant(context);
 }
 
-void WhileLoopStatement::serializeTo(ASTSerializer &serializer) const {
+void WhileLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("cond", cond);
     serializer.write("body", body);
 }
@@ -1426,7 +1440,7 @@ bool DoWhileLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return cond.verifyConstant(context) && body.verifyConstant(context);
 }
 
-void DoWhileLoopStatement::serializeTo(ASTSerializer &serializer) const {
+void DoWhileLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("cond", cond);
     serializer.write("body", body);
 }
@@ -1462,7 +1476,7 @@ bool ForeverLoopStatement::verifyConstantImpl(EvalContext& context) const {
     return body.verifyConstant(context);
 }
 
-void ForeverLoopStatement::serializeTo(ASTSerializer &serializer) const {
+void ForeverLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", body);
 }
 
@@ -1538,7 +1552,7 @@ bool ExpressionStatement::verifyConstantImpl(EvalContext& context) const {
     return expr.verifyConstant(context);
 }
 
-void ExpressionStatement::serializeTo(ASTSerializer &serializer) const {
+void ExpressionStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
 }
 
@@ -1574,7 +1588,7 @@ bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
     return false;
 }
 
-void TimedStatement::serializeTo(ASTSerializer &serializer) const {
+void TimedStatement::serializeTo(ASTSerializer& serializer) const {
     // TODO: add serialization method for timing
     serializer.write("timing", toString(timing.kind));
     serializer.write("stmt", stmt);
@@ -1659,11 +1673,12 @@ bool AssertionStatement::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
-
-void AssertionStatement::serializeTo(ASTSerializer &serializer) const {
+void AssertionStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("cond", cond);
-    if (ifTrue) serializer.write("ifTrue", *ifTrue);
-    if (ifFalse) serializer.write("ifFalse", *ifFalse);
+    if (ifTrue)
+        serializer.write("ifTrue", *ifTrue);
+    if (ifFalse)
+        serializer.write("ifFalse", *ifFalse);
     serializer.write("assertionKind", toString(assertionKind));
     serializer.write("isDeferred", isDeferred);
     serializer.write("isFinal", isFinal);
