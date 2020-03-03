@@ -536,9 +536,8 @@ bool StatementList::verifyConstantImpl(EvalContext& context) const {
 
 void StatementList::serializeTo(ASTSerializer& serializer) const {
     serializer.startArray("list");
-    for (auto const& stmt : list) {
-        if (stmt)
-            serializer.serialize(*stmt);
+    for (auto stmt : list) {
+        serializer.serialize(*stmt);
     }
     serializer.endArray();
 }
@@ -1041,15 +1040,12 @@ void CaseStatement::serializeTo(ASTSerializer& serializer) const {
         serializer.startObject("item");
 
         serializer.startArray("expressions");
-        for (auto const& ex : item.expressions) {
-            if (ex)
-                serializer.serialize(*ex);
+        for (auto ex : item.expressions) {
+            serializer.serialize(*ex);
         }
         serializer.endArray();
 
-        serializer.startObject("stmt");
-        serializer.serialize(*item.stmt);
-        serializer.endObject();
+        serializer.write("stmt", *item.stmt);
 
         serializer.endObject();
     }
@@ -1149,9 +1145,8 @@ bool ForLoopStatement::verifyConstantImpl(EvalContext& context) const {
 
 void ForLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.startArray("initializers");
-    for (auto const& ini : initializers) {
-        if (ini)
-            serializer.serialize(*ini);
+    for (auto ini : initializers) {
+        serializer.serialize(*ini);
     }
     serializer.endArray();
 
@@ -1159,9 +1154,8 @@ void ForLoopStatement::serializeTo(ASTSerializer& serializer) const {
         serializer.write("stopExpr", *stopExpr);
 
     serializer.startArray("steps");
-    for (auto const& step : steps) {
-        if (step)
-            serializer.serialize(*step);
+    for (auto step : steps) {
+        serializer.serialize(*step);
     }
     serializer.endArray();
 
@@ -1339,7 +1333,7 @@ void ForeachLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 
     serializer.startArray("loopVariables");
-    for (auto const& v : loopVariables) {
+    for (auto v : loopVariables) {
         if (v)
             serializer.serialize(*v);
     }
