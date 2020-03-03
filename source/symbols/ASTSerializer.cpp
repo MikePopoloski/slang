@@ -26,6 +26,10 @@ void ASTSerializer::serialize(const Statement& statement) {
     statement.visit(*this);
 }
 
+void ASTSerializer::serialize(string_view value) {
+    writer.writeValue(value);
+}
+
 void ASTSerializer::write(string_view name, string_view value) {
     writer.writeProperty(name);
     writer.writeValue(value);
@@ -86,8 +90,7 @@ void ASTSerializer::endArray() {
     writer.endArray();
 }
 
-void ASTSerializer::startObject(string_view name) {
-    writer.writeProperty(name);
+void ASTSerializer::startObject() {
     writer.startObject();
 }
 

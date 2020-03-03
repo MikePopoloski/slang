@@ -1037,7 +1037,7 @@ void CaseStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("check", toString(check));
     serializer.startArray("items");
     for (auto const& item : items) {
-        serializer.startObject("item");
+        serializer.startObject();
 
         serializer.startArray("expressions");
         for (auto ex : item.expressions) {
@@ -1328,7 +1328,7 @@ void ForeachLoopStatement::serializeTo(ASTSerializer& serializer) const {
 
     serializer.startArray("loopRanges");
     for (auto const& r : loopRanges) {
-        serializer.write("range", r.toString());
+        serializer.serialize(r.toString());
     }
     serializer.endArray();
 

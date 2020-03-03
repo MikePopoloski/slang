@@ -25,10 +25,11 @@ public:
     void serialize(const Symbol& symbol);
     void serialize(const Expression& expr);
     void serialize(const Statement& statement);
+    void serialize(std::string_view value);
 
     void startArray(string_view name);
     void endArray();
-    void startObject(string_view name);
+    void startObject();
     void endObject();
 
     void write(string_view name, string_view value);
