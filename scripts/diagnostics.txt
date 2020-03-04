@@ -33,7 +33,6 @@ error BadBinaryDigit "expected binary digit"
 error BadOctalDigit "expected octal digit"
 error BadDecimalDigit "expected decimal digit"
 error BadHexDigit "expected hexadecimal digit"
-error IncludeNotFirstOnLine "include directives must begin on their own line"
 error TooManyLexerErrors "lexer has encountered too many errors (input is a binary file?)"
 
 subsystem Numeric

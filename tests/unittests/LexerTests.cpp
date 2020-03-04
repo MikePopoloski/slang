@@ -624,22 +624,6 @@ TEST_CASE("Directive continuation") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Directive not on own line") {
-    auto& text = "foo `include <sdf.svh>";
-
-    diagnostics.clear();
-    auto buffer = getSourceManager().assignText(string_view(text));
-    Lexer lexer(buffer, alloc, diagnostics);
-
-    Token token = lexer.lex();
-    CHECK(token.kind == TokenKind::Identifier);
-    token = lexer.lex();
-    CHECK(token.kind == TokenKind::Directive);
-
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == diag::IncludeNotFirstOnLine);
-}
-
 TEST_CASE("Escaped keyword identifiers") {
     auto& text = "\\wire";
 

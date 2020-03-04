@@ -157,7 +157,6 @@ Token Lexer::lex(KeywordVersion keywordVersion) {
     // lex the next token
     mark();
     Token token = lexToken(keywordVersion);
-    onNewLine = false;
 
     if (token.kind != TokenKind::EndOfFile && errorCount > options.maxErrors) {
         // Stop any further lexing by claiming to be at the end of the buffer.
@@ -700,9 +699,6 @@ Token Lexer::lexDirective() {
     }
 
     SyntaxKind directive = LF::getDirectiveKind(lexeme().substr(1));
-    if (!onNewLine && directive == SyntaxKind::IncludeDirective)
-        addDiag(diag::IncludeNotFirstOnLine, startingOffset);
-
     return create(TokenKind::Directive, directive);
 }
 
@@ -984,12 +980,10 @@ void Lexer::lexTrivia() {
             case '\r':
                 advance();
                 consume('\n');
-                onNewLine = true;
                 addTrivia(TriviaKind::EndOfLine);
                 break;
             case '\n':
                 advance();
-                onNewLine = true;
                 addTrivia(TriviaKind::EndOfLine);
                 break;
             default:

@@ -126,10 +126,6 @@ private:
     // the number of errors that have occurred while lexing the current buffer
     uint32_t errorCount = 0;
 
-    // Keeps track of whether we just entered a new line, to enforce tokens
-    // that must start on their own line
-    bool onNewLine = true;
-
     // temporary storage for building arrays of trivia
     SmallVectorSized<Trivia, 32> triviaBuffer;
 };
