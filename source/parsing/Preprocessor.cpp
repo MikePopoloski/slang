@@ -41,7 +41,6 @@ void Preprocessor::pushSource(string_view source, string_view name) {
 }
 
 void Preprocessor::pushSource(SourceBuffer buffer) {
-    ASSERT(lexerStack.size() < options.maxIncludeDepth);
     ASSERT(buffer.id);
 
     lexerStack.emplace_back(std::make_unique<Lexer>(buffer, alloc, diagnostics, lexerOptions));
@@ -857,9 +856,6 @@ Trivia Preprocessor::handlePragmaDirective(Token directive) {
 }
 
 std::pair<PragmaExpressionSyntax*, bool> Preprocessor::parsePragmaExpression() {
-    if (auto pair = checkNextPragmaToken(); !pair.second)
-        return pair;
-
     Token token = peek();
     if (token.kind == TokenKind::Identifier || LexerFacts::isKeyword(token.kind)) {
         auto name = consume();

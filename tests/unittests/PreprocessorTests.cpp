@@ -2,10 +2,10 @@
 
 #include "slang/syntax/SyntaxPrinter.h"
 
-std::string preprocess(string_view text, string_view name = "source") {
+std::string preprocess(string_view text, string_view name = "source", const Bag& options = {}) {
     diagnostics.clear();
 
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, options);
     preprocessor.pushSource(getSourceManager().assignText(name, text));
 
     std::string result;
@@ -71,6 +71,31 @@ TEST_CASE("Double include, with pragma once") {
 
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Include directive errors") {
+    auto& text = R"(
+`include
+`include < asdf . svh >
+`include foo
+`include ""
+`include "include_once.svh"
+)";
+
+    PreprocessorOptions ppOptions;
+    ppOptions.maxIncludeDepth = 0;
+
+    Bag options;
+    options.add(ppOptions);
+
+    preprocess(text, "source", options);
+
+    REQUIRE(diagnostics.size() == 5);
+    CHECK(diagnostics[0].code == diag::CouldNotOpenIncludeFile);
+    CHECK(diagnostics[1].code == diag::ExpectedIncludeFileName);
+    CHECK(diagnostics[2].code == diag::ExpectedIncludeFileName);
+    CHECK(diagnostics[3].code == diag::ExpectedIncludeFileName);
+    CHECK(diagnostics[4].code == diag::ExceededMaxIncludeDepth);
 }
 
 void testDirective(SyntaxKind kind) {
@@ -1065,6 +1090,14 @@ TEST_CASE("`line + FILE + LINE Directive") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Invalid `line directive") {
+    auto& text = "`line 6 \"other.sv\" 4";
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::InvalidLineDirectiveLevel);
+}
+
 TEST_CASE("undef Directive") {
     auto& text = "`define FOO 45\n"
                  "`undef FOO\n"
@@ -1283,7 +1316,15 @@ TEST_CASE("macro-defined include file") {
 }
 
 TEST_CASE("Preprocessor API") {
-    Preprocessor pp(getSourceManager(), alloc, diagnostics);
+    PreprocessorOptions ppOptions;
+    ppOptions.predefines.emplace_back("BAZ=4");
+    ppOptions.predefines.emplace_back("BUZ");
+    ppOptions.undefines.emplace_back("BUZ");
+
+    Bag options;
+    options.add(ppOptions);
+
+    Preprocessor pp(getSourceManager(), alloc, diagnostics, options);
     CHECK(!pp.isDefined("FOO"));
     CHECK(pp.isDefined("__LINE__"));
     CHECK(!pp.undefine("FOO"));
@@ -1292,9 +1333,11 @@ TEST_CASE("Preprocessor API") {
     CHECK(pp.isDefined("FOO"));
     CHECK(pp.undefine("FOO"));
     CHECK(!pp.isDefined("FOO"));
+    CHECK(pp.isDefined("BAZ"));
+    CHECK(!pp.isDefined("BUZ"));
 
     pp.setKeywordVersion(KeywordVersion::v1364_2001);
-    CHECK(pp.getDefinedMacros().size() == 4);
+    CHECK(pp.getDefinedMacros().size() == 5);
 }
 
 TEST_CASE("Undef builtin") {
@@ -1325,6 +1368,16 @@ TEST_CASE("Trying to redefine built-in macro") {
     preprocess(text);
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::InvalidMacroName);
+}
+
+TEST_CASE("Bad define directive") {
+    auto& text = R"(
+`define
+)";
+
+    preprocess(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
 }
 
 TEST_CASE("Redefine macro -- same body") {
@@ -1411,6 +1464,9 @@ TEST_CASE("Pragma expressions -- errors") {
 `pragma reset (asdf, asdf), foo
 `pragma resetall asdf, asdf
 `pragma once asdf
+
+`pragma protect begin
+`pragma protect end
 )";
 
     preprocess(text);
@@ -1450,6 +1506,12 @@ source:17:1: error: expected pragma name
 source:16:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 `pragma bar 'h 3e+2
         ^~~
+source:25:9: warning: language feature not yet supported [-Wnot-supported]
+`pragma protect end
+        ^~~~~~~
+source:24:9: warning: language feature not yet supported [-Wnot-supported]
+`pragma protect begin
+        ^~~~~~~
 source:22:14: warning: too many arguments provided for pragma 'once' [-Wextra-pragma-args]
 `pragma once asdf
              ^
@@ -1496,4 +1558,16 @@ bar
     CHECK(result == "\nbar\n");
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::UnknownDirective);
+}
+
+TEST_CASE("celldefine check") {
+    auto& text = R"(
+`celldefine
+module m;
+endmodule
+`endcelldefine
+)";
+
+    preprocess(text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
