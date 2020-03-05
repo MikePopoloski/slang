@@ -234,7 +234,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             // If this declaration has a named type, we need to defer the creation of the variables
             // because that type name may actually resolve to a net type or interface instance.
             auto& dataDecl = syntax.as<DataDeclarationSyntax>();
-            if (dataDecl.type->kind == SyntaxKind::NamedType) {
+            if (dataDecl.type->kind == SyntaxKind::NamedType && dataDecl.modifiers.empty()) {
                 auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
                 addMember(*sym);
                 getOrAddDeferredData().addMember(sym);
