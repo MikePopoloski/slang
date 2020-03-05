@@ -208,9 +208,8 @@ private:
             symbol = compilation.emplace<NetSymbol>(port->name, port->location, *netType);
         }
         else {
-            // TODO: variable lifetime
-            auto variable = compilation.emplace<VariableSymbol>(port->name, port->location);
-            symbol = variable;
+            symbol = compilation.emplace<VariableSymbol>(port->name, port->location,
+                                                         VariableLifetime::Static);
         }
 
         // Initializers here are evaluated in the context of the port list and
@@ -378,8 +377,8 @@ private:
                 // definition. Otherwise we need to see if there's an existing symbol to match with.
                 if (varHeader.varKeyword || varHeader.dataType->kind != SyntaxKind::ImplicitType) {
                     // TODO: check for user defined net type?
-                    // TODO: variable lifetime
-                    auto variable = compilation.emplace<VariableSymbol>(name, declLoc);
+                    auto variable = compilation.emplace<VariableSymbol>(name, declLoc,
+                                                                        VariableLifetime::Static);
                     setInternalSymbol(*variable, decl, *varHeader.dataType, info, insertionPoint);
                 }
                 else if (auto symbol = scope.find(name);

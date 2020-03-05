@@ -103,7 +103,7 @@ public:
     DeclaredType declaredReturnType;
     const VariableSymbol* returnValVar = nullptr;
     ArgList arguments;
-    VariableLifetime defaultLifetime = VariableLifetime::Automatic;
+    VariableLifetime defaultLifetime;
     SubroutineKind subroutineKind;
 
     SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,

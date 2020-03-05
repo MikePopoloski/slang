@@ -35,7 +35,7 @@ TEST_CASE("Evaluate assignment expression") {
     auto& scope = compilation.createScriptScope();
 
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local{ varToken.valueText(), varToken.location() };
+    VariableSymbol local{ varToken.valueText(), varToken.location(), VariableLifetime::Automatic };
     local.setType(compilation.getIntType());
 
     // Bind the expression tree to the symbol
@@ -68,7 +68,7 @@ TEST_CASE("Check type propagation") {
     auto& scope = compilation.createScriptScope();
 
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local{ varToken.valueText(), varToken.location() };
+    VariableSymbol local{ varToken.valueText(), varToken.location(), VariableLifetime::Automatic };
     local.setType(compilation.getType(20, IntegralFlags::Unsigned));
 
     // Bind the expression tree to the symbol
@@ -97,7 +97,7 @@ TEST_CASE("Check type propagation 2") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local{ varToken.valueText(), varToken.location() };
+    VariableSymbol local{ varToken.valueText(), varToken.location(), VariableLifetime::Automatic };
     local.setType(compilation.getType(20, IntegralFlags::Unsigned));
 
     // Bind the expression tree to the symbol
@@ -132,7 +132,7 @@ TEST_CASE("Check type propagation real") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax->root().getFirstToken();
-    VariableSymbol local{ varToken.valueText(), varToken.location() };
+    VariableSymbol local{ varToken.valueText(), varToken.location(), VariableLifetime::Automatic };
     local.setType(compilation.getType(20, IntegralFlags::Unsigned));
 
     // Bind the expression tree to the symbol

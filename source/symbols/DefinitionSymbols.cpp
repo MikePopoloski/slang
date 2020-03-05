@@ -21,11 +21,13 @@
 namespace slang {
 
 DefinitionSymbol::DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                                   DefinitionKind definitionKind, const NetType& defaultNetType,
+                                   DefinitionKind definitionKind, VariableLifetime defaultLifetime,
+                                   const NetType& defaultNetType,
                                    UnconnectedDrive unconnectedDrive) :
     Symbol(SymbolKind::Definition, name, loc),
-    Scope(compilation, this), definitionKind(definitionKind), defaultNetType(defaultNetType),
-    unconnectedDrive(unconnectedDrive), portMap(compilation.allocSymbolMap()) {
+    Scope(compilation, this), defaultNetType(defaultNetType), definitionKind(definitionKind),
+    defaultLifetime(defaultLifetime), unconnectedDrive(unconnectedDrive),
+    portMap(compilation.allocSymbolMap()) {
 }
 
 const ModportSymbol* DefinitionSymbol::getModportOrError(string_view modport, const Scope& scope,
@@ -55,11 +57,15 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
                                                const ModuleDeclarationSyntax& syntax,
                                                const Scope& scope) {
     auto nameToken = syntax.header->name;
-    auto result = compilation.emplace<DefinitionSymbol>(
-        compilation, nameToken.valueText(), nameToken.location(),
-        SemanticFacts::getDefinitionKind(syntax.kind), compilation.getDefaultNetType(syntax),
-        compilation.getUnconnectedDrive(syntax));
+    DefinitionKind definitionKind = SemanticFacts::getDefinitionKind(syntax.kind);
+    VariableLifetime lifetime = SemanticFacts::getVariableLifetime(syntax.header->lifetime)
+                                    .value_or(VariableLifetime::Static);
+    const NetType& defaultNetType = compilation.getDefaultNetType(syntax);
+    UnconnectedDrive unconnectedDrive = compilation.getUnconnectedDrive(syntax);
 
+    auto result = compilation.emplace<DefinitionSymbol>(compilation, nameToken.valueText(),
+                                                        nameToken.location(), definitionKind,
+                                                        lifetime, defaultNetType, unconnectedDrive);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 

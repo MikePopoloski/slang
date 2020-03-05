@@ -483,8 +483,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     // Fabricate a local variable that will serve as the loop iteration variable.
     auto& iterScope = *compilation.emplace<StatementBlockSymbol>(compilation, "", loc,
                                                                  StatementBlockKind::Sequential);
-    auto& local = *compilation.emplace<VariableSymbol>(genvar.valueText(), genvar.location());
+    auto& local = *compilation.emplace<VariableSymbol>(genvar.valueText(), genvar.location(),
+                                                       VariableLifetime::Automatic);
     local.setType(compilation.getIntegerType());
+    local.flags.isCompilerGenerated = true;
 
     iterScope.setTemporaryParent(parent, scopeIndex);
     iterScope.addMember(local);

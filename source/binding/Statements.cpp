@@ -478,7 +478,7 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
             // source range here, since we don't have the real one.
             auto& var = member.as<VariableSymbol>();
             SourceRange range{ var.location, var.location + var.name.length() };
-            if (!var.isCompilerGenerated)
+            if (!var.flags.isCompilerGenerated)
                 buffer.append(comp.emplace<VariableDeclStatement>(var, range));
         }
     }

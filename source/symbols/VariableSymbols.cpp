@@ -7,6 +7,7 @@
 #include "slang/symbols/VariableSymbols.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Type.h"
@@ -17,35 +18,67 @@ namespace slang {
 
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                                 const Scope& scope, SmallVector<const ValueSymbol*>& results) {
-    // TODO: check modifiers
-
     // This might actually be a net declaration with a user defined net type. That can only
     // be true if the data type syntax is a simple identifier, so if we see that it is,
     // perform a lookup and see what comes back.
-    string_view simpleName = SyntaxFacts::getSimpleTypeName(*syntax.type);
-    if (!simpleName.empty()) {
-        auto result = Lookup::unqualified(scope, simpleName);
-        if (result && result->kind == SymbolKind::NetType) {
-            const NetType& netType = result->as<NetType>();
-            netType.getAliasTarget(); // force resolution of target
+    if (syntax.modifiers.empty()) {
+        string_view simpleName = SyntaxFacts::getSimpleTypeName(*syntax.type);
+        if (!simpleName.empty()) {
+            auto result = Lookup::unqualified(scope, simpleName);
+            if (result && result->kind == SymbolKind::NetType) {
+                const NetType& netType = result->as<NetType>();
+                netType.getAliasTarget(); // force resolution of target
 
-            auto& declaredType = *netType.getDeclaredType();
-            for (auto declarator : syntax.declarators) {
-                auto net = compilation.emplace<NetSymbol>(declarator->name.valueText(),
-                                                          declarator->name.location(), netType);
+                auto& declaredType = *netType.getDeclaredType();
+                for (auto declarator : syntax.declarators) {
+                    auto net = compilation.emplace<NetSymbol>(declarator->name.valueText(),
+                                                              declarator->name.location(), netType);
 
-                net->getDeclaredType()->copyTypeFrom(declaredType);
-                net->setFromDeclarator(*declarator);
-                net->setAttributes(scope, syntax.attributes);
-                results.append(net);
+                    net->getDeclaredType()->copyTypeFrom(declaredType);
+                    net->setFromDeclarator(*declarator);
+                    net->setAttributes(scope, syntax.attributes);
+                    results.append(net);
+                }
+                return;
             }
-            return;
         }
     }
 
+    bool isConst = false;
+    optional<VariableLifetime> lifetime;
+    for (Token mod : syntax.modifiers) {
+        switch (mod.kind) {
+            case TokenKind::VarKeyword:
+                break;
+            case TokenKind::ConstKeyword:
+                isConst = true;
+                break;
+            case TokenKind::StaticKeyword:
+                // Static lifetimes are allowed in all contexts.
+                lifetime = VariableLifetime::Static;
+                break;
+            case TokenKind::AutomaticKeyword:
+                // Automatic lifetimes are only allowed in procedural contexts.
+                lifetime = VariableLifetime::Automatic;
+                if (!scope.isProceduralContext())
+                    scope.addDiag(diag::AutomaticNotAllowed, mod.range());
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    // If no explicit lifetime is provided, find the default one for this scope.
+    bool hasExplicitLifetime = lifetime.has_value();
+    if (!hasExplicitLifetime)
+        lifetime = scope.getDefaultLifetime();
+
     for (auto declarator : syntax.declarators) {
         auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(),
-                                                            declarator->name.location());
+                                                            declarator->name.location(), *lifetime);
+        variable->flags.isConstant = isConst;
+        variable->flags.hasExplicitLifetime = hasExplicitLifetime;
+
         variable->setDeclaredType(*syntax.type);
         variable->setFromDeclarator(*declarator);
         variable->setAttributes(scope, syntax.attributes);
@@ -56,8 +89,9 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
 VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
                                            const ForVariableDeclarationSyntax& syntax,
                                            const VariableSymbol* lastVar) {
-    auto var = compilation.emplace<VariableSymbol>(syntax.declarator->name.valueText(),
-                                                   syntax.declarator->name.location());
+    auto nameToken = syntax.declarator->name;
+    auto var = compilation.emplace<VariableSymbol>(nameToken.valueText(), nameToken.location(),
+                                                   VariableLifetime::Automatic);
 
     if (syntax.type)
         var->setDeclaredType(*syntax.type);
@@ -72,8 +106,9 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
 
 VariableSymbol& VariableSymbol::fromForeachVar(Compilation& compilation,
                                                const IdentifierNameSyntax& syntax) {
-    auto var = compilation.emplace<VariableSymbol>(syntax.identifier.valueText(),
-                                                   syntax.identifier.location());
+    auto nameToken = syntax.identifier;
+    auto var = compilation.emplace<VariableSymbol>(nameToken.valueText(), nameToken.location(),
+                                                   VariableLifetime::Automatic);
     var->setSyntax(syntax);
 
     // TODO: for associative arrays the type needs to be the index type
@@ -84,7 +119,17 @@ VariableSymbol& VariableSymbol::fromForeachVar(Compilation& compilation,
 
 void VariableSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("lifetime", toString(lifetime));
-    serializer.write("isConst", isConst);
+    serializer.write("isConstant", flags.isConstant);
+    serializer.write("isCompilerGenerated", flags.isCompilerGenerated);
+    serializer.write("hasExplicitLifetime", flags.hasExplicitLifetime);
+}
+
+FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation loc,
+                                           ArgumentDirection direction) :
+    VariableSymbol(SymbolKind::FormalArgument, name, loc, VariableLifetime::Automatic),
+    direction(direction) {
+    if (direction == ArgumentDirection::ConstRef)
+        flags.isConstant = true;
 }
 
 void FormalArgumentSymbol::serializeTo(ASTSerializer& serializer) const {

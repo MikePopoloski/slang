@@ -24,13 +24,14 @@ class PortSymbol;
 class DefinitionSymbol : public Symbol, public Scope, TimeScaleSymbolBase {
 public:
     span<const ParameterSymbolBase* const> parameters;
-    DefinitionKind definitionKind;
     const NetType& defaultNetType;
+    DefinitionKind definitionKind;
+    VariableLifetime defaultLifetime;
     UnconnectedDrive unconnectedDrive;
 
     DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     DefinitionKind definitionKind, const NetType& defaultNetType,
-                     UnconnectedDrive unconnectedDrive);
+                     DefinitionKind definitionKind, VariableLifetime defaultLifetime,
+                     const NetType& defaultNetType, UnconnectedDrive unconnectedDrive);
 
     const SymbolMap& getPortMap() const {
         ensureElaborated();

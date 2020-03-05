@@ -119,13 +119,15 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     // TODO: non simple names?
     auto proto = syntax.prototype;
     Token nameToken = proto->name->getFirstToken();
-    auto lifetime =
-        SemanticFacts::getVariableLifetime(proto->lifetime).value_or(VariableLifetime::Automatic);
+    auto lifetime = SemanticFacts::getVariableLifetime(proto->lifetime);
+    if (!lifetime.has_value())
+        lifetime = parent.getDefaultLifetime();
 
     auto subroutineKind = syntax.kind == SyntaxKind::TaskDeclaration ? SubroutineKind::Task
                                                                      : SubroutineKind::Function;
-    auto result = compilation.emplace<SubroutineSymbol>(
-        compilation, nameToken.valueText(), nameToken.location(), lifetime, subroutineKind, parent);
+    auto result = compilation.emplace<SubroutineSymbol>(compilation, nameToken.valueText(),
+                                                        nameToken.location(), *lifetime,
+                                                        subroutineKind, parent);
 
     result->setSyntax(syntax);
     result->setAttributes(parent, syntax.attributes);
@@ -246,10 +248,10 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     // The function gets an implicit variable inserted that represents the return value.
     if (subroutineKind == SubroutineKind::Function) {
-        auto implicitReturnVar =
-            compilation.emplace<VariableSymbol>(result->name, result->location);
+        auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location,
+                                                                     VariableLifetime::Automatic);
         implicitReturnVar->setDeclaredType(*proto->returnType);
-        implicitReturnVar->isCompilerGenerated = true;
+        implicitReturnVar->flags.isCompilerGenerated = true;
         result->addMember(*implicitReturnVar);
         result->returnValVar = implicitReturnVar;
         result->declaredReturnType.setTypeSyntax(*proto->returnType);

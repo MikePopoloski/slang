@@ -21,12 +21,25 @@ struct ForVariableDeclarationSyntax;
 class VariableSymbol : public ValueSymbol {
 public:
     VariableLifetime lifetime;
-    bool isConst;
-    bool isCompilerGenerated = false;
 
-    VariableSymbol(string_view name, SourceLocation loc,
-                   VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false) :
-        VariableSymbol(SymbolKind::Variable, name, loc, lifetime, isConst) {}
+    /// Specifies flags that define variable behavior.
+    struct Flags {
+        /// The variable is marked constant and can't be modified.
+        bool isConstant : 1;
+
+        /// The compiler created this variable, as opposed to
+        /// it being declared in the user's source code.
+        bool isCompilerGenerated : 1;
+
+        /// The vaiable's lifetime was explicitly provided, as opposed
+        /// to being infered from its declaration context.
+        bool hasExplicitLifetime : 1;
+
+        Flags() : isConstant(false), isCompilerGenerated(false), hasExplicitLifetime(false) {}
+    } flags;
+
+    VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime) :
+        VariableSymbol(SymbolKind::Variable, name, loc, lifetime) {}
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -50,9 +63,9 @@ public:
 
 protected:
     VariableSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
-                   VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false) :
+                   VariableLifetime lifetime) :
         ValueSymbol(childKind, name, loc),
-        lifetime(lifetime), isConst(isConst) {}
+        lifetime(lifetime) {}
 };
 
 /// Represents a formal argument in subroutine (task or function).
@@ -60,13 +73,8 @@ class FormalArgumentSymbol : public VariableSymbol {
 public:
     ArgumentDirection direction = ArgumentDirection::In;
 
-    FormalArgumentSymbol() : VariableSymbol(SymbolKind::FormalArgument, "", SourceLocation()) {}
-
     FormalArgumentSymbol(string_view name, SourceLocation loc,
-                         ArgumentDirection direction = ArgumentDirection::In) :
-        VariableSymbol(SymbolKind::FormalArgument, name, loc, VariableLifetime::Automatic,
-                       direction == ArgumentDirection::ConstRef),
-        direction(direction) {}
+                         ArgumentDirection direction = ArgumentDirection::In);
 
     void serializeTo(ASTSerializer& serializer) const;
 

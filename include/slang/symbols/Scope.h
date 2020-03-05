@@ -10,6 +10,7 @@
 
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/symbols/Lookup.h"
+#include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/util/Iterator.h"
 #include "slang/util/Util.h"
@@ -49,6 +50,14 @@ public:
 
     /// Gets the time scale for delay values expressed within this scope.
     TimeScale getTimeScale() const;
+
+    /// Gets the default lifetime that should apply to variables
+    /// declared in this scope.
+    VariableLifetime getDefaultLifetime() const;
+
+    /// Returns true if this scope represents a procedural context; that is,
+    /// a procedural block, or a task/function scope.
+    bool isProceduralContext() const;
 
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;

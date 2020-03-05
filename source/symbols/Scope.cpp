@@ -51,7 +51,7 @@ Scope::iterator& Scope::iterator::operator++() {
 
 const NetType& Scope::getDefaultNetType() const {
     const Scope* current = this;
-    while (current) {
+    do {
         auto& sym = current->asSymbol();
         switch (sym.kind) {
             case SymbolKind::Definition:
@@ -65,14 +65,14 @@ const NetType& Scope::getDefaultNetType() const {
                     current = sym.getParentScope();
                 break;
         }
-    }
+    } while (current);
 
     return getCompilation().getNetType(TokenKind::Unknown);
 }
 
 TimeScale Scope::getTimeScale() const {
     const Scope* current = this;
-    while (current) {
+    do {
         auto& sym = current->asSymbol();
         switch (sym.kind) {
             case SymbolKind::CompilationUnit:
@@ -88,9 +88,48 @@ TimeScale Scope::getTimeScale() const {
                     current = sym.getParentScope();
                 break;
         }
-    }
+    } while (current);
 
     return getCompilation().getDefaultTimeScale();
+}
+
+VariableLifetime Scope::getDefaultLifetime() const {
+    // If we're not in a procedural context, the default lifetime
+    // is always just static (it's the only lifetime allowed).
+    const Symbol* sym = &asSymbol();
+    switch (sym->kind) {
+        case SymbolKind::StatementBlock:
+            break;
+        case SymbolKind::Subroutine:
+            return sym->as<SubroutineSymbol>().defaultLifetime;
+        default:
+            return VariableLifetime::Static;
+    }
+
+    while (true) {
+        auto scope = sym->getParentScope();
+        if (!scope)
+            return VariableLifetime::Static;
+
+        sym = &scope->asSymbol();
+        if (sym->kind == SymbolKind::Subroutine)
+            return sym->as<SubroutineSymbol>().defaultLifetime;
+        else if (sym->kind == SymbolKind::Definition)
+            return sym->as<DefinitionSymbol>().defaultLifetime;
+        else if (InstanceSymbol::isKind(sym->kind))
+            return sym->as<InstanceSymbol>().definition.defaultLifetime;
+    }
+}
+
+bool Scope::isProceduralContext() const {
+    switch (asSymbol().kind) {
+        case SymbolKind::ProceduralBlock:
+        case SymbolKind::StatementBlock:
+        case SymbolKind::Subroutine:
+            return true;
+        default:
+            return false;
+    }
 }
 
 Diagnostic& Scope::addDiag(DiagCode code, SourceLocation location) const {

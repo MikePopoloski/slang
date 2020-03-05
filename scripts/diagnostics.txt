@@ -195,6 +195,7 @@ error MaxInstanceDepthExceeded "module instantiation exceeded maximum depth of {
 error MaxGenerateStepsExceeded "generate loop hit maximum step limit; possible infinite loop?"
 error MixingSubroutinePortKinds "port declarations not allowed when subroutine defines a formal argument list"
 error UnpackedArrayParamType "unpacked array parameter requires explicit data type"
+error AutomaticNotAllowed "automatic variables can only be declared in procedural contexts"
 warning case-gen-dup CaseGenerateDup "more than one case generate block matches the value {}"
 warning case-gen-none CaseGenerateNoBlock "no case generate expression matches the value {}"
 warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"
