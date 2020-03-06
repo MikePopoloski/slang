@@ -147,9 +147,11 @@ void ASTSerializer::visit(const T& elem) {
         if constexpr (std::is_base_of_v<ValueSymbol, T>) {
             write("type", elem.getType());
 
-            auto& value = elem.getConstantValue();
-            if (value)
-                write("value", value);
+            if constexpr (!std::is_base_of_v<ParameterSymbol, T>) {
+                auto& value = elem.getConstantValue();
+                if (value)
+                    write("value", value);
+            }
 
             if (auto init = elem.getInitializer())
                 write("initializer", *init);
