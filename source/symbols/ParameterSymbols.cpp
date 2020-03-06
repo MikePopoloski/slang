@@ -79,6 +79,7 @@ void ParameterSymbol::setValue(ConstantValue value) {
 }
 
 void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("value", getValue());
     serializer.write("isLocal", isLocalParam());
     serializer.write("isPort", isPortParam());
     serializer.write("isBody", isBodyParam());
