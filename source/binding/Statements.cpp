@@ -1049,10 +1049,11 @@ void CaseStatement::serializeTo(ASTSerializer& serializer) const {
 
         serializer.endObject();
     }
+    serializer.endArray();
+
     if (defaultCase) {
         serializer.write("defaultCase", *defaultCase);
     }
-    serializer.endArray();
 }
 
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
