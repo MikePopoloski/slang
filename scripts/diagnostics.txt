@@ -196,6 +196,7 @@ error MaxGenerateStepsExceeded "generate loop hit maximum step limit; possible i
 error MixingSubroutinePortKinds "port declarations not allowed when subroutine defines a formal argument list"
 error UnpackedArrayParamType "unpacked array parameter requires explicit data type"
 error AutomaticNotAllowed "automatic variables can only be declared in procedural contexts"
+warning explicit-static StaticInitializerMustBeExplicit "initializing a static variable in a procedural context requires an explicit 'static' keyword"
 warning case-gen-dup CaseGenerateDup "more than one case generate block matches the value {}"
 warning case-gen-none CaseGenerateNoBlock "no case generate expression matches the value {}"
 warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"
@@ -374,6 +375,6 @@ group default = { real-underflow real-overflow literal-overflow ignored-macro-pa
                   case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
                   dup-import redef-macro nonstandard-generate pointless-void-cast unused-result
                   not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg
-                  pragma-diag-level }
+                  pragma-diag-level explicit-static }
 
 group extra = { empty-member empty-stmt }

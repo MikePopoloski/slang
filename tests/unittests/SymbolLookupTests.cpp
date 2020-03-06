@@ -255,7 +255,7 @@ module m1;
     initial begin
         import p::*;
         import q::*;
-        int x = c; // error
+        automatic int x = c; // error
     end
 endmodule
 
@@ -272,7 +272,7 @@ module m2;
 
     initial begin
         import q::*;
-        int x = c;
+        automatic int x = c;
         import p::c; // makes line above error
     end
 endmodule
@@ -325,7 +325,7 @@ module m1;
         foo.i = 1; // fine if not called from constant context, otherwise an error
     endfunction
 
-    function int baz;
+    function automatic int baz;
         int k = foo.j;
     endfunction
 
@@ -741,7 +741,10 @@ module M;
     N n();
 endmodule
 
-function static int foo; logic f = 1; return 42; endfunction
+function automatic int foo;
+    logic f = 1;
+    return 42;
+endfunction
 )");
 
     auto file2 = SyntaxTree::fromText(R"(

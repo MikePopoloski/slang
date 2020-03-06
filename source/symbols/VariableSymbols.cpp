@@ -76,13 +76,18 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     for (auto declarator : syntax.declarators) {
         auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(),
                                                             declarator->name.location(), *lifetime);
-        variable->flags.isConstant = isConst;
-        variable->flags.hasExplicitLifetime = hasExplicitLifetime;
-
+        variable->isConstant = isConst;
         variable->setDeclaredType(*syntax.type);
         variable->setFromDeclarator(*declarator);
         variable->setAttributes(scope, syntax.attributes);
         results.append(variable);
+
+        // If this is a static variable in a procedural context and it has an initializer,
+        // the spec requires that the static keyword must be explicitly provided.
+        if (*lifetime == VariableLifetime::Static && !hasExplicitLifetime &&
+            declarator->initializer && scope.isProceduralContext()) {
+            scope.addDiag(diag::StaticInitializerMustBeExplicit, declarator->name.range());
+        }
     }
 }
 
@@ -119,9 +124,8 @@ VariableSymbol& VariableSymbol::fromForeachVar(Compilation& compilation,
 
 void VariableSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("lifetime", toString(lifetime));
-    serializer.write("isConstant", flags.isConstant);
-    serializer.write("isCompilerGenerated", flags.isCompilerGenerated);
-    serializer.write("hasExplicitLifetime", flags.hasExplicitLifetime);
+    serializer.write("isConstant", isConstant);
+    serializer.write("isCompilerGenerated", isCompilerGenerated);
 }
 
 FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation loc,
@@ -129,7 +133,7 @@ FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation loc,
     VariableSymbol(SymbolKind::FormalArgument, name, loc, VariableLifetime::Automatic),
     direction(direction) {
     if (direction == ArgumentDirection::ConstRef)
-        flags.isConstant = true;
+        isConstant = true;
 }
 
 void FormalArgumentSymbol::serializeTo(ASTSerializer& serializer) const {

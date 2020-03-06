@@ -22,21 +22,12 @@ class VariableSymbol : public ValueSymbol {
 public:
     VariableLifetime lifetime;
 
-    /// Specifies flags that define variable behavior.
-    struct Flags {
-        /// The variable is marked constant and can't be modified.
-        bool isConstant : 1;
+    /// The variable is marked constant and can't be modified.
+    bool isConstant = false;
 
-        /// The compiler created this variable, as opposed to
-        /// it being declared in the user's source code.
-        bool isCompilerGenerated : 1;
-
-        /// The vaiable's lifetime was explicitly provided, as opposed
-        /// to being infered from its declaration context.
-        bool hasExplicitLifetime : 1;
-
-        Flags() : isConstant(false), isCompilerGenerated(false), hasExplicitLifetime(false) {}
-    } flags;
+    /// The compiler created this variable, as opposed to
+    /// it being declared in the user's source code.
+    bool isCompilerGenerated = false;
 
     VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime) :
         VariableSymbol(SymbolKind::Variable, name, loc, lifetime) {}

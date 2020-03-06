@@ -757,3 +757,20 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnpackedArrayParamType);
 }
+
+TEST_CASE("Static initializer missing static keyword") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        int i = 4;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::StaticInitializerMustBeExplicit);
+}

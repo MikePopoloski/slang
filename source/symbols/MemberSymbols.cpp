@@ -251,7 +251,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
         auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location,
                                                                      VariableLifetime::Automatic);
         implicitReturnVar->setDeclaredType(*proto->returnType);
-        implicitReturnVar->flags.isCompilerGenerated = true;
+        implicitReturnVar->isCompilerGenerated = true;
         result->addMember(*implicitReturnVar);
         result->returnValVar = implicitReturnVar;
         result->declaredReturnType.setTypeSyntax(*proto->returnType);

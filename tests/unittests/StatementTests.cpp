@@ -368,7 +368,7 @@ module m;
     always begin: asdf
         localparam i = 1;
         parameter j = 2;
-        logic [i+3:j] foo = '1;
+        static logic [i+3:j] foo = '1;
     end
 
 endmodule
@@ -505,7 +505,7 @@ TEST_CASE("Parallel blocks") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     initial fork
-        int i = 4;
+        static int i = 4;
         i += 2;
     join
 
@@ -531,7 +531,7 @@ TEST_CASE("Parallel blocks -- invalid in constexpr") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     function int foo;
-        int i = 0;
+        automatic int i = 0;
         fork : asdf
             i += 2;
         join
@@ -555,7 +555,7 @@ TEST_CASE("Statement blocks -- decl after statements") {
 module m;
     initial begin
         i++;
-        int i = 0;
+        int i;
     end
 endmodule
 )");

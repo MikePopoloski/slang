@@ -135,7 +135,7 @@ endfunction
 TEST_CASE("Eval for loop") {
     ScriptSession session;
     session.eval(R"(
-function logic [15:0] foo(int a);
+function automatic logic [15:0] foo(int a);
     logic [15:0] result = 1;
     for (int i = 0; i < a; i+=1)
         result *= 2;
@@ -160,7 +160,7 @@ endfunction
 TEST_CASE("Eval nested for loop") {
     ScriptSession session;
     session.eval(R"(
-function logic [15:0] foo(int a);
+function automatic logic [15:0] foo(int a);
     logic [15:0] result = 1;
     int temp = 0;
     for (int i = 0; i < a; i+=1) begin
@@ -843,7 +843,7 @@ TEST_CASE("Concat assignments") {
 TEST_CASE("Eval repeat loop") {
     ScriptSession session;
     session.eval(R"(
-function int foo(integer a);
+function automatic int foo(integer a);
     int result = 0;
     repeat (a) begin
         if (a == 8) return 8;
@@ -866,7 +866,7 @@ endfunction
 TEST_CASE("Eval while loop") {
     ScriptSession session;
     session.eval(R"(
-function int foo(integer a);
+function automatic int foo(integer a);
     int result = 0;
     while (result < a) begin
         if (a == 8) return 8;
@@ -889,7 +889,7 @@ endfunction
 TEST_CASE("Eval do-while loop") {
     ScriptSession session;
     session.eval(R"(
-function int foo(integer a);
+function automatic int foo(integer a);
     int result = 0;
     do begin
         if (a == 8) return 8;
@@ -913,7 +913,7 @@ endfunction
 TEST_CASE("Eval forever loop") {
     ScriptSession session;
     session.eval(R"(
-function int foo(integer a);
+function automatic int foo(integer a);
     int result = 0;
     forever begin
         if (a == 8) return 8;
@@ -936,7 +936,7 @@ endfunction
 TEST_CASE("Eval foreach loop") {
     ScriptSession session;
     session.eval(R"(
-function int foo();
+function automatic int foo();
     bit [1:0][2:1] asdf [3:-1][2];
 
     int result = 0;
