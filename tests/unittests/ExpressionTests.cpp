@@ -853,6 +853,12 @@ module m;
 
         static int foo = k; // disallowed
     end
+
+    // Nonblocking assignments to automatic variables are disallowed.
+    always begin
+        automatic int i;
+        i <= 1;
+    end
 endmodule
 )");
 
@@ -860,7 +866,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::AssignmentNotAllowed);
     CHECK(diags[1].code == diag::AssignmentNotAllowed);
     CHECK(diags[2].code == diag::AssignmentRequiresParens);
@@ -868,6 +874,7 @@ endmodule
     CHECK(diags[4].code == diag::IncDecNotAllowed);
     CHECK(diags[5].code == diag::IncDecNotAllowed);
     CHECK(diags[6].code == diag::AutoFromStaticInit);
+    CHECK(diags[7].code == diag::NonblockingAssignmentToAuto);
 }
 
 TEST_CASE("Subroutine calls with out params from various contexts") {

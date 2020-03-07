@@ -225,11 +225,22 @@ bool Expression::verifyConstant(EvalContext& context) const {
 bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking,
                                   SourceLocation location) const {
     switch (kind) {
-        case ExpressionKind::NamedValue:
-        case ExpressionKind::ElementSelect:
-        case ExpressionKind::RangeSelect:
-        case ExpressionKind::MemberAccess:
-            return true;
+        case ExpressionKind::NamedValue: {
+            auto& nv = as<NamedValueExpression>();
+            return nv.verifyAssignableImpl(context, isNonBlocking, location);
+        }
+        case ExpressionKind::ElementSelect: {
+            auto& select = as<ElementSelectExpression>();
+            return select.value().verifyAssignable(context, isNonBlocking, location);
+        }
+        case ExpressionKind::RangeSelect: {
+            auto& select = as<RangeSelectExpression>();
+            return select.value().verifyAssignable(context, isNonBlocking, location);
+        }
+        case ExpressionKind::MemberAccess: {
+            auto& access = as<MemberAccessExpression>();
+            return access.value().verifyAssignable(context, isNonBlocking, location);
+        }
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
             for (auto op : concat.operands()) {

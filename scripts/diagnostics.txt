@@ -259,6 +259,7 @@ error IncDecNotAllowed "increment and decrement expressions are not allowed in t
 error AssignmentRequiresParens "assignment expressions must be parenthesized"
 error PortConnArrayMismatch "cannot connect {} to each port of type {} in '{}'"
 error AutoFromStaticInit "cannot refer to automatic variable '{}' from static initializer"
+error NonblockingAssignmentToAuto "nonblocking assignment to automatic variable '{}' is not allowed"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

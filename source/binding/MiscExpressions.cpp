@@ -192,6 +192,19 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
+bool NamedValueExpression::verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
+                                                SourceLocation location) const {
+    // Nonblocking assignments to automatic variables are not allowed.
+    if (isNonBlocking && VariableSymbol::isKind(symbol.kind) &&
+        symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+        auto& diag = context.addDiag(diag::NonblockingAssignmentToAuto, location);
+        diag << symbol.name << sourceRange;
+        return false;
+    }
+
+    return true;
+}
+
 void NamedValueExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("symbol", symbol);
     serializer.write("isHierarchical", isHierarchical);
