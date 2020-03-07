@@ -320,6 +320,7 @@ error CouldNotResolveHierarchicalPath "could not resolve hierarchical path name 
 error UnresolvedForwardTypedef "forward typedef '{}' does not resolve to a data type"
 error DefinitionUsedAsType "'{}' is {} definition but is used like a type"
 error DefinitionUsedAsValue "'{}' is {} definition but is used as a value"
+error AutoVariableHierarchical "cannot refer to automatic variable via hierarchical reference"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 
 subsystem SysFuncs

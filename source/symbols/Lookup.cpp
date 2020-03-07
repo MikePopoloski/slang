@@ -19,6 +19,7 @@
 #include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
+#include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/String.h"
 
@@ -140,23 +141,23 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
     for (auto it = nameParts.rbegin(); it != nameParts.rend(); it++) {
         // If we found a value, the remaining dots are member access expressions.
         if (symbol->isValue()) {
-            if (selectors) {
+            if (selectors)
                 result.selectors.appendRange(*selectors);
-                selectors = nullptr;
-            }
 
             for (; it != nameParts.rend(); it++) {
-                std::tie(nameToken, selectors) = decomposeName(*it->name);
+                Token memberToken;
+                std::tie(memberToken, selectors) = decomposeName(*it->name);
 
                 result.selectors.append(LookupResult::MemberSelector{
-                    nameToken.valueText(), it->dotLocation, nameToken.range() });
+                    memberToken.valueText(), it->dotLocation, memberToken.range() });
 
                 if (selectors)
                     result.selectors.appendRange(*selectors);
             }
 
-            result.found = symbol;
-            return true;
+            // Break out to return the symbol.
+            selectors = nullptr;
+            break;
         }
 
         // This is a hierarchical lookup unless it's the first component in the path and the
@@ -233,6 +234,13 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
 
             return true;
         }
+    }
+
+    // If we found an automatic variable check that we didn't try to reference it hierarchically.
+    if (result.isHierarchical && symbol && VariableSymbol::isKind(symbol->kind) &&
+        symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+        result.addDiag(context.scope, diag::AutoVariableHierarchical, nameToken.range());
+        return false;
     }
 
     result.found = symbol;

@@ -6,6 +6,7 @@ add_executable(unittests
     FileTests.cpp
     HierarchyTests.cpp
     LexerTests.cpp
+    LookupTests.cpp
     main.cpp
     MemberParsingTests.cpp
     MemberTests.cpp
@@ -15,7 +16,6 @@ add_executable(unittests
     RewriterTests.cpp
     StatementParsingTests.cpp
     StatementTests.cpp
-    SymbolLookupTests.cpp
     SystemFuncTests.cpp
     TypeTests.cpp
     UtilTests.cpp

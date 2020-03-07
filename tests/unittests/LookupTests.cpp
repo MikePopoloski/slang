@@ -741,8 +741,8 @@ module M;
     N n();
 endmodule
 
-function automatic int foo;
-    logic f = 1;
+function int foo;
+    static logic f = 1;
     return 42;
 endfunction
 )");
@@ -1283,4 +1283,23 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Error for hierarchical reference to automatic variable") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin : foo
+        automatic int asdf = 1;
+        asdf++;
+    end
+    int j = foo.asdf;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AutoVariableHierarchical);
 }
