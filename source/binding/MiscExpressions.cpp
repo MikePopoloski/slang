@@ -194,12 +194,28 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
 
 bool NamedValueExpression::verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
                                                 SourceLocation location) const {
-    // Nonblocking assignments to automatic variables are not allowed.
-    if (isNonBlocking && VariableSymbol::isKind(symbol.kind) &&
-        symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-        auto& diag = context.addDiag(diag::NonblockingAssignmentToAuto, location);
-        diag << symbol.name << sourceRange;
+    if (symbol.kind == SymbolKind::Parameter || symbol.kind == SymbolKind::EnumValue) {
+        auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
+        diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        diag << sourceRange;
         return false;
+    }
+
+    if (VariableSymbol::isKind(symbol.kind)) {
+        auto& var = symbol.as<VariableSymbol>();
+        if (var.isConstant) {
+            auto& diag = context.addDiag(diag::AssignmentToConst, location);
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
+            diag << symbol.name << sourceRange;
+            return false;
+        }
+
+        if (isNonBlocking && var.lifetime == VariableLifetime::Automatic) {
+            auto& diag = context.addDiag(diag::NonblockingAssignmentToAuto, location);
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
+            diag << symbol.name << sourceRange;
+            return false;
+        }
     }
 
     return true;
