@@ -850,6 +850,8 @@ module m;
         automatic int l = k++;
         static int m = 2;
         static int n = m++;
+
+        static int foo = k; // disallowed
     end
 endmodule
 )");
@@ -858,13 +860,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::AssignmentNotAllowed);
     CHECK(diags[1].code == diag::AssignmentNotAllowed);
     CHECK(diags[2].code == diag::AssignmentRequiresParens);
     CHECK(diags[3].code == diag::AssignmentRequiresParens);
     CHECK(diags[4].code == diag::IncDecNotAllowed);
     CHECK(diags[5].code == diag::IncDecNotAllowed);
+    CHECK(diags[6].code == diag::AutoFromStaticInit);
 }
 
 TEST_CASE("Subroutine calls with out params from various contexts") {

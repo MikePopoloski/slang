@@ -83,11 +83,18 @@ bool checkArrayIndex(EvalContext& context, const Type& type, const ConstantValue
 
 namespace slang {
 
-Expression& NamedValueExpression::fromSymbol(const Scope& scope, const Symbol& symbol,
+Expression& NamedValueExpression::fromSymbol(const BindContext& context, const Symbol& symbol,
                                              bool isHierarchical, SourceRange sourceRange) {
-    Compilation& compilation = scope.getCompilation();
+    Compilation& compilation = context.getCompilation();
     if (!symbol.isValue()) {
-        scope.addDiag(diag::NotAValue, sourceRange) << symbol.name;
+        context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
+        return badExpr(compilation, nullptr);
+    }
+
+    if ((context.flags & BindFlags::StaticInitializer) != 0 &&
+        VariableSymbol::isKind(symbol.kind) &&
+        symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+        context.addDiag(diag::AutoFromStaticInit, sourceRange) << symbol.name;
         return badExpr(compilation, nullptr);
     }
 

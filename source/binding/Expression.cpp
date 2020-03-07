@@ -560,7 +560,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         invocation = nullptr;
     }
     else {
-        expr = &NamedValueExpression::fromSymbol(context.scope, *symbol, result.isHierarchical,
+        expr = &NamedValueExpression::fromSymbol(context, *symbol, result.isHierarchical,
                                                  syntax.sourceRange());
     }
 

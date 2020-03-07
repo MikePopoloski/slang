@@ -151,6 +151,8 @@ T DeclaredType::getBindContext() const {
         bindFlags = BindFlags::Constant;
     if (flags & DeclaredTypeFlags::InProceduralContext)
         bindFlags |= BindFlags::ProceduralStatement;
+    if ((flags & DeclaredTypeFlags::AutomaticInitializer) == 0)
+        bindFlags |= BindFlags::StaticInitializer;
 
     LookupLocation location;
     if (flags & DeclaredTypeFlags::LookupMax)

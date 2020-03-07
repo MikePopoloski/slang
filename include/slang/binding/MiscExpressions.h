@@ -28,8 +28,8 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static Expression& fromSymbol(const Scope& scope, const Symbol& symbol, bool isHierarchical,
-                                  SourceRange sourceRange);
+    static Expression& fromSymbol(const BindContext& context, const Symbol& symbol,
+                                  bool isHierarchical, SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 };

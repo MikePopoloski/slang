@@ -31,40 +31,44 @@ enum class BindFlags {
 
     /// The binding is for a constant expression, so report an error if
     /// it's not constant for some reason.
-    Constant = 1,
+    Constant = 1 << 0,
 
     /// No hierarchical references are allowed to symbols. This is implied by
     /// @a Constant but can be specified on its own if the expression doesn't
     /// need to be fully constant.
-    NoHierarchicalNames = 2,
+    NoHierarchicalNames = 1 << 1,
 
     /// The expression is inside a concatenation; this enables slightly
     /// different binding rules.
-    InsideConcatenation = 4,
+    InsideConcatenation = 1 << 2,
 
     /// The expression is inside the unevaluated side of a conditional branch.
     /// This is used to avoid issuing warnings for things that won't happen.
-    UnevaluatedBranch = 8,
+    UnevaluatedBranch = 1 << 3,
 
     /// Allow the expression to also be a data type; used in a few places like
     /// the first argument to system methods like $bits
-    AllowDataType = 16,
+    AllowDataType = 1 << 4,
 
     /// The expression being bound is an enum value initializer.
-    EnumInitializer = 32,
+    EnumInitializer = 1 << 5,
 
     /// Attributes are disallowed on expressions in this context.
-    NoAttributes = 64,
+    NoAttributes = 1 << 6,
 
     /// Assignment is allowed in this context. This flag is cleared
     /// for nested subexpressions, unless they are directly parenthesized.
-    AssignmentAllowed = 128,
+    AssignmentAllowed = 1 << 7,
 
     /// Expression is inside a procedural statement. This means that modifying
     /// variables via assignments and increment/decrement expressions is allowed.
-    ProceduralStatement = 256
+    ProceduralStatement = 1 << 8,
+
+    /// Expression is for a static variable's initializer. References to automatic
+    /// variables will be disallowed.
+    StaticInitializer = 1 << 9
 };
-BITMASK(BindFlags, ProceduralStatement);
+BITMASK(BindFlags, StaticInitializer);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

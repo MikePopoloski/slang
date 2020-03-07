@@ -735,7 +735,8 @@ private:
         if (portType.isError())
             return;
 
-        auto expr = &NamedValueExpression::fromSymbol(scope, *symbol, false, range);
+        BindContext context(scope, LookupLocation::max);
+        auto expr = &NamedValueExpression::fromSymbol(context, *symbol, false, range);
         if (expr->bad())
             return;
 
@@ -748,8 +749,7 @@ private:
         }
 
         // TODO: direction of assignment
-        auto& assign = Expression::convertAssignment(BindContext(scope, LookupLocation::max),
-                                                     portType, *expr, range.start());
+        auto& assign = Expression::convertAssignment(context, portType, *expr, range.start());
         port.setConnection(&assign, attributes);
     }
 
