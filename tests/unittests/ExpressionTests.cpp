@@ -850,7 +850,7 @@ module m;
         automatic int l = k++;
         static int m = 2;
         static int n = m++;
-    end 
+    end
 endmodule
 )");
 
@@ -865,6 +865,34 @@ endmodule
     CHECK(diags[3].code == diag::AssignmentRequiresParens);
     CHECK(diags[4].code == diag::IncDecNotAllowed);
     CHECK(diags[5].code == diag::IncDecNotAllowed);
+}
+
+TEST_CASE("Subroutine calls with out params from various contexts") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    // These are all fine
+    initial begin
+        automatic int i = 1;
+        automatic int j = mutate(i);
+        static int k = 2;
+        static int l = mutate(k);
+        void'(mutate(j));
+        void'(mutate(k));
+    end
+
+    int i;
+    int j = mutate(i);
+
+    function int mutate(output int f);
+        f++;
+        return f - 1;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Type operator") {
