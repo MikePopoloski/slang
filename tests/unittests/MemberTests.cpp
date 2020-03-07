@@ -774,3 +774,18 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::StaticInitializerMustBeExplicit);
 }
+
+TEST_CASE("Automatic variable not allowed in module scope") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    automatic int i = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AutomaticNotAllowed);
+}
