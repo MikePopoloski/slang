@@ -45,6 +45,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     }
 
     bool isConst = false;
+    bool inProceduralContext = scope.isProceduralContext();
     optional<VariableLifetime> lifetime;
     for (Token mod : syntax.modifiers) {
         switch (mod.kind) {
@@ -60,8 +61,10 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
             case TokenKind::AutomaticKeyword:
                 // Automatic lifetimes are only allowed in procedural contexts.
                 lifetime = VariableLifetime::Automatic;
-                if (!scope.isProceduralContext())
+                if (!inProceduralContext) {
                     scope.addDiag(diag::AutomaticNotAllowed, mod.range());
+                    lifetime = VariableLifetime::Static;
+                }
                 break;
             default:
                 THROW_UNREACHABLE;
@@ -81,6 +84,9 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
         variable->setFromDeclarator(*declarator);
         variable->setAttributes(scope, syntax.attributes);
         results.append(variable);
+
+        if (inProceduralContext)
+            variable->getDeclaredType()->setInProceduralContext();
 
         // If this is a static variable in a procedural context and it has an initializer,
         // the spec requires that the static keyword must be explicitly provided.
@@ -120,6 +126,14 @@ VariableSymbol& VariableSymbol::fromForeachVar(Compilation& compilation,
     var->setType(compilation.getIntType());
 
     return *var;
+}
+
+VariableSymbol::VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime) :
+    VariableSymbol(SymbolKind::Variable, name, loc, lifetime) {
+
+    // Automatic variables are always in a procedural context.
+    if (lifetime == VariableLifetime::Automatic)
+        getDeclaredType()->setInProceduralContext();
 }
 
 void VariableSymbol::serializeTo(ASTSerializer& serializer) const {

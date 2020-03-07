@@ -843,6 +843,14 @@ module m;
 
     // This is ok
     initial i = 1 + (j = 1);
+
+    // Initialization in a procedural context is also ok
+    initial begin
+        automatic int k = 1;
+        automatic int l = k++;
+        static int m = 2;
+        static int n = m++;
+    end 
 endmodule
 )");
 

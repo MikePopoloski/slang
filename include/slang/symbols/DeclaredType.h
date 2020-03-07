@@ -26,9 +26,10 @@ enum class DeclaredTypeFlags : uint8_t {
     InferImplicit = 1,
     RequireConstant = 2,
     ForceSigned = 4,
-    LookupMax = 8
+    LookupMax = 8,
+    InProceduralContext = 16
 };
-BITMASK(DeclaredTypeFlags, LookupMax);
+BITMASK(DeclaredTypeFlags, InProceduralContext);
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type.
@@ -77,6 +78,8 @@ public:
         type = nullptr;
         flags |= DeclaredTypeFlags::ForceSigned;
     }
+
+    void setInProceduralContext() { flags |= DeclaredTypeFlags::InProceduralContext; }
 
     void copyTypeFrom(const DeclaredType& source);
 

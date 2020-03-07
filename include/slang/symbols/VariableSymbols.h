@@ -29,8 +29,7 @@ public:
     /// it being declared in the user's source code.
     bool isCompilerGenerated = false;
 
-    VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime) :
-        VariableSymbol(SymbolKind::Variable, name, loc, lifetime) {}
+    VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime);
 
     void serializeTo(ASTSerializer& serializer) const;
 

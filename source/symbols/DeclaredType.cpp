@@ -149,6 +149,8 @@ T DeclaredType::getBindContext() const {
     bitmask<BindFlags> bindFlags;
     if (flags & DeclaredTypeFlags::RequireConstant)
         bindFlags = BindFlags::Constant;
+    if (flags & DeclaredTypeFlags::InProceduralContext)
+        bindFlags |= BindFlags::ProceduralStatement;
 
     LookupLocation location;
     if (flags & DeclaredTypeFlags::LookupMax)
