@@ -326,8 +326,10 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             // expression
             good = type->isNumeric();
             result->type = type;
-            if (!context.requireLValue(operand, syntax.operatorToken.location()))
+            if (!operand.verifyAssignable(context, /* isNonBlocking */ false,
+                                          syntax.operatorToken.location())) {
                 return badExpr(compilation, result);
+            }
             break;
         default:
             THROW_UNREACHABLE;
@@ -353,8 +355,10 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     // the operand must be an lvalue.
     Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
                                                               operand, syntax.sourceRange());
-    if (operand.bad() || !context.requireLValue(operand, syntax.operatorToken.location()))
+    if (operand.bad() || !operand.verifyAssignable(context, /* isNonBlocking */ false,
+                                                   syntax.operatorToken.location())) {
         return badExpr(compilation, result);
+    }
 
     if ((context.flags & BindFlags::ProceduralStatement) == 0 &&
         (context.flags & BindFlags::AssignmentAllowed) == 0) {

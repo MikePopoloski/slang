@@ -165,7 +165,7 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
 
             result = &ElementSelectExpression::fromConstant(comp, *result, index, context);
             if (result->bad())
-                return result;  // probably unreachable
+                return result; // probably unreachable
         }
 
         unpackedDims = unpackedDims.subspan(common);
@@ -381,8 +381,7 @@ Expression& AssignmentExpression::fromComponents(Compilation& compilation,
         return badExpr(compilation, result);
 
     // Make sure we can actually assign to the thing on the lhs.
-    // TODO: check for const assignment
-    if (!context.requireLValue(lhs, assignLoc))
+    if (!lhs.verifyAssignable(context, nonBlocking, assignLoc))
         return badExpr(compilation, result);
 
     result->right_ =

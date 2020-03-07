@@ -52,15 +52,6 @@ Diagnostic& BindContext::addDiag(DiagCode code, SourceRange sourceRange) const {
     return scope.addDiag(code, sourceRange);
 }
 
-bool BindContext::requireLValue(const Expression& expr, SourceLocation location) const {
-    if (!expr.isLValue()) {
-        auto& diag = addDiag(diag::ExpressionNotAssignable, location);
-        diag << expr.sourceRange;
-        return false;
-    }
-    return true;
-}
-
 bool BindContext::requireIntegral(const ConstantValue& cv, SourceRange range) const {
     if (cv.bad())
         return false;

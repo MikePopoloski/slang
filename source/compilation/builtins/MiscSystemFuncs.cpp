@@ -78,7 +78,7 @@ public:
             return comp.getErrorType();
         }
 
-        if (!context.requireLValue(*args[1], args[1]->sourceRange.start()))
+        if (!args[1]->verifyAssignable(context))
             return comp.getErrorType();
 
         // TODO: if the first argument is known at compile time, do more specific

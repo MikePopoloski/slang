@@ -222,11 +222,8 @@ bool Expression::verifyConstant(EvalContext& context) const {
     return visit(visitor, context);
 }
 
-bool Expression::bad() const {
-    return kind == ExpressionKind::Invalid || type->isError();
-}
-
-bool Expression::isLValue() const {
+bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking,
+                                  SourceLocation location) const {
     switch (kind) {
         case ExpressionKind::NamedValue:
         case ExpressionKind::ElementSelect:
@@ -236,14 +233,24 @@ bool Expression::isLValue() const {
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
             for (auto op : concat.operands()) {
-                if (!op->isLValue())
+                if (!op->verifyAssignable(context, isNonBlocking, location))
                     return false;
             }
             return true;
         }
-        default:
+        default: {
+            if (!location)
+                location = sourceRange.start();
+
+            auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
+            diag << sourceRange;
             return false;
+        }
     }
+}
+
+bool Expression::bad() const {
+    return kind == ExpressionKind::Invalid || type->isError();
 }
 
 bool Expression::isImplicitString() const {

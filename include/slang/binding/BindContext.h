@@ -114,7 +114,6 @@ public:
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 
-    bool requireLValue(const Expression& expr, SourceLocation location) const;
     bool requireIntegral(const ConstantValue& cv, SourceRange range) const;
     bool requireNoUnknowns(const SVInt& value, SourceRange range) const;
     bool requirePositive(const SVInt& value, SourceRange range) const;

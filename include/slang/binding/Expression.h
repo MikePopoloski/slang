@@ -181,9 +181,6 @@ public:
     /// Indicates whether the expression is invalid.
     bool bad() const;
 
-    /// Indicates whether the expression evaluates to an lvalue.
-    bool isLValue() const;
-
     /// Indicates whether the expression is of type string, or if it
     /// is implicitly convertible to a string.
     bool isImplicitString() const;
@@ -199,6 +196,12 @@ public:
     /// Verifies that this expression is valid as a constant expression.
     /// If it's not, appropriate diagnostics will be issued.
     bool verifyConstant(EvalContext& context) const;
+
+    /// Verifies that this expression is a valid lvalue and that each element
+    /// of that lvalue can be assigned to. If it's not, appropriate diagnostics
+    /// will be issued.
+    bool verifyAssignable(const BindContext& context, bool isNonBlocking = false,
+                          SourceLocation location = {}) const;
 
     template<typename T>
     T& as() {

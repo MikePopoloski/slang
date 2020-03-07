@@ -133,7 +133,7 @@ public:
         if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
             return comp.getErrorType();
 
-        if (!context.requireLValue(*args[0], args[0]->sourceRange.start()))
+        if (!args[0]->verifyAssignable(context))
             return comp.getErrorType();
 
         const Type& ft = *args[0]->type;
@@ -159,7 +159,7 @@ public:
         if (!checkArgCount(context, false, args, range, 2, INT32_MAX))
             return comp.getErrorType();
 
-        if (!context.requireLValue(*args[0], args[0]->sourceRange.start()))
+        if (!args[0]->verifyAssignable(context))
             return comp.getErrorType();
 
         for (size_t i = 0; i < 2; i++) {
@@ -188,7 +188,7 @@ public:
         if (!checkArgCount(context, false, args, range, 2, 4))
             return comp.getErrorType();
 
-        if (isInput && !context.requireLValue(*args[1], args[1]->sourceRange.start()))
+        if (isInput && !args[1]->verifyAssignable(context))
             return comp.getErrorType();
 
         if (!args[0]->type->canBeStringLike())
