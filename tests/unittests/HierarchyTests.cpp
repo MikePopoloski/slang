@@ -341,9 +341,9 @@ endmodule
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::RecursiveDefinition);
     CHECK(diags[1].code == diag::RecursiveDefinition);
-    CHECK(diags[2].code == diag::ExpressionNotConstant);
-    CHECK(diags[3].code == diag::RecursiveDefinition);
-    CHECK(diags[4].code == diag::ExpressionNotConstant);
+    CHECK(diags[2].code == diag::RecursiveDefinition);
+    CHECK(diags[3].code == diag::ConstEvalIdUsedInCEBeforeDecl);
+    CHECK(diags[4].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }
 
 TEST_CASE("Parameter ordering from const func") {
@@ -517,7 +517,7 @@ endmodule
     CHECK((it++)->code == diag::GenvarUnknownBits);
     CHECK((it++)->code == diag::GenvarUnknownBits);
     CHECK((it++)->code == diag::GenvarDuplicate);
-    CHECK((it++)->code == diag::ExpressionNotConstant);
+    CHECK((it++)->code == diag::ConstEvalNonConstVariable);
     CHECK((it++)->code == diag::LabelAndName);
     CHECK(it == diags.end());
 }
@@ -553,7 +553,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
     CHECK((it++)->code == diag::CaseGenerateEmpty);
-    CHECK((it++)->code == diag::ExpressionNotConstant);
+    CHECK((it++)->code == diag::ConstEvalNonConstVariable);
     CHECK((it++)->code == diag::UndeclaredIdentifier);
     CHECK((it++)->code == diag::CaseGenerateDup);
     CHECK((it++)->code == diag::CaseGenerateNoBlock);

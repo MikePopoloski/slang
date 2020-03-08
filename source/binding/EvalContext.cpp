@@ -47,7 +47,7 @@ bool EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation c
                             LookupLocation lookupLocation) {
     const uint32_t maxDepth = rootScope->getCompilation().getOptions().maxConstexprDepth;
     if (stack.size() >= maxDepth) {
-        addDiag(diag::NoteExceededMaxCallDepth, subroutine.location) << maxDepth;
+        addDiag(diag::ConstEvalExceededMaxCallDepth, subroutine.location) << maxDepth;
         return false;
     }
 
@@ -67,7 +67,7 @@ bool EvalContext::step(SourceLocation loc) {
     if (++steps < rootScope->getCompilation().getOptions().maxConstexprSteps)
         return true;
 
-    addDiag(diag::NoteExceededMaxSteps, loc);
+    addDiag(diag::ConstEvalExceededMaxSteps, loc);
     return false;
 }
 
@@ -90,51 +90,43 @@ std::string EvalContext::dumpStack() const {
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
-    // Be careful: adding diagnostics can resize the underlying array,
-    // so we have to remember an index here and return the reference
-    // after reporting the stack.
-    size_t index = diags.size();
-    diags.add(code, location);
-    reportStack();
-    return diags[index];
+    auto& diag = diags.add(code, location);
+    reportStack(diag);
+    return diag;
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
-    size_t index = diags.size();
-    diags.add(code, range);
-    reportStack();
-    return diags[index];
+    auto& diag = diags.add(code, range);
+    reportStack(diag);
+    return diag;
 }
 
 void EvalContext::addDiags(const Diagnostics& additional) {
-    reportStack();
-    diags.appendRange(additional);
-}
-
-void EvalContext::reportDiags(const BindContext& context, SourceRange range) const {
-    if (!diags.empty()) {
-        Diagnostic& diag = context.addDiag(diag::ExpressionNotConstant, range);
-        for (const Diagnostic& note : diags)
-            diag.addNote(note);
+    bool first = true;
+    for (auto& diag : additional) {
+        if (first) {
+            Diagnostic copy = diag;
+            reportStack(copy);
+            diags.emplace(std::move(copy));
+            first = false;
+        }
+        else {
+            diags.append(diag);
+        }
     }
 }
 
-void EvalContext::reportStack() {
-    // Once per evaluation, include the current callstack in the list of
-    // diagnostics if we end up issuing any at all.
-    if (std::exchange(reportedCallstack, true))
-        return;
-
-    reportStack(diags);
+void EvalContext::reportDiags(const BindContext& context) {
+    context.scope.addDiags(diags);
 }
 
-static void reportFrame(const EvalContext& context, Diagnostics& diags,
+static void reportFrame(const EvalContext& context, Diagnostic& diag,
                         const EvalContext::Frame& frame) {
     if (!frame.subroutine)
         return;
 
     if (context.isVerifying()) {
-        diags.add(diag::NoteInCallTo, frame.callLocation) << frame.subroutine->name;
+        diag.addNote(diag::NoteInCallTo, frame.callLocation) << frame.subroutine->name;
         return;
     }
 
@@ -152,15 +144,15 @@ static void reportFrame(const EvalContext& context, Diagnostics& diags,
 
     buffer.append(")");
 
-    diags.add(diag::NoteInCallTo, frame.callLocation) << buffer.str();
+    diag.addNote(diag::NoteInCallTo, frame.callLocation) << buffer.str();
 }
 
-void EvalContext::reportStack(Diagnostics& stackDiags) const {
+void EvalContext::reportStack(Diagnostic& diag) const {
     const size_t limit = rootScope->getCompilation().getOptions().maxConstexprBacktrace;
     if (stack.size() <= limit || limit == 0) {
         FormatBuffer buffer;
         for (const Frame& frame : make_reverse_range(stack))
-            reportFrame(*this, stackDiags, frame);
+            reportFrame(*this, diag, frame);
         return;
     }
 
@@ -168,13 +160,13 @@ void EvalContext::reportStack(Diagnostics& stackDiags) const {
     const ptrdiff_t end = start + ptrdiff_t(limit % 2);
     auto reversed = make_reverse_range(stack);
     for (auto it = reversed.begin(), itEnd = it + start; it != itEnd; it++)
-        reportFrame(*this, stackDiags, *it);
+        reportFrame(*this, diag, *it);
 
-    stackDiags.add(diag::NoteSkippingFrames, (reversed.begin() + start)->callLocation)
+    diag.addNote(diag::NoteSkippingFrames, (reversed.begin() + start)->callLocation)
         << stack.size() - limit;
 
     for (auto it = reversed.end() - end, itEnd = reversed.end(); it != itEnd; it++)
-        reportFrame(*this, stackDiags, *it);
+        reportFrame(*this, diag, *it);
 }
 
 } // namespace slang

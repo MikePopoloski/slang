@@ -1316,7 +1316,7 @@ ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
     if (type->isString()) {
         optional<int32_t> optCount = c.integer().as<int32_t>();
         if (!optCount || *optCount < 0) {
-            context.addDiag(diag::NoteReplicationCountInvalid, count().sourceRange) << c;
+            context.addDiag(diag::ConstEvalReplicationCountInvalid, count().sourceRange) << c;
             return nullptr;
         }
 

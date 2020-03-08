@@ -591,7 +591,7 @@ ER BlockStatement::evalImpl(EvalContext& context) const {
 
 bool BlockStatement::verifyConstantImpl(EvalContext& context) const {
     if (blockKind != StatementBlockKind::Sequential) {
-        context.addDiag(diag::NoteParallelBlockNotConst, sourceRange);
+        context.addDiag(diag::ConstEvalParallelBlockNotConst, sourceRange);
         return false;
     }
 
@@ -979,8 +979,9 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
                 // we'd still get here is to check for uniqueness. The presence of
                 // another match means we failed the uniqueness check.
                 if (matchedStmt) {
-                    context.addDiag(diag::NoteCaseItemsNotUnique, item->sourceRange) << cv;
-                    context.addDiag(diag::NotePreviousMatch, matchRange);
+                    auto& diag =
+                        context.addDiag(diag::ConstEvalCaseItemsNotUnique, item->sourceRange) << cv;
+                    diag.addNote(diag::NotePreviousMatch, matchRange.start());
                     unique = false;
                 }
                 else {
@@ -1005,7 +1006,7 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
         return matchedStmt->eval(context);
 
     if (check == CaseStatementCheck::Priority || check == CaseStatementCheck::Unique) {
-        auto& diag = context.addDiag(diag::NoteNoCaseItemsMatched, expr.sourceRange);
+        auto& diag = context.addDiag(diag::ConstEvalNoCaseItemsMatched, expr.sourceRange);
         diag << (check == CaseStatementCheck::Priority ? "priority"sv : "unique"sv);
         diag << cv;
     }
@@ -1579,7 +1580,7 @@ bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
     if (context.isScriptEval())
         return true;
 
-    context.addDiag(diag::NoteTimedStmtNotConst, sourceRange);
+    context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
     return false;
 }
 
@@ -1646,7 +1647,7 @@ ER AssertionStatement::evalImpl(EvalContext& context) const {
     if (assertionKind == AssertionKind::Cover)
         return ER::Success;
 
-    context.addDiag(diag::NoteAssertionFailed, sourceRange);
+    context.addDiag(diag::ConstEvalAssertionFailed, sourceRange);
     return ER::Fail;
 }
 
@@ -1661,7 +1662,7 @@ bool AssertionStatement::verifyConstantImpl(EvalContext& context) const {
         return false;
 
     if (isDeferred) {
-        context.addDiag(diag::NoteTimedStmtNotConst, sourceRange);
+        context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
         return false;
     }
 

@@ -198,13 +198,13 @@ void Expression::checkBindFlags(const Expression& expr, const BindContext& conte
 
     EvalContext verifyContext(context.scope, EvalFlags::IsVerifying);
     bool canBeConst = expr.verifyConstant(verifyContext);
-    verifyContext.reportDiags(context, expr.sourceRange);
+    verifyContext.reportDiags(context);
     if (!canBeConst)
         return;
 
     EvalContext evalContext(context.scope);
     expr.eval(evalContext);
-    evalContext.reportDiags(context, expr.sourceRange);
+    evalContext.reportDiags(context);
 }
 
 ConstantValue Expression::eval(EvalContext& context) const {
@@ -534,15 +534,11 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         // inside constant expressions (which we know if evalContext is set) then issue
         // a backtrace to give the user a bit more context.
         if (!result.found && result.isHierarchical && context.evalContext) {
-            Diagnostics stack;
-            context.evalContext->reportStack(stack);
-
             Diagnostics diagnostics;
             diagnostics.appendRange(result.getDiagnostics());
 
             Diagnostic& first = diagnostics.front();
-            for (auto& diag : stack)
-                first.addNote(diag);
+            context.evalContext->reportStack(first);
 
             compilation.addDiagnostics(diagnostics);
         }

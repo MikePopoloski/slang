@@ -61,7 +61,7 @@ bool checkArrayIndex(EvalContext& context, const Type& type, const ConstantValue
     optional<int32_t> index = cs.integer().as<int32_t>();
     if (index && type.isString()) {
         if (*index < 0 || size_t(*index) >= str.size()) {
-            context.addDiag(diag::NoteStringIndexInvalid, sourceRange) << cs << str.size();
+            context.addDiag(diag::ConstEvalStringIndexInvalid, sourceRange) << cs << str.size();
             return false;
         }
 
@@ -71,7 +71,7 @@ bool checkArrayIndex(EvalContext& context, const Type& type, const ConstantValue
 
     ConstantRange range = type.getArrayRange();
     if (!index || !range.containsPoint(*index)) {
-        context.addDiag(diag::NoteArrayIndexInvalid, sourceRange) << cs << type;
+        context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cs << type;
         return false;
     }
 
@@ -129,8 +129,8 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
 
     // If we reach this point, the variable was not found, which should mean that
     // it's not actually constant.
-    context.addDiag(diag::NoteNonConstVariable, sourceRange) << symbol.name;
-    context.addDiag(diag::NoteDeclarationHere, symbol.location);
+    auto& diag = context.addDiag(diag::ConstEvalNonConstVariable, sourceRange) << symbol.name;
+    diag.addNote(diag::NoteDeclarationHere, symbol.location);
     return nullptr;
 }
 
@@ -140,8 +140,8 @@ LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
 
     auto cv = context.findLocal(&symbol);
     if (!cv) {
-        context.addDiag(diag::NoteNonConstVariable, sourceRange) << symbol.name;
-        context.addDiag(diag::NoteDeclarationHere, symbol.location);
+        auto& diag = context.addDiag(diag::ConstEvalNonConstVariable, sourceRange) << symbol.name;
+        diag.addNote(diag::NoteDeclarationHere, symbol.location);
         return nullptr;
     }
 
@@ -154,7 +154,7 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
 
     // Hierarchical names are disallowed in constant expressions and constant functions
     if (isHierarchical) {
-        context.addDiag(diag::NoteHierarchicalNameInCE, sourceRange) << symbol.name;
+        context.addDiag(diag::ConstEvalHierarchicalNameInCE, sourceRange) << symbol.name;
         return false;
     }
 
@@ -174,8 +174,9 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
             scope = scope->asSymbol().getParentScope();
 
         if (scope != subroutine) {
-            context.addDiag(diag::NoteFunctionIdentifiersMustBeLocal, sourceRange);
-            context.addDiag(diag::NoteDeclarationHere, symbol.location);
+            auto& diag =
+                context.addDiag(diag::ConstEvalFunctionIdentifiersMustBeLocal, sourceRange);
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
             return false;
         }
     }
@@ -183,8 +184,9 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
         // If the two locations are not in the same compilation unit, assume that it's ok.
         auto compare = symbol.isDeclaredBefore(frame.lookupLocation);
         if (!compare.value_or(true)) {
-            context.addDiag(diag::NoteIdUsedInCEBeforeDecl, sourceRange) << symbol.name;
-            context.addDiag(diag::NoteDeclarationHere, symbol.location);
+            auto& diag = context.addDiag(diag::ConstEvalIdUsedInCEBeforeDecl, sourceRange)
+                         << symbol.name;
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
             return false;
         }
     }
@@ -543,7 +545,7 @@ optional<ConstantRange> RangeSelectExpression::getRange(EvalContext& context,
     else {
         optional<int32_t> l = cl.integer().as<int32_t>();
         if (!l) {
-            context.addDiag(diag::NoteArrayIndexInvalid, sourceRange) << cl << valueType;
+            context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cl << valueType;
             return std::nullopt;
         }
 
@@ -552,7 +554,7 @@ optional<ConstantRange> RangeSelectExpression::getRange(EvalContext& context,
     }
 
     if (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right)) {
-        auto& diag = context.addDiag(diag::NotePartSelectInvalid, sourceRange);
+        auto& diag = context.addDiag(diag::ConstEvalPartSelectInvalid, sourceRange);
         diag << result.left << result.right;
         diag << valueType;
         return std::nullopt;
@@ -1016,18 +1018,18 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
         return true;
 
     if (subroutine.subroutineKind == SubroutineKind::Task) {
-        context.addDiag(diag::NoteTaskNotConstant, range);
+        context.addDiag(diag::ConstEvalTaskNotConstant, range);
         return false;
     }
 
     if (subroutine.getReturnType().isVoid()) {
-        context.addDiag(diag::NoteVoidNotConstant, range);
+        context.addDiag(diag::ConstEvalVoidNotConstant, range);
         return false;
     }
 
     for (auto arg : subroutine.arguments) {
         if (arg->direction != ArgumentDirection::In) {
-            context.addDiag(diag::NoteFunctionArgDirection, range);
+            context.addDiag(diag::ConstEvalFunctionArgDirection, range);
             return false;
         }
     }
@@ -1035,7 +1037,7 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
     auto scope = subroutine.getParentScope();
     ASSERT(scope);
     if (scope->asSymbol().kind == SymbolKind::GenerateBlock) {
-        context.addDiag(diag::NoteFunctionInsideGenerate, range);
+        context.addDiag(diag::ConstEvalFunctionInsideGenerate, range);
         return false;
     }
 

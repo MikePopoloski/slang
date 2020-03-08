@@ -275,7 +275,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::ExpressionNotConstant);
+    CHECK(diags[0].code == diag::ConstEvalAssertionFailed);
 }
 
 TEST_CASE("Loop statement errors") {
@@ -355,10 +355,10 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::ExpressionNotConstant);
-    CHECK(diags[1].code == diag::ExpressionNotConstant);
-    CHECK(diags[2].code == diag::ExpressionNotConstant);
-    CHECK(diags[3].code == diag::ExpressionNotConstant);
+    CHECK(diags[0].code == diag::ValueOutOfRange);
+    CHECK(diags[1].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
+    CHECK(diags[2].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
+    CHECK(diags[3].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }
 
 TEST_CASE("Local statement parameter") {
@@ -547,7 +547,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::ExpressionNotConstant);
+    CHECK(diags[0].code == diag::ConstEvalParallelBlockNotConst);
 }
 
 TEST_CASE("Statement blocks -- decl after statements") {

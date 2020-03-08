@@ -339,8 +339,8 @@ endmodule
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::HierarchicalNotAllowedInConstant);
     CHECK(diags[1].code == diag::HierarchicalNotAllowedInConstant);
-    CHECK(diags[2].code == diag::ExpressionNotConstant);
-    CHECK(diags[3].code == diag::HierarchicalNotAllowedInConstant);
+    CHECK(diags[2].code == diag::HierarchicalNotAllowedInConstant);
+    CHECK(diags[3].code == diag::ConstEvalHierarchicalNameInCE);
 }
 
 TEST_CASE("Hierarchical reference in CE across modules") {
@@ -796,7 +796,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     auto it = diags.begin();
-    CHECK((it++)->code == diag::ExpressionNotConstant);
+    CHECK((it++)->code == diag::ConstEvalNonConstVariable);
     CHECK(it == diags.end());
 }
 
@@ -1011,10 +1011,7 @@ source:9:20: error: could not resolve hierarchical path name 'bar'
 source:16:26: note: in call to 'foo1()'
     localparam int bar = foo1;
                          ^
-source:17:26: error: expression is not constant
-    localparam int baz = foo2;
-                         ^~~~
-source:13:16: note: reference to 'asdf' by hierarchical name is not allowed in a constant expression
+source:13:16: error: reference to 'asdf' by hierarchical name is not allowed in a constant expression
         return $root.M.asdf;
                ^~~~~~~~~~~~
 source:17:26: note: in call to 'foo2'

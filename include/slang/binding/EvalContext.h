@@ -93,20 +93,17 @@ public:
     void addDiags(const Diagnostics& diags);
 
     /// Issues all recorded diagnostics to the given binding context.
-    void reportDiags(const BindContext& context, SourceRange range) const;
+    void reportDiags(const BindContext& context);
 
-    /// Reports the current function call stack to the given diagnostic bag.
-    void reportStack(Diagnostics& diags) const;
+    /// Reports the current function call stack as notes to the given diagnostic.
+    void reportStack(Diagnostic& diag) const;
 
 private:
-    void reportStack();
-
     SmallVectorSized<Frame, 4> stack;
     Diagnostics diags;
     bitmask<EvalFlags> flags;
     const Scope* rootScope;
     uint32_t steps = 0;
-    bool reportedCallstack = false;
 };
 
 } // namespace slang

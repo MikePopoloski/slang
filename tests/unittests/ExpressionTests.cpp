@@ -412,11 +412,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::ExpressionNotConstant);
-    CHECK(diags[1].code == diag::ExpressionNotConstant);
-    CHECK(diags[2].code == diag::ExpressionNotConstant);
-    CHECK(diags[3].code == diag::ExpressionNotConstant);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }
 
 TEST_CASE("Invalid string conversions") {
@@ -780,7 +777,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::ExpressionNotConstant);
+    CHECK(diags[0].code == diag::ConstEvalExceededMaxCallDepth);
 }
 
 TEST_CASE("Consteval - infinite loop checking") {
@@ -806,7 +803,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::ExpressionNotConstant);
+    CHECK(diags[0].code == diag::ConstEvalExceededMaxSteps);
 }
 
 TEST_CASE("Consteval - enum used in constant function") {

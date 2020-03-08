@@ -504,13 +504,13 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
     EvalContext stopVerifyContext(iterScope, EvalFlags::IsVerifying);
     bool canBeConst = stopExpr.verifyConstant(stopVerifyContext);
-    stopVerifyContext.reportDiags(iterContext, stopExpr.sourceRange);
+    stopVerifyContext.reportDiags(iterContext);
     if (!canBeConst)
         return *result;
 
     EvalContext iterVerifyContext(iterScope, EvalFlags::IsVerifying);
     canBeConst = iterExpr.verifyConstant(iterVerifyContext);
-    iterVerifyContext.reportDiags(iterContext, iterExpr.sourceRange);
+    iterVerifyContext.reportDiags(iterContext);
     if (!canBeConst)
         return *result;
 
@@ -554,7 +554,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         }
     }
 
-    evalContext.reportDiags(iterContext, syntax.sourceRange());
+    evalContext.reportDiags(iterContext);
 
     result->entries = entries.copy(compilation);
     if (entries.empty())
