@@ -247,11 +247,12 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 
     // If the selector is constant, we can do checking at compile time that it's within bounds.
     // Only do that if we're not in an unevaluated conditional branch.
-    if (selector.constant && (context.flags & BindFlags::UnevaluatedBranch) == 0) {
-        optional<int32_t> index = selector.constant->integer().as<int32_t>();
+    ConstantValue selVal = context.tryEval(selector);
+    if (selVal && (context.flags & BindFlags::UnevaluatedBranch) == 0) {
+        optional<int32_t> index = selVal.integer().as<int32_t>();
         if (!index || !value.type->getArrayRange().containsPoint(*index)) {
             auto& diag = context.addDiag(diag::IndexValueInvalid, selector.sourceRange);
-            diag << *selector.constant;
+            diag << selVal;
             diag << *value.type;
             return badExpr(compilation, result);
         }
@@ -427,11 +428,12 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         }
 
         // If the lhs is a known constant, we can check that now too.
-        if (left.constant && (context.flags & BindFlags::UnevaluatedBranch) == 0) {
-            optional<int32_t> index = left.constant->integer().as<int32_t>();
+        ConstantValue leftVal = context.tryEval(left);
+        if (leftVal && (context.flags & BindFlags::UnevaluatedBranch) == 0) {
+            optional<int32_t> index = leftVal.integer().as<int32_t>();
             if (!index) {
                 auto& diag = context.addDiag(diag::IndexValueInvalid, left.sourceRange);
-                diag << *left.constant;
+                diag << leftVal;
                 diag << *value.type;
                 return badExpr(compilation, result);
             }
@@ -1012,7 +1014,7 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return false;
 
-    bool result = symbol.getBody().verifyConstant(context);
+    bool result = symbol.getBody(&context).verifyConstant(context);
     context.popFrame();
     return result;
 }

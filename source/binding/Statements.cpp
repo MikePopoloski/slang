@@ -741,9 +741,10 @@ Statement& ConditionalStatement::fromSyntax(Compilation& compilation,
     if (!bad && !context.requireBooleanConvertible(cond))
         bad = true;
 
-    if (cond.constant) {
+    ConstantValue condVal = context.tryEval(cond);
+    if (condVal) {
         // If the condition is constant, we know which branch will be taken.
-        if (cond.constant->isTrue())
+        if (condVal.isTrue())
             elseFlags = BindFlags::UnevaluatedBranch;
         else
             ifFlags = BindFlags::UnevaluatedBranch;

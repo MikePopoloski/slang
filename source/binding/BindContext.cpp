@@ -109,6 +109,11 @@ bool BindContext::requireValidBitWidth(bitwidth_t width, SourceRange range) cons
     return true;
 }
 
+ConstantValue BindContext::tryEval(const Expression& expr) const {
+    EvalContext ctx(scope);
+    return expr.eval(ctx);
+}
+
 optional<bitwidth_t> BindContext::requireValidBitWidth(const SVInt& value,
                                                        SourceRange range) const {
     auto result = value.as<bitwidth_t>();
@@ -124,10 +129,11 @@ optional<int32_t> BindContext::evalInteger(const ExpressionSyntax& syntax) const
 }
 
 optional<int32_t> BindContext::evalInteger(const Expression& expr) const {
-    if (!expr.constant || !requireIntegral(*expr.constant, expr.sourceRange))
+    ConstantValue cv = tryEval(expr);
+    if (!requireIntegral(cv, expr.sourceRange))
         return std::nullopt;
 
-    const SVInt& value = expr.constant->integer();
+    const SVInt& value = cv.integer();
     if (!requireNoUnknowns(value, expr.sourceRange))
         return std::nullopt;
 

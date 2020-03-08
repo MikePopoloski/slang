@@ -125,7 +125,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumValue; }
 
 private:
-    const ConstantValue* value = nullptr;
+    mutable const ConstantValue* value = nullptr;
 };
 
 /// Represents a packed array of some simple element type (vectors, packed structures, other packed

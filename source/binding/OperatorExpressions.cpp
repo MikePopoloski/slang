@@ -828,8 +828,9 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
     // If the predicate is known at compile time, we can tell which branch will be unevaluated.
     BindFlags leftFlags = BindFlags::None;
     BindFlags rightFlags = BindFlags::None;
-    if (pred.constant && (!pred.constant->isInteger() || !pred.constant->integer().hasUnknown())) {
-        if (pred.constant->isTrue())
+    ConstantValue predVal = context.tryEval(pred);
+    if (predVal && (!predVal.isInteger() || !predVal.integer().hasUnknown())) {
+        if (predVal.isTrue())
             rightFlags = BindFlags::UnevaluatedBranch;
         else
             leftFlags = BindFlags::UnevaluatedBranch;
@@ -1249,7 +1250,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     }
 
     // If the multiplier isn't constant this must be a string replication.
-    if (!left.constant) {
+    if (ConstantValue leftVal = context.tryEval(left); !leftVal) {
         if (!right->isImplicitString()) {
             // They probably meant for this to be a constant (non-string) replication,
             // so do the normal error reporting for that case.

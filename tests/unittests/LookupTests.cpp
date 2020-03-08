@@ -614,10 +614,12 @@ endmodule
 
     auto& block = compilation.getRoot().lookupName<GenerateBlockSymbol>("n.n");
     auto& f1 = block.lookupName<VariableSymbol>("n.f");
-    CHECK(f1.getConstantValue().integer() == 42);
+
+    EvalContext ctx(block);
+    CHECK(f1.getInitializer()->eval(ctx).integer() == 42);
 
     auto& f2 = block.lookupName<VariableSymbol>("$root.n.f");
-    CHECK(f2.getConstantValue().integer() == 99);
+    CHECK(f2.getInitializer()->eval(ctx).integer() == 99);
 }
 
 TEST_CASE("Malformed name syntax") {
@@ -1008,7 +1010,7 @@ endmodule
 source:9:20: error: could not resolve hierarchical path name 'bar'
         return gen1.bar;
                    ^~~~
-source:16:26: note: in call to 'foo1()'
+source:16:26: note: in call to 'foo1'
     localparam int bar = foo1;
                          ^
 source:13:16: error: reference to 'asdf' by hierarchical name is not allowed in a constant expression

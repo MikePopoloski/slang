@@ -263,7 +263,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
 
         first = false;
-        previous = ev.getConstantValue();
+        previous = ev.getValue();
         previousRange = ev.getInitializer()->sourceRange;
 
         checkValue(previous, previousRange.start());
@@ -388,7 +388,22 @@ EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
 }
 
 const ConstantValue& EnumValueSymbol::getValue() const {
-    return value ? *value : getConstantValue();
+    if (!value) {
+        // If no value has been explicitly set, try to set it
+        // from our initializer.
+        auto init = getInitializer();
+        if (init) {
+            auto scope = getParentScope();
+            ASSERT(scope);
+
+            EvalContext ctx(*scope);
+            value = scope->getCompilation().allocConstant(init->eval(ctx));
+        }
+        else {
+            value = &ConstantValue::Invalid;
+        }
+    }
+    return *value;
 }
 
 void EnumValueSymbol::setValue(ConstantValue newValue) {
@@ -398,8 +413,7 @@ void EnumValueSymbol::setValue(ConstantValue newValue) {
 }
 
 void EnumValueSymbol::serializeTo(ASTSerializer& serializer) const {
-    if (value)
-        serializer.write("value", *value);
+    serializer.write("value", getValue());
 }
 
 PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :

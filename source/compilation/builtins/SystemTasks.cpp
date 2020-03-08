@@ -46,8 +46,9 @@ public:
 };
 
 static bool checkFinishNum(const BindContext& context, const Expression& arg) {
-    if (arg.constant && arg.constant->isInteger()) {
-        auto& val = arg.constant->integer();
+    ConstantValue cv = context.tryEval(arg);
+    if (cv.isInteger()) {
+        auto& val = cv.integer();
         if (val == 0 || val == 1 || val == 2)
             return true;
     }

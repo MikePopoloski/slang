@@ -23,14 +23,8 @@ using namespace slang;
 struct EvalVisitor {
     template<typename T>
     ConstantValue visit(const T& expr, EvalContext& context) {
-        // If the expression is already known to be constant just return the value we have.
-        if (expr.constant)
-            return *expr.constant;
-
         if (expr.bad())
             return nullptr;
-
-        // Otherwise evaluate and return that.
         return expr.evalImpl(context);
     }
 
@@ -76,10 +70,10 @@ struct VerifyVisitor {
 
 namespace slang {
 
-// This visitor handles inserting implicit conversions into an expression tree where necessary.
-// SystemVerilog has an additional weird feature where the type of one branch of an expression
-// tree can bubble up and then propagate back down a different branch, which is also implemented
-// here.
+// This visitor handles inserting implicit conversions into an expression
+// tree where necessary. SystemVerilog has an additional weird feature where
+// the type of one branch of an expression tree can bubble up and then propagate
+// back down a different branch, which is also implemented here.
 struct Expression::PropagationVisitor {
     template<typename T, typename... Args>
     using propagate_t = decltype(std::declval<T>().propagateType(std::declval<Args>()...));
@@ -119,13 +113,6 @@ struct Expression::PropagationVisitor {
         if (needConversion)
             result = &Expression::implicitConversion(context, newType, expr);
 
-        // Try to fold any constant values. If this results in diagnostics we
-        // don't save the value here to force re-evaluation later on.
-        ASSERT(!result->constant);
-        EvalContext evalContext(context.scope);
-        ConstantValue value = result->eval(evalContext);
-        if (value && evalContext.getDiagnostics().empty())
-            result->constant = context.scope.getCompilation().allocConstant(std::move(value));
         return *result;
     }
 

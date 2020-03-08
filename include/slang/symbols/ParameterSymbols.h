@@ -48,7 +48,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
-    const ConstantValue* overriden = nullptr;
+    mutable const ConstantValue* value = nullptr;
 };
 
 struct TypeParameterDeclarationSyntax;

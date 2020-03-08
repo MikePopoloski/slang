@@ -46,10 +46,7 @@ const ConstantValue& AttributeSymbol::getValue() const {
         BindContext context(*bindScope, loc, BindFlags::Constant | BindFlags::NoAttributes);
         auto& bound = Expression::bind(*expr, context);
 
-        if (bound.constant)
-            value = bound.constant;
-        else
-            value = bindScope->getCompilation().allocConstant(ConstantValue());
+        value = bindScope->getCompilation().allocConstant(context.tryEval(bound));
     }
 
     return *value;

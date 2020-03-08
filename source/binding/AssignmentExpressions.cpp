@@ -310,13 +310,15 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
 
     selfDetermined(context, result);
 
-    // If this is an enum initializer and we just discard unknown bits by
+    // If this is an enum initializer and we just discarded unknown bits by
     // implicitly converting to a 2-state result, the standard says we
     // should declare this an error.
-    if ((context.flags & BindFlags::EnumInitializer) != 0 && !type.isFourState() && expr.constant &&
-        expr.constant->isInteger() && expr.constant->integer().hasUnknown()) {
-        context.addDiag(diag::EnumValueUnknownBits, expr.sourceRange) << *expr.constant << type;
-        return badExpr(compilation, result);
+    if ((context.flags & BindFlags::EnumInitializer) != 0 && !type.isFourState()) {
+        ConstantValue cv = context.tryEval(expr);
+        if (cv.isInteger() && cv.integer().hasUnknown()) {
+            context.addDiag(diag::EnumValueUnknownBits, expr.sourceRange) << cv << type;
+            return badExpr(compilation, result);
+        }
     }
 
     return *result;

@@ -338,12 +338,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::RecursiveDefinition);
     CHECK(diags[1].code == diag::RecursiveDefinition);
-    CHECK(diags[2].code == diag::RecursiveDefinition);
-    CHECK(diags[3].code == diag::ConstEvalIdUsedInCEBeforeDecl);
-    CHECK(diags[4].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
+    CHECK(diags[2].code == diag::ConstEvalIdUsedInCEBeforeDecl);
+    CHECK(diags[3].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
 }
 
 TEST_CASE("Parameter ordering from const func") {

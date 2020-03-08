@@ -264,8 +264,9 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateS
     if (isInstantiated) {
         BindContext bindContext(parent, location, BindFlags::Constant);
         const auto& cond = Expression::bind(*syntax.condition, bindContext);
-        if (cond.constant && bindContext.requireBooleanConvertible(cond))
-            selector = cond.constant->isTrue();
+        ConstantValue cv = bindContext.tryEval(cond);
+        if (cv && bindContext.requireBooleanConvertible(cond))
+            selector = cv.isTrue();
     }
 
     createCondGenBlock(compilation, *syntax.block, location, parent, constructIndex,
@@ -312,7 +313,8 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
 
     auto boundIt = bound.begin();
     auto condExpr = *boundIt++;
-    if (!condExpr->constant)
+    ConstantValue condVal = bindContext.tryEval(*condExpr);
+    if (!condVal)
         return;
 
     SourceRange matchRange;
@@ -330,8 +332,8 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
         for (size_t i = 0; i < sci.expressions.size(); i++) {
             // Have to keep incrementing the iterator here so that we stay in sync.
             auto expr = *boundIt++;
-            auto val = expr->constant;
-            if (!currentFound && val && val->equivalentTo(*condExpr->constant)) {
+            ConstantValue val = bindContext.tryEval(*expr);
+            if (!currentFound && val && val.equivalentTo(condVal)) {
                 currentFound = true;
                 currentMatchRange = expr->sourceRange;
             }
@@ -348,7 +350,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
             // If we previously found a block, this block also matched, which we should warn about.
             if (currentFound && !warned) {
                 auto& diag = parent.addDiag(diag::CaseGenerateDup, currentMatchRange);
-                diag << *condExpr->constant;
+                diag << condVal;
                 diag.addNote(diag::NotePreviousMatch, matchRange.start());
                 warned = true;
             }
@@ -366,7 +368,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     }
     else if (!found) {
         auto& diag = parent.addDiag(diag::CaseGenerateNoBlock, condExpr->sourceRange);
-        diag << *condExpr->constant;
+        diag << condVal;
     }
 }
 
@@ -475,9 +477,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
     // Bind the initialization expression.
     BindContext bindContext(parent, location, BindFlags::Constant);
-    const auto& initial = Expression::bindRValue(compilation.getIntegerType(), *syntax.initialExpr,
-                                                 syntax.equals.location(), bindContext);
-    if (!initial.constant)
+    auto& initial = Expression::bindRValue(compilation.getIntegerType(), *syntax.initialExpr,
+                                           syntax.equals.location(), bindContext);
+    ConstantValue initialVal = bindContext.tryEval(initial);
+    if (!initialVal)
         return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
@@ -516,7 +519,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
 
     // Create storage for the iteration variable.
     EvalContext evalContext(iterScope);
-    auto loopVal = evalContext.createLocal(&local, *initial.constant);
+    auto loopVal = evalContext.createLocal(&local, initialVal);
 
     if (loopVal->integer().hasUnknown())
         iterContext.addDiag(diag::GenvarUnknownBits, genvar.range()) << *loopVal;

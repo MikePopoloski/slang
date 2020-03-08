@@ -68,7 +68,7 @@ public:
 
     void setFromDeclarator(const DeclaratorSyntax& decl);
 
-    const ConstantValue& getConstantValue() const;
+    //const ConstantValue& getConstantValue() const;
 
     bool isEvaluating() const { return evaluating; }
     bool isTypeResolved() const { return type != nullptr; }

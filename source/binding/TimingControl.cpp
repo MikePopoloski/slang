@@ -101,7 +101,7 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
     }
 
     // Warn if the expression is constant, since it'll never change to trigger off.
-    if (expr.constant)
+    if (context.tryEval(expr))
         context.addDiag(diag::EventExpressionConstant, expr.sourceRange);
 
     return *result;

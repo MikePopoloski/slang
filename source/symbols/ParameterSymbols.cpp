@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/ParameterSymbols.h"
 
+#include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -64,18 +65,33 @@ ParameterSymbol& ParameterSymbol::clone(Compilation& compilation) const {
     if (declared->hasInitializer())
         result->setInitializer(*declared->getInitializer());
 
-    result->overriden = overriden;
+    result->value = value;
     return *result;
 }
 
 const ConstantValue& ParameterSymbol::getValue() const {
-    return overriden ? *overriden : getConstantValue();
+    if (!value) {
+        // If no value has been explicitly set, try to set it
+        // from our initializer.
+        auto init = getInitializer();
+        if (init) {
+            auto scope = getParentScope();
+            ASSERT(scope);
+
+            EvalContext ctx(*scope);
+            value = scope->getCompilation().allocConstant(init->eval(ctx));
+        }
+        else {
+            value = &ConstantValue::Invalid;
+        }
+    }
+    return *value;
 }
 
-void ParameterSymbol::setValue(ConstantValue value) {
+void ParameterSymbol::setValue(ConstantValue newValue) {
     auto scope = getParentScope();
     ASSERT(scope);
-    overriden = scope->getCompilation().allocConstant(std::move(value));
+    value = scope->getCompilation().allocConstant(std::move(newValue));
 }
 
 void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {

@@ -105,9 +105,6 @@ void ASTSerializer::visit(const T& elem) {
         write("kind", toString(elem.kind));
         write("type", *elem.type);
 
-        if (elem.constant)
-            write("constant", *elem.constant);
-
         if constexpr (!std::is_same_v<Expression, T>) {
             elem.serializeTo(*this);
         }
@@ -146,12 +143,6 @@ void ASTSerializer::visit(const T& elem) {
 
         if constexpr (std::is_base_of_v<ValueSymbol, T>) {
             write("type", elem.getType());
-
-            if constexpr (!std::is_base_of_v<ParameterSymbol, T>) {
-                auto& value = elem.getConstantValue();
-                if (value)
-                    write("value", value);
-            }
 
             if (auto init = elem.getInitializer())
                 write("initializer", *init);

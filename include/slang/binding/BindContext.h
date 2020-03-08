@@ -122,6 +122,8 @@ public:
     bool requireValidBitWidth(bitwidth_t width, SourceRange range) const;
     optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
 
+    ConstantValue tryEval(const Expression& expr) const;
+
     optional<int32_t> evalInteger(const ExpressionSyntax& syntax) const;
     optional<int32_t> evalInteger(const Expression& expr) const;
     EvaluatedDimension evalDimension(const VariableDimensionSyntax& syntax,
