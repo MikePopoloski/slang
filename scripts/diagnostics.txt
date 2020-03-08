@@ -366,6 +366,7 @@ error ConstEvalTaskNotConstant "cannot invoke a task in a constant expression"
 error ConstEvalVoidNotConstant "cannot call a void function in a constant expression"
 error ConstEvalFunctionArgDirection "cannot call a function with output, inout, or ref arguments in a constant expression"
 error ConstEvalFunctionInsideGenerate "cannot call a function declared inside a generate block in a constant expression"
+warning static-skipped ConstEvalStaticSkipped "static variable initialization is skipped in constant function calls"
 
 subsystem Meta
 error TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
@@ -379,6 +380,6 @@ group default = { real-underflow real-overflow literal-overflow ignored-macro-pa
                   case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
                   dup-import redef-macro nonstandard-generate pointless-void-cast unused-result
                   not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg
-                  pragma-diag-level explicit-static }
+                  pragma-diag-level explicit-static static-skipped }
 
 group extra = { empty-member empty-stmt }

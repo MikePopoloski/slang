@@ -718,7 +718,7 @@ endfunction
 
     session.eval(R"(
 function int func11(int foo);
-    int asdf[3] = '{ 1, 3, 5 };
+    automatic int asdf[3] = '{ 1, 3, 5 };
     case (foo) inside
         asdf: return 9;
     endcase
@@ -1144,4 +1144,22 @@ TEST_CASE("Bit vector functions") {
     CHECK(session.eval("$isunknown(14'b101z10101)").integer() == 1);
 
     NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Static variables aren't initialized in consteval") {
+    ScriptSession session;
+
+    session.eval(R"(
+function int foo;
+    static int j = 1;
+    return ++j;
+endfunction
+)");
+    session.eval("localparam int i = foo();");
+
+    CHECK(session.eval("i").integer() == 1);
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalStaticSkipped);
 }

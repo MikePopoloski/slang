@@ -692,14 +692,25 @@ bool ContinueStatement::verifyConstantImpl(EvalContext&) const {
 }
 
 ER VariableDeclStatement::evalImpl(EvalContext& context) const {
-    // Create storage for the variable
+    // Figure out the initial value for the variable.
     ConstantValue initial;
     if (auto initializer = symbol.getInitializer()) {
-        initial = initializer->eval(context);
-        if (!initial)
-            return ER::Fail;
+        // Initialization of static variables is skipped in constant functions.
+        // This is confusing so issue a warning.
+        if (symbol.lifetime == VariableLifetime::Static) {
+            context.addDiag(diag::ConstEvalStaticSkipped, initializer->sourceRange);
+        }
+        else {
+            initial = initializer->eval(context);
+            if (!initial)
+                return ER::Fail;
+        }
     }
 
+    if (!initial)
+        initial = symbol.getType().getDefaultValue();
+
+    // Create storage for the variable.
     context.createLocal(&symbol, initial);
     return ER::Success;
 }
