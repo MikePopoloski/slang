@@ -32,7 +32,7 @@ public:
         return comp.getType(type.getBitWidth(), flags);
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -53,7 +53,7 @@ public:
         SimpleSystemSubroutine("$rtoi", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getIntegerType(), false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -68,7 +68,7 @@ public:
         SimpleSystemSubroutine("$itor", SubroutineKind::Function, 1, { &comp.getIntegerType() },
                                comp.getRealType(), false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -84,7 +84,7 @@ public:
         SimpleSystemSubroutine("$realtobits", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getType(64, IntegralFlags::Unsigned), false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -100,7 +100,7 @@ public:
                                { &comp.getType(64, IntegralFlags::Unsigned) }, comp.getRealType(),
                                false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -117,7 +117,7 @@ public:
                                { &comp.getShortRealType() },
                                comp.getType(32, IntegralFlags::Unsigned), false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -133,7 +133,7 @@ public:
                                { &comp.getType(32, IntegralFlags::Unsigned) },
                                comp.getShortRealType(), false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;

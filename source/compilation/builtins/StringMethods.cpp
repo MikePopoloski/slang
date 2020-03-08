@@ -16,7 +16,7 @@ public:
     explicit StringLenMethod(Compilation& comp) :
         SimpleSystemSubroutine("len", SubroutineKind::Function, 0, {}, comp.getIntType(), true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -32,7 +32,7 @@ public:
                                { &comp.getIntType(), &comp.getByteType() }, comp.getVoidType(),
                                true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto strCv = args[0]->evalLValue(context);
         auto indexCv = args[1]->eval(context);
         auto charCv = args[2]->eval(context);
@@ -57,7 +57,7 @@ public:
         SimpleSystemSubroutine("getc", SubroutineKind::Function, 1, { &comp.getIntType() },
                                comp.getByteType(), true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto strCv = args[0]->eval(context);
         auto indexCv = args[1]->eval(context);
         if (!strCv || !indexCv)
@@ -78,7 +78,7 @@ public:
         SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getStringType(), true),
         upper(upper) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -106,7 +106,7 @@ public:
                                comp.getIntType(), true),
         ignoreCase(ignoreCase) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto lhsCv = args[0]->eval(context);
         auto rhsCv = args[1]->eval(context);
         if (!lhsCv || !rhsCv)
@@ -147,7 +147,7 @@ public:
                                { &comp.getIntType(), &comp.getIntType() }, comp.getStringType(),
                                true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto strCv = args[0]->eval(context);
         auto leftCv = args[1]->eval(context);
         auto rightCv = args[2]->eval(context);
@@ -171,7 +171,7 @@ public:
         SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getIntegerType(), true),
         base(base) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto cv = args[0]->eval(context);
         if (!cv)
             return nullptr;
@@ -193,7 +193,7 @@ public:
         SimpleSystemSubroutine("atoreal", SubroutineKind::Function, 0, {}, comp.getRealType(),
                                true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto cv = args[0]->eval(context);
         if (!cv)
             return nullptr;
@@ -213,7 +213,7 @@ public:
                                comp.getVoidType(), true),
         base(base) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto strCv = args[0]->evalLValue(context);
         auto valCv = args[1]->eval(context);
         if (!strCv || !valCv)
@@ -233,7 +233,7 @@ public:
         SimpleSystemSubroutine("realtoa", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getVoidType(), true) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto strCv = args[0]->evalLValue(context);
         auto valCv = args[1]->eval(context);
         if (!strCv || !valCv)

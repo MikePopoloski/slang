@@ -64,12 +64,6 @@ public:
     /// a single constant function for too long.
     [[nodiscard]] bool step(SourceLocation loc);
 
-    /// Gets the root scope in which the evaluation process started.
-    const Scope& getRootScope() const { return *rootScope; }
-
-    /// Gets the currently executing scope (the one at the top of the call stack).
-    const Scope& getCurrentScope() const;
-
     /// Indicates whether this evaluation context is for a script session
     /// (not used during normal compilation flow).
     bool isScriptEval() const { return (flags & EvalFlags::IsScript) != 0; }

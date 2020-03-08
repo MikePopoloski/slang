@@ -16,7 +16,7 @@ public:
         SimpleSystemSubroutine(name, SubroutineKind::Function, requiredArgs, argTypes, returnType,
                                false) {}
 
-    ConstantValue eval(EvalContext&, const Args&) const final { return nullptr; }
+    ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
     bool verifyConstant(EvalContext&, const Args&) const final { return false; }
 };
 

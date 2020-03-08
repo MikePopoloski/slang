@@ -35,7 +35,7 @@ public:
         return comp.getIntegerType();
     }
 
-    ConstantValue eval(EvalContext&, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext&, const Args& args) const final {
         // TODO: support for unpacked sizes
         return SVInt(32, args[0]->type->getBitWidth(), true);
     }
@@ -62,7 +62,7 @@ public:
         return comp.getStringType();
     }
 
-    ConstantValue eval(EvalContext&, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext&, const Args& args) const final {
         TypePrinter printer;
         printer.append(*args[0]->type);
 
@@ -100,11 +100,11 @@ public:
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
-#define SUBROUTINE(className, base, ...)                                        \
-    class className : public base {                                             \
-    public:                                                                     \
-        className() : base(__VA_ARGS__) {}                                      \
-        ConstantValue eval(EvalContext& context, const Args& args) const final; \
+#define SUBROUTINE(className, base, ...)                                                      \
+    class className : public base {                                                           \
+    public:                                                                                   \
+        className() : base(__VA_ARGS__) {}                                                    \
+        ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final; \
     }
 
 #define FUNC SubroutineKind::Function
@@ -116,32 +116,32 @@ SUBROUTINE(RightFunction, ArrayQueryFunction, "$right", FUNC);
 SUBROUTINE(SizeFunction, ArrayQueryFunction, "$size", FUNC);
 SUBROUTINE(IncrementFunction, ArrayQueryFunction, "$increment", FUNC);
 
-ConstantValue LowFunction::eval(EvalContext&, const Args& args) const {
+ConstantValue LowFunction::eval(const Scope&, EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.lower(), true);
 }
 
-ConstantValue HighFunction::eval(EvalContext&, const Args& args) const {
+ConstantValue HighFunction::eval(const Scope&, EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.upper(), true);
 }
 
-ConstantValue LeftFunction::eval(EvalContext&, const Args& args) const {
+ConstantValue LeftFunction::eval(const Scope&, EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.left, true);
 }
 
-ConstantValue RightFunction::eval(EvalContext&, const Args& args) const {
+ConstantValue RightFunction::eval(const Scope&, EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)range.right, true);
 }
 
-ConstantValue SizeFunction::eval(EvalContext&, const Args& args) const {
+ConstantValue SizeFunction::eval(const Scope&, EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, range.width(), true);
 }
 
-ConstantValue IncrementFunction::eval(EvalContext&, const Args& args) const {
+ConstantValue IncrementFunction::eval(const Scope&, EvalContext&, const Args& args) const {
     ConstantRange range = args[0]->type->getArrayRange();
     return SVInt(32, (uint64_t)(range.isLittleEndian() ? 1 : -1), true);
 }

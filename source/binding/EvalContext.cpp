@@ -71,13 +71,6 @@ bool EvalContext::step(SourceLocation loc) {
     return false;
 }
 
-const Scope& EvalContext::getCurrentScope() const {
-    const Frame& frame = topFrame();
-    if (frame.subroutine)
-        return *frame.subroutine;
-    return getRootScope();
-}
-
 std::string EvalContext::dumpStack() const {
     FormatBuffer buffer;
     int index = 0;

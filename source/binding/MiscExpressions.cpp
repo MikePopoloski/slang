@@ -724,8 +724,8 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                                        const InvocationExpressionSyntax* syntax, SourceRange range,
                                        const BindContext& context) {
     if (subroutine.index() == 1) {
-        const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
-        return createSystemCall(compilation, systemSubroutine, nullptr, syntax, range, context);
+        const SystemCallInfo& info = std::get<1>(subroutine);
+        return createSystemCall(compilation, *info.subroutine, nullptr, syntax, range, context);
     }
 
     // Collect all arguments into a list of ordered expressions (which can
@@ -932,8 +932,9 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
         }
     }
 
+    SystemCallInfo callInfo{ &subroutine, &context.scope };
     const Type& type = subroutine.checkArguments(context, buffer, range);
-    auto expr = compilation.emplace<CallExpression>(&subroutine, type, buffer.copy(compilation),
+    auto expr = compilation.emplace<CallExpression>(callInfo, type, buffer.copy(compilation),
                                                     context.lookupLocation, range);
 
     if (type.isError())
@@ -952,8 +953,10 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
 
 ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     // Delegate system calls to their appropriate handler.
-    if (isSystemCall())
-        return std::get<1>(subroutine)->eval(context, arguments());
+    if (isSystemCall()) {
+        auto& callInfo = std::get<1>(subroutine);
+        return callInfo.subroutine->eval(*callInfo.scope, context, arguments());
+    }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     if (!checkConstant(context, symbol, sourceRange))
@@ -997,8 +1000,10 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
             return false;
     }
 
-    if (isSystemCall())
-        return std::get<1>(subroutine)->verifyConstant(context, arguments());
+    if (isSystemCall()) {
+        auto& callInfo = std::get<1>(subroutine);
+        return callInfo.subroutine->verifyConstant(context, arguments());
+    }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     if (!checkConstant(context, symbol, sourceRange))
@@ -1046,8 +1051,8 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
 
 string_view CallExpression::getSubroutineName() const {
     if (subroutine.index() == 1) {
-        const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
-        return systemSubroutine.name;
+        auto& callInfo = std::get<1>(subroutine);
+        return callInfo.subroutine->name;
     }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
@@ -1056,8 +1061,8 @@ string_view CallExpression::getSubroutineName() const {
 
 SubroutineKind CallExpression::getSubroutineKind() const {
     if (subroutine.index() == 1) {
-        const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
-        return systemSubroutine.kind;
+        auto& callInfo = std::get<1>(subroutine);
+        return callInfo.subroutine->kind;
     }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
@@ -1066,8 +1071,8 @@ SubroutineKind CallExpression::getSubroutineKind() const {
 
 void CallExpression::serializeTo(ASTSerializer& serializer) const {
     if (subroutine.index() == 1) {
-        const SystemSubroutine& systemSubroutine = *std::get<1>(subroutine);
-        serializer.write("subroutine", systemSubroutine.name);
+        auto& callInfo = std::get<1>(subroutine);
+        serializer.write("subroutine", callInfo.subroutine->name);
     }
     else {
         const SubroutineSymbol& symbol = *std::get<0>(subroutine);

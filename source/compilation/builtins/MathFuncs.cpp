@@ -28,7 +28,7 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         ConstantValue v = args[0]->eval(context);
         if (!v)
             return nullptr;
@@ -60,7 +60,7 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         ConstantValue value = args[0]->eval(context);
         if (!value)
             return nullptr;
@@ -130,7 +130,7 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         ConstantValue value = args[0]->eval(context);
         if (!value)
             return nullptr;
@@ -164,7 +164,7 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         ConstantValue value = args[0]->eval(context);
         if (!value)
             return nullptr;
@@ -195,7 +195,7 @@ public:
         SimpleSystemSubroutine(name, SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getRealType(), false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         ConstantValue v = args[0]->eval(context);
         if (!v)
             return nullptr;
@@ -213,7 +213,7 @@ public:
                                { &comp.getRealType(), &comp.getRealType() }, comp.getRealType(),
                                false) {}
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         ConstantValue a = args[0]->eval(context);
         ConstantValue b = args[1]->eval(context);
         if (!a || !b)

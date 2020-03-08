@@ -551,8 +551,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     if (result.systemSubroutine) {
         // There won't be any selectors here; this gets checked in the lookup call.
         ASSERT(result.selectors.empty());
-        return CallExpression::fromLookup(compilation, result.systemSubroutine, invocation,
-                                          callRange, context);
+        CallExpression::SystemCallInfo callInfo{ result.systemSubroutine, &context.scope };
+        return CallExpression::fromLookup(compilation, callInfo, invocation, callRange, context);
     }
 
     const Symbol* symbol = result.found;

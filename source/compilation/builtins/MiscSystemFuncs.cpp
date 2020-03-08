@@ -33,7 +33,7 @@ public:
         return comp.getStringType();
     }
 
-    ConstantValue eval(EvalContext& context, const Args& args) const final {
+    ConstantValue eval(const Scope& scope, EvalContext& context, const Args& args) const final {
         ConstantValue formatStr = args[0]->eval(context).convertToStr();
         if (!formatStr)
             return nullptr;
@@ -48,8 +48,8 @@ public:
         }
 
         Diagnostics diags;
-        auto result = SFormat::format(formatStr.str(), args[0]->sourceRange.start(), values,
-                                      context.getCurrentScope(), diags);
+        auto result =
+            SFormat::format(formatStr.str(), args[0]->sourceRange.start(), values, scope, diags);
         if (!diags.empty())
             context.addDiags(diags);
 
@@ -90,7 +90,7 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(EvalContext&, const Args&) const final { return nullptr; }
+    ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
     bool verifyConstant(EvalContext&, const Args&) const final { return false; }
 };
 

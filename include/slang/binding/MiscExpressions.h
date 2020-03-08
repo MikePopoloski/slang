@@ -155,7 +155,12 @@ private:
 /// Represents a subroutine call.
 class CallExpression : public Expression {
 public:
-    using Subroutine = std::variant<const SubroutineSymbol*, const SystemSubroutine*>;
+    struct SystemCallInfo {
+        not_null<const SystemSubroutine*> subroutine;
+        not_null<const Scope*> scope;
+    };
+
+    using Subroutine = std::variant<const SubroutineSymbol*, SystemCallInfo>;
     Subroutine subroutine;
 
     CallExpression(const Subroutine& subroutine, const Type& returnType,

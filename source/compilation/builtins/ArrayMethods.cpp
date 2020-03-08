@@ -36,22 +36,22 @@ public:
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
 };
 
-#define MAKE_REDUCTION_METHOD(typeName, sourceName, op)                          \
-    class Array##typeName##Method : public ArrayReductionMethod {                \
-    public:                                                                      \
-        Array##typeName##Method() : ArrayReductionMethod(sourceName) {}          \
-                                                                                 \
-        ConstantValue eval(EvalContext& context, const Args& args) const final { \
-            ConstantValue arr = args[0]->eval(context);                          \
-            if (!arr)                                                            \
-                return nullptr;                                                  \
-                                                                                 \
-            SVInt result = arr.elements()[0].integer();                          \
-            for (auto& elem : arr.elements().subspan(1))                         \
-                result op elem.integer();                                        \
-                                                                                 \
-            return result;                                                       \
-        }                                                                        \
+#define MAKE_REDUCTION_METHOD(typeName, sourceName, op)                                        \
+    class Array##typeName##Method : public ArrayReductionMethod {                              \
+    public:                                                                                    \
+        Array##typeName##Method() : ArrayReductionMethod(sourceName) {}                        \
+                                                                                               \
+        ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final { \
+            ConstantValue arr = args[0]->eval(context);                                        \
+            if (!arr)                                                                          \
+                return nullptr;                                                                \
+                                                                                               \
+            SVInt result = arr.elements()[0].integer();                                        \
+            for (auto& elem : arr.elements().subspan(1))                                       \
+                result op elem.integer();                                                      \
+                                                                                               \
+            return result;                                                                     \
+        }                                                                                      \
     };
 
 MAKE_REDUCTION_METHOD(Or, "or", |=)
