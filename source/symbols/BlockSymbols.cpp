@@ -264,7 +264,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateS
     if (isInstantiated) {
         BindContext bindContext(parent, location, BindFlags::Constant);
         const auto& cond = Expression::bind(*syntax.condition, bindContext);
-        ConstantValue cv = bindContext.tryEval(cond);
+        ConstantValue cv = bindContext.eval(cond);
         if (cv && bindContext.requireBooleanConvertible(cond))
             selector = cv.isTrue();
     }
@@ -313,7 +313,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
 
     auto boundIt = bound.begin();
     auto condExpr = *boundIt++;
-    ConstantValue condVal = bindContext.tryEval(*condExpr);
+    ConstantValue condVal = bindContext.eval(*condExpr);
     if (!condVal)
         return;
 
@@ -332,7 +332,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
         for (size_t i = 0; i < sci.expressions.size(); i++) {
             // Have to keep incrementing the iterator here so that we stay in sync.
             auto expr = *boundIt++;
-            ConstantValue val = bindContext.tryEval(*expr);
+            ConstantValue val = bindContext.eval(*expr);
             if (!currentFound && val && val.equivalentTo(condVal)) {
                 currentFound = true;
                 currentMatchRange = expr->sourceRange;
@@ -479,7 +479,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     BindContext bindContext(parent, location, BindFlags::Constant);
     auto& initial = Expression::bindRValue(compilation.getIntegerType(), *syntax.initialExpr,
                                            syntax.equals.location(), bindContext);
-    ConstantValue initialVal = bindContext.tryEval(initial);
+    ConstantValue initialVal = bindContext.eval(initial);
     if (!initialVal)
         return *result;
 

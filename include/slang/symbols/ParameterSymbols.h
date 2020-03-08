@@ -41,6 +41,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
     ParameterSymbol& clone(Compilation& compilation) const;
+    ParameterSymbol& instantiate(Scope& newScope, const BindContext& context,
+                                 const ExpressionSyntax* newInitializer) const;
 
     const ConstantValue& getValue() const;
     void setValue(ConstantValue value);

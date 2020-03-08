@@ -1250,11 +1250,12 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     }
 
     // If the multiplier isn't constant this must be a string replication.
-    if (ConstantValue leftVal = context.tryEval(left); !leftVal) {
+    EvalContext evalCtx(compilation);
+    if (ConstantValue leftVal = left.eval(evalCtx); !leftVal) {
         if (!right->isImplicitString()) {
             // They probably meant for this to be a constant (non-string) replication,
             // so do the normal error reporting for that case.
-            checkBindFlags(left, context.resetFlags(BindFlags::Constant));
+            evalCtx.reportDiags(context);
             return badExpr(compilation, result);
         }
 

@@ -434,27 +434,20 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     for (auto param : definition->parameters) {
         if (param->symbol.kind == SymbolKind::Parameter) {
             // This is a value parameter.
-            ParameterSymbol& newParam = param->symbol.as<ParameterSymbol>().clone(compilation);
-            tempDef.addMember(newParam);
+            auto& oldParam = param->symbol.as<ParameterSymbol>();
+
+            const ExpressionSyntax* newInitializer = nullptr;
+            if (auto it = paramOverrides.find(oldParam.name); it != paramOverrides.end())
+                newInitializer = it->second;
+
+            ParameterSymbol& newParam = oldParam.instantiate(tempDef, context, newInitializer);
             parameters.append(&newParam);
 
-            if (auto it = paramOverrides.find(newParam.name); it != paramOverrides.end()) {
-                auto& expr = *it->second;
-                newParam.setInitializerSyntax(expr, expr.getFirstToken().location());
-
-                auto declared = newParam.getDeclaredType();
-                declared->clearResolved();
-                declared->resolveAt(context);
-            }
-            else if (!newParam.isLocalParam() && newParam.isPortParam() &&
-                     !newParam.getInitializer()) {
+            if (!newParam.isLocalParam() && newParam.isPortParam() && !newParam.getInitializer()) {
                 auto& diag =
                     scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
                 diag << definition->name;
                 diag << newParam.name;
-            }
-            else {
-                newParam.getDeclaredType()->clearResolved();
             }
         }
         else {

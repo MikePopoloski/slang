@@ -396,9 +396,8 @@ const ConstantValue& EnumValueSymbol::getValue() const {
             auto scope = getParentScope();
             ASSERT(scope);
 
-            auto& comp = scope->getCompilation();
-            EvalContext ctx(comp);
-            value = comp.allocConstant(init->eval(ctx));
+            BindContext ctx(*scope, LookupLocation::max);
+            value = scope->getCompilation().allocConstant(ctx.eval(*init));
         }
         else {
             value = &ConstantValue::Invalid;

@@ -184,14 +184,8 @@ void Expression::checkBindFlags(const Expression& expr, const BindContext& conte
         return;
 
     EvalContext verifyContext(context.getCompilation(), EvalFlags::IsVerifying);
-    bool canBeConst = expr.verifyConstant(verifyContext);
+    expr.verifyConstant(verifyContext);
     verifyContext.reportDiags(context);
-    if (!canBeConst)
-        return;
-
-    EvalContext evalContext(context.getCompilation());
-    expr.eval(evalContext);
-    evalContext.reportDiags(context);
 }
 
 ConstantValue Expression::eval(EvalContext& context) const {

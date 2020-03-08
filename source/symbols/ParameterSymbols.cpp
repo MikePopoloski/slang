@@ -69,6 +69,38 @@ ParameterSymbol& ParameterSymbol::clone(Compilation& compilation) const {
     return *result;
 }
 
+ParameterSymbol& ParameterSymbol::instantiate(Scope& newScope, const BindContext& context,
+                                              const ExpressionSyntax* newInitializer) const {
+    // Construct the result using the source's properties.
+    auto result = context.getCompilation().emplace<ParameterSymbol>(name, location, isLocalParam(),
+                                                                    isPortParam());
+
+    newScope.addMember(*result);
+    if (auto syntax = getSyntax())
+        result->setSyntax(*syntax);
+
+    // Copy the type syntax from the source parameter to the result.
+    auto sourceDT = getDeclaredType();
+    auto resultDT = result->getDeclaredType();
+    if (auto ts = sourceDT->getTypeSyntax()) {
+        resultDT->setTypeSyntax(*ts);
+        if (auto dims = sourceDT->getDimensionSyntax())
+            resultDT->setDimensionSyntax(*dims);
+    }
+
+    // If we have a new initializer set that now. Otherwise use the source's as a default.
+    if (newInitializer) {
+        result->setInitializerSyntax(*newInitializer, newInitializer->getFirstToken().location());
+        resultDT->resolveAt(context);
+        result->getValue();
+    }
+    else if (auto init = sourceDT->getInitializerSyntax()) {
+        result->setInitializerSyntax(*init, sourceDT->getInitializerLocation());
+    }
+
+    return *result;
+}
+
 const ConstantValue& ParameterSymbol::getValue() const {
     if (!value) {
         // If no value has been explicitly set, try to set it
@@ -78,9 +110,8 @@ const ConstantValue& ParameterSymbol::getValue() const {
             auto scope = getParentScope();
             ASSERT(scope);
 
-            auto& comp = scope->getCompilation();
-            EvalContext ctx(comp);
-            value = comp.allocConstant(init->eval(ctx));
+            BindContext ctx(*scope, LookupLocation::max);
+            value = scope->getCompilation().allocConstant(ctx.eval(*init));
         }
         else {
             value = &ConstantValue::Invalid;

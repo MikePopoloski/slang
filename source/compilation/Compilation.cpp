@@ -54,6 +54,11 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
                 declaredType->getInitializer();
             }
 
+            if constexpr (std::is_same_v<ParameterSymbol, T> ||
+                          std::is_same_v<EnumValueSymbol, T>) {
+                symbol.getValue();
+            }
+
             for (auto attr : compilation.getAttributes(symbol))
                 attr->getValue();
         }

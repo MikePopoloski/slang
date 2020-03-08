@@ -122,6 +122,7 @@ public:
     bool requireValidBitWidth(bitwidth_t width, SourceRange range) const;
     optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
 
+    ConstantValue eval(const Expression& expr) const;
     ConstantValue tryEval(const Expression& expr) const;
 
     optional<int32_t> evalInteger(const ExpressionSyntax& syntax) const;
