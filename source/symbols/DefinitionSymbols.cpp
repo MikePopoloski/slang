@@ -435,12 +435,11 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         if (param->symbol.kind == SymbolKind::Parameter) {
             // This is a value parameter.
             auto& oldParam = param->symbol.as<ParameterSymbol>();
-
             const ExpressionSyntax* newInitializer = nullptr;
             if (auto it = paramOverrides.find(oldParam.name); it != paramOverrides.end())
                 newInitializer = it->second;
 
-            ParameterSymbol& newParam = oldParam.instantiate(tempDef, context, newInitializer);
+            auto& newParam = oldParam.instantiate(tempDef, context, newInitializer);
             parameters.append(&newParam);
 
             if (!newParam.isLocalParam() && newParam.isPortParam() && !newParam.getInitializer()) {
@@ -452,43 +451,20 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         }
         else {
             // Otherwise this is a type parameter.
-            auto& newParam = param->symbol.as<TypeParameterSymbol>().clone(compilation);
-            tempDef.addMember(newParam);
+            auto& oldParam = param->symbol.as<TypeParameterSymbol>();
+            const ExpressionSyntax* newInitializer = nullptr;
+            if (auto it = paramOverrides.find(oldParam.name); it != paramOverrides.end())
+                newInitializer = it->second;
+
+            auto& newParam = oldParam.instantiate(tempDef, context, newInitializer);
             parameters.append(&newParam);
 
-            auto& declared = newParam.targetType;
-
-            if (auto it = paramOverrides.find(newParam.name); it != paramOverrides.end()) {
-                auto& expr = *it->second;
-
-                // If this is a NameSyntax, the parser didn't know we were assigning to
-                // a type parameter, so fix it up into a NamedTypeSyntax to get a type from it.
-                if (NameSyntax::isKind(expr.kind)) {
-                    // const_cast is ugly but safe here, we're only going to refer to it
-                    // by const reference everywhere down.
-                    auto& nameSyntax = const_cast<NameSyntax&>(expr.as<NameSyntax>());
-                    auto namedType = compilation.emplace<NamedTypeSyntax>(nameSyntax);
-                    declared.setType(compilation.getType(*namedType, location, scope));
-                }
-                else if (!DataTypeSyntax::isKind(expr.kind)) {
-                    scope.addDiag(diag::BadTypeParamExpr, expr.getFirstToken().location())
-                        << newParam.name;
-                    declared.clearResolved();
-                }
-                else {
-                    declared.setType(
-                        compilation.getType(expr.as<DataTypeSyntax>(), location, scope));
-                }
-            }
-            else if (!newParam.isLocalParam() && newParam.isPortParam() &&
-                     !declared.getTypeSyntax()) {
+            if (!newInitializer && !newParam.isLocalParam() && newParam.isPortParam() &&
+                !newParam.targetType.getTypeSyntax()) {
                 auto& diag =
                     scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
                 diag << definition->name;
                 diag << newParam.name;
-            }
-            else {
-                declared.clearResolved();
             }
         }
     }

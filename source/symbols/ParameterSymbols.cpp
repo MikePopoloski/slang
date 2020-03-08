@@ -175,6 +175,47 @@ TypeParameterSymbol& TypeParameterSymbol::clone(Compilation& comp) const {
     return *result;
 }
 
+TypeParameterSymbol& TypeParameterSymbol::instantiate(Scope& newScope, const BindContext& context,
+                                                      const ExpressionSyntax* expr) const {
+    // Construct the result using the source's properties.
+    auto& comp = context.getCompilation();
+    auto result = comp.emplace<TypeParameterSymbol>(name, location, isLocalParam(), isPortParam());
+
+    newScope.addMember(*result);
+    if (auto syntax = getSyntax())
+        result->setSyntax(*syntax);
+
+    auto& tt = result->targetType;
+    if (expr) {
+        // If this is a NameSyntax, the parser didn't know we were assigning to
+        // a type parameter, so fix it up into a NamedTypeSyntax to get a type from it.
+        if (NameSyntax::isKind(expr->kind)) {
+            // const_cast is ugly but safe here, we're only going to refer to it
+            // by const reference everywhere down.
+            auto& nameSyntax = const_cast<NameSyntax&>(expr->as<NameSyntax>());
+            auto namedType = comp.emplace<NamedTypeSyntax>(nameSyntax);
+
+            tt.setTypeSyntax(*namedType);
+            tt.setType(comp.getType(*namedType, context.lookupLocation, context.scope));
+        }
+        else if (!DataTypeSyntax::isKind(expr->kind)) {
+            context.addDiag(diag::BadTypeParamExpr, expr->getFirstToken().location()) << name;
+        }
+        else {
+            tt.setTypeSyntax(expr->as<DataTypeSyntax>());
+            tt.setType(
+                comp.getType(expr->as<DataTypeSyntax>(), context.lookupLocation, context.scope));
+        }
+    }
+    else if (auto ts = targetType.getTypeSyntax()) {
+        tt.setTypeSyntax(*ts);
+        if (auto dims = targetType.getDimensionSyntax())
+            tt.setDimensionSyntax(*dims);
+    }
+
+    return *result;
+}
+
 const Type& TypeParameterSymbol::getTypeAlias() const {
     if (typeAlias)
         return *typeAlias;

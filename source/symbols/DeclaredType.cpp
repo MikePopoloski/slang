@@ -41,8 +41,7 @@ void DeclaredType::copyTypeFrom(const DeclaredType& source) {
             setDimensionSyntax(*dims);
     }
 
-    if (source.isTypeResolved())
-        setType(source.getType());
+    type = source.type;
 }
 
 const Scope& DeclaredType::getScope() const {
@@ -122,11 +121,6 @@ const Expression* DeclaredType::getInitializer() const {
 
     resolveAt(getBindContext());
     return initializer;
-}
-
-void DeclaredType::clearResolved() const {
-    type = nullptr;
-    initializer = nullptr;
 }
 
 void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {

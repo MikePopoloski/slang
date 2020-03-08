@@ -69,9 +69,7 @@ public:
     void setFromDeclarator(const DeclaratorSyntax& decl);
 
     bool isEvaluating() const { return evaluating; }
-    bool isTypeResolved() const { return type != nullptr; }
     bool hasInitializer() const { return initializer != nullptr; }
-    bitmask<DeclaredTypeFlags> getFlags() const { return flags; }
 
     void setForceSigned() {
         type = nullptr;
@@ -82,7 +80,6 @@ public:
 
     void copyTypeFrom(const DeclaredType& source);
 
-    void clearResolved() const;
     void resolveAt(const BindContext& context) const;
 
 private:

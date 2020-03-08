@@ -67,6 +67,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
 
     TypeParameterSymbol& clone(Compilation& compilation) const;
+    TypeParameterSymbol& instantiate(Scope& newScope, const BindContext& context,
+                                     const ExpressionSyntax* newInitializer) const;
 
     const Type& getTypeAlias() const;
 
