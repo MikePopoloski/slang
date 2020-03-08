@@ -46,7 +46,7 @@ TEST_CASE("Evaluate assignment expression") {
     REQUIRE(syntax->diagnostics().empty());
 
     // Initialize `i` to 1.
-    EvalContext context(scope);
+    EvalContext context(compilation);
     auto i = context.createLocal(&local, SVInt(32, 1, true));
 
     // Evaluate the expression tree.

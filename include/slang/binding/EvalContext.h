@@ -43,7 +43,7 @@ public:
         LookupLocation lookupLocation;
     };
 
-    explicit EvalContext(const Scope& scope, bitmask<EvalFlags> flags = {});
+    explicit EvalContext(const Compilation& compilation, bitmask<EvalFlags> flags = {});
 
     /// Creates storage for a local variable in the current frame.
     ConstantValue* createLocal(const ValueSymbol* symbol, ConstantValue value = nullptr);
@@ -96,7 +96,7 @@ private:
     SmallVectorSized<Frame, 4> stack;
     Diagnostics diags;
     bitmask<EvalFlags> flags;
-    const Scope* rootScope;
+    const Compilation& compilation;
     uint32_t steps = 0;
 };
 

@@ -427,7 +427,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& block = compilation.getRoot().topInstances[0]->memberAt<GenerateBlockSymbol>(1);
-    EvalContext context(block, EvalFlags::IsScript);
+    EvalContext context(compilation, EvalFlags::IsScript);
     CHECK(block.find<VariableSymbol>("a").getInitializer()->eval(context).integer() == 3);
     CHECK(block.find<VariableSymbol>("b").getInitializer()->eval(context).integer() == 4);
 }
@@ -615,7 +615,7 @@ endmodule
     auto& block = compilation.getRoot().lookupName<GenerateBlockSymbol>("n.n");
     auto& f1 = block.lookupName<VariableSymbol>("n.f");
 
-    EvalContext ctx(block);
+    EvalContext ctx(compilation);
     CHECK(f1.getInitializer()->eval(ctx).integer() == 42);
 
     auto& f2 = block.lookupName<VariableSymbol>("$root.n.f");

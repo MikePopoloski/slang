@@ -13,7 +13,7 @@
 namespace slang {
 
 ScriptSession::ScriptSession() :
-    scope(compilation.createScriptScope()), evalContext(scope, EvalFlags::IsScript) {
+    scope(compilation.createScriptScope()), evalContext(compilation, EvalFlags::IsScript) {
 }
 
 ConstantValue ScriptSession::eval(string_view text) {

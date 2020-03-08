@@ -17,8 +17,8 @@
 
 namespace slang {
 
-EvalContext::EvalContext(const Scope& scope, bitmask<EvalFlags> flags) :
-    flags(flags), rootScope(&scope) {
+EvalContext::EvalContext(const Compilation& compilation, bitmask<EvalFlags> flags) :
+    flags(flags), compilation(compilation) {
     stack.emplace(Frame{});
 }
 
@@ -45,7 +45,7 @@ ConstantValue* EvalContext::findLocal(const ValueSymbol* symbol) {
 
 bool EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
                             LookupLocation lookupLocation) {
-    const uint32_t maxDepth = rootScope->getCompilation().getOptions().maxConstexprDepth;
+    const uint32_t maxDepth = compilation.getOptions().maxConstexprDepth;
     if (stack.size() >= maxDepth) {
         addDiag(diag::ConstEvalExceededMaxCallDepth, subroutine.location) << maxDepth;
         return false;
@@ -64,7 +64,7 @@ void EvalContext::popFrame() {
 }
 
 bool EvalContext::step(SourceLocation loc) {
-    if (++steps < rootScope->getCompilation().getOptions().maxConstexprSteps)
+    if (++steps < compilation.getOptions().maxConstexprSteps)
         return true;
 
     addDiag(diag::ConstEvalExceededMaxSteps, loc);
@@ -141,7 +141,7 @@ static void reportFrame(const EvalContext& context, Diagnostic& diag,
 }
 
 void EvalContext::reportStack(Diagnostic& diag) const {
-    const size_t limit = rootScope->getCompilation().getOptions().maxConstexprBacktrace;
+    const size_t limit = compilation.getOptions().maxConstexprBacktrace;
     if (stack.size() <= limit || limit == 0) {
         FormatBuffer buffer;
         for (const Frame& frame : make_reverse_range(stack))

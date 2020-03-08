@@ -110,7 +110,7 @@ bool BindContext::requireValidBitWidth(bitwidth_t width, SourceRange range) cons
 }
 
 ConstantValue BindContext::tryEval(const Expression& expr) const {
-    EvalContext ctx(scope);
+    EvalContext ctx(getCompilation());
     return expr.eval(ctx);
 }
 

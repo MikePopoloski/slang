@@ -78,8 +78,9 @@ const ConstantValue& ParameterSymbol::getValue() const {
             auto scope = getParentScope();
             ASSERT(scope);
 
-            EvalContext ctx(*scope);
-            value = scope->getCompilation().allocConstant(init->eval(ctx));
+            auto& comp = scope->getCompilation();
+            EvalContext ctx(comp);
+            value = comp.allocConstant(init->eval(ctx));
         }
         else {
             value = &ConstantValue::Invalid;

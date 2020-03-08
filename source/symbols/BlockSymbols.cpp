@@ -505,20 +505,20 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     if (!bindContext.requireBooleanConvertible(stopExpr))
         return *result;
 
-    EvalContext stopVerifyContext(iterScope, EvalFlags::IsVerifying);
+    EvalContext stopVerifyContext(compilation, EvalFlags::IsVerifying);
     bool canBeConst = stopExpr.verifyConstant(stopVerifyContext);
     stopVerifyContext.reportDiags(iterContext);
     if (!canBeConst)
         return *result;
 
-    EvalContext iterVerifyContext(iterScope, EvalFlags::IsVerifying);
+    EvalContext iterVerifyContext(compilation, EvalFlags::IsVerifying);
     canBeConst = iterExpr.verifyConstant(iterVerifyContext);
     iterVerifyContext.reportDiags(iterContext);
     if (!canBeConst)
         return *result;
 
     // Create storage for the iteration variable.
-    EvalContext evalContext(iterScope);
+    EvalContext evalContext(compilation);
     auto loopVal = evalContext.createLocal(&local, initialVal);
 
     if (loopVal->integer().hasUnknown())

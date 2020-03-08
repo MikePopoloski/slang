@@ -183,13 +183,13 @@ void Expression::checkBindFlags(const Expression& expr, const BindContext& conte
     if ((context.flags & BindFlags::Constant) == 0)
         return;
 
-    EvalContext verifyContext(context.scope, EvalFlags::IsVerifying);
+    EvalContext verifyContext(context.getCompilation(), EvalFlags::IsVerifying);
     bool canBeConst = expr.verifyConstant(verifyContext);
     verifyContext.reportDiags(context);
     if (!canBeConst)
         return;
 
-    EvalContext evalContext(context.scope);
+    EvalContext evalContext(context.getCompilation());
     expr.eval(evalContext);
     evalContext.reportDiags(context);
 }
