@@ -136,14 +136,6 @@ void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
         setInitializerSyntax(*decl.initializer->expr, decl.initializer->equals.location());
 }
 
-//const ConstantValue& DeclaredType::getConstantValue() const {
-//    auto init = getInitializer();
-//    if (!init || !init->constant)
-//        return ConstantValue::Invalid;
-//
-//    return *init->constant;
-//}
-
 template<typename T>
 T DeclaredType::getBindContext() const {
     bitmask<BindFlags> bindFlags;
