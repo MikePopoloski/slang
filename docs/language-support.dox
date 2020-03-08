@@ -13,7 +13,7 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 
 @section elaboration Elaboration
 
-## Chapters 1-5
+## Chapters 1-4
 
 LRM | Feature | Supported
 --- | ------- | ---------
@@ -21,13 +21,31 @@ LRM | Feature | Supported
 {{m-dim}} 2 | Normative references | N/A
 {{m-dim}} 3 | Design and verification building blocks | N/A
 {{m-dim}} 4 | Scheduling semantics | N/A
-{{m-success}} 5 | Lexical conventions | v0.2
+
+## 5. Lexical conventions
+
+LRM | Feature | Supported
+--- | ------- | ---------
+{{m-success}} 5.2 | Lexical tokens | v0.2
+{{m-success}} 5.3 | White space | v0.2
+{{m-success}} 5.4 | Comments | v0.2
+{{m-success}} 5.5 | Operators | v0.2
+{{m-success}} 5.6 | Identifiers and keywords | v0.2
+{{m-success}} 5.7 | Numbers | v0.2
+{{m-danger}}  5.8 | Time literals | no
+{{m-success}} 5.9 | String literals | v0.2
+{{m-success}} 5.10 | Structure literals | v0.2
+{{m-success}} 5.11 | Array literals | v0.2
+{{m-success}} 5.12 | Attributes | v0.2
+{{m-success}} 5.13 | Built-in methods | v0.2
 
 ## 6. Data types
 
 LRM | Feature | Supported
 --- | ------- | ---------
 {{m-success}} 6.2 | Data types | v0.2
+{{m-success}} 6.3 | Value set | v0.2
+{{m-success}} 6.4 | Singular and aggregate types | v0.2
 {{m-success}} 6.5 | Nets and variables | v0.2
 {{m-warning}} 6.6 | Net types | partial
 {{m-warning}} 6.7 | Net declarations | partial
@@ -47,8 +65,8 @@ LRM | Feature | Supported
 {{m-success}} 6.20.3 | Type parameters | v0.2
 {{m-success}} 6.20.4 | Local parameters | v0.2
 {{m-danger}}  6.20.5 | Specify parameters | no
-{{m-danger}}  6.20.6 | Const constants | no
-{{m-danger}}  6.21 | Scope and lifetime | no
+{{m-success}} 6.20.6 | Const constants | v0.3
+{{m-success}} 6.21 | Scope and lifetime | v0.3
 {{m-success}} 6.22 | Type compatibility | v0.2
 {{m-danger}}  6.22.6 | Matching nettypes | no
 {{m-warning}} 6.23 | Type operator | partial
@@ -256,7 +274,7 @@ LRM | Feature | Supported
 {{m-success}} 22.6 | \`ifdef, \`else, \`elsif, \`endif, \`ifndef | v0.2
 {{m-success}} 22.7 | \`timescale | v0.2
 {{m-success}} 22.8 | \`default_nettype | v0.2
-{{m-warning}} 22.9 | \`unconnected_drive and \`nounconnected_drive | partial
+{{m-success}} 22.9 | \`unconnected_drive and \`nounconnected_drive | v0.3
 {{m-success}} 22.10 | \`celldefine and \`endcelldefine | v0.2
 {{m-success}} 22.11 | \`pragma | v0.3
 {{m-success}} 22.12 | \`line | v0.2
@@ -267,8 +285,13 @@ LRM | Feature | Supported
 
 LRM | Feature | Supported
 --- | ------- | ---------
-{{m-success}} 23.2 | Module definitions | v0.2
-{{m-success}} 23.3 | Module instances | v0.2
+{{m-success}} 23.2.1 | Module definitions | v0.2
+{{m-warning}} 23.2.2 | Port declarations | partial
+{{m-success}} 23.2.3 | Parameterized modules | v0.2
+{{m-success}} 23.2.4 | Module contents | v0.2
+{{m-success}} 23.3.1 | Top-level modules and $root | v0.2
+{{m-success}} 23.3.2 | Module instantiation syntax | v0.2
+{{m-warning}} 23.3.3 | Port connection rules | partial
 {{m-danger}}  23.4 | Nested modules | no
 {{m-danger}}  23.5 | Extern modules | no
 {{m-success}} 23.6 | Hierarchical names | v0.2
