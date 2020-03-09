@@ -175,6 +175,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor& visitor,
         case ExpressionKind::Invalid: return visitor.visitInvalid(*expr, std::forward<Args>(args)...);
         CASE(IntegerLiteral, IntegerLiteral);
         CASE(RealLiteral, RealLiteral);
+        CASE(TimeLiteral, TimeLiteral);
         CASE(UnbasedUnsizedIntegerLiteral, UnbasedUnsizedIntegerLiteral);
         CASE(NullLiteral, NullLiteral);
         CASE(StringLiteral, StringLiteral);

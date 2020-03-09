@@ -301,6 +301,9 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::RealLiteralExpression:
             result = &RealLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
             break;
+        case SyntaxKind::TimeLiteralExpression:
+            result = &TimeLiteral::fromSyntax(context, syntax.as<LiteralExpressionSyntax>());
+            break;
         case SyntaxKind::IntegerLiteralExpression:
             result = &IntegerLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
             break;
@@ -467,7 +470,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::SyncRejectOnPropertyExpression:
         case SyntaxKind::TaggedUnionExpression:
         case SyntaxKind::ThroughoutSequenceExpression:
-        case SyntaxKind::TimeLiteralExpression:
         case SyntaxKind::TimingControlExpression:
         case SyntaxKind::TimingControlExpressionConcatenation:
         case SyntaxKind::UnaryNotPropertyExpression:

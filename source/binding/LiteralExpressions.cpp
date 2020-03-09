@@ -68,6 +68,10 @@ ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
     return result;
 }
 
+void IntegerLiteral::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("value", getValue());
+}
+
 Expression& RealLiteral::fromSyntax(Compilation& compilation,
                                     const LiteralExpressionSyntax& syntax) {
     ASSERT(syntax.kind == SyntaxKind::RealLiteralExpression);
@@ -78,6 +82,33 @@ Expression& RealLiteral::fromSyntax(Compilation& compilation,
 
 ConstantValue RealLiteral::evalImpl(EvalContext&) const {
     return real_t(value);
+}
+
+void RealLiteral::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("value", getValue());
+}
+
+Expression& TimeLiteral::fromSyntax(const BindContext& context,
+                                    const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::TimeLiteralExpression);
+
+    // The provided value needs to be scaled to the current scope's time units
+    // and then rounded to the current scope's time precision.
+    double value = syntax.literal.realValue();
+    TimeUnit unit = syntax.literal.numericFlags().unit();
+    TimeScale scale = context.scope.getTimeScale();
+    value = scale.apply(value, unit);
+
+    auto& comp = context.getCompilation();
+    return *comp.emplace<TimeLiteral>(comp.getRealTimeType(), value, syntax.sourceRange());
+}
+
+ConstantValue TimeLiteral::evalImpl(EvalContext&) const {
+    return real_t(value);
+}
+
+void TimeLiteral::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("value", getValue());
 }
 
 Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
@@ -121,6 +152,10 @@ ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
         default:
             THROW_UNREACHABLE;
     }
+}
+
+void UnbasedUnsizedIntegerLiteral::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("value", SVInt(getValue()));
 }
 
 Expression& NullLiteral::fromSyntax(Compilation& compilation,

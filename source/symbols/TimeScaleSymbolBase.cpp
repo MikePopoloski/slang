@@ -58,6 +58,11 @@ void TimeScaleSymbolBase::setTimeScale(const Scope& scope, const TimeUnitsDeclar
     else {
         handle(syntax.time, precisionRange, timeScale.precision);
     }
+
+    if (!errored && unitsRange && precisionRange && timeScale.precision > timeScale.base) {
+        auto& diag = scope.addDiag(diag::InvalidTimeScalePrecision, *precisionRange);
+        diag << *unitsRange;
+    }
 }
 
 void TimeScaleSymbolBase::finalizeTimeScale(const Scope& parentScope,
@@ -82,6 +87,8 @@ void TimeScaleSymbolBase::finalizeTimeScale(const Scope& parentScope,
         timeScale.base = ts->base;
     if (!precisionRange)
         timeScale.precision = ts->precision;
+
+    // TODO: error if inferred timescale is invalid (because precision > units)
 }
 
 } // namespace slang

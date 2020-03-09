@@ -25,6 +25,7 @@ struct InvocationExpressionSyntax;
     x(Invalid) \
     x(IntegerLiteral) \
     x(RealLiteral) \
+    x(TimeLiteral) \
     x(UnbasedUnsizedIntegerLiteral) \
     x(NullLiteral) \
     x(StringLiteral) \

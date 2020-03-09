@@ -723,3 +723,31 @@ TEST_CASE("Float conversions") {
     CHECK(SVInt::fromFloat(19, INFINITY, true) == "19'sd0"_si);
     CHECK(SVInt::fromFloat(19, -INFINITY, true) == "19'sd0"_si);
 }
+
+using namespace Catch::literals;
+
+TEST_CASE("Time scaling") {
+    static constexpr double ep = std::numeric_limits<double>::epsilon() * 10;
+#define AP(v) Approx(v).epsilon(ep)
+
+    TimeScale scale("100ns", "1ps");
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(2.34057));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(0.00234));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(2.340567891e9));
+
+    scale.base = "10ps";
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(23405.7));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(23.4));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(2.340567891e13));
+
+    scale.base = "1ms";
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(0.000234057));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(2.34e-7));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(234056.7891));
+
+    scale.base = "1ns";
+    scale.precision = "1ns";
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(234));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(0));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(234056789100));
+}

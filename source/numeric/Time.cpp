@@ -95,6 +95,25 @@ std::ostream& operator<<(std::ostream& os, const TimeScaleValue& tv) {
     return os << tv.toString();
 }
 
+double TimeScale::apply(double value, TimeUnit unit) const {
+    // First scale the value by the difference between our base and the provided unit.
+    // TimeUnits are from 0-5, so we need 11 entries.
+    static constexpr double scales[] = { 1e15, 1e12, 1e9,  1e6,   1e3,  1e0,
+                                         1e-3, 1e-6, 1e-9, 1e-12, 1e-15 };
+    int diff = int(unit) - int(base.unit);
+    double scale = scales[diff + int(TimeUnit::Femtoseconds)] / int(base.magnitude);
+    value *= scale;
+
+    // Round the result to the number of decimals implied by the magnitude
+    // difference between our base and our precision.
+    diff = int(base.unit) - int(precision.unit);
+    scale = scales[diff + int(TimeUnit::Femtoseconds)] * int(base.magnitude);
+    scale /= int(precision.magnitude);
+    value = std::round(value * scale) / scale;
+
+    return value;
+}
+
 std::string TimeScale::toString() const {
     return fmt::format("{} / {}", base.toString(), precision.toString());
 }

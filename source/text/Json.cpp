@@ -84,6 +84,11 @@ void JsonWriter::writeValue(uint64_t value) {
     endValue();
 }
 
+void JsonWriter::writeValue(double value) {
+    buffer->format("{}", value);
+    endValue();
+}
+
 void JsonWriter::writeValue(bool value) {
     buffer->append(value ? "true" : "false");
     endValue();

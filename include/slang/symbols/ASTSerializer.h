@@ -35,6 +35,7 @@ public:
     void write(string_view name, string_view value);
     void write(string_view name, int64_t value);
     void write(string_view name, uint64_t value);
+    void write(string_view name, double value);
     void write(string_view name, bool value);
     void write(string_view name, const std::string& value);
     void write(string_view name, const Symbol& value);

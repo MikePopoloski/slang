@@ -60,6 +60,8 @@ struct TimeScale {
     TimeScale() = default;
     TimeScale(TimeScaleValue base, TimeScaleValue precision) : base(base), precision(precision) {}
 
+    double apply(double value, TimeUnit unit) const;
+
     std::string toString() const;
 
     bool operator==(const TimeScale& rhs) const;

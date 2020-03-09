@@ -28,7 +28,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
-    void serializeTo(ASTSerializer&) const {}
+    void serializeTo(ASTSerializer&) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& fromSyntax(Compilation& compilation,
@@ -52,11 +52,33 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
-    void serializeTo(ASTSerializer&) const {}
+    void serializeTo(ASTSerializer&) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RealLiteral; }
+
+private:
+    double value;
+};
+
+/// Represents a time literal.
+class TimeLiteral : public Expression {
+public:
+    TimeLiteral(const Type& type, double value, SourceRange sourceRange) :
+        Expression(ExpressionKind::TimeLiteral, type, sourceRange), value(value) {}
+
+    double getValue() const { return value; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    void serializeTo(ASTSerializer&) const;
+
+    static Expression& fromSyntax(const BindContext& context,
+                                  const LiteralExpressionSyntax& syntax);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TimeLiteral; }
 
 private:
     double value;
@@ -74,7 +96,7 @@ public:
     bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
-    void serializeTo(ASTSerializer&) const {}
+    void serializeTo(ASTSerializer&) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 

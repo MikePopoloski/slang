@@ -32,6 +32,7 @@ public:
     void writeValue(string_view value);
     void writeValue(int64_t value);
     void writeValue(uint64_t value);
+    void writeValue(double value);
     void writeValue(bool value);
 
 private:

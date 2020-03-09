@@ -170,13 +170,17 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
     TokenKind kind = peek().kind;
     switch (kind) {
         case TokenKind::StringLiteral:
-        case TokenKind::TimeLiteral:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::NullKeyword:
         case TokenKind::OneStep:
         case TokenKind::Dollar: {
             auto literal = consume();
             expr = &factory.literalExpression(getLiteralExpression(literal.kind), literal);
+            break;
+        }
+        case TokenKind::TimeLiteral: {
+            expr = &factory.literalExpression(SyntaxKind::TimeLiteralExpression,
+                                              numberParser.parseReal(*this));
             break;
         }
         case TokenKind::RealLiteral: {

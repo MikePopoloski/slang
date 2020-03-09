@@ -692,7 +692,7 @@ Trivia Preprocessor::handleTimeScaleDirective(Token directive) {
         // Precision must be equal to or smaller than the unit (i.e. more precise).
         if (precision > unit) {
             auto& diag = addDiag(diag::InvalidTimeScalePrecision, precisionToken.range());
-            diag << unitToken.range() << precisionToken.range();
+            diag << unitToken.range();
         }
         else {
             activeTimeScale = { unit, precision };

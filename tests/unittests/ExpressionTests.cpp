@@ -209,6 +209,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("\"asdfg\"") == "bit[39:0]");
     CHECK(typeof("reg1 + reg2") == "reg");
     CHECK(typeof("e1") == "enum{EVAL1=32'sd0,EVAL2=32'sd1}e$1");
+    CHECK(typeof("10.234ns") == "realtime");
 
     // Unary operators
     CHECK(typeof("+i") == "int");
@@ -939,4 +940,20 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Time literal + units / precision") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    timeunit 1ns / 1ps;
+    localparam real r = 234.0567891ns;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& r = compilation.getRoot().lookupName<ParameterSymbol>("m.r");
+    CHECK(r.getValue().real() == 234.057);
 }

@@ -45,6 +45,11 @@ void ASTSerializer::write(string_view name, uint64_t value) {
     writer.writeValue(value);
 }
 
+void ASTSerializer::write(string_view name, double value) {
+    writer.writeProperty(name);
+    writer.writeValue(value);
+}
+
 void ASTSerializer::write(string_view name, bool value) {
     writer.writeProperty(name);
     writer.writeValue(value);
