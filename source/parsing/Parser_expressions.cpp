@@ -234,7 +234,8 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             break;
         }
         case TokenKind::SignedKeyword:
-        case TokenKind::UnsignedKeyword: {
+        case TokenKind::UnsignedKeyword:
+        case TokenKind::ConstKeyword: {
             auto signing = consume();
             auto apostrophe = expect(TokenKind::Apostrophe);
             auto openParen = expect(TokenKind::OpenParenthesis);

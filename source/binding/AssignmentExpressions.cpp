@@ -477,6 +477,13 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     if (operand.bad())
         return badExpr(compilation, result);
 
+    // SignedCastExpression can also represent a const cast, which does nothing
+    // and passes the type through unchanged.
+    if (syntax.signing.kind == TokenKind::ConstKeyword) {
+        result->type = operand.type;
+        return *result;
+    }
+
     if (!operand.type->isIntegral()) {
         auto& diag = context.addDiag(diag::BadIntegerCast, syntax.apostrophe.location());
         diag << *operand.type;
@@ -495,7 +502,11 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
     ConstantValue value = operand().eval(context);
 
+    const Type& from = *operand().type;
     const Type& to = *type;
+    if (from.isMatching(to))
+        return value;
+
     if (to.isIntegral())
         return value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
 

@@ -288,6 +288,9 @@ TEST_CASE("Expression types") {
     CHECK(typeof("unsigned'(b1)") == "bit[8:0]");
     CHECK(typeof("signed'(sl)") == "logic signed[7:0]");
     CHECK(typeof("unsigned'(sl)") == "logic[7:0]");
+    CHECK(typeof("const'(sp)") == "struct packed{logic a;bit b;}s$1");
+    CHECK(typeof("const'(FOO)") == "int");
+    CHECK(typeof("const'(r)") == "real");
 
     // Strings
     declare("string s1 = \"asdf\";");
