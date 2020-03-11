@@ -32,7 +32,7 @@ LRM | Feature | Supported
 {{m-success}} 5.5 | Operators | v0.2
 {{m-success}} 5.6 | Identifiers and keywords | v0.2
 {{m-success}} 5.7 | Numbers | v0.2
-{{m-danger}}  5.8 | Time literals | no
+{{m-success}} 5.8 | Time literals | v0.3
 {{m-success}} 5.9 | String literals | v0.2
 {{m-success}} 5.10 | Structure literals | v0.2
 {{m-success}} 5.11 | Array literals | v0.2
