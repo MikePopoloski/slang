@@ -378,8 +378,8 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 
 group default = { real-underflow real-overflow literal-overflow ignored-macro-paste case-gen-dup
                   case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
-                  dup-import redef-macro nonstandard-generate pointless-void-cast unused-result
+                  redef-macro nonstandard-generate pointless-void-cast unused-result
                   not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg
                   pragma-diag-level explicit-static static-skipped }
 
-group extra = { empty-member empty-stmt }
+group extra = { empty-member empty-stmt dup-import }
