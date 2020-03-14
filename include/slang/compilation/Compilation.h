@@ -73,6 +73,7 @@ struct CompilationOptions {
 class Compilation : public BumpAllocator {
 public:
     explicit Compilation(const Bag& options = {});
+    Compilation(Compilation&& other);
     ~Compilation();
 
     /// Gets the set of options used to construct the compilation.

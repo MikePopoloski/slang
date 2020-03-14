@@ -34,6 +34,8 @@ public:
         // reserve a slot for the invalid value
         storage.emplace_back();
     }
+    SafeIndexedVector(const SafeIndexedVector& other) = default;
+    SafeIndexedVector(SafeIndexedVector&& other) = default;
 
     Index add(const T& item) {
         if (!freelist.empty()) {

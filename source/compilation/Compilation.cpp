@@ -262,6 +262,7 @@ Compilation::Compilation(const Bag& options) :
 }
 
 Compilation::~Compilation() = default;
+Compilation::Compilation(Compilation&&) = default;
 
 void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     if (finalized)
