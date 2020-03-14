@@ -18,7 +18,7 @@ namespace {
 using namespace slang;
 
 // This visitor is used to make sure we've found all module instantiations in the design.
-struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
+struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor, false, false> {
     template<typename T>
     void handle(const T&) {}
 
@@ -33,7 +33,7 @@ struct ElaborationVisitor : public ASTVisitor<ElaborationVisitor> {
 
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
-struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
+struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     DiagnosticVisitor(Compilation& compilation, const size_t& numErrors, uint32_t errorLimit) :
         compilation(compilation), numErrors(numErrors), errorLimit(errorLimit) {}
 
@@ -62,6 +62,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor> {
             for (auto attr : compilation.getAttributes(symbol))
                 attr->getValue();
         }
+
+        if constexpr (is_detected_v<getBody_t, T>)
+            symbol.getBody().visit(*this);
 
         visitDefault(symbol);
         return true;

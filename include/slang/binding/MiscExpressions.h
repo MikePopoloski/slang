@@ -65,6 +65,12 @@ public:
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        value().visit(visitor);
+        selector().visit(visitor);
+    }
+
 private:
     Expression* value_;
     Expression* selector_;
@@ -103,6 +109,13 @@ public:
                                     ConstantRange range, const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        value().visit(visitor);
+        left().visit(visitor);
+        right().visit(visitor);
+    }
 
 private:
     static ConstantRange getIndexedRange(RangeSelectionKind kind, int32_t l, int32_t r,
@@ -196,6 +209,12 @@ public:
                                         const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto arg : arguments())
+            arg->visit(visitor);
+    }
 
 private:
     static Expression& createSystemCall(Compilation& compilation,

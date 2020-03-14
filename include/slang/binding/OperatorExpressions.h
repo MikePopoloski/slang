@@ -42,6 +42,11 @@ public:
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnaryOp; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        operand().visit(visitor);
+    }
+
 private:
     Expression* operand_;
 };
@@ -74,6 +79,12 @@ public:
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        left().visit(visitor);
+        right().visit(visitor);
+    }
 
 private:
     Expression* left_;
@@ -111,6 +122,13 @@ public:
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ConditionalOp; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        pred().visit(visitor);
+        left().visit(visitor);
+        right().visit(visitor);
+    }
+
 private:
     Expression* pred_;
     Expression* left_;
@@ -141,6 +159,13 @@ public:
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Inside; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        left().visit(visitor);
+        for (auto range : rangeList())
+            range->visit(visitor);
+    }
+
 private:
     const Expression* left_;
     span<const Expression* const> rangeList_;
@@ -169,6 +194,12 @@ public:
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Concatenation; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto op : operands())
+            op->visit(visitor);
+    }
 
 private:
     span<const Expression* const> operands_;
@@ -199,6 +230,12 @@ public:
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Replication; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        count().visit(visitor);
+        concat().visit(visitor);
+    }
 
 private:
     const Expression* count_;
@@ -235,6 +272,12 @@ public:
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::OpenRange; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        left().visit(visitor);
+        right().visit(visitor);
+    }
 
 private:
     Expression* left_;

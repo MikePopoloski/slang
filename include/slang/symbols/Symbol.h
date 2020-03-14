@@ -171,7 +171,7 @@ public:
     void setSyntax(const SyntaxNode& node) { originatingSyntax = &node; }
 
     template<typename TVisitor, typename... Args>
-    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
+    decltype(auto) visit(TVisitor&& visitor, Args&&... args) const;
 
 protected:
     Symbol(SymbolKind kind, string_view name, SourceLocation location) :

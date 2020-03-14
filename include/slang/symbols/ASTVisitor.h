@@ -28,45 +28,81 @@ namespace slang {
 /// Use this type as a base class for AST visitors. It will default to
 /// traversing all children of each node. Add implementations for any specific
 /// node types you want to handle.
-template<typename TDerived>
-class ASTVisitor {
+template<typename TDerived, bool VisitStatements, bool VisitExpressions>
+struct ASTVisitor {
     template<typename T, typename Arg>
     using handle_t = decltype(std::declval<T>().handle(std::declval<Arg>()));
+
+    template<typename T, typename Arg>
+    using op_t = decltype(std::declval<T>()(std::declval<Arg>()));
 
     template<typename T>
     using getBody_t = decltype(std::declval<T>().getBody());
 
-public:
+    template<typename T, typename Arg>
+    using visitExprs_t = decltype(std::declval<T>().visitExprs(std::declval<Arg>()));
+
 #define DERIVED *static_cast<TDerived*>(this)
+
+public:
     template<typename T>
     void visit(const T& t) {
         if constexpr (is_detected_v<handle_t, TDerived, T>)
             static_cast<TDerived*>(this)->handle(t);
-        else
+        else if constexpr (is_detected_v<op_t, TDerived, T>)
+            (DERIVED)(t);
+
+        // By default definitions are not visited because it
+        // can be confusing to see them show up when they're
+        // technically not part of the hierarchy.
+        else if (!std::is_same_v<T, DefinitionSymbol>)
             visitDefault(t);
     }
 
-    void visitDefault(const Symbol&) {}
-    void visitDefault(const Statement&) {}
-    void visitDefault(const Expression&) {}
-
     template<typename T>
-    typename std::enable_if_t<std::is_base_of_v<Scope, T>> visitDefault(const T& symbol) {
-        for (const auto& member : symbol.members())
-            member.visit(DERIVED);
+    void visitDefault(const T& t) {
+        if constexpr (VisitExpressions && is_detected_v<visitExprs_t, T, TDerived>) {
+            t.visitExprs(DERIVED);
+        }
 
-        if constexpr (is_detected_v<getBody_t, T>)
-            symbol.getBody().visit(DERIVED);
+        if constexpr (VisitExpressions && std::is_base_of_v<Symbol, T>) {
+            if (auto declaredType = t.getDeclaredType()) {
+                if (auto init = declaredType->getInitializer())
+                    init->visit(DERIVED);
+            }
+        }
+
+        if constexpr (std::is_base_of_v<Scope, T>) {
+            for (auto& member : t.members())
+                member.visit(DERIVED);
+        }
+
+        if constexpr (is_detected_v<getBody_t, T>) {
+            t.getBody().visit(DERIVED);
+        }
     }
 
-    void visitDefault(const ProceduralBlockSymbol& symbol) { symbol.getBody().visit(DERIVED); }
+    void visitDefault(const Symbol&) {}
+    void visitDefault(const Expression&) {}
+    void visitDefault(const Statement&) {}
+
+    void visitInvalid(const Expression&) {}
     void visitInvalid(const Statement&) {}
 
 #undef DERIVED
 };
 
+template<typename... Functions>
+auto makeVisitor(Functions... funcs) {
+    struct Result : public Functions..., public ASTVisitor<Result, true, true> {
+        Result(Functions... funcs) : Functions(std::move(funcs))... {}
+        using Functions::operator()...;
+    };
+    return Result(std::move(funcs)...);
+}
+
 template<typename TVisitor, typename... Args>
-decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
+decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
     // clang-format off
 #define SYMBOL(k) case SymbolKind::k: return visitor.visit(*static_cast<const k##Symbol*>(this), std::forward<Args>(args)...)
 #define TYPE(k) case SymbolKind::k: return visitor.visit(*static_cast<const k*>(this), std::forward<Args>(args)...)
@@ -134,7 +170,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
 }
 
 template<typename TVisitor, typename... Args>
-decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
+decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case StatementKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
@@ -164,7 +200,7 @@ decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
 }
 
 template<typename TExpression, typename TVisitor, typename... Args>
-decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor& visitor,
+decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor,
                                            Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case ExpressionKind::k: return visitor.visit(\
@@ -205,12 +241,12 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor& visitor,
 }
 
 template<typename TVisitor, typename... Args>
-decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) const {
+decltype(auto) Expression::visit(TVisitor&& visitor, Args&&... args) const {
     return visitExpression(this, visitor, std::forward<Args>(args)...);
 }
 
 template<typename TVisitor, typename... Args>
-decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) {
+decltype(auto) Expression::visit(TVisitor&& visitor, Args&&... args) {
     return visitExpression(this, visitor, std::forward<Args>(args)...);
 }
 

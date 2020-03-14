@@ -214,10 +214,10 @@ public:
     }
 
     template<typename TVisitor, typename... Args>
-    decltype(auto) visit(TVisitor& visitor, Args&&... args);
+    decltype(auto) visit(TVisitor&& visitor, Args&&... args);
 
     template<typename TVisitor, typename... Args>
-    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
+    decltype(auto) visit(TVisitor&& visitor, Args&&... args) const;
 
 protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
@@ -272,7 +272,7 @@ protected:
     struct PropagationVisitor;
 
     template<typename TExpression, typename TVisitor, typename... Args>
-    decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... args) const;
+    decltype(auto) visitExpression(TExpression* expr, TVisitor&& visitor, Args&&... args) const;
 };
 
 /// Represents an invalid expression, which is usually generated and inserted

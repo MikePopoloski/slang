@@ -161,6 +161,11 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ContinuousAssign; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        getAssignment().visit(visitor);
+    }
+
 private:
     mutable const Expression* assign = nullptr;
 };

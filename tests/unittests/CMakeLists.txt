@@ -13,12 +13,12 @@ add_executable(unittests
     NumericTests.cpp
     PortTests.cpp
     PreprocessorTests.cpp
-    RewriterTests.cpp
     StatementParsingTests.cpp
     StatementTests.cpp
     SystemFuncTests.cpp
     TypeTests.cpp
     UtilTests.cpp
+    VisitorTests.cpp
 )
 
 if(SLANG_INCLUDE_LLVM)

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/binding/ConstantValue.h"
+#include "slang/binding/Expression.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
 
@@ -60,6 +61,12 @@ public:
                                 const SeparatedSyntaxList<PortConnectionSyntax>& portConnections);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (auto c = getConnection())
+            c->visit(visitor);
+    }
 
 private:
     mutable optional<const Expression*> conn;

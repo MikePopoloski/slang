@@ -46,6 +46,12 @@ public:
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Assignment; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        left().visit(visitor);
+        right().visit(visitor);
+    }
+
 private:
     Expression* left_;
     Expression* right_;
@@ -80,6 +86,11 @@ public:
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        operand().visit(visitor);
+    }
 
 private:
     Expression* operand_;

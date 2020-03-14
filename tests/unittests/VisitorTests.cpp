@@ -2,6 +2,7 @@
 #include <fmt/format.h>
 
 #include "slang/compilation/SemanticModel.h"
+#include "slang/symbols/ASTVisitor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxVisitor.h"
 
@@ -74,4 +75,25 @@ module M;
     localparam int test_t__count = 3;
 endmodule
 )");
+}
+
+TEST_CASE("Test AST visiting") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        if (1) begin
+            int i = {1 + 2, 5 + 6};
+        end
+    end
+    int j = 3 + 4;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Visit the whole tree and count the binary expressions.
+    int count = 0;
+    compilation.getRoot().visit(makeVisitor([&](const BinaryExpression&) { count++; }));
+    CHECK(count == 3);
 }

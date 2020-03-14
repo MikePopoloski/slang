@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/binding/EvalContext.h"
+#include "slang/binding/Expression.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/util/ScopeGuard.h"
 
@@ -144,7 +145,7 @@ public:
     }
 
     template<typename TVisitor, typename... Args>
-    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
+    decltype(auto) visit(TVisitor&& visitor, Args&&... args) const;
 
 protected:
     Statement(StatementKind kind, SourceRange sourceRange) : kind(kind), sourceRange(sourceRange) {}
@@ -224,6 +225,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::List; }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        for (auto stmt : list)
+            stmt->visit(visitor);
+    }
 };
 
 struct BlockStatementSyntax;
@@ -250,6 +257,11 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Block; }
 
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        getStatements().visit(visitor);
+    }
+
 private:
     const StatementBlockSymbol* block = nullptr;
     const StatementList* list = nullptr;
@@ -273,6 +285,12 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Return; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (expr)
+            expr->visit(visitor);
+    }
 };
 
 struct JumpStatementSyntax;
@@ -346,6 +364,18 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Conditional; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        cond.visit(visitor);
+    }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        ifTrue.visit(visitor);
+        if (ifFalse)
+            ifFalse->visit(visitor);
+    }
 };
 
 struct CaseStatementSyntax;
@@ -378,6 +408,23 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Case; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+        for (auto& item : items) {
+            for (auto itemExpr : item.expressions)
+                itemExpr->visit(visitor);
+        }
+    }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        for (auto& item : items)
+            item.stmt->visit(visitor);
+        if (defaultCase)
+            defaultCase->visit(visitor);
+    }
 };
 
 class ForLoopStatement : public Statement {
@@ -402,6 +449,21 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForLoop; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto init : initializers)
+            init->visit(visitor);
+        if (stopExpr)
+            stopExpr->visit(visitor);
+        for (auto step : steps)
+            step->visit(visitor);
+    }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        body.visit(visitor);
+    }
 };
 
 struct LoopStatementSyntax;
@@ -423,6 +485,16 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::RepeatLoop; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        count.visit(visitor);
+    }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        body.visit(visitor);
+    }
 };
 
 struct ForeachLoopStatementSyntax;
@@ -450,6 +522,11 @@ public:
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
 
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        body.visit(visitor);
+    }
+
 private:
     EvalResult evalRecursive(EvalContext& context, span<const ConstantRange> curRanges,
                              span<const ValueSymbol* const> curVars) const;
@@ -472,6 +549,16 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::WhileLoop; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        cond.visit(visitor);
+    }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        body.visit(visitor);
+    }
 };
 
 struct DoWhileStatementSyntax;
@@ -493,6 +580,16 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::DoWhileLoop; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        cond.visit(visitor);
+    }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        body.visit(visitor);
+    }
 };
 
 struct ForeverStatementSyntax;
@@ -513,6 +610,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeverLoop; }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        body.visit(visitor);
+    }
 };
 
 struct ExpressionStatementSyntax;
@@ -538,6 +640,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+    }
 };
 
 struct TimingControlStatementSyntax;
@@ -560,6 +667,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Timed; }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        stmt.visit(visitor);
+    }
 };
 
 struct ImmediateAssertionStatementSyntax;
@@ -590,6 +702,19 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Assertion; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        cond.visit(visitor);
+    }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        if (ifTrue)
+            ifTrue->visit(visitor);
+        if (ifFalse)
+            ifFalse->visit(visitor);
+    }
 };
 
 } // namespace slang

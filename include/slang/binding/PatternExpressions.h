@@ -20,6 +20,12 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto elem : elements())
+            elem->visit(visitor);
+    }
+
 protected:
     AssignmentPatternExpressionBase(ExpressionKind kind, const Type& type,
                                     span<const Expression* const> elements,
