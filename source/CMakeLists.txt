@@ -116,6 +116,10 @@ add_library(slang
     util/String.cpp
 )
 
+if(SLANG_INCLUDE_LLVM)
+    target_sources(slang PRIVATE codegen/CodeGenerator.cpp)
+endif()
+
 add_dependencies(slang gen_version)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -184,6 +188,18 @@ target_link_libraries(slang PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 target_include_directories(slang PUBLIC ../include/)
 target_include_directories(slang PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(slang SYSTEM PUBLIC ../external/)
+
+if(SLANG_INCLUDE_LLVM)
+    find_package(LLVM REQUIRED CONFIG)
+
+    message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+    message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+    target_include_directories(slang SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
+    target_compile_options(slang PRIVATE ${LLVM_DEFINITIONS})
+
+    llvm_map_components_to_libnames(llvm_libs support core)
+    target_link_libraries(slang PRIVATE ${llvm_libs})
+endif()
 
 install(TARGETS slang
         LIBRARY DESTINATION lib

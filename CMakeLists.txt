@@ -9,6 +9,7 @@ option(CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(FUZZ_TARGET "Enables changes to make binaries easier to fuzz test" OFF)
 option(SLANG_INCLUDE_TESTS "Include test targets in the build" ON)
 option(SLANG_INCLUDE_DOCS "Include documentation targets in the build" OFF)
+option(SLANG_INCLUDE_LLVM "Include LLVM in the build for code generation" OFF)
 option(BUILD_SHARED_LIBS "Generate a shared library instead of static" OFF)
 set(DOXYGENPY_PATH "" CACHE STRING "When building docs, the path to doxygen.py tool")
 

@@ -21,6 +21,10 @@ add_executable(unittests
     UtilTests.cpp
 )
 
+if(SLANG_INCLUDE_LLVM)
+    target_sources(unittests PRIVATE CodeGenTests.cpp)
+endif()
+
 target_link_libraries(unittests PRIVATE slang CONAN_PKG::Catch2)
 target_link_libraries(unittests PRIVATE CONAN_PKG::fmt)
 
