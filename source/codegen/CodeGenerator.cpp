@@ -20,29 +20,70 @@
 #    pragma warning(pop)
 #endif
 
-using namespace llvm;
+#include "slang/symbols/ASTVisitor.h"
+#include "slang/symbols/Symbol.h"
 
 namespace slang {
 
-std::string CodeGenerator::run(const Symbol&) {
-    // Just testing that LLVM is linked in and running properly.
-    LLVMContext ctx;
-    Module module("primary", ctx);
+CodeGenerator::CodeGenerator(Compilation& compilation) : compilation(compilation) {
+    ctx = std::make_unique<llvm::LLVMContext>();
+    module = std::make_unique<llvm::Module>("primary", *ctx);
+}
 
-    auto funcType = FunctionType::get(Type::getInt32Ty(ctx), /* isVarArg */ false);
-    auto func = Function::Create(funcType, Function::ExternalLinkage, "main", module);
-    auto bb = BasicBlock::Create(ctx, "", func);
-    
-    IRBuilder<> ir(bb);
-    ir.CreateRet(ConstantInt::get(Type::getInt32Ty(ctx), 0));
+CodeGenerator::~CodeGenerator() = default;
 
-    bool bad = llvm::verifyModule(module, &errs());
+std::string CodeGenerator::run(const Symbol& symbol) {
+    // Create a "main" function.
+    auto intType = llvm::Type::getInt32Ty(*ctx);
+    auto funcType = llvm::FunctionType::get(intType, /* isVarArg */ false);
+    auto mainFunc =
+        llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "main", *module);
+
+    auto bb = llvm::BasicBlock::Create(*ctx, "", mainFunc);
+    llvm::IRBuilder<> ir(bb);
+
+    // Declare C puts function for printing.
+    funcType = llvm::FunctionType::get(intType, { llvm::Type::getInt8PtrTy(*ctx) },
+                                       /* isVarArg */ false);
+    auto puts = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "puts", *module);
+    auto callPuts = [&](string_view text) {
+        ir.CreateCall(puts,
+                      { ir.CreateGlobalStringPtr(llvm::StringRef(text.data(), text.length())) });
+    };
+
+    // Visit all procedural blocks.
+    symbol.visit(makeVisitor([&](const ProceduralBlockSymbol& block) {
+        // Only look at initial blocks.
+        if (block.procedureKind == ProceduralBlockKind::Initial) {
+            // Find all subroutine calls.
+            block.getBody().visit(makeVisitor([&](const CallExpression& call) {
+                // Only look at $display calls.
+                if (call.getSubroutineName() == "$display") {
+                    // Emit a call to "puts" for every argument that has a known constant value.
+                    for (auto arg : call.arguments()) {
+                        EvalContext evalContext(compilation);
+                        ConstantValue val = arg->eval(evalContext);
+                        if (val) {
+                            if (arg->isImplicitString())
+                                callPuts(val.convertToStr().toString());
+                            else
+                                callPuts(val.toString());
+                        }
+                    }
+                }
+            }));
+        }
+    }));
+
+    ir.CreateRet(llvm::ConstantInt::get(intType, 0));
+
+    bool bad = llvm::verifyModule(*module, &llvm::errs());
     if (bad)
         return "";
 
     std::string result;
-    raw_string_ostream os(result);
-    module.print(os, nullptr);
+    llvm::raw_string_ostream os(result);
+    module->print(os, nullptr);
 
     return os.str();
 }

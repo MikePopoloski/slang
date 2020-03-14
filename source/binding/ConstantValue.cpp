@@ -25,9 +25,9 @@ std::string ConstantValue::toString() const {
             else if constexpr (std::is_same_v<T, SVInt>)
                 return arg.toString();
             else if constexpr (std::is_same_v<T, real_t>)
-                return std::to_string(arg);
+                return fmt::format("{}", double(arg));
             else if constexpr (std::is_same_v<T, shortreal_t>)
-                return std::to_string(arg);
+                return fmt::format("{}", float(arg));
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 return "null"s;
             else if constexpr (std::is_same_v<T, Elements>) {
