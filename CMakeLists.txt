@@ -48,6 +48,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(/permissive-)
     add_compile_options(/Zc:inline)
     add_compile_options(/Gy)        # Function-level linking
+    add_compile_options(/D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING)
 
     # Ignore warnings in external headers
     add_compile_options(/experimental:external /external:anglebrackets /external:W0)

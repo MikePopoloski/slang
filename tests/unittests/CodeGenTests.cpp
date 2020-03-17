@@ -7,6 +7,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/DefinitionSymbols.h"
 #include "slang/syntax/SyntaxTree.h"
 
 using namespace slang;
@@ -29,29 +30,26 @@ TEST_CASE("Basic test") {
     Compilation compilation = compile(R"(
 module m;
     localparam int i = 5;
-    localparam real r = 3.14;
+    int r = 3;
     initial $display(i, r, "SDFSDF");
 endmodule
 )");
 
     CodeGenerator codegen(compilation);
-    auto result = codegen.run(compilation.getRoot());
+    codegen.genInstance(*compilation.getRoot().topInstances[0]);
+    auto result = codegen.finish();
 
     CHECK("\n" + result == R"(
 ; ModuleID = 'primary'
 source_filename = "primary"
 
-@0 = private unnamed_addr constant [2 x i8] c"5\00", align 1
-@1 = private unnamed_addr constant [5 x i8] c"3.14\00", align 1
-@2 = private unnamed_addr constant [7 x i8] c"SDFSDF\00", align 1
+@0 = private global i32 3
 
 define i32 @main() {
-  %1 = call i32 @puts(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @0, i32 0, i32 0))
-  %2 = call i32 @puts(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @1, i32 0, i32 0))
-  %3 = call i32 @puts(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @2, i32 0, i32 0))
+  br label %1
+
+1:                                                ; preds = %0
   ret i32 0
 }
-
-declare i32 @puts(i8*)
 )");
 }

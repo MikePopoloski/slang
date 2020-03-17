@@ -117,7 +117,12 @@ add_library(slang
 )
 
 if(SLANG_INCLUDE_LLVM)
-    target_sources(slang PRIVATE codegen/CodeGenerator.cpp)
+    target_sources(slang PRIVATE
+        codegen/CodeGenerator.cpp
+        codegen/ExpressionEmitter.cpp
+        codegen/StatementEmitter.cpp
+        codegen/SystemCallEmitter.cpp
+    )
 endif()
 
 add_dependencies(slang gen_version)
