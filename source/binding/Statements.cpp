@@ -1048,6 +1048,7 @@ bool CaseStatement::verifyConstantImpl(EvalContext& context) const {
 void CaseStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("condition", toString(condition));
     serializer.write("check", toString(check));
+    serializer.write("expr", expr);
     serializer.startArray("items");
     for (auto const& item : items) {
         serializer.startObject();
