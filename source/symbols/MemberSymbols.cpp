@@ -269,6 +269,13 @@ void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("returnType", getReturnType());
     serializer.write("defaultLifetime", toString(defaultLifetime));
     serializer.write("subroutineKind", toString(subroutineKind));
+    serializer.write("body", getBody());
+
+    serializer.startArray("arguments");
+    for (auto const arg: arguments) {
+        arg->serializeTo(serializer);
+    }
+    serializer.endArray();
 }
 
 ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
