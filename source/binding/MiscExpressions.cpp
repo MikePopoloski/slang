@@ -1079,13 +1079,13 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
     else {
         const SubroutineSymbol& symbol = *std::get<0>(subroutine);
         serializer.writeLink("subroutine", symbol);
+    }
 
-        if (!arguments().empty()) {
-            serializer.startArray("arguments");
-            for (auto arg : arguments())
-                serializer.serialize(*arg);
-            serializer.endArray();
-        }
+    if (!arguments().empty()) {
+        serializer.startArray("arguments");
+        for (auto arg : arguments())
+            serializer.serialize(*arg);
+        serializer.endArray();
     }
 }
 
