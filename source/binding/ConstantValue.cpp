@@ -111,7 +111,7 @@ bool ConstantValue::equivalentTo(const ConstantValue& rhs) const {
         [&](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Elements>) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
-                return false;
+                return rhs.bad();
             else if constexpr (std::is_same_v<T, SVInt>)
                 return rhs.isInteger() && exactlyEqual(arg, rhs.integer());
             else if constexpr (std::is_same_v<T, real_t>)
