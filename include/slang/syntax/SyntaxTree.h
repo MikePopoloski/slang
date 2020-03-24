@@ -82,6 +82,11 @@ public:
     /// bits of preprocessor state).
     const Parser::MetadataMap& getMetadataMap() const { return metadataMap; }
 
+    /// Gets a set of names of all instantiations of global modules/interfaces/programs.
+    /// This can be used to determine which modules should be considered as top-level
+    /// roots of the design.
+    const Parser::NameSet& getGlobalInstantiations() const { return globalInstantiations; }
+
     /// This is a shared default source manager for cases where the user doesn't
     /// care about managing the lifetime of loaded source. Note that all of
     /// the source loaded by this thing will live in memory for the lifetime of
@@ -90,8 +95,8 @@ public:
 
 private:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap, Bag options,
-               Token eof);
+               Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap,
+               Parser::NameSet&& globalInstantiations, Bag options, Token eof);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
                                               span<const SourceBuffer> source, const Bag& options,
@@ -100,6 +105,7 @@ private:
     SyntaxNode* rootNode;
     SourceManager& sourceMan;
     Parser::MetadataMap metadataMap;
+    Parser::NameSet globalInstantiations;
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
     Bag options_;

@@ -153,9 +153,9 @@ a1: assert property (@(posedge clk) a |-> p3);
 
     Parser parser(preprocessor);
 
-    auto propertyDecl = parser.parseMember();
-    auto coverStatement = parser.parseMember();
-    auto assertStatement = parser.parseMember();
+    auto propertyDecl = parser.parseSingleMember(SyntaxKind::ModuleDeclaration);
+    auto coverStatement = parser.parseSingleMember(SyntaxKind::ModuleDeclaration);
+    auto assertStatement = parser.parseSingleMember(SyntaxKind::ModuleDeclaration);
 
     REQUIRE(propertyDecl);
     REQUIRE(coverStatement);
@@ -204,7 +204,7 @@ endfunction : foo
 )";
 
     parseCompilationUnit(text);
-    
+
     REQUIRE(diagnostics.size() == 3);
     CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
     CHECK(diagnostics[1].code == diag::EndNameNotEmpty);
@@ -278,7 +278,7 @@ endmodule
 )";
 
     parseCompilationUnit(text);
-    
+
     REQUIRE(diagnostics.size() == 3);
     CHECK(diagnostics[0].code == diag::DuplicateDeclModifier);
     CHECK(diagnostics[1].code == diag::DeclModifierConflict);

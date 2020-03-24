@@ -12,8 +12,10 @@ namespace slang {
 
 CompilationUnitSyntax& Parser::parseCompilationUnit() {
     try {
-        auto members = parseMemberList<MemberSyntax>(TokenKind::EndOfFile, eofToken,
-                                                     [this]() { return parseMember(); });
+        auto members = parseMemberList<MemberSyntax>(
+            TokenKind::EndOfFile, eofToken, [this](bool& anyLocalModules) {
+                return parseMember(SyntaxKind::CompilationUnit, anyLocalModules);
+            });
         return factory.compilationUnit(members, eofToken);
     }
     catch (const RecursionException&) {
@@ -22,10 +24,12 @@ CompilationUnitSyntax& Parser::parseCompilationUnit() {
 }
 
 ModuleDeclarationSyntax& Parser::parseModule() {
-    return parseModule(parseAttributes());
+    bool anyLocalModules = false;
+    return parseModule(parseAttributes(), SyntaxKind::CompilationUnit, anyLocalModules);
 }
 
-ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes) {
+ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind parentKind,
+                                             bool& anyLocalModules) {
     // Tell the preprocessor that we're inside a design element for the duration of this function.
     auto& pp = getPP();
     pp.pushDesignElementStack();
@@ -33,11 +37,26 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes) {
     auto& header = parseModuleHeader();
     auto endKind = getModuleEndKind(header.moduleKeyword.kind);
 
+    // If the parent isn't a compilation unit, that means we're a nested definition.
+    // Record our name in the decl stack so that child instantiations know they're
+    // referencing a local module and not a global one.
+    if (parentKind != SyntaxKind::CompilationUnit) {
+        auto name = header.name.valueText();
+        if (!name.empty()) {
+            if (!anyLocalModules) {
+                moduleDeclStack.emplace();
+                anyLocalModules = true;
+            }
+            moduleDeclStack.back().emplace(name);
+        }
+    }
+
     NodeMetadata meta{ pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale() };
 
     Token endmodule;
-    auto members =
-        parseMemberList<MemberSyntax>(endKind, endmodule, [this]() { return parseMember(); });
+    auto members = parseMemberList<MemberSyntax>(endKind, endmodule, [this](bool& anyLocalModules) {
+        return parseMember(SyntaxKind::ModuleDeclaration, anyLocalModules);
+    });
 
     pp.popDesignElementStack();
 
@@ -61,7 +80,7 @@ ClassDeclarationSyntax& Parser::parseClass() {
     return parseClassDeclaration(attributes, virtualOrInterface);
 }
 
-MemberSyntax* Parser::parseMember() {
+MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) {
     auto attributes = parseAttributes();
 
     if (isHierarchyInstantiation())
@@ -79,8 +98,10 @@ MemberSyntax* Parser::parseMember() {
             auto keyword = consume();
 
             Token endgenerate;
-            auto members = parseMemberList<MemberSyntax>(TokenKind::EndGenerateKeyword, endgenerate,
-                                                         [this]() { return parseMember(); });
+            auto members = parseMemberList<MemberSyntax>(
+                TokenKind::EndGenerateKeyword, endgenerate, [this](bool& anyLocalModules) {
+                    return parseMember(SyntaxKind::GenerateRegion, anyLocalModules);
+                });
             return &factory.generateRegion(attributes, keyword, members, endgenerate);
         }
         case TokenKind::BeginKeyword:
@@ -101,13 +122,13 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::ProgramKeyword:
         case TokenKind::PackageKeyword:
             // modules, interfaces, and programs share the same syntax
-            return &parseModule(attributes);
+            return &parseModule(attributes, parentKind, anyLocalModules);
         case TokenKind::InterfaceKeyword:
             // an interface class is different from an interface
             if (peek(1).kind == TokenKind::ClassKeyword)
                 return &parseClassDeclaration(attributes, consume());
             else
-                return &parseModule(attributes);
+                return &parseModule(attributes, parentKind, anyLocalModules);
         case TokenKind::ModPortKeyword:
             return &parseModportDeclaration(attributes);
         case TokenKind::SpecParamKeyword:
@@ -238,22 +259,32 @@ MemberSyntax* Parser::parseMember() {
             Token::createMissing(alloc, TokenKind::Semicolon, peek().location()));
     }
 
-    // otherwise, we got nothing and should just return null so that our caller will skip and try
-    // again.
+    // Otherwise, we got nothing and should just return null so that our
+    // caller will skip and try again.
     return nullptr;
+}
+
+MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
+    bool anyLocalModules = false;
+    auto result = parseMember(parentKind, anyLocalModules);
+    if (anyLocalModules)
+        moduleDeclStack.pop();
+
+    return result;
 }
 
 template<typename TMember, typename TParseFunc>
 span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc) {
     SmallVectorSized<TMember*, 16> members;
     bool errored = false;
+    bool anyLocalModules = false;
 
     while (true) {
         auto kind = peek().kind;
         if (kind == TokenKind::EndOfFile || kind == endKind)
             break;
 
-        auto member = parseFunc();
+        auto member = parseFunc(anyLocalModules);
         if (member) {
             members.append(member);
             errored = false;
@@ -263,6 +294,9 @@ span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TPars
             errored = true;
         }
     }
+
+    if (anyLocalModules)
+        moduleDeclStack.pop();
 
     endToken = expect(endKind);
     return members.copy(alloc);
@@ -626,7 +660,7 @@ MemberSyntax& Parser::parseGenerateBlock() {
         if (!peek(TokenKind::Identifier) || peek(1).kind != TokenKind::Colon ||
             peek(2).kind != TokenKind::BeginKeyword) {
             // This is just a single member instead of a block.
-            auto member = parseMember();
+            auto member = parseSingleMember(SyntaxKind::GenerateBlock);
             if (member)
                 return *member;
 
@@ -644,8 +678,10 @@ MemberSyntax& Parser::parseGenerateBlock() {
     auto beginName = parseNamedBlockClause();
 
     Token end;
-    auto members = parseMemberList<MemberSyntax>(TokenKind::EndKeyword, end,
-                                                 [this]() { return parseMember(); });
+    auto members =
+        parseMemberList<MemberSyntax>(TokenKind::EndKeyword, end, [this](bool& anyLocalModules) {
+            return parseMember(SyntaxKind::GenerateBlock, anyLocalModules);
+        });
 
     auto endName = parseNamedBlockClause();
     checkBlockNames(beginName, endName, label);
@@ -698,7 +734,7 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
 
     Token endClass;
     auto members = parseMemberList<MemberSyntax>(TokenKind::EndClassKeyword, endClass,
-                                                 [this]() { return parseClassMember(); });
+                                                 [this](bool&) { return parseClassMember(); });
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
 
@@ -909,8 +945,8 @@ CoverpointSyntax* Parser::parseCoverpoint(AttrList attributes, DataTypeSyntax* t
         auto openBrace = consume();
 
         Token closeBrace;
-        auto members = parseMemberList<MemberSyntax>(TokenKind::CloseBrace, closeBrace,
-                                                     [this]() { return parseCoverpointMember(); });
+        auto members = parseMemberList<MemberSyntax>(
+            TokenKind::CloseBrace, closeBrace, [this](bool&) { return parseCoverpointMember(); });
         return &factory.coverpoint(attributes, type, label, keyword, expr, openBrace, members,
                                    closeBrace, Token());
     }
@@ -1128,7 +1164,7 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
 
     Token endGroup;
     auto members = parseMemberList<MemberSyntax>(TokenKind::EndGroupKeyword, endGroup,
-                                                 [this]() { return parseCoverageMember(); });
+                                                 [this](bool&) { return parseCoverageMember(); });
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
 
@@ -1151,7 +1187,7 @@ ConstraintBlockSyntax& Parser::parseConstraintBlock() {
     Token closeBrace;
     auto openBrace = expect(TokenKind::OpenBrace);
     auto members = parseMemberList<ConstraintItemSyntax>(
-        TokenKind::CloseBrace, closeBrace, [this]() { return parseConstraintItem(false); });
+        TokenKind::CloseBrace, closeBrace, [this](bool&) { return parseConstraintItem(false); });
     return factory.constraintBlock(openBrace, members, closeBrace);
 }
 
@@ -1521,7 +1557,7 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(AttrList attributes)
                         &factory.clockingDirection(Token(), nullptr, Token(), nullptr, consume());
                     break;
                 default:
-                    declaration = parseMember();
+                    declaration = parseSingleMember(SyntaxKind::ClockingItem);
                     break;
             }
 
@@ -1566,6 +1602,21 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(AttrList attributes)
 HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attributes) {
     auto type = expect(TokenKind::Identifier);
     auto parameters = parseParameterValueAssignment();
+
+    // If this is an instantiation of a global module/interface/program,
+    // keep track of it in our instantiatedModules set.
+    string_view name = type.valueText();
+    if (!name.empty()) {
+        bool found = false;
+        for (auto& set : moduleDeclStack) {
+            if (set.find(name) != set.end()) {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            globalInstances.emplace(name);
+    }
 
     Token semi;
     SmallVectorSized<TokenOrSyntax, 8> items;

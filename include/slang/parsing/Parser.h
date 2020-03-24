@@ -97,7 +97,7 @@ public:
     StatementSyntax& parseStatement(bool allowEmpty = true);
     ModuleDeclarationSyntax& parseModule();
     ClassDeclarationSyntax& parseClass();
-    MemberSyntax* parseMember();
+    MemberSyntax* parseSingleMember(SyntaxKind parentKind);
     NameSyntax& parseName();
 
     /// Generalized node parse function that tries to figure out what we're
@@ -123,6 +123,13 @@ public:
     /// Gets metadata that was in effect when certain syntax nodes were parsed (such as various
     /// bits of preprocessor state).
     MetadataMap&& getMetadataMap() { return std::move(metadataMap); }
+
+    using NameSet = flat_hash_set<string_view>;
+
+    /// Gets a set of names of all instantiations of global modules/interfaces/programs.
+    /// This can be used to determine which modules should be considered as top-level
+    /// roots of the design.
+    NameSet&& getGlobalInstantiations() { return std::move(globalInstances); }
 
 private:
     using ExpressionOptions = detail::ExpressionOptions;
@@ -194,9 +201,10 @@ private:
     DotMemberClauseSyntax* parseDotMemberClause();
     AttrList parseAttributes();
     AttributeSpecSyntax& parseAttributeSpec();
+    MemberSyntax* parseMember(SyntaxKind parentKind, bool& anyLocalModules);
     ModuleHeaderSyntax& parseModuleHeader();
     ParameterPortListSyntax* parseParameterPortList();
-    ModuleDeclarationSyntax& parseModule(AttrList attributes);
+    ModuleDeclarationSyntax& parseModule(AttrList attributes, SyntaxKind parentKind, bool& anyLocalModules);
     MemberSyntax& parseModportSubroutinePortList(AttrList attributes);
     MemberSyntax& parseModportPort();
     ModportItemSyntax& parseModportItem();
@@ -345,6 +353,16 @@ private:
     // Helper class for parsing out numeric literals.
     NumberParser numberParser;
     friend class NumberParser;
+
+    // A stack of names of modules declared locally within the given scope.
+    // This is used to detect and ignore instantiations of local modules when
+    // trying to find the set of globally instantiated modules.
+    SmallVectorSized<NameSet, 4> moduleDeclStack;
+
+    // The names of all globally instantiated modules/interfaces/programs that
+    // the parser has found. This is later used to determine which modules should
+    // be considered as roots of the design.
+    NameSet globalInstances;
 
     // The current depth of recursion in the parser.
     size_t recursionDepth = 0;

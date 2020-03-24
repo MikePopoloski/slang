@@ -348,6 +348,10 @@ private:
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
     flat_hash_map<const void*, span<const AttributeSymbol* const>> attributeMap;
 
+    // A set of all instantiated names in the design; used for determining whether a given
+    // module has ever been instantiated to know whether it should be considered top-level.
+    flat_hash_set<string_view> globalInstantiations;
+
     // A set of all generate block syntax nodes that have ever been visited.
     flat_hash_set<const SyntaxNode*> visitedGenBlocks;
 

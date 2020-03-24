@@ -157,7 +157,7 @@ inline const MemberSyntax& parseMember(const std::string& text) {
     preprocessor.pushSource(string_view(text));
 
     Parser parser(preprocessor);
-    MemberSyntax* member = parser.parseMember();
+    MemberSyntax* member = parser.parseSingleMember(SyntaxKind::ModuleDeclaration);
     REQUIRE(member);
     return *member;
 }

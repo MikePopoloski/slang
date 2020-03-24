@@ -299,6 +299,9 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
             timeScaleDirectiveMap.emplace(decl, *meta.timeScale);
     }
 
+    for (auto& name : tree->getGlobalInstantiations())
+        globalInstantiations.emplace(name);
+
     auto unit = emplace<CompilationUnitSymbol>(*this);
     const SyntaxNode& node = tree->root();
     if (node.kind == SyntaxKind::CompilationUnit) {
