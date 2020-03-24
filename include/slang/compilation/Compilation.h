@@ -242,11 +242,6 @@ public:
     /// Allocates a symbol map.
     SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
 
-    /// Visits an uninstantiated generate block to see if there are any
-    /// module instantiations we need to observe -- this is used to determine
-    /// which modules are considered "top level".
-    void noteUninstantiatedGenerateBlock(const SyntaxNode& node);
-
     int getNextEnumSystemId() { return nextEnumSystemId++; }
     int getNextStructSystemId() { return nextStructSystemId++; }
     int getNextUnionSystemId() { return nextUnionSystemId++; }
@@ -311,10 +306,8 @@ private:
     SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
 
     // The name map for global definitions. The key is a combination of definition name +
-    // the scope in which it was declared. The value is the definition symbol along with a
-    // boolean that indicates whether it has ever been instantiated in the design.
-    mutable flat_hash_map<std::tuple<string_view, const Scope*>,
-                          std::tuple<const DefinitionSymbol*, bool>>
+    // the scope in which it was declared.
+    mutable flat_hash_map<std::tuple<string_view, const Scope*>, const DefinitionSymbol*>
         definitionMap;
 
     // A cache of vector types, keyed on various properties such as bit width.
@@ -352,9 +345,6 @@ private:
     // module has ever been instantiated to know whether it should be considered top-level.
     flat_hash_set<string_view> globalInstantiations;
 
-    // A set of all generate block syntax nodes that have ever been visited.
-    flat_hash_set<const SyntaxNode*> visitedGenBlocks;
-
     // A map from diag code + location to the diagnostics that have occurred at that location.
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
     // The value is a pair, with the first element being a list of all other diagnostics at that
@@ -377,7 +367,7 @@ private:
 
     // This is storage for a temporary diagnostic that is being constructed.
     // Typically this is done in-place within the diagMap, but for diagnostics
-    // that have been surpressed we need space to return *something* to the caller.
+    // that have been supressed we need space to return *something* to the caller.
     Diagnostic tempDiag;
 
     optional<Diagnostics> cachedParseDiagnostics;

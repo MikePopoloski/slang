@@ -205,13 +205,7 @@ static string_view getGenerateBlockName(const SyntaxNode& node) {
     return "";
 }
 
-static void addBlockMembers(Compilation& compilation, GenerateBlockSymbol& block,
-                            const SyntaxNode& syntax, bool isInstantiated) {
-    if (!isInstantiated) {
-        compilation.noteUninstantiatedGenerateBlock(syntax);
-        return;
-    }
-
+static void addBlockMembers(GenerateBlockSymbol& block, const SyntaxNode& syntax) {
     if (syntax.kind != SyntaxKind::GenerateBlock) {
         block.addMembers(syntax);
     }
@@ -253,7 +247,8 @@ static void createCondGenBlock(Compilation& compilation, const SyntaxNode& synta
     block->setAttributes(parent, attributes);
     results.append(block);
 
-    addBlockMembers(compilation, *block, syntax, isInstantiated);
+    if (isInstantiated)
+        addBlockMembers(*block, syntax);
 }
 
 void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
@@ -467,7 +462,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         block->addMember(*implicitParam);
         block->setSyntax(*syntax.block);
 
-        addBlockMembers(compilation, *block, *syntax.block, isInstantiated);
+        if (isInstantiated)
+            addBlockMembers(*block, *syntax.block);
 
         implicitParam->setType(compilation.getIntegerType());
         implicitParam->setValue(std::move(value));
