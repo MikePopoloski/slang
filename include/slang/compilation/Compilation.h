@@ -21,6 +21,7 @@ namespace slang {
 
 class AttributeSymbol;
 class CompilationUnitSymbol;
+class Definition;
 class DefinitionSymbol;
 class Expression;
 class PackageSymbol;
@@ -103,15 +104,27 @@ public:
     bool isFinalized() const { return finalized; }
 
     /// Gets the definition with the given name, or null if there is no such definition.
-    /// This takes into account the given scope so that nested definitions are found before more
-    /// global ones.
+    /// This takes into account the given scope so that nested definitions are found
+    /// before more global ones.
     const DefinitionSymbol* getDefinition(string_view name, const Scope& scope) const;
 
     /// Gets the top level definition with the given name, or null if there is no such definition.
     const DefinitionSymbol* getDefinition(string_view name) const;
 
+    /// Gets the definition with the given name, or null if there is no such definition.
+    /// This takes into account the given scope so that nested definitions are found
+    /// before more global ones.
+    const Definition* getDefinition2(string_view name, const Scope& scope) const;
+
+    /// Gets the top level definition with the given name, or null if there is no such definition.
+    const Definition* getDefinition2(string_view name) const;
+
     /// Adds a definition to the set of definitions tracked in the compilation.
     void addDefinition(const DefinitionSymbol& definition);
+
+    /// Creates a new definition in the given scope based on the given syntax.
+    const Definition* createDefinition(const Scope& scope, LookupLocation location,
+                                       const ModuleDeclarationSyntax& syntax);
 
     /// Gets the package with the give name, or null if there is no such package.
     const PackageSymbol* getPackage(string_view name) const;
@@ -309,6 +322,11 @@ private:
     // the scope in which it was declared.
     mutable flat_hash_map<std::tuple<string_view, const Scope*>, const DefinitionSymbol*>
         definitionMap;
+
+    // The name map for all module, interface, and program definitions.
+    // The key is a combination of definition name + the scope in which it was declared.
+    flat_hash_map<std::tuple<string_view, const Scope*>, std::unique_ptr<Definition>>
+        definitionMap2;
 
     // A cache of vector types, keyed on various properties such as bit width.
     flat_hash_map<uint32_t, const Type*> vectorTypeCache;

@@ -31,17 +31,18 @@ module mh22(ref wire x); endmodule
     compilation.addSyntaxTree(tree);
     auto& diags = compilation.getAllDiagnostics();
 
-#define checkPort(moduleName, name, dir, nt, type)                 \
-    {                                                              \
-        auto def = compilation.getDefinition(moduleName);          \
-        REQUIRE(def);                                              \
-        auto& port = def->getPortMap().at(name)->as<PortSymbol>(); \
-        CHECK(port.direction == (dir));                            \
-        CHECK(port.getType().toString() == (type));                \
-        if (nt) {                                                  \
-            auto& net = port.internalSymbol->as<NetSymbol>();      \
-            CHECK(&net.netType == (nt));                           \
-        }                                                          \
+#define checkPort(moduleName, name, dir, nt, type)            \
+    {                                                         \
+        auto def = compilation.getRoot().find(moduleName);    \
+        REQUIRE(def);                                         \
+        auto& ports = def->as<InstanceSymbol>().getPortMap(); \
+        auto& port = ports.at(name)->as<PortSymbol>();        \
+        CHECK(port.direction == (dir));                       \
+        CHECK(port.getType().toString() == (type));           \
+        if (nt) {                                             \
+            auto& net = port.internalSymbol->as<NetSymbol>(); \
+            CHECK(&net.netType == (nt));                      \
+        }                                                     \
     };
 
     auto wire = &compilation.getWireNetType();
@@ -109,20 +110,21 @@ module m6(I.bar bar); endmodule
     compilation.addSyntaxTree(tree);
     auto& diags = compilation.getAllDiagnostics();
 
-#define checkIfacePort(moduleName, portName, ifaceName, modportName)            \
-    {                                                                           \
-        auto def = compilation.getDefinition(moduleName);                       \
-        REQUIRE(def);                                                           \
-        auto& port = def->getPortMap().at(portName)->as<InterfacePortSymbol>(); \
-        REQUIRE(port.interfaceDef);                                             \
-        CHECK(port.interfaceDef->name == (ifaceName));                          \
-        if (*(modportName)) {                                                   \
-            REQUIRE(port.modport);                                              \
-            CHECK(port.modport->name == (modportName));                         \
-        }                                                                       \
-        else {                                                                  \
-            CHECK(!port.modport);                                               \
-        }                                                                       \
+#define checkIfacePort(moduleName, portName, ifaceName, modportName) \
+    {                                                                \
+        auto def = compilation.getRoot().find(moduleName);           \
+        REQUIRE(def);                                                \
+        auto& ports = def->as<InstanceSymbol>().getPortMap();        \
+        auto& port = ports.at(portName)->as<InterfacePortSymbol>();  \
+        REQUIRE(port.interfaceDef);                                  \
+        CHECK(port.interfaceDef->name == (ifaceName));               \
+        if (*(modportName)) {                                        \
+            REQUIRE(port.modport);                                   \
+            CHECK(port.modport->name == (modportName));              \
+        }                                                            \
+        else {                                                       \
+            CHECK(!port.modport);                                    \
+        }                                                            \
     };
 
     auto wire = &compilation.getWireNetType();
@@ -263,7 +265,6 @@ endmodule
 
     NO_COMPILATION_ERRORS;
 }
-
 
 TEST_CASE("Simple port connections") {
     auto tree = SyntaxTree::fromText(R"(

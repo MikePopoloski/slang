@@ -8,6 +8,7 @@
 
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/AllTypes.h"
@@ -879,7 +880,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
     }
 
     // Otherwise, check if this names a definition, in which case we can give a nicer error.
-    auto def = initialScope.getCompilation().getDefinition(name, initialScope);
+    auto def = initialScope.getCompilation().getDefinition2(name, initialScope);
     if (def) {
         string_view kindStr;
         switch (def->definitionKind) {

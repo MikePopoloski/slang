@@ -8,6 +8,10 @@
 
 #include <fmt/format.h>
 
+#include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/PreprocessorDiags.h"
+#include "slang/symbols/Scope.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/util/String.h"
 #include "slang/util/StringTable.h"
 
@@ -116,6 +120,57 @@ double TimeScale::apply(double value, TimeUnit unit) const {
 
 std::string TimeScale::toString() const {
     return fmt::format("{} / {}", base.toString(), precision.toString());
+}
+
+void TimeScale::setFromSyntax(const Scope& scope, const TimeUnitsDeclarationSyntax& syntax,
+                              optional<SourceRange>& unitsRange,
+                              optional<SourceRange>& precisionRange, bool isFirst) {
+    bool errored = false;
+    auto handle = [&](Token token, optional<SourceRange>& prevRange, TimeScaleValue& value) {
+        // If there were syntax errors just bail out, diagnostics have already been issued.
+        if (token.isMissing() || token.kind != TokenKind::TimeLiteral)
+            return;
+
+        auto val = TimeScaleValue::fromLiteral(token.realValue(), token.numericFlags().unit());
+        if (!val) {
+            scope.addDiag(diag::InvalidTimeScaleSpecifier, token.location());
+            return;
+        }
+
+        if (prevRange) {
+            // If the value was previously set, we need to make sure this new
+            // value is exactly the same, otherwise we error.
+            if (value != *val && !errored) {
+                auto& diag = scope.addDiag(diag::MismatchedTimeScales, token.range());
+                diag.addNote(diag::NotePreviousDefinition, prevRange->start()) << *prevRange;
+                errored = true;
+            }
+        }
+        else {
+            // The first time scale declarations must be the first elements in the parent scope.
+            if (!isFirst && !errored) {
+                scope.addDiag(diag::TimeScaleFirstInScope, token.range());
+                errored = true;
+            }
+
+            value = *val;
+            prevRange = token.range();
+        }
+    };
+
+    if (syntax.keyword.kind == TokenKind::TimeUnitKeyword) {
+        handle(syntax.time, unitsRange, base);
+        if (syntax.divider)
+            handle(syntax.divider->value, precisionRange, precision);
+    }
+    else {
+        handle(syntax.time, precisionRange, precision);
+    }
+
+    if (!errored && unitsRange && precisionRange && precision > base) {
+        auto& diag = scope.addDiag(diag::InvalidTimeScalePrecision, *precisionRange);
+        diag << *unitsRange;
+    }
 }
 
 bool TimeScale::operator==(const TimeScale& rhs) const {

@@ -1,6 +1,7 @@
 #include "Test.h"
 
 #include "slang/binding/OperatorExpressions.h"
+#include "slang/compilation/Definition.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AttributeSymbol.h"
 #include "slang/text/Json.h"
@@ -278,9 +279,9 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    CHECK(compilation.getDefinition("m")->getTimeScale() == TimeScale("10ns", "10ps"));
-    CHECK(compilation.getDefinition("n")->getTimeScale() == TimeScale("10us", "1ns"));
-    CHECK(compilation.getDefinition("o")->getTimeScale() == TimeScale("100s", "10fs"));
+    CHECK(compilation.getDefinition2("m")->timeScale == TimeScale("10ns", "10ps"));
+    CHECK(compilation.getDefinition2("n")->timeScale == TimeScale("10us", "1ns"));
+    CHECK(compilation.getDefinition2("o")->timeScale == TimeScale("100s", "10fs"));
     CHECK(compilation.getPackage("p")->getTimeScale() == TimeScale("100s", "1ps"));
 }
 

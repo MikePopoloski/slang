@@ -6,9 +6,13 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
 
 namespace slang {
+
+class Scope;
+struct TimeUnitsDeclarationSyntax;
 
 /// Scale unit for a time value.
 enum class TimeUnit : uint8_t {
@@ -63,6 +67,10 @@ struct TimeScale {
     double apply(double value, TimeUnit unit) const;
 
     std::string toString() const;
+
+    void setFromSyntax(const Scope& scope, const TimeUnitsDeclarationSyntax& syntax,
+                       optional<SourceRange>& unitsRange, optional<SourceRange>& precisionRange,
+                       bool isFirst);
 
     bool operator==(const TimeScale& rhs) const;
     bool operator!=(const TimeScale& rhs) const { return !(*this == rhs); }

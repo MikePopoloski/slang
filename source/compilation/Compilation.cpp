@@ -7,6 +7,7 @@
 #include "slang/compilation/Compilation.h"
 
 #include "slang/binding/SystemSubroutine.h"
+#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
@@ -266,8 +267,18 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         }
     }
 
-    for (auto& [node, meta] : tree->getMetadataMap()) {
-        auto decl = &node->as<ModuleDeclarationSyntax>();
+    const SyntaxNode& node = tree->root();
+    const SyntaxNode* topNode = &node;
+    while (topNode->parent)
+        topNode = topNode->parent;
+
+    auto unit = emplace<CompilationUnitSymbol>(*this);
+    unit->setSyntax(*topNode);
+    root->addMember(*unit);
+    compilationUnits.push_back(unit);
+
+    for (auto& [n, meta] : tree->getMetadataMap()) {
+        auto decl = &n->as<ModuleDeclarationSyntax>();
         defaultNetTypeMap.emplace(decl, &getNetType(meta.defaultNetType));
 
         switch (meta.unconnectedDrive) {
@@ -288,8 +299,6 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     for (auto& name : tree->getGlobalInstantiations())
         globalInstantiations.emplace(name);
 
-    auto unit = emplace<CompilationUnitSymbol>(*this);
-    const SyntaxNode& node = tree->root();
     if (node.kind == SyntaxKind::CompilationUnit) {
         for (auto member : node.as<CompilationUnitSyntax>().members)
             unit->addMembers(*member);
@@ -298,13 +307,6 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         unit->addMembers(node);
     }
 
-    const SyntaxNode* topNode = &node;
-    while (topNode->parent)
-        topNode = topNode->parent;
-
-    unit->setSyntax(*topNode);
-    root->addMember(*unit);
-    compilationUnits.push_back(unit);
     syntaxTrees.emplace_back(std::move(tree));
     cachedParseDiagnostics.reset();
 }
@@ -406,6 +408,27 @@ const DefinitionSymbol* Compilation::getDefinition(string_view lookupName) const
     return getDefinition(lookupName, *root);
 }
 
+const Definition* Compilation::getDefinition2(string_view lookupName, const Scope& scope) const {
+    const Scope* searchScope = &scope;
+    while (searchScope) {
+        auto it = definitionMap2.find(std::make_tuple(lookupName, searchScope));
+        if (it != definitionMap2.end())
+            return it->second.get();
+
+        auto& sym = searchScope->asSymbol();
+        if (sym.kind == SymbolKind::Root)
+            return nullptr;
+
+        searchScope = sym.getLexicalScope();
+    }
+
+    return nullptr;
+}
+
+const Definition* Compilation::getDefinition2(string_view lookupName) const {
+    return getDefinition2(lookupName, *root);
+}
+
 void Compilation::addDefinition(const DefinitionSymbol& definition) {
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
@@ -416,6 +439,21 @@ void Compilation::addDefinition(const DefinitionSymbol& definition) {
         definitionMap.emplace(std::make_tuple(definition.name, root.get()), &definition);
     else
         definitionMap.emplace(std::make_tuple(definition.name, scope), &definition);
+}
+
+const Definition* Compilation::createDefinition(const Scope& scope, LookupLocation location,
+                                                const ModuleDeclarationSyntax& syntax) {
+    auto def =
+        std::make_unique<Definition>(scope, location, syntax, getDefaultNetType(syntax),
+                                     getUnconnectedDrive(syntax), getDirectiveTimeScale(syntax));
+    auto result = def.get();
+
+    // Record that the given scope contains this definition. If the scope is a compilation unit, add
+    // it to the root scope instead so that lookups from other compilation units will find it.
+    auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
+    definitionMap2.emplace(std::tuple(def->name, targetScope), std::move(def));
+
+    return result;
 }
 
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {

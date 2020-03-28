@@ -53,6 +53,7 @@ add_library(slang
     compilation/builtins/SystemTasks.cpp
 
     compilation/Compilation.cpp
+    compilation/Definition.cpp
     compilation/ScriptSession.cpp
     compilation/SemanticModel.cpp
 

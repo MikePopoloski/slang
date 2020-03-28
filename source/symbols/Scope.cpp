@@ -173,6 +173,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                                                      syntax.as<ModuleDeclarationSyntax>(), *this);
             addMember(def);
             compilation.addDefinition(def);
+
+            LookupLocation ll(this, lastMember ? uint32_t(lastMember->getIndex()) : 1);
+            compilation.createDefinition(*this, ll, syntax.as<ModuleDeclarationSyntax>());
             break;
         }
         case SyntaxKind::PackageDeclaration: {
