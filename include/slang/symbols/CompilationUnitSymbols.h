@@ -45,8 +45,9 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static PackageSymbol& fromSyntax(Compilation& compilation,
-                                     const ModuleDeclarationSyntax& syntax, const Scope& scope);
+    static PackageSymbol& fromSyntax(const Scope& scope, const ModuleDeclarationSyntax& syntax,
+                                     const NetType& defaultNetType,
+                                     optional<TimeScale> directiveTimeScale);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Package; }
 };

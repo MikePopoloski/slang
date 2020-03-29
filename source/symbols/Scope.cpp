@@ -170,10 +170,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::PackageDeclaration: {
             // Packages exist in their own namespace and are tracked in the Compilation.
-            auto& package =
-                PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>(), *this);
+            auto& package = compilation.createPackage(*this, syntax.as<ModuleDeclarationSyntax>());
             addMember(package);
-            compilation.addPackage(package);
             break;
         }
         case SyntaxKind::PackageImportDeclaration: {

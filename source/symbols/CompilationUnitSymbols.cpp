@@ -36,12 +36,12 @@ PackageSymbol::PackageSymbol(Compilation& compilation, string_view name, SourceL
     Scope(compilation, this), defaultNetType(defaultNetType) {
 }
 
-PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation,
-                                         const ModuleDeclarationSyntax& syntax,
-                                         const Scope& scope) {
-    auto result = compilation.emplace<PackageSymbol>(compilation, syntax.header->name.valueText(),
-                                                     syntax.header->name.location(),
-                                                     compilation.getDefaultNetType(syntax));
+PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclarationSyntax& syntax,
+                                         const NetType& defaultNetType,
+                                         optional<TimeScale> directiveTimeScale) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<PackageSymbol>(comp, syntax.header->name.valueText(),
+                                              syntax.header->name.location(), defaultNetType);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
@@ -60,8 +60,8 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation,
         result->addMembers(*member);
     }
 
-    result->timeScale.setDefault(scope, compilation.getDirectiveTimeScale(syntax),
-                                 unitsRange.has_value(), precisionRange.has_value());
+    result->timeScale.setDefault(scope, directiveTimeScale, unitsRange.has_value(),
+                                 precisionRange.has_value());
     return *result;
 }
 

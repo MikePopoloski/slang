@@ -267,21 +267,23 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
 
     for (auto& [n, meta] : tree->getMetadataMap()) {
         auto decl = &n->as<ModuleDeclarationSyntax>();
-        defaultNetTypeMap.emplace(decl, &getNetType(meta.defaultNetType));
+        DefinitionMetadata result;
+        result.defaultNetType = &getNetType(meta.defaultNetType);
+        result.timeScale = meta.timeScale;
 
         switch (meta.unconnectedDrive) {
             case TokenKind::Pull0Keyword:
-                unconnectedDriveMap.emplace(decl, UnconnectedDrive::Pull0);
+                result.unconnectedDrive = UnconnectedDrive::Pull0;
                 break;
             case TokenKind::Pull1Keyword:
-                unconnectedDriveMap.emplace(decl, UnconnectedDrive::Pull1);
+                result.unconnectedDrive = UnconnectedDrive::Pull1;
                 break;
             default:
+                result.unconnectedDrive = UnconnectedDrive::None;
                 break;
         }
 
-        if (meta.timeScale)
-            timeScaleDirectiveMap.emplace(decl, *meta.timeScale);
+        definitionMetadata[decl] = result;
     }
 
     for (auto& name : tree->getGlobalInstantiations())
@@ -405,17 +407,16 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
 
 const Definition& Compilation::createDefinition(const Scope& scope, LookupLocation location,
                                                 const ModuleDeclarationSyntax& syntax) {
-    auto def =
-        std::make_unique<Definition>(scope, location, syntax, getDefaultNetType(syntax),
-                                     getUnconnectedDrive(syntax), getDirectiveTimeScale(syntax));
-    auto result = def.get();
+    auto& metadata = definitionMetadata[&syntax];
+    auto def = std::make_unique<Definition>(scope, location, syntax, *metadata.defaultNetType,
+                                            metadata.unconnectedDrive, metadata.timeScale);
 
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
-    definitionMap.emplace(std::tuple(def->name, targetScope), std::move(def));
+    auto it = definitionMap.emplace(std::tuple(def->name, targetScope), std::move(def)).first;
 
-    return *result;
+    return *it->second;
 }
 
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
@@ -425,8 +426,13 @@ const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
     return it->second;
 }
 
-void Compilation::addPackage(const PackageSymbol& package) {
+const PackageSymbol& Compilation::createPackage(const Scope& scope,
+                                                const ModuleDeclarationSyntax& syntax) {
+    auto& metadata = definitionMetadata[&syntax];
+    auto& package =
+        PackageSymbol::fromSyntax(scope, syntax, *metadata.defaultNetType, metadata.timeScale);
     packageMap.emplace(package.name, &package);
+    return package;
 }
 
 void Compilation::addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine) {
@@ -628,27 +634,6 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
     auto [it, inserted] =
         diagMap.emplace(std::make_tuple(diag.code, diag.location), std::move(newEntry));
     return it->second.back();
-}
-
-const NetType& Compilation::getDefaultNetType(const ModuleDeclarationSyntax& decl) const {
-    auto it = defaultNetTypeMap.find(&decl);
-    if (it == defaultNetTypeMap.end())
-        return getNetType(TokenKind::Unknown);
-    return *it->second;
-}
-
-UnconnectedDrive Compilation::getUnconnectedDrive(const ModuleDeclarationSyntax& decl) const {
-    auto it = unconnectedDriveMap.find(&decl);
-    if (it == unconnectedDriveMap.end())
-        return UnconnectedDrive::None;
-    return it->second;
-}
-
-optional<TimeScale> Compilation::getDirectiveTimeScale(const ModuleDeclarationSyntax& decl) const {
-    auto it = timeScaleDirectiveMap.find(&decl);
-    if (it == timeScaleDirectiveMap.end())
-        return std::nullopt;
-    return it->second;
 }
 
 const Type& Compilation::getType(SyntaxKind typeKind) const {

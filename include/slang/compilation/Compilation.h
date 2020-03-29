@@ -120,8 +120,8 @@ public:
     /// Gets the package with the give name, or null if there is no such package.
     const PackageSymbol* getPackage(string_view name) const;
 
-    /// Adds a package to the map of global packages.
-    void addPackage(const PackageSymbol& package);
+    /// Creates a new package in the given scope based on the given syntax.
+    const PackageSymbol& createPackage(const Scope& scope, const ModuleDeclarationSyntax& syntax);
 
     /// Registers a system subroutine handler, which can be accessed by compiled code.
     void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
@@ -184,17 +184,6 @@ public:
 
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);
-
-    /// Gets the default net type that was in place at the time the given declaration was parsed.
-    const NetType& getDefaultNetType(const ModuleDeclarationSyntax& decl) const;
-
-    /// Gets the unconnected drive setting that was in place at the time the given declaration was
-    /// parsed.
-    UnconnectedDrive getUnconnectedDrive(const ModuleDeclarationSyntax& decl) const;
-
-    /// Gets the time scale that was put in place by a preprocessor directive at the time
-    /// the given declaration was parsed. Returns nullopt if there was no such directive.
-    optional<TimeScale> getDirectiveTimeScale(const ModuleDeclarationSyntax& decl) const;
 
     /// Sets the default time scale to use when none is specified in the source code.
     void setDefaultTimeScale(TimeScale timeScale) { defaultTimeScale = timeScale; }
@@ -322,15 +311,6 @@ private:
     // Map from token kinds to the built-in net types.
     flat_hash_map<TokenKind, std::unique_ptr<NetType>> knownNetTypes;
 
-    // Map from syntax nodes to parse-time metadata about default net types.
-    flat_hash_map<const ModuleDeclarationSyntax*, const NetType*> defaultNetTypeMap;
-
-    // Map from syntax nodes to parse-time metadata about time scale directives.
-    flat_hash_map<const ModuleDeclarationSyntax*, TimeScale> timeScaleDirectiveMap;
-
-    // Map from syntax nodes to parse-time metadata about unconnected drive settings.
-    flat_hash_map<const ModuleDeclarationSyntax*, UnconnectedDrive> unconnectedDriveMap;
-
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the definitions name table.
     flat_hash_map<string_view, const PackageSymbol*> packageMap;
@@ -347,6 +327,15 @@ private:
     // A set of all instantiated names in the design; used for determining whether a given
     // module has ever been instantiated to know whether it should be considered top-level.
     flat_hash_set<string_view> globalInstantiations;
+
+    struct DefinitionMetadata {
+        const NetType* defaultNetType;
+        optional<TimeScale> timeScale;
+        UnconnectedDrive unconnectedDrive;
+    };
+
+    // Map from syntax nodes to parse-time metadata about them.
+    flat_hash_map<const ModuleDeclarationSyntax*, DefinitionMetadata> definitionMetadata;
 
     // A map from diag code + location to the diagnostics that have occurred at that location.
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
