@@ -13,7 +13,7 @@
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/DefinitionSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/PortSymbols.h"

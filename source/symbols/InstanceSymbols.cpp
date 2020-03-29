@@ -1,10 +1,10 @@
 //------------------------------------------------------------------------------
-// DefinitionSymbols.cpp
-// Contains definition-related symbol definitions
+// InstanceSymbols.cpp
+// Contains instance-related symbol definitions
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/symbols/DefinitionSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
 
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"

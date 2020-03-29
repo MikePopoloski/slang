@@ -14,7 +14,7 @@
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
-#include "slang/symbols/DefinitionSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace {

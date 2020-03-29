@@ -84,7 +84,7 @@ add_library(slang
     symbols/BlockSymbols.cpp
     symbols/CompilationUnitSymbols.cpp
     symbols/DeclaredType.cpp
-    symbols/DefinitionSymbols.cpp
+    symbols/InstanceSymbols.cpp
     symbols/Lookup.cpp
     symbols/MemberSymbols.cpp
     symbols/ParameterSymbols.cpp
