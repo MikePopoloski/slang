@@ -75,21 +75,11 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getAssignment();
     }
 
-    void handle(const DefinitionSymbol& symbol) {
-        if (numErrors > errorLimit)
-            return;
-
-        auto guard = ScopeGuard([saved = inDef, this] { inDef = saved; });
-        inDef = true;
-        handleDefault(symbol);
-    }
-
     void handleInstance(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit)
             return;
 
-        if (!inDef)
-            instanceCount[&symbol.definition]++;
+        instanceCount[&symbol.definition]++;
         handleDefault(symbol);
     }
 
@@ -125,12 +115,10 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     const size_t& numErrors;
     flat_hash_map<const Definition*, size_t> instanceCount;
     uint32_t errorLimit;
-    bool inDef = false;
 };
 
-const Symbol* getInstanceOrDef(const Symbol* symbol) {
-    while (symbol && symbol->kind != SymbolKind::Definition &&
-           !InstanceSymbol::isKind(symbol->kind)) {
+const Symbol* getInstance(const Symbol* symbol) {
+    while (symbol && !InstanceSymbol::isKind(symbol->kind)) {
         auto scope = symbol->getParentScope();
         symbol = scope ? &scope->asSymbol() : nullptr;
     }
@@ -544,31 +532,8 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
 
-    auto isInsideDef = [](const Symbol* symbol) {
-        while (true) {
-            if (symbol->kind == SymbolKind::Definition)
-                return true;
-
-            auto scope = symbol->getParentScope();
-            if (!scope)
-                return false;
-
-            symbol = &scope->asSymbol();
-        }
-    };
-
     Diagnostics results;
-    for (auto& pair : diagMap) {
-        // Figure out which diagnostic from this group to issue.
-        // If any of them are inside a definition (as opposed to one or more instances), issue
-        // the one for the definition without embellishment. Otherwise, pick the first instance
-        // and include a note about where the diagnostic occurred in the hierarchy.
-        auto& [diagList, definitionIndex] = pair.second;
-        if (definitionIndex < diagList.size()) {
-            results.append(diagList[definitionIndex]);
-            continue;
-        }
-
+    for (auto& [key, diagList] : diagMap) {
         // Try to find a diagnostic in an instance that isn't at the top-level
         // (printing such a path seems silly).
         const Diagnostic* found = nullptr;
@@ -576,12 +541,8 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         size_t count = 0;
 
         for (auto& diag : diagList) {
-            auto symbol = getInstanceOrDef(diag.symbol);
+            auto symbol = getInstance(diag.symbol);
             if (!symbol || !symbol->getParentScope())
-                continue;
-
-            // Don't count the diagnostic if it's inside a definition instead of an instance.
-            if (isInsideDef(symbol))
                 continue;
 
             count++;
@@ -596,7 +557,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         // providing specific instantiation info.
         if (found && visitor.instanceCount[&inst->as<InstanceSymbol>().definition] > count) {
             Diagnostic diag = *found;
-            diag.symbol = getInstanceOrDef(inst);
+            diag.symbol = getInstance(inst);
             diag.coalesceCount = count;
             results.append(std::move(diag));
         }
@@ -651,31 +612,22 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
         return tempDiag;
     }
 
-    auto inst = getInstanceOrDef(diag.symbol);
-
     // Coalesce diagnostics that are at the same source location and have the same code.
     if (auto it = diagMap.find({ diag.code, diag.location }); it != diagMap.end()) {
-        auto& [diagList, defIndex] = it->second;
+        auto& diagList = it->second;
         diagList.emplace_back(std::move(diag));
-        if (inst && inst->kind == SymbolKind::Definition)
-            defIndex = diagList.size() - 1;
         return diagList.back();
     }
 
     if (diag.isError())
         numErrors++;
 
-    std::pair<std::vector<Diagnostic>, size_t> newEntry;
-    newEntry.first.push_back(std::move(diag));
-    if (inst && inst->kind == SymbolKind::Definition)
-        newEntry.second = 0;
-    else
-        newEntry.second = SIZE_MAX;
+    std::vector<Diagnostic> newEntry;
+    newEntry.push_back(std::move(diag));
 
     auto [it, inserted] =
         diagMap.emplace(std::make_tuple(diag.code, diag.location), std::move(newEntry));
-    auto& [diagList, defIndex] = it->second;
-    return diagList.back();
+    return it->second.back();
 }
 
 const NetType& Compilation::getDefaultNetType(const ModuleDeclarationSyntax& decl) const {

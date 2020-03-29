@@ -316,9 +316,6 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
                         return false;
                     }
                     return true;
-                case SymbolKind::Definition:
-                    result.clear();
-                    return false;
                 case SymbolKind::CompilationUnit:
                     scope = nullptr;
                     break;

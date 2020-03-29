@@ -55,8 +55,6 @@ const NetType& Scope::getDefaultNetType() const {
     do {
         auto& sym = current->asSymbol();
         switch (sym.kind) {
-            case SymbolKind::Definition:
-                return sym.as<DefinitionSymbol>().defaultNetType;
             case SymbolKind::Package:
                 return sym.as<PackageSymbol>().defaultNetType;
             default:
@@ -78,8 +76,6 @@ TimeScale Scope::getTimeScale() const {
         switch (sym.kind) {
             case SymbolKind::CompilationUnit:
                 return sym.as<CompilationUnitSymbol>().getTimeScale();
-            case SymbolKind::Definition:
-                return sym.as<DefinitionSymbol>().getTimeScale();
             case SymbolKind::Package:
                 return sym.as<PackageSymbol>().getTimeScale();
             default:
@@ -115,8 +111,6 @@ VariableLifetime Scope::getDefaultLifetime() const {
         sym = &scope->asSymbol();
         if (sym->kind == SymbolKind::Subroutine)
             return sym->as<SubroutineSymbol>().defaultLifetime;
-        else if (sym->kind == SymbolKind::Definition)
-            return sym->as<DefinitionSymbol>().defaultLifetime;
         else if (InstanceSymbol::isKind(sym->kind))
             return sym->as<InstanceSymbol>().definition.defaultLifetime;
     }
@@ -396,10 +390,10 @@ void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborat
     if (!member->nextInScope)
         lastMember = member;
 
-    // Add to the name map if the symbol has a name, unless it's a port or definition symbol.
-    // Per the spec, ports and definitions exist in their own namespaces.
+    // Add to the name map if the symbol has a name, unless it's a port.
+    // Per the spec, ports exist in their own namespaces.
     if (!member->name.empty() && member->kind != SymbolKind::Port &&
-        member->kind != SymbolKind::Definition && member->kind != SymbolKind::Package) {
+        member->kind != SymbolKind::Package) {
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second)
             handleNameConflict(*member, pair.first->second, isElaborating);
@@ -565,12 +559,8 @@ void Scope::elaborate() const {
                 // Only a few kinds of symbols can have port maps; grab that port map
                 // now so we can add each port to it for future lookup.
                 // The const_cast here is ugly but valid.
-                SymbolMap* portMap;
-                const Symbol& sym = asSymbol();
-                if (sym.kind == SymbolKind::Definition)
-                    portMap = const_cast<SymbolMap*>(&sym.as<DefinitionSymbol>().getPortMap());
-                else
-                    portMap = const_cast<SymbolMap*>(&sym.as<InstanceSymbol>().getPortMap());
+                auto portMap =
+                    const_cast<SymbolMap*>(&asSymbol().as<InstanceSymbol>().getPortMap());
 
                 const Symbol* last = symbol;
                 for (auto port : ports) {

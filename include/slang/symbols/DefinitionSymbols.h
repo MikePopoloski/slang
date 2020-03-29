@@ -20,40 +20,6 @@ class NetType;
 class ParameterSymbolBase;
 class PortSymbol;
 
-/// Represents a definition (module, interface, or program) that can be instantiated
-/// to form a node in the design hierarchy.
-class DefinitionSymbol : public Symbol, public Scope, TimeScaleSymbolBase {
-public:
-    span<const ParameterSymbolBase* const> parameters;
-    const NetType& defaultNetType;
-    DefinitionKind definitionKind;
-    VariableLifetime defaultLifetime;
-    UnconnectedDrive unconnectedDrive;
-
-    DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     DefinitionKind definitionKind, VariableLifetime defaultLifetime,
-                     const NetType& defaultNetType, UnconnectedDrive unconnectedDrive);
-
-    const SymbolMap& getPortMap() const {
-        ensureElaborated();
-        return *portMap;
-    }
-
-    /// Looks for a modport in this definition and issues a diagnostic if not found.
-    const ModportSymbol* getModportOrError(string_view modport, const Scope& scope,
-                                           SourceRange range) const;
-
-    TimeScale getTimeScale() const { return timeScale; }
-    void serializeTo(ASTSerializer& serializer) const;
-
-    static DefinitionSymbol& fromSyntax(Compilation& compilation,
-                                        const ModuleDeclarationSyntax& syntax, const Scope& scope);
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Definition; }
-
-private:
-    SymbolMap* portMap;
-};
-
 struct HierarchicalInstanceSyntax;
 struct HierarchyInstantiationSyntax;
 

@@ -19,148 +19,9 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
 
-namespace slang {
-
-DefinitionSymbol::DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                                   DefinitionKind definitionKind, VariableLifetime defaultLifetime,
-                                   const NetType& defaultNetType,
-                                   UnconnectedDrive unconnectedDrive) :
-    Symbol(SymbolKind::Definition, name, loc),
-    Scope(compilation, this), defaultNetType(defaultNetType), definitionKind(definitionKind),
-    defaultLifetime(defaultLifetime), unconnectedDrive(unconnectedDrive),
-    portMap(compilation.allocSymbolMap()) {
-}
-
-const ModportSymbol* DefinitionSymbol::getModportOrError(string_view modport, const Scope& scope,
-                                                         SourceRange range) const {
-    if (modport.empty())
-        return nullptr;
-
-    auto symbol = find(modport);
-    if (!symbol) {
-        auto& diag = scope.addDiag(diag::UnknownMember, range);
-        diag << modport;
-        diag << this->name;
-        return nullptr;
-    }
-
-    if (symbol->kind != SymbolKind::Modport) {
-        auto& diag = scope.addDiag(diag::NotAModport, range);
-        diag << modport;
-        diag.addNote(diag::NoteDeclarationHere, symbol->location);
-        return nullptr;
-    }
-
-    return &symbol->as<ModportSymbol>();
-}
-
-DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
-                                               const ModuleDeclarationSyntax& syntax,
-                                               const Scope& scope) {
-    auto nameToken = syntax.header->name;
-    DefinitionKind definitionKind = SemanticFacts::getDefinitionKind(syntax.kind);
-    VariableLifetime lifetime = SemanticFacts::getVariableLifetime(syntax.header->lifetime)
-                                    .value_or(VariableLifetime::Static);
-    const NetType& defaultNetType = compilation.getDefaultNetType(syntax);
-    UnconnectedDrive unconnectedDrive = compilation.getUnconnectedDrive(syntax);
-
-    auto result = compilation.emplace<DefinitionSymbol>(compilation, nameToken.valueText(),
-                                                        nameToken.location(), definitionKind,
-                                                        lifetime, defaultNetType, unconnectedDrive);
-    result->setSyntax(syntax);
-    result->setAttributes(scope, syntax.attributes);
-
-    for (auto import : syntax.header->imports)
-        result->addMembers(*import);
-
-    SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
-    bool hasPortParams = syntax.header->parameters;
-    if (hasPortParams) {
-        bool lastLocal = false;
-        for (auto declaration : syntax.header->parameters->declarations) {
-            // It's legal to leave off the parameter keyword in the parameter port list.
-            // If you do so, we "inherit" the parameter or localparam keyword from the previous
-            // entry. This isn't allowed in a module body, but the parser will take care of the
-            // error for us.
-            if (declaration->keyword)
-                lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
-
-            if (declaration->kind == SyntaxKind::ParameterDeclaration) {
-                SmallVectorSized<ParameterSymbol*, 8> params;
-                ParameterSymbol::fromSyntax(*result, declaration->as<ParameterDeclarationSyntax>(),
-                                            lastLocal, /* isPort */ true, params);
-
-                for (auto param : params) {
-                    parameters.append(param);
-                    result->addMember(*param);
-                }
-            }
-            else {
-                SmallVectorSized<TypeParameterSymbol*, 8> params;
-                TypeParameterSymbol::fromSyntax(*result,
-                                                declaration->as<TypeParameterDeclarationSyntax>(),
-                                                lastLocal, /* isPort */ true, params);
-
-                for (auto param : params) {
-                    parameters.append(param);
-                    result->addMember(*param);
-                }
-            }
-        }
-    }
-
-    if (syntax.header->ports)
-        result->addMembers(*syntax.header->ports);
-
-    bool first = true;
-    for (auto member : syntax.members) {
-        if (member->kind == SyntaxKind::TimeUnitsDeclaration)
-            result->setTimeScale(*result, member->as<TimeUnitsDeclarationSyntax>(), first);
-        else if (member->kind != SyntaxKind::ParameterDeclarationStatement) {
-            result->addMembers(*member);
-            first = false;
-        }
-        else {
-            first = false;
-
-            auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
-            bool isLocal =
-                hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
-
-            if (declaration->kind == SyntaxKind::ParameterDeclaration) {
-                SmallVectorSized<ParameterSymbol*, 8> params;
-                ParameterSymbol::fromSyntax(*result, declaration->as<ParameterDeclarationSyntax>(),
-                                            isLocal, false, params);
-
-                for (auto param : params) {
-                    parameters.append(param);
-                    result->addMember(*param);
-                }
-            }
-            else {
-                SmallVectorSized<TypeParameterSymbol*, 8> params;
-                TypeParameterSymbol::fromSyntax(*result,
-                                                declaration->as<TypeParameterDeclarationSyntax>(),
-                                                isLocal, false, params);
-
-                for (auto param : params) {
-                    parameters.append(param);
-                    result->addMember(*param);
-                }
-            }
-        }
-    }
-
-    result->finalizeTimeScale(scope, syntax);
-    result->parameters = parameters.copy(compilation);
-    return *result;
-}
-
-void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("definitionKind", toString(definitionKind));
-}
-
 namespace {
+
+using namespace slang;
 
 class InstanceBuilder {
 public:
@@ -348,6 +209,8 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindCo
 }
 
 } // namespace
+
+namespace slang {
 
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax, LookupLocation location,

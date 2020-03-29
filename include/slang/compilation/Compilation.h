@@ -350,11 +350,7 @@ private:
 
     // A map from diag code + location to the diagnostics that have occurred at that location.
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
-    // The value is a pair, with the first element being a list of all other diagnostics at that
-    // code + location and the second being the index of the last diagnostic of that kind that
-    // came from a DefinitionSymbol.
-    using DiagMap = flat_hash_map<std::tuple<DiagCode, SourceLocation>,
-                                  std::pair<std::vector<Diagnostic>, size_t>>;
+    using DiagMap = flat_hash_map<std::tuple<DiagCode, SourceLocation>, std::vector<Diagnostic>>;
     DiagMap diagMap;
 
     std::unique_ptr<RootSymbol> root;

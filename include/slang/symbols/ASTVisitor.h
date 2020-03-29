@@ -51,11 +51,7 @@ public:
             static_cast<TDerived*>(this)->handle(t);
         else if constexpr (is_detected_v<op_t, TDerived, T>)
             (DERIVED)(t);
-
-        // By default definitions are not visited because it
-        // can be confusing to see them show up when they're
-        // technically not part of the hierarchy.
-        else if (!std::is_same_v<T, DefinitionSymbol>)
+        else
             visitDefault(t);
     }
 
@@ -121,7 +117,6 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(TypeParameter);
         SYMBOL(Port);
         SYMBOL(InterfacePort);
-        SYMBOL(Definition);
         SYMBOL(ModuleInstance);
         SYMBOL(ProgramInstance);
         SYMBOL(InterfaceInstance);

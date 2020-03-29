@@ -219,13 +219,6 @@ const Type& TypeParameterSymbol::getTypeAlias() const {
     auto scope = getParentScope();
     ASSERT(scope);
 
-    // If the parent scope is a DefinitionSymbol, as opposed to an instance,
-    // we need to always return an Error type here so that elaborating the
-    // definition doesn't cause spurious errors when looking at default values
-    // for type parameters that are invalid but aren't ever actually instantiated.
-    if (scope->asSymbol().kind == SymbolKind::Definition)
-        return scope->getCompilation().getErrorType();
-
     auto alias = scope->getCompilation().emplace<TypeAliasType>(name, location);
     if (auto syntax = getSyntax())
         alias->setSyntax(*syntax);

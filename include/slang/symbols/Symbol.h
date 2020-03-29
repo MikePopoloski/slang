@@ -48,7 +48,6 @@ struct AttributeInstanceSyntax;
     x(ErrorType) \
     x(ForwardingTypedef) \
     x(NetType) \
-    x(Definition) \
     x(Parameter) \
     x(TypeParameter) \
     x(Port) \
