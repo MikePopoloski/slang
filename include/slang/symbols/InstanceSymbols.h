@@ -10,7 +10,6 @@
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
-#include "slang/symbols/TimeScaleSymbolBase.h"
 
 namespace slang {
 

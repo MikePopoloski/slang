@@ -71,6 +71,8 @@ struct TimeScale {
     void setFromSyntax(const Scope& scope, const TimeUnitsDeclarationSyntax& syntax,
                        optional<SourceRange>& unitsRange, optional<SourceRange>& precisionRange,
                        bool isFirst);
+    void setDefault(const Scope& scope, optional<TimeScale> directiveTimeScale, bool hasBase,
+                    bool hasPrecision);
 
     bool operator==(const TimeScale& rhs) const;
     bool operator!=(const TimeScale& rhs) const { return !(*this == rhs); }

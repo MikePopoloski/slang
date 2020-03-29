@@ -92,7 +92,6 @@ add_library(slang
     symbols/Scope.cpp
     symbols/SemanticFacts.cpp
     symbols/Symbol.cpp
-    symbols/TimeScaleSymbolBase.cpp
     symbols/TypePrinter.cpp
     symbols/Type.cpp
     symbols/VariableSymbols.cpp

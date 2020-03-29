@@ -8,20 +8,21 @@
 
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
-#include "slang/symbols/TimeScaleSymbolBase.h"
 
 namespace slang {
 
 class ModuleInstanceSymbol;
+struct ModuleDeclarationSyntax;
 
 /// The root of a single compilation unit.
-class CompilationUnitSymbol : public Symbol, public Scope, TimeScaleSymbolBase {
+class CompilationUnitSymbol : public Symbol, public Scope {
 public:
+    TimeScale timeScale;
+
     explicit CompilationUnitSymbol(Compilation& compilation);
 
     void addMembers(const SyntaxNode& syntax);
 
-    TimeScale getTimeScale() const { return timeScale; }
     void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CompilationUnit; }
@@ -29,17 +30,19 @@ public:
 private:
     // Used for tracking whether a time scale directive is first in scope.
     bool anyMembers = false;
+    optional<SourceRange> unitsRange;
+    optional<SourceRange> precisionRange;
 };
 
 /// A SystemVerilog package construct.
-class PackageSymbol : public Symbol, public Scope, TimeScaleSymbolBase {
+class PackageSymbol : public Symbol, public Scope {
 public:
     const NetType& defaultNetType;
+    TimeScale timeScale;
 
     PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                   const NetType& defaultNetType);
 
-    TimeScale getTimeScale() const { return timeScale; }
     void serializeTo(ASTSerializer&) const {}
 
     static PackageSymbol& fromSyntax(Compilation& compilation,

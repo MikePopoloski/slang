@@ -75,9 +75,9 @@ TimeScale Scope::getTimeScale() const {
         auto& sym = current->asSymbol();
         switch (sym.kind) {
             case SymbolKind::CompilationUnit:
-                return sym.as<CompilationUnitSymbol>().getTimeScale();
+                return sym.as<CompilationUnitSymbol>().timeScale;
             case SymbolKind::Package:
-                return sym.as<PackageSymbol>().getTimeScale();
+                return sym.as<PackageSymbol>().timeScale;
             default:
                 if (InstanceSymbol::isKind(sym.kind))
                     return sym.as<InstanceSymbol>().definition.timeScale;

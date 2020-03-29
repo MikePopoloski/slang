@@ -173,6 +173,31 @@ void TimeScale::setFromSyntax(const Scope& scope, const TimeUnitsDeclarationSynt
     }
 }
 
+void TimeScale::setDefault(const Scope& scope, optional<TimeScale> directiveTimeScale, bool hasBase,
+                           bool hasPrecision) {
+    // If no time unit was set, infer one based on the following rules:
+    // - If the scope is nested (inside another definition), inherit from that definition.
+    // - Otherwise use a `timescale directive if there is one.
+    // - Otherwise, look for a time unit in the compilation scope.
+    // - Finally use the compilation default.
+    if (hasBase && hasPrecision)
+        return;
+
+    optional<TimeScale> ts;
+    if (scope.asSymbol().kind == SymbolKind::CompilationUnit)
+        ts = directiveTimeScale;
+
+    if (!ts)
+        ts = scope.getTimeScale();
+
+    if (!hasBase)
+        base = ts->base;
+    if (!hasPrecision)
+        precision = ts->precision;
+
+    // TODO: error if inferred timescale is invalid (because precision > units)
+}
+
 bool TimeScale::operator==(const TimeScale& rhs) const {
     return base == rhs.base && precision == rhs.precision;
 }

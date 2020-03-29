@@ -20,8 +20,10 @@ CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :
 }
 
 void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {
-    if (syntax.kind == SyntaxKind::TimeUnitsDeclaration)
-        setTimeScale(*this, syntax.as<TimeUnitsDeclarationSyntax>(), !anyMembers);
+    if (syntax.kind == SyntaxKind::TimeUnitsDeclaration) {
+        timeScale.setFromSyntax(*this, syntax.as<TimeUnitsDeclarationSyntax>(), unitsRange,
+                                precisionRange, !anyMembers);
+    }
     else {
         anyMembers = true;
         Scope::addMembers(syntax);
@@ -37,24 +39,29 @@ PackageSymbol::PackageSymbol(Compilation& compilation, string_view name, SourceL
 PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation,
                                          const ModuleDeclarationSyntax& syntax,
                                          const Scope& scope) {
-
     auto result = compilation.emplace<PackageSymbol>(compilation, syntax.header->name.valueText(),
                                                      syntax.header->name.location(),
                                                      compilation.getDefaultNetType(syntax));
-
-    bool first = true;
-    for (auto member : syntax.members) {
-        if (member->kind == SyntaxKind::TimeUnitsDeclaration)
-            result->setTimeScale(*result, member->as<TimeUnitsDeclarationSyntax>(), first);
-        else {
-            first = false;
-            result->addMembers(*member);
-        }
-    }
-
-    result->finalizeTimeScale(scope, syntax);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
+
+    bool first = true;
+    optional<SourceRange> unitsRange;
+    optional<SourceRange> precisionRange;
+
+    for (auto member : syntax.members) {
+        if (member->kind == SyntaxKind::TimeUnitsDeclaration) {
+            result->timeScale.setFromSyntax(scope, member->as<TimeUnitsDeclarationSyntax>(),
+                                            unitsRange, precisionRange, first);
+            continue;
+        }
+
+        first = false;
+        result->addMembers(*member);
+    }
+
+    result->timeScale.setDefault(scope, compilation.getDirectiveTimeScale(syntax),
+                                 unitsRange.has_value(), precisionRange.has_value());
     return *result;
 }
 

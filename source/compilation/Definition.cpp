@@ -124,27 +124,8 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
         }
     }
 
-    // If no time unit was set, infer one based on the following rules:
-    // - If the scope is nested (inside another definition), inherit from that definition.
-    // - Otherwise use a `timescale directive if there is one.
-    // - Otherwise, look for a time unit in the compilation scope.
-    // - Finally use the compilation default.
-    if (unitsRange && precisionRange)
-        return;
-
-    optional<TimeScale> ts;
-    if (scope.asSymbol().kind == SymbolKind::CompilationUnit)
-        ts = directiveTimeScale;
-
-    if (!ts)
-        ts = scope.getTimeScale();
-
-    if (!unitsRange)
-        timeScale.base = ts->base;
-    if (!precisionRange)
-        timeScale.precision = ts->precision;
-
-    // TODO: error if inferred timescale is invalid (because precision > units)
+    timeScale.setDefault(scope, directiveTimeScale, unitsRange.has_value(),
+                         precisionRange.has_value());
 }
 
 } // namespace slang
