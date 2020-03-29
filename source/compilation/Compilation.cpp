@@ -578,10 +578,10 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             Diagnostic diag = *found;
             diag.symbol = getInstance(inst);
             diag.coalesceCount = count;
-            results.append(std::move(diag));
+            results.emplace(std::move(diag));
         }
         else {
-            results.append(diagList.front());
+            results.emplace(diagList.front());
         }
     }
 
@@ -641,11 +641,11 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
     if (diag.isError())
         numErrors++;
 
+    auto key = std::make_tuple(diag.code, diag.location);
     std::vector<Diagnostic> newEntry;
-    newEntry.push_back(std::move(diag));
+    newEntry.emplace_back(std::move(diag));
 
-    auto [it, inserted] =
-        diagMap.emplace(std::make_tuple(diag.code, diag.location), std::move(newEntry));
+    auto [it, inserted] = diagMap.emplace(key, std::move(newEntry));
     return it->second.back();
 }
 

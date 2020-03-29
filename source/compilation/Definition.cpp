@@ -8,6 +8,7 @@
 
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/AttributeSymbol.h"
+#include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -73,12 +74,12 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
 
     auto createParams = [&](auto syntax, bool isLocal, bool isPort) {
         if (syntax->kind == SyntaxKind::ParameterDeclaration) {
-            auto& paramSyntax = syntax->as<ParameterDeclarationSyntax>();
+            auto& paramSyntax = syntax->template as<ParameterDeclarationSyntax>();
             for (auto decl : paramSyntax.declarators)
                 parameters.emplace(scope, paramSyntax, *decl, isLocal, isPort);
         }
         else {
-            auto& paramSyntax = syntax->as<TypeParameterDeclarationSyntax>();
+            auto& paramSyntax = syntax->template as<TypeParameterDeclarationSyntax>();
             for (auto decl : paramSyntax.declarators)
                 parameters.emplace(scope, paramSyntax, *decl, isLocal, isPort);
         }
