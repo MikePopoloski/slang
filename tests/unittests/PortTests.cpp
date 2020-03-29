@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include "slang/compilation/Definition.h"
+
 TEST_CASE("Module ANSI ports") {
     auto tree = SyntaxTree::fromText(R"(
 module mh0 (wire x); endmodule
@@ -119,11 +121,10 @@ module m6(I.bar bar); endmodule
         REQUIRE(port.interfaceDef);                                  \
         CHECK(port.interfaceDef->name == (ifaceName));               \
         if (*(modportName)) {                                        \
-            REQUIRE(port.modport);                                   \
-            CHECK(port.modport->name == (modportName));              \
+            CHECK(port.modport == (modportName));                    \
         }                                                            \
         else {                                                       \
-            CHECK(!port.modport);                                    \
+            CHECK(port.modport.empty());                             \
         }                                                            \
     };
 
@@ -136,15 +137,15 @@ module m6(I.bar bar); endmodule
     checkIfacePort("m3", "k", "K", "");
     checkPort("m3", "w", PortDirection::InOut, wire, "logic");
     checkPort("m4", "v", PortDirection::Out, nullptr, "logic");
-    checkIfacePort("m5", "a1", "J", "");
-    checkIfacePort("m5", "a2", "K", "");
+    checkIfacePort("m5", "a1", "J", "foo");
+    checkIfacePort("m5", "a2", "K", "f");
     checkIfacePort("m6", "bar", "I", "bar");
 
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::PortTypeNotInterfaceOrData);
     CHECK(diags[1].code == diag::VarWithInterfacePort);
     CHECK(diags[2].code == diag::DirectionWithInterfacePort);
-    CHECK(diags[3].code == diag::UnknownMember);
+    CHECK(diags[3].code == diag::NotAModport);
     CHECK(diags[4].code == diag::NotAModport);
 }
 

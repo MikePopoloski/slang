@@ -8,6 +8,7 @@
 
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
@@ -60,7 +61,7 @@ const NetType& Scope::getDefaultNetType() const {
                 return sym.as<PackageSymbol>().defaultNetType;
             default:
                 if (InstanceSymbol::isKind(sym.kind))
-                    current = &sym.as<InstanceSymbol>().definition;
+                    return sym.as<InstanceSymbol>().definition.defaultNetType;
                 else
                     current = sym.getParentScope();
                 break;
@@ -83,7 +84,7 @@ TimeScale Scope::getTimeScale() const {
                 return sym.as<PackageSymbol>().getTimeScale();
             default:
                 if (InstanceSymbol::isKind(sym.kind))
-                    current = &sym.as<InstanceSymbol>().definition;
+                    return sym.as<InstanceSymbol>().definition.timeScale;
                 else
                     current = sym.getParentScope();
                 break;

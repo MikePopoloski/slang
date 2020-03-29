@@ -8,6 +8,7 @@
 
 #include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -65,14 +66,14 @@ public:
 
                 // It's possible that this is actually an interface port if the data type is just an
                 // identifier. The only way to know is to do a lookup and see what comes back.
-                const DefinitionSymbol* definition = nullptr;
+                const Definition* definition = nullptr;
                 string_view simpleName = SyntaxFacts::getSimpleTypeName(*header.dataType);
                 if (!simpleName.empty()) {
                     auto found = Lookup::unqualified(scope, simpleName, LookupFlags::Type);
 
                     // If we didn't find a valid type, try to find a definition.
                     if (!found || !found->isType())
-                        definition = compilation.getDefinition(simpleName, scope);
+                        definition = compilation.getDefinition2(simpleName, scope);
                 }
 
                 if (definition) {
@@ -94,7 +95,7 @@ public:
                         }
                     }
 
-                    return add(decl, definition, nullptr, syntax.attributes);
+                    return add(decl, definition, ""sv, syntax.attributes);
                 }
 
                 // Rules from [23.2.2.3]:
@@ -124,8 +125,8 @@ public:
                 // TODO: handle generic interface header
                 auto& header = syntax.header->as<InterfacePortHeaderSyntax>();
                 auto token = header.nameOrKeyword;
-                auto definition = compilation.getDefinition(token.valueText(), scope);
-                const ModportSymbol* modport = nullptr;
+                auto definition = compilation.getDefinition2(token.valueText(), scope);
+                string_view modport;
 
                 if (!definition) {
                     scope.addDiag(diag::UnknownInterface, token.range()) << token.valueText();
@@ -138,9 +139,17 @@ public:
                     definition = nullptr;
                 }
                 else if (header.modport) {
+                    auto def = compilation.getDefinition2(token.valueText(), scope);
+                    ASSERT(def);
+
                     auto member = header.modport->member;
-                    modport =
-                        definition->getModportOrError(member.valueText(), scope, member.range());
+                    modport = member.valueText();
+                    if (auto it = def->modports.find(modport);
+                        it == def->modports.end() && !modport.empty()) {
+                        auto& diag = scope.addDiag(diag::NotAModport, member.range());
+                        diag << modport;
+                        diag << def->name;
+                    }
                 }
 
                 return add(decl, definition, modport, syntax.attributes);
@@ -182,7 +191,7 @@ private:
                          span<const AttributeInstanceSyntax* const> attrs) {
         if (lastInterface) {
             // TODO: inherit modport
-            return add(decl, lastInterface, nullptr, attrs);
+            return add(decl, lastInterface, ""sv, attrs);
         }
 
         return add(decl, lastDirection, *lastType, lastNetType, attrs);
@@ -230,8 +239,8 @@ private:
         return port;
     }
 
-    Symbol* add(const DeclaratorSyntax& decl, const DefinitionSymbol* iface,
-                const ModportSymbol* modport, span<const AttributeInstanceSyntax* const> attrs) {
+    Symbol* add(const DeclaratorSyntax& decl, const Definition* iface, string_view modport,
+                span<const AttributeInstanceSyntax* const> attrs) {
         auto port =
             compilation.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
 
@@ -255,7 +264,7 @@ private:
     PortDirection lastDirection = PortDirection::InOut;
     const DataTypeSyntax* lastType = &UnsetType;
     const NetType* lastNetType = nullptr;
-    const DefinitionSymbol* lastInterface = nullptr;
+    const Definition* lastInterface = nullptr;
 
     static const ImplicitTypeSyntax UnsetType;
 };
@@ -1068,9 +1077,9 @@ optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() cons
 
 void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {
     if (interfaceDef)
-        serializer.writeLink("interfaceDef", *interfaceDef);
-    if (modport)
-        serializer.writeLink("modport", *modport);
+        serializer.write("interfaceDef", interfaceDef->name);
+    if (!modport.empty())
+        serializer.write("modport", modport);
     if (connection)
         serializer.writeLink("connection", *connection);
 }

@@ -40,7 +40,7 @@ LookupLocation LookupLocation::after(const Symbol& symbol) {
 LookupLocation LookupLocation::beforeLexical(const Symbol& symbol) {
     if (InstanceSymbol::isKind(symbol.kind)) {
         auto& def = symbol.as<InstanceSymbol>().definition;
-        return LookupLocation(def.getParentScope(), (uint32_t)def.getIndex());
+        return LookupLocation(&def.scope, (uint32_t)def.indexInScope);
     }
     return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex());
 }

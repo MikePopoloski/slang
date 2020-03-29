@@ -6,9 +6,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <flat_hash_map.hpp>
+
 #include "slang/symbols/Lookup.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/util/SmallVector.h"
+#include "slang/util/Util.h"
 
 namespace slang {
 
@@ -29,6 +32,8 @@ public:
     SourceLocation location;
     const ModuleDeclarationSyntax& syntax;
     const NetType& defaultNetType;
+    const Scope& scope;
+    SymbolIndex indexInScope;
     DefinitionKind definitionKind;
     VariableLifetime defaultLifetime;
     UnconnectedDrive unconnectedDrive;
@@ -55,9 +60,12 @@ public:
                       const DeclaratorSyntax& decl, bool isLocal, bool isPort);
         ParameterDecl(const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
                       const TypeAssignmentSyntax& decl, bool isLocal, bool isPort);
+
+        bool hasDefault() const;
     };
 
     SmallVectorSized<ParameterDecl, 8> parameters;
+    flat_hash_set<string_view> modports;
     span<const AttributeSymbol* const> attributes;
 
     Definition(const Scope& scope, LookupLocation lookupLocation,

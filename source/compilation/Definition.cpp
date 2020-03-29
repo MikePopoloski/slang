@@ -48,16 +48,24 @@ Definition::ParameterDecl::ParameterDecl(const Scope& scope,
     }
 }
 
+bool Definition::ParameterDecl::hasDefault() const {
+    if (isTypeParam)
+        return typeDecl && typeDecl->assignment != nullptr;
+    else
+        return valueDecl && valueDecl->initializer != nullptr;
+}
+
 Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
                        const ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
                        UnconnectedDrive unconnectedDrive, optional<TimeScale> directiveTimeScale) :
     syntax(syntax),
-    defaultNetType(defaultNetType), unconnectedDrive(unconnectedDrive) {
+    defaultNetType(defaultNetType), scope(scope), unconnectedDrive(unconnectedDrive) {
 
     // Extract and save various properties of the definition.
     auto& header = *syntax.header;
     name = header.name.valueText();
     location = header.name.location();
+    indexInScope = lookupLocation.getIndex();
     definitionKind = SemanticFacts::getDefinitionKind(syntax.kind);
     defaultLifetime =
         SemanticFacts::getVariableLifetime(header.lifetime).value_or(VariableLifetime::Static);
@@ -104,12 +112,16 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
         }
 
         first = false;
-        if (member->kind != SyntaxKind::ParameterDeclarationStatement)
-            continue;
-
-        auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
-        bool isLocal = hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
-        createParams(declaration, isLocal, /* isPort */ false);
+        if (member->kind == SyntaxKind::ModportDeclaration) {
+            for (auto item : member->as<ModportDeclarationSyntax>().items)
+                modports.emplace(item->name.valueText());
+        }
+        else if (member->kind == SyntaxKind::ParameterDeclarationStatement) {
+            auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
+            bool isLocal =
+                hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
+            createParams(declaration, isLocal, /* isPort */ false);
+        }
     }
 
     // If no time unit was set, infer one based on the following rules:
@@ -133,9 +145,6 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
         timeScale.precision = ts->precision;
 
     // TODO: error if inferred timescale is invalid (because precision > units)
-
-    // TODO:
-    // result->setAttributes(scope, syntax.attributes);
 }
 
 } // namespace slang

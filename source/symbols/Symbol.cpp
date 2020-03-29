@@ -7,6 +7,7 @@
 #include "slang/symbols/Symbol.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/compilation/Definition.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
@@ -50,7 +51,7 @@ bool Symbol::isInstance() const {
 
 const Scope* Symbol::getLexicalScope() const {
     if (InstanceSymbol::isKind(kind))
-        return as<InstanceSymbol>().definition.getParentScope();
+        return &as<InstanceSymbol>().definition.scope;
     else
         return getParentScope();
 }

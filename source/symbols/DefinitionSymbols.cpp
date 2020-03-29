@@ -8,6 +8,7 @@
 
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -163,7 +164,7 @@ namespace {
 
 class InstanceBuilder {
 public:
-    InstanceBuilder(const BindContext& context, const DefinitionSymbol& definition,
+    InstanceBuilder(const BindContext& context, const Definition& definition,
                     span<const ParameterSymbolBase* const> parameters,
                     span<const AttributeInstanceSyntax* const> attributes,
                     uint32_t hierarchyDepth) :
@@ -183,7 +184,7 @@ private:
 
     Compilation& compilation;
     const BindContext& context;
-    const DefinitionSymbol& definition;
+    const Definition& definition;
     SmallVectorSized<int32_t, 4> path;
     span<const ParameterSymbolBase* const> parameters;
     span<const AttributeInstanceSyntax* const> attributes;
@@ -252,7 +253,7 @@ private:
     }
 };
 
-Scope& createTempInstance(Compilation& compilation, const DefinitionSymbol& def) {
+Scope& createTempInstance(Compilation& compilation, const Definition& def) {
     // Construct a temporary scope that has the right parent to house instance parameters
     // as we're evaluating them. We hold on to the initializer expressions and give them
     // to the instances later when we create them.
@@ -263,10 +264,10 @@ Scope& createTempInstance(Compilation& compilation, const DefinitionSymbol& def)
 
     auto& tempDef =
         *compilation.emplace<TempInstance>(compilation, def.name, def.location, def, 0u);
-    tempDef.setParent(*def.getParentScope());
+    tempDef.setParent(def.scope);
 
     // Need the imports here as well, since parameters may depend on them.
-    for (auto import : def.getSyntax()->as<ModuleDeclarationSyntax>().header->imports)
+    for (auto import : def.syntax.header->imports)
         tempDef.addMembers(*import);
 
     return tempDef;
@@ -316,7 +317,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const Scope& scope, SmallVector<const Symbol*>& results) {
 
     auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
-    if (!definition) {
+    auto definition2 = compilation.getDefinition2(syntax.type.valueText(), scope);
+    if (!definition || !definition2) {
         scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
         return;
     }
@@ -426,7 +428,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     // As an optimization, determine values for all parameters now so that they can be
     // shared between instances. That way an instance array with hundreds of entries
     // doesn't recompute the same param values over and over again.
-    Scope& tempDef = createTempInstance(compilation, *definition);
+    Scope& tempDef = createTempInstance(compilation, *definition2);
 
     BindContext context(scope, location, BindFlags::Constant);
     SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
@@ -497,7 +499,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = scope.getDefaultNetType();
 
-    InstanceBuilder builder(context, *definition, parameters, syntax.attributes, hierarchyDepth);
+    InstanceBuilder builder(context, *definition2, parameters, syntax.attributes, hierarchyDepth);
 
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
@@ -506,7 +508,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 }
 
 InstanceSymbol::InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name,
-                               SourceLocation loc, const DefinitionSymbol& definition,
+                               SourceLocation loc, const Definition& definition,
                                uint32_t hierarchyDepth) :
     Symbol(kind, name, loc),
     Scope(compilation, this), definition(definition), hierarchyDepth(hierarchyDepth),
@@ -537,7 +539,7 @@ void InstanceSymbol::getArrayDimensions(SmallVector<ConstantRange>& dimensions) 
 }
 
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.writeLink("definition", definition);
+    serializer.write("definition", definition.name);
 }
 
 bool InstanceSymbol::isKind(SymbolKind kind) {
@@ -554,7 +556,7 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
 void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
                               span<const ParameterSymbolBase* const> parameters) {
     // TODO: getSyntax dependency
-    auto& declSyntax = definition.getSyntax()->as<ModuleDeclarationSyntax>();
+    auto& declSyntax = definition.syntax;
     Compilation& comp = getCompilation();
 
     // Package imports from the header always come first.
@@ -623,16 +625,17 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
                                                         SourceLocation loc,
-                                                        const DefinitionSymbol& definition) {
+                                                        const Definition& definition,
+                                                        const DefinitionSymbol& defSymbol) {
     auto instance =
         compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc, definition, 0u);
-    instance->populate(nullptr, definition.parameters);
+    instance->populate(nullptr, defSymbol.parameters);
     return *instance;
 }
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const ParameterSymbolBase* const> parameters,
+    const Definition& definition, span<const ParameterSymbolBase* const> parameters,
     uint32_t hierarchyDepth) {
 
     auto instance = compilation.emplace<ModuleInstanceSymbol>(
@@ -643,7 +646,7 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
 
 ProgramInstanceSymbol& ProgramInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const ParameterSymbolBase* const> parameters,
+    const Definition& definition, span<const ParameterSymbolBase* const> parameters,
     uint32_t hierarchyDepth) {
 
     auto instance = compilation.emplace<ProgramInstanceSymbol>(
@@ -655,7 +658,7 @@ ProgramInstanceSymbol& ProgramInstanceSymbol::instantiate(
 
 InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
     Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const DefinitionSymbol& definition, span<const ParameterSymbolBase* const> parameters,
+    const Definition& definition, span<const ParameterSymbolBase* const> parameters,
     uint32_t hierarchyDepth) {
 
     auto instance = compilation.emplace<InterfaceInstanceSymbol>(

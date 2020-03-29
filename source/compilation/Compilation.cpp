@@ -123,7 +123,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
     Compilation& compilation;
     const size_t& numErrors;
-    flat_hash_map<const Symbol*, size_t> instanceCount;
+    flat_hash_map<const Definition*, size_t> instanceCount;
     uint32_t errorLimit;
     bool inDef = false;
 };
@@ -330,8 +330,8 @@ const RootSymbol& Compilation::getRoot() {
     // Find modules that have no instantiations. Iterate the definitions map
     // before instantiating any top level modules, since that can cause changes
     // to the definition map itself.
-    SmallVectorSized<const DefinitionSymbol*, 8> topDefinitions;
-    for (auto& [key, definition] : definitionMap) {
+    SmallVectorSized<const Definition*, 8> topDefinitions;
+    for (auto& [key, definition] : definitionMap2) {
         // Ignore definitions that are not top level. Top level definitions are:
         // - Always modules
         // - Not nested
@@ -346,8 +346,8 @@ const RootSymbol& Compilation::getRoot() {
             continue;
 
         bool allDefaulted = true;
-        for (auto param : definition->parameters) {
-            if (!param->hasDefault()) {
+        for (auto& param : definition->parameters) {
+            if (!param.hasDefault()) {
                 allDefaulted = false;
                 break;
             }
@@ -355,7 +355,7 @@ const RootSymbol& Compilation::getRoot() {
         if (!allDefaulted)
             continue;
 
-        topDefinitions.append(definition);
+        topDefinitions.append(definition.get());
     }
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
@@ -365,7 +365,9 @@ const RootSymbol& Compilation::getRoot() {
 
     SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
     for (auto def : topDefinitions) {
-        auto& instance = ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def);
+        auto defSym = getDefinition(def->name, def->scope);
+        ASSERT(defSym);
+        auto& instance = ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def, *defSym);
         root->addMember(instance);
         topList.append(&instance);
     }

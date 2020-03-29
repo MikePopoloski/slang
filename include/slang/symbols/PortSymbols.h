@@ -14,8 +14,7 @@
 namespace slang {
 
 class AttributeSymbol;
-class DefinitionSymbol;
-class ModportSymbol;
+class Definition;
 
 struct PortConnectionSyntax;
 struct PortDeclarationSyntax;
@@ -79,14 +78,14 @@ private:
 class InterfacePortSymbol : public Symbol {
 public:
     /// A pointer to the definition for the interface.
-    const DefinitionSymbol* interfaceDef = nullptr;
-
-    /// A pointer to an optional modport that restricts which interface signals are accessible.
-    const ModportSymbol* modport = nullptr;
+    const Definition* interfaceDef = nullptr;
 
     /// If the port is connected during instantiation, this is the external instance to which it
     /// connects.
     const Symbol* connection = nullptr;
+
+    /// If non-empty, the name of the modport that restricts which interface signals are accessible.
+    string_view modport;
 
     /// Attributes attached to the connection, if any.
     span<const AttributeSymbol* const> connectionAttributes;

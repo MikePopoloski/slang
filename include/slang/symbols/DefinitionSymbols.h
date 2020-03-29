@@ -14,6 +14,7 @@
 
 namespace slang {
 
+class Definition;
 class ModportSymbol;
 class NetType;
 class ParameterSymbolBase;
@@ -59,7 +60,7 @@ struct HierarchyInstantiationSyntax;
 /// Base class for module, interface, and program instance symbols.
 class InstanceSymbol : public Symbol, public Scope {
 public:
-    const DefinitionSymbol& definition;
+    const Definition& definition;
     span<const int32_t> arrayPath;
     uint32_t hierarchyDepth;
 
@@ -86,7 +87,7 @@ public:
 
 protected:
     InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc,
-                   const DefinitionSymbol& definition, uint32_t hierarchyDepth);
+                   const Definition& definition, uint32_t hierarchyDepth);
 
     void populate(const HierarchicalInstanceSyntax* syntax,
                   span<const ParameterSymbolBase* const> parameters);
@@ -98,17 +99,17 @@ private:
 class ModuleInstanceSymbol : public InstanceSymbol {
 public:
     ModuleInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                         const DefinitionSymbol& definition, uint32_t hierarchyDepth) :
+                         const Definition& definition, uint32_t hierarchyDepth) :
         InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, loc, definition,
                        hierarchyDepth) {}
 
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name,
-                                             SourceLocation loc,
-                                             const DefinitionSymbol& definition);
+                                             SourceLocation loc, const Definition& definition,
+                                             const DefinitionSymbol& defSymbol);
 
     static ModuleInstanceSymbol& instantiate(Compilation& compilation,
                                              const HierarchicalInstanceSyntax& syntax,
-                                             const DefinitionSymbol& definition,
+                                             const Definition& definition,
                                              span<const ParameterSymbolBase* const> parameters,
                                              uint32_t hierarchyDepth);
 
@@ -118,13 +119,13 @@ public:
 class ProgramInstanceSymbol : public InstanceSymbol {
 public:
     ProgramInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                          const DefinitionSymbol& definition, uint32_t hierarchyDepth) :
+                          const Definition& definition, uint32_t hierarchyDepth) :
         InstanceSymbol(SymbolKind::ProgramInstance, compilation, name, loc, definition,
                        hierarchyDepth) {}
 
     static ProgramInstanceSymbol& instantiate(Compilation& compilation,
                                               const HierarchicalInstanceSyntax& syntax,
-                                              const DefinitionSymbol& definition,
+                                              const Definition& definition,
                                               span<const ParameterSymbolBase* const> parameters,
                                               uint32_t hierarchyDepth);
 
@@ -134,13 +135,13 @@ public:
 class InterfaceInstanceSymbol : public InstanceSymbol {
 public:
     InterfaceInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                            const DefinitionSymbol& definition, uint32_t hierarchyDepth) :
+                            const Definition& definition, uint32_t hierarchyDepth) :
         InstanceSymbol(SymbolKind::InterfaceInstance, compilation, name, loc, definition,
                        hierarchyDepth) {}
 
     static InterfaceInstanceSymbol& instantiate(Compilation& compilation,
                                                 const HierarchicalInstanceSyntax& syntax,
-                                                const DefinitionSymbol& definition,
+                                                const Definition& definition,
                                                 span<const ParameterSymbolBase* const> parameters,
                                                 uint32_t hierarchyDepth);
 
