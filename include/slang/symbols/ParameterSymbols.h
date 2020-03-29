@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/compilation/Definition.h"
 #include "slang/symbols/Symbol.h"
 
 namespace slang {
@@ -38,11 +39,13 @@ public:
     static void fromSyntax(const Scope& scope, const ParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVector<ParameterSymbol*>& results);
 
+    static ParameterSymbol& fromDecl(const Definition::ParameterDecl& decl, Scope& newScope,
+                                     const BindContext& context,
+                                     const ExpressionSyntax* newInitializer);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
     ParameterSymbol& clone(Compilation& compilation) const;
-    ParameterSymbol& instantiate(Scope& newScope, const BindContext& context,
-                                 const ExpressionSyntax* newInitializer) const;
 
     const ConstantValue& getValue() const;
     void setValue(ConstantValue value);
@@ -64,11 +67,13 @@ public:
     static void fromSyntax(const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVector<TypeParameterSymbol*>& results);
 
+    static TypeParameterSymbol& fromDecl(const Definition::ParameterDecl& decl, Scope& newScope,
+                                         const BindContext& context,
+                                         const ExpressionSyntax* newInitializer);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
 
     TypeParameterSymbol& clone(Compilation& compilation) const;
-    TypeParameterSymbol& instantiate(Scope& newScope, const BindContext& context,
-                                     const ExpressionSyntax* newInitializer) const;
 
     const Type& getTypeAlias() const;
 

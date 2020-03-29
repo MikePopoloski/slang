@@ -253,7 +253,10 @@ private:
     }
 };
 
-Scope& createTempInstance(Compilation& compilation, const Definition& def) {
+void createParams(Compilation& compilation, const Definition& definition, const Scope& scope,
+                  LookupLocation ll, SourceLocation instanceLoc,
+                  SmallMap<string_view, const ExpressionSyntax*, 8>& paramOverrides,
+                  SmallVector<const ParameterSymbolBase*>& parameters) {
     // Construct a temporary scope that has the right parent to house instance parameters
     // as we're evaluating them. We hold on to the initializer expressions and give them
     // to the instances later when we create them.
@@ -262,15 +265,49 @@ Scope& createTempInstance(Compilation& compilation, const Definition& def) {
         void setParent(const Scope& scope) { ModuleInstanceSymbol::setParent(scope); }
     };
 
-    auto& tempDef =
-        *compilation.emplace<TempInstance>(compilation, def.name, def.location, def, 0u);
-    tempDef.setParent(def.scope);
+    auto& tempDef = *compilation.emplace<TempInstance>(compilation, definition.name,
+                                                       definition.location, definition, 0u);
+    tempDef.setParent(definition.scope);
 
     // Need the imports here as well, since parameters may depend on them.
-    for (auto import : def.syntax.header->imports)
+    for (auto import : definition.syntax.header->imports)
         tempDef.addMembers(*import);
 
-    return tempDef;
+    BindContext context(scope, ll, BindFlags::Constant);
+    for (auto& param : definition.parameters) {
+        if (!param.isTypeParam) {
+            // This is a value parameter.
+            const ExpressionSyntax* newInitializer = nullptr;
+            if (auto it = paramOverrides.find(param.name); it != paramOverrides.end())
+                newInitializer = it->second;
+
+            auto& newParam = ParameterSymbol::fromDecl(param, tempDef, context, newInitializer);
+            parameters.append(&newParam);
+
+            if (!newParam.isLocalParam() && newParam.isPortParam() &&
+                !newParam.getDeclaredType()->getInitializerSyntax()) {
+                auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
+                diag << definition.name;
+                diag << newParam.name;
+            }
+        }
+        else {
+            // Otherwise this is a type parameter.
+            const ExpressionSyntax* newInitializer = nullptr;
+            if (auto it = paramOverrides.find(param.name); it != paramOverrides.end())
+                newInitializer = it->second;
+
+            auto& newParam = TypeParameterSymbol::fromDecl(param, tempDef, context, newInitializer);
+            parameters.append(&newParam);
+
+            if (!newInitializer && !newParam.isLocalParam() && newParam.isPortParam() &&
+                !newParam.targetType.getTypeSyntax()) {
+                auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
+                diag << definition.name;
+                diag << newParam.name;
+            }
+        }
+    }
 }
 
 void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindContext& context,
@@ -315,10 +352,8 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindCo
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax, LookupLocation location,
                                 const Scope& scope, SmallVector<const Symbol*>& results) {
-
-    auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
-    auto definition2 = compilation.getDefinition2(syntax.type.valueText(), scope);
-    if (!definition || !definition2) {
+    auto definition = compilation.getDefinition2(syntax.type.valueText(), scope);
+    if (!definition) {
         scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
         return;
     }
@@ -366,14 +401,14 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         // For each parameter assignment we have, match it up to a real parameter
         if (orderedAssignments) {
             uint32_t orderedIndex = 0;
-            for (auto param : definition->parameters) {
+            for (auto& param : definition->parameters) {
                 if (orderedIndex >= orderedParams.size())
                     break;
 
-                if (param->isLocalParam())
+                if (param.isLocalParam)
                     continue;
 
-                paramOverrides.emplace(param->symbol.name, orderedParams[orderedIndex++]->expr);
+                paramOverrides.emplace(param.name, orderedParams[orderedIndex++]->expr);
             }
 
             // Make sure there aren't extra param assignments for non-existent params.
@@ -387,20 +422,20 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         }
         else {
             // Otherwise handle named assignments.
-            for (auto param : definition->parameters) {
-                auto it = namedParams.find(param->symbol.name);
+            for (auto& param : definition->parameters) {
+                auto it = namedParams.find(param.name);
                 if (it == namedParams.end())
                     continue;
 
                 const NamedArgumentSyntax* arg = it->second.first;
                 it->second.second = true;
-                if (param->isLocalParam()) {
+                if (param.isLocalParam) {
                     // Can't assign to localparams, so this is an error.
-                    DiagCode code = param->isPortParam() ? diag::AssignedToLocalPortParam
-                                                         : diag::AssignedToLocalBodyParam;
+                    DiagCode code = param.isPortParam ? diag::AssignedToLocalPortParam
+                                                      : diag::AssignedToLocalBodyParam;
 
                     auto& diag = scope.addDiag(code, arg->name.location());
-                    diag.addNote(diag::NoteDeclarationHere, param->symbol.location);
+                    diag.addNote(diag::NoteDeclarationHere, param.location);
                     continue;
                 }
 
@@ -409,7 +444,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
                 if (!arg->expr)
                     continue;
 
-                paramOverrides.emplace(param->symbol.name, arg->expr);
+                paramOverrides.emplace(param.name, arg->expr);
             }
 
             for (const auto& pair : namedParams) {
@@ -428,48 +463,9 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     // As an optimization, determine values for all parameters now so that they can be
     // shared between instances. That way an instance array with hundreds of entries
     // doesn't recompute the same param values over and over again.
-    Scope& tempDef = createTempInstance(compilation, *definition2);
-
-    BindContext context(scope, location, BindFlags::Constant);
     SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
-
-    for (auto param : definition->parameters) {
-        if (param->symbol.kind == SymbolKind::Parameter) {
-            // This is a value parameter.
-            auto& oldParam = param->symbol.as<ParameterSymbol>();
-            const ExpressionSyntax* newInitializer = nullptr;
-            if (auto it = paramOverrides.find(oldParam.name); it != paramOverrides.end())
-                newInitializer = it->second;
-
-            auto& newParam = oldParam.instantiate(tempDef, context, newInitializer);
-            parameters.append(&newParam);
-
-            if (!newParam.isLocalParam() && newParam.isPortParam() && !newParam.getInitializer()) {
-                auto& diag =
-                    scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
-                diag << definition->name;
-                diag << newParam.name;
-            }
-        }
-        else {
-            // Otherwise this is a type parameter.
-            auto& oldParam = param->symbol.as<TypeParameterSymbol>();
-            const ExpressionSyntax* newInitializer = nullptr;
-            if (auto it = paramOverrides.find(oldParam.name); it != paramOverrides.end())
-                newInitializer = it->second;
-
-            auto& newParam = oldParam.instantiate(tempDef, context, newInitializer);
-            parameters.append(&newParam);
-
-            if (!newInitializer && !newParam.isLocalParam() && newParam.isPortParam() &&
-                !newParam.targetType.getTypeSyntax()) {
-                auto& diag =
-                    scope.addDiag(diag::ParamHasNoValue, syntax.getFirstToken().location());
-                diag << definition->name;
-                diag << newParam.name;
-            }
-        }
-    }
+    createParams(compilation, *definition, scope, location, syntax.getFirstToken().location(),
+                 paramOverrides, parameters);
 
     // In order to avoid infinitely recursive instantiations, keep track of how deep we are
     // in the hierarchy tree. Each instance knows, so we only need to walk up as far as our
@@ -499,7 +495,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = scope.getDefaultNetType();
 
-    InstanceBuilder builder(context, *definition2, parameters, syntax.attributes, hierarchyDepth);
+    BindContext context(scope, location);
+    InstanceBuilder builder(context, *definition, parameters, syntax.attributes, hierarchyDepth);
 
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
@@ -625,11 +622,15 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
                                                         SourceLocation loc,
-                                                        const Definition& definition,
-                                                        const DefinitionSymbol& defSymbol) {
+                                                        const Definition& definition) {
+    SmallMap<string_view, const ExpressionSyntax*, 8> unused;
+    SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
+    createParams(compilation, definition, definition.scope, LookupLocation::max, loc, unused,
+                 parameters);
+
     auto instance =
         compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc, definition, 0u);
-    instance->populate(nullptr, defSymbol.parameters);
+    instance->populate(nullptr, parameters);
     return *instance;
 }
 

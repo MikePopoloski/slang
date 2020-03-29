@@ -365,9 +365,7 @@ const RootSymbol& Compilation::getRoot() {
 
     SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
     for (auto def : topDefinitions) {
-        auto defSym = getDefinition(def->name, def->scope);
-        ASSERT(defSym);
-        auto& instance = ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def, *defSym);
+        auto& instance = ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def);
         root->addMember(instance);
         topList.append(&instance);
     }

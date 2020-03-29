@@ -104,8 +104,7 @@ public:
                        hierarchyDepth) {}
 
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name,
-                                             SourceLocation loc, const Definition& definition,
-                                             const DefinitionSymbol& defSymbol);
+                                             SourceLocation loc, const Definition& definition);
 
     static ModuleInstanceSymbol& instantiate(Compilation& compilation,
                                              const HierarchicalInstanceSyntax& syntax,

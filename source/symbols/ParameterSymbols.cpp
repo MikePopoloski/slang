@@ -49,6 +49,32 @@ void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationS
     }
 }
 
+ParameterSymbol& ParameterSymbol::fromDecl(const Definition::ParameterDecl& decl, Scope& newScope,
+                                           const BindContext& context,
+                                           const ExpressionSyntax* newInitializer) {
+    // Construct the result using the source's properties.
+    auto result = context.getCompilation().emplace<ParameterSymbol>(
+        decl.name, decl.location, decl.isLocalParam, decl.isPortParam);
+
+    newScope.addMember(*result);
+
+    ASSERT(!decl.isTypeParam);
+    ASSERT(decl.valueSyntax);
+    ASSERT(decl.valueDecl);
+
+    result->setDeclaredType(*decl.valueSyntax->type);
+    result->setFromDeclarator(*decl.valueDecl);
+
+    // If we have a new initializer set that now.
+    if (newInitializer) {
+        result->setInitializerSyntax(*newInitializer, newInitializer->getFirstToken().location());
+        result->getDeclaredType()->resolveAt(context);
+        result->getValue();
+    }
+
+    return *result;
+}
+
 ParameterSymbol& ParameterSymbol::clone(Compilation& compilation) const {
     auto result =
         compilation.emplace<ParameterSymbol>(name, location, isLocalParam(), isPortParam());
@@ -66,38 +92,6 @@ ParameterSymbol& ParameterSymbol::clone(Compilation& compilation) const {
         result->setInitializer(*declared->getInitializer());
 
     result->value = value;
-    return *result;
-}
-
-ParameterSymbol& ParameterSymbol::instantiate(Scope& newScope, const BindContext& context,
-                                              const ExpressionSyntax* newInitializer) const {
-    // Construct the result using the source's properties.
-    auto result = context.getCompilation().emplace<ParameterSymbol>(name, location, isLocalParam(),
-                                                                    isPortParam());
-
-    newScope.addMember(*result);
-    if (auto syntax = getSyntax())
-        result->setSyntax(*syntax);
-
-    // Copy the type syntax from the source parameter to the result.
-    auto sourceDT = getDeclaredType();
-    auto resultDT = result->getDeclaredType();
-    if (auto ts = sourceDT->getTypeSyntax()) {
-        resultDT->setTypeSyntax(*ts);
-        if (auto dims = sourceDT->getDimensionSyntax())
-            resultDT->setDimensionSyntax(*dims);
-    }
-
-    // If we have a new initializer set that now. Otherwise use the source's as a default.
-    if (newInitializer) {
-        result->setInitializerSyntax(*newInitializer, newInitializer->getFirstToken().location());
-        resultDT->resolveAt(context);
-        result->getValue();
-    }
-    else if (auto init = sourceDT->getInitializerSyntax()) {
-        result->setInitializerSyntax(*init, sourceDT->getInitializerLocation());
-    }
-
     return *result;
 }
 
@@ -164,6 +158,49 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
     }
 }
 
+TypeParameterSymbol& TypeParameterSymbol::fromDecl(const Definition::ParameterDecl& decl,
+                                                   Scope& newScope, const BindContext& context,
+                                                   const ExpressionSyntax* newInitializer) {
+    // Construct the result using the source's properties.
+    auto& comp = context.getCompilation();
+    auto result = comp.emplace<TypeParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
+                                                    decl.isPortParam);
+    newScope.addMember(*result);
+
+    ASSERT(decl.isTypeParam);
+    ASSERT(decl.typeDecl);
+    result->setSyntax(*decl.typeDecl);
+
+    auto& tt = result->targetType;
+    if (newInitializer) {
+        // If this is a NameSyntax, the parser didn't know we were assigning to
+        // a type parameter, so fix it up into a NamedTypeSyntax to get a type from it.
+        if (NameSyntax::isKind(newInitializer->kind)) {
+            // const_cast is ugly but safe here, we're only going to refer to it
+            // by const reference everywhere down.
+            auto& nameSyntax = const_cast<NameSyntax&>(newInitializer->as<NameSyntax>());
+            auto namedType = comp.emplace<NamedTypeSyntax>(nameSyntax);
+
+            tt.setTypeSyntax(*namedType);
+            tt.setType(comp.getType(*namedType, context.lookupLocation, context.scope));
+        }
+        else if (!DataTypeSyntax::isKind(newInitializer->kind)) {
+            context.addDiag(diag::BadTypeParamExpr, newInitializer->getFirstToken().location())
+                << result->name;
+        }
+        else {
+            tt.setTypeSyntax(newInitializer->as<DataTypeSyntax>());
+            tt.setType(comp.getType(newInitializer->as<DataTypeSyntax>(), context.lookupLocation,
+                                    context.scope));
+        }
+    }
+    else if (decl.typeDecl->assignment) {
+        result->targetType.setTypeSyntax(*decl.typeDecl->assignment->type);
+    }
+
+    return *result;
+}
+
 TypeParameterSymbol& TypeParameterSymbol::clone(Compilation& comp) const {
     auto result = comp.emplace<TypeParameterSymbol>(name, location, isLocalParam(), isPortParam());
     if (auto syntax = getSyntax())
@@ -171,47 +208,6 @@ TypeParameterSymbol& TypeParameterSymbol::clone(Compilation& comp) const {
 
     auto declared = getDeclaredType();
     result->targetType.copyTypeFrom(*declared);
-
-    return *result;
-}
-
-TypeParameterSymbol& TypeParameterSymbol::instantiate(Scope& newScope, const BindContext& context,
-                                                      const ExpressionSyntax* expr) const {
-    // Construct the result using the source's properties.
-    auto& comp = context.getCompilation();
-    auto result = comp.emplace<TypeParameterSymbol>(name, location, isLocalParam(), isPortParam());
-
-    newScope.addMember(*result);
-    if (auto syntax = getSyntax())
-        result->setSyntax(*syntax);
-
-    auto& tt = result->targetType;
-    if (expr) {
-        // If this is a NameSyntax, the parser didn't know we were assigning to
-        // a type parameter, so fix it up into a NamedTypeSyntax to get a type from it.
-        if (NameSyntax::isKind(expr->kind)) {
-            // const_cast is ugly but safe here, we're only going to refer to it
-            // by const reference everywhere down.
-            auto& nameSyntax = const_cast<NameSyntax&>(expr->as<NameSyntax>());
-            auto namedType = comp.emplace<NamedTypeSyntax>(nameSyntax);
-
-            tt.setTypeSyntax(*namedType);
-            tt.setType(comp.getType(*namedType, context.lookupLocation, context.scope));
-        }
-        else if (!DataTypeSyntax::isKind(expr->kind)) {
-            context.addDiag(diag::BadTypeParamExpr, expr->getFirstToken().location()) << name;
-        }
-        else {
-            tt.setTypeSyntax(expr->as<DataTypeSyntax>());
-            tt.setType(
-                comp.getType(expr->as<DataTypeSyntax>(), context.lookupLocation, context.scope));
-        }
-    }
-    else if (auto ts = targetType.getTypeSyntax()) {
-        tt.setTypeSyntax(*ts);
-        if (auto dims = targetType.getDimensionSyntax())
-            tt.setDimensionSyntax(*dims);
-    }
 
     return *result;
 }
