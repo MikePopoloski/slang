@@ -298,9 +298,10 @@ private:
     // is stored here and queried during name lookups.
     SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
 
-    // The name map for all module, interface, and program definitions.
-    // The key is a combination of definition name + the scope in which it was declared.
-    flat_hash_map<std::tuple<string_view, const Scope*>, std::unique_ptr<Definition>> definitionMap;
+    // The lookup table for top-level modules. The value is a pair, with the second
+    // element being a boolean indicating whether there exists at least one nested
+    // module with the given name (requiring a more involved lookup).
+    flat_hash_map<string_view, std::pair<const Definition*, bool>> topDefinitions;
 
     // A cache of vector types, keyed on various properties such as bit width.
     flat_hash_map<uint32_t, const Type*> vectorTypeCache;
@@ -336,6 +337,10 @@ private:
 
     // Map from syntax nodes to parse-time metadata about them.
     flat_hash_map<const ModuleDeclarationSyntax*, DefinitionMetadata> definitionMetadata;
+
+    // The name map for all module, interface, and program definitions.
+    // The key is a combination of definition name + the scope in which it was declared.
+    flat_hash_map<std::tuple<string_view, const Scope*>, std::unique_ptr<Definition>> definitionMap;
 
     // A map from diag code + location to the diagnostics that have occurred at that location.
     // This is used to collapse duplicate diagnostics across instantiations into a single report.

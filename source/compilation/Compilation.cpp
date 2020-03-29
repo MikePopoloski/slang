@@ -320,7 +320,7 @@ const RootSymbol& Compilation::getRoot() {
     // Find modules that have no instantiations. Iterate the definitions map
     // before instantiating any top level modules, since that can cause changes
     // to the definition map itself.
-    SmallVectorSized<const Definition*, 8> topDefinitions;
+    SmallVectorSized<const Definition*, 8> topDefs;
     for (auto& [key, definition] : definitionMap) {
         // Ignore definitions that are not top level. Top level definitions are:
         // - Always modules
@@ -345,16 +345,15 @@ const RootSymbol& Compilation::getRoot() {
         if (!allDefaulted)
             continue;
 
-        topDefinitions.append(definition.get());
+        topDefs.append(definition.get());
     }
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
     // the order is otherwise dependent on iterating over a hash table.
-    std::sort(topDefinitions.begin(), topDefinitions.end(),
-              [](auto a, auto b) { return a->name < b->name; });
+    std::sort(topDefs.begin(), topDefs.end(), [](auto a, auto b) { return a->name < b->name; });
 
     SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
-    for (auto def : topDefinitions) {
+    for (auto def : topDefs) {
         auto& instance = ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def);
         root->addMember(instance);
         topList.append(&instance);
@@ -377,6 +376,14 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(
 }
 
 const Definition* Compilation::getDefinition(string_view lookupName, const Scope& scope) const {
+    // First try to do a quick lookup in the top definitions map (most definitions are global).
+    // If the flag is set it means we have to do a full scope lookup instead.
+    if (auto it = topDefinitions.find(lookupName); it != topDefinitions.end()) {
+        if (!it->second.second)
+            return it->second.first;
+    }
+
+    // There are nested modules somewhere with this same name, so we need to do the full search.
     const Scope* searchScope = &scope;
     while (searchScope) {
         auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
@@ -416,7 +423,13 @@ const Definition& Compilation::createDefinition(const Scope& scope, LookupLocati
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
     auto it = definitionMap.emplace(std::tuple(def->name, targetScope), std::move(def)).first;
 
-    return *it->second;
+    auto result = it->second.get();
+    if (targetScope == root.get())
+        topDefinitions[result->name].first = result;
+    else
+        topDefinitions[result->name].second = true;
+
+    return *result;
 }
 
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
