@@ -279,9 +279,9 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    CHECK(compilation.getDefinition2("m")->timeScale == TimeScale("10ns", "10ps"));
-    CHECK(compilation.getDefinition2("n")->timeScale == TimeScale("10us", "1ns"));
-    CHECK(compilation.getDefinition2("o")->timeScale == TimeScale("100s", "10fs"));
+    CHECK(compilation.getDefinition("m")->timeScale == TimeScale("10ns", "10ps"));
+    CHECK(compilation.getDefinition("n")->timeScale == TimeScale("10us", "1ns"));
+    CHECK(compilation.getDefinition("o")->timeScale == TimeScale("100s", "10fs"));
     CHECK(compilation.getPackage("p")->getTimeScale() == TimeScale("100s", "1ps"));
 }
 

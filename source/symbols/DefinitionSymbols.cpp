@@ -352,7 +352,7 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindCo
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax, LookupLocation location,
                                 const Scope& scope, SmallVector<const Symbol*>& results) {
-    auto definition = compilation.getDefinition2(syntax.type.valueText(), scope);
+    auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
     if (!definition) {
         scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
         return;

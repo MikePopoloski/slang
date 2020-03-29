@@ -7,6 +7,7 @@
 #include "slang/compilation/SemanticModel.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/compilation/Definition.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {
@@ -29,6 +30,19 @@ const Symbol* SemanticModel::getDeclaredSymbol(const SyntaxNode& syntax) {
         if (result)
             symbolCache[&syntax] = result;
         return result;
+    }
+    else if (syntax.kind == SyntaxKind::ModuleDeclaration ||
+             syntax.kind == SyntaxKind::InterfaceDeclaration ||
+             syntax.kind == SyntaxKind::ProgramDeclaration) {
+        auto def = compilation.getDefinition(syntax.as<ModuleDeclarationSyntax>());
+        if (!def)
+            return nullptr;
+
+        // There is no symbol to use here so create a placeholder instance.
+        auto& result =
+            ModuleInstanceSymbol::instantiate(compilation, def->name, def->location, *def);
+        symbolCache[&syntax] = &result;
+        return &result;
     }
 
     // Otherwise try to find the parent symbol first.
@@ -57,6 +71,7 @@ const Symbol* SemanticModel::getDeclaredSymbol(const SyntaxNode& syntax) {
             return &child;
         }
     }
+
     return nullptr;
 }
 

@@ -170,12 +170,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration: {
             // Definitions exist in their own namespace and are tracked in the Compilation.
-            auto& def = DefinitionSymbol::fromSyntax(compilation,
-                                                     syntax.as<ModuleDeclarationSyntax>(), *this);
-            addMember(def);
-            compilation.addDefinition(def);
-
-            LookupLocation ll(this, lastMember ? uint32_t(lastMember->getIndex()) : 1);
+            LookupLocation ll(this, lastMember ? uint32_t(lastMember->getIndex()) + 1 : 1);
             compilation.createDefinition(*this, ll, syntax.as<ModuleDeclarationSyntax>());
             break;
         }

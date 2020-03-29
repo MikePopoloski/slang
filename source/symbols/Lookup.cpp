@@ -880,7 +880,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
     }
 
     // Otherwise, check if this names a definition, in which case we can give a nicer error.
-    auto def = initialScope.getCompilation().getDefinition2(name, initialScope);
+    auto def = initialScope.getCompilation().getDefinition(name, initialScope);
     if (def) {
         string_view kindStr;
         switch (def->definitionKind) {

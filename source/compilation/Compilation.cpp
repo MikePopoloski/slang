@@ -331,7 +331,7 @@ const RootSymbol& Compilation::getRoot() {
     // before instantiating any top level modules, since that can cause changes
     // to the definition map itself.
     SmallVectorSized<const Definition*, 8> topDefinitions;
-    for (auto& [key, definition] : definitionMap2) {
+    for (auto& [key, definition] : definitionMap) {
         // Ignore definitions that are not top level. Top level definitions are:
         // - Always modules
         // - Not nested
@@ -386,33 +386,11 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(
     return nullptr;
 }
 
-const DefinitionSymbol* Compilation::getDefinition(string_view lookupName,
-                                                   const Scope& scope) const {
+const Definition* Compilation::getDefinition(string_view lookupName, const Scope& scope) const {
     const Scope* searchScope = &scope;
     while (searchScope) {
         auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
         if (it != definitionMap.end())
-            return it->second;
-
-        auto& sym = searchScope->asSymbol();
-        if (sym.kind == SymbolKind::Root)
-            return nullptr;
-
-        searchScope = sym.getLexicalScope();
-    }
-
-    return nullptr;
-}
-
-const DefinitionSymbol* Compilation::getDefinition(string_view lookupName) const {
-    return getDefinition(lookupName, *root);
-}
-
-const Definition* Compilation::getDefinition2(string_view lookupName, const Scope& scope) const {
-    const Scope* searchScope = &scope;
-    while (searchScope) {
-        auto it = definitionMap2.find(std::make_tuple(lookupName, searchScope));
-        if (it != definitionMap2.end())
             return it->second.get();
 
         auto& sym = searchScope->asSymbol();
@@ -425,23 +403,19 @@ const Definition* Compilation::getDefinition2(string_view lookupName, const Scop
     return nullptr;
 }
 
-const Definition* Compilation::getDefinition2(string_view lookupName) const {
-    return getDefinition2(lookupName, *root);
+const Definition* Compilation::getDefinition(string_view lookupName) const {
+    return getDefinition(lookupName, *root);
 }
 
-void Compilation::addDefinition(const DefinitionSymbol& definition) {
-    // Record that the given scope contains this definition. If the scope is a compilation unit, add
-    // it to the root scope instead so that lookups from other compilation units will find it.
-    const Scope* scope = definition.getParentScope();
-    ASSERT(scope);
-
-    if (scope->asSymbol().kind == SymbolKind::CompilationUnit)
-        definitionMap.emplace(std::make_tuple(definition.name, root.get()), &definition);
-    else
-        definitionMap.emplace(std::make_tuple(definition.name, scope), &definition);
+const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
+    for (auto& [key, def] : definitionMap) {
+        if (&def->syntax == &syntax)
+            return def.get();
+    }
+    return nullptr;
 }
 
-const Definition* Compilation::createDefinition(const Scope& scope, LookupLocation location,
+const Definition& Compilation::createDefinition(const Scope& scope, LookupLocation location,
                                                 const ModuleDeclarationSyntax& syntax) {
     auto def =
         std::make_unique<Definition>(scope, location, syntax, getDefaultNetType(syntax),
@@ -451,9 +425,9 @@ const Definition* Compilation::createDefinition(const Scope& scope, LookupLocati
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
-    definitionMap2.emplace(std::tuple(def->name, targetScope), std::move(def));
+    definitionMap.emplace(std::tuple(def->name, targetScope), std::move(def));
 
-    return result;
+    return *result;
 }
 
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {

@@ -73,7 +73,7 @@ public:
 
                     // If we didn't find a valid type, try to find a definition.
                     if (!found || !found->isType())
-                        definition = compilation.getDefinition2(simpleName, scope);
+                        definition = compilation.getDefinition(simpleName, scope);
                 }
 
                 if (definition) {
@@ -125,7 +125,7 @@ public:
                 // TODO: handle generic interface header
                 auto& header = syntax.header->as<InterfacePortHeaderSyntax>();
                 auto token = header.nameOrKeyword;
-                auto definition = compilation.getDefinition2(token.valueText(), scope);
+                auto definition = compilation.getDefinition(token.valueText(), scope);
                 string_view modport;
 
                 if (!definition) {
@@ -139,7 +139,7 @@ public:
                     definition = nullptr;
                 }
                 else if (header.modport) {
-                    auto def = compilation.getDefinition2(token.valueText(), scope);
+                    auto def = compilation.getDefinition(token.valueText(), scope);
                     ASSERT(def);
 
                     auto member = header.modport->member;
