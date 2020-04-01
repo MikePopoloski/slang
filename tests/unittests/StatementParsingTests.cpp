@@ -157,6 +157,11 @@ TEST_CASE("Function calls") {
     testStatement("foo::bar.baz(blah, 324, yes);", SyntaxKind::ExpressionStatement);
 }
 
+TEST_CASE("Block statements") {
+    testStatement("begin i = 4'b???1; j = 4'b??10; k = 4'b?100; l = 4'b1000; end",
+                  SyntaxKind::SequentialBlockStatement);
+}
+
 void parseBlockDeclaration(const std::string& text) {
     auto fullText = "begin " + text + " end";
     auto& stmt = parseStatement(fullText);

@@ -35,6 +35,7 @@ void NumberParser::startVector(Token baseToken, Token sizeToken) {
     hasUnknown = false;
     valid = true;
     digits.clear();
+    text.clear();
 
     NumericTokenFlags baseFlags = baseToken.numericFlags();
     literalBase = baseFlags.base();
