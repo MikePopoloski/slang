@@ -139,7 +139,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
         JsonWriter writer;
         writer.setPrettyPrint(true);
 
-        ASTSerializer serializer(writer);
+        ASTSerializer serializer(compilation, writer);
         serializer.serialize(compilation.getRoot());
 
         writeToFile(*astJsonFile, writer.view());

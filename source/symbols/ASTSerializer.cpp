@@ -11,7 +11,8 @@
 
 namespace slang {
 
-ASTSerializer::ASTSerializer(JsonWriter& writer) : writer(writer) {
+ASTSerializer::ASTSerializer(Compilation& compilation, JsonWriter& writer) :
+    compilation(compilation), writer(writer) {
 }
 
 void ASTSerializer::serialize(const Symbol& symbol) {
@@ -113,6 +114,13 @@ void ASTSerializer::visit(const T& elem) {
         if constexpr (!std::is_same_v<Expression, T>) {
             elem.serializeTo(*this);
         }
+
+        // This isn't the most efficient thing in the world; it could be improved
+        // with some kind of caching of values for individual expressions.
+        EvalContext ctx(compilation);
+        ConstantValue constant = elem.eval(ctx);
+        if (constant)
+            write("constant", constant);
 
         writer.endObject();
     }

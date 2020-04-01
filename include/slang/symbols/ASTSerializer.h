@@ -12,6 +12,7 @@
 namespace slang {
 
 class AttributeSymbol;
+class Compilation;
 class ConstantValue;
 class Expression;
 class Statement;
@@ -20,7 +21,7 @@ class Type;
 
 class ASTSerializer {
 public:
-    explicit ASTSerializer(JsonWriter& writer);
+    ASTSerializer(Compilation& compilation, JsonWriter& writer);
 
     void serialize(const Symbol& symbol);
     void serialize(const Expression& expr);
@@ -67,6 +68,7 @@ private:
     void visitInvalid(const Expression& expr);
     void visitInvalid(const Statement& statement);
 
+    Compilation& compilation;
     JsonWriter& writer;
 };
 

@@ -140,7 +140,7 @@ endmodule
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
-    ASTSerializer serializer(writer);
+    ASTSerializer serializer(compilation, writer);
     serializer.serialize(compilation.getRoot());
     writer.view();
 }
