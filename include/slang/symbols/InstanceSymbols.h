@@ -26,10 +26,19 @@ public:
     span<const int32_t> arrayPath;
     uint32_t hierarchyDepth;
 
+    InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                   const Definition& definition);
+    InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                   const Definition& definition, uint32_t hierarchyDepth,
+                   const HierarchicalInstanceSyntax& instanceSyntax,
+                   span<const ParameterSymbolBase* const> parameters);
+
     const SymbolMap& getPortMap() const {
         ensureElaborated();
         return *portMap;
     }
+
+    bool isInterface() const;
 
     /// If this instance is part of an array, walk upward to find the array's name.
     /// Otherwise returns the name of the instance itself.
@@ -45,68 +54,17 @@ public:
                            LookupLocation location, const Scope& scope,
                            SmallVector<const Symbol*>& results);
 
-    static bool isKind(SymbolKind kind);
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Instance; }
 
 protected:
-    InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc,
+    InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                    const Definition& definition, uint32_t hierarchyDepth);
 
-    void populate(const HierarchicalInstanceSyntax* syntax,
+private:
+    void populate(const HierarchicalInstanceSyntax* instanceSyntax,
                   span<const ParameterSymbolBase* const> parameters);
 
-private:
     SymbolMap* portMap;
-};
-
-class ModuleInstanceSymbol : public InstanceSymbol {
-public:
-    ModuleInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                         const Definition& definition, uint32_t hierarchyDepth) :
-        InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, loc, definition,
-                       hierarchyDepth) {}
-
-    static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name,
-                                             SourceLocation loc, const Definition& definition);
-
-    static ModuleInstanceSymbol& instantiate(Compilation& compilation,
-                                             const HierarchicalInstanceSyntax& syntax,
-                                             const Definition& definition,
-                                             span<const ParameterSymbolBase* const> parameters,
-                                             uint32_t hierarchyDepth);
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
-};
-
-class ProgramInstanceSymbol : public InstanceSymbol {
-public:
-    ProgramInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                          const Definition& definition, uint32_t hierarchyDepth) :
-        InstanceSymbol(SymbolKind::ProgramInstance, compilation, name, loc, definition,
-                       hierarchyDepth) {}
-
-    static ProgramInstanceSymbol& instantiate(Compilation& compilation,
-                                              const HierarchicalInstanceSyntax& syntax,
-                                              const Definition& definition,
-                                              span<const ParameterSymbolBase* const> parameters,
-                                              uint32_t hierarchyDepth);
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ProgramInstance; }
-};
-
-class InterfaceInstanceSymbol : public InstanceSymbol {
-public:
-    InterfaceInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                            const Definition& definition, uint32_t hierarchyDepth) :
-        InstanceSymbol(SymbolKind::InterfaceInstance, compilation, name, loc, definition,
-                       hierarchyDepth) {}
-
-    static InterfaceInstanceSymbol& instantiate(Compilation& compilation,
-                                                const HierarchicalInstanceSyntax& syntax,
-                                                const Definition& definition,
-                                                span<const ParameterSymbolBase* const> parameters,
-                                                uint32_t hierarchyDepth);
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfaceInstance; }
 };
 
 class InstanceArraySymbol : public Symbol, public Scope {

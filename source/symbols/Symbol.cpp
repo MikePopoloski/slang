@@ -45,10 +45,6 @@ bool Symbol::isValue() const {
     return ValueSymbol::isKind(kind);
 }
 
-bool Symbol::isInstance() const {
-    return InstanceSymbol::isKind(kind);
-}
-
 const Scope* Symbol::getLexicalScope() const {
     if (InstanceSymbol::isKind(kind))
         return &as<InstanceSymbol>().definition.scope;

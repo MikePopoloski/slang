@@ -55,7 +55,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    auto& top = compilation.getRoot().find<ModuleInstanceSymbol>("Top");
+    auto& top = compilation.getRoot().find<InstanceSymbol>("Top");
     auto get = [&](string_view name) {
         return top.find<EnumValueSymbol>(name).getValue().integer();
     };

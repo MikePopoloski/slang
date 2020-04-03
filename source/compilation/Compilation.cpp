@@ -75,17 +75,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getAssignment();
     }
 
-    void handleInstance(const InstanceSymbol& symbol) {
+    void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit)
             return;
 
         instanceCount[&symbol.definition]++;
         handleDefault(symbol);
     }
-
-    void handle(const ModuleInstanceSymbol& symbol) { handleInstance(symbol); }
-    void handle(const ProgramInstanceSymbol& symbol) { handleInstance(symbol); }
-    void handle(const InterfaceInstanceSymbol& symbol) { handleInstance(symbol); }
 
     void handle(const PortSymbol& symbol) {
         if (!handleDefault(symbol))
@@ -352,11 +348,11 @@ const RootSymbol& Compilation::getRoot() {
     // the order is otherwise dependent on iterating over a hash table.
     std::sort(topDefs.begin(), topDefs.end(), [](auto a, auto b) { return a->name < b->name; });
 
-    SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
+    SmallVectorSized<const InstanceSymbol*, 4> topList;
     for (auto def : topDefs) {
-        auto& instance = ModuleInstanceSymbol::instantiate(*this, def->name, def->location, *def);
-        root->addMember(instance);
-        topList.append(&instance);
+        auto instance = emplace<InstanceSymbol>(*this, def->name, def->location, *def);
+        root->addMember(*instance);
+        topList.append(instance);
     }
 
     root->topInstances = topList.copy(*this);

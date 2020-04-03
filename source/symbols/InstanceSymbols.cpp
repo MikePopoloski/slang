@@ -52,24 +52,9 @@ private:
     uint32_t hierarchyDepth;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax) {
-        InstanceSymbol* inst;
-        switch (definition.definitionKind) {
-            case DefinitionKind::Module:
-                inst = &ModuleInstanceSymbol::instantiate(compilation, syntax, definition,
-                                                          parameters, hierarchyDepth);
-                break;
-            case DefinitionKind::Interface:
-                inst = &InterfaceInstanceSymbol::instantiate(compilation, syntax, definition,
-                                                             parameters, hierarchyDepth);
-                break;
-            case DefinitionKind::Program:
-                inst = &ProgramInstanceSymbol::instantiate(compilation, syntax, definition,
-                                                           parameters, hierarchyDepth);
-                break;
-            default:
-                THROW_UNREACHABLE;
-        }
-
+        auto inst = compilation.emplace<InstanceSymbol>(compilation, syntax.name.valueText(),
+                                                        syntax.name.location(), definition,
+                                                        hierarchyDepth, syntax, parameters);
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
         inst->setAttributes(context.scope, attributes);
@@ -121,13 +106,16 @@ void createParams(Compilation& compilation, const Definition& definition, const 
     // Construct a temporary scope that has the right parent to house instance parameters
     // as we're evaluating them. We hold on to the initializer expressions and give them
     // to the instances later when we create them.
-    struct TempInstance : public ModuleInstanceSymbol {
-        using ModuleInstanceSymbol::ModuleInstanceSymbol;
-        void setParent(const Scope& scope) { ModuleInstanceSymbol::setParent(scope); }
+    struct TempInstance : public InstanceSymbol {
+        TempInstance(Compilation& compilation, string_view name, SourceLocation loc,
+                     const Definition& definition) :
+            InstanceSymbol(compilation, name, loc, definition, 0u) {}
+
+        void setParent(const Scope& scope) { InstanceSymbol::setParent(scope); }
     };
 
     auto& tempDef = *compilation.emplace<TempInstance>(compilation, definition.name,
-                                                       definition.location, definition, 0u);
+                                                       definition.location, definition);
     tempDef.setParent(definition.scope);
 
     // Need the imports here as well, since parameters may depend on them.
@@ -211,6 +199,34 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindCo
 } // namespace
 
 namespace slang {
+
+InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                               const Definition& definition, uint32_t hierarchyDepth) :
+    Symbol(SymbolKind::Instance, name, loc),
+    Scope(compilation, this), definition(definition), hierarchyDepth(hierarchyDepth),
+    portMap(compilation.allocSymbolMap()) {
+}
+
+InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                               const Definition& definition) :
+    InstanceSymbol(compilation, name, loc, definition, 0u) {
+
+    // Create parameters with all default values set.
+    SmallMap<string_view, const ExpressionSyntax*, 8> unused;
+    SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
+    createParams(compilation, definition, definition.scope, LookupLocation::max, loc, unused,
+                 parameters);
+
+    populate(nullptr, parameters);
+}
+
+InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                               const Definition& definition, uint32_t hierarchyDepth,
+                               const HierarchicalInstanceSyntax& instanceSyntax,
+                               span<const ParameterSymbolBase* const> parameters) :
+    InstanceSymbol(compilation, name, loc, definition, hierarchyDepth) {
+    populate(&instanceSyntax, parameters);
+}
 
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax, LookupLocation location,
@@ -367,14 +383,6 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     }
 }
 
-InstanceSymbol::InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name,
-                               SourceLocation loc, const Definition& definition,
-                               uint32_t hierarchyDepth) :
-    Symbol(kind, name, loc),
-    Scope(compilation, this), definition(definition), hierarchyDepth(hierarchyDepth),
-    portMap(compilation.allocSymbolMap()) {
-}
-
 static void getInstanceArrayDimensions(const InstanceArraySymbol& array,
                                        SmallVector<ConstantRange>& dimensions) {
     auto scope = array.getParentScope();
@@ -382,6 +390,10 @@ static void getInstanceArrayDimensions(const InstanceArraySymbol& array,
         getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
 
     dimensions.append(array.range);
+}
+
+bool InstanceSymbol::isInterface() const {
+    return definition.definitionKind == DefinitionKind::Interface;
 }
 
 string_view InstanceSymbol::getArrayName() const {
@@ -402,20 +414,8 @@ void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("definition", definition.name);
 }
 
-bool InstanceSymbol::isKind(SymbolKind kind) {
-    switch (kind) {
-        case SymbolKind::ModuleInstance:
-        case SymbolKind::ProgramInstance:
-        case SymbolKind::InterfaceInstance:
-            return true;
-        default:
-            return false;
-    }
-}
-
 void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
                               span<const ParameterSymbolBase* const> parameters) {
-    // TODO: getSyntax dependency
     auto& declSyntax = definition.syntax;
     Compilation& comp = getCompilation();
 
@@ -481,55 +481,6 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
             }
         }
     }
-}
-
-ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
-                                                        SourceLocation loc,
-                                                        const Definition& definition) {
-    SmallMap<string_view, const ExpressionSyntax*, 8> unused;
-    SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
-    createParams(compilation, definition, definition.scope, LookupLocation::max, loc, unused,
-                 parameters);
-
-    auto instance =
-        compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc, definition, 0u);
-    instance->populate(nullptr, parameters);
-    return *instance;
-}
-
-ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
-    Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const Definition& definition, span<const ParameterSymbolBase* const> parameters,
-    uint32_t hierarchyDepth) {
-
-    auto instance = compilation.emplace<ModuleInstanceSymbol>(
-        compilation, syntax.name.valueText(), syntax.name.location(), definition, hierarchyDepth);
-    instance->populate(&syntax, parameters);
-    return *instance;
-}
-
-ProgramInstanceSymbol& ProgramInstanceSymbol::instantiate(
-    Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const Definition& definition, span<const ParameterSymbolBase* const> parameters,
-    uint32_t hierarchyDepth) {
-
-    auto instance = compilation.emplace<ProgramInstanceSymbol>(
-        compilation, syntax.name.valueText(), syntax.name.location(), definition, hierarchyDepth);
-
-    instance->populate(&syntax, parameters);
-    return *instance;
-}
-
-InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(
-    Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-    const Definition& definition, span<const ParameterSymbolBase* const> parameters,
-    uint32_t hierarchyDepth) {
-
-    auto instance = compilation.emplace<InterfaceInstanceSymbol>(
-        compilation, syntax.name.valueText(), syntax.name.location(), definition, hierarchyDepth);
-
-    instance->populate(&syntax, parameters);
-    return *instance;
 }
 
 string_view InstanceArraySymbol::getArrayName() const {

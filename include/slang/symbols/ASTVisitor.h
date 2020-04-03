@@ -119,9 +119,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(TypeParameter);
         SYMBOL(Port);
         SYMBOL(InterfacePort);
-        SYMBOL(ModuleInstance);
-        SYMBOL(ProgramInstance);
-        SYMBOL(InterfaceInstance);
+        SYMBOL(Instance);
         SYMBOL(InstanceArray);
         SYMBOL(Package);
         SYMBOL(ExplicitImport);

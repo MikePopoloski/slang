@@ -849,7 +849,7 @@ private:
         }
 
         // TODO: handle interface/modport ports as well
-        if (child->kind != SymbolKind::InterfaceInstance) {
+        if (child->kind != SymbolKind::Instance || !child->as<InstanceSymbol>().isInterface()) {
             // If this is a variable with an errored type, an error is already emitted.
             if (child->kind != SymbolKind::Variable ||
                 !child->as<VariableSymbol>().getType().isError()) {
@@ -858,7 +858,7 @@ private:
             return;
         }
 
-        auto connDef = &child->as<InterfaceInstanceSymbol>().definition;
+        auto connDef = &child->as<InstanceSymbol>().definition;
         if (connDef != port.interfaceDef) {
             // TODO: print the potentially nested name path instead of the simple name
             auto& diag = scope.addDiag(diag::InterfacePortTypeMismatch, range);

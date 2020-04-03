@@ -319,9 +319,7 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
                 case SymbolKind::CompilationUnit:
                     scope = nullptr;
                     break;
-                case SymbolKind::ModuleInstance:
-                case SymbolKind::ProgramInstance:
-                case SymbolKind::InterfaceInstance:
+                case SymbolKind::Instance:
                     nextInstance = symbol->getParentScope();
                     scope = symbol->getLexicalScope();
                     break;
@@ -818,7 +816,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
                 return sym.isType() || sym.kind == SymbolKind::TypeParameter;
 
             return sym.isValue() || sym.kind == SymbolKind::InstanceArray ||
-                   sym.kind == SymbolKind::InterfaceInstance;
+                   (sym.kind == SymbolKind::Instance && sym.as<InstanceSymbol>().isInterface());
         };
 
         if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {

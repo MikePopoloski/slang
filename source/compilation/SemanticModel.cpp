@@ -39,10 +39,10 @@ const Symbol* SemanticModel::getDeclaredSymbol(const SyntaxNode& syntax) {
             return nullptr;
 
         // There is no symbol to use here so create a placeholder instance.
-        auto& result =
-            ModuleInstanceSymbol::instantiate(compilation, def->name, def->location, *def);
-        symbolCache[&syntax] = &result;
-        return &result;
+        auto result =
+            compilation.emplace<InstanceSymbol>(compilation, def->name, def->location, *def);
+        symbolCache[&syntax] = result;
+        return result;
     }
 
     // Otherwise try to find the parent symbol first.

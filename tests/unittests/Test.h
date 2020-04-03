@@ -192,7 +192,7 @@ inline const CompilationUnitSyntax& parseCompilationUnit(const std::string& text
     return parser.parseCompilationUnit();
 }
 
-inline const ModuleInstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax,
+inline const InstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax,
                                               Compilation& compilation) {
     compilation.addSyntaxTree(syntax);
     const RootSymbol& root = compilation.getRoot();

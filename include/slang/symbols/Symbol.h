@@ -53,9 +53,7 @@ struct AttributeInstanceSyntax;
     x(Port) \
     x(InterfacePort) \
     x(Modport) \
-    x(ModuleInstance) \
-    x(ProgramInstance) \
-    x(InterfaceInstance) \
+    x(Instance) \
     x(InstanceArray) \
     x(Package) \
     x(ExplicitImport) \
@@ -119,9 +117,6 @@ public:
 
     /// Determines whether this symbol represents a value.
     bool isValue() const;
-
-    /// Determines whether this symbol is a module, interface, or program instance.
-    bool isInstance() const;
 
     /// If the symbol has a declared type, returns a pointer to it. Otherwise returns nullptr.
     const DeclaredType* getDeclaredType() const;

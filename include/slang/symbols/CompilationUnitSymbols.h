@@ -11,7 +11,7 @@
 
 namespace slang {
 
-class ModuleInstanceSymbol;
+class InstanceSymbol;
 struct ModuleDeclarationSyntax;
 
 /// The root of a single compilation unit.
@@ -55,7 +55,7 @@ public:
 /// Represents the entirety of a design, along with all contained compilation units.
 class RootSymbol : public Symbol, public Scope {
 public:
-    span<const ModuleInstanceSymbol* const> topInstances;
+    span<const InstanceSymbol* const> topInstances;
     span<const CompilationUnitSymbol* const> compilationUnits;
 
     explicit RootSymbol(Compilation& compilation) :
