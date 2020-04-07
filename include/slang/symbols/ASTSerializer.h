@@ -17,6 +17,7 @@ class Expression;
 class Statement;
 class Symbol;
 class Type;
+class TimingControl;
 
 class ASTSerializer {
 public:
@@ -25,6 +26,7 @@ public:
     void serialize(const Symbol& symbol);
     void serialize(const Expression& expr);
     void serialize(const Statement& statement);
+    void serialize(const TimingControl& timing);
     void serialize(std::string_view value);
 
     void startArray(string_view name);
@@ -42,6 +44,7 @@ public:
     void write(string_view name, const ConstantValue& value);
     void write(string_view name, const Expression& value);
     void write(string_view name, const Statement& value);
+    void write(string_view name, const TimingControl& value);
 
     void writeLink(string_view name, const Symbol& value);
 
@@ -60,12 +63,14 @@ private:
     friend Symbol;
     friend Expression;
     friend Statement;
+    friend TimingControl;
 
     template<typename T>
     void visit(const T& symbol);
 
     void visitInvalid(const Expression& expr);
     void visitInvalid(const Statement& statement);
+    void visitInvalid(const TimingControl& timing);
 
     JsonWriter& writer;
 };

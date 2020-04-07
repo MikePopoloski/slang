@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/util/Util.h"
 
@@ -49,6 +50,9 @@ public:
         return *static_cast<const T*>(this);
     }
 
+    template<typename TVisitor, typename... Args>
+    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
+
 protected:
     explicit TimingControl(TimingControlKind kind) : kind(kind) {}
 
@@ -63,6 +67,8 @@ public:
         TimingControl(TimingControlKind::Invalid), child(child) {}
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Invalid; }
+
+    void serializeTo(ASTSerializer& serializer) const;
 };
 
 struct DelaySyntax;
@@ -78,6 +84,8 @@ public:
                                      const BindContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay; }
+
+    void serializeTo(ASTSerializer& serializer) const;
 };
 
 struct EventControlSyntax;
@@ -100,6 +108,8 @@ public:
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::SignalEvent; }
 
+    void serializeTo(ASTSerializer& serializer) const;
+
 private:
     static TimingControl& fromExpr(Compilation& compilation, EdgeKind edge, const Expression& expr,
                                    const BindContext& context);
@@ -118,6 +128,8 @@ public:
                                      const BindContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::EventList; }
+
+    void serializeTo(ASTSerializer& serializer) const;
 };
 
 struct ImplicitEventControlSyntax;
@@ -131,6 +143,8 @@ public:
                                      const BindContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::ImplicitEvent; }
+
+    void serializeTo(ASTSerializer&) const {}
 };
 
 } // namespace slang

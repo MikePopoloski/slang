@@ -12,6 +12,7 @@
 #include "slang/binding/OperatorExpressions.h"
 #include "slang/binding/PatternExpressions.h"
 #include "slang/binding/Statements.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/BlockSymbols.h"
@@ -61,6 +62,7 @@ public:
 
     void visitDefault(const ProceduralBlockSymbol& symbol) { symbol.getBody().visit(DERIVED); }
     void visitInvalid(const Statement&) {}
+    void visitInvalid(const TimingControl&) {}
 
 #undef DERIVED
 };
@@ -157,6 +159,22 @@ decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
         CASE(ForeverLoop, ForeverLoopStatement);
         CASE(Timed, TimedStatement);
         CASE(Assertion, AssertionStatement);
+    }
+#undef CASE
+    // clang-format on
+    THROW_UNREACHABLE;
+}
+
+template<typename TVisitor, typename... Args>
+decltype(auto) TimingControl::visit(TVisitor& visitor, Args&&... args) const {
+    // clang-format off
+#define CASE(k, n) case TimingControlKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
+    switch (kind) {
+        case TimingControlKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
+        CASE(Delay, DelayControl);
+        CASE(SignalEvent, SignalEventControl);
+        CASE(EventList, EventListControl);
+        CASE(ImplicitEvent, ImplicitEventControl);
     }
 #undef CASE
     // clang-format on

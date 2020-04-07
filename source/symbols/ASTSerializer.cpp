@@ -26,6 +26,10 @@ void ASTSerializer::serialize(const Statement& statement) {
     statement.visit(*this);
 }
 
+void ASTSerializer::serialize(const TimingControl& timing) {
+    timing.visit(*this);
+}
+
 void ASTSerializer::serialize(string_view value) {
     writer.writeValue(value);
 }
@@ -80,6 +84,11 @@ void ASTSerializer::write(string_view name, const Statement& value) {
     serialize(value);
 }
 
+void ASTSerializer::write(string_view name, const TimingControl& value) {
+    writer.writeProperty(name);
+    serialize(value);
+}
+
 void ASTSerializer::writeLink(string_view name, const Symbol& value) {
     writer.writeProperty(name);
     writer.writeValue(std::to_string(uintptr_t(&value)) + " " +
@@ -129,6 +138,14 @@ void ASTSerializer::visit(const T& elem) {
     else if constexpr (std::is_base_of_v<Type, T> && !std::is_same_v<TypeAliasType, T>) {
         writer.writeValue(elem.toString());
     }
+    else if constexpr (std::is_base_of_v<TimingControl, T>) {
+        writer.startObject();
+        write("kind", toString(elem.kind));
+        if constexpr (!std::is_same_v<TimingControl, T>) {
+            elem.serializeTo(*this);
+        }
+        writer.endObject();
+    }
     else {
         writer.startObject();
         write("name", elem.name);
@@ -176,6 +193,10 @@ void ASTSerializer::visitInvalid(const Expression& expr) {
 
 void ASTSerializer::visitInvalid(const slang::Statement& statement) {
     visit(statement.as<InvalidStatement>());
+}
+
+void ASTSerializer::visitInvalid(const slang::TimingControl& timing) {
+    visit(timing.as<InvalidTimingControl>());
 }
 
 } // namespace slang

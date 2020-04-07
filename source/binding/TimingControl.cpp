@@ -53,6 +53,11 @@ TimingControl& TimingControl::badCtrl(Compilation& compilation, const TimingCont
     return *compilation.emplace<InvalidTimingControl>(ctrl);
 }
 
+void InvalidTimingControl::serializeTo(ASTSerializer& serializer) const {
+    if (child)
+        serializer.write("child", *child);
+}
+
 TimingControl& DelayControl::fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
                                         const BindContext& context) {
     auto& expr = Expression::bind(*syntax.delayValue, context);
@@ -66,6 +71,10 @@ TimingControl& DelayControl::fromSyntax(Compilation& compilation, const DelaySyn
     }
 
     return *result;
+}
+
+void DelayControl::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
 }
 
 TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
@@ -105,6 +114,11 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
         context.addDiag(diag::EventExpressionConstant, expr.sourceRange);
 
     return *result;
+}
+
+void SignalEventControl::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
+    serializer.write("edge", toString(edge));
 }
 
 static void collectEvents(const BindContext& context, const EventExpressionSyntax& expr,
@@ -148,6 +162,14 @@ TimingControl& EventListControl::fromSyntax(Compilation& compilation,
     }
 
     return *result;
+}
+
+void EventListControl::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("events");
+    for (auto const event : events) {
+        serializer.serialize(*event);
+    }
+    serializer.endArray();
 }
 
 TimingControl& ImplicitEventControl::fromSyntax(Compilation& compilation,
