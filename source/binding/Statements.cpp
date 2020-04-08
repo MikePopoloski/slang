@@ -1598,8 +1598,7 @@ bool TimedStatement::verifyConstantImpl(EvalContext& context) const {
 }
 
 void TimedStatement::serializeTo(ASTSerializer& serializer) const {
-    // TODO: add serialization method for timing
-    serializer.write("timing", toString(timing.kind));
+    serializer.write("timing", timing);
     serializer.write("stmt", stmt);
 }
 
