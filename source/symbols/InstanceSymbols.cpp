@@ -14,6 +14,7 @@
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
+#include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -27,11 +28,9 @@ class InstanceBuilder {
 public:
     InstanceBuilder(const BindContext& context, const Definition& definition,
                     span<const ParameterSymbolBase* const> parameters,
-                    span<const AttributeInstanceSyntax* const> attributes,
-                    uint32_t hierarchyDepth) :
+                    span<const AttributeInstanceSyntax* const> attributes) :
         compilation(context.getCompilation()),
-        context(context), definition(definition), parameters(parameters), attributes(attributes),
-        hierarchyDepth(hierarchyDepth) {}
+        context(context), definition(definition), parameters(parameters), attributes(attributes) {}
 
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
@@ -49,12 +48,11 @@ private:
     SmallVectorSized<int32_t, 4> path;
     span<const ParameterSymbolBase* const> parameters;
     span<const AttributeInstanceSyntax* const> attributes;
-    uint32_t hierarchyDepth;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax) {
-        auto inst = compilation.emplace<InstanceSymbol>(compilation, syntax.name.valueText(),
-                                                        syntax.name.location(), definition,
-                                                        hierarchyDepth, syntax, parameters);
+        auto inst = compilation.emplace<InstanceSymbol>(
+            compilation, syntax.name.valueText(), syntax.name.location(), definition, parameters);
+
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
         inst->setAttributes(context.scope, attributes);
@@ -106,17 +104,14 @@ void createParams(Compilation& compilation, const Definition& definition, const 
     // Construct a temporary scope that has the right parent to house instance parameters
     // as we're evaluating them. We hold on to the initializer expressions and give them
     // to the instances later when we create them.
-    struct TempInstance : public InstanceSymbol {
-        TempInstance(Compilation& compilation, string_view name, SourceLocation loc,
-                     const Definition& definition) :
-            InstanceSymbol(compilation, name, loc, definition, 0u) {}
-
-        void setParent(const Scope& scope) { InstanceSymbol::setParent(scope); }
+    struct TempInstance : public InstanceBodySymbol {
+        TempInstance(Compilation& compilation, const Definition& definition) :
+            InstanceBodySymbol(compilation, definition) {
+            setParent(definition.scope);
+        }
     };
 
-    auto& tempDef = *compilation.emplace<TempInstance>(compilation, definition.name,
-                                                       definition.location, definition);
-    tempDef.setParent(definition.scope);
+    auto& tempDef = *compilation.emplace<TempInstance>(compilation, definition);
 
     // Need the imports here as well, since parameters may depend on them.
     for (auto import : definition.syntax.header->imports)
@@ -201,31 +196,18 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindCo
 namespace slang {
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                               const Definition& definition, uint32_t hierarchyDepth) :
-    Symbol(SymbolKind::Instance, name, loc),
-    Scope(compilation, this), definition(definition), hierarchyDepth(hierarchyDepth),
-    portMap(compilation.allocSymbolMap()) {
-}
-
-InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                                const Definition& definition) :
-    InstanceSymbol(compilation, name, loc, definition, 0u) {
-
-    // Create parameters with all default values set.
-    SmallMap<string_view, const ExpressionSyntax*, 8> unused;
-    SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
-    createParams(compilation, definition, definition.scope, LookupLocation::max, loc, unused,
-                 parameters);
-
-    populate(nullptr, parameters);
+    Symbol(SymbolKind::Instance, name, loc),
+    body(InstanceBodySymbol::fromDefinition(compilation, definition)) {
+    compilation.addInstance(*this);
 }
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                               const Definition& definition, uint32_t hierarchyDepth,
-                               const HierarchicalInstanceSyntax& instanceSyntax,
+                               const Definition& definition,
                                span<const ParameterSymbolBase* const> parameters) :
-    InstanceSymbol(compilation, name, loc, definition, hierarchyDepth) {
-    populate(&instanceSyntax, parameters);
+    Symbol(SymbolKind::Instance, name, loc),
+    body(InstanceBodySymbol::fromDefinition(compilation, definition, parameters)) {
+    compilation.addInstance(*this);
 }
 
 void InstanceSymbol::fromSyntax(Compilation& compilation,
@@ -346,36 +328,13 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     createParams(compilation, *definition, scope, location, syntax.getFirstToken().location(),
                  paramOverrides, parameters);
 
-    // In order to avoid infinitely recursive instantiations, keep track of how deep we are
-    // in the hierarchy tree. Each instance knows, so we only need to walk up as far as our
-    // nearest parent in order to know our own depth here.
-    uint32_t hierarchyDepth = 0;
-    const Symbol* parent = &scope.asSymbol();
-    while (true) {
-        if (InstanceSymbol::isKind(parent->kind)) {
-            hierarchyDepth = parent->as<InstanceSymbol>().hierarchyDepth + 1;
-            if (hierarchyDepth > compilation.getOptions().maxInstanceDepth) {
-                auto& diag = scope.addDiag(diag::MaxInstanceDepthExceeded, syntax.type.range());
-                diag << compilation.getOptions().maxInstanceDepth;
-                return;
-            }
-            break;
-        }
-
-        auto s = parent->getParentScope();
-        if (!s)
-            break;
-
-        parent = &s->asSymbol();
-    }
-
     // We have to check each port connection expression for any names that can't be resolved,
     // which represent implicit nets that need to be created now.
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = scope.getDefaultNetType();
 
     BindContext context(scope, location);
-    InstanceBuilder builder(context, *definition, parameters, syntax.attributes, hierarchyDepth);
+    InstanceBuilder builder(context, *definition, parameters, syntax.attributes);
 
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
@@ -392,8 +351,50 @@ static void getInstanceArrayDimensions(const InstanceArraySymbol& array,
     dimensions.append(array.range);
 }
 
+const Definition& InstanceSymbol::getDefinition() const {
+    return body.definition;
+}
+
 bool InstanceSymbol::isInterface() const {
-    return definition.definitionKind == DefinitionKind::Interface;
+    return getDefinition().definitionKind == DefinitionKind::Interface;
+}
+
+const PortConnection* InstanceSymbol::getPortConnection(const PortSymbol& port) const {
+    resolvePortConnections();
+
+    auto it = connections->find(reinterpret_cast<uintptr_t>(&port));
+    if (it == connections->end())
+        return nullptr;
+
+    return reinterpret_cast<const PortConnection*>(it->second);
+}
+
+const PortConnection* InstanceSymbol::getPortConnection(const InterfacePortSymbol& port) const {
+    resolvePortConnections();
+
+    auto it = connections->find(reinterpret_cast<uintptr_t>(&port));
+    if (it == connections->end())
+        return nullptr;
+
+    return reinterpret_cast<const PortConnection*>(it->second);
+}
+
+void InstanceSymbol::resolvePortConnections() const {
+    if (connections)
+        return;
+
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    connections = scope->getCompilation().allocPointerMap();
+
+    auto syntax = getSyntax();
+    if (!syntax)
+        return;
+
+    PortConnection::makeConnections(*this, body.getPortList(),
+                                    syntax->as<HierarchicalInstanceSyntax>().connections,
+                                    *connections);
 }
 
 string_view InstanceSymbol::getArrayName() const {
@@ -411,17 +412,37 @@ void InstanceSymbol::getArrayDimensions(SmallVector<ConstantRange>& dimensions) 
 }
 
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("definition", definition.name);
+    serializer.write("body", body);
 }
 
-void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
-                              span<const ParameterSymbolBase* const> parameters) {
+InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definition& definition) :
+    Symbol(SymbolKind::InstanceBody, definition.name, definition.location),
+    Scope(compilation, this), definition(definition) {
+    setParent(definition.scope, definition.indexInScope);
+}
+
+InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
+                                                       const Definition& definition) {
+    // Create parameters with all default values set.
+    SmallMap<string_view, const ExpressionSyntax*, 8> unused;
+    SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
+    createParams(compilation, definition, definition.scope, LookupLocation::max,
+                 definition.location, unused, parameters);
+
+    return fromDefinition(compilation, definition, parameters);
+}
+
+InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
+    Compilation& comp, const Definition& definition,
+    span<const ParameterSymbolBase* const> parameters) {
+
     auto& declSyntax = definition.syntax;
-    Compilation& comp = getCompilation();
+    auto result = comp.emplace<InstanceBodySymbol>(comp, definition);
+    result->setSyntax(declSyntax);
 
     // Package imports from the header always come first.
     for (auto import : declSyntax.header->imports)
-        addMembers(*import);
+        result->addMembers(*import);
 
     // Now add in all parameter ports.
     auto paramIt = parameters.begin();
@@ -431,29 +452,24 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
             break;
 
         if (original->symbol.kind == SymbolKind::Parameter)
-            addMember(original->symbol.as<ParameterSymbol>().clone(comp));
+            result->addMember(original->symbol.as<ParameterSymbol>().clone(comp));
         else
-            addMember(original->symbol.as<TypeParameterSymbol>().clone(comp));
+            result->addMember(original->symbol.as<TypeParameterSymbol>().clone(comp));
 
         paramIt++;
     }
 
-    // It's important that the port syntax is added before any body members, so that port
-    // connections are elaborated before anything tries to depend on any interface port params.
     if (declSyntax.header->ports)
-        addMembers(*declSyntax.header->ports);
-
-    // Connect all ports to external sources.
-    if (instanceSyntax)
-        setPortConnections(instanceSyntax->connections);
+        result->addMembers(*declSyntax.header->ports);
 
     // Finally add members from the body.
     for (auto member : declSyntax.members) {
         // If this is a parameter declaration, we should already have metadata for it in our
         // parameters list. The list is given in declaration order, so we should be be able to move
         // through them incrementally.
-        if (member->kind != SyntaxKind::ParameterDeclarationStatement)
-            addMembers(*member);
+        if (member->kind != SyntaxKind::ParameterDeclarationStatement) {
+            result->addMembers(*member);
+        }
         else {
             auto paramBase = member->as<ParameterDeclarationStatementSyntax>().parameter;
             if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
@@ -463,7 +479,7 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
                     auto& symbol = (*paramIt)->symbol;
                     ASSERT(declarator->name.valueText() == symbol.name);
 
-                    addMember(symbol.as<ParameterSymbol>().clone(comp));
+                    result->addMember(symbol.as<ParameterSymbol>().clone(comp));
                     paramIt++;
                 }
             }
@@ -475,12 +491,26 @@ void InstanceSymbol::populate(const HierarchicalInstanceSyntax* instanceSyntax,
                     auto& symbol = (*paramIt)->symbol;
                     ASSERT(declarator->name.valueText() == symbol.name);
 
-                    addMember(symbol.as<TypeParameterSymbol>().clone(comp));
+                    result->addMember(symbol.as<TypeParameterSymbol>().clone(comp));
                     paramIt++;
                 }
             }
         }
     }
+
+    return *result;
+}
+
+const Symbol* InstanceBodySymbol::findPort(string_view portName) const {
+    for (auto port : getPortList()) {
+        if (port->name == portName)
+            return port;
+    }
+    return nullptr;
+}
+
+void InstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("definition", definition.name);
 }
 
 string_view InstanceArraySymbol::getArrayName() const {

@@ -59,9 +59,11 @@ const Symbol* SemanticModel::getDeclaredSymbol(const SyntaxNode& syntax) {
         }
         return nullptr;
     }
-    else if (!parent->isScope()) {
+
+    if (parent->kind == SymbolKind::Instance)
+        parent = &parent->as<InstanceSymbol>().body;
+    else if (!parent->isScope())
         return nullptr;
-    }
 
     // Search among the parent's children to see if we can find ourself.
     for (auto& child : parent->as<Scope>().members()) {

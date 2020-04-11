@@ -191,7 +191,6 @@ error GenvarDuplicate "loop generation value {} repeats more than once"
 error GenvarUnknownBits "value of {} is invalid for loop generation value"
 error ImplicitNamedPortNotFound "could not find connection for implicit named port '{}'"
 error ImplicitNamedPortTypeMismatch "implicit named port '{}' of type {} connects to value of inequivalent type {}"
-error MaxInstanceDepthExceeded "module instantiation exceeded maximum depth of {}"
 error MaxGenerateStepsExceeded "generate loop hit maximum step limit; possible infinite loop?"
 error MixingSubroutinePortKinds "port declarations not allowed when subroutine defines a formal argument list"
 error UnpackedArrayParamType "unpacked array parameter requires explicit data type"
@@ -367,6 +366,9 @@ error ConstEvalVoidNotConstant "cannot call a void function in a constant expres
 error ConstEvalFunctionArgDirection "cannot call a function with output, inout, or ref arguments in a constant expression"
 error ConstEvalFunctionInsideGenerate "cannot call a function declared inside a generate block in a constant expression"
 warning static-skipped ConstEvalStaticSkipped "static variable initialization is skipped in constant function calls"
+
+subsystem Compilation
+error MaxInstanceDepthExceeded "module instantiation exceeded maximum depth of {}"
 
 subsystem Meta
 error TooManyErrors "too many errors emitted, stopping now [--error-limit=]"

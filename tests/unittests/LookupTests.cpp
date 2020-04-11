@@ -49,7 +49,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     const auto& top = *compilation.getRoot().topInstances[0];
-    const auto& gen_b = top.memberAt<GenerateBlockSymbol>(1);
+    const auto& gen_b = top.body.memberAt<GenerateBlockSymbol>(1);
     const auto& param = gen_b.memberAt<ParameterSymbol>(0);
     CHECK(compilation.getSemanticDiagnostics().empty());
     CHECK(param.getValue().integer() == 12);
@@ -100,7 +100,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     const auto& top = *compilation.getRoot().topInstances[0];
-    const auto& gen_b = top.memberAt<GenerateBlockSymbol>(1);
+    const auto& gen_b = top.body.memberAt<GenerateBlockSymbol>(1);
 
     CHECK(gen_b.find<ParameterSymbol>("foo").getValue().integer() == 4);
     CHECK(gen_b.find<ParameterSymbol>("bar").getValue().integer() == 12);
@@ -137,7 +137,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     const auto& top = *compilation.getRoot().topInstances[0];
-    const auto& x = top.memberAt<GenerateBlockSymbol>(1)
+    const auto& x = top.body.memberAt<GenerateBlockSymbol>(1)
                         .memberAt<ProceduralBlockSymbol>(0)
                         .getBody()
                         .as<ExpressionStatement>()
@@ -185,7 +185,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     const auto& top = *compilation.getRoot().topInstances[0];
-    const auto& x = top.memberAt<GenerateBlockSymbol>(2).memberAt<ParameterSymbol>(0);
+    const auto& x = top.body.memberAt<GenerateBlockSymbol>(2).memberAt<ParameterSymbol>(0);
 
     CHECK(x.getValue().integer() == 2);
 
@@ -426,7 +426,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    auto& block = compilation.getRoot().topInstances[0]->memberAt<GenerateBlockSymbol>(1);
+    auto& block = compilation.getRoot().topInstances[0]->body.memberAt<GenerateBlockSymbol>(1);
     EvalContext context(compilation, EvalFlags::IsScript);
     CHECK(block.find<VariableSymbol>("a").getInitializer()->eval(context).integer() == 3);
     CHECK(block.find<VariableSymbol>("b").getInitializer()->eval(context).integer() == 4);
@@ -449,7 +449,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    auto& block = *compilation.getRoot().topInstances[0];
+    auto& block = compilation.getRoot().topInstances[0]->body;
     CHECK(block.find<ParameterSymbol>("first").getValue().integer() == 2);
     CHECK(block.find<ParameterSymbol>("last").getValue().integer() == 7);
     CHECK(block.find<ParameterSymbol>("count1").getValue().integer() == 3);
@@ -1297,7 +1297,7 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AutoVariableHierarchical);

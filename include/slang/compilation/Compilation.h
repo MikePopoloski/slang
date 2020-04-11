@@ -23,6 +23,8 @@ class AttributeSymbol;
 class CompilationUnitSymbol;
 class Definition;
 class Expression;
+class InstanceBodySymbol;
+class InstanceSymbol;
 class PackageSymbol;
 class RootSymbol;
 class Statement;
@@ -155,6 +157,13 @@ public:
     /// Gets the attributes associated with the given expression.
     span<const AttributeSymbol* const> getAttributes(const Expression& expr) const;
 
+    /// Registers a new instance with the compilation; used to keep track of which
+    /// instances point to which instance bodies.
+    void addInstance(const InstanceSymbol& instance);
+
+    /// Returns the list of instances that share the same instance body.
+    span<const InstanceSymbol* const> getParentInstances(const InstanceBodySymbol& body) const;
+
     /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
     /// This is mostly for testing and API purposes; normal compilation never does this.
     /// Throws an exception if there are errors parsing the name.
@@ -235,6 +244,9 @@ public:
     /// Allocates a symbol map.
     SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
 
+    /// Allocates a pointer map.
+    PointerMap* allocPointerMap() { return pointerMapAllocator.emplace(); }
+
     int getNextEnumSystemId() { return nextEnumSystemId++; }
     int getNextStructSystemId() { return nextStructSystemId++; }
     int getNextUnionSystemId() { return nextUnionSystemId++; }
@@ -261,6 +273,7 @@ private:
 
     // Specialized allocators for types that are not trivially destructible.
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;
+    TypedBumpAllocator<PointerMap> pointerMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
@@ -311,6 +324,9 @@ private:
 
     // Map from token kinds to the built-in net types.
     flat_hash_map<TokenKind, std::unique_ptr<NetType>> knownNetTypes;
+
+    // Map of all instances that share a single instance body.
+    flat_hash_map<const InstanceBodySymbol*, std::vector<const InstanceSymbol*>> instanceParents;
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the definitions name table.

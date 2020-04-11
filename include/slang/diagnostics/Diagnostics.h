@@ -33,6 +33,7 @@ enum class DiagSubsystem : uint16_t {
     Lookup,
     SysFuncs,
     ConstEval,
+    Compilation,
     Meta
 };
 

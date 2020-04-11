@@ -477,7 +477,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m");
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
     CHECK(m.lookupName("label1"));
     CHECK(m.lookupName("label2"));
     CHECK(m.lookupName("label3"));

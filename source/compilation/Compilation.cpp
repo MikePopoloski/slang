@@ -8,6 +8,7 @@
 
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Definition.h"
+#include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
@@ -79,25 +80,25 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (numErrors > errorLimit)
             return;
 
-        instanceCount[&symbol.definition]++;
-        handleDefault(symbol);
-    }
-
-    void handle(const PortSymbol& symbol) {
-        if (!handleDefault(symbol))
+        // In order to avoid infinitely recursive instantiations, keep track
+        // of how deep we are in the hierarchy tree and report an error if we
+        // get too deep.
+        if (hierarchyDepth > compilation.getOptions().maxInstanceDepth) {
+            auto& diag =
+                symbol.getParentScope()->addDiag(diag::MaxInstanceDepthExceeded, symbol.location);
+            diag << compilation.getOptions().maxInstanceDepth;
             return;
+        }
 
-        symbol.getConnection();
-        for (auto attr : symbol.getConnectionAttributes())
+        instanceCount[&symbol.getDefinition()]++;
+        symbol.resolvePortConnections();
+
+        for (auto attr : compilation.getAttributes(symbol))
             attr->getValue();
-    }
 
-    void handle(const InterfacePortSymbol& symbol) {
-        if (!handleDefault(symbol))
-            return;
-
-        for (auto attr : symbol.connectionAttributes)
-            attr->getValue();
+        hierarchyDepth++;
+        visit(symbol.body);
+        hierarchyDepth--;
     }
 
     void handle(const GenerateBlockSymbol& symbol) {
@@ -111,6 +112,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     const size_t& numErrors;
     flat_hash_map<const Definition*, size_t> instanceCount;
     uint32_t errorLimit;
+    uint32_t hierarchyDepth = 0;
 };
 
 const Symbol* getInstance(const Symbol* symbol) {
@@ -390,7 +392,7 @@ const Definition* Compilation::getDefinition(string_view lookupName, const Scope
         if (sym.kind == SymbolKind::Root)
             return nullptr;
 
-        searchScope = sym.getLexicalScope();
+        searchScope = sym.getParentScope();
     }
 
     return nullptr;
@@ -501,6 +503,17 @@ span<const AttributeSymbol* const> Compilation::getAttributes(const void* ptr) c
     return it->second;
 }
 
+void Compilation::addInstance(const InstanceSymbol& instance) {
+    instanceParents[&instance.body].push_back(&instance);
+}
+
+span<const InstanceSymbol* const> Compilation::getParentInstances(const InstanceBodySymbol& body) const {
+    auto it = instanceParents.find(&body);
+    if (it == instanceParents.end())
+        return {};
+    return it->second;
+}
+
 const NameSyntax& Compilation::parseName(string_view name) {
     Diagnostics localDiags;
     SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
@@ -570,7 +583,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
         // If the diagnostic is present in all instances, don't bother
         // providing specific instantiation info.
-        if (found && visitor.instanceCount[&inst->as<InstanceSymbol>().definition] > count) {
+        if (found && visitor.instanceCount[&inst->as<InstanceSymbol>().getDefinition()] > count) {
             Diagnostic diag = *found;
             diag.symbol = getInstance(inst);
             diag.coalesceCount = count;
@@ -637,11 +650,11 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
     if (diag.isError())
         numErrors++;
 
-    auto key = std::make_tuple(diag.code, diag.location);
     std::vector<Diagnostic> newEntry;
     newEntry.emplace_back(std::move(diag));
 
-    auto [it, inserted] = diagMap.emplace(key, std::move(newEntry));
+    auto [it, inserted] =
+        diagMap.emplace(std::make_tuple(diag.code, diag.location), std::move(newEntry));
     return it->second.back();
 }
 

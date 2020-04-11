@@ -47,7 +47,7 @@ bool Symbol::isValue() const {
 
 const Scope* Symbol::getLexicalScope() const {
     if (InstanceSymbol::isKind(kind))
-        return &as<InstanceSymbol>().definition.scope;
+        return &as<InstanceSymbol>().getDefinition().scope;
     else
         return getParentScope();
 }
@@ -120,7 +120,7 @@ void Symbol::getLexicalPath(std::string& buffer) const {
 }
 
 optional<bool> Symbol::isDeclaredBefore(const Symbol& target) const {
-    return isDeclaredBefore(LookupLocation::beforeLexical(target));
+    return isDeclaredBefore(LookupLocation::before(target));
 }
 
 optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
@@ -137,7 +137,7 @@ optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
     while (sym->kind != SymbolKind::CompilationUnit && scope && scope != target.getScope()) {
         locMap[scope] = ll;
         sym = &scope->asSymbol();
-        ll = LookupLocation::beforeLexical(*sym);
+        ll = LookupLocation::before(*sym);
         scope = ll.getScope();
     }
 
@@ -147,14 +147,14 @@ optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
     // If target wasn't in a direct scope of any of our own parents,
     // repeat the process walking up target's scopes.
     sym = &target.getScope()->asSymbol();
-    ll = LookupLocation::beforeLexical(*sym);
+    ll = LookupLocation::before(*sym);
 
     while ((scope = ll.getScope()) != nullptr && sym->kind != SymbolKind::CompilationUnit) {
         if (auto it = locMap.find(scope); it != locMap.end())
             return it->second < ll;
 
         sym = &scope->asSymbol();
-        ll = LookupLocation::beforeLexical(*sym);
+        ll = LookupLocation::before(*sym);
     }
 
     return std::nullopt;

@@ -29,6 +29,7 @@ struct PortConnectionSyntax;
 struct PortDeclarationSyntax;
 
 using SymbolMap = flat_hash_map<string_view, const Symbol*>;
+using PointerMap = flat_hash_map<uintptr_t, uintptr_t>;
 
 /// Base class for symbols that represent a name scope; that is, they contain children and can
 /// participate in name lookup.
@@ -209,10 +210,6 @@ protected:
             elaborate();
     }
 
-    void setPortConnections(const SeparatedSyntaxList<PortConnectionSyntax>& connections) {
-        getOrAddDeferredData().setPortConnections(connections);
-    }
-
     const Symbol* getLastMember() const { return lastMember; }
 
 private:
@@ -231,11 +228,6 @@ private:
     public:
         void addMember(Symbol* symbol);
         span<Symbol* const> getMembers() const;
-
-        void setPortConnections(const SeparatedSyntaxList<PortConnectionSyntax>& connections);
-        const SeparatedSyntaxList<PortConnectionSyntax>* getPortConnections() const {
-            return portConns;
-        }
 
         using TransparentTypeMap = flat_hash_map<const Symbol*, const Symbol*>;
         void registerTransparentType(const Symbol* insertion, const Symbol& parent);
@@ -270,9 +262,6 @@ private:
 
         // A list of members that have name conflicts that need to be reported.
         std::vector<const Symbol*> nameConflicts;
-
-        // For instances, track port connections.
-        const SeparatedSyntaxList<PortConnectionSyntax>* portConns = nullptr;
     };
 
     // Sideband collection of wildcard imports stored in the Compilation object.

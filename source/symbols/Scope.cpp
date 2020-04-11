@@ -58,8 +58,8 @@ const NetType& Scope::getDefaultNetType() const {
             case SymbolKind::Package:
                 return sym.as<PackageSymbol>().defaultNetType;
             default:
-                if (InstanceSymbol::isKind(sym.kind))
-                    return sym.as<InstanceSymbol>().definition.defaultNetType;
+                if (sym.kind == SymbolKind::InstanceBody)
+                    return sym.as<InstanceBodySymbol>().definition.defaultNetType;
                 else
                     current = sym.getParentScope();
                 break;
@@ -79,8 +79,8 @@ TimeScale Scope::getTimeScale() const {
             case SymbolKind::Package:
                 return sym.as<PackageSymbol>().timeScale;
             default:
-                if (InstanceSymbol::isKind(sym.kind))
-                    return sym.as<InstanceSymbol>().definition.timeScale;
+                if (sym.kind == SymbolKind::InstanceBody)
+                    return sym.as<InstanceBodySymbol>().definition.timeScale;
                 else
                     current = sym.getParentScope();
                 break;
@@ -111,8 +111,8 @@ VariableLifetime Scope::getDefaultLifetime() const {
         sym = &scope->asSymbol();
         if (sym->kind == SymbolKind::Subroutine)
             return sym->as<SubroutineSymbol>().defaultLifetime;
-        else if (InstanceSymbol::isKind(sym->kind))
-            return sym->as<InstanceSymbol>().definition.defaultLifetime;
+        else if (sym->kind == SymbolKind::InstanceBody)
+            return sym->as<InstanceBodySymbol>().definition.defaultLifetime;
     }
 }
 
@@ -554,15 +554,8 @@ void Scope::elaborate() const {
                 PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
                                        implicitMembers, deferredData.getPortDeclarations());
 
-                // Only a few kinds of symbols can have port maps; grab that port map
-                // now so we can add each port to it for future lookup.
-                // The const_cast here is ugly but valid.
-                auto portMap =
-                    const_cast<SymbolMap*>(&asSymbol().as<InstanceSymbol>().getPortMap());
-
                 const Symbol* last = symbol;
                 for (auto port : ports) {
-                    portMap->emplace(port->name, port);
                     insertMember(port, last, true);
                     last = port;
                 }
@@ -570,10 +563,10 @@ void Scope::elaborate() const {
                 for (auto [implicitMember, insertionPoint] : implicitMembers)
                     insertMember(implicitMember, insertionPoint, true);
 
-                // If we have port connections, tie them to the ports now.
-                if (auto connections = deferredData.getPortConnections())
-                    PortSymbol::makeConnections(*this, ports, *connections);
-
+                // Let the instance know its list of ports. This is kind of annoying because it
+                // inverts the dependency tree but it's better than giving all symbols a virtual
+                // method just for this.
+                asSymbol().as<InstanceBodySymbol>().setPorts(ports.copy(compilation));
                 break;
             }
             case SyntaxKind::DataDeclaration: {
@@ -722,11 +715,6 @@ void Scope::DeferredMemberData::addMember(Symbol* symbol) {
 
 span<Symbol* const> Scope::DeferredMemberData::getMembers() const {
     return members;
-}
-
-void Scope::DeferredMemberData::setPortConnections(
-    const SeparatedSyntaxList<PortConnectionSyntax>& connections) {
-    portConns = &connections;
 }
 
 void Scope::DeferredMemberData::registerTransparentType(const Symbol* insertion,

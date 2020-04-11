@@ -495,10 +495,10 @@ LookupLocation getConnectionLookupLocation(const Symbol& instance) {
 
 class PortConnectionBuilder {
 public:
-    PortConnectionBuilder(const Scope& childScope, const Scope& instanceScope,
+    PortConnectionBuilder(const InstanceSymbol& instance, const Scope& instanceScope,
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
         scope(instanceScope),
-        instance(childScope.asSymbol().as<InstanceSymbol>()) {
+        instance(instance), comp(instanceScope.getCompilation()) {
 
         lookupLocation = getConnectionLookupLocation(instance);
 
@@ -556,13 +556,14 @@ public:
         std::reverse(instanceDims.begin(), instanceDims.end());
     }
 
-    void setConnection(PortSymbol& port) {
+    PortConnection* getConnection(const PortSymbol& port) {
         if (usingOrdered) {
             if (orderedIndex >= orderedConns.size()) {
                 orderedIndex++;
                 if (port.defaultValue)
-                    port.setConnection(port.defaultValue, {});
-                else if (port.name.empty()) {
+                    return createConnection(port, port.defaultValue, {});
+
+                if (port.name.empty()) {
                     if (!warnedAboutUnnamed) {
                         auto& diag = scope.addDiag(diag::UnconnectedUnnamedPort, instance.location);
                         diag.addNote(diag::NoteDeclarationHere, port.location);
@@ -573,17 +574,15 @@ public:
                     scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
                 }
 
-                return;
+                return emptyConnection(port);
             }
 
             const OrderedPortConnectionSyntax& opc = *orderedConns[orderedIndex++];
             auto attrs = AttributeSymbol::fromSyntax(opc.attributes, scope, lookupLocation);
             if (opc.expr)
-                port.setConnection(*opc.expr, attrs);
+                return createConnection(port, *opc.expr, attrs);
             else
-                port.setConnection(port.defaultValue, attrs);
-
-            return;
+                return createConnection(port, port.defaultValue, attrs);
         }
 
         if (port.name.empty()) {
@@ -593,21 +592,19 @@ public:
                 diag.addNote(diag::NoteDeclarationHere, port.location);
                 warnedAboutUnnamed = true;
             }
-            return;
+            return emptyConnection(port);
         }
 
         auto it = namedConns.find(port.name);
         if (it == namedConns.end()) {
-            if (hasWildcard) {
-                implicitNamedPort(port, wildcardAttrs, wildcardRange, true);
-                return;
-            }
+            if (hasWildcard)
+                return implicitNamedPort(port, wildcardAttrs, wildcardRange, true);
 
             if (port.defaultValue)
-                port.setConnection(port.defaultValue, {});
-            else
-                scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
-            return;
+                return createConnection(port, port.defaultValue, {});
+
+            scope.addDiag(diag::UnconnectedNamedPort, instance.location) << port.name;
+            return emptyConnection(port);
         }
 
         // We have a named connection; there are two possibilities here:
@@ -621,15 +618,15 @@ public:
             // For explicit named port connections, having an empty expression means no connection,
             // so we never take the default value here.
             if (conn.expr)
-                port.setConnection(*conn.expr, attrs);
+                return createConnection(port, *conn.expr, attrs);
 
-            return;
+            return emptyConnection(port);
         }
 
-        implicitNamedPort(port, attrs, conn.name.range(), false);
+        return implicitNamedPort(port, attrs, conn.name.range(), false);
     }
 
-    void setConnection(InterfacePortSymbol& port) {
+    PortConnection* getConnection(const InterfacePortSymbol& port) {
         // TODO: verify that interface ports must always have a name
         ASSERT(!port.name.empty());
 
@@ -637,35 +634,32 @@ public:
             auto& diag = scope.addDiag(diag::InterfacePortNotConnected, instance.location);
             diag << port.name;
             diag.addNote(diag::NoteDeclarationHere, port.location);
+            return emptyConnection(port);
         };
 
         if (usingOrdered) {
             const ExpressionSyntax* expr = nullptr;
+            span<const AttributeSymbol* const> attributes;
+
             if (orderedIndex < orderedConns.size()) {
                 const OrderedPortConnectionSyntax& opc = *orderedConns[orderedIndex];
                 expr = opc.expr;
-                port.connectionAttributes =
-                    AttributeSymbol::fromSyntax(opc.attributes, scope, lookupLocation);
+                attributes = AttributeSymbol::fromSyntax(opc.attributes, scope, lookupLocation);
             }
 
             orderedIndex++;
-            if (!expr) {
-                reportUnconnected();
-                return;
-            }
+            if (!expr)
+                return reportUnconnected();
 
-            setInterfaceExpr(port, *expr);
-            return;
+            return getInterfaceExpr(port, *expr, attributes);
         }
 
         auto it = namedConns.find(port.name);
         if (it == namedConns.end()) {
-            port.connectionAttributes = wildcardAttrs;
             if (hasWildcard)
-                setImplicitInterface(port, wildcardRange);
-            else
-                reportUnconnected();
-            return;
+                return getImplicitInterface(port, wildcardRange, wildcardAttrs);
+
+            return reportUnconnected();
         }
 
         // We have a named connection; there are two possibilities here:
@@ -674,19 +668,16 @@ public:
         const NamedPortConnectionSyntax& conn = *it->second.first;
         it->second.second = true;
 
-        port.connectionAttributes =
-            AttributeSymbol::fromSyntax(conn.attributes, scope, lookupLocation);
-
+        auto attributes = AttributeSymbol::fromSyntax(conn.attributes, scope, lookupLocation);
         if (conn.openParen) {
             // For explicit named port connections, having an empty expression means no connection.
             if (!conn.expr)
-                reportUnconnected();
-            else
-                setInterfaceExpr(port, *conn.expr);
-            return;
+                return reportUnconnected();
+
+            return getInterfaceExpr(port, *conn.expr, attributes);
         }
 
-        setImplicitInterface(port, conn.name.range());
+        return getImplicitInterface(port, conn.name.range(), attributes);
     }
 
     void finalize() {
@@ -714,8 +705,37 @@ public:
     }
 
 private:
-    void implicitNamedPort(PortSymbol& port, span<const AttributeSymbol* const> attributes,
-                           SourceRange range, bool isWildcard) {
+    PortConnection* emptyConnection(const PortSymbol& port) {
+        return comp.emplace<PortConnection>(port, nullptr, span<const AttributeSymbol* const>{});
+    }
+
+    PortConnection* emptyConnection(const InterfacePortSymbol& port) {
+        return comp.emplace<PortConnection>(port, nullptr, span<const AttributeSymbol* const>{});
+    }
+
+    PortConnection* createConnection(const PortSymbol& port, const Expression* expr,
+                                     span<const AttributeSymbol* const> attributes) {
+        return comp.emplace<PortConnection>(port, expr, attributes);
+    }
+
+    PortConnection* createConnection(const PortSymbol& port, const ExpressionSyntax& syntax,
+                                     span<const AttributeSymbol* const> attributes) {
+        // TODO: if port is explicit, check that expression as well
+        BindContext context(scope, lookupLocation);
+        auto& expr = Expression::bindArgument(
+            port.getType(), SemanticFacts::getArgDirection(port.direction), syntax, context);
+
+        return createConnection(port, &expr, attributes);
+    }
+
+    PortConnection* createConnection(const InterfacePortSymbol& port, const Symbol* ifaceInst,
+                                     span<const AttributeSymbol* const> attributes) {
+        return comp.emplace<PortConnection>(port, ifaceInst, attributes);
+    }
+
+    PortConnection* implicitNamedPort(const PortSymbol& port,
+                                      span<const AttributeSymbol* const> attributes,
+                                      SourceRange range, bool isWildcard) {
         // An implicit named port connection is semantically equivalent to `.port(port)` except:
         // - Can't create implicit net declarations this way
         // - Port types need to be equivalent, not just assignment compatible
@@ -728,10 +748,10 @@ private:
             // If this is a wildcard connection, we're allowed to use the port's default value,
             // if it has one.
             if (isWildcard && port.defaultValue)
-                port.setConnection(port.defaultValue, attributes);
-            else
-                scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
-            return;
+                return createConnection(port, port.defaultValue, attributes);
+
+            scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
+            return emptyConnection(port);
         }
 
         if (!symbol->isDeclaredBefore(lookupLocation).value_or(true)) {
@@ -742,34 +762,36 @@ private:
 
         auto& portType = port.getType();
         if (portType.isError())
-            return;
+            return emptyConnection(port);
 
         BindContext context(scope, LookupLocation::max);
         auto expr = &NamedValueExpression::fromSymbol(context, *symbol, false, range);
         if (expr->bad())
-            return;
+            return emptyConnection(port);
 
         if (!expr->type->isEquivalent(portType)) {
             auto& diag = scope.addDiag(diag::ImplicitNamedPortTypeMismatch, range);
             diag << port.name;
             diag << portType;
             diag << *expr->type;
-            return;
+            return emptyConnection(port);
         }
 
         // TODO: direction of assignment
         auto& assign = Expression::convertAssignment(context, portType, *expr, range.start());
-        port.setConnection(&assign, attributes);
+        return createConnection(port, &assign, attributes);
     }
 
-    void setInterfaceExpr(InterfacePortSymbol& port, const ExpressionSyntax& syntax) {
+    PortConnection* getInterfaceExpr(const InterfacePortSymbol& port,
+                                     const ExpressionSyntax& syntax,
+                                     span<const AttributeSymbol* const> attributes) {
         const ExpressionSyntax* expr = &syntax;
         while (expr->kind == SyntaxKind::ParenthesizedExpression)
             expr = expr->as<ParenthesizedExpressionSyntax>().expression;
 
         if (!NameSyntax::isKind(expr->kind)) {
             scope.addDiag(diag::InterfacePortInvalidExpression, expr->sourceRange()) << port.name;
-            return;
+            return emptyConnection(port);
         }
 
         LookupResult result;
@@ -778,9 +800,10 @@ private:
             scope.getCompilation().addDiagnostics(result.getDiagnostics());
 
         // If we found the interface but it's actually a port, unwrap to the target connection.
+        // TODO: check this
         const Symbol* symbol = result.found;
         if (symbol && symbol->kind == SymbolKind::InterfacePort) {
-            symbol = symbol->as<InterfacePortSymbol>().connection;
+            symbol = symbol->as<InterfacePortSymbol>().getConnection();
             if (symbol && !result.selectors.empty()) {
                 SmallVectorSized<const ElementSelectSyntax*, 4> selectors;
                 for (auto& sel : result.selectors)
@@ -791,17 +814,19 @@ private:
             }
         }
 
-        if (!symbol)
-            return;
+        const Symbol* conn = nullptr;
+        if (symbol)
+            conn = getInterface(port, symbol, expr->sourceRange());
 
-        setInterface(port, symbol, expr->sourceRange());
+        return createConnection(port, conn, attributes);
     }
 
-    void setImplicitInterface(InterfacePortSymbol& port, SourceRange range) {
+    PortConnection* getImplicitInterface(const InterfacePortSymbol& port, SourceRange range,
+                                         span<const AttributeSymbol* const> attributes) {
         auto symbol = Lookup::unqualified(scope, port.name);
         if (!symbol) {
             scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
-            return;
+            return emptyConnection(port);
         }
 
         if (!symbol->isDeclaredBefore(lookupLocation).value_or(true)) {
@@ -810,7 +835,8 @@ private:
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
         }
 
-        setInterface(port, symbol, range);
+        auto conn = getInterface(port, symbol, range);
+        return createConnection(port, conn, attributes);
     }
 
     static bool areDimSizesEqual(span<const ConstantRange> left, span<const ConstantRange> right) {
@@ -825,15 +851,16 @@ private:
         return true;
     }
 
-    void setInterface(InterfacePortSymbol& port, const Symbol* symbol, SourceRange range) {
+    const Symbol* getInterface(const InterfacePortSymbol& port, const Symbol* symbol,
+                               SourceRange range) {
         if (!port.interfaceDef)
-            return;
+            return nullptr;
 
         // If the symbol is another port, unwrap it now.
         if (symbol->kind == SymbolKind::InterfacePort) {
-            symbol = symbol->as<InterfacePortSymbol>().connection;
+            symbol = symbol->as<InterfacePortSymbol>().getConnection();
             if (!symbol)
-                return;
+                return nullptr;
         }
 
         // Make sure the thing we're connecting to is an interface or array of interfaces.
@@ -842,7 +869,7 @@ private:
         while (child->kind == SymbolKind::InstanceArray) {
             auto& array = child->as<InstanceArraySymbol>();
             if (array.elements.empty())
-                return;
+                return nullptr;
 
             dims.append(array.range);
             child = array.elements[0];
@@ -855,27 +882,25 @@ private:
                 !child->as<VariableSymbol>().getType().isError()) {
                 scope.addDiag(diag::NotAnInterface, range) << symbol->name;
             }
-            return;
+            return nullptr;
         }
 
-        auto connDef = &child->as<InstanceSymbol>().definition;
+        auto connDef = &child->as<InstanceSymbol>().getDefinition();
         if (connDef != port.interfaceDef) {
             // TODO: print the potentially nested name path instead of the simple name
             auto& diag = scope.addDiag(diag::InterfacePortTypeMismatch, range);
             diag << connDef->name << port.interfaceDef->name;
             diag.addNote(diag::NoteDeclarationHere, port.location);
-            return;
+            return nullptr;
         }
 
         auto portDims = port.getDeclaredRange();
         if (!portDims)
-            return;
+            return nullptr;
 
         // If the dimensions match exactly what the port is expecting make the connection.
-        if (areDimSizesEqual(*portDims, dims)) {
-            port.connection = symbol;
-            return;
-        }
+        if (areDimSizesEqual(*portDims, dims))
+            return symbol;
 
         // Otherwise, if the instance being instantiated is part of an array of instances *and*
         // the symbol we're connecting to is an array of interfaces, we need to check to see whether
@@ -904,16 +929,17 @@ private:
                 symbol = array.elements[size_t(index)];
             }
 
-            port.connection = symbol;
-            return;
+            return symbol;
         }
 
         auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, range) << port.name;
         diag.addNote(diag::NoteDeclarationHere, port.location);
+        return nullptr;
     }
 
     const Scope& scope;
     const InstanceSymbol& instance;
+    Compilation& comp;
     SmallVectorSized<ConstantRange, 4> instanceDims;
     SmallVectorSized<const OrderedPortConnectionSyntax*, 8> orderedConns;
     SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
@@ -930,44 +956,6 @@ private:
 
 PortSymbol::PortSymbol(string_view name, SourceLocation loc, bitmask<DeclaredTypeFlags> flags) :
     ValueSymbol(SymbolKind::Port, name, loc, flags) {
-}
-
-const Expression* PortSymbol::getConnection() const {
-    if (!conn) {
-        if (!connSyntax)
-            conn = nullptr;
-        else {
-            // TODO: if port is explicit, check that expression as well
-
-            auto scope = getParentScope();
-            ASSERT(scope);
-
-            auto& parentSym = scope->asSymbol();
-            LookupLocation lookupLocation = getConnectionLookupLocation(parentSym);
-            BindContext context(*lookupLocation.getScope(), lookupLocation);
-
-            if (InstanceSymbol::isKind(parentSym.kind))
-                context.instance = &parentSym.as<InstanceSymbol>();
-
-            conn = &Expression::bindArgument(getType(), SemanticFacts::getArgDirection(direction),
-                                             *connSyntax, context);
-        }
-    }
-    return *conn;
-}
-
-void PortSymbol::setConnection(const Expression* expr,
-                               span<const AttributeSymbol* const> attributes) {
-    conn = expr;
-    connSyntax = nullptr;
-    connAttrs = attributes;
-}
-
-void PortSymbol::setConnection(const ExpressionSyntax& syntax,
-                               span<const AttributeSymbol* const> attributes) {
-    conn.reset();
-    connSyntax = &syntax;
-    connAttrs = attributes;
 }
 
 void PortSymbol::fromSyntax(
@@ -1021,22 +1009,6 @@ void PortSymbol::fromSyntax(
     }
 }
 
-void PortSymbol::makeConnections(const Scope& childScope, span<Symbol* const> ports,
-                                 const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) {
-    const Scope* instanceScope = childScope.asSymbol().getParentScope();
-    ASSERT(instanceScope);
-
-    PortConnectionBuilder builder(childScope, *instanceScope, portConnections);
-    for (auto portBase : ports) {
-        if (portBase->kind == SymbolKind::Port)
-            builder.setConnection(portBase->as<PortSymbol>());
-        else
-            builder.setConnection(portBase->as<InterfacePortSymbol>());
-    }
-
-    builder.finalize();
-}
-
 void PortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("direction", toString(direction));
 
@@ -1045,9 +1017,6 @@ void PortSymbol::serializeTo(ASTSerializer& serializer) const {
 
     if (defaultValue)
         serializer.write("default", *defaultValue);
-
-    if (auto ext = getConnection())
-        serializer.write("externalConnection", *ext);
 }
 
 optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
@@ -1075,13 +1044,63 @@ optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() cons
     return *range;
 }
 
+const Symbol* InterfacePortSymbol::getConnection() const {
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    auto& body = scope->asSymbol().as<InstanceBodySymbol>();
+    auto instances = scope->getCompilation().getParentInstances(body);
+    if (instances.empty())
+        return nullptr;
+
+    auto conn = instances[0]->getPortConnection(*this);
+    if (!conn)
+        return nullptr;
+
+    return conn->ifaceInstance;
+}
+
 void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {
     if (interfaceDef)
         serializer.write("interfaceDef", interfaceDef->name);
     if (!modport.empty())
         serializer.write("modport", modport);
-    if (connection)
-        serializer.writeLink("connection", *connection);
+}
+
+PortConnection::PortConnection(const PortSymbol& port, const Expression* expr,
+                               span<const AttributeSymbol* const> attributes) :
+    port(&port),
+    expr(expr), isInterfacePort(false), attributes(attributes) {
+}
+
+PortConnection::PortConnection(const InterfacePortSymbol& port, const Symbol* instance,
+                               span<const AttributeSymbol* const> attributes) :
+    ifacePort(&port),
+    ifaceInstance(instance), isInterfacePort(true), attributes(attributes) {
+}
+
+void PortConnection::makeConnections(
+    const InstanceSymbol& instance, span<const Symbol* const> ports,
+    const SeparatedSyntaxList<PortConnectionSyntax>& portConnections, PointerMap& results) {
+
+    const Scope* instanceScope = instance.getParentScope();
+    ASSERT(instanceScope);
+
+    PortConnectionBuilder builder(instance, *instanceScope, portConnections);
+    for (auto portBase : ports) {
+        if (portBase->kind == SymbolKind::Port) {
+            auto& port = portBase->as<PortSymbol>();
+            results.emplace(reinterpret_cast<uintptr_t>(&port),
+                            reinterpret_cast<uintptr_t>(builder.getConnection(port)));
+        }
+        else {
+            auto& port = portBase->as<InterfacePortSymbol>();
+            results.emplace(reinterpret_cast<uintptr_t>(&port),
+                            reinterpret_cast<uintptr_t>(builder.getConnection(port)));
+        }
+    }
+
+    builder.finalize();
 }
 
 } // namespace slang

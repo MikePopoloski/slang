@@ -15,8 +15,8 @@ namespace slang {
 
 class AttributeSymbol;
 class Definition;
+class InstanceBodySymbol;
 
-struct PortConnectionSyntax;
 struct PortDeclarationSyntax;
 struct PortListSyntax;
 
@@ -39,16 +39,6 @@ public:
     PortSymbol(string_view name, SourceLocation loc,
                bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
 
-    /// If the port is connected during instantiation, gets the expression that
-    /// indicates how it connects to the outside world. Otherwise returns nullptr.
-    const Expression* getConnection() const;
-
-    void setConnection(const Expression* expr, span<const AttributeSymbol* const> attributes);
-    void setConnection(const ExpressionSyntax& syntax,
-                       span<const AttributeSymbol* const> attributes);
-
-    span<const AttributeSymbol* const> getConnectionAttributes() const { return connAttrs; }
-
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(
@@ -56,21 +46,7 @@ public:
         SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers,
         span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> portDeclarations);
 
-    static void makeConnections(const Scope& scope, span<Symbol* const> ports,
-                                const SeparatedSyntaxList<PortConnectionSyntax>& portConnections);
-
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Port; }
-
-    template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
-        if (auto c = getConnection())
-            c->visit(visitor);
-    }
-
-private:
-    mutable optional<const Expression*> conn;
-    const ExpressionSyntax* connSyntax = nullptr;
-    span<const AttributeSymbol* const> connAttrs;
 };
 
 /// Represents the public-facing side of a module / program / interface port
@@ -80,19 +56,17 @@ public:
     /// A pointer to the definition for the interface.
     const Definition* interfaceDef = nullptr;
 
-    /// If the port is connected during instantiation, this is the external instance to which it
-    /// connects.
-    const Symbol* connection = nullptr;
-
     /// If non-empty, the name of the modport that restricts which interface signals are accessible.
     string_view modport;
-
-    /// Attributes attached to the connection, if any.
-    span<const AttributeSymbol* const> connectionAttributes;
 
     /// Gets the set of dimensions for specifying interface arrays.
     /// Returns nullopt if an error occurs evaluating the dimensions.
     optional<span<const ConstantRange>> getDeclaredRange() const;
+
+    /// Gets the interface instance that this port connects to. Note that there may be
+    /// more than one actual instance that has connected this port; this will return
+    /// only the first such connection.
+    const Symbol* getConnection() const;
 
     InterfacePortSymbol(string_view name, SourceLocation loc) :
         Symbol(SymbolKind::InterfacePort, name, loc) {}
@@ -103,6 +77,31 @@ public:
 
 private:
     mutable optional<span<const ConstantRange>> range;
+};
+
+class PortConnection {
+public:
+    union {
+        const PortSymbol* port;
+        const InterfacePortSymbol* ifacePort;
+    };
+
+    union {
+        const Expression* expr;
+        const Symbol* ifaceInstance;
+    };
+
+    bool isInterfacePort;
+    span<const AttributeSymbol* const> attributes;
+
+    PortConnection(const PortSymbol& port, const Expression* expr,
+                   span<const AttributeSymbol* const> attributes);
+    PortConnection(const InterfacePortSymbol& port, const Symbol* instance,
+                   span<const AttributeSymbol* const> attributes);
+
+    static void makeConnections(const InstanceSymbol& instance, span<const Symbol* const> ports,
+                                const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
+                                PointerMap& results);
 };
 
 } // namespace slang

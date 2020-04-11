@@ -14,31 +14,32 @@
 namespace slang {
 
 class Definition;
+class InstanceBodySymbol;
+class InterfacePortSymbol;
 class ParameterSymbolBase;
+class PortConnection;
+class PortSymbol;
 
 struct HierarchicalInstanceSyntax;
 struct HierarchyInstantiationSyntax;
 
 /// Base class for module, interface, and program instance symbols.
-class InstanceSymbol : public Symbol, public Scope {
+class InstanceSymbol : public Symbol {
 public:
-    const Definition& definition;
+    const InstanceBodySymbol& body;
     span<const int32_t> arrayPath;
-    uint32_t hierarchyDepth;
 
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                    const Definition& definition);
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                   const Definition& definition, uint32_t hierarchyDepth,
-                   const HierarchicalInstanceSyntax& instanceSyntax,
-                   span<const ParameterSymbolBase* const> parameters);
+                   const Definition& definition, span<const ParameterSymbolBase* const> parameters);
 
-    const SymbolMap& getPortMap() const {
-        ensureElaborated();
-        return *portMap;
-    }
-
+    const Definition& getDefinition() const;
     bool isInterface() const;
+
+    const PortConnection* getPortConnection(const PortSymbol& port) const;
+    const PortConnection* getPortConnection(const InterfacePortSymbol& port) const;
+    void resolvePortConnections() const;
 
     /// If this instance is part of an array, walk upward to find the array's name.
     /// Otherwise returns the name of the instance itself.
@@ -56,15 +57,43 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Instance; }
 
-protected:
-    InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                   const Definition& definition, uint32_t hierarchyDepth);
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const; // implementation is in ASTVisitor.h
 
 private:
-    void populate(const HierarchicalInstanceSyntax* instanceSyntax,
-                  span<const ParameterSymbolBase* const> parameters);
+    mutable PointerMap* connections = nullptr;
+};
 
-    SymbolMap* portMap;
+class InstanceBodySymbol : public Symbol, public Scope {
+public:
+    const Definition& definition;
+
+    InstanceBodySymbol(Compilation& compilation, const Definition& definition);
+
+    span<const Symbol* const> getPortList() const {
+        ensureElaborated();
+        return portList;
+    }
+
+    const Symbol* findPort(string_view name) const;
+
+    static InstanceBodySymbol& fromDefinition(Compilation& compilation,
+                                              const Definition& definition);
+
+    static InstanceBodySymbol& fromDefinition(Compilation& compilation,
+                                              const Definition& definition,
+                                              span<const ParameterSymbolBase* const> parameters);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceBody; }
+
+private:
+    friend class Scope;
+
+    void setPorts(span<const Symbol* const> ports) const { portList = ports; }
+
+    mutable span<const Symbol* const> portList;
 };
 
 class InstanceArraySymbol : public Symbol, public Scope {

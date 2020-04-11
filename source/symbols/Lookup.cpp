@@ -37,14 +37,6 @@ LookupLocation LookupLocation::after(const Symbol& symbol) {
     return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex() + 1);
 }
 
-LookupLocation LookupLocation::beforeLexical(const Symbol& symbol) {
-    if (InstanceSymbol::isKind(symbol.kind)) {
-        auto& def = symbol.as<InstanceSymbol>().definition;
-        return LookupLocation(&def.scope, (uint32_t)def.indexInScope);
-    }
-    return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex());
-}
-
 bool LookupLocation::operator<(const LookupLocation& other) const {
     ASSERT(scope == other.scope || !scope || !other.scope);
     return index < other.index;
@@ -166,7 +158,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
         // is in the same scope as the lookup.
         result.isHierarchical = true;
         if (it == nameParts.rbegin()) {
-            if (symbol->kind == SymbolKind::InstanceArray || InstanceSymbol::isKind(symbol->kind)) {
+            if (symbol->kind == SymbolKind::InstanceArray || symbol->kind == SymbolKind::Instance) {
                 result.isHierarchical = symbol->getParentScope() != &context.scope;
             }
             else {
@@ -178,12 +170,12 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
 
         if (symbol->kind == SymbolKind::InterfacePort) {
             // TODO: modports
-            symbol = symbol->as<InterfacePortSymbol>().connection;
+            symbol = symbol->as<InterfacePortSymbol>().getConnection();
             if (!symbol)
                 return false;
         }
 
-        if (!symbol->isScope() || symbol->isType()) {
+        if ((!symbol->isScope() && symbol->kind != SymbolKind::Instance) || symbol->isType()) {
             auto code = symbol->isType() ? diag::DotOnType : diag::NotAHierarchicalScope;
             auto& diag = result.addDiag(context.scope, code, it->dotLocation);
             diag << nameToken.range();
@@ -208,6 +200,9 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
             if (!symbol)
                 return false;
         }
+
+        if (symbol->kind == SymbolKind::Instance)
+            symbol = &symbol->as<InstanceSymbol>().body;
 
         SymbolKind previousKind = symbol->kind;
         string_view packageName = symbol->kind == SymbolKind::Package ? symbol->name : "";
@@ -267,12 +262,13 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
 
         while (scope) {
             auto symbol = scope->find(name);
-            if (!symbol || symbol->isValue() || symbol->isType() || !symbol->isScope()) {
+            if (!symbol || symbol->isValue() || symbol->isType() ||
+                (!symbol->isScope() && symbol->kind != SymbolKind::Instance)) {
                 // We didn't find an instance name, so now look at the definition types of each
                 // instance.
                 symbol = nullptr;
                 for (auto& instance : scope->membersOfType<InstanceSymbol>()) {
-                    if (instance.definition.name == name) {
+                    if (instance.getDefinition().name == name) {
                         if (!symbol)
                             symbol = &instance;
                         else {
@@ -319,12 +315,21 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
                 case SymbolKind::CompilationUnit:
                     scope = nullptr;
                     break;
-                case SymbolKind::Instance:
-                    nextInstance = symbol->getParentScope();
-                    scope = symbol->getLexicalScope();
+                case SymbolKind::InstanceBody: {
+                    // TODO: This will only look at one of our instance parents, but there
+                    // may be many, instantiated in such a way that some of them are invalid.
+                    // We need to check that somewhere at some point.
+                    //
+                    // TODO: if this is a nested module it may do the wrong thing...
+                    auto parents = compilation.getParentInstances(symbol->as<InstanceBodySymbol>());
+                    if (!parents.empty())
+                        nextInstance = parents[0]->getParentScope();
+
+                    scope = symbol->getParentScope();
                     break;
+                }
                 default:
-                    scope = symbol->getLexicalScope();
+                    scope = symbol->getParentScope();
                     break;
             }
         }
@@ -631,9 +636,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
         return;
     }
 
-    // Continue up the scope chain via our parent. If we hit an instance, we need to instead
-    // search within the context of the definition's parent scope.
-    location = LookupLocation::beforeLexical(scope.asSymbol());
+    // Continue up the scope chain via our parent.
+    location = LookupLocation::before(scope.asSymbol());
     if (!location.getScope())
         return;
 

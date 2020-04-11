@@ -186,7 +186,7 @@ endmodule
     REQUIRE(attrs.size() == 1);
     CHECK(attrs[0]->name == "blah");
 
-    auto ports = n1.membersOfType<PortSymbol>();
+    auto ports = n1.body.membersOfType<PortSymbol>();
     REQUIRE(ports.size() == 1);
 
     auto& fooPort = *ports.begin();
@@ -194,12 +194,12 @@ endmodule
     REQUIRE(attrs.size() == 1);
     CHECK(attrs[0]->name == "asdf");
 
-    attrs = fooPort.getConnectionAttributes();
+    attrs = n1.getPortConnection(fooPort)->attributes;
     REQUIRE(attrs.size() == 1);
     CHECK(attrs[0]->name == "blah2");
 
     auto& m = root.lookupName<InstanceSymbol>("m");
-    attrs = compilation.getAttributes(*m.membersOfType<EmptyMemberSymbol>().begin());
+    attrs = compilation.getAttributes(*m.body.membersOfType<EmptyMemberSymbol>().begin());
     REQUIRE(attrs.size() == 1);
     CHECK(attrs[0]->name == "blah3");
     CHECK(attrs[0]->getValue().convertToStr().str() == "str val");
@@ -640,11 +640,11 @@ endmodule
 
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
-    const auto& alwaysComb = instance.memberAt<ProceduralBlockSymbol>(14);
+    const auto& alwaysComb = instance.body.memberAt<ProceduralBlockSymbol>(14);
 
     CHECK(alwaysComb.procedureKind == ProceduralBlockKind::AlwaysComb);
 
-    const auto& variable = instance.memberAt<VariableSymbol>(16);
+    const auto& variable = instance.body.memberAt<VariableSymbol>(16);
     CHECK(variable.getType().isIntegral());
     CHECK(variable.name == "arr1");
 
@@ -662,7 +662,7 @@ endmodule
 
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
-    const auto& foo = instance.memberAt<SubroutineSymbol>(0);
+    const auto& foo = instance.body.memberAt<SubroutineSymbol>(0);
     CHECK(foo.subroutineKind == SubroutineKind::Function);
     CHECK(foo.defaultLifetime == VariableLifetime::Static);
     CHECK(foo.getReturnType().getBitWidth() == 16);

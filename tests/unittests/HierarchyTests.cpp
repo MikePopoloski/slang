@@ -90,7 +90,7 @@ endmodule
 )");
 
     Compilation compilation;
-    auto it = evalModule(tree, compilation).membersOfType<InstanceSymbol>().begin();
+    auto it = evalModule(tree, compilation).body.membersOfType<InstanceSymbol>().begin();
     CHECK(it->name == "l1");
     it++;
     CHECK(it->name == "l2");
@@ -147,8 +147,8 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
-    const auto& leaf = instance.memberAt<InstanceSymbol>(0).memberAt<InstanceSymbol>(0);
+    const auto& instance = evalModule(tree, compilation).body;
+    const auto& leaf = instance.memberAt<InstanceSymbol>(0).body.memberAt<InstanceSymbol>(0).body;
     const auto& foo = leaf.find<ParameterSymbol>("foo");
     CHECK(foo.getValue().integer() == 4);
     NO_COMPILATION_ERRORS;
@@ -176,12 +176,12 @@ endmodule
 )");
 
     Compilation compilation;
-    auto& instance = evalModule(tree, compilation);
-    auto& child = instance.memberAt<InstanceSymbol>(0);
+    auto& instance = evalModule(tree, compilation).body;
+    auto& child = instance.memberAt<InstanceSymbol>(0).body;
     CHECK(child.memberAt<GenerateBlockSymbol>(1).isInstantiated);
     CHECK(!child.memberAt<GenerateBlockSymbol>(2).isInstantiated);
 
-    auto& leaf = child.memberAt<GenerateBlockSymbol>(1).memberAt<InstanceSymbol>(0);
+    auto& leaf = child.memberAt<GenerateBlockSymbol>(1).memberAt<InstanceSymbol>(0).body;
     const auto& foo = leaf.find<ParameterSymbol>("foo");
     CHECK(foo.getValue().integer() == 1);
     NO_COMPILATION_ERRORS;
@@ -200,13 +200,13 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation).memberAt<GenerateBlockArraySymbol>(1);
+    const auto& instance = evalModule(tree, compilation).body.memberAt<GenerateBlockArraySymbol>(1);
 
     REQUIRE(instance.members().size() == 10);
 
     for (uint32_t i = 0; i < 10; i++) {
-        const auto& leaf = instance.memberAt<GenerateBlockSymbol>(i).memberAt<InstanceSymbol>(1);
-        const auto& foo = leaf.find<ParameterSymbol>("foo");
+        auto& leaf = instance.memberAt<GenerateBlockSymbol>(i).memberAt<InstanceSymbol>(1).body;
+        auto& foo = leaf.find<ParameterSymbol>("foo");
         CHECK(foo.getValue().integer() == i);
     }
     NO_COMPILATION_ERRORS;
@@ -295,7 +295,7 @@ endpackage
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    auto& cv = compilation.getRoot().topInstances[0]->memberAt<ParameterSymbol>(0).getValue();
+    auto& cv = compilation.getRoot().topInstances[0]->body.memberAt<ParameterSymbol>(0).getValue();
     CHECK(cv.integer() == 4);
     NO_COMPILATION_ERRORS;
 }
@@ -411,13 +411,12 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto top = compilation.getRoot().topInstances[0];
-    auto& j = top->find<InstanceSymbol>("m").find<ParameterSymbol>("j");
+    auto& j = top->body.find<InstanceSymbol>("m").body.find<ParameterSymbol>("j");
     CHECK(j.getValue().integer() == 17);
 }
 
 TEST_CASE("Generate dependent on iface port param") {
     auto tree = SyntaxTree::fromText(R"(
-
 interface I #(parameter int i) ();
 endinterface
 

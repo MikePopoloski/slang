@@ -14,7 +14,7 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
+    const auto& instance = evalModule(tree, compilation).body;
 
     // Make sure the enum value can be looked up in the parent scope.
     CHECK(instance.find("A"));
@@ -55,7 +55,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    auto& top = compilation.getRoot().find<InstanceSymbol>("Top");
+    auto& top = compilation.getRoot().find<InstanceSymbol>("Top").body;
     auto get = [&](string_view name) {
         return top.find<EnumValueSymbol>(name).getValue().integer();
     };
@@ -169,7 +169,7 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
+    const auto& instance = evalModule(tree, compilation).body;
 
     CHECK(instance.find("FOO"));
     CHECK(instance.find("BAR"));
@@ -221,7 +221,7 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
+    const auto& instance = evalModule(tree, compilation).body;
 
     const auto& foo = instance.memberAt<VariableSymbol>(0);
     REQUIRE(foo.getType().kind == SymbolKind::PackedStructType);
@@ -252,7 +252,7 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
+    const auto& instance = evalModule(tree, compilation).body;
 
     const auto& foo = instance.memberAt<VariableSymbol>(0);
     REQUIRE(foo.getType().kind == SymbolKind::PackedUnionType);
@@ -289,7 +289,7 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
+    const auto& instance = evalModule(tree, compilation).body;
 
     const auto& f = instance.memberAt<VariableSymbol>(1);
     const Type& type = f.getType().getCanonicalType();
@@ -343,7 +343,7 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
+    const auto& instance = evalModule(tree, compilation).body;
 
     const auto& e = instance.memberAt<VariableSymbol>(1);
     const Type& type = e.getType().getCanonicalType();
@@ -382,7 +382,7 @@ endmodule
                                      "source");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
+    const auto& instance = evalModule(tree, compilation).body;
     CHECK(instance.find("e1_t") == nullptr);
     CHECK(instance.find("e2") == nullptr);
 
@@ -416,7 +416,7 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
+    const auto& instance = evalModule(tree, compilation).body;
 
     const auto& fType = instance.find<NetSymbol>("f").getType();
     CHECK(fType.isPackedArray());
@@ -433,7 +433,7 @@ endmodule
 )");
 
     Compilation compilation;
-    const auto& instance = evalModule(tree, compilation);
+    const auto& instance = evalModule(tree, compilation).body;
 
     const auto& fType = instance.find<NetSymbol>("f").getType();
     CHECK(fType.isUnpackedArray());

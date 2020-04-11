@@ -74,8 +74,13 @@ public:
                 member.visit(DERIVED);
         }
 
+        // TODO: check VisitStatements
         if constexpr (is_detected_v<getBody_t, T>) {
             t.getBody().visit(DERIVED);
+        }
+
+        if constexpr (std::is_same_v<InstanceSymbol, T>) {
+            t.body.visit(DERIVED);
         }
     }
 
@@ -120,6 +125,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(Port);
         SYMBOL(InterfacePort);
         SYMBOL(Instance);
+        SYMBOL(InstanceBody);
         SYMBOL(InstanceArray);
         SYMBOL(Package);
         SYMBOL(ExplicitImport);
@@ -259,6 +265,16 @@ decltype(auto) Expression::visit(TVisitor&& visitor, Args&&... args) const {
 template<typename TVisitor, typename... Args>
 decltype(auto) Expression::visit(TVisitor&& visitor, Args&&... args) {
     return visitExpression(this, visitor, std::forward<Args>(args)...);
+}
+
+template<typename TVisitor>
+void InstanceSymbol::visitExprs(TVisitor&& visitor) const {
+    resolvePortConnections();
+    for (auto& [k, v] : *connections) {
+        auto conn = reinterpret_cast<const PortConnection*>(v);
+        if (conn && !conn->isInterfacePort && conn->expr)
+            conn->expr->visit(visitor);
+    }
 }
 
 } // namespace slang
