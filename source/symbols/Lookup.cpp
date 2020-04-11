@@ -347,7 +347,7 @@ const Symbol* getCompilationUnit(const Symbol& symbol) {
         if (current->kind == SymbolKind::CompilationUnit)
             return current;
 
-        auto scope = current->getLexicalScope();
+        auto scope = current->getParentScope();
         ASSERT(scope);
 
         current = &scope->asSymbol();
@@ -859,7 +859,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
             }
         }
 
-        scope = scope->asSymbol().getLexicalScope();
+        scope = scope->asSymbol().getParentScope();
     } while (scope);
 
     // If we found the actual named symbol and it's viable for our kind of lookup,
@@ -873,7 +873,8 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
 
     // Otherwise, if we found the symbol but it wasn't viable becaues we're in a
     // constant context, tell the user not to use hierarchical names here.
-    if ((flags & LookupFlags::Constant) && actualSym && actualSym->isScope()) {
+    if ((flags & LookupFlags::Constant) && actualSym &&
+        (actualSym->isScope() || actualSym->kind == SymbolKind::Instance)) {
         result.addDiag(initialScope, diag::HierarchicalNotAllowedInConstant, range);
         return;
     }

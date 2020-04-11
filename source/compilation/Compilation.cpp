@@ -104,7 +104,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     void handle(const GenerateBlockSymbol& symbol) {
         if (!symbol.isInstantiated)
             return;
-
         handleDefault(symbol);
     }
 
@@ -113,14 +112,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     flat_hash_map<const Definition*, size_t> instanceCount;
     uint32_t errorLimit;
     uint32_t hierarchyDepth = 0;
-};
-
-const Symbol* getInstance(const Symbol* symbol) {
-    while (symbol && !InstanceSymbol::isKind(symbol->kind)) {
-        auto scope = symbol->getParentScope();
-        symbol = scope ? &scope->asSymbol() : nullptr;
-    }
-    return symbol;
 };
 
 } // namespace
@@ -507,7 +498,8 @@ void Compilation::addInstance(const InstanceSymbol& instance) {
     instanceParents[&instance.body].push_back(&instance);
 }
 
-span<const InstanceSymbol* const> Compilation::getParentInstances(const InstanceBodySymbol& body) const {
+span<const InstanceSymbol* const> Compilation::getParentInstances(
+    const InstanceBodySymbol& body) const {
     auto it = instanceParents.find(&body);
     if (it == instanceParents.end())
         return {};
@@ -569,15 +561,28 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         size_t count = 0;
 
         for (auto& diag : diagList) {
-            auto symbol = getInstance(diag.symbol);
-            if (!symbol || !symbol->getParentScope())
+            auto symbol = diag.symbol;
+            while (symbol && symbol->kind != SymbolKind::InstanceBody) {
+                auto scope = symbol->getParentScope();
+                symbol = scope ? &scope->asSymbol() : nullptr;
+            }
+
+            if (!symbol)
                 continue;
 
-            count++;
-            auto& parent = symbol->getParentScope()->asSymbol();
-            if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
-                found = &diag;
-                inst = symbol;
+            auto parents = getParentInstances(symbol->as<InstanceBodySymbol>());
+            if (parents.empty())
+                continue;
+
+            count += parents.size();
+            for (auto parent : parents) {
+                if (auto scope = parent->getParentScope()) {
+                    auto& sym = scope->asSymbol();
+                    if (sym.kind != SymbolKind::Root && sym.kind != SymbolKind::CompilationUnit) {
+                        found = &diag;
+                        inst = parent;
+                    }
+                }
             }
         }
 
@@ -585,7 +590,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         // providing specific instantiation info.
         if (found && visitor.instanceCount[&inst->as<InstanceSymbol>().getDefinition()] > count) {
             Diagnostic diag = *found;
-            diag.symbol = getInstance(inst);
+            diag.symbol = inst;
             diag.coalesceCount = count;
             results.emplace(std::move(diag));
         }

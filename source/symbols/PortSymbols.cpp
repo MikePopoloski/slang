@@ -486,21 +486,13 @@ private:
     }
 };
 
-LookupLocation getConnectionLookupLocation(const Symbol& instance) {
-    // This needs to be a lookup for the instance's parent in the hierarchy, not its lexical
-    // location. Usually all lookups want the lexical location, so we have to specifically ask
-    // for the parent here.
-    return LookupLocation(instance.getParentScope(), (uint32_t)instance.getIndex() + 1);
-}
-
 class PortConnectionBuilder {
 public:
-    PortConnectionBuilder(const InstanceSymbol& instance, const Scope& instanceScope,
+    PortConnectionBuilder(const InstanceSymbol& instance,
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
-        scope(instanceScope),
-        instance(instance), comp(instanceScope.getCompilation()) {
-
-        lookupLocation = getConnectionLookupLocation(instance);
+        scope(*instance.getParentScope()),
+        instance(instance), comp(scope.getCompilation()),
+        lookupLocation(LookupLocation::after(instance)) {
 
         bool hasConnections = false;
         for (auto conn : portConnections) {
@@ -547,7 +539,7 @@ public:
 
         // Build up the set of dimensions for the instantiating instance's array parent, if any.
         // This builds up the dimensions in reverse order, so we have to reverse them back.
-        auto parent = instance.getParentScope();
+        auto parent = &scope;
         while (parent && parent->asSymbol().kind == SymbolKind::InstanceArray) {
             auto& sym = parent->asSymbol().as<InstanceArraySymbol>();
             instanceDims.append(sym.range);
@@ -722,6 +714,8 @@ private:
                                      span<const AttributeSymbol* const> attributes) {
         // TODO: if port is explicit, check that expression as well
         BindContext context(scope, lookupLocation);
+        context.instance = &instance;
+
         auto& expr = Expression::bindArgument(
             port.getType(), SemanticFacts::getArgDirection(port.direction), syntax, context);
 
@@ -1083,10 +1077,7 @@ void PortConnection::makeConnections(
     const InstanceSymbol& instance, span<const Symbol* const> ports,
     const SeparatedSyntaxList<PortConnectionSyntax>& portConnections, PointerMap& results) {
 
-    const Scope* instanceScope = instance.getParentScope();
-    ASSERT(instanceScope);
-
-    PortConnectionBuilder builder(instance, *instanceScope, portConnections);
+    PortConnectionBuilder builder(instance, portConnections);
     for (auto portBase : ports) {
         if (portBase->kind == SymbolKind::Port) {
             auto& port = portBase->as<PortSymbol>();

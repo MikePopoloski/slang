@@ -101,11 +101,6 @@ public:
     /// Gets the logical parent scope that contains this symbol.
     const Scope* getParentScope() const { return parentScope; }
 
-    /// Gets the lexical scope that contains this symbol, from a lookup perspective.
-    /// For example, inside of a module instance the lexical scope is the definition
-    /// but the logical scope is the parent module in the hierarchy.
-    const Scope* getLexicalScope() const;
-
     /// Gets the syntax node that was used to create this symbol, if any. Symbols can
     /// be created without any originating syntax; in those cases, this returns nullptr.
     const SyntaxNode* getSyntax() const { return originatingSyntax; }

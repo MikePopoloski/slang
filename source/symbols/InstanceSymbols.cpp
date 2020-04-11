@@ -380,6 +380,24 @@ const PortConnection* InstanceSymbol::getPortConnection(const InterfacePortSymbo
 }
 
 void InstanceSymbol::resolvePortConnections() const {
+    // Note: the order of operations here is very subtly important.
+    // In order to resolve connections, we need to actually know our list of ports.
+    // Asking the body for the list of ports requires fully elaborating the instance,
+    // especially because of things like non-ansi port declarations which might be
+    // deep in the body. That process of elaboration can actually depend back on the
+    // port connections because of interface ports.
+    // For example:
+    //
+    //     interface I #(parameter int i) (); endinterface
+    //     module M(I iface, input logic [iface.i - 1 : 0] foo);
+    //         localparam int j = $bits(foo);
+    //     endmodule
+    //
+    // In order to resolve connections for an instance of M, we elaborate its body,
+    // which then requires evaluating $bits(foo) which then depends on the connection
+    // provided to `iface`. In the code, this translates to a reetrant call to this
+    // function; the first time we call getPortList() on the body will call back in here.
+    auto portList = body.getPortList();
     if (connections)
         return;
 
@@ -392,9 +410,8 @@ void InstanceSymbol::resolvePortConnections() const {
     if (!syntax)
         return;
 
-    PortConnection::makeConnections(*this, body.getPortList(),
-                                    syntax->as<HierarchicalInstanceSyntax>().connections,
-                                    *connections);
+    PortConnection::makeConnections(
+        *this, portList, syntax->as<HierarchicalInstanceSyntax>().connections, *connections);
 }
 
 string_view InstanceSymbol::getArrayName() const {

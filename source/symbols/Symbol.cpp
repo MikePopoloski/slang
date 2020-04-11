@@ -45,13 +45,6 @@ bool Symbol::isValue() const {
     return ValueSymbol::isKind(kind);
 }
 
-const Scope* Symbol::getLexicalScope() const {
-    if (InstanceSymbol::isKind(kind))
-        return &as<InstanceSymbol>().getDefinition().scope;
-    else
-        return getParentScope();
-}
-
 const DeclaredType* Symbol::getDeclaredType() const {
     switch (kind) {
         case SymbolKind::TypeAlias:
@@ -70,12 +63,23 @@ const DeclaredType* Symbol::getDeclaredType() const {
 }
 
 static void getHierarchicalPathImpl(const Symbol& symbol, std::string& buffer) {
-    if (symbol.getParentScope()) {
-        auto& parent = symbol.getParentScope()->asSymbol();
+    auto scope = symbol.getParentScope();
+    auto current = &symbol;
+    if (scope && symbol.kind == SymbolKind::InstanceBody) {
+        auto parents = scope->getCompilation().getParentInstances(symbol.as<InstanceBodySymbol>());
+        if (parents.empty())
+            return;
+
+        current = parents[0];
+        scope = current->getParentScope();
+    }
+
+    if (scope) {
+        auto& parent = scope->asSymbol();
         if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
             getHierarchicalPathImpl(parent, buffer);
 
-            if (!symbol.name.empty()) {
+            if (!current->name.empty()) {
                 if (parent.kind == SymbolKind::Package || parent.kind == SymbolKind::ClassType)
                     buffer.append("::");
                 else
@@ -84,8 +88,8 @@ static void getHierarchicalPathImpl(const Symbol& symbol, std::string& buffer) {
         }
     }
 
-    if (!symbol.name.empty())
-        buffer.append(symbol.name);
+    if (!current->name.empty())
+        buffer.append(current->name);
 }
 
 void Symbol::getHierarchicalPath(std::string& buffer) const {
@@ -97,8 +101,8 @@ void Symbol::getHierarchicalPath(std::string& buffer) const {
 }
 
 static void getLexicalPathImpl(const Symbol& symbol, std::string& buffer) {
-    if (symbol.getLexicalScope()) {
-        auto& parent = symbol.getLexicalScope()->asSymbol();
+    if (symbol.getParentScope()) {
+        auto& parent = symbol.getParentScope()->asSymbol();
         if (parent.kind != SymbolKind::Root && parent.kind != SymbolKind::CompilationUnit) {
             getLexicalPathImpl(parent, buffer);
 
