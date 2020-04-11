@@ -92,8 +92,17 @@ void ASTSerializer::write(string_view name, const TimingControl& value) {
 
 void ASTSerializer::writeLink(string_view name, const Symbol& value) {
     writer.writeProperty(name);
-    writer.writeValue(std::to_string(uintptr_t(&value)) + " " +
-                      (value.isType() ? value.as<Type>().toString() : std::string(value.name)));
+
+    std::string str;
+    if (includeAddrs)
+        str = std::to_string(uintptr_t(&value)) + " ";
+
+    if (value.isType())
+        str += value.as<Type>().toString();
+    else
+        str += std::string(value.name);
+
+    writer.writeValue(str);
 }
 
 void ASTSerializer::startArray(string_view name) {
@@ -158,7 +167,9 @@ void ASTSerializer::visit(const T& elem) {
         writer.startObject();
         write("name", elem.name);
         write("kind", toString(elem.kind));
-        write("addr", uintptr_t(&elem));
+
+        if (includeAddrs)
+            write("addr", uintptr_t(&elem));
 
         auto scope = elem.getParentScope();
         if (scope) {

@@ -145,6 +145,86 @@ endmodule
     writer.view();
 }
 
+TEST_CASE("JSON dump -- types and values") {
+    auto tree = SyntaxTree::fromText(R"(
+module test_enum;
+    typedef enum logic {
+        STATE_0 = 0,
+        STATE_1 = 1
+    } STATE;
+
+    STATE a = STATE_0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+
+    ASTSerializer serializer(compilation, writer);
+    serializer.setIncludeAddresses(false);
+    serializer.serialize(compilation.getRoot());
+
+    std::string result = "\n"s + std::string(writer.view());
+    CHECK(result == R"(
+{
+  "name": "$root",
+  "kind": "Root",
+  "members": [
+    {
+      "name": "",
+      "kind": "CompilationUnit"
+    },
+    {
+      "name": "test_enum",
+      "kind": "Instance",
+      "body": {
+        "name": "test_enum",
+        "kind": "InstanceBody",
+        "members": [
+          {
+            "name": "STATE_0",
+            "kind": "TransparentMember"
+          },
+          {
+            "name": "STATE_1",
+            "kind": "TransparentMember"
+          },
+          {
+            "name": "STATE",
+            "kind": "TypeAlias",
+            "target": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.e$1"
+          },
+          {
+            "name": "a",
+            "kind": "Variable",
+            "type": {
+              "name": "STATE",
+              "kind": "TypeAlias",
+              "target": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.e$1"
+            },
+            "initializer": {
+              "kind": "NamedValue",
+              "type": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.e$1",
+              "symbol": "STATE_0",
+              "isHierarchical": false,
+              "constant": "1'b0"
+            },
+            "lifetime": "Static",
+            "isConstant": false,
+            "isCompilerGenerated": false
+          }
+        ],
+        "definition": "test_enum"
+      }
+    }
+  ]
+})");
+}
+
 TEST_CASE("Attributes") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

@@ -24,6 +24,8 @@ class ASTSerializer {
 public:
     ASTSerializer(Compilation& compilation, JsonWriter& writer);
 
+    void setIncludeAddresses(bool set) { includeAddrs = set; }
+
     void serialize(const Symbol& symbol);
     void serialize(const Expression& expr);
     void serialize(const Statement& statement);
@@ -75,6 +77,7 @@ private:
 
     Compilation& compilation;
     JsonWriter& writer;
+    bool includeAddrs = true;
 };
 
 } // namespace slang
