@@ -549,7 +549,7 @@ void Scope::elaborate() const {
             }
             case SyntaxKind::AnsiPortList:
             case SyntaxKind::NonAnsiPortList: {
-                SmallVectorSized<Symbol*, 8> ports;
+                SmallVectorSized<const Symbol*, 8> ports;
                 SmallVectorSized<std::pair<Symbol*, const Symbol*>, 8> implicitMembers;
                 PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
                                        implicitMembers, deferredData.getPortDeclarations());

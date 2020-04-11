@@ -953,7 +953,7 @@ PortSymbol::PortSymbol(string_view name, SourceLocation loc, bitmask<DeclaredTyp
 }
 
 void PortSymbol::fromSyntax(
-    const PortListSyntax& syntax, const Scope& scope, SmallVector<Symbol*>& results,
+    const PortListSyntax& syntax, const Scope& scope, SmallVector<const Symbol*>& results,
     SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers,
     span<std::pair<const PortDeclarationSyntax*, const Symbol*> const> portDeclarations) {
 
