@@ -6,11 +6,13 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/Definition.h"
 
+#include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxFacts.h"
 
 namespace slang {
 
@@ -127,6 +129,67 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
 
     timeScale.setDefault(scope, directiveTimeScale, unitsRange.has_value(),
                          precisionRange.has_value());
+}
+
+void Definition::resolvePorts() const {
+    // Index all of our ports. We do just enough work here to figure out the
+    // names of each port and whether it's likely an interface port or not.
+    resolvedPorts = true;
+    auto portSyntax = syntax.header->ports;
+    if (!portSyntax)
+        return;
+
+    uint32_t index = 0;
+    if (portSyntax->kind == SyntaxKind::AnsiPortList) {
+        for (auto port : portSyntax->as<AnsiPortListSyntax>().ports) {
+            if (port->kind == SyntaxKind::ImplicitAnsiPort) {
+                auto& iap = port->as<ImplicitAnsiPortSyntax>();
+                bool isIface = iap.header->kind == SyntaxKind::InterfacePortHeader;
+                if (iap.header->kind == SyntaxKind::VariablePortHeader) {
+                    // A variable port header might still be an interface port; check if it has
+                    // a simple type name that resolves to a definition name somewhere.
+                    auto& vph = iap.header->as<VariablePortHeaderSyntax>();
+                    string_view simpleName = SyntaxFacts::getSimpleTypeName(*vph.dataType);
+                    if (!simpleName.empty()) {
+                        auto def = scope.getCompilation().getDefinition(simpleName, scope);
+                        if (def && def->definitionKind == DefinitionKind::Interface)
+                            isIface = true;
+                    }
+                }
+                ports.emplace(iap.declarator->name.valueText(), index, isIface);
+            }
+            else {
+                // TODO: can this be an iface?
+                auto& eap = port->as<ExplicitAnsiPortSyntax>();
+                ports.emplace(eap.name.valueText(), index, /* isIface */ false);
+            }
+
+            index++;
+        }
+    }
+    else {
+        // TODO: non-ansi iface ports not supported yet
+        for (auto port : portSyntax->as<NonAnsiPortListSyntax>().ports) {
+            if (port->kind == SyntaxKind::ImplicitNonAnsiPort) {
+                auto& iap = port->as<ImplicitNonAnsiPortSyntax>();
+                if (iap.expr) {
+                    if (iap.expr->kind == SyntaxKind::PortReference) {
+                        auto& ref = iap.expr->as<PortReferenceSyntax>();
+                        ports.emplace(ref.name.valueText(), index, /* isIface */ false);
+                    }
+                    else {
+                        // TODO: support this
+                    }
+                }
+            }
+            else {
+                auto& eap = port->as<ExplicitNonAnsiPortSyntax>();
+                ports.emplace(eap.name.valueText(), index, /* isIface */ false);
+            }
+
+            index++;
+        }
+    }
 }
 
 } // namespace slang

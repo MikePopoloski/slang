@@ -16,6 +16,7 @@ namespace slang {
 class AttributeSymbol;
 class Definition;
 class InstanceBodySymbol;
+class InstanceCacheKey;
 
 struct PortDeclarationSyntax;
 struct PortListSyntax;
@@ -74,6 +75,11 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfacePort; }
+
+    static void findInterfaceInstanceKeys(
+        const Scope& scope, const Definition& definition,
+        const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
+        SmallVector<const InstanceCacheKey*>& results);
 
 private:
     mutable optional<span<const ConstantRange>> range;

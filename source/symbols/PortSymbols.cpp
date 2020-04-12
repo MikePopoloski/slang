@@ -1054,6 +1054,103 @@ const Symbol* InterfacePortSymbol::getConnection() const {
     return conn->ifaceInstance;
 }
 
+void InterfacePortSymbol::findInterfaceInstanceKeys(
+    const Scope& scope, const Definition& definition,
+    const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
+    SmallVector<const InstanceCacheKey*>& results) {
+
+    // This method only tries to find an interface instance connection for each
+    // provided interface port. We don't bother trying to diagnose errors, that
+    // will be handled by the port connection builder later.
+    auto ports = definition.getPorts();
+    if (ports.empty() || portConnections.empty())
+        return;
+
+    auto unwrap = [&](const Symbol* symbol) {
+        if (!symbol)
+            return;
+
+        if (symbol->kind == SymbolKind::InterfacePort) {
+            symbol = symbol->as<InterfacePortSymbol>().getConnection();
+            if (!symbol)
+                return;
+        }
+
+        while (symbol->kind == SymbolKind::InstanceArray) {
+            auto& array = symbol->as<InstanceArraySymbol>();
+            if (array.elements.empty())
+                return;
+            symbol = array.elements[0];
+        }
+
+        if (symbol->kind == SymbolKind::Instance)
+            results.append(&symbol->as<InstanceSymbol>().body.getCacheKey());
+    };
+
+    auto findIface = [&](const ExpressionSyntax& syntax) {
+        const ExpressionSyntax* expr = &syntax;
+        while (expr->kind == SyntaxKind::ParenthesizedExpression)
+            expr = expr->as<ParenthesizedExpressionSyntax>().expression;
+
+        if (NameSyntax::isKind(expr->kind)) {
+            LookupResult result;
+            Lookup::name(scope, expr->as<NameSyntax>(), LookupLocation::max, LookupFlags::None,
+                         result);
+            unwrap(result.found);
+        }
+    };
+
+    if (portConnections[0]->kind == SyntaxKind::OrderedPortConnection) {
+        for (auto& port : ports) {
+            if (port.index >= portConnections.size())
+                break;
+
+            if (!port.likelyInterface)
+                continue;
+
+            auto conn = portConnections[port.index];
+            if (conn->kind == SyntaxKind::OrderedPortConnection) {
+                auto expr = conn->as<OrderedPortConnectionSyntax>().expr;
+                if (expr)
+                    findIface(*expr);
+            }
+        }
+        return;
+    }
+
+    SmallMap<string_view, const NamedPortConnectionSyntax*, 8> namedConns;
+    bool hasWildcard = false;
+    for (auto conn : portConnections) {
+        if (conn->kind == SyntaxKind::WildcardPortConnection) {
+            hasWildcard = true;
+        }
+        else if (conn->kind == SyntaxKind::NamedPortConnection) {
+            auto& npc = conn->as<NamedPortConnectionSyntax>();
+            auto name = npc.name.valueText();
+            if (!name.empty())
+                namedConns.emplace(name, &npc);
+        }
+    }
+
+    for (auto& port : ports) {
+        if (!port.likelyInterface)
+            continue;
+
+        auto it = namedConns.find(port.name);
+        if (it == namedConns.end()) {
+            if (hasWildcard)
+                unwrap(Lookup::unqualified(scope, port.name));
+            continue;
+        }
+
+        auto& npc = *it->second;
+        if (npc.expr)
+            findIface(*npc.expr);
+        else if (!npc.openParen)
+            unwrap(Lookup::unqualified(scope, port.name));
+    }
+}
+
 void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {
     if (interfaceDef)
         serializer.write("interfaceDef", interfaceDef->name);
