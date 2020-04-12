@@ -19,7 +19,6 @@ class Type;
 
 class InstanceCacheKey {
 public:
-    InstanceCacheKey() = default;
     InstanceCacheKey(const Definition& def, span<const ConstantValue* const> paramValues,
                      span<const Type* const> typeParams);
 

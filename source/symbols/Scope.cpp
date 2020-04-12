@@ -59,7 +59,7 @@ const NetType& Scope::getDefaultNetType() const {
                 return sym.as<PackageSymbol>().defaultNetType;
             default:
                 if (sym.kind == SymbolKind::InstanceBody)
-                    return sym.as<InstanceBodySymbol>().definition.defaultNetType;
+                    return sym.as<InstanceBodySymbol>().getDefinition().defaultNetType;
                 else
                     current = sym.getParentScope();
                 break;
@@ -80,7 +80,7 @@ TimeScale Scope::getTimeScale() const {
                 return sym.as<PackageSymbol>().timeScale;
             default:
                 if (sym.kind == SymbolKind::InstanceBody)
-                    return sym.as<InstanceBodySymbol>().definition.timeScale;
+                    return sym.as<InstanceBodySymbol>().getDefinition().timeScale;
                 else
                     current = sym.getParentScope();
                 break;
@@ -112,7 +112,7 @@ VariableLifetime Scope::getDefaultLifetime() const {
         if (sym->kind == SymbolKind::Subroutine)
             return sym->as<SubroutineSymbol>().defaultLifetime;
         else if (sym->kind == SymbolKind::InstanceBody)
-            return sym->as<InstanceBodySymbol>().definition.defaultLifetime;
+            return sym->as<InstanceBodySymbol>().getDefinition().defaultLifetime;
     }
 }
 

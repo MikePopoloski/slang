@@ -33,7 +33,8 @@ public:
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                    const Definition& definition);
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                   const Definition& definition, span<const ParameterSymbolBase* const> parameters);
+                   const InstanceCacheKey& cacheKey,
+                   span<const ParameterSymbolBase* const> parameters);
 
     const Definition& getDefinition() const;
     bool isInterface() const;
@@ -67,9 +68,7 @@ private:
 
 class InstanceBodySymbol : public Symbol, public Scope {
 public:
-    const Definition& definition;
-
-    InstanceBodySymbol(Compilation& compilation, const Definition& definition);
+    InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey);
 
     span<const Symbol* const> getPortList() const {
         ensureElaborated();
@@ -77,13 +76,15 @@ public:
     }
 
     const Symbol* findPort(string_view name) const;
+
+    const Definition& getDefinition() const { return cacheKey.getDefinition(); }
     const InstanceCacheKey& getCacheKey() const { return cacheKey; }
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                               const Definition& definition);
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                              const Definition& definition,
+                                              const InstanceCacheKey& cacheKey,
                                               span<const ParameterSymbolBase* const> parameters);
 
     void serializeTo(ASTSerializer& serializer) const;

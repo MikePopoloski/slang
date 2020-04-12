@@ -26,11 +26,12 @@ using namespace slang;
 
 class InstanceBuilder {
 public:
-    InstanceBuilder(const BindContext& context, const Definition& definition,
+    InstanceBuilder(const BindContext& context, const InstanceCacheKey& cacheKeyBase,
                     span<const ParameterSymbolBase* const> parameters,
                     span<const AttributeInstanceSyntax* const> attributes) :
         compilation(context.getCompilation()),
-        context(context), definition(definition), parameters(parameters), attributes(attributes) {}
+        context(context), cacheKeyBase(cacheKeyBase), parameters(parameters),
+        attributes(attributes) {}
 
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
@@ -44,14 +45,26 @@ private:
 
     Compilation& compilation;
     const BindContext& context;
-    const Definition& definition;
+    const InstanceCacheKey& cacheKeyBase;
     SmallVectorSized<int32_t, 4> path;
     span<const ParameterSymbolBase* const> parameters;
     span<const AttributeInstanceSyntax* const> attributes;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax) {
+        // Find all port connections to interface instances so we can
+        // extract their cache keys.
+        auto& def = cacheKeyBase.getDefinition();
+        SmallVectorSized<const InstanceCacheKey*, 8> ifaceKeys;
+        InterfacePortSymbol::findInterfaceInstanceKeys(context.scope, def, syntax.connections,
+                                                       ifaceKeys);
+
+        // Try to look up a cached instance using our own key to avoid redoing work.
+        InstanceCacheKey cacheKey = cacheKeyBase;
+        if (!ifaceKeys.empty())
+            cacheKey.setInterfacePortKeys(ifaceKeys.copy(compilation));
+
         auto inst = compilation.emplace<InstanceSymbol>(
-            compilation, syntax.name.valueText(), syntax.name.location(), definition, parameters);
+            compilation, syntax.name.valueText(), syntax.name.location(), cacheKey, parameters);
 
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
@@ -100,13 +113,15 @@ private:
 void createParams(Compilation& compilation, const Definition& definition, const Scope& scope,
                   LookupLocation ll, SourceLocation instanceLoc,
                   SmallMap<string_view, const ExpressionSyntax*, 8>& paramOverrides,
-                  SmallVector<const ParameterSymbolBase*>& parameters) {
+                  SmallVector<const ParameterSymbolBase*>& parameters,
+                  SmallVector<const ConstantValue*>& paramValues,
+                  SmallVector<const Type*>& typeParams) {
     // Construct a temporary scope that has the right parent to house instance parameters
     // as we're evaluating them. We hold on to the initializer expressions and give them
     // to the instances later when we create them.
     struct TempInstance : public InstanceBodySymbol {
         TempInstance(Compilation& compilation, const Definition& definition) :
-            InstanceBodySymbol(compilation, definition) {
+            InstanceBodySymbol(compilation, InstanceCacheKey(definition, {}, {})) {
             setParent(definition.scope);
         }
     };
@@ -127,9 +142,20 @@ void createParams(Compilation& compilation, const Definition& definition, const 
 
             auto& newParam = ParameterSymbol::fromDecl(param, tempDef, context, newInitializer);
             parameters.append(&newParam);
+            if (newParam.isLocalParam())
+                continue;
 
-            if (!newParam.isLocalParam() && newParam.isPortParam() &&
-                !newParam.getDeclaredType()->getInitializerSyntax()) {
+            // For all port params, if we were provided a parameter override save
+            // that value now for use with the cache key. Otherwise use a nullptr
+            // to represent that the default will be used. We can't evaluate the
+            // default now because it might depend on other members that haven't
+            // been created yet.
+            if (newInitializer)
+                paramValues.append(&newParam.getValue());
+            else
+                paramValues.append(nullptr);
+
+            if (newParam.isPortParam() && !newParam.getDeclaredType()->getInitializerSyntax()) {
                 auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
                 diag << definition.name;
                 diag << newParam.name;
@@ -143,9 +169,15 @@ void createParams(Compilation& compilation, const Definition& definition, const 
 
             auto& newParam = TypeParameterSymbol::fromDecl(param, tempDef, context, newInitializer);
             parameters.append(&newParam);
+            if (newParam.isLocalParam())
+                continue;
 
-            if (!newInitializer && !newParam.isLocalParam() && newParam.isPortParam() &&
-                !newParam.targetType.getTypeSyntax()) {
+            if (newInitializer)
+                typeParams.append(&newParam.targetType.getType());
+            else
+                typeParams.append(nullptr);
+
+            if (!newInitializer && newParam.isPortParam() && !newParam.targetType.getTypeSyntax()) {
                 auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
                 diag << definition.name;
                 diag << newParam.name;
@@ -203,10 +235,10 @@ InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, Sourc
 }
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                               const Definition& definition,
+                               const InstanceCacheKey& cacheKey,
                                span<const ParameterSymbolBase* const> parameters) :
     Symbol(SymbolKind::Instance, name, loc),
-    body(InstanceBodySymbol::fromDefinition(compilation, definition, parameters)) {
+    body(InstanceBodySymbol::fromDefinition(compilation, cacheKey, parameters)) {
     compilation.addInstance(*this);
 }
 
@@ -321,20 +353,26 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
-    // As an optimization, determine values for all parameters now so that they can be
-    // shared between instances. That way an instance array with hundreds of entries
-    // doesn't recompute the same param values over and over again.
+    // Determine values for all parameters now so that they can be
+    // shared between instances, and so that we can use them to create
+    // a cache key to lookup any instance bodies that may already be
+    // suitable for the new instances we're about to create.
     SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
+    SmallVectorSized<const ConstantValue*, 8> paramValues;
+    SmallVectorSized<const Type*, 8> typeParams;
     createParams(compilation, *definition, scope, location, syntax.getFirstToken().location(),
-                 paramOverrides, parameters);
+                 paramOverrides, parameters, paramValues, typeParams);
+
+    BindContext context(scope, location);
+    InstanceCacheKey cacheKey(*definition, paramValues.copy(compilation),
+                              typeParams.copy(compilation));
+
+    InstanceBuilder builder(context, cacheKey, parameters, syntax.attributes);
 
     // We have to check each port connection expression for any names that can't be resolved,
     // which represent implicit nets that need to be created now.
     SmallSet<string_view, 8> implicitNetNames;
     auto& netType = scope.getDefaultNetType();
-
-    BindContext context(scope, location);
-    InstanceBuilder builder(context, *definition, parameters, syntax.attributes);
 
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
@@ -352,7 +390,7 @@ static void getInstanceArrayDimensions(const InstanceArraySymbol& array,
 }
 
 const Definition& InstanceSymbol::getDefinition() const {
-    return body.definition;
+    return body.getDefinition();
 }
 
 bool InstanceSymbol::isInterface() const {
@@ -432,29 +470,33 @@ void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", body);
 }
 
-InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definition& definition) :
-    Symbol(SymbolKind::InstanceBody, definition.name, definition.location),
-    Scope(compilation, this), definition(definition) {
-    setParent(definition.scope, definition.indexInScope);
+InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey) :
+    Symbol(SymbolKind::InstanceBody, cacheKey.getDefinition().name,
+           cacheKey.getDefinition().location),
+    Scope(compilation, this), cacheKey(cacheKey) {
+    setParent(cacheKey.getDefinition().scope, cacheKey.getDefinition().indexInScope);
 }
 
 InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
                                                        const Definition& definition) {
     // Create parameters with all default values set.
     SmallMap<string_view, const ExpressionSyntax*, 8> unused;
-    SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
-    createParams(compilation, definition, definition.scope, LookupLocation::max,
-                 definition.location, unused, parameters);
+    SmallVectorSized<const ParameterSymbolBase*, 2> parameters;
+    SmallVectorSized<const ConstantValue*, 2> paramValues;
+    SmallVectorSized<const Type*, 2> typeParams;
 
-    return fromDefinition(compilation, definition, parameters);
+    createParams(compilation, definition, definition.scope, LookupLocation::max,
+                 definition.location, unused, parameters, paramValues, typeParams);
+
+    return fromDefinition(compilation, InstanceCacheKey(definition, {}, {}), parameters);
 }
 
 InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
-    Compilation& comp, const Definition& definition,
+    Compilation& comp, const InstanceCacheKey& cacheKey,
     span<const ParameterSymbolBase* const> parameters) {
 
-    auto& declSyntax = definition.syntax;
-    auto result = comp.emplace<InstanceBodySymbol>(comp, definition);
+    auto& declSyntax = cacheKey.getDefinition().syntax;
+    auto result = comp.emplace<InstanceBodySymbol>(comp, cacheKey);
     result->setSyntax(declSyntax);
 
     // Package imports from the header always come first.
@@ -527,7 +569,7 @@ const Symbol* InstanceBodySymbol::findPort(string_view portName) const {
 }
 
 void InstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("definition", definition.name);
+    serializer.write("definition", cacheKey.getDefinition().name);
 }
 
 string_view InstanceArraySymbol::getArrayName() const {
