@@ -203,6 +203,7 @@ public:
     const Type* getFullArrayBounds(SmallVector<ConstantRange>& dimensions) const;
 
     std::string toString() const;
+    size_t hash() const;
 
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope, bool forceSigned);

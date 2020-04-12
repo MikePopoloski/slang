@@ -24,6 +24,7 @@ class CompilationUnitSymbol;
 class Definition;
 class Expression;
 class InstanceBodySymbol;
+class InstanceCache;
 class InstanceSymbol;
 class PackageSymbol;
 class RootSymbol;
@@ -236,6 +237,9 @@ public:
     /// that we don't bother providing dedicated accessors for them.
     const NetType& getWireNetType() const { return *wireNetType; }
 
+    /// Gets access to the compilation's cache of instantiated modules, interfaces, and programs.
+    InstanceCache& getInstanceCache();
+
     /// Allocates space for a constant value in the pool of constants.
     ConstantValue* allocConstant(ConstantValue&& value) {
         return constantAllocator.emplace(std::move(value));
@@ -364,6 +368,7 @@ private:
     DiagMap diagMap;
 
     std::unique_ptr<RootSymbol> root;
+    std::unique_ptr<InstanceCache> instanceCache;
     const SourceManager* sourceManager = nullptr;
     size_t numErrors = 0; // total number of errors inserted into the diagMap
     TimeScale defaultTimeScale;

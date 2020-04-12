@@ -93,6 +93,7 @@ public:
     const Variant& getVariant() const { return value; }
 
     std::string toString() const;
+    size_t hash() const;
 
     bool isTrue() const;
     bool isFalse() const;

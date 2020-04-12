@@ -404,6 +404,35 @@ std::string Type::toString() const {
     return printer.toString();
 }
 
+size_t Type::hash() const {
+    size_t h = size_t(kind);
+    auto& ct = getCanonicalType();
+    if (ct.isScalar()) {
+        auto sk = ct.as<ScalarType>().scalarKind;
+        if (sk == ScalarType::Reg)
+            sk = ScalarType::Logic;
+        hash_combine(h, sk);
+    }
+    else if (ct.isFloating()) {
+        auto fk = ct.as<FloatingType>().floatKind;
+        if (fk == FloatingType::RealTime)
+            fk = FloatingType::Real;
+        hash_combine(h, fk);
+    }
+    else if (ct.isIntegral()) {
+        auto& it = ct.as<IntegralType>();
+        hash_combine(h, it.isSigned, it.isFourState, it.bitWidth);
+    }
+    else if (ct.kind == SymbolKind::UnpackedArrayType) {
+        auto& uat = ct.as<UnpackedArrayType>();
+        hash_combine(h, uat.range.left, uat.range.right, uat.elementType.hash());
+    }
+    else {
+        h = std::hash<const Type*>()(&ct);
+    }
+    return h;
+}
+
 const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node,
                              LookupLocation location, const Scope& parent, bool forceSigned) {
     switch (node.kind) {

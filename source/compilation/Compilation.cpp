@@ -215,6 +215,7 @@ Compilation::Compilation(const Bag& options) :
     defaultTimeScale.precision = { TimeUnit::Nanoseconds, TimeScaleMagnitude::One };
 
     root = std::make_unique<RootSymbol>(*this);
+    instanceCache = std::make_unique<InstanceCache>();
 
     // Register all system tasks, functions, and methods.
     Builtins::registerArrayMethods(*this);

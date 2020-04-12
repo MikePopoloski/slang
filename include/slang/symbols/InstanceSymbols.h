@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/binding/ConstantValue.h"
+#include "slang/compilation/InstanceCache.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
@@ -76,6 +77,7 @@ public:
     }
 
     const Symbol* findPort(string_view name) const;
+    const InstanceCacheKey& getCacheKey() const { return cacheKey; }
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                               const Definition& definition);
@@ -93,6 +95,7 @@ private:
 
     void setPorts(span<const Symbol* const> ports) const { portList = ports; }
 
+    InstanceCacheKey cacheKey;
     mutable span<const Symbol* const> portList;
 };
 

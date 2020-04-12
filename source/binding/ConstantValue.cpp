@@ -9,6 +9,8 @@
 #include "../text/FormatBuffer.h"
 #include <fmt/format.h>
 
+#include "slang/util/Hash.h"
+
 namespace slang {
 
 template<typename T>
@@ -49,6 +51,34 @@ std::string ConstantValue::toString() const {
                 static_assert(always_false<T>::value, "Missing case");
         },
         value);
+}
+
+size_t ConstantValue::hash() const {
+    size_t h = value.index();
+    std::visit(
+        [&h](auto&& arg) noexcept {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::monostate>)
+                hash_combine(h, 0);
+            else if constexpr (std::is_same_v<T, SVInt>)
+                hash_combine(h, arg.hash());
+            else if constexpr (std::is_same_v<T, real_t>)
+                hash_combine(h, std::hash<double>()(arg));
+            else if constexpr (std::is_same_v<T, shortreal_t>)
+                hash_combine(h, std::hash<float>()(arg));
+            else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
+                hash_combine(h, 0);
+            else if constexpr (std::is_same_v<T, Elements>) {
+                for (auto& element : arg)
+                    hash_combine(h, element.hash());
+            }
+            else if constexpr (std::is_same_v<T, std::string>)
+                hash_combine(h, std::hash<std::string>()(arg));
+            else
+                static_assert(always_false<T>::value, "Missing case");
+        },
+        value);
+    return h;
 }
 
 ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower) const {

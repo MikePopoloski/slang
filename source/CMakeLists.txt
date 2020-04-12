@@ -54,6 +54,7 @@ add_library(slang
 
     compilation/Compilation.cpp
     compilation/Definition.cpp
+    compilation/InstanceCache.cpp
     compilation/ScriptSession.cpp
     compilation/SemanticModel.cpp
 
