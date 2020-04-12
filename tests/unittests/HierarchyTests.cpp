@@ -797,7 +797,7 @@ module bar;
 endmodule
 
 module foo #(parameter int count = 2) ();
-    foo #(count * 2 + 1) f();
+    foo #(count + 1) f();
 endmodule
 )");
 
