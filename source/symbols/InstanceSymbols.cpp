@@ -477,8 +477,8 @@ InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceC
     setParent(cacheKey.getDefinition().scope, cacheKey.getDefinition().indexInScope);
 }
 
-InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
-                                                       const Definition& definition) {
+const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
+                                                             const Definition& definition) {
     // Create parameters with all default values set.
     SmallMap<string_view, const ExpressionSyntax*, 8> unused;
     SmallVectorSized<const ParameterSymbolBase*, 2> parameters;
@@ -491,9 +491,13 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
     return fromDefinition(compilation, InstanceCacheKey(definition, {}, {}), parameters);
 }
 
-InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
+const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
     Compilation& comp, const InstanceCacheKey& cacheKey,
     span<const ParameterSymbolBase* const> parameters) {
+
+    // If there's already a cached body for this key, return that instead of creating a new one.
+    if (auto cached = comp.getInstanceCache().find(cacheKey))
+        return *cached;
 
     auto& declSyntax = cacheKey.getDefinition().syntax;
     auto result = comp.emplace<InstanceBodySymbol>(comp, cacheKey);
@@ -557,6 +561,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
         }
     }
 
+    comp.getInstanceCache().insert(*result);
     return *result;
 }
 

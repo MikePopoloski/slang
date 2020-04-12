@@ -80,6 +80,16 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (numErrors > errorLimit)
             return;
 
+        instanceCount[&symbol.getDefinition()]++;
+        symbol.resolvePortConnections();
+        for (auto attr : compilation.getAttributes(symbol))
+            attr->getValue();
+
+        // Instance bodies are all the same, so if we've visited this one
+        // already don't bother doing it again.
+        if (!visitedInstanceBodies.emplace(&symbol.body).second)
+            return;
+
         // In order to avoid infinitely recursive instantiations, keep track
         // of how deep we are in the hierarchy tree and report an error if we
         // get too deep.
@@ -89,12 +99,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             diag << compilation.getOptions().maxInstanceDepth;
             return;
         }
-
-        instanceCount[&symbol.getDefinition()]++;
-        symbol.resolvePortConnections();
-
-        for (auto attr : compilation.getAttributes(symbol))
-            attr->getValue();
 
         hierarchyDepth++;
         visit(symbol.body);
@@ -110,6 +114,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     Compilation& compilation;
     const size_t& numErrors;
     flat_hash_map<const Definition*, size_t> instanceCount;
+    flat_hash_set<const InstanceBodySymbol*> visitedInstanceBodies;
     uint32_t errorLimit;
     uint32_t hierarchyDepth = 0;
 };
@@ -708,6 +713,14 @@ const NetType& Compilation::getNetType(TokenKind kind) const {
 
 const Type& Compilation::getUnsignedIntType() {
     return getType(32, IntegralFlags::Unsigned | IntegralFlags::TwoState);
+}
+
+InstanceCache& Compilation::getInstanceCache() {
+    return *instanceCache;
+}
+
+const InstanceCache& Compilation::getInstanceCache() const {
+    return *instanceCache;
 }
 
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {

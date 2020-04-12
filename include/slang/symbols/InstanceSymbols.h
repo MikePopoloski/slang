@@ -80,12 +80,12 @@ public:
     const Definition& getDefinition() const { return cacheKey.getDefinition(); }
     const InstanceCacheKey& getCacheKey() const { return cacheKey; }
 
-    static InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                              const Definition& definition);
+    static const InstanceBodySymbol& fromDefinition(Compilation& compilation,
+                                                    const Definition& definition);
 
-    static InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                              const InstanceCacheKey& cacheKey,
-                                              span<const ParameterSymbolBase* const> parameters);
+    static const InstanceBodySymbol& fromDefinition(
+        Compilation& compilation, const InstanceCacheKey& cacheKey,
+        span<const ParameterSymbolBase* const> parameters);
 
     void serializeTo(ASTSerializer& serializer) const;
 

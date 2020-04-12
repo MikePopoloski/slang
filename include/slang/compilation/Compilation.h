@@ -239,6 +239,7 @@ public:
 
     /// Gets access to the compilation's cache of instantiated modules, interfaces, and programs.
     InstanceCache& getInstanceCache();
+    const InstanceCache& getInstanceCache() const;
 
     /// Allocates space for a constant value in the pool of constants.
     ConstantValue* allocConstant(ConstantValue&& value) {
