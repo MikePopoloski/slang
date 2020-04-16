@@ -128,7 +128,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
         return factory.expressionStatement(label, attributes, expr, expect(TokenKind::Semicolon));
     }
 
-    // This is an error case but we'll let someone higher on the stack deal with issuing the error.
+    addDiag(diag::ExpectedStatement, peek().location());
     return factory.emptyStatement(label, attributes,
                                   missingToken(TokenKind::Semicolon, peek().location()));
 }

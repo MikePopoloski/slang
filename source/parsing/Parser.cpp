@@ -43,6 +43,8 @@ SyntaxNode& Parser::parseGuess() {
     // It might not have been a statement at all, in which case try a whole compilation unit
     if (statement.kind == SyntaxKind::EmptyStatement &&
         statement.as<EmptyStatementSyntax>().semicolon.isMissing()) {
+
+        getDiagnostics().pop();
         auto& unit = parseCompilationUnit();
 
         // If there's only one member, pull it out for convenience

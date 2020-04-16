@@ -11,6 +11,14 @@ TEST_CASE("If statement") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("If statement -- missing semicolon") {
+    auto& text = "begin if (foo) end";
+    auto& stmt = parseStatement(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedStatement);
+}
+
 TEST_CASE("Case statement (normal)") {
     auto& text = "unique case (foo) 3'd01: ; 3+9, foo: ; default; endcase";
     auto& stmt = parseStatement(text);
