@@ -222,13 +222,16 @@ void NamedValueExpression::serializeTo(ASTSerializer& serializer) const {
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                                 const ExpressionSyntax& syntax,
                                                 SourceRange fullRange, const BindContext& context) {
+    if (value.bad())
+        return badExpr(compilation, nullptr);
+
     Expression& selector = selfDetermined(compilation, syntax, context);
     const Type& resultType = getIndexedType(compilation, context, *value.type, syntax.sourceRange(),
                                             value.sourceRange, false);
 
     auto result =
         compilation.emplace<ElementSelectExpression>(resultType, value, selector, fullRange);
-    if (value.bad() || selector.bad() || result->bad())
+    if (selector.bad() || result->bad())
         return badExpr(compilation, result);
 
     if (!selector.type->isIntegral()) {
