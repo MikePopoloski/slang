@@ -12,4 +12,7 @@ target_link_libraries(rewriter PRIVATE CONAN_PKG::fmt)
 if(FUZZ_TARGET)
     message("Tweaking driver for fuzz testing")
     target_compile_definitions(driver PRIVATE FUZZ_TARGET)
+
+    target_compile_options(driver PRIVATE "-fsanitize=fuzzer")
+    target_link_libraries(driver PRIVATE "-fsanitize=fuzzer")
 endif()

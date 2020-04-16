@@ -133,7 +133,9 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
             diagEngine.issue(diag);
     }
 
+#ifndef FUZZ_TARGET
     print("{}", client->getString());
+#endif
 
     if (astJsonFile) {
         JsonWriter writer;
@@ -436,10 +438,12 @@ void print(string_view format, const Args&... args) {
                 fmt::make_format_args<fmt::wformat_context>(convert(args)...));
 }
 
+#ifndef FUZZ_TARGET
 int wmain(int argc, wchar_t** argv) {
     _setmode(_fileno(stdout), _O_U16TEXT);
     return driverMain(argc, argv);
 }
+#endif
 
 #else
 
@@ -458,8 +462,26 @@ void print(string_view format, const Args&... args) {
     fmt::vprint(format, fmt::make_format_args(args...));
 }
 
+#ifndef FUZZ_TARGET
 int main(int argc, char** argv) {
     return driverMain(argc, argv);
 }
+#endif
 
+#endif
+
+// When fuzzing with libFuzzer, this is the entry point.
+#ifdef FUZZ_TARGET
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+    string_view text(reinterpret_cast<const char*>(data), size);
+
+    SourceManager sourceManager;
+    std::vector<SourceBuffer> buffers;
+    buffers.push_back(sourceManager.assignText("<source>", text));
+
+    runCompiler(sourceManager, {}, buffers, {}, 0, /* singleUnit */ false, /* onlyParse */ false,
+                /* showColors */ false, {});
+
+    return 0;
+}
 #endif
