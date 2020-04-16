@@ -761,6 +761,21 @@ endmodule
     CHECK(diags[5].code == diag::BadRangeExpression);
 }
 
+TEST_CASE("Empty concat error") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i = {1 {}};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::EmptyConcatNotAllowed);
+}
+
 TEST_CASE("Consteval - infinite recursion checking") {
     auto tree = SyntaxTree::fromText(R"(
 function int foo;

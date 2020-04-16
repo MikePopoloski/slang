@@ -260,6 +260,7 @@ error PortConnArrayMismatch "cannot connect {} to each port of type {} in '{}'"
 error AutoFromStaticInit "cannot refer to automatic variable '{}' from static initializer"
 error NonblockingAssignmentToAuto "nonblocking assignment to automatic variable '{}' is not allowed"
 error AssignmentToConst "cannot assign to read-only variable '{}'"
+error EmptyConcatNotAllowed "concatenation cannot be empty"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

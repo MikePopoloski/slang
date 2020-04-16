@@ -1144,6 +1144,11 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                 buffer[i] = expr;
             }
         }
+
+        if (!anyStrings && totalWidth == 0) {
+            context.addDiag(diag::EmptyConcatNotAllowed, syntax.sourceRange());
+            errored = true;
+        }
     }
 
     if (errored) {
