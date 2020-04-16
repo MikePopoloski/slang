@@ -62,6 +62,40 @@ endmodule
     CHECK(root.topInstances[0]->name == "Top");
 }
 
+TEST_CASE("Duplicate module") {
+    auto tree = SyntaxTree::fromText(R"(
+module top #(parameter int foo = 3) ();
+endmodule
+
+module top #(parameter real r, int i) ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::Redefinition);
+}
+
+TEST_CASE("Duplicate package") {
+    auto tree = SyntaxTree::fromText(R"(
+package pack;
+endpackage
+
+package pack;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::Redefinition);
+}
+
 TEST_CASE("Module parameterization errors") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;

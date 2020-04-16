@@ -10,6 +10,7 @@
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -419,10 +420,21 @@ const Definition& Compilation::createDefinition(const Scope& scope, LookupLocati
     auto it = definitionMap.emplace(std::tuple(def->name, targetScope), std::move(def)).first;
 
     auto result = it->second.get();
-    if (targetScope == root.get())
-        topDefinitions[result->name].first = result;
-    else
+    if (targetScope == root.get()) {
+        auto& topDef = topDefinitions[result->name].first;
+        if (topDef) {
+            auto& diag = scope.addDiag(diag::Redefinition, def->location);
+            diag << def->name;
+            diag.addNote(diag::NotePreviousDefinition, topDef->location);
+        }
+        else {
+            topDef = result;
+        }
+    }
+    else {
+        // Record the fact that we have nested modules with this given name.
         topDefinitions[result->name].second = true;
+    }
 
     return *result;
 }
@@ -439,7 +451,14 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
     auto& metadata = definitionMetadata[&syntax];
     auto& package =
         PackageSymbol::fromSyntax(scope, syntax, *metadata.defaultNetType, metadata.timeScale);
-    packageMap.emplace(package.name, &package);
+    
+    auto [it, inserted] = packageMap.emplace(package.name, &package);
+    if (!inserted) {
+        auto& diag = scope.addDiag(diag::Redefinition, package.location);
+        diag << package.name;
+        diag.addNote(diag::NotePreviousDefinition, it->second->location);
+    }
+
     return package;
 }
 
