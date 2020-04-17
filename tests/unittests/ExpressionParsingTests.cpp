@@ -585,3 +585,8 @@ TEST_CASE("Constraint block error recovery") {
     auto& text = "int i = foo.randomize with { end";
     parseCompilationUnit(text);
 }
+
+TEST_CASE("Assignment pattern error recovery") {
+    auto& text = "int i = '{ asdf bazf gfdgh }";
+    parseCompilationUnit(text);
+}

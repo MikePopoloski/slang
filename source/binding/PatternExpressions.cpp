@@ -28,7 +28,8 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
         assignmentTarget = &comp.getType(*syntax.type, context.lookupLocation, context.scope);
         if (assignmentTarget->kind != SymbolKind::TypeAlias &&
             assignmentTarget->kind != SymbolKind::PredefinedIntegerType) {
-            context.addDiag(diag::BadAssignmentPatternType, range) << *assignmentTarget;
+            if (!assignmentTarget->isError())
+                context.addDiag(diag::BadAssignmentPatternType, range) << *assignmentTarget;
             return badExpr(comp, nullptr);
         }
     }

@@ -411,7 +411,6 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             pattern =
                 &factory.structuredAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
-
         case TokenKind::OpenBrace: {
             auto innerOpenBrace = consume();
 
@@ -432,9 +431,15 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 diag::ExpectedExpression, [this] { return &parseExpression(); });
             pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
-
-        default:
+        case TokenKind::CloseBrace:
             buffer.append(firstExpr);
+            closeBrace = consume();
+            pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
+            break;
+        default:
+            // This is an error case; let the list handling code get us out of it.
+            buffer.append(firstExpr);
+            buffer.append(expect(TokenKind::Comma));
 
             parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
