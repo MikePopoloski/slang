@@ -10,6 +10,7 @@ add_executable(unittests
     main.cpp
     MemberParsingTests.cpp
     MemberTests.cpp
+    MIRTests.cpp
     NumericTests.cpp
     PortTests.cpp
     PreprocessorTests.cpp

@@ -49,7 +49,7 @@ struct InvocationExpressionSyntax;
     x(EmptyArgument) \
     x(OpenRange)
 ENUM(ExpressionKind, EXPRESSION);
-#undef EXPRESION
+#undef EXPRESSION
 
 #define OP(x) \
     x(Plus) \

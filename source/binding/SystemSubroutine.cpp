@@ -12,6 +12,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/mir/Procedure.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SFormat.h"
 
@@ -178,6 +179,49 @@ bool SystemSubroutine::checkFormatValues(const BindContext& context, const Args&
     }
 
     return ok;
+}
+
+void SystemSubroutine::lowerFormatArgs(mir::Procedure& proc, const Args& args,
+                                       LiteralBase) {
+    SmallVectorSized<SFormat::Arg, 8> specs;
+    auto specIt = specs.begin();
+
+    auto argIt = args.begin();
+    while (argIt != args.end()) {
+        auto arg = *argIt++;
+        if (arg->bad())
+            return;
+
+        if (arg->kind == ExpressionKind::EmptyArgument) {
+            proc.emitCall(mir::SysCallKind::PrintChar, proc.emitConst(SVInt(8, ' ', false)));
+            continue;
+        }
+
+        const Type& type = *arg->type;
+        if (specIt == specs.end()) {
+            if (arg->kind == ExpressionKind::StringLiteral) {
+                specs.clear();
+                auto& lit = arg->as<StringLiteral>();
+
+                string_view fmt = lit.getRawValue();
+                if (fmt.length() >= 2)
+                    fmt = fmt.substr(1, fmt.length() - 2);
+
+                Diagnostics diags;
+                if (!SFormat::parseArgs(fmt, arg->sourceRange.start() + 1, specs, diags))
+                    return;
+
+                specIt = specs.begin();
+            }
+            else if (type.isIntegral()) {
+            }
+            else if (type.isByteArray()) {
+            }
+        }
+        else {
+            SFormat::Arg fmtArg = *specIt++;
+        }
+    }
 }
 
 const Type& SystemSubroutine::badArg(const BindContext& context, const Expression& arg) const {

@@ -13,7 +13,7 @@ TEST_CASE("If statement") {
 
 TEST_CASE("If statement -- missing semicolon") {
     auto& text = "begin if (foo) end";
-    auto& stmt = parseStatement(text);
+    parseStatement(text);
 
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ExpectedStatement);

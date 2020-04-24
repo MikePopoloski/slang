@@ -64,6 +64,10 @@ add_library(slang
     diagnostics/Diagnostics.cpp
     diagnostics/TextDiagnosticClient.cpp
 
+    mir/Instr.cpp
+    mir/MIRPrinter.cpp
+    mir/Procedure.cpp
+
     numeric/SVInt.cpp
     numeric/Time.cpp
 

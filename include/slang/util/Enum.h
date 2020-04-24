@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/util/Util.h"
+
 #define UTIL_ENUM_ELEMENT(x) x,
 #define UTIL_ENUM_STRING(x) #x,
 #define ENUM(name, elements)                                           \

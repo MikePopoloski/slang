@@ -7,6 +7,7 @@
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/mir/Procedure.h"
 
 namespace slang::Builtins {
 
@@ -31,7 +32,10 @@ public:
 
 class DisplayTask : public SystemTaskBase {
 public:
-    using SystemTaskBase::SystemTaskBase;
+    LiteralBase defaultIntFmt;
+
+    DisplayTask(const std::string& name, LiteralBase defaultIntFmt) :
+        SystemTaskBase(name), defaultIntFmt(defaultIntFmt) {}
 
     bool allowEmptyArgument(size_t) const final { return true; }
 
@@ -42,6 +46,10 @@ public:
             return comp.getErrorType();
 
         return comp.getVoidType();
+    }
+
+    void lower(mir::Procedure& proc, const Args& args) const final {
+        lowerFormatArgs(proc, args, defaultIntFmt);
     }
 };
 
@@ -224,24 +232,30 @@ private:
 };
 
 void registerSystemTasks(Compilation& c) {
-#define REGISTER(type, name) c.addSystemSubroutine(std::make_unique<type>(name))
-    REGISTER(DisplayTask, "$display");
-    REGISTER(DisplayTask, "$displayb");
-    REGISTER(DisplayTask, "$displayo");
-    REGISTER(DisplayTask, "$displayh");
-    REGISTER(DisplayTask, "$write");
-    REGISTER(DisplayTask, "$writeb");
-    REGISTER(DisplayTask, "$writeo");
-    REGISTER(DisplayTask, "$writeh");
-    REGISTER(DisplayTask, "$strobe");
-    REGISTER(DisplayTask, "$strobeb");
-    REGISTER(DisplayTask, "$strobeo");
-    REGISTER(DisplayTask, "$strobeh");
-    REGISTER(DisplayTask, "$monitor");
-    REGISTER(DisplayTask, "$monitorb");
-    REGISTER(DisplayTask, "$monitoro");
-    REGISTER(DisplayTask, "$monitorh");
+#define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
+    REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
+    REGISTER(DisplayTask, "$displayb", LiteralBase::Binary);
+    REGISTER(DisplayTask, "$displayo", LiteralBase::Octal);
+    REGISTER(DisplayTask, "$displayh", LiteralBase::Hex);
+    REGISTER(DisplayTask, "$write", LiteralBase::Decimal);
+    REGISTER(DisplayTask, "$writeb", LiteralBase::Binary);
+    REGISTER(DisplayTask, "$writeo", LiteralBase::Octal);
+    REGISTER(DisplayTask, "$writeh", LiteralBase::Hex);
+    REGISTER(DisplayTask, "$strobe", LiteralBase::Decimal);
+    REGISTER(DisplayTask, "$strobeb", LiteralBase::Binary);
+    REGISTER(DisplayTask, "$strobeo", LiteralBase::Octal);
+    REGISTER(DisplayTask, "$strobeh", LiteralBase::Hex);
+    REGISTER(DisplayTask, "$monitor", LiteralBase::Decimal);
+    REGISTER(DisplayTask, "$monitorb", LiteralBase::Binary);
+    REGISTER(DisplayTask, "$monitoro", LiteralBase::Octal);
+    REGISTER(DisplayTask, "$monitorh", LiteralBase::Hex);
 
+    REGISTER(DisplayTask, "$error", LiteralBase::Decimal);
+    REGISTER(DisplayTask, "$warning", LiteralBase::Decimal);
+    REGISTER(DisplayTask, "$info", LiteralBase::Decimal);
+
+#undef REGISTER
+#define REGISTER(type, name) c.addSystemSubroutine(std::make_unique<type>(name))
     REGISTER(FileDisplayTask, "$fdisplay");
     REGISTER(FileDisplayTask, "$fdisplayb");
     REGISTER(FileDisplayTask, "$fdisplayo");
@@ -263,10 +277,6 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(StringOutputTask, "$swriteb");
     REGISTER(StringOutputTask, "$swriteo");
     REGISTER(StringOutputTask, "$swriteh");
-
-    REGISTER(DisplayTask, "$error");
-    REGISTER(DisplayTask, "$warning");
-    REGISTER(DisplayTask, "$info");
 
     REGISTER(FatalTask, "$fatal");
 

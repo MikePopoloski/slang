@@ -14,6 +14,10 @@
 
 namespace slang {
 
+namespace mir {
+class Procedure;
+}
+
 class SystemSubroutine {
 public:
     virtual ~SystemSubroutine() = default;
@@ -32,6 +36,8 @@ public:
                                const Args& args) const = 0;
     virtual bool verifyConstant(EvalContext& context, const Args& args) const = 0;
 
+    virtual void lower(mir::Procedure&, const Args&) const {}
+
 protected:
     SystemSubroutine(const std::string& name, SubroutineKind kind) : name(name), kind(kind) {}
 
@@ -44,6 +50,8 @@ protected:
     static bool checkFormatArgs(const BindContext& context, const Args& args);
 
     static bool checkFormatValues(const BindContext& context, const Args& args);
+
+    static void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase defaultIntFmt);
 
     static BindContext makeNonConst(const BindContext& context);
 };
