@@ -41,7 +41,7 @@ public:
 
     const ConstantValue& asConstant() const {
         ASSERT(getKind() == Constant);
-        return *reinterpret_cast<const ConstantValue*>(val & ~7);
+        return *reinterpret_cast<const ConstantValue*>(val & ~7ull);
     }
 
     size_t asInstrSlot() const {

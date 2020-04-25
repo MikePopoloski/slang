@@ -218,9 +218,9 @@ void SystemSubroutine::lowerFormatArgs(mir::Procedure& proc, const Args& args,
             else if (type.isByteArray()) {
             }
         }
-        else {
+        /*else {
             SFormat::Arg fmtArg = *specIt++;
-        }
+        }*/
     }
 }
 
