@@ -7,7 +7,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/symbols/DefinitionSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
 #include "slang/syntax/SyntaxTree.h"
 
 using namespace slang;

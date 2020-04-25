@@ -16,12 +16,15 @@
 #include "slang/codegen/ExpressionEmitter.h"
 #include "slang/codegen/StatementEmitter.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/mir/Procedure.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/Symbol.h"
 
 namespace slang {
 
-CodeGenerator::CodeGenerator(Compilation& compilation) : compilation(compilation) {
+using namespace mir;
+
+CodeGenerator::CodeGenerator(Compilation& compilation, bool startStuff) : compilation(compilation) {
     ctx = std::make_unique<llvm::LLVMContext>();
     module = std::make_unique<llvm::Module>("primary", *ctx);
 
@@ -29,16 +32,84 @@ CodeGenerator::CodeGenerator(Compilation& compilation) : compilation(compilation
     typeMap.emplace(&compilation.getVoidType(), llvm::Type::getVoidTy(*ctx));
 
     // Create the main entry point.
-    auto intType = llvm::Type::getInt32Ty(*ctx);
-    auto funcType = llvm::FunctionType::get(intType, /* isVarArg */ false);
-    mainFunc = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "main", *module);
+    if (startStuff) {
+        auto intType = llvm::Type::getInt32Ty(*ctx);
+        auto funcType = llvm::FunctionType::get(intType, /* isVarArg */ false);
+        mainFunc =
+            llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "main", *module);
 
-    // Create the first basic block that will run at the start of simulation
-    // to initialize all static variables.
-    globalInitBlock = llvm::BasicBlock::Create(*ctx, "", mainFunc);
+        // Create the first basic block that will run at the start of simulation
+        // to initialize all static variables.
+        globalInitBlock = llvm::BasicBlock::Create(*ctx, "", mainFunc);
+    }
 }
 
 CodeGenerator::~CodeGenerator() = default;
+
+void CodeGenerator::generate(const Procedure& proc) {
+    auto funcType = llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx), /* isVarArg */ false);
+    auto func = llvm::Function::Create(funcType, llvm::Function::PrivateLinkage, "", *module);
+    auto bb = llvm::BasicBlock::Create(*ctx, "", func);
+
+    IRBuilder ir(bb);
+    for (auto& instr : proc.getInstructions())
+        emit(ir, instr);
+
+    ir.CreateRetVoid();
+}
+
+llvm::Value* CodeGenerator::emit(IRBuilder& ir, const Instr& instr) {
+    switch (instr.kind) {
+        case InstrKind::SysCall:
+            return emitSysCall(ir, instr);
+        case InstrKind::Invalid:
+            return ir.CreateUnreachable();
+    }
+    THROW_UNREACHABLE;
+}
+
+llvm::Value* CodeGenerator::emit(IRBuilder&, const MIRValue& val) {
+    switch (val.getKind()) {
+        case MIRValue::Constant: {
+            auto& tcv = val.asConstant();
+            return genConstant(tcv.type, tcv.value);
+        }
+        case MIRValue::Slot:
+        case MIRValue::Empty:
+            break;
+    }
+    THROW_UNREACHABLE;
+}
+
+llvm::Value* CodeGenerator::emitSysCall(IRBuilder& ir, const Instr& instr) {
+    SmallVectorSized<llvm::Value*, 8> args;
+    for (auto& op : instr.getOperands())
+        args.append(emit(ir, op));
+
+    return ir.CreateCall(getSysFunc(instr.getSysCallKind()),
+                         llvm::makeArrayRef(args.data(), args.size()));
+}
+
+llvm::Function* CodeGenerator::getSysFunc(SysCallKind kind) {
+    if (auto it = sysFunctions.find(kind); it != sysFunctions.end())
+        return it->second;
+
+    auto void_t = llvm::Type::getVoidTy(*ctx);
+    auto int8_t = llvm::Type::getInt8Ty(*ctx);
+
+    llvm::Function* func = nullptr;
+    switch (kind) {
+        case SysCallKind::PrintChar:
+            func = llvm::Function::Create(
+                llvm::FunctionType::get(void_t, { int8_t }, /* isVarArg */ false),
+                llvm::Function::ExternalLinkage, "printChar", *module);
+            break;
+    }
+
+    ASSERT(func);
+    sysFunctions.emplace(kind, func);
+    return func;
+}
 
 std::string CodeGenerator::finish() {
     // Insert all initial blocks into the main function.

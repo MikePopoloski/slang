@@ -101,12 +101,12 @@ MIRValue Procedure::emitExpr(const Expression& expr) {
     return expr.visit(visitor);
 }
 
-MIRValue Procedure::emitConst(const ConstantValue& val) {
-    return MIRValue(*constantAlloc.emplace(val));
+MIRValue Procedure::emitConst(const Type& type, const ConstantValue& val) {
+    return MIRValue(*constantAlloc.emplace(type, val));
 }
 
-MIRValue Procedure::emitConst(ConstantValue&& val) {
-    return MIRValue(*constantAlloc.emplace(std::move(val)));
+MIRValue Procedure::emitConst(const Type& type, ConstantValue&& val) {
+    return MIRValue(*constantAlloc.emplace(type, std::move(val)));
 }
 
 MIRValue Procedure::emitCall(SysCallKind sysCall, const Type& returnType,
@@ -121,6 +121,10 @@ void Procedure::emitCall(SysCallKind sysCall, span<const MIRValue> args) {
 
 void Procedure::emitCall(SysCallKind sysCall, MIRValue arg0) {
     emitCall(sysCall, { &arg0, 1 });
+}
+
+Compilation& Procedure::getCompilation() const {
+    return builder.compilation;
 }
 
 std::string Procedure::toString() const {

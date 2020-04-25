@@ -18,11 +18,16 @@ namespace llvm {
 
 class BasicBlock;
 class Constant;
+class ConstantFolder;
 class Function;
+class IRBuilderDefaultInserter;
 class LLVMContext;
 class Module;
 class Type;
 class Value;
+
+template<typename T, typename U>
+class IRBuilder;
 
 } // namespace llvm
 
@@ -41,6 +46,15 @@ class SystemSubroutine;
 class Type;
 class VariableSymbol;
 
+namespace mir {
+
+class Instr;
+class MIRValue;
+class Procedure;
+enum class SysCallKind;
+
+} // namespace mir
+
 struct CodegenOptions {
     uint32_t maxIntBits = 128;
     bool flattenFourState = false;
@@ -48,8 +62,10 @@ struct CodegenOptions {
 
 class CodeGenerator {
 public:
-    CodeGenerator(Compilation& compilation);
+    CodeGenerator(Compilation& compilation, bool startStuff = true);
     ~CodeGenerator();
+
+    void generate(const mir::Procedure& proc);
 
     std::string finish();
 
@@ -64,6 +80,14 @@ public:
     llvm::Function* genSubroutine(const SystemSubroutine& subroutine);
 
 private:
+    using IRBuilder = llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>;
+
+    llvm::Value* emit(IRBuilder& ir, const mir::Instr& instr);
+    llvm::Value* emit(IRBuilder& ir, const mir::MIRValue& val);
+    llvm::Value* emitSysCall(IRBuilder& ir, const mir::Instr& instr);
+
+    llvm::Function* getSysFunc(mir::SysCallKind kind);
+
     void genGlobal(const VariableSymbol& variable);
     void genBlock(const ProceduralBlockSymbol& variable);
 
@@ -73,6 +97,7 @@ private:
     flat_hash_map<const Symbol*, llvm::Value*> globalMap;
     flat_hash_map<const SubroutineSymbol*, llvm::Function*> userSubroutineMap;
     flat_hash_map<const SystemSubroutine*, llvm::Function*> sysSubroutineMap;
+    flat_hash_map<mir::SysCallKind, llvm::Function*> sysFunctions;
     llvm::BasicBlock* globalInitBlock;
     std::vector<llvm::BasicBlock*> initialBlocks;
     llvm::Function* mainFunc;

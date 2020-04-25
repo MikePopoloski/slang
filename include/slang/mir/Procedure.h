@@ -13,6 +13,7 @@
 
 namespace slang {
 
+class Compilation;
 class ConstantValue;
 class Expression;
 class ProceduralBlockSymbol;
@@ -27,14 +28,16 @@ public:
     Procedure(MIRBuilder& builder, const ProceduralBlockSymbol& block);
 
     MIRValue emitExpr(const Expression& expr);
-    MIRValue emitConst(const ConstantValue& val);
-    MIRValue emitConst(ConstantValue&& val);
+    MIRValue emitConst(const Type& type, const ConstantValue& val);
+    MIRValue emitConst(const Type& type, ConstantValue&& val);
 
     MIRValue emitCall(SysCallKind sysCall, const Type& returnType, span<const MIRValue> args);
     void emitCall(SysCallKind sysCall, span<const MIRValue> args);
     void emitCall(SysCallKind sysCall, MIRValue arg0);
 
     span<const Instr> getInstructions() const { return instructions; }
+
+    Compilation& getCompilation() const;
 
     std::string toString() const;
 
@@ -45,7 +48,7 @@ private:
     std::vector<Instr> instructions;
     std::vector<BasicBlock> blocks;
     BumpAllocator alloc;
-    TypedBumpAllocator<ConstantValue> constantAlloc;
+    TypedBumpAllocator<TypedConstantValue> constantAlloc;
 };
 
 } // namespace mir

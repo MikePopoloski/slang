@@ -181,8 +181,7 @@ bool SystemSubroutine::checkFormatValues(const BindContext& context, const Args&
     return ok;
 }
 
-void SystemSubroutine::lowerFormatArgs(mir::Procedure& proc, const Args& args,
-                                       LiteralBase) {
+void SystemSubroutine::lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase) {
     SmallVectorSized<SFormat::Arg, 8> specs;
     auto specIt = specs.begin();
 
@@ -193,7 +192,8 @@ void SystemSubroutine::lowerFormatArgs(mir::Procedure& proc, const Args& args,
             return;
 
         if (arg->kind == ExpressionKind::EmptyArgument) {
-            proc.emitCall(mir::SysCallKind::PrintChar, proc.emitConst(SVInt(8, ' ', false)));
+            auto& type = proc.getCompilation().getType(8, IntegralFlags::TwoState);
+            proc.emitCall(mir::SysCallKind::PrintChar, proc.emitConst(type, SVInt(8, ' ', false)));
             continue;
         }
 

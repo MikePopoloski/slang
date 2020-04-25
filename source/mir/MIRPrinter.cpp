@@ -8,7 +8,7 @@
 
 #include <fmt/format.h>
 
-#include "slang/binding/ConstantValue.h"
+#include "slang/symbols/Type.h"
 
 namespace {
 
@@ -26,7 +26,6 @@ string_view instrName(InstrKind kind) {
 string_view syscallName(SysCallKind kind) {
     switch (kind) {
         case SysCallKind::PrintChar: return "$printChar"sv;
-        case SysCallKind::PrintInt: return "$printInt"sv;
     }
     THROW_UNREACHABLE;
 }
@@ -68,12 +67,13 @@ MIRPrinter& MIRPrinter::print(const Instr& instr, size_t index) {
 
 MIRPrinter& MIRPrinter::print(const MIRValue& value) {
     switch (value.getKind()) {
-        case MIRValue::Constant:
-            buffer += value.asConstant().toString();
+        case MIRValue::Constant: {
+            auto& tcv = value.asConstant();
+            buffer += fmt::format("{}: {}", tcv.type.toString(), tcv.value.toString());
             break;
+        }
         case MIRValue::Slot:
-            buffer += '%';
-            buffer += std::to_string(value.asInstrSlot());
+            buffer += fmt::format("%{}", value.asInstrSlot());
             break;
         default:
             break;

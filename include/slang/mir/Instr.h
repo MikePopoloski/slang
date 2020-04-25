@@ -6,14 +6,24 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/ConstantValue.h"
 #include "slang/util/Enum.h"
+#include "slang/util/Util.h"
 
 namespace slang {
 
-class ConstantValue;
 class Type;
 
 namespace mir {
+
+struct TypedConstantValue {
+    const Type& type;
+    ConstantValue value;
+
+    TypedConstantValue(const Type& type, const ConstantValue& value) : type(type), value(value) {}
+    TypedConstantValue(const Type& type, ConstantValue&& value) :
+        type(type), value(std::move(value)) {}
+};
 
 // clang-format off
 #define INSTR(x) \
@@ -23,8 +33,7 @@ ENUM(InstrKind, INSTR);
 #undef INSTR
 
 #define SYSCALL(x) \
-    x(PrintChar) \
-    x(PrintInt)
+    x(PrintChar)
 ENUM(SysCallKind, SYSCALL);
 #undef SYSCALL
 // clang-format on
@@ -34,14 +43,15 @@ public:
     enum Kind { Empty, Slot, Constant };
 
     MIRValue() : val(0) {}
-    explicit MIRValue(const ConstantValue& cv) : val(reinterpret_cast<uintptr_t>(&cv) | Constant) {}
+    explicit MIRValue(const TypedConstantValue& cv) :
+        val(reinterpret_cast<uintptr_t>(&cv) | Constant) {}
     explicit MIRValue(size_t instructionIndex) : val(instructionIndex << 3) {}
 
     Kind getKind() const { return Kind(val & 7); }
 
-    const ConstantValue& asConstant() const {
+    const TypedConstantValue& asConstant() const {
         ASSERT(getKind() == Constant);
-        return *reinterpret_cast<const ConstantValue*>(val & ~7ull);
+        return *reinterpret_cast<const TypedConstantValue*>(val & ~7ull);
     }
 
     size_t asInstrSlot() const {
