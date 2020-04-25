@@ -59,7 +59,7 @@ public:
     const Type& type;
     InstrKind kind;
 
-    Instr(SysCallKind sysCall, const Type& returnType, span<const MIRValue> args) :
+    Instr(SysCallKind sysCall, const Type& returnType, span<const MIRValue> args) noexcept :
         type(returnType), kind(InstrKind::SysCall), sysCallKind(sysCall), varOps(args) {}
 
     SysCallKind getSysCallKind() const { return sysCallKind; }
