@@ -125,6 +125,7 @@ if(SLANG_INCLUDE_LLVM)
     target_sources(slang PRIVATE
         codegen/CodeGenerator.cpp
         codegen/ExpressionEmitter.cpp
+        codegen/JIT.cpp
         codegen/StatementEmitter.cpp
         codegen/SystemCallEmitter.cpp
     )
@@ -207,7 +208,7 @@ if(SLANG_INCLUDE_LLVM)
     target_include_directories(slang SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
     target_compile_options(slang PRIVATE ${LLVM_DEFINITIONS})
 
-    llvm_map_components_to_libnames(llvm_libs support core)
+    llvm_map_components_to_libnames(llvm_libs support core orcjit native nativecodegen)
     target_link_libraries(slang PRIVATE ${llvm_libs})
 endif()
 

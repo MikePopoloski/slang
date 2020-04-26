@@ -4,13 +4,18 @@
 #include <catch2/catch.hpp>
 
 #include "slang/codegen/CodeGenerator.h"
+#include "slang/codegen/JIT.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/mir/MIRBuilder.h"
+#include "slang/mir/Procedure.h"
+#include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/syntax/SyntaxTree.h"
 
 using namespace slang;
+using namespace slang::mir;
 
 Compilation compile(const std::string& text) {
     Compilation compilation;
@@ -37,7 +42,7 @@ endmodule
 
     CodeGenerator codegen(compilation);
     codegen.genInstance(*compilation.getRoot().topInstances[0]);
-    auto result = codegen.finish();
+    auto result = codegen.finish().toString();
 
     CHECK("\n" + result == R"(
 ; ModuleID = 'primary'
@@ -52,4 +57,25 @@ define i32 @main() {
   ret i32 0
 }
 )");
+}
+
+TEST_CASE("JIT test") {
+    Compilation compilation = compile(R"(
+module m;
+    initial $display(,);
+endmodule
+)");
+
+    auto& block =
+        *compilation.getRoot().topInstances[0]->body.membersOfType<ProceduralBlockSymbol>()[0];
+
+    MIRBuilder builder(compilation);
+    Procedure proc(builder, block);
+
+    CodeGenerator codegen(compilation);
+    codegen.generate(proc);
+
+    JIT jit;
+    jit.addCode(codegen.finish());
+    CHECK(jit.run() == 0);
 }

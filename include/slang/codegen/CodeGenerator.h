@@ -60,14 +60,28 @@ struct CodegenOptions {
     bool flattenFourState = false;
 };
 
+class GeneratedCode {
+public:
+    GeneratedCode(std::unique_ptr<llvm::LLVMContext> context, std::unique_ptr<llvm::Module> module);
+    GeneratedCode(GeneratedCode&&);
+    ~GeneratedCode();
+
+    std::pair<std::unique_ptr<llvm::LLVMContext>, std::unique_ptr<llvm::Module>> release();
+    std::string toString() const;
+
+private:
+    std::unique_ptr<llvm::LLVMContext> context;
+    std::unique_ptr<llvm::Module> module;
+};
+
 class CodeGenerator {
 public:
-    CodeGenerator(Compilation& compilation, bool startStuff = true);
+    CodeGenerator(Compilation& compilation);
     ~CodeGenerator();
 
     void generate(const mir::Procedure& proc);
 
-    std::string finish();
+    GeneratedCode finish();
 
     void genInstance(const InstanceSymbol& instance);
     void genStmt(llvm::BasicBlock* bb, const Statement& stmt);

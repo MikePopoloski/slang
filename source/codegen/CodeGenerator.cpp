@@ -7,11 +7,19 @@
 //------------------------------------------------------------------------------
 #include "slang/codegen/CodeGenerator.h"
 
+#ifdef _MSC_VER
+#    pragma warning(push)
+#    pragma warning(disable : 4702) // unreachable code
+#endif
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Support/TargetSelect.h>
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
 
 #include "slang/codegen/ExpressionEmitter.h"
 #include "slang/codegen/StatementEmitter.h"
@@ -24,7 +32,32 @@ namespace slang {
 
 using namespace mir;
 
-CodeGenerator::CodeGenerator(Compilation& compilation, bool startStuff) : compilation(compilation) {
+GeneratedCode::GeneratedCode(std::unique_ptr<llvm::LLVMContext> context,
+                             std::unique_ptr<llvm::Module> module) :
+    context(std::move(context)),
+    module(std::move(module)) {
+}
+
+GeneratedCode::GeneratedCode(GeneratedCode&&) = default;
+GeneratedCode::~GeneratedCode() = default;
+
+std::pair<std::unique_ptr<llvm::LLVMContext>, std::unique_ptr<llvm::Module>> GeneratedCode::
+    release() {
+    return { std::move(context), std::move(module) };
+}
+
+std::string GeneratedCode::toString() const {
+    std::string result;
+    llvm::raw_string_ostream os(result);
+    module->print(os, nullptr);
+    return os.str();
+}
+
+CodeGenerator::CodeGenerator(Compilation& compilation) : compilation(compilation) {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+
     ctx = std::make_unique<llvm::LLVMContext>();
     module = std::make_unique<llvm::Module>("primary", *ctx);
 
@@ -32,16 +65,13 @@ CodeGenerator::CodeGenerator(Compilation& compilation, bool startStuff) : compil
     typeMap.emplace(&compilation.getVoidType(), llvm::Type::getVoidTy(*ctx));
 
     // Create the main entry point.
-    if (startStuff) {
-        auto intType = llvm::Type::getInt32Ty(*ctx);
-        auto funcType = llvm::FunctionType::get(intType, /* isVarArg */ false);
-        mainFunc =
-            llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "main", *module);
+    auto intType = llvm::Type::getInt32Ty(*ctx);
+    auto funcType = llvm::FunctionType::get(intType, /* isVarArg */ false);
+    mainFunc = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "main", *module);
 
-        // Create the first basic block that will run at the start of simulation
-        // to initialize all static variables.
-        globalInitBlock = llvm::BasicBlock::Create(*ctx, "", mainFunc);
-    }
+    // Create the first basic block that will run at the start of simulation
+    // to initialize all static variables.
+    globalInitBlock = llvm::BasicBlock::Create(*ctx, "", mainFunc);
 }
 
 CodeGenerator::~CodeGenerator() = default;
@@ -111,7 +141,7 @@ llvm::Function* CodeGenerator::getSysFunc(SysCallKind kind) {
     return func;
 }
 
-std::string CodeGenerator::finish() {
+GeneratedCode CodeGenerator::finish() {
     // Insert all initial blocks into the main function.
     auto lastBlock = globalInitBlock;
     for (auto block : initialBlocks) {
@@ -125,17 +155,10 @@ std::string CodeGenerator::finish() {
 
     // Verify all generated code.
     bool bad = llvm::verifyModule(*module, &llvm::errs());
-    if (bad) {
+    if (bad)
         module->dump();
-        return "";
-    }
 
-    // Return the module bitcode.
-    std::string result;
-    llvm::raw_string_ostream os(result);
-    module->print(os, nullptr);
-
-    return os.str();
+    return GeneratedCode(std::move(ctx), std::move(module));
 }
 
 void CodeGenerator::genInstance(const InstanceSymbol& instance) {
