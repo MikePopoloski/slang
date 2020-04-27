@@ -155,6 +155,10 @@ if(SLANG_INCLUDE_TESTS)
 
     add_subdirectory(tests/regression)
     add_subdirectory(tests/unittests)
+
+    if(SLANG_INCLUDE_LLVM)
+        add_subdirectory(tests/simtests)
+    endif()
 endif()
 
 if(SLANG_INCLUDE_DOCS)
