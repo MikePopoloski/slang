@@ -1,0 +1,32 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build_msvc:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: microsoft/setup-msbuild@v1.0.0
+    - name: Install dependencies
+      run: |
+        pip install conan
+        conan user
+        conan --version
+    - name: Configure
+      run: |
+        cd $GITHUB_WORKSPACE
+        mkdir build
+        cd build
+        cmake -G "Visual Studio 16 2019" ..
+    - name: Build
+      run: |
+        msbuild $GITHUB_WORKSPACE/build/INSTALL.vcxproj -m -p:configuration=release -p:platform=x64
+    - name: Run tests
+      run: |
+        cd $GITHUB_WORKSPACE/build
+        ctest -C Release --output-on-failure
