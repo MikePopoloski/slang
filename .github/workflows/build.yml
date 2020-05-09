@@ -61,6 +61,7 @@ jobs:
         cd build
         ctest --output-on-failure
     - name: Upload code coverage
+      if: matrix.compiler == 'clang++-9'
       run: |
         cd build
         find . -name *.profraw -exec llvm-profdata-9 merge -o merged.profdata -sparse {} + ;
