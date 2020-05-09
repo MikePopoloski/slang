@@ -21,7 +21,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 16 2019" -DCMAKE_INSTALL_PREFIX=$env:HOME/slang/
+        cmake .. -G "Visual Studio 16 2019" -DCMAKE_INSTALL_PREFIX=${env:HOME}/slang/
     - name: Build
       run: msbuild build/INSTALL.vcxproj -m -p:configuration=release -p:platform=x64
     - name: Run tests
@@ -30,7 +30,7 @@ jobs:
         ctest -C Release --output-on-failure
     - name: Archive binaries
       run: |
-        Compress-Archive $env:HOME/slang/ slang-windows.zip
+        Compress-Archive ${env:HOME}/slang/ slang-windows.zip
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
@@ -88,3 +88,13 @@ jobs:
         name: SLANG_ARTIFACT_LINUX
         path: slang-linux.tar.gz
       
+  publish:
+    runs-on: ubuntu-latest
+    needs: [build_msvc, build_linux]
+    steps:
+    - uses: actions/download-artifact@v2
+      with:
+        name: SLANG_ARTIFACT_WIN
+    - uses: actions/download-artifact@v2
+      with:
+        name: SLANG_ARTIFACT_LINUX
