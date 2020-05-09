@@ -423,8 +423,8 @@ const Definition& Compilation::createDefinition(const Scope& scope, LookupLocati
     if (targetScope == root.get()) {
         auto& topDef = topDefinitions[result->name].first;
         if (topDef) {
-            auto& diag = scope.addDiag(diag::Redefinition, def->location);
-            diag << def->name;
+            auto& diag = scope.addDiag(diag::Redefinition, result->location);
+            diag << result->name;
             diag.addNote(diag::NotePreviousDefinition, topDef->location);
         }
         else {
@@ -451,7 +451,7 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
     auto& metadata = definitionMetadata[&syntax];
     auto& package =
         PackageSymbol::fromSyntax(scope, syntax, *metadata.defaultNetType, metadata.timeScale);
-    
+
     auto [it, inserted] = packageMap.emplace(package.name, &package);
     if (!inserted) {
         auto& diag = scope.addDiag(diag::Redefinition, package.location);
@@ -680,11 +680,11 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
     if (diag.isError())
         numErrors++;
 
+    auto key = std::make_tuple(diag.code, diag.location);
     std::vector<Diagnostic> newEntry;
     newEntry.emplace_back(std::move(diag));
 
-    auto [it, inserted] =
-        diagMap.emplace(std::make_tuple(diag.code, diag.location), std::move(newEntry));
+    auto [it, inserted] = diagMap.emplace(key, std::move(newEntry));
     return it->second.back();
 }
 

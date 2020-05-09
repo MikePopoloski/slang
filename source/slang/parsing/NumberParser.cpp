@@ -170,7 +170,7 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
     auto createResult = [&](auto&& val) {
         return Token(alloc, TokenKind::IntegerLiteral, firstToken.trivia(),
                      singleToken ? firstToken.rawText() : toStringView(text.copy(alloc)),
-                     firstLocation, std::move(val));
+                     firstLocation, std::forward<decltype(val)>(val));
     };
 
     if (!valid)
