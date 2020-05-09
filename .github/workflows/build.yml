@@ -19,13 +19,13 @@ jobs:
         conan --version
     - name: Configure
       run: |
-        echo ${env:PATH}
+        pwd
         cd $GITHUB_WORKSPACE
-        echo ${env:PATH}
+        pwd
         mkdir build
-        echo ${env:PATH}
+        pwd
         cd build
-        echo ${env:PATH}
+        pwd
         cmake -G "Visual Studio 16 2019" ..
     - name: Build
       run: |
