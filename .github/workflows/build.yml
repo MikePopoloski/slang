@@ -2,7 +2,7 @@ name: CI Build
 
 on:
   push:
-    branches: [ master ]
+    branches: [ ** ]
   pull_request:
     branches: [ master ]
 
@@ -20,6 +20,7 @@ jobs:
     - name: Configure
       run: |
         pwd
+        echo $GITHUB_WORKSPACE
         cd $GITHUB_WORKSPACE
         pwd
         mkdir build
