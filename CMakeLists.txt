@@ -58,6 +58,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         string(REGEX REPLACE "/debug" "/DEBUG:FASTLINK" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
         string(REGEX REPLACE "/debug" "/DEBUG:FASTLINK" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
         add_compile_options(/DDEBUG)
+
+        # Ignore annoying "missing pdb" warnings
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4099")
     else()
         add_compile_options(/GS-)   # Disable buffer overrun checks
         add_compile_options(/GL)    # Whole program optimization
@@ -68,6 +71,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${REL_LINK_FLAGS}")
         set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /LTCG")
     endif()
+
+    # Ignore annoying DELAYLOAD warnings
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4199")
 
     if(SLANG_MSVC_W4)
         if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
