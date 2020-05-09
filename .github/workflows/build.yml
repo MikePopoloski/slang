@@ -21,13 +21,21 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake -G "Visual Studio 16 2019" ..
+        cmake .. -G "Visual Studio 16 2019" -DCMAKE_INSTALL_PREFIX=$env:HOME/slang/
     - name: Build
       run: msbuild build/INSTALL.vcxproj -m -p:configuration=release -p:platform=x64
     - name: Run tests
       run: |
         cd build
         ctest -C Release --output-on-failure
+    - name: Archive binaries
+      run: |
+        Compress-Archive $env:HOME/slang/ slang-windows.zip
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: SLANG_ARTIFACT_WIN
+        path: slang-windows.zip
         
   build_linux:
     runs-on: ubuntu-latest
@@ -53,7 +61,7 @@ jobs:
         export PATH="$HOME/.local/bin:$PATH"
         mkdir build
         cd build
-        cmake .. -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCI_BUILD=ON ${{ matrix.flags }}
+        cmake .. -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCI_BUILD=ON ${{ matrix.flags }} -DCMAKE_INSTALL_PREFIX=$HOME/slang/
         make -j8
     - name: Run tests
       run: |
@@ -66,5 +74,17 @@ jobs:
         cd build
         find . -name *.profraw -exec llvm-profdata-9 merge -o merged.profdata -sparse {} + ;
         llvm-cov-9 show bin/unittests -instr-profile=merged.profdata > coverage.txt
-        bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN) || echo 'Codecov failed to upload'
+        bash <(curl -s https://codecov.io/bash) || echo 'Codecov failed to upload'
+    - name: Archive binaries
+      if: matrix.compiler == 'g++-9'
+      run: |
+        strip --strip-unneeded $HOME/slang/bin/*
+        strip --strip-unneeded $HOME/slang/lib/*
+        tar -czvf slang-linux.tar.gz $HOME/slang/
+    - name: Upload artifacts
+      if: matrix.compiler == 'g++-9'
+      uses: actions/upload-artifact@v2
+      with:
+        name: SLANG_ARTIFACT_LINUX
+        path: slang-linux.tar.gz
       
