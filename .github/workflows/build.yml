@@ -60,3 +60,10 @@ jobs:
         export LLVM_PROFILE_FILE=%p.profraw
         cd build
         ctest --output-on-failure
+    - name: Upload code coverage
+      run: |
+        cd build
+        find . -name *.profraw -exec llvm-profdata-9 merge -o merged.profdata -sparse {} + ;
+        llvm-cov-9 show bin/unittests -instr-profile=merged.profdata > coverage.txt
+        bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN) || echo 'Codecov failed to upload'
+      if: ${{ matrix.compiler == clang++-9 }}
