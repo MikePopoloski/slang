@@ -20,13 +20,21 @@ jobs:
     - name: Configure
       run: |
         pwd
+        echo "Hello"
         echo $GITHUB_WORKSPACE
+        echo "Test1"
         cd $GITHUB_WORKSPACE
+        echo "Test2"
         pwd
+        echo "Test3"
         mkdir build
+        echo "Test4"
         pwd
+        echo "Test5"
         cd build
+        echo "Test6"
         pwd
+        echo "Test7"
         cmake -G "Visual Studio 16 2019" ..
     - name: Build
       run: |
