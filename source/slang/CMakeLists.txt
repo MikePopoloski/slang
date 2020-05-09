@@ -1,17 +1,19 @@
+SET(SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../scripts)
+
 add_custom_command(
-    COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/diagnostic_gen.py
+    COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/diagnostic_gen.py
                 --outDir ${CMAKE_CURRENT_BINARY_DIR}
                 --srcDir ${CMAKE_CURRENT_SOURCE_DIR}
-                --incDir ${CMAKE_CURRENT_SOURCE_DIR}/../include/slang
+                --incDir ${CMAKE_CURRENT_SOURCE_DIR}/../../include/slang
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
-    DEPENDS ../scripts/diagnostic_gen.py ../scripts/diagnostics.txt
+    DEPENDS ${SCRIPTS_DIR}/diagnostic_gen.py ${SCRIPTS_DIR}/diagnostics.txt
     COMMENT "Generating diagnostics"
 )
 
 add_custom_command(
-    COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/syntax_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
-    DEPENDS ../scripts/syntax_gen.py ../scripts/syntax.txt
+    DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
     COMMENT "Generating syntax"
 )
 
@@ -25,7 +27,7 @@ add_custom_target(gen_version
         -Dlocal_dir="${CMAKE_CURRENT_SOURCE_DIR}"
         -D_version_major=${SLANG_VERSION_MAJOR}
         -D_version_minor=${SLANG_VERSION_MINOR}
-    -P "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/gitversion.cmake"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/gitversion.cmake"
 )
 
 add_library(slang
@@ -196,9 +198,9 @@ target_link_libraries(slang PRIVATE CONAN_PKG::fmt)
 find_package(Threads)
 target_link_libraries(slang PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
-target_include_directories(slang PUBLIC ../include/)
+target_include_directories(slang PUBLIC ../../include/)
 target_include_directories(slang PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-target_include_directories(slang SYSTEM PUBLIC ../external/)
+target_include_directories(slang SYSTEM PUBLIC ../../external/)
 
 if(SLANG_INCLUDE_LLVM)
     find_package(LLVM REQUIRED CONFIG)
@@ -215,8 +217,8 @@ endif()
 install(TARGETS slang
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
-install(DIRECTORY ../include/ DESTINATION include)
-install(DIRECTORY ../external/ DESTINATION include)
+install(DIRECTORY ../../include/ DESTINATION include)
+install(DIRECTORY ../../external/ DESTINATION include)
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ DESTINATION include/slang/diagnostics)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h DESTINATION include/slang/syntax/)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h DESTINATION include/slang/syntax/)
