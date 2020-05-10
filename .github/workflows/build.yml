@@ -30,7 +30,6 @@ jobs:
         cd build
         ctest -C Release --output-on-failure
     - name: Archive binaries
-      shell: bash
       run: |
         Compress-Archive $HOME/slang/ slang-windows.zip
     - name: Upload artifacts
