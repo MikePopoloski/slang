@@ -89,7 +89,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: SLANG_ARTIFACT_LINUX
-        path: slang-linux.tar.gz
+        path: $HOME/slang-linux.tar.gz
       
   publish:
     runs-on: ubuntu-latest
