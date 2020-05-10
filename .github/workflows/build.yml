@@ -80,9 +80,10 @@ jobs:
     - name: Archive binaries
       if: matrix.compiler == 'g++-9'
       run: |
-        strip --strip-unneeded $HOME/slang/bin/*
-        strip --strip-unneeded $HOME/slang/lib/*
-        tar -czvf slang-linux.tar.gz $HOME/slang/
+        cd $HOME
+        strip --strip-unneeded slang/bin/*
+        strip --strip-unneeded slang/lib/*
+        tar -czvf slang-linux.tar.gz slang/
     - name: Upload artifacts
       if: matrix.compiler == 'g++-9' #&& github.event_name == 'push'
       uses: actions/upload-artifact@v2
