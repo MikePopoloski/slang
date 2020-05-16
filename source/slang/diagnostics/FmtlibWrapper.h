@@ -35,6 +35,7 @@ private:
 public:
     using iterator = OutputIt;
     using format_arg = fmt::basic_format_arg<BasicFormatContext>;
+    using parse_context_type = fmt::basic_format_parse_context<char>;
     template<typename T>
     using formatter_type = fmt::formatter<T, char_type>;
 
@@ -48,7 +49,7 @@ public:
     format_arg arg(fmt::basic_string_view<char_type> name) {
         map_.init(args_);
         format_arg arg = map_.find(name);
-        if (arg.type() == fmt::internal::none_type)
+        if (arg.type() == fmt::internal::type::none_type)
             this->on_error("argument not found");
         return arg;
     }
