@@ -101,12 +101,13 @@ jobs:
     - uses: actions/download-artifact@v2
       with:
         name: SLANG_ARTIFACT_LINUX
-    - uses: johnwbyrd/update-release@v1
+    - uses: meeDamian/github-release@2.0
       with:
         token: "${{ secrets.GITHUB_TOKEN }}"
-        release: "Nightly"
+        name: Nightly
         tag: nightly
         prerelease: true
+        allow_override: true
         files: slang-linux.tar.gz slang-windows.zip
       
 #     - uses: "marvinpinto/action-automatic-releases@latest"
