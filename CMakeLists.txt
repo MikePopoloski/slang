@@ -100,6 +100,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
             endif()
         endforeach()
     endif()
+
+    set(SLANG_WARN_FLAGS "/WX")
 else()
     set(CMAKE_CXX_STANDARD 17)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -144,6 +146,57 @@ else()
     endif()
 endif()
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(SLANG_WARN_FLAGS
+        -Wall
+        -Wextra
+        -Werror
+        -Warray-bounds-pointer-arithmetic
+        -Wassign-enum
+        -Wbad-function-cast
+        -Wcast-qual
+        -Wchar-subscripts
+        -Wcomma
+        -Wconditional-uninitialized
+        -Wconversion
+        -Wdelete-non-virtual-dtor
+        -Wdeprecated
+        -Wduplicate-enum
+        -Wduplicate-method-arg
+        -Wembedded-directive
+        -Wfor-loop-analysis
+        -Wformat-pedantic
+        -Widiomatic-parentheses
+        -Wimplicit-fallthrough
+        -Wpedantic
+        -Wrange-loop-analysis
+        -Wredundant-parens
+        -Wreserved-id-macro
+        -Wshadow
+        -Wundefined-reinterpret-cast
+        -Wunreachable-code-aggressive
+        -Wzero-as-null-pointer-constant
+        -Wno-missing-braces
+    )
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(SLANG_WARN_FLAGS
+        -Wall
+        -Wextra
+        -Werror
+        -Wunused-value
+        -Wformat-security
+        -Wimplicit-fallthrough=5
+        -Walloc-zero
+        -Wlogical-op
+        -Wlogical-not-parentheses
+        -Wvla
+        -Wnoexcept
+        -Wduplicated-cond
+        -Wtype-limits
+        -Wno-maybe-uninitialized
+    )
+endif()
+
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
     # Only MSBuild needs this, other generators will compile one file at a time
     add_compile_options("/MP")
@@ -153,6 +206,7 @@ endif()
 include(cmake/conan.cmake)
 conan_cmake_run(CONANFILE conanfile.txt BASIC_SETUP CMAKE_TARGETS BUILD missing)
 
+add_subdirectory(source/simrt)
 add_subdirectory(source/slang)
 add_subdirectory(tools)
 

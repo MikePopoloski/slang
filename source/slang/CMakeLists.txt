@@ -135,65 +135,15 @@ endif()
 
 add_dependencies(slang gen_version)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    # Warnings as errors
-    target_compile_options(slang PRIVATE /WX)
-else()
+target_compile_options(slang PRIVATE ${SLANG_WARN_FLAGS})
+
+if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     # Link against C++17 filesystem
     target_link_libraries(slang PUBLIC stdc++fs)
-    target_compile_options(slang PRIVATE
-        -Wall
-        -Wextra
-        -Werror
-    )
-endif()
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(slang PRIVATE
-        -Warray-bounds-pointer-arithmetic
-        -Wassign-enum
-        -Wbad-function-cast
-        -Wcast-qual
-        -Wchar-subscripts
-        -Wcomma
-        -Wconditional-uninitialized
-        -Wconversion
-        -Wdelete-non-virtual-dtor
-        -Wdeprecated
-        -Wduplicate-enum
-        -Wduplicate-method-arg
-        -Wembedded-directive
-        -Wfor-loop-analysis
-        -Wformat-pedantic
-        -Widiomatic-parentheses
-        -Wimplicit-fallthrough
-        -Wpedantic
-        -Wrange-loop-analysis
-        -Wredundant-parens
-        -Wreserved-id-macro
-        -Wshadow
-        -Wundefined-reinterpret-cast
-        -Wunreachable-code-aggressive
-        -Wzero-as-null-pointer-constant
-        -Wno-missing-braces
-    )
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    target_compile_options(slang PRIVATE
-        -Wunused-value
-        -Wformat-security
-        -Wimplicit-fallthrough=5
-        -Walloc-zero
-        -Wlogical-op
-        -Wlogical-not-parentheses
-        -Wvla
-        -Wnoexcept
-        -Wduplicated-cond
-        -Wtype-limits
-        -Wno-maybe-uninitialized
-    )
 endif()
 
 target_link_libraries(slang PRIVATE CONAN_PKG::fmt)
+target_link_libraries(slang PRIVATE simrt)
 
 find_package(Threads)
 target_link_libraries(slang PUBLIC ${CMAKE_THREAD_LIBS_INIT})
