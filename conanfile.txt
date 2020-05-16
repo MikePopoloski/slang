@@ -1,5 +1,5 @@
 [requires]
-Catch2/2.11.1@catchorg/stable
+catch2/2.12.1
 fmt/6.1.2
 
 [generators]

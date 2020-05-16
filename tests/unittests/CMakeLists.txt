@@ -22,7 +22,7 @@ add_executable(unittests
     VisitorTests.cpp
 )
 
-target_link_libraries(unittests PRIVATE slang CONAN_PKG::Catch2)
+target_link_libraries(unittests PRIVATE slang CONAN_PKG::catch2)
 target_link_libraries(unittests PRIVATE CONAN_PKG::fmt)
 
 if(CI_BUILD)
