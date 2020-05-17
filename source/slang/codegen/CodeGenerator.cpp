@@ -86,6 +86,9 @@ void CodeGenerator::generate(const Procedure& proc) {
         emit(ir, instr);
 
     ir.CreateRetVoid();
+
+    IRBuilder caller(globalInitBlock);
+    caller.CreateCall(func, {});
 }
 
 llvm::Value* CodeGenerator::emit(IRBuilder& ir, const Instr& instr) {

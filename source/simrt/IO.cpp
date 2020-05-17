@@ -4,9 +4,21 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include <cstdint>
+#include "simrt/SimRT.h"
 #include <cstdio>
 
-void printChar(int8_t c) {
-    printf("Foo: %c\n", c);
+EXPORT void printChar(int8_t c) {
+    printf("'%c'\n", c);
 }
+
+namespace simrt {
+
+void getIOExports(ExportList& results) {
+#define ADD(name) results.emplace_back(#name, &name)
+
+    ADD(printChar);
+
+#undef ADD
+}
+
+} // namespace simrt
