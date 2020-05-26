@@ -14,7 +14,7 @@ EXPORT void printChar(int8_t c) {
 namespace simrt {
 
 void getIOExports(ExportList& results) {
-#define ADD(name) results.emplace_back(#name, &name)
+#define ADD(name) results.emplace_back(#name, reinterpret_cast<uintptr_t>(&(name)));
 
     ADD(printChar);
 

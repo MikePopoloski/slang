@@ -37,7 +37,7 @@ JIT::JIT() {
     // Register all exported simrt functions with the JIT.
     auto exported = simrt::getExportedFunctions();
     for (auto& [name, ptr] : exported) {
-        llvm::JITEvaluatedSymbol sym(llvm::pointerToJITTargetAddress(ptr), {});
+        llvm::JITEvaluatedSymbol sym(static_cast<llvm::JITTargetAddress>(ptr), {});
         auto err = jit->defineAbsolute(llvm::StringRef(name.data(), name.length()), sym);
         if (err)
             report(std::move(err));

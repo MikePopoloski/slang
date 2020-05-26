@@ -14,7 +14,7 @@
 
 namespace simrt {
 
-using ExportList = std::vector<std::pair<std::string_view, const void*>>;
+using ExportList = std::vector<std::pair<std::string_view, uintptr_t>>;
 
 /// Gets a list of all exported functions in the runtime. The results are a pair,
 /// with the first element being the function's name and the second being
