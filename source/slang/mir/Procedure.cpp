@@ -145,8 +145,8 @@ void Procedure::emitLocal(const VariableSymbol& symbol) {
     locals.push_back(&symbol);
 
     // TODO: initializer
-    if (auto init = symbol.getInitializer()) {
-    }
+    /*if (auto init = symbol.getInitializer()) {
+    }*/
 }
 
 Compilation& Procedure::getCompilation() const {
