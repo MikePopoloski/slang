@@ -33,7 +33,13 @@ public:
     void visit(const BlockStatement& block) { block.getStatements().visit(*this); }
     void visit(const ExpressionStatement& stmt) { stmt.expr.visit(*this); }
 
-    void visit(const VariableDeclStatement&) {}
+    void visit(const VariableDeclStatement& stmt) {
+        if (stmt.symbol.lifetime == VariableLifetime::Automatic)
+            proc.emitLocal(stmt.symbol);
+        else
+            proc.emitGlobal(stmt.symbol);
+    }
+
     void visit(const ReturnStatement&) {}
     void visit(const BreakStatement&) {}
     void visit(const ContinueStatement&) {}
@@ -48,12 +54,30 @@ public:
     void visit(const TimedStatement&) {}
     void visit(const AssertionStatement&) {}
 
-    MIRValue visit(const IntegerLiteral&) { return {}; }
-    MIRValue visit(const RealLiteral&) { return {}; }
-    MIRValue visit(const TimeLiteral&) { return {}; }
-    MIRValue visit(const UnbasedUnsizedIntegerLiteral&) { return {}; }
-    MIRValue visit(const NullLiteral&) { return {}; }
-    MIRValue visit(const StringLiteral&) { return {}; }
+    MIRValue visit(const IntegerLiteral& expr) {
+        return proc.emitConst(*expr.type, expr.getValue());
+    }
+
+    MIRValue visit(const RealLiteral& expr) {
+        return proc.emitConst(*expr.type, real_t(expr.getValue()));
+    }
+
+    MIRValue visit(const TimeLiteral& expr) {
+        return proc.emitConst(*expr.type, real_t(expr.getValue()));
+    }
+
+    MIRValue visit(const UnbasedUnsizedIntegerLiteral& expr) {
+        return proc.emitConst(*expr.type, expr.getValue());
+    }
+
+    MIRValue visit(const NullLiteral& expr) {
+        return proc.emitConst(*expr.type, ConstantValue::NullPlaceholder{});
+    }
+
+    MIRValue visit(const StringLiteral& expr) {
+        return proc.emitConst(*expr.type, expr.getIntValue());
+    }
+
     MIRValue visit(const NamedValueExpression&) { return {}; }
     MIRValue visit(const UnaryExpression&) { return {}; }
     MIRValue visit(const BinaryExpression&) { return {}; }
@@ -66,9 +90,9 @@ public:
     MIRValue visit(const RangeSelectExpression&) { return {}; }
     MIRValue visit(const MemberAccessExpression&) { return {}; }
 
-    MIRValue visit(const CallExpression& call) {
-        if (call.isSystemCall()) {
-            std::get<1>(call.subroutine).subroutine->lower(proc, call.arguments());
+    MIRValue visit(const CallExpression& expr) {
+        if (expr.isSystemCall()) {
+            std::get<1>(expr.subroutine).subroutine->lower(proc, expr.arguments());
             return {};
         }
         return {};
@@ -101,18 +125,10 @@ MIRValue Procedure::emitExpr(const Expression& expr) {
     return expr.visit(visitor);
 }
 
-MIRValue Procedure::emitConst(const Type& type, const ConstantValue& val) {
-    return MIRValue(*constantAlloc.emplace(type, val));
-}
-
-MIRValue Procedure::emitConst(const Type& type, ConstantValue&& val) {
-    return MIRValue(*constantAlloc.emplace(type, std::move(val)));
-}
-
 MIRValue Procedure::emitCall(SysCallKind sysCall, const Type& returnType,
                              span<const MIRValue> args) {
     instructions.emplace_back(sysCall, returnType, copyValues(args));
-    return MIRValue(instructions.size() - 1);
+    return MIRValue::slot(instructions.size() - 1);
 }
 
 void Procedure::emitCall(SysCallKind sysCall, span<const MIRValue> args) {
@@ -123,12 +139,22 @@ void Procedure::emitCall(SysCallKind sysCall, MIRValue arg0) {
     emitCall(sysCall, { &arg0, 1 });
 }
 
+void Procedure::emitLocal(const VariableSymbol& symbol) {
+    auto val = MIRValue::local(locals.size());
+    localMap.emplace(&symbol, val);
+    locals.push_back(&symbol);
+
+    // TODO: initializer
+    if (auto init = symbol.getInitializer()) {
+    }
+}
+
 Compilation& Procedure::getCompilation() const {
     return builder.compilation;
 }
 
 std::string Procedure::toString() const {
-    return MIRPrinter().print(*this).str();
+    return MIRPrinter(builder).print(*this).str();
 }
 
 span<const MIRValue> Procedure::copyValues(span<const MIRValue> values) {
@@ -136,7 +162,7 @@ span<const MIRValue> Procedure::copyValues(span<const MIRValue> values) {
         return {};
 
     size_t bytes = sizeof(MIRValue) * values.size();
-    auto data = (MIRValue*)alloc.allocate(bytes, alignof(MIRValue));
+    auto data = (MIRValue*)builder.allocate(bytes, alignof(MIRValue));
     memcpy(data, values.data(), bytes);
 
     return { data, values.size() };

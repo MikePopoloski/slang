@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iterator>
 #include <utility>
+#include <stdexcept>
 #include <type_traits>
 
 #ifdef _MSC_VER

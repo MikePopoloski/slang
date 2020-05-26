@@ -6,13 +6,39 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-namespace slang::mir {
+#include <flat_hash_map.hpp>
+#include <vector>
 
-class MIRBuilder {
+#include "slang/mir/Instr.h"
+#include "slang/util/BumpAllocator.h"
+
+namespace slang {
+
+class Compilation;
+class ConstantValue;
+class Type;
+class VariableSymbol;
+
+namespace mir {
+
+class MIRBuilder : public BumpAllocator {
 public:
     Compilation& compilation;
 
     MIRBuilder(Compilation& compilation) : compilation(compilation) {}
+
+    MIRValue emitConst(const Type& type, const ConstantValue& val);
+    MIRValue emitConst(const Type& type, ConstantValue&& val);
+    MIRValue emitGlobal(const VariableSymbol& symbol);
+
+    const VariableSymbol& getGlobal(MIRValue val) const;
+
+private:
+    TypedBumpAllocator<TypedConstantValue> constantAlloc;
+    std::vector<const VariableSymbol*> globals;
+    flat_hash_map<const VariableSymbol*, MIRValue> globalMap;
 };
 
-} // namespace slang::mir
+} // namespace mir
+
+} // namespace slang

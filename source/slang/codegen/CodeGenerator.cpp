@@ -107,8 +107,11 @@ llvm::Value* CodeGenerator::emit(IRBuilder&, const MIRValue& val) {
             auto& tcv = val.asConstant();
             return genConstant(tcv.type, tcv.value);
         }
-        case MIRValue::Slot:
+        case MIRValue::InstrSlot:
+        case MIRValue::Global:
+        case MIRValue::Local:
         case MIRValue::Empty:
+            // TODO:
             break;
     }
     THROW_UNREACHABLE;

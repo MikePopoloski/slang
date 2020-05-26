@@ -28,6 +28,7 @@ endmodule
 
     std::string result = "\n" + proc.toString();
     CHECK(result == R"(
-%0 = syscall $printChar bit[7:0]: 8'h20
+L0 i: int
+%0 = syscall $printChar 8'h20: bit[7:0]
 )");
 }

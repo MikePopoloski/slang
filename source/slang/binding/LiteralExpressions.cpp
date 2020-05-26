@@ -133,7 +133,7 @@ bool UnbasedUnsizedIntegerLiteral::propagateType(const BindContext&, const Type&
     return true;
 }
 
-ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
+SVInt UnbasedUnsizedIntegerLiteral::getValue() const {
     bitwidth_t width = type->getBitWidth();
     bool isSigned = type->isSigned();
 
@@ -154,8 +154,12 @@ ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
     }
 }
 
+ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
+    return getValue();
+}
+
 void UnbasedUnsizedIntegerLiteral::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("value", SVInt(getValue()));
+    serializer.write("value", getValue());
 }
 
 Expression& NullLiteral::fromSyntax(Compilation& compilation,
@@ -202,6 +206,10 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation,
     auto& type = compilation.getType(width, IntegralFlags::Unsigned);
     return *compilation.emplace<StringLiteral>(type, value, syntax.literal.rawText(), *intVal,
                                                syntax.sourceRange());
+}
+
+const ConstantValue& StringLiteral::getIntValue() const {
+    return *intStorage;
 }
 
 ConstantValue StringLiteral::evalImpl(EvalContext&) const {

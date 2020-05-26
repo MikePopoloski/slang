@@ -40,12 +40,16 @@ ENUM(SysCallKind, SYSCALL);
 
 class MIRValue {
 public:
-    enum Kind { Empty, Slot, Constant };
+    enum Kind { Empty, InstrSlot, Constant, Local, Global };
 
     MIRValue() : val(0) {}
     explicit MIRValue(const TypedConstantValue& cv) :
         val(reinterpret_cast<uintptr_t>(&cv) | Constant) {}
-    explicit MIRValue(size_t instructionIndex) : val(instructionIndex << 3) {}
+    MIRValue(Kind kind, size_t index) : val((index << 3) | kind) {}
+
+    static MIRValue slot(size_t index) { return MIRValue(InstrSlot, index); }
+    static MIRValue local(size_t index) { return MIRValue(Local, index); }
+    static MIRValue global(size_t index) { return MIRValue(Global, index); }
 
     Kind getKind() const { return Kind(val & 7); }
 
@@ -54,10 +58,12 @@ public:
         return *reinterpret_cast<const TypedConstantValue*>(val & ~7ull);
     }
 
-    size_t asInstrSlot() const {
-        ASSERT(getKind() == Slot);
+    size_t asIndex() const {
+        ASSERT(getKind() != Constant);
         return val >> 3;
     }
+
+    explicit operator bool() const { return getKind() != Empty; }
 
 private:
     uintptr_t val;

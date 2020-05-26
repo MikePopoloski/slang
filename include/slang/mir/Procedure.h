@@ -6,36 +6,38 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <vector>
-
-#include "slang/mir/Instr.h"
-#include "slang/util/BumpAllocator.h"
+#include "slang/mir/MIRBuilder.h"
 
 namespace slang {
 
-class Compilation;
-class ConstantValue;
 class Expression;
 class ProceduralBlockSymbol;
-class Type;
 
 namespace mir {
-
-class MIRBuilder;
 
 class Procedure {
 public:
     Procedure(MIRBuilder& builder, const ProceduralBlockSymbol& block);
 
     MIRValue emitExpr(const Expression& expr);
-    MIRValue emitConst(const Type& type, const ConstantValue& val);
-    MIRValue emitConst(const Type& type, ConstantValue&& val);
 
     MIRValue emitCall(SysCallKind sysCall, const Type& returnType, span<const MIRValue> args);
     void emitCall(SysCallKind sysCall, span<const MIRValue> args);
     void emitCall(SysCallKind sysCall, MIRValue arg0);
 
+    MIRValue emitConst(const Type& type, const ConstantValue& val) {
+        return builder.emitConst(type, val);
+    }
+
+    MIRValue emitConst(const Type& type, ConstantValue&& val) {
+        return builder.emitConst(type, std::move(val));
+    }
+
+    void emitLocal(const VariableSymbol& symbol);
+    MIRValue emitGlobal(const VariableSymbol& symbol) { return builder.emitGlobal(symbol); }
+
     span<const Instr> getInstructions() const { return instructions; }
+    span<const VariableSymbol* const> getLocals() const { return locals; }
 
     Compilation& getCompilation() const;
 
@@ -47,8 +49,8 @@ private:
     MIRBuilder& builder;
     std::vector<Instr> instructions;
     std::vector<BasicBlock> blocks;
-    BumpAllocator alloc;
-    TypedBumpAllocator<TypedConstantValue> constantAlloc;
+    std::vector<const VariableSymbol*> locals;
+    flat_hash_map<const VariableSymbol*, MIRValue> localMap;
 };
 
 } // namespace mir

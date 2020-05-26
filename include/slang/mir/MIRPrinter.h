@@ -14,6 +14,8 @@ namespace slang::mir {
 
 class MIRPrinter {
 public:
+    explicit MIRPrinter(const MIRBuilder& builder) : builder(builder) {}
+
     MIRPrinter& print(const Procedure& proc);
     MIRPrinter& print(const Instr& instr, size_t index);
     MIRPrinter& print(const MIRValue& value);
@@ -21,6 +23,7 @@ public:
     std::string str() const { return buffer; }
 
 private:
+    const MIRBuilder& builder;
     std::string buffer;
 };
 

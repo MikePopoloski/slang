@@ -67,6 +67,7 @@ add_library(slang
     diagnostics/TextDiagnosticClient.cpp
 
     mir/Instr.cpp
+    mir/MIRBuilder.cpp
     mir/MIRPrinter.cpp
     mir/Procedure.cpp
 

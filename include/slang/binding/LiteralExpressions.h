@@ -90,7 +90,8 @@ public:
     UnbasedUnsizedIntegerLiteral(const Type& type, logic_t value, SourceRange sourceRange) :
         Expression(ExpressionKind::UnbasedUnsizedIntegerLiteral, type, sourceRange), value(value) {}
 
-    logic_t getValue() const { return value; }
+    logic_t getLiteralValue() const { return value; }
+    SVInt getValue() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
@@ -132,6 +133,7 @@ public:
 
     string_view getValue() const { return value; }
     string_view getRawValue() const { return rawValue; }
+    const ConstantValue& getIntValue() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const { return true; }
