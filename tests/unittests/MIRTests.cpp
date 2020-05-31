@@ -1,6 +1,7 @@
 #include "Test.h"
 
 #include "slang/mir/MIRBuilder.h"
+#include "slang/mir/MIRPrinter.h"
 #include "slang/mir/Procedure.h"
 
 using namespace slang::mir;
@@ -26,9 +27,20 @@ endmodule
     MIRBuilder builder(compilation);
     Procedure proc(builder, block);
 
-    std::string result = "\n" + proc.toString();
+    MIRPrinter printer(builder);
+    printer.printGlobals();
+    printer.str().append("\n");
+    printer.print(proc);
+
+    std::string result = "\n" + printer.str();
     CHECK(result == R"(
+G0 j: int
+
 L0 i: int
-%0 = syscall $printChar 8'h20: bit[7:0]
+%0 = syscall $printInt L0
+%1 = syscall $printChar 8'h20: bit[7:0]
+%2 = syscall $printStringLit hello : string
+%3 = syscall $printInt G0[j]
+%4 = syscall $printStringLit  world: string
 )");
 }

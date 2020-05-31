@@ -25,13 +25,6 @@ static optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
     return result;
 }
 
-struct FormatOptions {
-    optional<uint32_t> width;
-    optional<uint32_t> precision;
-    bool leftJustify = false;
-    bool zeroPad = false;
-};
-
 template<typename OnChar, typename OnArg>
 static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onChar, OnArg&& onArg,
                               Diagnostics& diags) {
@@ -451,6 +444,7 @@ optional<std::string> format(string_view formatString, SourceLocation loc,
         auto& [value, type, range] = *argIt;
         if (!isArgTypeValid(requiredType, *type)) {
             if (isRealToInt(requiredType, *type))
+                // TODO: actually print this still
                 diags.add(diag::FormatRealInt, range) << c << specRange;
             else
                 diags.add(diag::FormatMismatchedType, range) << *type << c << specRange;
@@ -464,6 +458,31 @@ optional<std::string> format(string_view formatString, SourceLocation loc,
         return std::nullopt;
 
     // TODO: check for too many args
+
+    return result;
+}
+
+bool splitFormatString(
+    string_view formatString, function_ref<void(string_view text)> onText,
+    function_ref<void(char specifier, const FormatOptions& options)> onArg) {
+
+    Diagnostics diags;
+    SmallVectorSized<char, 16> text;
+
+    bool result = parseFormatString(
+        formatString, SourceLocation::NoLocation, [&](char c) { text.append(c); },
+        [&](Arg::Type, char specifier, SourceRange, const FormatOptions& options) {
+            if (!text.empty()) {
+                onText(toStringView(text));
+                text.clear();
+            }
+
+            onArg(specifier, options);
+        },
+        diags);
+
+    if (!text.empty())
+        onText(toStringView(text));
 
     return result;
 }

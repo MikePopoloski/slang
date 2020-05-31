@@ -27,13 +27,21 @@ struct TypedConstantValue {
 
 // clang-format off
 #define INSTR(x) \
-    x(Invalid) \
-    x(SysCall)
+    x(invalid) \
+    x(syscall)
 ENUM(InstrKind, INSTR);
 #undef INSTR
 
 #define SYSCALL(x) \
-    x(PrintChar)
+    x(printChar) \
+    x(printInt) \
+    x(printFloat) \
+    x(printStringObj) \
+    x(printStringLit) \
+    x(printBytes) \
+    x(printClass) \
+    x(printCHandle) \
+
 ENUM(SysCallKind, SYSCALL);
 #undef SYSCALL
 // clang-format on
@@ -76,7 +84,7 @@ public:
     InstrKind kind;
 
     Instr(SysCallKind sysCall, const Type& returnType, span<const MIRValue> args) noexcept :
-        type(returnType), kind(InstrKind::SysCall), sysCallKind(sysCall), varOps(args) {}
+        type(returnType), kind(InstrKind::syscall), sysCallKind(sysCall), varOps(args) {}
 
     SysCallKind getSysCallKind() const { return sysCallKind; }
     span<const MIRValue> getOperands() const;

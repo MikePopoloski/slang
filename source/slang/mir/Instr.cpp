@@ -12,7 +12,7 @@ namespace slang::mir {
 
 span<const MIRValue> Instr::getOperands() const {
     switch (kind) {
-        case InstrKind::SysCall:
+        case InstrKind::syscall:
             return varOps;
         default:
             break;

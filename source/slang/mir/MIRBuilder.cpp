@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/mir/MIRBuilder.h"
 
+#include "slang/symbols/VariableSymbols.h"
+
 namespace slang::mir {
 
 MIRValue MIRBuilder::emitConst(const Type& type, const ConstantValue& val) {
@@ -21,6 +23,7 @@ MIRValue MIRBuilder::emitGlobal(const VariableSymbol& symbol) {
     if (val)
         return val;
 
+    ASSERT(symbol.lifetime == VariableLifetime::Static);
     val = MIRValue::global(globals.size());
     globals.push_back(&symbol);
     return val;

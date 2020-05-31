@@ -78,7 +78,17 @@ public:
         return proc.emitConst(*expr.type, expr.getIntValue());
     }
 
-    MIRValue visit(const NamedValueExpression&) { return {}; }
+    MIRValue visit(const NamedValueExpression& expr) {
+        // Either we find this in our locals map, or we assume it's a global
+        // declared somewhere else. emitGlobal will check first if we've
+        // already allocated a slot, so it's fine to just call it as-is.
+        // TODO: handle non-variable references
+        auto& var = expr.symbol.as<VariableSymbol>();
+        if (auto localSlot = proc.findLocalSlot(var))
+            return localSlot;
+        return proc.emitGlobal(var);
+    }
+
     MIRValue visit(const UnaryExpression&) { return {}; }
     MIRValue visit(const BinaryExpression&) { return {}; }
     MIRValue visit(const ConditionalExpression&) { return {}; }
@@ -139,7 +149,20 @@ void Procedure::emitCall(SysCallKind sysCall, MIRValue arg0) {
     emitCall(sysCall, { &arg0, 1 });
 }
 
+MIRValue Procedure::emitInt(bitwidth_t width, uint64_t value, bool isSigned) {
+    bitmask<IntegralFlags> flags = IntegralFlags::TwoState;
+    if (isSigned)
+        flags |= IntegralFlags::Signed;
+
+    return emitConst(getCompilation().getType(width, flags), SVInt(width, value, isSigned));
+}
+
+MIRValue Procedure::emitString(std::string&& str) {
+    return emitConst(getCompilation().getStringType(), ConstantValue(std::move(str)));
+}
+
 void Procedure::emitLocal(const VariableSymbol& symbol) {
+    ASSERT(symbol.lifetime == VariableLifetime::Automatic);
     auto val = MIRValue::local(locals.size());
     localMap.emplace(&symbol, val);
     locals.push_back(&symbol);
@@ -147,6 +170,17 @@ void Procedure::emitLocal(const VariableSymbol& symbol) {
     // TODO: initializer
     /*if (auto init = symbol.getInitializer()) {
     }*/
+}
+
+const VariableSymbol& Procedure::getLocalSymbol(MIRValue val) const {
+    ASSERT(val.getKind() == MIRValue::Local);
+    return *locals[val.asIndex()];
+}
+
+MIRValue Procedure::findLocalSlot(const VariableSymbol& symbol) const {
+    if (auto it = localMap.find(&symbol); it != localMap.end())
+        return it->second;
+    return MIRValue();
 }
 
 Compilation& Procedure::getCompilation() const {

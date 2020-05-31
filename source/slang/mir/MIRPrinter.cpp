@@ -11,29 +11,6 @@
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 
-namespace {
-
-using namespace slang::mir;
-
-// clang-format off
-string_view instrName(InstrKind kind) {
-    switch (kind) {
-        case InstrKind::Invalid: return "<invalid>"sv;
-        case InstrKind::SysCall: return "syscall"sv;
-    }
-    THROW_UNREACHABLE;
-}
-
-string_view syscallName(SysCallKind kind) {
-    switch (kind) {
-        case SysCallKind::PrintChar: return "$printChar"sv;
-    }
-    THROW_UNREACHABLE;
-}
-// clang-format on
-
-} // namespace
-
 namespace slang::mir {
 
 MIRPrinter& MIRPrinter::print(const Procedure& proc) {
@@ -53,12 +30,10 @@ MIRPrinter& MIRPrinter::print(const Procedure& proc) {
 }
 
 MIRPrinter& MIRPrinter::print(const Instr& instr, size_t index) {
-    buffer += fmt::format("%{} = {}", index, instrName(instr.kind));
+    buffer += fmt::format("%{} = {}", index, toString(instr.kind));
 
-    if (instr.kind == InstrKind::SysCall) {
-        buffer += ' ';
-        buffer += syscallName(instr.getSysCallKind());
-    }
+    if (instr.kind == InstrKind::syscall)
+        buffer += fmt::format(" ${}", toString(instr.getSysCallKind()));
 
     auto ops = instr.getOperands();
     if (!ops.empty()) {
@@ -87,10 +62,19 @@ MIRPrinter& MIRPrinter::print(const MIRValue& value) {
             buffer += fmt::format("L{}", value.asIndex());
             break;
         case MIRValue::Global:
-            buffer += fmt::format("G{}[{}]", builder.getGlobal(value).name);
+            buffer += fmt::format("G{}[{}]", value.asIndex(), builder.getGlobal(value).name);
             break;
         default:
             break;
+    }
+    return *this;
+}
+
+MIRPrinter& MIRPrinter::printGlobals() {
+    size_t index = 0;
+    for (auto& global : builder.getGlobals()) {
+        buffer += fmt::format("G{} {}: {}", index++, global->name, global->getType().toString());
+        buffer += '\n';
     }
     return *this;
 }

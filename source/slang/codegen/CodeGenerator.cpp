@@ -93,9 +93,9 @@ void CodeGenerator::generate(const Procedure& proc) {
 
 llvm::Value* CodeGenerator::emit(IRBuilder& ir, const Instr& instr) {
     switch (instr.kind) {
-        case InstrKind::SysCall:
+        case InstrKind::syscall:
             return emitSysCall(ir, instr);
-        case InstrKind::Invalid:
+        case InstrKind::invalid:
             return ir.CreateUnreachable();
     }
     THROW_UNREACHABLE;
@@ -135,7 +135,7 @@ llvm::Function* CodeGenerator::getSysFunc(SysCallKind kind) {
 
     llvm::Function* func = nullptr;
     switch (kind) {
-        case SysCallKind::PrintChar:
+        case SysCallKind::printChar:
             func = llvm::Function::Create(
                 llvm::FunctionType::get(void_t, { int8_t }, /* isVarArg */ false),
                 llvm::Function::ExternalLinkage, "printChar", *module);

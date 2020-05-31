@@ -32,6 +32,7 @@ public:
     MIRValue emitGlobal(const VariableSymbol& symbol);
 
     const VariableSymbol& getGlobal(MIRValue val) const;
+    span<const VariableSymbol* const> getGlobals() const { return globals; }
 
 private:
     TypedBumpAllocator<TypedConstantValue> constantAlloc;

@@ -33,11 +33,16 @@ public:
         return builder.emitConst(type, std::move(val));
     }
 
+    MIRValue emitInt(bitwidth_t width, uint64_t value, bool isSigned);
+    MIRValue emitString(std::string&& str);
+
     void emitLocal(const VariableSymbol& symbol);
     MIRValue emitGlobal(const VariableSymbol& symbol) { return builder.emitGlobal(symbol); }
 
     span<const Instr> getInstructions() const { return instructions; }
     span<const VariableSymbol* const> getLocals() const { return locals; }
+    const VariableSymbol& getLocalSymbol(MIRValue val) const;
+    MIRValue findLocalSlot(const VariableSymbol& symbol) const;
 
     Compilation& getCompilation() const;
 

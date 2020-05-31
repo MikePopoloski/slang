@@ -20,7 +20,10 @@ public:
     MIRPrinter& print(const Instr& instr, size_t index);
     MIRPrinter& print(const MIRValue& value);
 
-    std::string str() const { return buffer; }
+    MIRPrinter& printGlobals();
+
+    std::string& str() { return buffer; }
+    const std::string& str() const { return buffer; }
 
 private:
     const MIRBuilder& builder;
