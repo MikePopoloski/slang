@@ -11,7 +11,7 @@
 #include <variant>
 #include <vector>
 
-#include "slang/binding/ConstantValue.h"
+#include "slang/numeric/ConstantValue.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
 

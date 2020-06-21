@@ -10,7 +10,7 @@
 #include <stack>
 #include <vector>
 
-#include "slang/binding/ConstantValue.h"
+#include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
 

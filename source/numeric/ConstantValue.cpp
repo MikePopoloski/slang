@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/binding/ConstantValue.h"
+#include "slang/numeric/ConstantValue.h"
 
 #include "../text/FormatBuffer.h"
 #include <fmt/format.h>

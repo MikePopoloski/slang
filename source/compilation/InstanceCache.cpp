@@ -6,8 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/InstanceCache.h"
 
-#include "slang/binding/ConstantValue.h"
 #include "slang/compilation/Definition.h"
+#include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/Type.h"
 #include "slang/util/Hash.h"

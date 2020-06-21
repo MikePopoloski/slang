@@ -6,8 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/binding/ConstantValue.h"
 #include "slang/binding/Expression.h"
+#include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
 

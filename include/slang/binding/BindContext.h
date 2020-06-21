@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/binding/ConstantValue.h"
+#include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/Lookup.h"
 #include "slang/util/Util.h"
 

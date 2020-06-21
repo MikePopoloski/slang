@@ -48,6 +48,7 @@ add_library(slangcore
     diagnostics/Diagnostics.cpp
     diagnostics/TextDiagnosticClient.cpp
 
+    numeric/ConstantValue.cpp
     numeric/SVInt.cpp
     numeric/Time.cpp
 
@@ -112,7 +113,6 @@ target_link_libraries(slangparser INTERFACE slangcore)
 add_library(slangcompiler
     binding/AssignmentExpressions.cpp
     binding/BindContext.cpp
-    binding/ConstantValue.cpp
     binding/EvalContext.cpp
     binding/Expression.cpp
     binding/LiteralExpressions.cpp
