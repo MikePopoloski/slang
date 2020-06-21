@@ -28,10 +28,18 @@ add_custom_command(
     COMMENT "Generating diagnostics"
 )
 
+add_custom_command(
+    COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
+    DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
+    COMMENT "Generating syntax"
+)
+
+
 add_custom_target(gen_version
     ALL
     BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
     COMMAND ${CMAKE_COMMAND}
     -Dinfile="${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in"
     -Doutfile="${CMAKE_CURRENT_BINARY_DIR}/Version.cpp"
@@ -62,6 +70,9 @@ add_library(slangcore
     util/Hash.cpp
     util/OS.cpp
     util/String.cpp
+
+    # TODO: remove this
+    ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
 )
 slang_define_lib(slangcore)
 add_dependencies(slangcore gen_version)
@@ -75,13 +86,6 @@ find_package(Threads)
 target_link_libraries(slangcore PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
 #-------- Parsing / syntax library
-add_custom_command(
-    COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
-    DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
-    COMMENT "Generating syntax"
-)
-
 add_library(slangparser
     parsing/Lexer.cpp
     parsing/LexerFacts.cpp

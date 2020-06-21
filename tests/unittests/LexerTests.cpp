@@ -1,5 +1,5 @@
 #include "Test.h"
-#include "../source/slang/text/CharInfo.h"
+#include "../source/text/CharInfo.h"
 
 #include "slang/syntax/SyntaxPrinter.h"
 
