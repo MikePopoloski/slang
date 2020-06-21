@@ -28,18 +28,10 @@ add_custom_command(
     COMMENT "Generating diagnostics"
 )
 
-add_custom_command(
-    COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
-    DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
-    COMMENT "Generating syntax"
-)
-
-
 add_custom_target(gen_version
     ALL
     BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in
     COMMAND ${CMAKE_COMMAND}
     -Dinfile="${CMAKE_CURRENT_SOURCE_DIR}/util/Version.cpp.in"
     -Doutfile="${CMAKE_CURRENT_BINARY_DIR}/Version.cpp"
@@ -86,6 +78,13 @@ find_package(Threads)
 target_link_libraries(slangcore PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
 #-------- Parsing / syntax library
+add_custom_command(
+    COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir ${CMAKE_CURRENT_BINARY_DIR}
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h ${CMAKE_CURRENT_BINARY_DIR}/AllSyntax.cpp ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
+    DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
+    COMMENT "Generating syntax"
+)
+
 add_library(slangparser
     parsing/Lexer.cpp
     parsing/LexerFacts.cpp
@@ -108,6 +107,7 @@ add_library(slangparser
 )
 slang_define_lib(slangparser)
 add_dependencies(slangparser slangcore)
+target_link_libraries(slangparser INTERFACE slangcore)
 
 #-------- Compiler library
 add_library(slangcompiler
@@ -160,6 +160,7 @@ add_library(slangcompiler
 )
 slang_define_lib(slangcompiler)
 add_dependencies(slangcompiler slangcore)
+target_link_libraries(slangcompiler INTERFACE slangparser)
 
 #-------- MIR library
 add_library(slangmir
@@ -170,6 +171,7 @@ add_library(slangmir
 )
 slang_define_lib(slangmir)
 add_dependencies(slangmir slangcore)
+target_link_libraries(slangmir INTERFACE slangcompiler)
 
 #-------- Runtime library
 add_library(slangruntime
@@ -178,6 +180,7 @@ add_library(slangruntime
 )
 slang_define_lib(slangruntime)
 add_dependencies(slangruntime slangcore)
+target_link_libraries(slangruntime INTERFACE slangcore)
 
 #-------- Codegen library
 if(SLANG_INCLUDE_LLVM)
@@ -190,6 +193,7 @@ if(SLANG_INCLUDE_LLVM)
     )
     slang_define_lib(slangcodegen)
     add_dependencies(slangcodegen slangcore)
+    target_link_libraries(slangcodegen INTERFACE slangmir)
 
     find_package(LLVM REQUIRED CONFIG)
 
