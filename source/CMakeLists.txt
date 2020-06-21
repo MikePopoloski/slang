@@ -1,18 +1,18 @@
-SET(SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../scripts)
+SET(SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../scripts)
 
 function(slang_define_lib libname)
     target_compile_options(${libname} PRIVATE ${SLANG_WARN_FLAGS})
-    target_include_directories(${libname} PUBLIC ../../include/)
+    target_include_directories(${libname} PUBLIC ../include/)
     target_include_directories(${libname} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-    target_include_directories(${libname} SYSTEM PUBLIC ../../external/)
+    target_include_directories(${libname} SYSTEM PUBLIC ../external/)
     target_link_libraries(${libname} PUBLIC CONAN_PKG::fmt)
     install(TARGETS ${libname}
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib)
 endfunction()
 
-install(DIRECTORY ../../include/ DESTINATION include)
-install(DIRECTORY ../../external/ DESTINATION include)
+install(DIRECTORY ../include/ DESTINATION include)
+install(DIRECTORY ../external/ DESTINATION include)
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ DESTINATION include/slang/diagnostics)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/AllSyntax.h DESTINATION include/slang/syntax/)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h DESTINATION include/slang/syntax/)
@@ -22,7 +22,7 @@ add_custom_command(
     COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/diagnostic_gen.py
                 --outDir ${CMAKE_CURRENT_BINARY_DIR}
                 --srcDir ${CMAKE_CURRENT_SOURCE_DIR}
-                --incDir ${CMAKE_CURRENT_SOURCE_DIR}/../../include/slang
+                --incDir ${CMAKE_CURRENT_SOURCE_DIR}/../include/slang
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
     DEPENDS ${SCRIPTS_DIR}/diagnostic_gen.py ${SCRIPTS_DIR}/diagnostics.txt
     COMMENT "Generating diagnostics"
@@ -38,7 +38,7 @@ add_custom_target(gen_version
         -Dlocal_dir="${CMAKE_CURRENT_SOURCE_DIR}"
         -D_version_major=${SLANG_VERSION_MAJOR}
         -D_version_minor=${SLANG_VERSION_MINOR}
-    -P "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/gitversion.cmake"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/gitversion.cmake"
 )
 
 add_library(slangcore
@@ -64,7 +64,6 @@ add_library(slangcore
     util/String.cpp
 )
 slang_define_lib(slangcore)
-
 add_dependencies(slangcore gen_version)
 
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -104,6 +103,7 @@ add_library(slangparser
     syntax/SyntaxVisitor.cpp
 )
 slang_define_lib(slangparser)
+add_dependencies(slangparser slangcore)
 
 #-------- Compiler library
 add_library(slangcompiler
@@ -155,6 +155,7 @@ add_library(slangcompiler
     symbols/VariableSymbols.cpp
 )
 slang_define_lib(slangcompiler)
+add_dependencies(slangcompiler slangcore)
 
 #-------- MIR library
 add_library(slangmir
@@ -164,6 +165,7 @@ add_library(slangmir
     mir/Procedure.cpp
 )
 slang_define_lib(slangmir)
+add_dependencies(slangmir slangcore)
 
 #-------- Runtime library
 add_library(slangruntime
@@ -171,6 +173,7 @@ add_library(slangruntime
     runtime/Runtime.cpp
 )
 slang_define_lib(slangruntime)
+add_dependencies(slangruntime slangcore)
 
 #-------- Codegen library
 if(SLANG_INCLUDE_LLVM)
@@ -182,6 +185,7 @@ if(SLANG_INCLUDE_LLVM)
         codegen/SystemCallEmitter.cpp
     )
     slang_define_lib(slangcodegen)
+    add_dependencies(slangcodegen slangcore)
 
     find_package(LLVM REQUIRED CONFIG)
 
