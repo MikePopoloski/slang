@@ -9,14 +9,16 @@
 #include <flat_hash_map.hpp>
 #include <memory>
 #include <string>
+#include <typeindex>
+#include <typeinfo>
 
 #include "slang/diagnostics/Diagnostics.h"
 
 namespace slang {
 
+class DiagArgFormatter;
 class DiagnosticClient;
 class SourceManager;
-struct TypePrintingOptions;
 
 struct ReportedDiagnostic {
     const Diagnostic& originalDiagnostic;
@@ -100,12 +102,6 @@ public:
     /// other one takes precedence.
     void setFatalsAsErrors(bool set) { fatalsAsErrors = set; }
 
-    /// Gets the set of options currently being used to print type names in diagnostics.
-    TypePrintingOptions& typeOptions() { return *typePrintingOptions; }
-
-    /// Gets the set of options currently being used to print type names in diagnostics.
-    const TypePrintingOptions& typeOptions() const { return *typePrintingOptions; }
-
     /// Sets the severity for the given diagnostic. If this is a built-in diagnostic
     /// this will essentially override its default severity. Otherwise this can
     /// be used to define a new user-specified diagnostic.
@@ -148,6 +144,20 @@ public:
     /// Clears out all custom mappings for diagnostics that are set to the specific
     /// severity type.
     void clearMappings(DiagnosticSeverity severity);
+
+    /// Sets a custom formatter function for the given type. This is used to
+    /// provide formatting for diagnostic arguments of a custom type.
+    template<typename ForType>
+    void setFormatter(std::shared_ptr<DiagArgFormatter> formatter) {
+        formatters[std::type_index(typeid(ForType))] = std::move(formatter);
+    }
+
+    /// Sets a custom formatter for the given type that should apply by default to
+    /// all new DiagnosticEngine instances that get created.
+    template<typename ForType>
+    static void setDefaultFormatter(std::shared_ptr<DiagArgFormatter> formatter) {
+        defaultFormatters[std::type_index(typeid(ForType))] = std::move(formatter);
+    }
 
     /// Formats the given diagnostic using its arguments and the currently mapped
     /// message for its diagnostic code.
@@ -195,9 +205,6 @@ private:
     // The source manager used to resolve locations into file names.
     const SourceManager& sourceManager;
 
-    // Various options that control type printing in diagnostics.
-    std::unique_ptr<TypePrintingOptions> typePrintingOptions;
-
     // A global mapping from diagnostic to a configured severity it should have.
     flat_hash_map<DiagCode, DiagnosticSeverity> severityTable;
 
@@ -214,6 +221,15 @@ private:
 
     // A list of all registered clients that receive issued diagnostics.
     std::vector<std::shared_ptr<DiagnosticClient>> clients;
+
+    // A map from typeid to a formatter for that type. Used to register custom
+    // formatters for subsystem-specific types.
+    using FormatterMap = flat_hash_map<std::type_index, std::shared_ptr<DiagArgFormatter>>;
+    FormatterMap formatters;
+
+    // A set of default formatters that will be assigned to each new DiagnosticEngine instance
+    // that gets created. These can later be overridden on a per-instance basis.
+    static FormatterMap defaultFormatters;
 
     // Tracking for the number of errors and warnings we've issued.
     int numErrors = 0;

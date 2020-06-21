@@ -49,6 +49,10 @@ void TypePrinter::append(const Type& type) {
         printAKA(type);
 }
 
+void TypePrinter::clear() {
+    buffer->clear();
+}
+
 std::string TypePrinter::toString() const {
     return buffer->str();
 }
@@ -331,6 +335,29 @@ void TypePrinter::printAKA(const Type& type) {
         target->visit(*this, ""sv);
         buffer->append("')");
     }
+}
+
+TypeArgFormatter::TypeArgFormatter() {
+    printer.options.addSingleQuotes = true;
+    printer.options.elideScopeNames = true;
+    printer.options.printAKA = true;
+    printer.options.anonymousTypeStyle = TypePrintingOptions::FriendlyName;
+}
+
+void TypeArgFormatter::startMessage(const Diagnostic&) {
+    seenTypes.clear();
+
+    // TODO: build a list of used types so we can disambiguate if necessary
+}
+
+void TypeArgFormatter::format(FormatArgStore& argStore, const std::any& arg) {
+    const Type& type = *std::any_cast<const Type*>(arg);
+    bool unique = seenTypes.insert(&type).second;
+    printer.options.printAKA = unique;
+
+    printer.clear();
+    printer.append(type);
+    argStore.push_back(printer.toString());
 }
 
 } // namespace slang

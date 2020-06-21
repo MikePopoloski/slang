@@ -232,6 +232,8 @@ private:
                                        LookupLocation location, const Scope& parent);
 };
 
+Diagnostic& operator<<(Diagnostic& diag, const Type& arg);
+
 class SubroutineSymbol;
 struct NetTypeDeclarationSyntax;
 

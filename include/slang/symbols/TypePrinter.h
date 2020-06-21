@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/diagnostics/DiagArgFormatter.h"
 #include "slang/symbols/AllTypes.h"
 
 namespace slang {
@@ -18,18 +19,17 @@ struct TypePrintingOptions {
     bool printAKA = false;
 
     enum AnonymousTypeStyle { SystemName, FriendlyName } anonymousTypeStyle = SystemName;
-
-    span<const Type* const> disambiguateTypes;
 };
 
 class TypePrinter {
 public:
+    TypePrintingOptions options;
+
     TypePrinter();
     ~TypePrinter();
 
-    void setOptions(const TypePrintingOptions& options_) { options = options_; }
-
     void append(const Type& type);
+    void clear();
 
     std::string toString() const;
 
@@ -60,7 +60,20 @@ private:
     void printAKA(const Type& type);
 
     std::unique_ptr<FormatBuffer> buffer;
-    TypePrintingOptions options;
+};
+
+class TypeArgFormatter : public DiagArgFormatter {
+public:
+    TypeArgFormatter();
+
+    void setOptions(const TypePrintingOptions& options) { printer.options = options; }
+
+    void startMessage(const Diagnostic& diag) final;
+    void format(FormatArgStore& argStore, const std::any& arg) final;
+
+private:
+    TypePrinter printer;
+    flat_hash_set<const Type*> seenTypes;
 };
 
 } // namespace slang

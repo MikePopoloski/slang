@@ -14,6 +14,7 @@
 namespace slang {
 
 class Scope;
+class Type;
 
 namespace SFormat {
 

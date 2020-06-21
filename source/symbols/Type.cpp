@@ -599,6 +599,12 @@ const Type& Type::getPredefinedType(Compilation& compilation, SyntaxKind kind, b
     return compilation.getType(predef.bitWidth, flags);
 }
 
+Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {
+    ASSERT(!arg.isError());
+    diag.args.emplace_back(&arg);
+    return diag;
+}
+
 NetType::NetType(NetKind netKind, string_view name, const Type& dataType) :
     Symbol(SymbolKind::NetType, name, SourceLocation()), netKind(netKind), declaredType(*this),
     isResolved(true) {

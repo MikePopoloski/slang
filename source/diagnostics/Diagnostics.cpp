@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/Diagnostics.h"
 
-#include "slang/symbols/Type.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {
@@ -44,12 +43,6 @@ Diagnostic& Diagnostic::operator<<(const std::string& arg) {
 
 Diagnostic& Diagnostic::operator<<(string_view arg) {
     args.emplace_back(std::string(arg));
-    return *this;
-}
-
-Diagnostic& Diagnostic::operator<<(const Type& arg) {
-    ASSERT(!arg.isError());
-    args.emplace_back(&arg);
     return *this;
 }
 

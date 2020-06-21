@@ -122,6 +122,8 @@ def createsource(path, diags, groups):
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/AllDiags.h"
 
+#include <ostream>
+
 #include <flat_hash_map.hpp>
 
 namespace slang {

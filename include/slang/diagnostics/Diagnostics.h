@@ -6,7 +6,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <any>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "slang/binding/ConstantValue.h"
@@ -17,7 +19,6 @@ namespace slang {
 
 class SourceManager;
 class Symbol;
-class Type;
 
 enum class DiagSubsystem : uint16_t {
     Invalid,
@@ -73,7 +74,7 @@ string_view toString(DiagCode code);
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    using Arg = std::variant<std::string, int64_t, uint64_t, const Type*, ConstantValue, char>;
+    using Arg = std::variant<std::string, int64_t, uint64_t, char, ConstantValue, std::any>;
     std::vector<Arg> args;
     std::vector<SourceRange> ranges;
     std::vector<Diagnostic> notes;
@@ -103,7 +104,6 @@ public:
     Diagnostic& addNote(const Diagnostic& diag);
 
     /// Adds an argument to the diagnostic.
-    Diagnostic& operator<<(const Type& arg);
     Diagnostic& operator<<(const std::string& arg);
     Diagnostic& operator<<(string_view arg);
     Diagnostic& operator<<(SourceRange arg);

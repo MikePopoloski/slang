@@ -6,8 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/DiagnosticEngine.h"
 
-#include "FmtlibWrapper.h"
-
+#include "slang/diagnostics/DiagArgFormatter.h"
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/MetaDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
@@ -23,14 +22,10 @@ string_view getDefaultOptionName(DiagCode code);
 DiagCode findDiagFromOptionName(string_view name);
 const DiagGroup* findDefaultDiagGroup(string_view name);
 
-DiagnosticEngine::DiagnosticEngine(const SourceManager& sourceManager) :
-    sourceManager(sourceManager) {
+DiagnosticEngine::FormatterMap DiagnosticEngine::defaultFormatters;
 
-    typePrintingOptions = std::make_unique<TypePrintingOptions>();
-    typePrintingOptions->addSingleQuotes = true;
-    typePrintingOptions->elideScopeNames = true;
-    typePrintingOptions->printAKA = true;
-    typePrintingOptions->anonymousTypeStyle = TypePrintingOptions::FriendlyName;
+DiagnosticEngine::DiagnosticEngine(const SourceManager& sourceManager) :
+    sourceManager(sourceManager), formatters(defaultFormatters) {
 }
 
 DiagnosticEngine::~DiagnosticEngine() = default;
@@ -232,45 +227,40 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
     if (diag.args.empty())
         return std::string(getMessage(diag.code));
 
-    // For formatting types we want to know the full set of all types we'll be
-    // including in the message (to see if we need to disambiguate them) so keep
-    // track of them while building the arugment list.
-    SmallVectorSized<const Type*, 8> allTypes;
+    // Let each formatter have a look at the diagnostic before we begin.
+    for (auto& [key, formatter] : formatters)
+        formatter->startMessage(diag);
 
     // Dynamically build up the list of arguments to pass to the formatting routines.
-    using ctx = format::detail::FormatContext;
-    std::vector<fmt::basic_format_arg<ctx>> args;
+    fmt::dynamic_format_arg_store<fmt::format_context> args;
     for (auto& arg : diag.args) {
         // Unwrap the argument type (stored as a variant).
         std::visit(
             [&](auto&& t) {
                 // If the argument is a pointer, the fmtlib API needs it unwrapped into a reference.
                 using T = std::decay_t<decltype(t)>;
-                if constexpr (std::is_pointer_v<T>)
-                    args.push_back(fmt::internal::make_arg<ctx>(*t));
-                else
-                    args.push_back(fmt::internal::make_arg<ctx>(t));
-
-                if constexpr (std::is_same_v<T, const Type*>)
-                    allTypes.append(t);
+                if constexpr (std::is_same_v<std::any, T>) {
+                    if (auto it = formatters.find(t.type()); it != formatters.end())
+                        it->second->format(args, t);
+                    else
+                        throw std::runtime_error("No diagnostic formatter for type");
+                }
+                else if constexpr (std::is_same_v<ConstantValue, T>) {
+                    if (t.isReal())
+                        args.push_back(double(t.real()));
+                    else if (t.isShortReal())
+                        args.push_back(float(t.shortReal()));
+                    else
+                        args.push_back(t.toString());
+                }
+                else {
+                    args.push_back(t);
+                }
             },
             arg);
     }
 
-    using Range = fmt::buffer_range<char>;
-
-    auto&& formatStr = fmt::to_string_view(getMessage(diag.code));
-    fmt::memory_buffer out;
-    fmt::format_handler<format::detail::ArgFormatter<Range>, char, ctx> handler(
-        out, formatStr, fmt::basic_format_args(args.data(), (int)args.size()),
-        fmt::internal::locale_ref());
-
-    typePrintingOptions->disambiguateTypes = allTypes;
-    handler.context.typeOptions = typePrintingOptions.get();
-
-    fmt::internal::parse_format_string<false>(formatStr, handler);
-
-    return std::string(out.data(), out.size());
+    return fmt::vformat(getMessage(diag.code), args);
 }
 
 // Walks up a chain of macro argument expansions and collects their buffer IDs.

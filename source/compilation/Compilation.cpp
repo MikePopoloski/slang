@@ -13,6 +13,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
+#include "slang/symbols/TypePrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 
@@ -233,6 +234,9 @@ Compilation::Compilation(const Bag& options) :
     Builtins::registerQueryFuncs(*this);
     Builtins::registerStringMethods(*this);
     Builtins::registerSystemTasks(*this);
+
+    // Set a default handler for printing types for convenience.
+    DiagnosticEngine::setDefaultFormatter<const Type*>(std::make_unique<TypeArgFormatter>());
 }
 
 Compilation::~Compilation() = default;
