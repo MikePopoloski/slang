@@ -167,8 +167,8 @@ slang_define_lib(slangmir)
 
 #-------- Runtime library
 add_library(slangruntime
-    runtime/IO.cpp
-    runtime/SimRT.cpp
+    runtime/SimIO.cpp
+    runtime/Runtime.cpp
 )
 slang_define_lib(slangruntime)
 

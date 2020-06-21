@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// SimRT.h
+// Runtime.h
 // Simulation runtime exports
 //
 // File is under the MIT license; see LICENSE for details
@@ -12,7 +12,7 @@
 
 #define EXPORT extern "C"
 
-namespace simrt {
+namespace slang::runtime {
 
 using ExportList = std::vector<std::pair<std::string_view, uintptr_t>>;
 

@@ -1,17 +1,18 @@
 //------------------------------------------------------------------------------
-// print.cpp
-// Runtime print output routines
+// SimIO.cpp
+// Simulation IO routines
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "simrt/SimRT.h"
 #include <cstdio>
+
+#include "slang/runtime/Runtime.h"
 
 EXPORT void printChar(int8_t c) {
     printf("'%c'\n", c);
 }
 
-namespace simrt {
+namespace slang::runtime {
 
 void getIOExports(ExportList& results) {
 #define ADD(name) results.emplace_back(#name, reinterpret_cast<uintptr_t>(&(name)));
@@ -21,4 +22,4 @@ void getIOExports(ExportList& results) {
 #undef ADD
 }
 
-} // namespace simrt
+} // namespace slang::runtime

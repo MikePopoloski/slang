@@ -7,9 +7,10 @@
 //------------------------------------------------------------------------------
 #include "slang/codegen/JIT.h"
 
-#include "simrt/SimRT.h"
 #include <llvm/ExecutionEngine/JITSymbol.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
+
+#include "slang/runtime/Runtime.h"
 
 using namespace llvm::orc;
 
@@ -35,7 +36,7 @@ JIT::JIT() {
     jit = std::move(*result);
 
     // Register all exported simrt functions with the JIT.
-    auto exported = simrt::getExportedFunctions();
+    auto exported = slang::runtime::getExportedFunctions();
     for (auto& [name, ptr] : exported) {
         llvm::JITEvaluatedSymbol sym(static_cast<llvm::JITTargetAddress>(ptr), {});
         auto err = jit->defineAbsolute(llvm::StringRef(name.data(), name.length()), sym);
