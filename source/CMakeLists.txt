@@ -52,7 +52,6 @@ add_library(slangcore
     numeric/Time.cpp
 
     text/Json.cpp
-    text/SFormat.cpp
     text/SourceManager.cpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
@@ -139,6 +138,7 @@ add_library(slangcompiler
     compilation/InstanceCache.cpp
     compilation/ScriptSession.cpp
     compilation/SemanticModel.cpp
+    compilation/SFormat.cpp
 
     symbols/AllTypes.cpp
     symbols/ASTSerializer.cpp

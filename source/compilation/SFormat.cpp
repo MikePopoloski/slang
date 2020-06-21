@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/text/SFormat.h"
+#include "slang/compilation/SFormat.h"
 
 #include "../text/CharInfo.h"
 #include <ieee1800/vpi_user.h>
@@ -462,9 +462,8 @@ optional<std::string> format(string_view formatString, SourceLocation loc,
     return result;
 }
 
-bool splitFormatString(
-    string_view formatString, function_ref<void(string_view text)> onText,
-    function_ref<void(char specifier, const FormatOptions& options)> onArg) {
+bool splitFormatString(string_view formatString, function_ref<void(string_view text)> onText,
+                       function_ref<void(char specifier, const FormatOptions& options)> onArg) {
 
     Diagnostics diags;
     SmallVectorSized<char, 16> text;

@@ -16,6 +16,7 @@ namespace slang {
 class Scope;
 class Type;
 
+// TODO: clean this up, split into runtime and compile time pieces
 namespace SFormat {
 
 struct Arg {

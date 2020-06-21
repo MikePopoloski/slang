@@ -10,11 +10,11 @@
 #include "slang/binding/Expression.h"
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/compilation/SFormat.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/mir/Procedure.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/text/SFormat.h"
 
 namespace slang {
 
