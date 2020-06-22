@@ -140,6 +140,11 @@ add_library(slangcompiler
     compilation/SemanticModel.cpp
     compilation/SFormat.cpp
 
+    mir/Instr.cpp
+    mir/MIRBuilder.cpp
+    mir/MIRPrinter.cpp
+    mir/Procedure.cpp
+
     symbols/AllTypes.cpp
     symbols/ASTSerializer.cpp
     symbols/AttributeSymbol.cpp
@@ -162,17 +167,6 @@ slang_define_lib(slangcompiler)
 add_dependencies(slangcompiler slangcore)
 target_link_libraries(slangcompiler INTERFACE slangparser)
 
-#-------- MIR library
-add_library(slangmir
-    mir/Instr.cpp
-    mir/MIRBuilder.cpp
-    mir/MIRPrinter.cpp
-    mir/Procedure.cpp
-)
-slang_define_lib(slangmir)
-add_dependencies(slangmir slangcore)
-target_link_libraries(slangmir INTERFACE slangcompiler)
-
 #-------- Runtime library
 add_library(slangruntime
     runtime/SimIO.cpp
@@ -193,7 +187,7 @@ if(SLANG_INCLUDE_LLVM)
     )
     slang_define_lib(slangcodegen)
     add_dependencies(slangcodegen slangcore)
-    target_link_libraries(slangcodegen INTERFACE slangmir)
+    target_link_libraries(slangcodegen INTERFACE slangcompiler)
 
     find_package(LLVM REQUIRED CONFIG)
 

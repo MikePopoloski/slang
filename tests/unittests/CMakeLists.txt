@@ -22,7 +22,7 @@ add_executable(unittests
     VisitorTests.cpp
 )
 
-target_link_libraries(unittests PRIVATE slangmir CONAN_PKG::catch2)
+target_link_libraries(unittests PRIVATE slangcompiler CONAN_PKG::catch2)
 
 if(CI_BUILD)
     message("Running CI build")
