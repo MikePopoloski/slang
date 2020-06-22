@@ -13,7 +13,9 @@
 
 namespace slang {
 
+class Scope;
 struct BlockStatementSyntax;
+struct TimeUnitsDeclarationSyntax;
 
 #define LIFETIME(x) x(Automatic) x(Static)
 /// Specifies the storage lifetime of a variable.
@@ -92,7 +94,7 @@ ENUM(AssertionKind, ASK);
     x(Tran) \
     x(Rtran) \
     x(PullDown) \
-    x(PullUp) \
+    x(PullUp)
 // clang-format on
 
 ENUM(GateType, GATE)
@@ -119,6 +121,15 @@ public:
     static ArgumentDirection getArgDirection(PortDirection direction);
 
     static GateType getGateType(TokenKind kind);
+
+    static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
+                                  const TimeUnitsDeclarationSyntax& syntax,
+                                  optional<SourceRange>& unitsRange,
+                                  optional<SourceRange>& precisionRange, bool isFirst);
+
+    static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
+                                  optional<TimeScale> directiveTimeScale, bool hasBase,
+                                  bool hasPrecision);
 
 private:
     SemanticFacts() = default;

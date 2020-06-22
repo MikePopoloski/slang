@@ -109,8 +109,9 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
 
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::TimeUnitsDeclaration) {
-            timeScale.setFromSyntax(scope, member->as<TimeUnitsDeclarationSyntax>(), unitsRange,
-                                    precisionRange, first);
+            SemanticFacts::populateTimeScale(timeScale, scope,
+                                             member->as<TimeUnitsDeclarationSyntax>(), unitsRange,
+                                             precisionRange, first);
             continue;
         }
 
@@ -127,8 +128,8 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
         }
     }
 
-    timeScale.setDefault(scope, directiveTimeScale, unitsRange.has_value(),
-                         precisionRange.has_value());
+    SemanticFacts::populateTimeScale(timeScale, scope, directiveTimeScale, unitsRange.has_value(),
+                                     precisionRange.has_value());
 }
 
 void Definition::resolvePorts() const {

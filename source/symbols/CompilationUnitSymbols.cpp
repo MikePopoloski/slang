@@ -21,8 +21,8 @@ CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :
 
 void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {
     if (syntax.kind == SyntaxKind::TimeUnitsDeclaration) {
-        timeScale.setFromSyntax(*this, syntax.as<TimeUnitsDeclarationSyntax>(), unitsRange,
-                                precisionRange, !anyMembers);
+        SemanticFacts::populateTimeScale(timeScale, *this, syntax.as<TimeUnitsDeclarationSyntax>(),
+                                         unitsRange, precisionRange, !anyMembers);
     }
     else {
         anyMembers = true;
@@ -51,8 +51,9 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
 
     for (auto member : syntax.members) {
         if (member->kind == SyntaxKind::TimeUnitsDeclaration) {
-            result->timeScale.setFromSyntax(scope, member->as<TimeUnitsDeclarationSyntax>(),
-                                            unitsRange, precisionRange, first);
+            SemanticFacts::populateTimeScale(result->timeScale, scope,
+                                             member->as<TimeUnitsDeclarationSyntax>(), unitsRange,
+                                             precisionRange, first);
             continue;
         }
 
@@ -60,8 +61,8 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
         result->addMembers(*member);
     }
 
-    result->timeScale.setDefault(scope, directiveTimeScale, unitsRange.has_value(),
-                                 precisionRange.has_value());
+    SemanticFacts::populateTimeScale(result->timeScale, scope, directiveTimeScale,
+                                     unitsRange.has_value(), precisionRange.has_value());
     return *result;
 }
 

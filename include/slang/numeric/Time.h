@@ -11,9 +11,6 @@
 
 namespace slang {
 
-class Scope;
-struct TimeUnitsDeclarationSyntax;
-
 /// Scale unit for a time value.
 enum class TimeUnit : uint8_t {
     Seconds,
@@ -67,12 +64,6 @@ struct TimeScale {
     double apply(double value, TimeUnit unit) const;
 
     std::string toString() const;
-
-    void setFromSyntax(const Scope& scope, const TimeUnitsDeclarationSyntax& syntax,
-                       optional<SourceRange>& unitsRange, optional<SourceRange>& precisionRange,
-                       bool isFirst);
-    void setDefault(const Scope& scope, optional<TimeScale> directiveTimeScale, bool hasBase,
-                    bool hasPrecision);
 
     bool operator==(const TimeScale& rhs) const;
     bool operator!=(const TimeScale& rhs) const { return !(*this == rhs); }

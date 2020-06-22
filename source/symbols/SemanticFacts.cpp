@@ -6,6 +6,9 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/SemanticFacts.h"
 
+#include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/PreprocessorDiags.h"
+#include "slang/symbols/Scope.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {
@@ -126,6 +129,84 @@ StatementBlockKind SemanticFacts::getStatementBlockKind(const BlockStatementSynt
         default:
             return StatementBlockKind::JoinAll;
     }
+}
+
+void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
+                                      const TimeUnitsDeclarationSyntax& syntax,
+                                      optional<SourceRange>& unitsRange,
+                                      optional<SourceRange>& precisionRange, bool isFirst) {
+    bool errored = false;
+    auto handle = [&](Token token, optional<SourceRange>& prevRange, TimeScaleValue& value) {
+        // If there were syntax errors just bail out, diagnostics have already been issued.
+        if (token.isMissing() || token.kind != TokenKind::TimeLiteral)
+            return;
+
+        auto val = TimeScaleValue::fromLiteral(token.realValue(), token.numericFlags().unit());
+        if (!val) {
+            scope.addDiag(diag::InvalidTimeScaleSpecifier, token.location());
+            return;
+        }
+
+        if (prevRange) {
+            // If the value was previously set, we need to make sure this new
+            // value is exactly the same, otherwise we error.
+            if (value != *val && !errored) {
+                auto& diag = scope.addDiag(diag::MismatchedTimeScales, token.range());
+                diag.addNote(diag::NotePreviousDefinition, prevRange->start()) << *prevRange;
+                errored = true;
+            }
+        }
+        else {
+            // The first time scale declarations must be the first elements in the parent scope.
+            if (!isFirst && !errored) {
+                scope.addDiag(diag::TimeScaleFirstInScope, token.range());
+                errored = true;
+            }
+
+            value = *val;
+            prevRange = token.range();
+        }
+    };
+
+    if (syntax.keyword.kind == TokenKind::TimeUnitKeyword) {
+        handle(syntax.time, unitsRange, timeScale.base);
+        if (syntax.divider)
+            handle(syntax.divider->value, precisionRange, timeScale.precision);
+    }
+    else {
+        handle(syntax.time, precisionRange, timeScale.precision);
+    }
+
+    if (!errored && unitsRange && precisionRange && timeScale.precision > timeScale.base) {
+        auto& diag = scope.addDiag(diag::InvalidTimeScalePrecision, *precisionRange);
+        diag << *unitsRange;
+    }
+}
+
+void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
+                                      optional<TimeScale> directiveTimeScale, bool hasBase,
+                                      bool hasPrecision) {
+    // If no time unit was set, infer one based on the following rules:
+    // - If the scope is nested (inside another definition), inherit from that definition.
+    // - Otherwise use a `timescale directive if there is one.
+    // - Otherwise, look for a time unit in the compilation scope.
+    // - Finally use the compilation default.
+    if (hasBase && hasPrecision)
+        return;
+
+    optional<TimeScale> ts;
+    if (scope.asSymbol().kind == SymbolKind::CompilationUnit)
+        ts = directiveTimeScale;
+
+    if (!ts)
+        ts = scope.getTimeScale();
+
+    if (!hasBase)
+        timeScale.base = ts->base;
+    if (!hasPrecision)
+        timeScale.precision = ts->precision;
+
+    // TODO: error if inferred timescale is invalid (because precision > units)
 }
 
 } // namespace slang
