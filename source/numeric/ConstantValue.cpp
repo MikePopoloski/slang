@@ -20,7 +20,7 @@ const ConstantValue ConstantValue::Invalid;
 
 std::string ConstantValue::toString() const {
     return std::visit(
-        [](auto&& arg) noexcept {
+        [](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return "<unset>"s;

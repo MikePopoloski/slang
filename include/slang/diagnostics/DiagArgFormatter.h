@@ -17,6 +17,8 @@ using FormatArgStore = fmt::dynamic_format_arg_store<fmt::format_context>;
 
 class DiagArgFormatter {
 public:
+    virtual ~DiagArgFormatter() {}
+
     virtual void startMessage(const Diagnostic&) {}
     virtual void format(FormatArgStore& argStore, const std::any& arg) = 0;
 };
