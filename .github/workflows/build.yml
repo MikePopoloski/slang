@@ -54,8 +54,7 @@ jobs:
       run: |
         export PATH="$HOME/.local/bin:$PATH"
         sudo apt-get update
-        sudo apt-get upgrade
-        sudo apt-get install -y python3-setuptools gcc-10 clang++-10 clang-tidy-10
+        sudo apt-get install -y python3-setuptools g++-10 clang++-10 clang-tidy-10
         pip3 install wheel
         pip3 install conan
         conan user
