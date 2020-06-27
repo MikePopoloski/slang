@@ -44,16 +44,16 @@ jobs:
     strategy:
       matrix:
         include:
-          - compiler: clang++-9
-            flags: '-DCMAKE_BUILD_TYPE=Debug -DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address "-DCMAKE_CXX_CLANG_TIDY=/usr/lib/llvm-9/bin/clang-tidy;-quiet;-checks=-*,clang-analyzer-*,bugprone-*,performance-*,modernize-*,-modernize-use-auto,-modernize-use-trailing-return-type,-modernize-raw-string-literal,-modernize-use-nodiscard,-bugprone-suspicious-semicolon,-bugprone-branch-clone,-bugprone-sizeof-expression,-clang-analyzer-cplusplus.NewDelete*,-clang-analyzer-cplusplus.InnerPointer,misc-*,-misc-non-private-member-variables-in-classes,-modernize-avoid-c-arrays"'
-          - compiler: g++-9
+          - compiler: clang++-10
+            flags: '-DCMAKE_BUILD_TYPE=Debug -DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address "-DCMAKE_CXX_CLANG_TIDY=/usr/lib/llvm-10/bin/clang-tidy;-quiet;-checks=-*,clang-analyzer-*,bugprone-*,performance-*,modernize-*,-modernize-use-auto,-modernize-use-trailing-return-type,-modernize-raw-string-literal,-modernize-use-nodiscard,-bugprone-suspicious-semicolon,-bugprone-branch-clone,-bugprone-sizeof-expression,-clang-analyzer-cplusplus.NewDelete*,-clang-analyzer-cplusplus.InnerPointer,misc-*,-misc-non-private-member-variables-in-classes,-modernize-avoid-c-arrays"'
+          - compiler: g++-10
             flags: '-DCMAKE_BUILD_TYPE=Release'
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
         export PATH="$HOME/.local/bin:$PATH"
-        sudo apt-get install -y python3-setuptools clang-tidy-9
+        sudo apt-get install -y python3-setuptools gcc-10 clang++-10 clang-tidy-10
         pip3 install wheel
         pip3 install conan
         conan user
@@ -71,20 +71,20 @@ jobs:
         cd build
         ctest --output-on-failure
     - name: Upload code coverage
-      if: matrix.compiler == 'clang++-9'
+      if: matrix.compiler == 'clang++-10'
       run: |
         cd build
-        find . -name *.profraw -exec llvm-profdata-9 merge -o merged.profdata -sparse {} + ;
-        llvm-cov-9 show bin/unittests -instr-profile=merged.profdata > coverage.txt
+        find . -name *.profraw -exec llvm-profdata-10 merge -o merged.profdata -sparse {} + ;
+        llvm-cov-10 show bin/unittests -instr-profile=merged.profdata > coverage.txt
         bash <(curl -s https://codecov.io/bash) || echo 'Codecov failed to upload'
     - name: Archive binaries
-      if: matrix.compiler == 'g++-9'
+      if: matrix.compiler == 'g++-10'
       run: |
         strip --strip-unneeded $HOME/slang/bin/*
         strip --strip-unneeded $HOME/slang/lib/*
         tar -czvf slang-linux.tar.gz -C $HOME slang/
     - name: Upload artifacts
-      if: matrix.compiler == 'g++-9' && github.event_name == 'push'
+      if: matrix.compiler == 'g++-10' && github.event_name == 'push'
       uses: actions/upload-artifact@v2
       with:
         name: SLANG_ARTIFACT_LINUX
