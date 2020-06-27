@@ -53,6 +53,7 @@ add_library(slangcore
     numeric/Time.cpp
 
     text/Json.cpp
+    text/SFormat.cpp
     text/SourceManager.cpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp
@@ -123,6 +124,7 @@ add_library(slangcompiler
     compilation/builtins/ArrayMethods.cpp
     compilation/builtins/ConversionFuncs.cpp
     compilation/builtins/EnumMethods.cpp
+    compilation/builtins/FormatHelpers.cpp
     compilation/builtins/MathFuncs.cpp
     compilation/builtins/MiscSystemFuncs.cpp
     compilation/builtins/NonConstFuncs.cpp
@@ -135,7 +137,6 @@ add_library(slangcompiler
     compilation/InstanceCache.cpp
     compilation/ScriptSession.cpp
     compilation/SemanticModel.cpp
-    compilation/SFormat.cpp
 
     mir/Instr.cpp
     mir/MIRBuilder.cpp
@@ -183,7 +184,7 @@ if(SLANG_INCLUDE_LLVM)
         codegen/SystemCallEmitter.cpp
     )
     slang_define_lib(slangcodegen)
-    add_dependencies(slangcodegen slangcore)
+    add_dependencies(slangcodegen slangparser)
     target_link_libraries(slangcodegen INTERFACE slangcompiler)
 
     find_package(LLVM REQUIRED CONFIG)

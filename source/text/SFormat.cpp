@@ -4,14 +4,12 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/compilation/SFormat.h"
+#include "slang/text/SFormat.h"
 
 #include "../text/CharInfo.h"
 #include <ieee1800/vpi_user.h>
 
 #include "slang/diagnostics/SysFuncsDiags.h"
-#include "slang/symbols/AllTypes.h"
-#include "slang/symbols/VariableSymbols.h"
 #include "slang/util/String.h"
 
 namespace slang::SFormat {
@@ -25,28 +23,28 @@ static optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
     return result;
 }
 
-template<typename OnChar, typename OnArg>
-static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onChar, OnArg&& onArg,
-                              Diagnostics& diags) {
+bool parse(string_view str, function_ref<void(string_view)> onText,
+           function_ref<void(char, size_t, size_t, const FormatOptions&)> onArg,
+           function_ref<void(DiagCode, size_t, size_t, optional<char>)> onError) {
+    SmallVectorSized<char, 16> text;
     const char* ptr = str.data();
     const char* end = str.data() + str.length();
 
-    auto onError = [&](DiagCode code, const char* curr) -> decltype(auto) {
-        SourceLocation sl = loc + (curr - str.data());
-        return diags.add(code, SourceRange{ sl, sl + (ptr - curr) });
+    auto err = [&](DiagCode code, const char* curr, optional<char> spec = {}) {
+        onError(code, size_t(curr - str.data()), size_t(ptr - curr), spec);
     };
 
     while (ptr != end) {
         const char* start = ptr;
         if (char c = *ptr++; c != '%') {
-            onChar(c);
+            text.append(c);
             continue;
         }
 
         // %% collapses to a single %
         if (ptr != end && *ptr == '%') {
             ptr++;
-            onChar('%');
+            text.append('%');
             continue;
         }
 
@@ -68,7 +66,7 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
         if (ptr != end && isDecimalDigit(*ptr)) {
             options.width = parseUInt(ptr, end);
             if (!options.width) {
-                onError(diag::FormatSpecifierInvalidWidth, ptr);
+                err(diag::FormatSpecifierInvalidWidth, ptr);
                 return false;
             }
         }
@@ -78,7 +76,7 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
             if (ptr != end && isDecimalDigit(*ptr)) {
                 options.precision = parseUInt(ptr, end);
                 if (!options.precision) {
-                    onError(diag::FormatSpecifierInvalidWidth, ptr);
+                    err(diag::FormatSpecifierInvalidWidth, ptr);
                     return false;
                 }
             }
@@ -89,111 +87,78 @@ static bool parseFormatString(string_view str, SourceLocation loc, OnChar&& onCh
         }
 
         if (ptr == end) {
-            onError(diag::MissingFormatSpecifier, start);
+            err(diag::MissingFormatSpecifier, start);
             return false;
         }
 
-        Arg::Type type;
         bool widthAllowed = false;
         bool floatAllowed = false;
         char c = *ptr++;
-        switch (::tolower(c)) {
-            case 'l':
-            case 'm':
-                type = Arg::None;
-                break;
+        char spec = char(::tolower(c));
+        switch (spec) {
             case 'h':
             case 'x':
             case 'd':
             case 'o':
             case 'b':
                 widthAllowed = true;
-                type = Arg::Integral;
                 if (options.zeroPad) {
                     options.zeroPad = false;
                     if (!options.width)
                         options.width = 0;
                 }
                 break;
-            case 'u':
-            case 'z':
-                type = Arg::Raw;
-                break;
             case 'e':
             case 'f':
             case 'g':
                 widthAllowed = true;
                 floatAllowed = true;
-                type = Arg::Float;
-                break;
-            case 't':
-                widthAllowed = true;
-                type = Arg::Float;
-                break;
-            case 'c':
-                type = Arg::Character;
-                break;
-            case 'v':
-                type = Arg::Net;
-                break;
-            case 'p':
-                type = Arg::Pattern;
                 break;
             case 's':
+            case 't':
                 widthAllowed = true;
-                type = Arg::String;
+                break;
+            case 'c':
+            case 'u':
+            case 'z':
+            case 'v':
+            case 'p':
+            case 'l':
+            case 'm':
                 break;
             default:
-                onError(diag::UnknownFormatSpecifier, start) << c;
+                err(diag::UnknownFormatSpecifier, start, c);
                 return false;
         }
 
         if (options.width && !widthAllowed) {
-            onError(diag::FormatSpecifierWidthNotAllowed, start) << c;
+            err(diag::FormatSpecifierWidthNotAllowed, start, c);
             return false;
         }
 
         if ((options.precision || options.leftJustify) && !floatAllowed) {
-            onError(diag::FormatSpecifierNotFloat, start);
+            err(diag::FormatSpecifierNotFloat, start);
             return false;
         }
 
-        if (options.zeroPad && !widthAllowed && type != Arg::Pattern) {
-            onError(diag::FormatSpecifierWidthNotAllowed, start) << c;
+        // Pattern args allow the zero-pad specifier.
+        if (options.zeroPad && !widthAllowed && spec != 'p') {
+            err(diag::FormatSpecifierWidthNotAllowed, start, c);
             return false;
         }
 
-        SourceLocation sl = loc + (start - str.data());
-        SourceRange range{ sl, sl + (ptr - start) };
+        if (!text.empty()) {
+            onText(toStringView(text));
+            text.clear();
+        }
 
-        onArg(type, c, range, options);
+        onArg(c, size_t(start - str.data()), size_t(ptr - start), options);
     }
+
+    if (!text.empty())
+        onText(toStringView(text));
 
     return true;
-}
-
-static bool isValidForRaw(const Type& type) {
-    if (type.isIntegral())
-        return true;
-
-    if (type.isUnpackedUnion()) {
-        auto& uut = type.getCanonicalType().as<UnpackedUnionType>();
-        for (auto& member : uut.members()) {
-            if (!isValidForRaw(member.as<FieldSymbol>().getType()))
-                return false;
-        }
-        return true;
-    }
-    else if (type.isUnpackedStruct()) {
-        auto& ust = type.getCanonicalType().as<UnpackedStructType>();
-        for (auto& member : ust.members()) {
-            if (!isValidForRaw(member.as<FieldSymbol>().getType()))
-                return false;
-        }
-        return true;
-    }
-
-    return false;
 }
 
 static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
@@ -349,8 +314,8 @@ static void formatRaw4(std::string& result, const ConstantValue& value) {
     }
 }
 
-static void formatArg(std::string& result, const ConstantValue& arg, const Type&, char specifier,
-                      const FormatOptions& options, Diagnostics&) {
+void formatArg(std::string& result, const ConstantValue& arg, char specifier,
+               const FormatOptions& options) {
     switch (::tolower(specifier)) {
         case 'h':
         case 'x':
@@ -394,121 +359,6 @@ static void formatArg(std::string& result, const ConstantValue& arg, const Type&
         default:
             THROW_UNREACHABLE;
     }
-}
-
-static void formatNonArg(std::string& result, char specifier, const Scope& scope) {
-    specifier = char(::tolower(specifier));
-    if (specifier == 'l') {
-        // TODO: support libraries
-        return;
-    }
-
-    if (specifier == 'm') {
-        scope.asSymbol().getHierarchicalPath(result);
-        return;
-    }
-
-    THROW_UNREACHABLE;
-}
-
-bool parseArgs(string_view formatString, SourceLocation loc, SmallVector<Arg>& args,
-               Diagnostics& diags) {
-    auto onArg = [&](Arg::Type type, char c, SourceRange range, const FormatOptions&) {
-        if (type == Arg::None)
-            return;
-        args.append({ range, type, c });
-    };
-    return parseFormatString(
-        formatString, loc, [](char) {}, onArg, diags);
-}
-
-optional<std::string> format(string_view formatString, SourceLocation loc,
-                             span<const TypedValue> args, const Scope& scope, Diagnostics& diags) {
-    std::string result;
-    auto argIt = args.begin();
-
-    auto onChar = [&](char c) { result += c; };
-
-    auto onArg = [&](Arg::Type requiredType, char c, SourceRange specRange,
-                     const FormatOptions& options) {
-        if (requiredType == Arg::None) {
-            formatNonArg(result, c, scope);
-            return;
-        }
-
-        if (argIt == args.end()) {
-            // TODO: error for not enough args
-            return;
-        }
-
-        auto& [value, type, range] = *argIt;
-        if (!isArgTypeValid(requiredType, *type)) {
-            if (isRealToInt(requiredType, *type))
-                // TODO: actually print this still
-                diags.add(diag::FormatRealInt, range) << c << specRange;
-            else
-                diags.add(diag::FormatMismatchedType, range) << *type << c << specRange;
-        }
-        else {
-            formatArg(result, value, *type, c, options, diags);
-        }
-    };
-
-    if (!parseFormatString(formatString, loc, onChar, onArg, diags))
-        return std::nullopt;
-
-    // TODO: check for too many args
-
-    return result;
-}
-
-bool splitFormatString(string_view formatString, function_ref<void(string_view text)> onText,
-                       function_ref<void(char specifier, const FormatOptions& options)> onArg) {
-
-    Diagnostics diags;
-    SmallVectorSized<char, 16> text;
-
-    bool result = parseFormatString(
-        formatString, SourceLocation::NoLocation, [&](char c) { text.append(c); },
-        [&](Arg::Type, char specifier, SourceRange, const FormatOptions& options) {
-            if (!text.empty()) {
-                onText(toStringView(text));
-                text.clear();
-            }
-
-            onArg(specifier, options);
-        },
-        diags);
-
-    if (!text.empty())
-        onText(toStringView(text));
-
-    return result;
-}
-
-bool isArgTypeValid(Arg::Type required, const Type& type) {
-    switch (required) {
-        case Arg::Integral:
-        case Arg::Character:
-            return type.isIntegral();
-        case Arg::Float:
-            return type.isNumeric();
-        case Arg::Net:
-            // TODO: support this
-            return false;
-        case Arg::Raw:
-            return isValidForRaw(type);
-        case Arg::Pattern:
-            return true;
-        case Arg::String:
-            return type.canBeStringLike();
-        default:
-            return false;
-    }
-}
-
-bool isRealToInt(Arg::Type arg, const Type& type) {
-    return type.isFloating() && (arg == Arg::Integral || arg == Arg::Character);
 }
 
 } // namespace slang::SFormat

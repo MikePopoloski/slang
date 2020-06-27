@@ -4,9 +4,10 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
+#include "FormatHelpers.h"
+
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
-#include "slang/compilation/SFormat.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
 namespace slang::Builtins {
@@ -27,7 +28,7 @@ public:
             return comp.getErrorType();
         }
 
-        if (!checkFormatValues(context, args))
+        if (!checkSFormatArgs(context, args))
             return comp.getErrorType();
 
         return comp.getStringType();
@@ -38,21 +39,8 @@ public:
         if (!formatStr)
             return nullptr;
 
-        SmallVectorSized<SFormat::TypedValue, 8> values;
-        for (auto arg : args.subspan(1)) {
-            auto&& value = arg->eval(context);
-            if (!value)
-                return nullptr;
-
-            values.emplace(std::move(value), arg->type, arg->sourceRange);
-        }
-
-        Diagnostics diags;
-        auto result =
-            SFormat::format(formatStr.str(), args[0]->sourceRange.start(), values, scope, diags);
-        if (!diags.empty())
-            context.addDiags(diags);
-
+        auto result = formatArgs(formatStr.str(), args[0]->sourceRange.start(), scope, context,
+                                 args.subspan(1));
         if (!result)
             return nullptr;
 

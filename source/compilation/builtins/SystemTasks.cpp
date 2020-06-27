@@ -4,6 +4,8 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
+#include "FormatHelpers.h"
+
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
@@ -42,7 +44,7 @@ public:
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange) const final {
         auto& comp = context.getCompilation();
-        if (!checkFormatArgs(context, args))
+        if (!checkDisplayArgs(context, args))
             return comp.getErrorType();
 
         return comp.getVoidType();
@@ -100,7 +102,7 @@ public:
             if (!checkFinishNum(context, *args[0]))
                 return comp.getErrorType();
 
-            if (!checkFormatArgs(context, args.subspan(1)))
+            if (!checkDisplayArgs(context, args.subspan(1)))
                 return comp.getErrorType();
         }
 
@@ -123,7 +125,7 @@ public:
         if (!args[0]->type->isIntegral())
             return badArg(context, *args[0]);
 
-        if (!checkFormatArgs(context, args.subspan(1)))
+        if (!checkDisplayArgs(context, args.subspan(1)))
             return comp.getErrorType();
 
         return comp.getVoidType();
@@ -151,7 +153,7 @@ public:
             return comp.getErrorType();
         }
 
-        if (!checkFormatArgs(context, args.subspan(1)))
+        if (!checkDisplayArgs(context, args.subspan(1)))
             return comp.getErrorType();
 
         return comp.getVoidType();
@@ -179,7 +181,7 @@ public:
             }
         }
 
-        if (!checkFormatArgs(context, args.subspan(2)))
+        if (!checkDisplayArgs(context, args.subspan(2)))
             return comp.getErrorType();
 
         return comp.getVoidType();

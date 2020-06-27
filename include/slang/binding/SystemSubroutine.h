@@ -47,12 +47,6 @@ protected:
     static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
                               SourceRange callRange, size_t min, size_t max);
 
-    static bool checkFormatArgs(const BindContext& context, const Args& args);
-
-    static bool checkFormatValues(const BindContext& context, const Args& args);
-
-    static void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase defaultIntFmt);
-
     static BindContext makeNonConst(const BindContext& context);
 };
 
