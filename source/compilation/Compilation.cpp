@@ -11,6 +11,7 @@
 #include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/TypePrinter.h"
@@ -235,8 +236,13 @@ Compilation::Compilation(const Bag& options) :
     Builtins::registerStringMethods(*this);
     Builtins::registerSystemTasks(*this);
 
-    // Set a default handler for printing types for convenience.
+    // Set a default handler for printing types and symbol paths, for convenience.
     DiagnosticEngine::setDefaultFormatter<const Type*>(std::make_unique<TypeArgFormatter>());
+    TextDiagnosticClient::setDefaultSymbolPathCB([](const Symbol& sym) {
+        std::string str;
+        sym.getHierarchicalPath(str);
+        return str;
+    });
 }
 
 Compilation::~Compilation() = default;

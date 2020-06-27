@@ -8,8 +8,6 @@
 
 #include "../text/FormatBuffer.h"
 
-#include "slang/symbols/Symbol.h"
-#include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {
@@ -37,7 +35,10 @@ static fmt::terminal_color getSeverityColor(DiagnosticSeverity severity) {
     }
 }
 
-TextDiagnosticClient::TextDiagnosticClient() : buffer(std::make_unique<FormatBuffer>()) {
+TextDiagnosticClient::SymbolPathCB TextDiagnosticClient::defaultSymbolPathCB;
+
+TextDiagnosticClient::TextDiagnosticClient() :
+    buffer(std::make_unique<FormatBuffer>()), symbolPathCB(defaultSymbolPathCB) {
 }
 
 TextDiagnosticClient::~TextDiagnosticClient() = default;
@@ -61,15 +62,13 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
 
     // Print out the hierarchy where the diagnostic occurred, if we know it.
     auto& od = diag.originalDiagnostic;
-    if (od.coalesceCount && od.symbol) {
+    if (od.coalesceCount && od.symbol && symbolPathCB) {
         if (od.coalesceCount == 1)
             buffer->append("  in instance: "sv);
         else
             buffer->format("  in {} instances, e.g. ", *od.coalesceCount);
 
-        std::string str;
-        od.symbol->getHierarchicalPath(str);
-        buffer->append(fmt::emphasis::bold, str);
+        buffer->append(fmt::emphasis::bold, symbolPathCB(*od.symbol));
         buffer->append("\n"sv);
     }
 

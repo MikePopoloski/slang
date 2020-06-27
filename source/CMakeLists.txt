@@ -62,9 +62,6 @@ add_library(slangcore
     util/Hash.cpp
     util/OS.cpp
     util/String.cpp
-
-    # TODO: remove this
-    ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
 )
 slang_define_lib(slangcore)
 add_dependencies(slangcore gen_version)
@@ -164,7 +161,7 @@ add_library(slangcompiler
     symbols/VariableSymbols.cpp
 )
 slang_define_lib(slangcompiler)
-add_dependencies(slangcompiler slangcore)
+add_dependencies(slangcompiler slangparser)
 target_link_libraries(slangcompiler INTERFACE slangparser)
 
 #-------- Runtime library

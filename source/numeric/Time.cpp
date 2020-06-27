@@ -7,8 +7,8 @@
 #include "slang/numeric/Time.h"
 
 #include <fmt/format.h>
+#include <ostream>
 
-#include "slang/syntax/AllSyntax.h"
 #include "slang/util/String.h"
 #include "slang/util/StringTable.h"
 
