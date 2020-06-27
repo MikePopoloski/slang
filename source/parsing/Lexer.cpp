@@ -865,9 +865,9 @@ Token Lexer::lexNumericLiteral() {
     if (!digits.empty()) {
         static const double BitsPerDecimal = log2(10.0);
 
-        double bitsDbl = ceil(BitsPerDecimal * digits.size());
+        double bitsDbl = ceil(BitsPerDecimal * double(digits.size()));
         bitwidth_t bits;
-        if (bitsDbl <= SVInt::MAX_BITS)
+        if (bitsDbl <= double(SVInt::MAX_BITS))
             bits = (bitwidth_t)bitsDbl;
         else {
             addDiag(diag::LiteralSizeTooLarge, startOfNum) << (int)SVInt::MAX_BITS;
