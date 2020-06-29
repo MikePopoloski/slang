@@ -261,12 +261,15 @@ optional<std::string> formatArgs(string_view formatString, SourceLocation loc, c
 }
 
 static void lowerFormatArg(mir::Procedure& proc, const Expression& arg, char,
-                           const SFormat::FormatOptions&) {
+                           const SFormat::FormatOptions& options, LiteralBase defaultBase) {
     // TODO: actually use the options
     mir::MIRValue argVal = proc.emitExpr(arg);
     const Type& type = arg.type->getCanonicalType();
     if (type.isIntegral()) {
-        proc.emitCall(mir::SysCallKind::printInt, argVal);
+        auto args = { argVal, proc.emitInt(8, uint64_t(defaultBase), false),
+                      proc.emitInt(32, options.width.value_or(0), false),
+                      proc.emitInt(1, options.width.has_value(), false) };
+        proc.emitCall(mir::SysCallKind::printInt, args);
         return;
     }
 
@@ -285,7 +288,7 @@ static void lowerFormatArg(mir::Procedure& proc, const Expression& arg, char,
     }
 }
 
-void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase) {
+void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase defaultBase) {
     auto argIt = args.begin();
     while (argIt != args.end()) {
         auto arg = *argIt++;
@@ -315,7 +318,7 @@ void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase) {
                 [&](char specifier, size_t, size_t, const SFormat::FormatOptions& options) {
                     if (argIt != args.end()) {
                         auto currentArg = *argIt++;
-                        lowerFormatArg(proc, *currentArg, specifier, options);
+                        lowerFormatArg(proc, *currentArg, specifier, options, defaultBase);
                     }
                 },
                 [](DiagCode, size_t, size_t, optional<char>) {});
@@ -326,7 +329,7 @@ void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase) {
         else {
             // Otherwise, print the value with default options.
             // TODO: set correct specifier
-            lowerFormatArg(proc, *arg, ' ', {});
+            lowerFormatArg(proc, *arg, ' ', {}, defaultBase);
         }
     }
 }

@@ -179,6 +179,7 @@ if(SLANG_INCLUDE_LLVM)
     add_library(slangcodegen
         codegen/CodeGenerator.cpp
         codegen/ExpressionEmitter.cpp
+        codegen/FunctionDef.cpp
         codegen/JIT.cpp
         codegen/StatementEmitter.cpp
         codegen/SystemCallEmitter.cpp

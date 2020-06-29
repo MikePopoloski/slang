@@ -161,8 +161,8 @@ bool parse(string_view str, function_ref<void(string_view)> onText,
     return true;
 }
 
-static void formatInt(std::string& result, const SVInt& value, LiteralBase base,
-                      const FormatOptions& options) {
+void formatInt(std::string& result, const SVInt& value, LiteralBase base,
+               const FormatOptions& options) {
     std::string str;
     if (base != LiteralBase::Decimal && value.isSigned()) {
         // Non-decimal bases don't print as signed ever.

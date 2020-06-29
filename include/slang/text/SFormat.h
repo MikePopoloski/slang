@@ -28,6 +28,9 @@ bool parse(
         onArg,
     function_ref<void(DiagCode code, size_t offset, size_t len, optional<char> specifier)> onError);
 
+void formatInt(std::string& result, const SVInt& value, LiteralBase base,
+               const FormatOptions& options);
+
 void formatArg(std::string& result, const ConstantValue& arg, char specifier,
                const FormatOptions& options);
 

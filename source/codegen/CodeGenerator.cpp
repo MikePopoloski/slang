@@ -72,6 +72,11 @@ CodeGenerator::CodeGenerator(Compilation& compilation) : compilation(compilation
     // Create the first basic block that will run at the start of simulation
     // to initialize all static variables.
     globalInitBlock = llvm::BasicBlock::Create(*ctx, "", mainFunc);
+
+    auto genericIntType =
+        llvm::StructType::get(llvm::Type::getInt64Ty(*ctx), llvm::Type::getInt32Ty(*ctx),
+                              llvm::ArrayType::get(llvm::Type::getInt8Ty(*ctx), 4));
+    genericIntPtrType = llvm::PointerType::getUnqual(genericIntType);
 }
 
 CodeGenerator::~CodeGenerator() = default;
@@ -117,34 +122,48 @@ llvm::Value* CodeGenerator::emit(IRBuilder&, const MIRValue& val) {
     THROW_UNREACHABLE;
 }
 
-llvm::Value* CodeGenerator::emitSysCall(IRBuilder& ir, const Instr& instr) {
-    SmallVectorSized<llvm::Value*, 8> args;
-    for (auto& op : instr.getOperands())
-        args.append(emit(ir, op));
-
-    return ir.CreateCall(getSysFunc(instr.getSysCallKind()),
-                         llvm::makeArrayRef(args.data(), args.size()));
-}
-
-llvm::Function* CodeGenerator::getSysFunc(SysCallKind kind) {
-    if (auto it = sysFunctions.find(kind); it != sysFunctions.end())
-        return it->second;
-
-    auto void_t = llvm::Type::getVoidTy(*ctx);
-    auto int8_t = llvm::Type::getInt8Ty(*ctx);
-
-    llvm::Function* func = nullptr;
-    switch (kind) {
-        case SysCallKind::printChar:
-            func = llvm::Function::Create(
-                llvm::FunctionType::get(void_t, { int8_t }, /* isVarArg */ false),
-                llvm::Function::ExternalLinkage, "printChar", *module);
+const Type& CodeGenerator::getTypeOf(MIRValue val) const {
+    switch (val.getKind()) {
+        case MIRValue::Constant:
+            return val.asConstant().type;
+        case MIRValue::InstrSlot:
+        case MIRValue::Global:
+        case MIRValue::Local:
+        case MIRValue::Empty:
+            // TODO:
             break;
     }
+    THROW_UNREACHABLE;
+}
 
-    ASSERT(func);
-    sysFunctions.emplace(kind, func);
-    return func;
+llvm::Value* CodeGenerator::emitSysCall(IRBuilder& ir, const Instr& instr) {
+    auto kind = instr.getSysCallKind();
+    auto it = sysFunctions.find(kind);
+    if (it == sysFunctions.end())
+        it = sysFunctions.emplace(kind, FunctionDef::getSystemFunc(*this, kind)).first;
+
+    auto params = it->second.parameters();
+    auto ops = instr.getOperands();
+    ASSERT(params.size() == ops.size());
+
+    SmallVectorSized<llvm::Value*, 8> args;
+    auto paramIt = params.begin();
+    for (auto& op : ops) {
+        auto val = emit(ir, op);
+
+        // Special handling is needed for generic integers to set up the metadata struct.
+        if (paramIt->nativeType == genericIntPtrType)
+            val = emitGenericInt(val, getTypeOf(op));
+
+        args.append(val);
+    }
+
+    return ir.CreateCall(it->second.getNative(), llvm::makeArrayRef(args.data(), args.size()));
+}
+
+llvm::Value* CodeGenerator::emitGenericInt(llvm::Value* val, const Type&) {
+    // TODO: implement this
+    return val;
 }
 
 GeneratedCode CodeGenerator::finish() {

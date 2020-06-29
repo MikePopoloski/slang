@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "slang/codegen/FunctionDef.h"
 #include "slang/util/Util.h"
 
 namespace llvm {
@@ -51,7 +52,6 @@ namespace mir {
 class Instr;
 class MIRValue;
 class Procedure;
-enum class SysCallKind;
 
 } // namespace mir
 
@@ -74,7 +74,7 @@ private:
     std::unique_ptr<llvm::Module> module;
 };
 
-class CodeGenerator {
+class CodeGenerator : public BumpAllocator {
 public:
     CodeGenerator(Compilation& compilation);
     ~CodeGenerator();
@@ -93,17 +93,22 @@ public:
     llvm::Function* genSubroutine(const SubroutineSymbol& subroutine);
     llvm::Function* genSubroutine(const SystemSubroutine& subroutine);
 
+    llvm::LLVMContext& getContext() const { return *ctx; }
+    llvm::Module& getModule() const { return *module; }
+    llvm::Type* getGenericIntPtrType() const { return genericIntPtrType; }
+
 private:
     using IRBuilder = llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>;
 
     llvm::Value* emit(IRBuilder& ir, const mir::Instr& instr);
     llvm::Value* emit(IRBuilder& ir, const mir::MIRValue& val);
     llvm::Value* emitSysCall(IRBuilder& ir, const mir::Instr& instr);
-
-    llvm::Function* getSysFunc(mir::SysCallKind kind);
+    llvm::Value* emitGenericInt(llvm::Value* val, const Type& type);
 
     void genGlobal(const VariableSymbol& variable);
     void genBlock(const ProceduralBlockSymbol& variable);
+
+    const Type& getTypeOf(mir::MIRValue val) const;
 
     std::unique_ptr<llvm::LLVMContext> ctx;
     std::unique_ptr<llvm::Module> module;
@@ -111,10 +116,11 @@ private:
     flat_hash_map<const Symbol*, llvm::Value*> globalMap;
     flat_hash_map<const SubroutineSymbol*, llvm::Function*> userSubroutineMap;
     flat_hash_map<const SystemSubroutine*, llvm::Function*> sysSubroutineMap;
-    flat_hash_map<mir::SysCallKind, llvm::Function*> sysFunctions;
+    flat_hash_map<mir::SysCallKind, FunctionDef> sysFunctions;
     llvm::BasicBlock* globalInitBlock;
     std::vector<llvm::BasicBlock*> initialBlocks;
     llvm::Function* mainFunc;
+    llvm::Type* genericIntPtrType;
     Compilation& compilation;
     CodegenOptions options;
 };
