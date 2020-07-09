@@ -6,7 +6,7 @@
 TEST_CASE("JIT test") {
     Compilation compilation = compile(R"(
 module m;
-    initial $display(,);
+    initial $display(3,);
 endmodule
 )");
 

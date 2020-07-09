@@ -39,18 +39,24 @@ llvm::Function* CodeGenFunction::getSysFunc(mir::SysCallKind kind) const {
 }
 
 llvm::Value* CodeGenFunction::emitSysCall(SysCallKind kind, span<const mir::MIRValue> operands) {
+    auto func = codegen.getOrCreateSystemFunction(kind, [this, kind] { return getSysFunc(kind); });
+    auto argIt = func->arg_begin();
+
     SmallVectorSized<llvm::Value*, 8> args;
     for (auto& op : operands) {
+        // Emit the argument.
         auto val = emit(op);
 
-        // TODO: Special handling is needed for generic integers to set up the metadata struct.
-        /*if (paramIt->nativeType == genericIntPtrType)
-            val = emitGenericInt(val, getTypeOf(op));*/
+        // If the argument should be boxed, do that now.
+        ASSERT(argIt != func->arg_end());
+        auto type = argIt->getType();
+        if (type->isPointerTy() && type->getPointerElementType() == types.BoxedIntType)
+            val = boxInt(val, getTypeOf(op)).getPointer();
 
         args.append(val);
+        argIt++;
     }
 
-    auto func = codegen.getOrCreateSystemFunction(kind, [this, kind] { return getSysFunc(kind); });
     return builder.CreateCall(func, llvm::makeArrayRef(args.data(), args.size()));
 }
 

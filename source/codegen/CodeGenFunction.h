@@ -25,7 +25,7 @@ class CodeGenFunction {
 public:
     CodeGenFunction(CodeGenerator& codegen, const mir::Procedure& proc);
 
-    llvm::Function* getFunction() { return generatedFunc; }
+    llvm::Function* finalize();
 
     llvm::Value* emit(const mir::Instr& instr);
     llvm::Value* emit(mir::MIRValue val);
@@ -38,11 +38,17 @@ private:
     const Type& getTypeOf(mir::MIRValue val) const;
     llvm::Function* getSysFunc(mir::SysCallKind kind) const;
 
+    Address createTempAlloca(llvm::Type* type, llvm::Align align);
+    Address boxInt(llvm::Value* value, const Type& type);
+
     CodeGenerator& codegen;
     CodeGenTypes& types;
     CGBuilder builder;
     llvm::LLVMContext& ctx;
     llvm::Function* generatedFunc;
+
+    // This is an instruction in the entry block before which we prefer to insert allocas.
+    llvm::AssertingVH<llvm::Instruction> allocaInsertionPoint;
 };
 
 } // namespace slang

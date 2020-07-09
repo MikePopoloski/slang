@@ -64,7 +64,7 @@ CodeGenerator::~CodeGenerator() = default;
 void CodeGenerator::emit(const mir::Procedure& proc) {
     CodeGenFunction cgf(*this, proc);
     llvm::IRBuilder<> caller(globalInitBlock);
-    caller.CreateCall(cgf.getFunction(), {});
+    caller.CreateCall(cgf.finalize(), {});
 }
 
 GeneratedCode CodeGenerator::finish() {
