@@ -17,7 +17,7 @@ endmodule
     Procedure proc(builder, block);
 
     CodeGenerator codegen(compilation);
-    codegen.generate(proc);
+    codegen.emit(proc);
 
     JIT jit;
     jit.addCode(codegen.finish());

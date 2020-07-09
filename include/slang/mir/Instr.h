@@ -76,7 +76,6 @@ public:
 private:
     uintptr_t val;
 };
-static_assert(sizeof(MIRValue) == 8);
 
 class Instr {
 public:
@@ -97,8 +96,6 @@ private:
         span<const MIRValue> varOps;
     };
 };
-static_assert(sizeof(span<const MIRValue>) == 16);
-static_assert(sizeof(Instr) == 32);
 
 class BasicBlock {
 public:

@@ -177,12 +177,11 @@ target_link_libraries(slangruntime INTERFACE slangcore)
 #-------- Codegen library
 if(SLANG_INCLUDE_LLVM)
     add_library(slangcodegen
+        codegen/CGSysCall.cpp
         codegen/CodeGenerator.cpp
-        codegen/ExpressionEmitter.cpp
-        codegen/FunctionDef.cpp
+        codegen/CodeGenFunction.cpp
+        codegen/CodeGenTypes.cpp
         codegen/JIT.cpp
-        codegen/StatementEmitter.cpp
-        codegen/SystemCallEmitter.cpp
     )
     slang_define_lib(slangcodegen)
     add_dependencies(slangcodegen slangparser)
