@@ -163,15 +163,15 @@ bool parse(string_view str, function_ref<void(string_view)> onText,
 
 void formatInt(std::string& result, const SVInt& value, LiteralBase base,
                const FormatOptions& options) {
-    std::string str;
+    SmallVectorSized<char, 32> buffer;
     if (base != LiteralBase::Decimal && value.isSigned()) {
         // Non-decimal bases don't print as signed ever.
         SVInt copy = value;
         copy.setSigned(false);
-        str = copy.toString(base, /* includeBase */ false);
+        copy.writeTo(buffer, base, /* includeBase */ false);
     }
     else {
-        str = value.toString(base, /* includeBase */ false);
+        value.writeTo(buffer, base, /* includeBase */ false);
     }
 
     // If no width is specified we need to calculate it ourselves based on the bitwidth
@@ -200,15 +200,15 @@ void formatInt(std::string& result, const SVInt& value, LiteralBase base,
         }
     }
 
-    if (str.size() < width) {
+    if (buffer.size() < width) {
         char pad = '0';
         if (base == LiteralBase::Decimal)
             pad = ' ';
 
-        result.append(width - str.size(), pad);
+        result.append(width - buffer.size(), pad);
     }
 
-    result.append(str);
+    result.append(buffer.begin(), buffer.end());
 }
 
 static void formatFloat(std::string& result, double value, char specifier,
