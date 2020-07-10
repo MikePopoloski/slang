@@ -24,7 +24,7 @@ CodeGenTypes::CodeGenTypes(CodeGenerator& codegen) : codegen(codegen) {
 
     // All boxed integers use this type. It needs to pass across FFI calls,
     // so there should probably be more ABI logic here.
-    BoxedIntType = llvm::StructType::get(Int64Type, Int32Type, llvm::ArrayType::get(Int8Type, 4));
+    BoxedIntType = llvm::StructType::get(Int64Type, Int32Type, Int8Type, Int8Type);
 }
 
 llvm::Type* CodeGenTypes::convertType(const Type& type) {

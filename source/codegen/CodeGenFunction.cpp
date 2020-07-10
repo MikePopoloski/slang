@@ -130,13 +130,15 @@ Address CodeGenFunction::boxInt(llvm::Value* value, const Type& type) {
 
     builder.CreateStore(value, builder.CreateStructGEP(types.BoxedIntType, addr, 0));
 
-    // This matches the packing of flags in SVInt.
-    uint32_t sizeAndFlags = bits;
-    if (isSigned)
-        sizeAndFlags |= (1u << SVInt::BITWIDTH_BITS);
-
-    builder.CreateStore(llvm::ConstantInt::get(types.Int32Type, sizeAndFlags),
+    builder.CreateStore(llvm::ConstantInt::get(types.Int32Type, bits),
                         builder.CreateStructGEP(types.BoxedIntType, addr, 1));
+
+    builder.CreateStore(llvm::ConstantInt::get(types.Int8Type, isSigned),
+                        builder.CreateStructGEP(types.BoxedIntType, addr, 2));
+
+    // TODO: handle unknowns
+    builder.CreateStore(llvm::ConstantInt::get(types.Int8Type, 0),
+                        builder.CreateStructGEP(types.BoxedIntType, addr, 3));
 
     return addr;
 }
