@@ -1,6 +1,6 @@
 [requires]
-catch2/2.12.1
-fmt/6.2.1
+catch2/2.12.4
+fmt/7.0.1
 
 [generators]
 cmake

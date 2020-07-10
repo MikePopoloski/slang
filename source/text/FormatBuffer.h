@@ -33,9 +33,9 @@ public:
                            std::forward<Args>(args)...);
         }
         else {
-            fmt::internal::vformat_to(
-                *static_cast<fmt::memory_buffer*>(this), style, fmt::to_string_view(format),
-                { fmt::internal::make_args_checked<Args...>(format, args...) });
+            fmt::detail::vformat_to(*static_cast<fmt::memory_buffer*>(this), style,
+                                    fmt::to_string_view(format),
+                                    { fmt::detail::make_args_checked<Args...>(format, args...) });
         }
     }
 
