@@ -96,6 +96,22 @@ llvm::Function* CodeGenerator::getOrCreateSystemFunction(mir::SysCallKind kind,
     return it->second;
 }
 
+llvm::GlobalVariable* CodeGenerator::getOrCreateStringConstant(const std::string& str) {
+    auto it = stringConstants.find(str);
+    if (it == stringConstants.end()) {
+        // TODO: alignment
+        auto cda = llvm::ConstantDataArray::getString(*ctx, str, /* AddNull */ false);
+        auto gv = new llvm::GlobalVariable(*module, cda->getType(), /* isConstant */ true,
+                                           llvm::GlobalValue::PrivateLinkage, cda);
+        gv->setAlignment(llvm::Align(llvm::Align::Constant<1>()));
+        gv->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+        gv->setDSOLocal(true);
+
+        it = stringConstants.emplace(str, gv).first;
+    }
+    return it->second;
+}
+
 // TODO:
 // void CodeGenerator::genGlobal(const VariableSymbol& variable) {
 //    ASSERT(variable.lifetime == VariableLifetime::Static);

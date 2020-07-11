@@ -10,6 +10,9 @@
 
 namespace llvm {
 
+class IntegerType;
+class PointerType;
+class StructType;
 class Type;
 
 } // namespace llvm
@@ -25,12 +28,15 @@ public:
 
     llvm::Type* convertType(const Type& type);
 
-    llvm::Type* VoidType;
-    llvm::Type* BoolType;
-    llvm::Type* Int8Type;
-    llvm::Type* Int32Type;
-    llvm::Type* Int64Type;
-    llvm::Type* BoxedIntType;
+    llvm::Type* Void;
+    llvm::IntegerType* Int1;
+    llvm::IntegerType* Int8;
+    llvm::IntegerType* Int32;
+    llvm::IntegerType* Int64;
+    llvm::IntegerType* Size;
+    llvm::PointerType* Int8Ptr;
+    llvm::StructType* StringObj;
+    llvm::StructType* BoxedInt;
 
 private:
     CodeGenerator& codegen;

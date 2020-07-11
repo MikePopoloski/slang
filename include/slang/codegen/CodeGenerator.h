@@ -19,6 +19,7 @@ namespace llvm {
 
 class BasicBlock;
 class Function;
+class GlobalVariable;
 class LLVMContext;
 class Module;
 
@@ -72,11 +73,14 @@ public:
     llvm::Function* getOrCreateSystemFunction(mir::SysCallKind kind,
                                               function_ref<llvm::Function*()> factory);
 
+    llvm::GlobalVariable* getOrCreateStringConstant(const std::string& str);
+
 private:
     std::unique_ptr<llvm::LLVMContext> ctx;
     std::unique_ptr<llvm::Module> module;
     std::unique_ptr<CodeGenTypes> types;
     flat_hash_map<mir::SysCallKind, llvm::Function*> sysFunctions;
+    flat_hash_map<std::string, llvm::GlobalVariable*> stringConstants;
     const Compilation& compilation;
     CodegenOptions options;
     llvm::BasicBlock* globalInitBlock;

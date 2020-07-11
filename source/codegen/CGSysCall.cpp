@@ -13,6 +13,7 @@ namespace slang {
 
 using namespace mir;
 
+// Simple wrapper to make getting function types more compact.
 template<typename TRet, typename... TParam>
 llvm::FunctionType* getFuncType(TRet&& ret, TParam&&... params) {
     return llvm::FunctionType::get(std::forward<TRet>(ret), { std::forward<TParam>(params)... },
@@ -20,14 +21,18 @@ llvm::FunctionType* getFuncType(TRet&& ret, TParam&&... params) {
 }
 
 llvm::Function* CodeGenFunction::getSysFunc(mir::SysCallKind kind) const {
+    auto ptr = [](auto type) { return llvm::PointerType::getUnqual(type); };
+
     llvm::FunctionType* ft;
     switch (kind) {
-        case SysCallKind::printChar:
-            ft = getFuncType(types.VoidType, types.Int8Type);
+        case SysCallKind::flush:
+            ft = getFuncType(types.Void, types.Int1);
+            break;
+        case SysCallKind::printStr:
+            ft = getFuncType(types.Void, ptr(types.Int8), types.Size);
             break;
         case SysCallKind::printInt:
-            ft = getFuncType(types.VoidType, llvm::PointerType::getUnqual(types.BoxedIntType),
-                             types.Int8Type, types.Int32Type, types.BoolType);
+            ft = getFuncType(types.Void, ptr(types.BoxedInt), types.Int8, types.Int32, types.Int1);
             break;
         default:
             THROW_UNREACHABLE;
@@ -47,14 +52,28 @@ llvm::Value* CodeGenFunction::emitSysCall(SysCallKind kind, span<const mir::MIRV
         // Emit the argument.
         auto val = emit(op);
 
-        // If the argument should be boxed, do that now.
         ASSERT(argIt != func->arg_end());
-        auto type = argIt->getType();
-        if (type->isPointerTy() && type->getPointerElementType() == types.BoxedIntType)
-            val = boxInt(val, getTypeOf(op)).getPointer();
-
-        args.append(val);
+        auto expectedType = argIt->getType();
         argIt++;
+
+        if (expectedType->isPointerTy() &&
+            expectedType->getPointerElementType() == types.BoxedInt) {
+            // If the argument should be boxed, do that now.
+            args.append(boxInt(val, getTypeOf(op)).getPointer());
+        }
+        else if (val->getType() == types.StringObj) {
+            // If the argument is a string object, decompose into two separate arguments,
+            // the data pointer and the length.
+            args.append(builder.CreateExtractValue(val, 0));
+            args.append(builder.CreateExtractValue(val, 1));
+
+            ASSERT(argIt != func->arg_end());
+            argIt++;
+        }
+        else {
+            // Otherwise, pass the argument directly.
+            args.append(val);
+        }
     }
 
     return builder.CreateCall(func, llvm::makeArrayRef(args.data(), args.size()));

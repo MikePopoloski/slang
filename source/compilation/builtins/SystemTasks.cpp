@@ -51,7 +51,7 @@ public:
     }
 
     void lower(mir::Procedure& proc, const Args& args) const final {
-        lowerFormatArgs(proc, args, defaultIntFmt);
+        lowerFormatArgs(proc, args, defaultIntFmt, /* newline */ true);
     }
 };
 

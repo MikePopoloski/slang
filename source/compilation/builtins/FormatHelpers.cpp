@@ -288,7 +288,8 @@ static void lowerFormatArg(mir::Procedure& proc, const Expression& arg, char,
     }
 }
 
-void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase defaultBase) {
+void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase defaultBase,
+                     bool newline) {
     auto argIt = args.begin();
     while (argIt != args.end()) {
         auto arg = *argIt++;
@@ -297,7 +298,7 @@ void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase default
 
         // Empty arguments always print a space.
         if (arg->kind == ExpressionKind::EmptyArgument) {
-            proc.emitCall(mir::SysCallKind::printChar, proc.emitInt(8, ' ', false));
+            proc.emitCall(mir::SysCallKind::printStr, proc.emitString(" "));
             continue;
         }
 
@@ -312,8 +313,7 @@ void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase default
             bool result = SFormat::parse(
                 fmt,
                 [&](string_view text) {
-                    proc.emitCall(mir::SysCallKind::printStringLit,
-                                  proc.emitString(std::string(text)));
+                    proc.emitCall(mir::SysCallKind::printStr, proc.emitString(std::string(text)));
                 },
                 [&](char specifier, size_t, size_t, const SFormat::FormatOptions& options) {
                     if (argIt != args.end()) {
@@ -332,6 +332,8 @@ void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase default
             lowerFormatArg(proc, *arg, ' ', {}, defaultBase);
         }
     }
+
+    proc.emitCall(mir::SysCallKind::flush, proc.emitBool(newline));
 }
 
 } // namespace slang

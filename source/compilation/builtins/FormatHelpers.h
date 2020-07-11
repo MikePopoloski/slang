@@ -29,6 +29,6 @@ optional<std::string> formatArgs(string_view formatString, SourceLocation loc, c
                                  EvalContext& context, const span<const Expression* const>& args);
 
 void lowerFormatArgs(mir::Procedure& proc, const span<const Expression* const>& args,
-                     LiteralBase defaultIntFmt);
+                     LiteralBase defaultIntFmt, bool newline);
 
 } // namespace slang

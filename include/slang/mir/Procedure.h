@@ -34,7 +34,15 @@ public:
     }
 
     MIRValue emitInt(bitwidth_t width, uint64_t value, bool isSigned);
+
+    MIRValue emitBool(bool b) { return emitInt(1, uint64_t(b), /* isSigned */ false); }
+
     MIRValue emitString(std::string&& str);
+
+    template<int N>
+    MIRValue emitString(const char (&str)[N]) {
+        return emitString(std::string(str));
+    }
 
     void emitLocal(const VariableSymbol& symbol);
     MIRValue emitGlobal(const VariableSymbol& symbol) { return builder.emitGlobal(symbol); }

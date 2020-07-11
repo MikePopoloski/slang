@@ -15,6 +15,8 @@
 #    pragma warning(pop)
 #endif
 
+#include "CodeGenTypes.h"
+
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -41,7 +43,9 @@ private:
 
 class CGBuilder : public llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter> {
 public:
-    explicit CGBuilder(llvm::LLVMContext& ctx) : IRBuilder(ctx) {}
+    CGBuilder(const CodeGenTypes& types, llvm::LLVMContext& ctx) : IRBuilder(ctx), types(types) {}
+
+    llvm::ConstantInt* getSize(uint64_t n) { return llvm::ConstantInt::get(types.Size, n); }
 
     llvm::LoadInst* CreateLoad(Address addr, llvm::Type* type) {
         return CreateAlignedLoad(type, addr.getPointer(), addr.getAlignment());
@@ -63,6 +67,19 @@ public:
 
         return Address(IRBuilder::CreateStructGEP(type, addr.getPointer(), index), align);
     }
+
+    Address CreateConstArrayGEP(llvm::Type* type, Address addr, uint64_t index) {
+        llvm::ArrayType* elementType = llvm::cast<llvm::ArrayType>(type);
+        const llvm::DataLayout& dl = BB->getParent()->getParent()->getDataLayout();
+
+        llvm::TypeSize size = dl.getTypeAllocSize(elementType->getElementType());
+        llvm::Align align(llvm::MinAlign(addr.getAlignment().value(), size * index));
+
+        return Address(CreateInBoundsGEP(addr.getPointer(), { getSize(0), getSize(index) }), align);
+    }
+
+private:
+    const CodeGenTypes& types;
 };
 
 } // namespace slang

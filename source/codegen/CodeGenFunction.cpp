@@ -17,11 +17,11 @@ namespace slang {
 using namespace mir;
 
 CodeGenFunction::CodeGenFunction(CodeGenerator& codegen, const Procedure& proc) :
-    codegen(codegen), types(codegen.getTypes()), builder(codegen.getContext()),
+    codegen(codegen), types(codegen.getTypes()), builder(types, codegen.getContext()),
     ctx(codegen.getContext()) {
 
     // Create the function object itself.
-    auto funcType = llvm::FunctionType::get(types.VoidType, /* isVarArg */ false);
+    auto funcType = llvm::FunctionType::get(types.Void, /* isVarArg */ false);
     generatedFunc =
         llvm::Function::Create(funcType, llvm::Function::PrivateLinkage, "", codegen.getModule());
 
@@ -30,8 +30,8 @@ CodeGenFunction::CodeGenFunction(CodeGenerator& codegen, const Procedure& proc) 
 
     // Create a marker to make it easy to insert allocas into the entryblock
     // later. Don't create this with the builder, because we don't want it folded.
-    auto undef = llvm::UndefValue::get(types.Int32Type);
-    allocaInsertionPoint = new llvm::BitCastInst(undef, types.Int32Type, "allocapt", bb);
+    auto undef = llvm::UndefValue::get(types.Int32);
+    allocaInsertionPoint = new llvm::BitCastInst(undef, types.Int32, "allocapt", bb);
 
     // Start emitting instructions.
     builder.SetInsertPoint(bb);
@@ -76,12 +76,23 @@ llvm::Value* CodeGenFunction::emit(MIRValue val) {
     THROW_UNREACHABLE;
 }
 
-llvm::Constant* CodeGenFunction::emitConstant(const Type& type, const ConstantValue& cv) {
+llvm::Value* CodeGenFunction::emitConstant(const Type& type, const ConstantValue& cv) {
     // TODO: other value types
+    if (cv.isString()) {
+        auto& str = cv.str();
+        auto gv = codegen.getOrCreateStringConstant(str);
+
+        Address addr(gv, llvm::Align(gv->getAlignment()));
+        addr = builder.CreateConstArrayGEP(gv->getType()->getPointerElementType(), addr, 0);
+        return llvm::ConstantStruct::get(types.StringObj,
+                                         llvm::cast<llvm::Constant>(addr.getPointer()),
+                                         builder.getSize(str.size()));
+    }
+
     return emitConstant(type, cv.integer());
 }
 
-llvm::Constant* CodeGenFunction::emitConstant(const Type& type, const SVInt& integer) {
+llvm::Value* CodeGenFunction::emitConstant(const Type& type, const SVInt& integer) {
     auto& intType = type.as<IntegralType>();
     uint32_t bits = intType.bitWidth;
     if (intType.isFourState)
@@ -116,29 +127,29 @@ Address CodeGenFunction::createTempAlloca(llvm::Type* type, llvm::Align align) {
 
 Address CodeGenFunction::boxInt(llvm::Value* value, const Type& type) {
     // TODO: put alignment behind an ABI
-    auto addr = createTempAlloca(types.BoxedIntType, llvm::Align::Constant<8>());
+    auto addr = createTempAlloca(types.BoxedInt, llvm::Align::Constant<8>());
 
     // TODO: fix int types
     bitwidth_t bits = type.getBitWidth();
     bool isSigned = type.isSigned();
     if (bits < 64) {
         if (isSigned)
-            value = builder.CreateSExt(value, types.Int64Type);
+            value = builder.CreateSExt(value, types.Int64);
         else
-            value = builder.CreateZExt(value, types.Int64Type);
+            value = builder.CreateZExt(value, types.Int64);
     }
 
-    builder.CreateStore(value, builder.CreateStructGEP(types.BoxedIntType, addr, 0));
+    builder.CreateStore(value, builder.CreateStructGEP(types.BoxedInt, addr, 0));
 
-    builder.CreateStore(llvm::ConstantInt::get(types.Int32Type, bits),
-                        builder.CreateStructGEP(types.BoxedIntType, addr, 1));
+    builder.CreateStore(llvm::ConstantInt::get(types.Int32, bits),
+                        builder.CreateStructGEP(types.BoxedInt, addr, 1));
 
-    builder.CreateStore(llvm::ConstantInt::get(types.Int8Type, isSigned),
-                        builder.CreateStructGEP(types.BoxedIntType, addr, 2));
+    builder.CreateStore(llvm::ConstantInt::get(types.Int8, isSigned),
+                        builder.CreateStructGEP(types.BoxedInt, addr, 2));
 
     // TODO: handle unknowns
-    builder.CreateStore(llvm::ConstantInt::get(types.Int8Type, 0),
-                        builder.CreateStructGEP(types.BoxedIntType, addr, 3));
+    builder.CreateStore(llvm::ConstantInt::get(types.Int8, 0),
+                        builder.CreateStructGEP(types.BoxedInt, addr, 3));
 
     return addr;
 }

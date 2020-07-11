@@ -33,14 +33,10 @@ ENUM(InstrKind, INSTR);
 #undef INSTR
 
 #define SYSCALL(x) \
-    x(printChar) \
+    x(flush) \
+    x(printStr) \
     x(printInt) \
-    x(printFloat) \
-    x(printStringObj) \
-    x(printStringLit) \
-    x(printBytes) \
-    x(printClass) \
-    x(printCHandle) \
+    x(printFloat)
 
 ENUM(SysCallKind, SYSCALL);
 #undef SYSCALL

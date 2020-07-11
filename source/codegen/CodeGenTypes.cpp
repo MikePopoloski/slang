@@ -15,16 +15,17 @@
 namespace slang {
 
 CodeGenTypes::CodeGenTypes(CodeGenerator& codegen) : codegen(codegen) {
+    // TODO: ABI concerns
     auto& ctx = codegen.getContext();
-    VoidType = llvm::Type::getVoidTy(ctx);
-    BoolType = llvm::Type::getInt1Ty(ctx);
-    Int8Type = llvm::Type::getInt8Ty(ctx);
-    Int32Type = llvm::Type::getInt32Ty(ctx);
-    Int64Type = llvm::Type::getInt64Ty(ctx);
-
-    // All boxed integers use this type. It needs to pass across FFI calls,
-    // so there should probably be more ABI logic here.
-    BoxedIntType = llvm::StructType::get(Int64Type, Int32Type, Int8Type, Int8Type);
+    Void = llvm::Type::getVoidTy(ctx);
+    Int1 = llvm::Type::getInt1Ty(ctx);
+    Int8 = llvm::Type::getInt8Ty(ctx);
+    Int32 = llvm::Type::getInt32Ty(ctx);
+    Int64 = llvm::Type::getInt64Ty(ctx);
+    Size = Int64;
+    Int8Ptr = llvm::Type::getInt8PtrTy(ctx);
+    StringObj = llvm::StructType::get(Int8Ptr, Int64);
+    BoxedInt = llvm::StructType::get(Int64, Int32, Int8, Int8);
 }
 
 llvm::Type* CodeGenTypes::convertType(const Type& type) {
@@ -52,7 +53,7 @@ llvm::Type* CodeGenTypes::convertType(const Type& type) {
 
     llvm::Type* result;
     if (bits > codegen.getOptions().maxIntBits)
-        result = llvm::ArrayType::get(Int64Type, (bits + 63) / 64);
+        result = llvm::ArrayType::get(Int64, (bits + 63) / 64);
     else
         result = llvm::Type::getIntNTy(codegen.getContext(), bits);
 

@@ -38,9 +38,10 @@ G0 j: int
 
 L0 i: int
 %0 = syscall $printInt L0, 8'h2: bit[7:0], 32'd0: bit[31:0], 1'b0: bit[0:0]
-%1 = syscall $printChar 8'h20: bit[7:0]
-%2 = syscall $printStringLit hello : string
+%1 = syscall $printStr  : string
+%2 = syscall $printStr hello : string
 %3 = syscall $printInt G0[j], 8'h2: bit[7:0], 32'd0: bit[31:0], 1'b1: bit[0:0]
-%4 = syscall $printStringLit  world: string
+%4 = syscall $printStr  world: string
+%5 = syscall $flush 1'b1: bit[0:0]
 )");
 }

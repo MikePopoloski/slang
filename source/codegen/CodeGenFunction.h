@@ -31,8 +31,8 @@ public:
     llvm::Value* emit(mir::MIRValue val);
     llvm::Value* emitSysCall(mir::SysCallKind kind, span<const mir::MIRValue> operands);
 
-    llvm::Constant* emitConstant(const Type& type, const ConstantValue& cv);
-    llvm::Constant* emitConstant(const Type& type, const SVInt& integer);
+    llvm::Value* emitConstant(const Type& type, const ConstantValue& cv);
+    llvm::Value* emitConstant(const Type& type, const SVInt& integer);
 
 private:
     const Type& getTypeOf(mir::MIRValue val) const;
