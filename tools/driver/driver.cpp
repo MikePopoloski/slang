@@ -5,7 +5,6 @@
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 
-#include <fmt/format.h>
 #include <fstream>
 #include <iostream>
 
@@ -25,9 +24,6 @@
 #include "slang/util/Version.h"
 
 using namespace slang;
-
-template<typename... Args>
-void print(string_view format, const Args&... args);
 
 void writeToFile(string_view fileName, string_view contents);
 
@@ -55,12 +51,12 @@ bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
     // Only print diagnostics if actual errors occurred.
     for (auto& diag : diagnostics) {
         if (diag.isError()) {
-            print("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics));
+            OS::print("{}", DiagnosticEngine::reportAll(sourceManager, diagnostics));
             return false;
         }
     }
 
-    print("{}\n", output.str());
+    OS::print("{}\n", output.str());
     return true;
 }
 
@@ -90,7 +86,7 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
             printer.print(*macro->formalArguments);
         printer.print(macro->body);
 
-        print("{}\n", printer.str());
+        OS::print("{}\n", printer.str());
     }
 }
 
@@ -134,7 +130,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
     }
 
 #ifndef FUZZ_TARGET
-    print("{}", client->getString());
+    OS::print("{}", client->getString());
 #endif
 
     if (astJsonFile) {
@@ -254,18 +250,18 @@ int driverMain(int argc, TArgs argv) try {
 
     if (!cmdLine.parse(argc, argv)) {
         for (auto& err : cmdLine.getErrors())
-            print("{}\n", err);
+            OS::print("{}\n", err);
         return 1;
     }
 
     if (showHelp == true) {
-        print("{}", cmdLine.getHelpText("slang SystemVerilog compiler"));
+        OS::print("{}", cmdLine.getHelpText("slang SystemVerilog compiler"));
         return 0;
     }
 
     if (showVersion == true) {
-        print("slang version {}.{}.{}\n", VersionInfo::getMajor(), VersionInfo::getMinor(),
-              VersionInfo::getRevision());
+        OS::print("slang version {}.{}.{}\n", VersionInfo::getMajor(), VersionInfo::getMinor(),
+                  VersionInfo::getRevision());
         return 0;
     }
 
@@ -276,7 +272,7 @@ int driverMain(int argc, TArgs argv) try {
             sourceManager.addUserDirectory(string_view(dir));
         }
         catch (const std::exception&) {
-            print("error: include directory '{}' does not exist\n", dir);
+            OS::print("error: include directory '{}' does not exist\n", dir);
             anyErrors = true;
         }
     }
@@ -286,7 +282,7 @@ int driverMain(int argc, TArgs argv) try {
             sourceManager.addSystemDirectory(string_view(dir));
         }
         catch (const std::exception&) {
-            print("error: include directory '{}' does not exist\n", dir);
+            OS::print("error: include directory '{}' does not exist\n", dir);
             anyErrors = true;
         }
     }
@@ -330,7 +326,7 @@ int driverMain(int argc, TArgs argv) try {
     for (const std::string& file : sourceFiles) {
         SourceBuffer buffer = sourceManager.readSource(file);
         if (!buffer) {
-            print("error: no such file or directory: '{}'\n", file);
+            OS::print("error: no such file or directory: '{}'\n", file);
             anyErrors = true;
             continue;
         }
@@ -342,12 +338,12 @@ int driverMain(int argc, TArgs argv) try {
         return 2;
 
     if (buffers.empty()) {
-        print("error: no input files\n");
+        OS::print("error: no input files\n");
         return 3;
     }
 
     if (onlyParse.has_value() + onlyPreprocess.has_value() + onlyMacros.has_value() > 1) {
-        print("Can only specify one of --preprocess, --macros-only, --parse-only");
+        OS::print("Can only specify one of --preprocess, --macros-only, --parse-only");
         return 4;
     }
 
@@ -376,7 +372,7 @@ int driverMain(int argc, TArgs argv) try {
         (void)e;
         throw;
 #else
-        print("internal compiler error: {}\n", e.what());
+        OS::print("internal compiler error: {}\n", e.what());
         return 4;
 #endif
     }
@@ -388,7 +384,7 @@ catch (const std::exception& e) {
     (void)e;
     throw;
 #else
-    print("{}\n", e.what());
+    OS::print("{}\n", e.what());
     return 5;
 #endif
 }
@@ -415,35 +411,12 @@ void writeToFile(string_view fileName, string_view contents) {
     }
 }
 
-template<typename T>
-T convert(T&& t) {
-    return std::forward<T>(t);
-}
-
-std::wstring convert(const std::string& s) {
-    return widen(s);
-}
-
-std::wstring convert(const std::string_view& s) {
-    return widen(s);
-}
-
-std::wstring convert(const char* s) {
-    return widen(s);
-}
-
-template<typename... Args>
-void print(string_view format, const Args&... args) {
-    fmt::vprint(fmt::to_string_view(widen(format)),
-                fmt::make_format_args<fmt::wformat_context>(convert(args)...));
-}
-
-#ifndef FUZZ_TARGET
+#    ifndef FUZZ_TARGET
 int wmain(int argc, wchar_t** argv) {
     _setmode(_fileno(stdout), _O_U16TEXT);
     return driverMain(argc, argv);
 }
-#endif
+#    endif
 
 #else
 
@@ -457,16 +430,11 @@ void writeToFile(string_view fileName, string_view contents) {
     }
 }
 
-template<typename... Args>
-void print(string_view format, const Args&... args) {
-    fmt::vprint(format, fmt::make_format_args(args...));
-}
-
-#ifndef FUZZ_TARGET
+#    ifndef FUZZ_TARGET
 int main(int argc, char** argv) {
     return driverMain(argc, argv);
 }
-#endif
+#    endif
 
 #endif
 
