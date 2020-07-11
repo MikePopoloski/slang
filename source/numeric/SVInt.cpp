@@ -1344,7 +1344,7 @@ SVInt SVInt::slice(int32_t msb, int32_t lsb) const {
 
     // variables to keep track of out-of-bounds accesses
     uint32_t frontOOB = lsb < 0 ? uint32_t(-lsb) : 0;
-    uint32_t backOOB = bitwidth_t(msb) >= bitWidth ? bitwidth_t(msb - bitWidth + 1) : 0;
+    uint32_t backOOB = bitwidth_t(msb) >= bitWidth ? bitwidth_t(msb - int32_t(bitWidth) + 1) : 0;
     bool anyOOB = frontOOB || backOOB;
     if (isSingleWord() && !anyOOB) {
         // simplest case; 1 word input, 1 word output, no out of bounds
@@ -1390,7 +1390,7 @@ void SVInt::set(int32_t msb, int32_t lsb, const SVInt& value) {
         return;
 
     uint32_t frontOOB = lsb < 0 ? uint32_t(-lsb) : 0;
-    uint32_t backOOB = bitwidth_t(msb) >= bitWidth ? bitwidth_t(msb - bitWidth + 1) : 0;
+    uint32_t backOOB = bitwidth_t(msb) >= bitWidth ? bitwidth_t(msb - int32_t(bitWidth) + 1) : 0;
     uint32_t validSelectWidth = selectWidth - frontOOB - backOOB;
 
     if (!hasUnknown() && value.hasUnknown()) {

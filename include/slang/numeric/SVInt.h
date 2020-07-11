@@ -248,7 +248,7 @@ public:
 
     /// Check whether the number is negative. Note that this doesn't care about
     /// the sign flag; it simply looks at the highest bit to determine whether it is set.
-    bool isNegative() const { return (bool)(*this)[bitWidth - 1]; }
+    bool isNegative() const { return (bool)(*this)[int32_t(bitWidth) - 1]; }
 
     /// Check whether a number is odd or even. Ignores the unknown flag.
     bool isOdd() const { return getRawData()[0] & 0x1; }
