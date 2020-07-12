@@ -42,6 +42,10 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 endif()
 
 # Always require C++17 or later, no extensions
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     # Prefer the latest standard, and enable full conformance
     add_compile_options(/std:c++17)
@@ -103,10 +107,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 
     set(SLANG_WARN_FLAGS "/WX")
 else()
-    set(CMAKE_CXX_STANDARD 17)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
-    set(CMAKE_CXX_EXTENSIONS OFF)
-
     # Always include debug info
     add_compile_options(-g)
 
