@@ -10,6 +10,7 @@ namespace slang {
 
 // Note: hopefully this can all go away with C++20's range proposal
 
+/// A range represented by an interator pair, begin and end.
 template<typename TIterator>
 class iterator_range {
 public:
@@ -22,7 +23,12 @@ public:
     TIterator begin() const { return m_begin; }
     TIterator end() const { return m_end; }
 
+    /// Computes the number of elements in the range via std::distance.
+    /// Not necessarily very efficient.
     auto size() const { return std::distance(begin(), end()); }
+
+    /// Retrieves the element at the specified offset in the range, via std::next.
+    /// Not necessarily very efficient.
     auto operator[](typename std::iterator_traits<TIterator>::difference_type index) const {
         return std::next(begin(), index);
     }
@@ -32,11 +38,14 @@ private:
     TIterator m_end;
 };
 
+/// Constructs an iterator_range from two provided iterators (inferring the types involved).
 template<typename T>
 iterator_range<T> make_range(T begin, T end) {
     return iterator_range<T>(begin, end);
 }
 
+/// Constructs a reversed iterator_range from the provided container,
+/// using std::make_reverse_iterator.
 template<typename TContainer>
 auto make_reverse_range(TContainer&& container) {
     auto b = std::make_reverse_iterator(container.end());

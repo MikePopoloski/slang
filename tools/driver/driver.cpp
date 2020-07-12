@@ -317,10 +317,10 @@ int driverMain(int argc, TArgs argv) try {
         coptions.errorLimit = *errorLimit * 2;
 
     Bag options;
-    options.add(ppoptions);
-    options.add(loptions);
-    options.add(poptions);
-    options.add(coptions);
+    options.set(ppoptions);
+    options.set(loptions);
+    options.set(poptions);
+    options.set(coptions);
 
     std::vector<SourceBuffer> buffers;
     for (const std::string& file : sourceFiles) {

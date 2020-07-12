@@ -8,6 +8,8 @@
 
 namespace slang {
 
+/// A simple guard class that ensures a given function is invoked when the
+/// guard object is destroyed.
 template<typename F>
 class ScopeGuard {
 public:

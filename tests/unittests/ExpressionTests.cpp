@@ -815,7 +815,7 @@ endmodule
     co.maxConstexprSteps = 8192;
 
     Bag options;
-    options.add(co);
+    options.set(co);
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);

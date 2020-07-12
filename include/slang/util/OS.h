@@ -12,18 +12,24 @@
 
 namespace slang {
 
+/// A collection of various OS-specific utility functions.
 class OS {
 public:
+    /// @return true if the given file descriptor supports color text output.
     static bool fileSupportsColors(int fd);
+
+    /// @return true if the given FILE supports color text output.
     static bool fileSupportsColors(FILE* file);
 
 #if defined(_MSC_VER)
+    /// Prints formatted text to stdout, handling Unicode conversions where necessary.
     template<typename... Args>
     static void print(string_view format, const Args&... args) {
         fmt::vprint(fmt::to_string_view(widen(format)),
                     fmt::make_format_args<fmt::wformat_context>(convert(args)...));
     }
 #else
+    /// Prints formatted text to stdout, handling Unicode conversions where necessary.
     template<typename... Args>
     static void print(string_view format, const Args&... args) {
         fmt::vprint(format, fmt::make_format_args(args...));

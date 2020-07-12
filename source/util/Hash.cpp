@@ -15,17 +15,9 @@ namespace slang {
 
 size_t xxhash(const void* input, size_t len, size_t seed) {
     if constexpr (sizeof(input) == 4)
-        return xxhash32(input, len, (uint32_t)seed);
+        return XXH32(input, len, (uint32_t)seed);
     else
-        return xxhash64(input, len, (uint64_t)seed);
-}
-
-uint32_t xxhash32(const void* input, size_t len, uint32_t seed) {
-    return XXH32(input, len, seed);
-}
-
-uint64_t xxhash64(const void* input, size_t len, uint64_t seed) {
-    return XXH64(input, len, seed);
+        return XXH64(input, len, (uint64_t)seed);
 }
 
 } // namespace slang

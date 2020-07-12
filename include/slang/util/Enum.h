@@ -12,6 +12,9 @@
 
 #define UTIL_ENUM_ELEMENT(x) x,
 #define UTIL_ENUM_STRING(x) #x,
+
+/// The ENUM macro defines a strongly-typed enum with the given elements
+/// along with a toString() method and an overload of operator<< for formatting.
 #define ENUM(name, elements)                                           \
     enum class name { elements(UTIL_ENUM_ELEMENT) };                   \
     inline string_view toString(name e) {                              \
@@ -20,6 +23,9 @@
     }                                                                  \
     inline std::ostream& operator<<(std::ostream& os, name e) { return os << toString(e); }
 
+/// The ENUM_MEMBER macro defines a weakly-typed enum with stringification
+/// methods similar to ENUM. It is intended to be used for enums that are
+/// defined inside a parent class.
 #define ENUM_MEMBER(name, elements)                                    \
     enum name { elements(UTIL_ENUM_ELEMENT) };                         \
     friend string_view toString(name e) {                              \
@@ -51,6 +57,9 @@
                                                             value_type::max_element>::value; \
     }
 
+/// The BITMASK macro defines convenience operators for a bitmask type.
+/// This is to work around strongly typed enums not being combinable by
+/// operators like | and & in C++.
 #define BITMASK(value_type, max_element)                       \
     BITMASK_DETAIL_DEFINE_MAX_ELEMENT(value_type, max_element) \
     BITMASK_DETAIL_DEFINE_OPS(value_type)
@@ -97,6 +106,9 @@ inline constexpr bitmask_detail::underlying_type_t<T> get_enum_mask(const T&) no
     return bitmask_detail::enum_mask<T>::value;
 }
 
+/// A convenience wrapper around an enum that is intended to be used as a combination
+/// of bitwise-combined flags. Built-in strongly-typed C++ enums are not otherwise
+/// combinable via operators like | and &.
 template<typename T>
 class bitmask {
 public:
@@ -107,8 +119,10 @@ public:
     constexpr bitmask() noexcept = default;
     constexpr bitmask(T value) noexcept : m_bits{ static_cast<underlying_type>(value) } {}
 
+    /// @return the underlying integer value containing the combined flags.
     constexpr underlying_type bits() const noexcept { return m_bits; }
 
+    /// @return true if any flags at all are set (non-zero), otherwise false.
     constexpr explicit operator bool() const noexcept { return bits() ? true : false; }
 
     constexpr bitmask operator~() const noexcept {

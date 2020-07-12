@@ -482,7 +482,7 @@ module M; localparam foo = (stackDepth == 100) || ((stackDepth == 200) || ((stac
     Bag options;
     ParserOptions parserOptions;
     parserOptions.maxRecursionDepth = 128;
-    options.add(parserOptions);
+    options.set(parserOptions);
 
     Parser parser(preprocessor, options);
     parser.parseCompilationUnit();

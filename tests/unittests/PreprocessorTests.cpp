@@ -86,7 +86,7 @@ TEST_CASE("Include directive errors") {
     ppOptions.maxIncludeDepth = 0;
 
     Bag options;
-    options.add(ppOptions);
+    options.set(ppOptions);
 
     preprocess(text, "source", options);
 
@@ -1322,7 +1322,7 @@ TEST_CASE("Preprocessor API") {
     ppOptions.undefines.emplace_back("BUZ");
 
     Bag options;
-    options.add(ppOptions);
+    options.set(ppOptions);
 
     Preprocessor pp(getSourceManager(), alloc, diagnostics, options);
     CHECK(!pp.isDefined("FOO"));

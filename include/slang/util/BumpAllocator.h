@@ -13,8 +13,8 @@ namespace slang {
 /// BumpAllocator - Fast O(1) allocator.
 ///
 /// Allocates items sequentially in memory, with underlying memory allocated in
-/// blocks of a configurable size. Individual items cannot be deallocated;
-/// the entire thing must be destroyed to release the memory.
+/// blocks as needed. Individual items cannot be deallocated; the entire thing
+/// must be destroyed to release the memory.
 class BumpAllocator {
 public:
     BumpAllocator();
@@ -27,6 +27,8 @@ public:
     BumpAllocator& operator=(const BumpAllocator&) = delete;
 
     /// Construct a new item using the allocator.
+    /// NOTE: the type of object being created must be trivially destructible,
+    /// since the allocator won't run destructors when freeing memory.
     template<typename T, typename... Args>
     T* emplace(Args&&... args) {
         static_assert(std::is_trivially_destructible_v<T>);
@@ -71,6 +73,9 @@ protected:
     static Segment* allocSegment(Segment* prev, size_t size);
 };
 
+/// A strongly-typed version of the BumpAllocator, which has the additional
+/// behavior of calling destructors on all elements when the allocator
+/// itself is destructed.
 template<typename T>
 class TypedBumpAllocator : public BumpAllocator {
 public:

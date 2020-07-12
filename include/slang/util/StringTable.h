@@ -15,6 +15,8 @@ namespace slang {
 template<typename T>
 class StringTable {
 public:
+    /// Constructs the string table with all possible entries (key / values) already provided.
+    /// No other entries can be added after construction.
     StringTable(std::initializer_list<std::pair<string_view, T>> entries) {
         // Give ourselves a bunch of room for entries to hash by using double
         // the required number of entries. Also round up to power of two so that
@@ -35,6 +37,8 @@ public:
         }
     }
 
+    /// Looks for an entry with the given @a key and sets @a value if found.
+    /// @return true if the element is found, and false otherwise.
     bool lookup(string_view key, T& value) const {
         size_t hc = std::hash<string_view>()(key);
         uint32_t index = hc & (capacity - 1);

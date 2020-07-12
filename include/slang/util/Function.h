@@ -42,10 +42,13 @@ public:
         callback(callback_fn<typename std::remove_reference<Callable>::type>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 
+    /// Invokes the function with the given parameters.
     Ret operator()(Params... params) const {
         return callback(callable, std::forward<Params>(params)...);
     }
 
+    /// @return true if the function_ref points to a valid function; otherwise, false
+    /// if the function is null / empty.
     explicit operator bool() const { return callback; }
 };
 

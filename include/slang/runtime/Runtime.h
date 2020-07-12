@@ -20,9 +20,12 @@ using ExportList = std::vector<std::pair<std::string_view, uintptr_t>>;
 
 /// Gets a list of all exported functions in the runtime. The results are a pair,
 /// with the first element being the function's name and the second being
-/// a pointer to the function itself.
+/// an opaque pointer to the function itself.
 ExportList getExportedFunctions();
 
+/// Sets a callback that will be invoked whenever the simulation outputs text.
+/// The callback can display that text however it likes. The string_view
+/// parameter is only valid for the duration of the callback.
 void setOutputHandler(function_ref<void(std::string_view)> handler);
 
-} // namespace simrt
+} // namespace slang::runtime

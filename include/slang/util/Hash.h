@@ -10,17 +10,16 @@
 
 namespace slang {
 
-// Imported hashing functions from the xxhash library.
-uint32_t xxhash32(const void* input, size_t len, uint32_t seed);
-uint64_t xxhash64(const void* input, size_t len, uint64_t seed);
-
-// uses 32-bit or 64-bit implementation depending on platform
+/// Hashes the provided input using the xxhash algorithm.
+/// It uses XXH32 or XXH64, depending on the current platform.
 size_t xxhash(const void* input, size_t len, size_t seed);
 
 inline void hash_combine(size_t&) {
 }
 
 /// Hash combining function, based on the function from Boost.
+/// It hashes the provided @a v object and combines it with the
+/// previous hash value in @a seed.
 template<typename T, typename... Rest>
 inline void hash_combine(size_t& seed, const T& v, Rest... rest) {
     std::hash<T> hasher;
@@ -49,6 +48,7 @@ struct HashValueImpl<Tuple, 0> {
 
 namespace std {
 
+// Specialization of std::hash for all std::tuples. Why isn't this built in?
 template<typename... TT>
 struct hash<std::tuple<TT...>> {
     size_t operator()(const std::tuple<TT...>& tt) const {

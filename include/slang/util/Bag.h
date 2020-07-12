@@ -21,16 +21,22 @@ namespace slang {
 /// to have cross dependencies between them.
 class Bag {
 public:
+    /// Adds or overwrites an existing element of type T in the bag
+    /// (making a copy in the process).
     template<typename T>
-    void add(const T& item) {
+    void set(const T& item) {
         items[std::type_index(typeid(T))] = item;
     }
 
+    /// Adds or overwrites an existing element of type T in the bag
+    /// (moving in the new item in the process).
     template<typename T>
-    void add(T&& item) {
+    void set(T&& item) {
         items[std::type_index(typeid(T))] = std::move(item);
     }
 
+    /// Gets an element of type T from the bag, if it exists.
+    /// Otherwise returns nullptr.
     template<typename T>
     const T* get() const {
         auto it = items.find(std::type_index(typeid(T)));
@@ -39,6 +45,8 @@ public:
         return std::any_cast<T>(&it->second);
     }
 
+    /// Gets an element of type T from the bag, if it exists.
+    /// Otherwise returns a default constructed T.
     template<typename T>
     T getOrDefault() const {
         const T* result = get<T>();

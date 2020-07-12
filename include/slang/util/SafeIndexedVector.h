@@ -37,6 +37,7 @@ public:
     SafeIndexedVector(const SafeIndexedVector& other) = default;
     SafeIndexedVector(SafeIndexedVector&& other) = default;
 
+    /// Add a new item to the vector by copying and return an Index to its location.
     Index add(const T& item) {
         if (!freelist.empty()) {
             Index i = freelist.front();
@@ -48,6 +49,7 @@ public:
         return static_cast<Index>(storage.size() - 1);
     }
 
+    /// Add a new item to the vector by moving and return an Index to its location.
     Index add(T&& item) {
         if (!freelist.empty()) {
             Index i = freelist.front();
@@ -59,6 +61,7 @@ public:
         return static_cast<Index>(storage.size() - 1);
     }
 
+    /// Construct a new item in the vector and return an Index to its location.
     template<typename... Args>
     Index emplace(Args&&... args) {
         if (!freelist.empty()) {
@@ -71,18 +74,25 @@ public:
         return static_cast<Index>(storage.size() - 1);
     }
 
+    /// Remove the item at the given index. This operation is O(1) because the
+    /// removed index is added to a free list instead of moving other elements around.
     void remove(Index index) {
         storage[static_cast<size_t>(index)] = T();
         freelist.push_back(index);
     }
 
+    /// Removes all items from the vector.
     void clear() {
         storage.clear();
         freelist.clear();
         storage.emplace_back();
     }
 
-    size_t size() const { return storage.size() - freelist.size() - 1; }
+    /// @return the number of elements in the vector.
+    [[nodiscard]] size_t size() const { return storage.size() - freelist.size() - 1; }
+
+    /// @return true if the vector is empty, and false if it has elements in it.
+    [[nodiscard]] bool empty() const { return size() == 0; }
 
     const T& operator[](Index index) const { return storage[static_cast<size_t>(index)]; }
 

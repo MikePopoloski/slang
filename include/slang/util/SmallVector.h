@@ -16,9 +16,9 @@ namespace slang {
 
 /// SmallVector<T> - A fast growable array.
 ///
-/// SmallVector a vector-like growable array that allocates its first N elements
+/// SmallVector is a vector-like growable array that allocates its first N elements
 /// on the stack. As long as you don't need more room than that, there are no
-/// heap allocations. Otherwise we spill over into the heap. This is the base class
+/// heap allocations -- otherwise we spill over into the heap. This is the base class
 /// for the actual sized implementation; it's split apart so that this one can be
 /// used in more general interfaces that don't care about the explicit stack size.
 template<typename T>
@@ -30,36 +30,56 @@ public:
     using reference = T&;
     using size_type = size_t;
 
-    T* begin() { return data_; }
-    T* end() { return data_ + len; }
-    const T* begin() const { return data_; }
-    const T* end() const { return data_ + len; }
-    const T* cbegin() const { return data_; }
-    const T* cend() const { return data_ + len; }
+    /// @return a pointer / iterator to the beginning of the array.
+    [[nodiscard]] T* begin() { return data_; }
 
-    const T& front() const {
+    /// @return a pointer / iterator to the end of the array.
+    [[nodiscard]] T* end() { return data_ + len; }
+
+    /// @return a pointer / iterator to the beginning of the array.
+    [[nodiscard]] const T* begin() const { return data_; }
+
+    /// @return a pointer / iterator to the end of the array.
+    [[nodiscard]] const T* end() const { return data_ + len; }
+
+    /// @return a pointer / iterator to the beginning of the array.
+    [[nodiscard]] const T* cbegin() const { return data_; }
+
+    /// @return a pointer / iterator to the end of the array.
+    [[nodiscard]] const T* cend() const { return data_ + len; }
+
+    /// @return a reference to the first element in the array. The array must not be empty!
+    [[nodiscard]] const T& front() const {
         ASSERT(len);
         return data_[0];
     }
 
-    const T& back() const {
+    /// @return a reference to the last element in the array. The array must not be empty!
+    [[nodiscard]] const T& back() const {
         ASSERT(len);
         return data_[len - 1];
     }
 
-    T& front() {
+    /// @return a reference to the first element in the array. The array must not be empty!
+    [[nodiscard]] T& front() {
         ASSERT(len);
         return data_[0];
     }
 
-    T& back() {
+    /// @return a reference to the last element in the array. The array must not be empty!
+    [[nodiscard]] T& back() {
         ASSERT(len);
         return data_[len - 1];
     }
 
-    T* data() const noexcept { return data_; }
-    size_t size() const noexcept { return len; }
-    bool empty() const noexcept { return len == 0; }
+    /// @return a pointer to the underlying array.
+    [[nodiscard]] T* data() const noexcept { return data_; }
+
+    /// @return the number of elements in the array.
+    [[nodiscard]] size_t size() const noexcept { return len; }
+
+    /// @return true if the array is empty, and false if it has elements in it.
+    [[nodiscard]] bool empty() const noexcept { return len == 0; }
 
     /// Clear all elements but retain underlying storage.
     void clear() {
@@ -130,6 +150,7 @@ public:
         len += size;
     }
 
+    /// Ensure that there is enough allocated memory in the array for at least @a size objects.
     void reserve(size_t size) { ensureSize(size); }
 
     /// Creates a copy of the array using the given allocator.
@@ -223,6 +244,8 @@ protected:
     }
 };
 
+/// A concrete, sized version of the SmallVector<T> template.
+/// The template parameter N is the number of elements that will be allocated on the stack.
 template<typename T, size_t N>
 class SmallVectorSized : public SmallVector<T> {
     static_assert(N > 1, "Must have at least two elements in SmallVector stack size");
@@ -231,6 +254,9 @@ class SmallVectorSized : public SmallVector<T> {
 public:
     SmallVectorSized() : SmallVector<T>(N) {}
 
+    /// Constructs the SmallVectorSized with the given capacity. If that capacity is less than
+    /// the preallocated stack size `N` it will be ignored. Otherwise it will perform a heap
+    /// allocation right away.
     explicit SmallVectorSized(size_t capacity) : SmallVector<T>(N) { this->reserve(capacity); }
 
     SmallVectorSized(SmallVectorSized<T, N>&& other) noexcept :

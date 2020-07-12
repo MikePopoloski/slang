@@ -10,6 +10,12 @@
 
 namespace slang {
 
+/// A wrapper around a pointer that indicates that it should never be null.
+/// It deletes some operators and assignments from null, but it can only enforce at
+/// runtime, via asserts, that the value is not actually null.
+///
+/// The real value of this type is in documenting in the API the intentions of the pointer,
+/// so that consumers don't need to add explicit null checks.
 template<typename T>
 class not_null {
 public:
