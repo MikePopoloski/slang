@@ -26,6 +26,7 @@ class SyntaxVisitor {
     using handle_t = decltype(std::declval<T>().handle(std::declval<Arg>()));
 
 public:
+    /// Visit the provided node, of static type T.
     template<typename T>
     void visit(const T& t) {
         if constexpr (is_detected_v<handle_t, TDerived, T>)
@@ -34,6 +35,8 @@ public:
             DERIVED->visitDefault(t);
     }
 
+    /// The default handler invoked when no visit() method is overriden for a particular type.
+    /// Will visit all child nodes by default.
     void visitDefault(const SyntaxNode& node) {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
@@ -47,6 +50,7 @@ public:
         }
     }
 
+    /// The default handler invoked when visiting an invalid node.
     void visitInvalid(const SyntaxNode&) {}
 
 private:
@@ -73,9 +77,17 @@ std::shared_ptr<SyntaxTree> transformTree(
 
 } // namespace detail
 
+/// A helper class that assists in rewriting syntax trees
+/// -- useful for automated refactoring tools.
 template<typename TDerived>
 class SyntaxRewriter : public SyntaxVisitor<TDerived> {
 public:
+    /// Transforms the given syntax tree using the rewriter.
+    /// The tree will be visited in order and each node will be given a chance to be
+    /// rewritten (by providing visit() implementations in the derived class).
+    ///
+    /// @return if no changes are requested, returns the original syntax tree.
+    /// Otherwise, the changes are applied and the newly rewritten syntax tree is returned.
     std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
         sourceManager = &tree->sourceManager();
         changes.clear();
@@ -90,26 +102,31 @@ public:
     }
 
 protected:
+    /// A helper for derived classes that parses some text into syntax nodes.
     SyntaxNode& parse(string_view text) {
         tempTrees.emplace_back(SyntaxTree::fromText(text, *sourceManager));
         return tempTrees.back()->root();
     }
 
+    /// Register a removal for the given syntax node from the tree.
     void remove(const SyntaxNode& oldNode) {
         changes.emplace(&oldNode,
                         detail::SyntaxChange{ detail::SyntaxChange::Remove, &oldNode, nullptr });
     }
 
+    /// Replace the given @a oldNode with @a newNode in the rewritten tree.
     void replace(const SyntaxNode& oldNode, SyntaxNode& newNode) {
         changes.emplace(&oldNode,
                         detail::SyntaxChange{ detail::SyntaxChange::Replace, &oldNode, &newNode });
     }
 
+    /// Insert @a newNode before @a oldNode in the rewritten tree.
     void insertBefore(const SyntaxNode& oldNode, SyntaxNode& newNode) {
         changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::InsertBefore,
                                                         &oldNode, &newNode });
     }
 
+    /// Insert @a newNode after @a oldNode in the rewritten tree.
     void insertAfter(const SyntaxNode& oldNode, SyntaxNode& newNode) {
         changes.emplace(&oldNode, detail::SyntaxChange{ detail::SyntaxChange::InsertAfter, &oldNode,
                                                         &newNode });

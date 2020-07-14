@@ -31,21 +31,48 @@ public:
     SyntaxTree(SyntaxTree&& other) = default;
 
     /// Creates a syntax tree from a full compilation unit.
+    /// @a path is the path to the source file on disk.
+    /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromFile(string_view path);
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
+    /// @a text is the actual source code text.
+    /// @a name is an optional name to give to the loaded source buffer.
+    /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromText(string_view text, string_view name = "");
 
+    /// Creates a syntax tree from a full compilation unit.
+    /// @a path is the path to the source file on disk.
+    /// @a sourceManager is the manager that owns all of the loaded source code.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromFile(string_view path, SourceManager& sourceManager,
                                                 const Bag& options = {});
 
+    /// Creates a syntax tree by guessing at what might be in the given source snippet.
+    /// @a text is the actual source code text.
+    /// @a sourceManager is the manager that owns all of the loaded source code.
+    /// @a name is an optional name to give to the loaded source buffer.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromText(string_view text, SourceManager& sourceManager,
                                                 string_view name = "", const Bag& options = {});
 
+    /// Creates a syntax tree from an already loaded source buffer.
+    /// @a buffer is the loaded source buffer.
+    /// @a sourceManager is the manager that owns the buffer.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromBuffer(const SourceBuffer& buffer,
                                                   SourceManager& sourceManager,
                                                   const Bag& options = {});
 
+    /// Creates a syntax tree by concatenating several loaded source buffers.
+    /// @a buffers is the list of buffers that should be concatenated to form
+    /// the compilation unit to parse.
+    /// @a sourceManager is the manager that owns the buffers.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromBuffers(span<const SourceBuffer> buffers,
                                                    SourceManager& sourceManager,
                                                    const Bag& options = {});
@@ -58,10 +85,14 @@ public:
 
     /// Gets the source manager used to build the syntax tree.
     SourceManager& sourceManager() { return sourceMan; }
+
+    /// Gets the source manager used to build the syntax tree.
     const SourceManager& sourceManager() const { return sourceMan; }
 
     /// Gets the root of the syntax tree.
     SyntaxNode& root() { return *rootNode; }
+
+    /// Gets the root of the syntax tree.
     const SyntaxNode& root() const { return *rootNode; }
 
     /// Gets the EndOfFile token marking the end of the input source text.
@@ -78,8 +109,8 @@ public:
     /// the lifetime of the child tree.
     const SyntaxTree* getParentTree() const { return parentTree.get(); }
 
-    /// Gets metadata that was in effect when various syntax nodes were parsed (such as various
-    /// bits of preprocessor state).
+    /// Gets metadata that was in effect when various syntax nodes were parsed
+    /// (this includes bits of preprocessor state like the current timescale or default nettype).
     const Parser::MetadataMap& getMetadataMap() const { return metadataMap; }
 
     /// Gets a set of names of all instantiations of global modules/interfaces/programs.

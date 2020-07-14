@@ -29,7 +29,8 @@ struct BufferID {
         (void)name;
     }
 
-    bool valid() const { return id != 0; }
+    /// @return true if the ID is for a valid buffer, and false if not.
+    [[nodiscard]] bool valid() const { return id != 0; }
 
     bool operator==(const BufferID& rhs) const { return id == rhs.id; }
     bool operator!=(const BufferID& rhs) const { return !(*this == rhs); }
@@ -38,10 +39,15 @@ struct BufferID {
     bool operator>(const BufferID& rhs) const { return rhs < *this; }
     bool operator>=(const BufferID& rhs) const { return rhs <= *this; }
 
+    /// @return an integer representing the raw buffer ID.
     constexpr uint32_t getId() const { return id; }
 
+    /// @return true if the ID is for a valid buffer, and false if not.
     explicit operator bool() const { return valid(); }
 
+    /// @return a placeholder buffer ID. It should be used only for
+    /// locations where the buffer doesn't actually matter and won't
+    /// be observed.
     static BufferID getPlaceholder() { return BufferID(UINT32_MAX, ""sv); }
 
 #ifdef DEBUG
@@ -66,6 +72,7 @@ public:
         bufferID(buffer.getId()), charOffset(offset) {
     }
 
+    /// @return an identifier for the buffer that contains this location.
     BufferID buffer() const {
 #ifdef DEBUG
         return BufferID(bufferID, bufferName);
@@ -74,9 +81,13 @@ public:
 #endif
     }
 
-    size_t offset() const { return charOffset; }
-    bool valid() const { return buffer().valid(); }
+    /// @return the character offset of this location within the source buffer.
+    [[nodiscard]] size_t offset() const { return charOffset; }
 
+    /// @return true if the location is valid, and false if not.
+    [[nodiscard]] bool valid() const { return buffer().valid(); }
+
+    /// @return true if the location is valid, and false if not.
     explicit operator bool() const { return valid(); }
 
     /// Computes a source location that is offset from the current one.
@@ -115,6 +126,7 @@ public:
     string_view bufferName;
 #endif
 
+    /// A location that is reserved to represent "no location" at all.
     static const SourceLocation NoLocation;
 
 private:
@@ -130,14 +142,16 @@ static_assert(sizeof(SourceLocation) == 8);
 #endif
 
 /// Combines a pair of source locations that denote a range of source text.
-/// This is mostly used for diagnostic reporting purposes.
 class SourceRange {
 public:
     SourceRange() {}
     SourceRange(SourceLocation startLoc, SourceLocation endLoc) :
         startLoc(startLoc), endLoc(endLoc) {}
 
+    /// @return the start of the range.
     SourceLocation start() const { return startLoc; }
+
+    /// @return the end of the range.
     SourceLocation end() const { return endLoc; }
 
 private:
@@ -149,7 +163,10 @@ private:
 /// code along with an identifier for the buffer which potentially
 /// encodes its include stack.
 struct SourceBuffer {
+    /// A view into the text comprising the buffer.
     string_view data;
+
+    /// The ID assigned to the buffer.
     BufferID id;
 
     explicit operator bool() const { return id.valid(); }

@@ -19,6 +19,7 @@ namespace slang {
 
 class SyntaxNode;
 
+/// A base class template for a sum type representing either a token or a syntax node.
 template<typename TNode>
 struct TokenOrSyntaxBase : public std::variant<Token, TNode> {
     using Base = std::variant<Token, TNode>;
@@ -26,20 +27,30 @@ struct TokenOrSyntaxBase : public std::variant<Token, TNode> {
     TokenOrSyntaxBase(TNode node) : Base(node) {}
     TokenOrSyntaxBase(nullptr_t) : Base(Token()) {}
 
+    /// @return true if the object is a token.
     bool isToken() const { return this->index() == 0; }
+
+    /// @return true if the object is a syntax node.
     bool isNode() const { return this->index() == 1; }
 
+    /// Gets access to the object as a token (throwing an exception
+    /// if it's not actually a token).
     Token token() const { return std::get<0>(*this); }
+
+    /// Gets access to the object as a syntax node (throwing an exception
+    /// if it's not actually a syntax node).
     TNode node() const { return std::get<1>(*this); }
 
 protected:
     TokenOrSyntaxBase() = default;
 };
 
+/// A token or a syntax node.
 struct TokenOrSyntax : public TokenOrSyntaxBase<SyntaxNode*> {
     using TokenOrSyntaxBase::TokenOrSyntaxBase;
 };
 
+/// A token or a constant syntax node.
 struct ConstTokenOrSyntax : public TokenOrSyntaxBase<const SyntaxNode*> {
     using TokenOrSyntaxBase::TokenOrSyntaxBase;
 
@@ -71,28 +82,44 @@ public:
     /// Gets the child syntax node at the specified index. If the child at
     /// the given index is not a node (probably a token) then this returns null.
     const SyntaxNode* childNode(size_t index) const;
+
+    /// Gets the child token at the specified index. If the child at
+    /// the given index is not a token (probably a node) then this returns
+    /// an empty Token.
     Token childToken(size_t index) const;
 
+    /// Gets the number of (direct) children underneath this node in the tree.
     size_t getChildCount() const; // Note: implemented in AllSyntax.cpp
 
+    /// Reinterprets this node as being of type T. In debug this will assert
+    /// that the dynamic kind is appropriate for the specified static type.
     template<typename T>
     T& as() {
         ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
+    /// Reinterprets this node as being of type T. In debug this will assert
+    /// that the dynamic kind is appropriate for the specified static type.
     template<typename T>
     const T& as() const {
         ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 
+    /// Applies a visitor object to this node by dispatching based on the
+    /// dynamic kind. The given @a args are forwarded to the visitor.
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args);
 
+    /// Applies a visitor object to this node by dispatching based on the
+    /// dynamic kind. The given @a args are forwarded to the visitor.
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
+    /// A base implemention of the method that checks correctness of dynamic casting.
+    /// Derived nodes should reimplement this and return true if the provided syntax kind
+    /// is compatible with the static type of the object.
     static bool isKind(SyntaxKind) { return true; }
 
 protected:
@@ -102,16 +129,26 @@ private:
     ConstTokenOrSyntax getChild(size_t index) const;
 };
 
+/// A base class for syntax nodes that represent a list of items.
 class SyntaxListBase : public SyntaxNode {
 public:
+    /// Gets the number of child items in the node.
     size_t getChildCount() const { return childCount; }
 
+    /// Gets the child (token or node) at the given index.
     virtual TokenOrSyntax getChild(size_t index) = 0;
+
+    /// Gets the child (token or node) at the given index.
     virtual ConstTokenOrSyntax getChild(size_t index) const = 0;
+
+    /// Sets the child (token or node) at the given index.
     virtual void setChild(size_t index, TokenOrSyntax child) = 0;
 
+    /// Clones the list into a new node using the provided allocator.
     virtual SyntaxListBase* clone(BumpAllocator& alloc) const = 0;
 
+    /// Overwrites all children with the new set of provided @a children (and making
+    /// a copy with the provided allocator).
     virtual void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) = 0;
 
     static bool isKind(SyntaxKind kind);
@@ -122,6 +159,7 @@ protected:
     size_t childCount;
 };
 
+/// A syntax node that represents a list of child syntax nodes.
 template<typename T>
 class SyntaxList : public SyntaxListBase, public span<T*> {
 public:
@@ -150,6 +188,7 @@ private:
     }
 };
 
+/// A syntax node that represents a list of child tokens.
 class TokenList : public SyntaxListBase, public span<Token> {
 public:
     TokenList(nullptr_t) : TokenList(span<Token>()) {}
@@ -174,9 +213,13 @@ private:
     }
 };
 
+/// A syntax node that represents a token-separated list of child syntax nodes.
+/// The stored children are assumed to alternate between delimiters (such as a comma) and nodes.
 template<typename T>
 class SeparatedSyntaxList : public SyntaxListBase {
 public:
+    /// An iterator that will iterate over just the nodes (and skip the delimiters) in the
+    /// parent SeparatedSyntaxList.
     template<typename U>
     class iterator_base
         : public iterator_facade<iterator_base<U>, std::random_access_iterator_tag, U, size_t> {
@@ -215,8 +258,11 @@ public:
     SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax>()) {}
     SeparatedSyntaxList(span<TokenOrSyntax> elements);
 
-    bool empty() const { return elements.empty(); }
-    size_t size() const noexcept { return (elements.size() + 1) / 2; }
+    /// @return true if the list is empty, and false if it has elements.
+    [[nodiscard]] bool empty() const { return elements.empty(); }
+
+    /// @return the number of nodes in the list (doesn't include delimiter tokens in the count).
+    [[nodiscard]] size_t size() const noexcept { return (elements.size() + 1) / 2; }
 
     const T* operator[](size_t index) const {
         index <<= 1;
