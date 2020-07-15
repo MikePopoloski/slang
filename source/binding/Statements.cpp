@@ -1257,11 +1257,7 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
     const Type* type = arrayRef.type;
     while (type->isArray()) {
         dims.append(type->getArrayRange());
-        auto& ct = type->getCanonicalType();
-        if (ct.kind == SymbolKind::UnpackedArrayType)
-            type = &ct.as<UnpackedArrayType>().elementType;
-        else
-            type = &ct.as<PackedArrayType>().elementType;
+        type = type->getArrayElementType();
     }
 
     SmallVectorSized<ConstantRange, 4> filteredDims;

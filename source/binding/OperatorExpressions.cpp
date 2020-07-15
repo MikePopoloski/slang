@@ -239,7 +239,7 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         // into their element types before checking further.
         if (unwrapUnpacked) {
             while (bt->isUnpackedArray())
-                bt = &bt->getCanonicalType().as<UnpackedArrayType>().elementType;
+                bt = bt->getArrayElementType();
         }
 
         checkType(*bound, *bt);
@@ -930,10 +930,9 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
             span<ConstantValue> result = resultValue.elements();
             ASSERT(la.size() == result.size());
 
-            const Type& ct = type->getCanonicalType();
-            ConstantValue defaultElement =
-                ct.isUnpackedArray() ? ct.as<UnpackedArrayType>().elementType.getDefaultValue()
-                                     : ct.as<PackedArrayType>().elementType.getDefaultValue();
+            // TODO: what if this is an unpacked struct?
+            // TODO: special handling for associative arrays
+            ConstantValue defaultElement = type->getArrayElementType()->getDefaultValue();
 
             // [11.4.11] says that if both sides are unpacked arrays, we
             // check each element. If they are equal, take it in the result,

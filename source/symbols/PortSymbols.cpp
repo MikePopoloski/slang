@@ -459,7 +459,7 @@ private:
             // Drill past any unpacked arrays to figure out if this thing is even integral.
             const Type* type = &symbol.getType();
             while (type->isUnpackedArray())
-                type = &type->getCanonicalType().as<UnpackedArrayType>().elementType;
+                type = type->getArrayElementType();
 
             if (!type->isIntegral()) {
                 auto& diag = scope.addDiag(diag::CantDeclarePortSigned, location);
@@ -472,7 +472,7 @@ private:
                 // Verify that the sign flag had an effect; it's not always possible to force it.
                 type = &symbol.getType();
                 while (type->isUnpackedArray())
-                    type = &type->getCanonicalType().as<UnpackedArrayType>().elementType;
+                    type = type->getArrayElementType();
 
                 if (!type->isSigned()) {
                     // TODO: error

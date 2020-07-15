@@ -437,14 +437,14 @@ endmodule
 
     const auto& fType = instance.find<NetSymbol>("f").getType();
     CHECK(fType.isUnpackedArray());
-    CHECK(fType.as<UnpackedArrayType>().range == ConstantRange{ 0, 2 });
+    CHECK(fType.as<FixedSizeUnpackedArrayType>().range == ConstantRange{ 0, 2 });
 
     const auto& gType = instance.find<NetSymbol>("g").getType();
     CHECK(!gType.isUnpackedArray());
 
     const auto& hType = instance.find<NetSymbol>("h").getType();
     CHECK(hType.isUnpackedArray());
-    CHECK(hType.as<UnpackedArrayType>().range == ConstantRange{ 0, 1 });
+    CHECK(hType.as<FixedSizeUnpackedArrayType>().range == ConstantRange{ 0, 1 });
 
     NO_COMPILATION_ERRORS;
 }

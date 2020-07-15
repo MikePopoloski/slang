@@ -208,9 +208,10 @@ public:
         if (!args[1]->type->isUnpackedArray())
             return badArg(context, *args[1]);
 
+        // TODO: rules for associative arrays
         const Type* t = args[1]->type;
         do {
-            t = &t->getCanonicalType().as<UnpackedArrayType>().elementType;
+            t = t->getArrayElementType();
         } while (t->isUnpackedArray());
 
         if (!t->isIntegral())

@@ -115,10 +115,9 @@ public:
     /// Indicates whether this is a packed array type.
     bool isPackedArray() const { return getCanonicalType().kind == SymbolKind::PackedArrayType; }
 
-    /// Indicates whether this is an unpacked array type.
-    bool isUnpackedArray() const {
-        return getCanonicalType().kind == SymbolKind::UnpackedArrayType;
-    }
+    /// Indicates whether this is any form of unpacked array type:
+    /// fixed size, dynamic, associative, or a queue.
+    bool isUnpackedArray() const;
 
     /// Indicates whether this is an unpacked structure type.
     bool isUnpackedStruct() const {
@@ -192,6 +191,9 @@ public:
     /// Returns the bounds of the array, if this is an array type.
     /// Otherwise returns an empty range.
     ConstantRange getArrayRange() const;
+
+    /// Returns the element type if this is an array type; otherwise returns nullptr.
+    const Type* getArrayElementType() const;
 
     /// Returns true if the type can represent a string-like value; this includes
     /// the string type itself as well as byte arrays and all integral types.

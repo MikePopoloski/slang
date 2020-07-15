@@ -28,11 +28,8 @@ const Type& getIndexedType(Compilation& compilation, const BindContext& context,
                            const Type& valueType, SourceRange exprRange, SourceRange valueRange,
                            bool isRangeSelect) {
     const Type& ct = valueType.getCanonicalType();
-    if (ct.kind == SymbolKind::UnpackedArrayType) {
-        return ct.as<UnpackedArrayType>().elementType;
-    }
-    else if (ct.kind == SymbolKind::PackedArrayType) {
-        return ct.as<PackedArrayType>().elementType;
+    if (ct.isArray()) {
+        return *ct.getArrayElementType();
     }
     else if (ct.kind == SymbolKind::StringType && !isRangeSelect) {
         return compilation.getByteType();
@@ -458,8 +455,9 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
 
     // At this point, all expressions are good, ranges have been validated and
     // we know the final width of the selection, so pick the result type and we're done.
+    // TODO: handle other kinds of arrays
     if (value.type->isUnpackedArray())
-        result->type = compilation.emplace<UnpackedArrayType>(elementType, selectionRange);
+        result->type = compilation.emplace<FixedSizeUnpackedArrayType>(elementType, selectionRange);
     else
         result->type = compilation.emplace<PackedArrayType>(elementType, selectionRange);
 
@@ -488,8 +486,9 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
     ConstantRange valueRange = value.type->getArrayRange();
     ASSERT(range.isLittleEndian() == valueRange.isLittleEndian());
 
+    // TODO: handle other kinds of arrays
     if (value.type->isUnpackedArray())
-        result->type = compilation.emplace<UnpackedArrayType>(elementType, range);
+        result->type = compilation.emplace<FixedSizeUnpackedArrayType>(elementType, range);
     else
         result->type = compilation.emplace<PackedArrayType>(elementType, range);
 
@@ -618,7 +617,10 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
             break;
         case SymbolKind::EnumType:
         case SymbolKind::StringType:
-        case SymbolKind::UnpackedArrayType:
+        case SymbolKind::FixedSizeUnpackedArrayType:
+        case SymbolKind::DynamicArrayType:
+        case SymbolKind::AssociativeArrayType:
+        case SymbolKind::QueueType:
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     context);
         default: {

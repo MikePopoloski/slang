@@ -143,13 +143,14 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedArrayType; }
 };
 
-/// Represents an unpacked array of some other type.
-class UnpackedArrayType : public Type {
+/// Represents a fixed size unpacked array (as opposed to a dynamically sized unpacked
+/// array, associative array, or queue).
+class FixedSizeUnpackedArrayType : public Type {
 public:
     const Type& elementType;
     ConstantRange range;
 
-    UnpackedArrayType(const Type& elementType, ConstantRange range);
+    FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range);
 
     static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
                                   LookupLocation location, const Scope& scope,
@@ -160,7 +161,55 @@ public:
 
     ConstantValue getDefaultValueImpl() const;
 
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnpackedArrayType; }
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::FixedSizeUnpackedArrayType; }
+};
+
+/// Represents a dynamically sized unpacked array.
+class DynamicArrayType : public Type {
+public:
+    const Type& elementType;
+
+    explicit DynamicArrayType(const Type& elementType);
+
+    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
+                                  LookupLocation location, const Scope& scope,
+                                  const SyntaxList<VariableDimensionSyntax>& dimensions);
+
+    ConstantValue getDefaultValueImpl() const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::DynamicArrayType; }
+};
+
+/// Represents an unpacked array that provides associative lookup.
+class AssociativeArrayType : public Type {
+public:
+    const Type& elementType;
+
+    explicit AssociativeArrayType(const Type& elementType);
+
+    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
+                                  LookupLocation location, const Scope& scope,
+                                  const SyntaxList<VariableDimensionSyntax>& dimensions);
+
+    ConstantValue getDefaultValueImpl() const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::AssociativeArrayType; }
+};
+
+/// Represents an unpacked array that provides queue semantics.
+class QueueType : public Type {
+public:
+    const Type& elementType;
+
+    explicit QueueType(const Type& elementType);
+
+    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
+                                  LookupLocation location, const Scope& scope,
+                                  const SyntaxList<VariableDimensionSyntax>& dimensions);
+
+    ConstantValue getDefaultValueImpl() const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::QueueType; }
 };
 
 struct StructUnionTypeSyntax;

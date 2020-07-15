@@ -33,7 +33,10 @@ struct AttributeInstanceSyntax;
     x(EnumType) \
     x(EnumValue) \
     x(PackedArrayType) \
-    x(UnpackedArrayType) \
+    x(FixedSizeUnpackedArrayType) \
+    x(DynamicArrayType) \
+    x(AssociativeArrayType) \
+    x(QueueType) \
     x(PackedStructType) \
     x(UnpackedStructType) \
     x(PackedUnionType) \

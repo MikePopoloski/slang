@@ -105,9 +105,10 @@ bool Type::isFourState() const {
     if (ct.isIntegral())
         return ct.as<IntegralType>().isFourState;
 
+    if (ct.isArray())
+        return ct.getArrayElementType()->isFourState();
+
     switch (ct.kind) {
-        case SymbolKind::UnpackedArrayType:
-            return ct.as<UnpackedArrayType>().elementType.isFourState();
         case SymbolKind::UnpackedStructType: {
             auto& us = ct.as<UnpackedStructType>();
             for (auto& field : us.membersOfType<FieldSymbol>()) {
@@ -136,7 +137,10 @@ bool Type::isIntegral() const {
 
 bool Type::isAggregate() const {
     switch (getCanonicalType().kind) {
-        case SymbolKind::UnpackedArrayType:
+        case SymbolKind::FixedSizeUnpackedArrayType:
+        case SymbolKind::DynamicArrayType:
+        case SymbolKind::AssociativeArrayType:
+        case SymbolKind::QueueType:
         case SymbolKind::UnpackedStructType:
         case SymbolKind::UnpackedUnionType:
             return true;
@@ -170,7 +174,10 @@ bool Type::isArray() const {
     const Type& ct = getCanonicalType();
     switch (ct.kind) {
         case SymbolKind::PackedArrayType:
-        case SymbolKind::UnpackedArrayType:
+        case SymbolKind::FixedSizeUnpackedArrayType:
+        case SymbolKind::DynamicArrayType:
+        case SymbolKind::AssociativeArrayType:
+        case SymbolKind::QueueType:
             return true;
         default:
             return false;
@@ -210,9 +217,21 @@ bool Type::isByteArray() const {
     if (!ct.isUnpackedArray())
         return false;
 
-    auto& elem = ct.as<UnpackedArrayType>().elementType.getCanonicalType();
+    auto& elem = ct.getArrayElementType()->getCanonicalType();
     return elem.isPredefinedInteger() &&
            elem.as<PredefinedIntegerType>().integerKind == PredefinedIntegerType::Byte;
+}
+
+bool Type::isUnpackedArray() const {
+    switch (getCanonicalType().kind) {
+        case SymbolKind::FixedSizeUnpackedArrayType:
+        case SymbolKind::DynamicArrayType:
+        case SymbolKind::AssociativeArrayType:
+        case SymbolKind::QueueType:
+            return true;
+        default:
+            return false;
+    }
 }
 
 bool Type::isMatching(const Type& rhs) const {
@@ -259,9 +278,11 @@ bool Type::isMatching(const Type& rhs) const {
         auto& ra = r->as<PackedArrayType>();
         return la.range == ra.range && la.elementType.isMatching(ra.elementType);
     }
-    if (l->kind == SymbolKind::UnpackedArrayType && r->kind == SymbolKind::UnpackedArrayType) {
-        auto& la = l->as<UnpackedArrayType>();
-        auto& ra = r->as<UnpackedArrayType>();
+    // TODO: other array types
+    if (l->kind == SymbolKind::FixedSizeUnpackedArrayType &&
+        r->kind == SymbolKind::FixedSizeUnpackedArrayType) {
+        auto& la = l->as<FixedSizeUnpackedArrayType>();
+        auto& ra = r->as<FixedSizeUnpackedArrayType>();
         return la.range == ra.range && la.elementType.isMatching(ra.elementType);
     }
 
@@ -289,9 +310,11 @@ bool Type::isEquivalent(const Type& rhs) const {
                li.bitWidth == ri.bitWidth;
     }
 
-    if (l->kind == SymbolKind::UnpackedArrayType && r->kind == SymbolKind::UnpackedArrayType) {
-        auto& la = l->as<UnpackedArrayType>();
-        auto& ra = r->as<UnpackedArrayType>();
+    // TODO: other array types
+    if (l->kind == SymbolKind::FixedSizeUnpackedArrayType &&
+        r->kind == SymbolKind::FixedSizeUnpackedArrayType) {
+        auto& la = l->as<FixedSizeUnpackedArrayType>();
+        auto& ra = r->as<FixedSizeUnpackedArrayType>();
         return la.range.width() == ra.range.width() && la.elementType.isEquivalent(ra.elementType);
     }
 
@@ -358,10 +381,29 @@ ConstantRange Type::getArrayRange() const {
     if (t.isIntegral())
         return t.as<IntegralType>().getBitVectorRange();
 
+    // TODO: other array types
     if (t.isUnpackedArray())
-        return t.as<UnpackedArrayType>().range;
+        return t.as<FixedSizeUnpackedArrayType>().range;
 
     return {};
+}
+
+const Type* Type::getArrayElementType() const {
+    const Type& t = getCanonicalType();
+    switch (t.kind) {
+        case SymbolKind::PackedArrayType:
+            return &t.as<PackedArrayType>().elementType;
+        case SymbolKind::FixedSizeUnpackedArrayType:
+            return &t.as<FixedSizeUnpackedArrayType>().elementType;
+        case SymbolKind::DynamicArrayType:
+            return &t.as<DynamicArrayType>().elementType;
+        case SymbolKind::AssociativeArrayType:
+            return &t.as<AssociativeArrayType>().elementType;
+        case SymbolKind::QueueType:
+            return &t.as<QueueType>().elementType;
+        default:
+            return nullptr;
+    }
 }
 
 bool Type::canBeStringLike() const {
@@ -383,14 +425,15 @@ const Type* Type::getFullArrayBounds(SmallVector<ConstantRange>& dimensions) con
         return &curr->elementType;
     }
 
-    if (t.kind == SymbolKind::UnpackedArrayType) {
-        const UnpackedArrayType* curr = &t.as<UnpackedArrayType>();
+    // TODO: other array types
+    if (t.kind == SymbolKind::FixedSizeUnpackedArrayType) {
+        const FixedSizeUnpackedArrayType* curr = &t.as<FixedSizeUnpackedArrayType>();
         while (true) {
             dimensions.append(curr->range);
             if (!curr->elementType.isUnpackedArray())
                 break;
 
-            curr = &curr->elementType.getCanonicalType().as<UnpackedArrayType>();
+            curr = &curr->elementType.getCanonicalType().as<FixedSizeUnpackedArrayType>();
         }
         return &curr->elementType;
     }
@@ -423,8 +466,9 @@ size_t Type::hash() const {
         auto& it = ct.as<IntegralType>();
         hash_combine(h, it.isSigned, it.isFourState, it.bitWidth);
     }
-    else if (ct.kind == SymbolKind::UnpackedArrayType) {
-        auto& uat = ct.as<UnpackedArrayType>();
+    // TODO: other array types
+    else if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType) {
+        auto& uat = ct.as<FixedSizeUnpackedArrayType>();
         hash_combine(h, uat.range.left, uat.range.right, uat.elementType.hash());
     }
     else {
@@ -518,7 +562,10 @@ bool Type::isKind(SymbolKind kind) {
         case SymbolKind::FloatingType:
         case SymbolKind::EnumType:
         case SymbolKind::PackedArrayType:
-        case SymbolKind::UnpackedArrayType:
+        case SymbolKind::FixedSizeUnpackedArrayType:
+        case SymbolKind::DynamicArrayType:
+        case SymbolKind::AssociativeArrayType:
+        case SymbolKind::QueueType:
         case SymbolKind::PackedStructType:
         case SymbolKind::UnpackedStructType:
         case SymbolKind::PackedUnionType:

@@ -192,7 +192,7 @@ void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
     }
 }
 
-void TypePrinter::visit(const UnpackedArrayType& type, string_view) {
+void TypePrinter::visit(const FixedSizeUnpackedArrayType& type, string_view) {
     SmallVectorSized<ConstantRange, 8> dims;
     const Type* elemType = type.getFullArrayBounds(dims);
     ASSERT(elemType);
@@ -216,6 +216,18 @@ void TypePrinter::visit(const UnpackedArrayType& type, string_view) {
         for (auto& range : dims)
             buffer->format("[{}:{}]", range.left, range.right);
     }
+}
+
+void TypePrinter::visit(const DynamicArrayType&, string_view) {
+    // TODO:
+}
+
+void TypePrinter::visit(const AssociativeArrayType&, string_view) {
+    // TODO:
+}
+
+void TypePrinter::visit(const QueueType&, string_view) {
+    // TODO:
 }
 
 void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName) {

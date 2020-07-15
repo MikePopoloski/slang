@@ -22,15 +22,15 @@ public:
             return comp.getErrorType();
 
         auto& type = *args[0]->type;
-        ASSERT(type.isUnpackedArray());
+        auto elemType = type.getArrayElementType();
+        ASSERT(elemType);
 
-        auto& elemType = type.getCanonicalType().as<UnpackedArrayType>().elementType;
-        if (!elemType.isIntegral()) {
+        if (!elemType->isIntegral()) {
             context.addDiag(diag::ArrayReductionIntegral, args[0]->sourceRange);
             return comp.getErrorType();
         }
 
-        return elemType;
+        return *elemType;
     }
 
     bool verifyConstant(EvalContext&, const Args&) const final { return true; }
@@ -63,9 +63,13 @@ MAKE_REDUCTION_METHOD(Xor, "xor", ^=)
 void registerArrayMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
-    REGISTER(SymbolKind::UnpackedArrayType, ArrayOr, );
-    REGISTER(SymbolKind::UnpackedArrayType, ArrayAnd, );
-    REGISTER(SymbolKind::UnpackedArrayType, ArrayXor, );
+
+    for (auto kind : { SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
+                       SymbolKind::AssociativeArrayType, SymbolKind::QueueType }) {
+        REGISTER(kind, ArrayOr, );
+        REGISTER(kind, ArrayAnd, );
+        REGISTER(kind, ArrayXor, );
+    }
 #undef REGISTER
 }
 

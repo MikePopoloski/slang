@@ -435,14 +435,15 @@ const Type& PackedArrayType::fromSyntax(Compilation& compilation, const Type& el
     return *result;
 }
 
-UnpackedArrayType::UnpackedArrayType(const Type& elementType, ConstantRange range) :
-    Type(SymbolKind::UnpackedArrayType, "", SourceLocation()), elementType(elementType),
-    range(range) {
+FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType,
+                                                       ConstantRange range) :
+    Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()),
+    elementType(elementType), range(range) {
 }
 
-const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& elementType,
-                                          LookupLocation location, const Scope& scope,
-                                          const SyntaxList<VariableDimensionSyntax>& dimensions) {
+const Type& FixedSizeUnpackedArrayType::fromSyntax(
+    Compilation& compilation, const Type& elementType, LookupLocation location, const Scope& scope,
+    const SyntaxList<VariableDimensionSyntax>& dimensions) {
     if (elementType.isError())
         return elementType;
 
@@ -456,7 +457,7 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
         if (!dim.isRange())
             return compilation.getErrorType();
 
-        auto unpacked = compilation.emplace<UnpackedArrayType>(*result, dim.range);
+        auto unpacked = compilation.emplace<FixedSizeUnpackedArrayType>(*result, dim.range);
         unpacked->setSyntax(*dimensions[count - i - 1]);
         result = unpacked;
     }
@@ -464,21 +465,65 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
     return *result;
 }
 
-const Type& UnpackedArrayType::fromDims(Compilation& compilation, const Type& elementType,
-                                        span<const ConstantRange> dimensions) {
+const Type& FixedSizeUnpackedArrayType::fromDims(Compilation& compilation, const Type& elementType,
+                                                 span<const ConstantRange> dimensions) {
     if (elementType.isError())
         return elementType;
 
     const Type* result = &elementType;
     size_t count = dimensions.size();
     for (size_t i = 0; i < count; i++)
-        result = compilation.emplace<UnpackedArrayType>(*result, dimensions[count - i - 1]);
+        result =
+            compilation.emplace<FixedSizeUnpackedArrayType>(*result, dimensions[count - i - 1]);
 
     return *result;
 }
 
-ConstantValue UnpackedArrayType::getDefaultValueImpl() const {
+ConstantValue FixedSizeUnpackedArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>(range.width(), elementType.getDefaultValue());
+}
+
+DynamicArrayType::DynamicArrayType(const Type& elementType) :
+    Type(SymbolKind::DynamicArrayType, "", SourceLocation()), elementType(elementType) {
+}
+
+const Type& DynamicArrayType::fromSyntax(Compilation&, const Type& elementType, LookupLocation,
+                                         const Scope&, const SyntaxList<VariableDimensionSyntax>&) {
+    // TODO:
+    return elementType;
+}
+
+ConstantValue DynamicArrayType::getDefaultValueImpl() const {
+    return std::vector<ConstantValue>();
+}
+
+AssociativeArrayType::AssociativeArrayType(const Type& elementType) :
+    Type(SymbolKind::AssociativeArrayType, "", SourceLocation()), elementType(elementType) {
+}
+
+const Type& AssociativeArrayType::fromSyntax(Compilation&, const Type& elementType, LookupLocation,
+                                             const Scope&,
+                                             const SyntaxList<VariableDimensionSyntax>&) {
+    // TODO:
+    return elementType;
+}
+
+ConstantValue AssociativeArrayType::getDefaultValueImpl() const {
+    return std::vector<ConstantValue>();
+}
+
+QueueType::QueueType(const Type& elementType) :
+    Type(SymbolKind::QueueType, "", SourceLocation()), elementType(elementType) {
+}
+
+const Type& QueueType::fromSyntax(Compilation&, const Type& elementType, LookupLocation,
+                                  const Scope&, const SyntaxList<VariableDimensionSyntax>&) {
+    // TODO:
+    return elementType;
+}
+
+ConstantValue QueueType::getDefaultValueImpl() const {
+    return std::vector<ConstantValue>();
 }
 
 PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,

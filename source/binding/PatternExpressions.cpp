@@ -55,8 +55,9 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
         elementType = &ua.elementType;
         numElements = ua.range.width();
     }
-    else if (ct.kind == SymbolKind::UnpackedArrayType) {
-        auto& ua = ct.as<UnpackedArrayType>();
+    // TODO: other kinds of arrays
+    else if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType) {
+        auto& ua = ct.as<FixedSizeUnpackedArrayType>();
         elementType = &ua.elementType;
         numElements = ua.range.width();
     }

@@ -141,7 +141,7 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
     // the leading instance dimensions now.
     Expression* result = &expr;
     const Type* ct = &expr.type->getCanonicalType();
-    if (ct->kind == SymbolKind::UnpackedArrayType) {
+    if (ct->kind == SymbolKind::FixedSizeUnpackedArrayType) {
         SmallVectorSized<ConstantRange, 8> unpackedDimVec;
         ct = ct->getFullArrayBounds(unpackedDimVec);
         ASSERT(ct);
@@ -178,8 +178,10 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
         // all of the instance dims and whatever is left should match
         // the actual port type to connect.
         if (!unpackedDims.empty()) {
-            if (!portType.isEquivalent(UnpackedArrayType::fromDims(comp, *ct, unpackedDims)))
+            if (!portType.isEquivalent(
+                    FixedSizeUnpackedArrayType::fromDims(comp, *ct, unpackedDims))) {
                 return bad();
+            }
 
             ASSERT(instanceDims.empty());
             ASSERT(arrayPath.empty());
