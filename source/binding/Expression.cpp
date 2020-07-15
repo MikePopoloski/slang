@@ -146,8 +146,8 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
 
     SourceRange lhsRange = lhs.sourceRange();
     return AssignmentExpression::fromComponents(comp, std::nullopt, /* nonBlocking */ false,
-                                                *lhsExpr, *rhsExpr, lhsRange.start(), lhsRange,
-                                                context);
+                                                *lhsExpr, *rhsExpr, lhsRange.start(),
+                                                /* timingControl */ nullptr, lhsRange, context);
 }
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
@@ -436,6 +436,12 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &OpenRangeExpression::fromSyntax(
                 compilation, syntax.as<OpenRangeExpressionSyntax>(), context);
             break;
+        case SyntaxKind::TimingControlExpression:
+            // Valid cases of this expression type are handled in AssignmentExpression. If we reach
+            // this block here, the expression is invalid so always report an error.
+            context.addDiag(diag::TimingControlNotAllowed, syntax.sourceRange());
+            result = &badExpr(compilation, nullptr);
+            break;
         case SyntaxKind::AcceptOnPropertyExpression:
         case SyntaxKind::AlwaysPropertyExpression:
         case SyntaxKind::AndSequenceExpression:
@@ -470,7 +476,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::SyncRejectOnPropertyExpression:
         case SyntaxKind::TaggedUnionExpression:
         case SyntaxKind::ThroughoutSequenceExpression:
-        case SyntaxKind::TimingControlExpression:
         case SyntaxKind::TimingControlExpressionConcatenation:
         case SyntaxKind::UnaryNotPropertyExpression:
         case SyntaxKind::UnarySequenceDelayExpression:

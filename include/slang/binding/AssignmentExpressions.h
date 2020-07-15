@@ -10,17 +10,21 @@
 
 namespace slang {
 
+class TimingControl;
 struct BinaryExpressionSyntax;
 
 /// Represents an assignment expression.
 class AssignmentExpression : public Expression {
 public:
     optional<BinaryOperator> op;
+    const TimingControl* timingControl;
 
     AssignmentExpression(optional<BinaryOperator> op, bool nonBlocking, const Type& type,
-                         Expression& left, Expression& right, SourceRange sourceRange) :
+                         Expression& left, Expression& right, const TimingControl* timingControl,
+                         SourceRange sourceRange) :
         Expression(ExpressionKind::Assignment, type, sourceRange),
-        op(op), left_(&left), right_(&right), nonBlocking(nonBlocking) {}
+        op(op), timingControl(timingControl), left_(&left), right_(&right),
+        nonBlocking(nonBlocking) {}
 
     bool isCompound() const { return op.has_value(); }
     bool isNonBlocking() const { return nonBlocking; }
@@ -41,8 +45,8 @@ public:
 
     static Expression& fromComponents(Compilation& compilation, optional<BinaryOperator> op,
                                       bool nonBlocking, Expression& lhs, Expression& rhs,
-                                      SourceLocation assignLoc, SourceRange sourceRange,
-                                      const BindContext& context);
+                                      SourceLocation assignLoc, const TimingControl* timingControl,
+                                      SourceRange sourceRange, const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Assignment; }
 

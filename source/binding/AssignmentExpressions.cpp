@@ -9,7 +9,9 @@
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/OperatorExpressions.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -341,7 +343,19 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         op = getBinaryOperator(syntax.kind);
     }
 
+    const ExpressionSyntax* rightExpr = syntax.right;
     bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
+
+    // If we're in a procedural statement, check for an intra-assignment timing control.
+    // Otherwise, we'll let this fall through to the default handler which will issue an error.
+    const TimingControl* timingControl = nullptr;
+    if ((context.flags & BindFlags::ProceduralStatement) &&
+        rightExpr->kind == SyntaxKind::TimingControlExpression) {
+
+        auto& tce = rightExpr->as<TimingControlExpressionSyntax>();
+        timingControl = &TimingControl::bind(*tce.timing, context);
+        rightExpr = tce.expr;
+    }
 
     // The right hand side of an assignment expression is typically an
     // "assignment-like context", except if the left hand side does not
@@ -352,7 +366,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         if (!pattern.type) {
             // In this case we have to bind the rhs first to determine the
             // correct type to use as the context for the lhs.
-            Expression* rhs = &selfDetermined(compilation, *syntax.right, context);
+            Expression* rhs = &selfDetermined(compilation, *rightExpr, context);
             if (rhs->bad())
                 return badExpr(compilation, rhs);
 
@@ -361,24 +375,25 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
             selfDetermined(context, lhs);
 
             return fromComponents(compilation, op, isNonBlocking, *lhs, *rhs,
-                                  syntax.operatorToken.location(), syntax.sourceRange(), context);
+                                  syntax.operatorToken.location(), timingControl,
+                                  syntax.sourceRange(), context);
         }
     }
 
     Expression& lhs = selfDetermined(compilation, *syntax.left, context);
-    Expression& rhs = create(compilation, *syntax.right, context, BindFlags::None, lhs.type);
+    Expression& rhs = create(compilation, *rightExpr, context, BindFlags::None, lhs.type);
 
     return fromComponents(compilation, op, isNonBlocking, lhs, rhs, syntax.operatorToken.location(),
-                          syntax.sourceRange(), context);
+                          timingControl, syntax.sourceRange(), context);
 }
 
-Expression& AssignmentExpression::fromComponents(Compilation& compilation,
-                                                 optional<BinaryOperator> op, bool nonBlocking,
-                                                 Expression& lhs, Expression& rhs,
-                                                 SourceLocation assignLoc, SourceRange sourceRange,
-                                                 const BindContext& context) {
+Expression& AssignmentExpression::fromComponents(
+    Compilation& compilation, optional<BinaryOperator> op, bool nonBlocking, Expression& lhs,
+    Expression& rhs, SourceLocation assignLoc, const TimingControl* timingControl,
+    SourceRange sourceRange, const BindContext& context) {
+
     auto result = compilation.emplace<AssignmentExpression>(op, nonBlocking, *lhs.type, lhs, rhs,
-                                                            sourceRange);
+                                                            timingControl, sourceRange);
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
 
@@ -395,6 +410,9 @@ Expression& AssignmentExpression::fromComponents(Compilation& compilation,
 }
 
 ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
+    if (!context.isScriptEval() && timingControl)
+        return nullptr;
+
     LValue lvalue = left().evalLValue(context);
     ConstantValue rvalue = right().eval(context);
     if (!lvalue || !rvalue)
@@ -408,6 +426,11 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
 }
 
 bool AssignmentExpression::verifyConstantImpl(EvalContext& context) const {
+    if (!context.isScriptEval() && timingControl) {
+        context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
+        return false;
+    }
+
     return left().verifyConstant(context) && right().verifyConstant(context);
 }
 
@@ -417,6 +440,8 @@ void AssignmentExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isNonBlocking", isNonBlocking());
     if (op)
         serializer.write("op", toString(*op));
+    if (timingControl)
+        serializer.write("timingControl", *timingControl);
 }
 
 Expression& ConversionExpression::fromSyntax(Compilation& compilation,

@@ -452,6 +452,52 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Intra-assignment timing controls") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int j;
+    int g;
+    initial begin
+        j <= #2 2;
+        g = @(posedge j) 3;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Intra-assignment timing control errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int j;
+    int g;
+    initial begin
+        j <= (#2 2);
+        g = 1 + #2 2;
+    end
+
+    localparam int i = foo();
+    function foo;
+        int j;
+        j = #2 2;
+        return j;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::TimingControlNotAllowed);
+    CHECK(diags[1].code == diag::TimingControlNotAllowed);
+    CHECK(diags[2].code == diag::ConstEvalTimedStmtNotConst);
+}
+
 TEST_CASE("Statement labels") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

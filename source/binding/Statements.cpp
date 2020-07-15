@@ -697,7 +697,7 @@ ER VariableDeclStatement::evalImpl(EvalContext& context) const {
     if (auto initializer = symbol.getInitializer()) {
         // Initialization of static variables is skipped in constant functions.
         // This is confusing so issue a warning.
-        if (symbol.lifetime == VariableLifetime::Static) {
+        if (symbol.lifetime == VariableLifetime::Static && !initializer->bad()) {
             context.addDiag(diag::ConstEvalStaticSkipped, initializer->sourceRange);
         }
         else {

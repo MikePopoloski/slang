@@ -347,6 +347,7 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
     auto syntax = getSyntax();
     ASSERT(syntax);
 
+    // TODO: handle drive strengths, delays
     BindContext context(*scope, LookupLocation::before(*this));
     assign =
         &Expression::bind(syntax->as<ExpressionSyntax>(), context, BindFlags::AssignmentAllowed);
