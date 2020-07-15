@@ -152,10 +152,6 @@ public:
 
     FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range);
 
-    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
-                                  LookupLocation location, const Scope& scope,
-                                  const SyntaxList<VariableDimensionSyntax>& dimensions);
-
     static const Type& fromDims(Compilation& compilation, const Type& elementType,
                                 span<const ConstantRange> dimensions);
 
@@ -171,10 +167,6 @@ public:
 
     explicit DynamicArrayType(const Type& elementType);
 
-    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
-                                  LookupLocation location, const Scope& scope,
-                                  const SyntaxList<VariableDimensionSyntax>& dimensions);
-
     ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::DynamicArrayType; }
@@ -184,13 +176,12 @@ public:
 class AssociativeArrayType : public Type {
 public:
     const Type& elementType;
+    const Type* indexType = nullptr;
+    const ConstantValue* defaultElementValue = nullptr;
 
-    explicit AssociativeArrayType(const Type& elementType);
+    AssociativeArrayType(const Type& elementType, const Type* indexType);
 
-    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
-                                  LookupLocation location, const Scope& scope,
-                                  const SyntaxList<VariableDimensionSyntax>& dimensions);
-
+    bool hasWildcardIndexType() const { return indexType == nullptr; }
     ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::AssociativeArrayType; }
@@ -200,12 +191,9 @@ public:
 class QueueType : public Type {
 public:
     const Type& elementType;
+    uint32_t maxSize;
 
-    explicit QueueType(const Type& elementType);
-
-    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
-                                  LookupLocation location, const Scope& scope,
-                                  const SyntaxList<VariableDimensionSyntax>& dimensions);
+    QueueType(const Type& elementType, uint32_t maxSize);
 
     ConstantValue getDefaultValueImpl() const;
 

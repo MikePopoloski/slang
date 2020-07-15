@@ -76,7 +76,7 @@ struct EvaluatedDimension {
     DimensionKind kind = DimensionKind::Unknown;
     ConstantRange range;
     const Type* associativeType = nullptr;
-    int32_t queueMaxSize = 0;
+    uint32_t queueMaxSize = 0;
 
     bool isRange() const {
         return kind == DimensionKind::Range || kind == DimensionKind::AbbreviatedRange;

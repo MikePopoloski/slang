@@ -711,8 +711,7 @@ const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation loca
 const Type& Compilation::getType(const Type& elementType,
                                  const SyntaxList<VariableDimensionSyntax>& dimensions,
                                  LookupLocation location, const Scope& scope) {
-    // TODO: handle other kinds of arrays
-    return FixedSizeUnpackedArrayType::fromSyntax(*this, elementType, location, scope, dimensions);
+    return Type::fromSyntax(*this, elementType, dimensions, location, scope);
 }
 
 const Type& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags) {

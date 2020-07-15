@@ -358,6 +358,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         }
     }
 
+    // TODO: packed dimensions?
+
     return *resultType;
 }
 
@@ -441,30 +443,6 @@ FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType,
     elementType(elementType), range(range) {
 }
 
-const Type& FixedSizeUnpackedArrayType::fromSyntax(
-    Compilation& compilation, const Type& elementType, LookupLocation location, const Scope& scope,
-    const SyntaxList<VariableDimensionSyntax>& dimensions) {
-    if (elementType.isError())
-        return elementType;
-
-    BindContext context(scope, location);
-
-    const Type* result = &elementType;
-    size_t count = dimensions.size();
-    for (size_t i = 0; i < count; i++) {
-        // TODO: handle other kinds of unpacked arrays
-        EvaluatedDimension dim = context.evalDimension(*dimensions[count - i - 1], true);
-        if (!dim.isRange())
-            return compilation.getErrorType();
-
-        auto unpacked = compilation.emplace<FixedSizeUnpackedArrayType>(*result, dim.range);
-        unpacked->setSyntax(*dimensions[count - i - 1]);
-        result = unpacked;
-    }
-
-    return *result;
-}
-
 const Type& FixedSizeUnpackedArrayType::fromDims(Compilation& compilation, const Type& elementType,
                                                  span<const ConstantRange> dimensions) {
     if (elementType.isError())
@@ -487,39 +465,21 @@ DynamicArrayType::DynamicArrayType(const Type& elementType) :
     Type(SymbolKind::DynamicArrayType, "", SourceLocation()), elementType(elementType) {
 }
 
-const Type& DynamicArrayType::fromSyntax(Compilation&, const Type& elementType, LookupLocation,
-                                         const Scope&, const SyntaxList<VariableDimensionSyntax>&) {
-    // TODO:
-    return elementType;
-}
-
 ConstantValue DynamicArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>();
 }
 
-AssociativeArrayType::AssociativeArrayType(const Type& elementType) :
-    Type(SymbolKind::AssociativeArrayType, "", SourceLocation()), elementType(elementType) {
-}
-
-const Type& AssociativeArrayType::fromSyntax(Compilation&, const Type& elementType, LookupLocation,
-                                             const Scope&,
-                                             const SyntaxList<VariableDimensionSyntax>&) {
-    // TODO:
-    return elementType;
+AssociativeArrayType::AssociativeArrayType(const Type& elementType, const Type* indexType) :
+    Type(SymbolKind::AssociativeArrayType, "", SourceLocation()), elementType(elementType),
+    indexType(indexType) {
 }
 
 ConstantValue AssociativeArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>();
 }
 
-QueueType::QueueType(const Type& elementType) :
-    Type(SymbolKind::QueueType, "", SourceLocation()), elementType(elementType) {
-}
-
-const Type& QueueType::fromSyntax(Compilation&, const Type& elementType, LookupLocation,
-                                  const Scope&, const SyntaxList<VariableDimensionSyntax>&) {
-    // TODO:
-    return elementType;
+QueueType::QueueType(const Type& elementType, uint32_t maxSize) :
+    Type(SymbolKind::QueueType, "", SourceLocation()), elementType(elementType), maxSize(maxSize) {
 }
 
 ConstantValue QueueType::getDefaultValueImpl() const {

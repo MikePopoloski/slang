@@ -210,6 +210,10 @@ public:
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope, bool forceSigned);
 
+    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
+                                  const SyntaxList<VariableDimensionSyntax>& dimensions,
+                                  LookupLocation location, const Scope& scope);
+
     /// Constructs a type from the results of a lookup operation. Note that this will
     /// not issue any diagnostics from the result object; the caller must do that
     /// themselves if they wish.

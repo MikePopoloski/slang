@@ -196,7 +196,7 @@ bool Type::isStruct() const {
 }
 
 bool Type::isBitstreamType() const {
-    // TODO: dynamic types, classes
+    // TODO: classes
     return isIntegral() || isUnpackedArray() || isUnpackedStruct();
 }
 
@@ -273,17 +273,39 @@ bool Type::isMatching(const Type& rhs) const {
     }
 
     // Handle check (f): matching array types
-    if (l->kind == SymbolKind::PackedArrayType && r->kind == SymbolKind::PackedArrayType) {
-        auto& la = l->as<PackedArrayType>();
-        auto& ra = r->as<PackedArrayType>();
-        return la.range == ra.range && la.elementType.isMatching(ra.elementType);
-    }
-    // TODO: other array types
-    if (l->kind == SymbolKind::FixedSizeUnpackedArrayType &&
-        r->kind == SymbolKind::FixedSizeUnpackedArrayType) {
-        auto& la = l->as<FixedSizeUnpackedArrayType>();
-        auto& ra = r->as<FixedSizeUnpackedArrayType>();
-        return la.range == ra.range && la.elementType.isMatching(ra.elementType);
+    if (l->isArray() && r->isArray()) {
+        // Both arrays must be of the same type (fixed, packed, associative, etc) and
+        // their element types must match.
+        if (l->kind != r->kind || !l->getArrayElementType()->isMatching(*r->getArrayElementType()))
+            return false;
+
+        if (l->kind == SymbolKind::PackedArrayType) {
+            // If packed size, ranges must match.
+            if (l->as<PackedArrayType>().range != r->as<PackedArrayType>().range)
+                return false;
+        }
+        else if (l->kind == SymbolKind::FixedSizeUnpackedArrayType) {
+            // If fixed size, ranges must match.
+            if (l->as<FixedSizeUnpackedArrayType>().range !=
+                r->as<FixedSizeUnpackedArrayType>().range) {
+                return false;
+            }
+        }
+        else if (l->kind == SymbolKind::AssociativeArrayType) {
+            // If associative, index types must match.
+            auto li = l->as<AssociativeArrayType>().indexType;
+            auto ri = r->as<AssociativeArrayType>().indexType;
+            if (li) {
+                if (!ri || !li->isMatching(*ri))
+                    return false;
+            }
+            else if (ri) {
+                return false;
+            }
+        }
+
+        // Otherwise, the arrays match.
+        return true;
     }
 
     // This is not specified in the standard but people naturally expect it to work:
@@ -303,6 +325,8 @@ bool Type::isEquivalent(const Type& rhs) const {
     if (l->isMatching(*r))
         return true;
 
+    // (c) packed integral types are equivalent if signedness, four-statedness,
+    // and bitwidth are the same.
     if (l->isIntegral() && r->isIntegral() && !l->isEnum() && !r->isEnum()) {
         const auto& li = l->as<IntegralType>();
         const auto& ri = r->as<IntegralType>();
@@ -310,12 +334,32 @@ bool Type::isEquivalent(const Type& rhs) const {
                li.bitWidth == ri.bitWidth;
     }
 
-    // TODO: other array types
+    // (d) fixed size unpacked arrays are equivalent if element types are equivalent
+    // and ranges are the same width; actual bounds may differ.
     if (l->kind == SymbolKind::FixedSizeUnpackedArrayType &&
         r->kind == SymbolKind::FixedSizeUnpackedArrayType) {
         auto& la = l->as<FixedSizeUnpackedArrayType>();
         auto& ra = r->as<FixedSizeUnpackedArrayType>();
         return la.range.width() == ra.range.width() && la.elementType.isEquivalent(ra.elementType);
+    }
+
+    // (e) dynamic arrays, associative arrays, and queues are equivalent if they
+    // are the same kind and have equivalent element types.
+    if (l->isUnpackedArray() && l->kind == r->kind) {
+        // Associative arrays additionally must have the same index type.
+        if (l->kind == SymbolKind::AssociativeArrayType) {
+            auto li = l->as<AssociativeArrayType>().indexType;
+            auto ri = r->as<AssociativeArrayType>().indexType;
+            if (li) {
+                if (!ri || !li->isEquivalent(*ri))
+                    return false;
+            }
+            else if (ri) {
+                return false;
+            }
+        }
+
+        return l->getArrayElementType()->isEquivalent(*r->getArrayElementType());
     }
 
     return false;
@@ -332,6 +376,24 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
     // value or to a floating value.
     if ((l->isIntegral() && !l->isEnum()) || l->isFloating())
         return r->isIntegral() || r->isFloating();
+
+    if (l->isUnpackedArray() && r->isUnpackedArray()) {
+        // Associative arrays are only compatible with each other.
+        // This will have already been ruled out by the isEquivalent check above,
+        // so we if see them here then they're not compatible.
+        if (l->kind == SymbolKind::AssociativeArrayType ||
+            r->kind == SymbolKind::AssociativeArrayType) {
+            return false;
+        }
+
+        // Fixed size unpacked arrays, dynamic arrays, and queues can be assignment
+        // compatible with each other, provided element types are equivalent and,
+        // if the target is fixed size, the ranges are the same width. We don't
+        // need to check the fixed size condition here, since the only way it would
+        // matter is if the source (rhs) is dynamically sized, which can't be checked
+        // until runtime.
+        return l->getArrayElementType()->isEquivalent(*r->getArrayElementType());
+    }
 
     return false;
 }
@@ -352,6 +414,7 @@ bool Type::isCastCompatible(const Type& rhs) const {
     if (r->isString())
         return l->isIntegral();
 
+    // TODO: bitstream casting
     return false;
 }
 
@@ -553,6 +616,46 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         default:
             THROW_UNREACHABLE;
     }
+}
+
+const Type& Type::fromSyntax(Compilation& compilation, const Type& elementType,
+                             const SyntaxList<VariableDimensionSyntax>& dimensions,
+                             LookupLocation location, const Scope& scope) {
+    if (elementType.isError())
+        return elementType;
+
+    BindContext context(scope, location);
+
+    const Type* result = &elementType;
+    size_t count = dimensions.size();
+    for (size_t i = 0; i < count; i++) {
+        auto& syntax = *dimensions[count - i - 1];
+        auto dim = context.evalDimension(syntax, /* requireRange */ false);
+
+        Type* next = nullptr;
+        switch (dim.kind) {
+            case DimensionKind::Unknown:
+                return compilation.getErrorType();
+            case DimensionKind::Range:
+            case DimensionKind::AbbreviatedRange:
+                next = compilation.emplace<FixedSizeUnpackedArrayType>(*result, dim.range);
+                break;
+            case DimensionKind::Dynamic:
+                next = compilation.emplace<DynamicArrayType>(*result);
+                break;
+            case DimensionKind::Associative:
+                next = compilation.emplace<AssociativeArrayType>(*result, dim.associativeType);
+                break;
+            case DimensionKind::Queue:
+                next = compilation.emplace<QueueType>(*result, dim.queueMaxSize);
+                break;
+        }
+
+        next->setSyntax(syntax);
+        result = next;
+    }
+
+    return *result;
 }
 
 bool Type::isKind(SymbolKind kind) {

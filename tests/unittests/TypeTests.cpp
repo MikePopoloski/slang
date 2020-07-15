@@ -425,7 +425,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Unpacked arrays") {
+TEST_CASE("Unpacked array ports") {
     auto tree = SyntaxTree::fromText(R"(
 module Top(logic f[3], g, h[0:1]);
 
@@ -447,6 +447,47 @@ endmodule
     CHECK(hType.as<FixedSizeUnpackedArrayType>().range == ConstantRange{ 0, 1 });
 
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Unpacked array kinds") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    real a[][3];
+    real b[*];
+    real c[int];
+    real d[$];
+    real e[$:9999];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& a = compilation.getRoot().lookupName<VariableSymbol>("m.a").getType();
+    CHECK(a.kind == SymbolKind::DynamicArrayType);
+    CHECK(a.getArrayElementType()->toString() == "real$[0:2]");
+
+    auto& b = compilation.getRoot().lookupName<VariableSymbol>("m.b").getType();
+    CHECK(b.kind == SymbolKind::AssociativeArrayType);
+    CHECK(b.getArrayElementType()->toString() == "real");
+    CHECK(b.as<AssociativeArrayType>().indexType == nullptr);
+
+    auto& c = compilation.getRoot().lookupName<VariableSymbol>("m.c").getType();
+    CHECK(c.kind == SymbolKind::AssociativeArrayType);
+    CHECK(c.getArrayElementType()->toString() == "real");
+    REQUIRE(c.as<AssociativeArrayType>().indexType);
+    CHECK(c.as<AssociativeArrayType>().indexType->toString() == "int");
+
+    auto& d = compilation.getRoot().lookupName<VariableSymbol>("m.d").getType();
+    CHECK(d.kind == SymbolKind::QueueType);
+    CHECK(d.getArrayElementType()->toString() == "real");
+    CHECK(d.as<QueueType>().maxSize == 0);
+
+    auto& e = compilation.getRoot().lookupName<VariableSymbol>("m.e").getType();
+    CHECK(e.kind == SymbolKind::QueueType);
+    CHECK(e.getArrayElementType()->toString() == "real");
+    CHECK(e.as<QueueType>().maxSize == 9999);
 }
 
 TEST_CASE("Invalid unpacked dimensions") {
@@ -603,9 +644,27 @@ TEST_CASE("Type matching") {
     declare("logic [7:0] myNibbles;");
     declare("logic [3:0] fooArray;");
     declare("logic [0:3] reverseFoo;");
+    declare("logic da1[];");
+    declare("bit da2[];");
+    declare("logic da3[];");
+    declare("bit aa1[int];");
+    declare("bit aa2[*];");
+    declare("bit aa3[real];");
+    declare("bit aa4[int];");
+    declare("logic q1[$:1];");
+    declare("logic q2[$];");
     CHECK(matching("memBytes", "myMemBytes"));
     CHECK(!matching("nibbles", "myNibbles"));
     CHECK(!matching("fooArray", "reverseFoo"));
+    CHECK(!matching("da1", "da2"));
+    CHECK(matching("da1", "da3"));
+    CHECK(!matching("da1", "myMemBytes"));
+    CHECK(!matching("aa1", "aa2"));
+    CHECK(!matching("aa2", "aa1"));
+    CHECK(!matching("aa1", "aa3"));
+    CHECK(matching("aa1", "aa4"));
+    CHECK(matching("q1", "q2"));
+    CHECK(!matching("q1", "da1"));
 
     // g) Adding default signedness keyword doesn't change anything
     declare("byte signed stillRealByte;");
@@ -670,13 +729,64 @@ TEST_CASE("Type equivalence") {
     declare("uint10 C[6:1];");
     declare("bit [10:0] D[0:5];");
     declare("bit [9:0] E[0:6];");
+    declare("bit [9:0] F[$];");
+    declare("bit [1:10] G[$];");
+    declare("bit [9:0] H[*];");
+    declare("bit [1:10] I[int];");
+    declare("bit [1:10] J[bit signed[31:0]];");
+    declare("bit [1:10] K[];");
+    declare("bit [9:0] L[];");
     CHECK(equiv("A", "B"));
     CHECK(equiv("B", "C"));
     CHECK(equiv("C", "A"));
     CHECK(!equiv("D", "A"));
     CHECK(!equiv("E", "A"));
+    CHECK(equiv("F", "G"));
+    CHECK(!equiv("F", "H"));
+    CHECK(!equiv("H", "I"));
+    CHECK(equiv("I", "J"));
+    CHECK(equiv("K", "L"));
 
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Assignment compatibility") {
+    std::vector<std::shared_ptr<SyntaxTree>> savedTrees;
+
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
+
+    auto declare = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        savedTrees.push_back(tree);
+        scope.addMembers(tree->root());
+    };
+
+    auto typeof = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        BindContext context(scope, LookupLocation::max);
+        return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
+    };
+
+    // [6.22.3] - Assignment compatibility
+    auto compat = [&](const std::string& lhs, const std::string& rhs) {
+        return typeof(lhs)->isAssignmentCompatible(*typeof(rhs));
+    };
+
+    declare("bit [9:0] A[0:5];");
+    declare("bit [9:0] B[$];");
+    declare("bit [1:10] C[$];");
+    declare("bit [9:0] D[*];");
+    declare("bit [1:10] E[int];");
+    declare("bit [1:10] F[];");
+    declare("bit [9:0] G[];");
+    CHECK(compat("A", "B"));
+    CHECK(compat("B", "A"));
+    CHECK(!compat("C", "D"));
+    CHECK(!compat("D", "F"));
+    CHECK(compat("F", "A"));
+    CHECK(compat("A", "G"));
+    CHECK(!compat("G", "D"));
 }
 
 TEST_CASE("$typename") {

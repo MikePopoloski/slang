@@ -169,7 +169,7 @@ EvaluatedDimension BindContext::evalDimension(const VariableDimensionSyntax& syn
                 if (maxSizeClause) {
                     auto value = evalInteger(*maxSizeClause->expr);
                     if (requireGtZero(value, maxSizeClause->expr->sourceRange()))
-                        result.queueMaxSize = *value;
+                        result.queueMaxSize = uint32_t(*value);
                 }
                 break;
             }
@@ -234,9 +234,8 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax,
                                      EvaluatedDimension& result) const {
     switch (syntax.kind) {
         case SyntaxKind::BitSelect: {
-            auto& expr =
-                Expression::bind(*syntax.as<BitSelectSyntax>().expr,
-                                 resetFlags(BindFlags::Constant | BindFlags::AllowDataType));
+            auto& expr = Expression::bind(*syntax.as<BitSelectSyntax>().expr, *this,
+                                          BindFlags::Constant | BindFlags::AllowDataType);
 
             // If this expression is actually a data type, this is an associative array dimension
             // instead of a normal packed / unpacked array.
