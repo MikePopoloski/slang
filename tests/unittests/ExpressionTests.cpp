@@ -279,6 +279,10 @@ TEST_CASE("Expression types") {
     CHECK(typeof("upUnion.a") == "logic[13:0]");
     CHECK(typeof("upUnion.b") == "int");
 
+    // Selections
+    CHECK(typeof("l[0:0]") == "logic[0:0]");
+    CHECK(typeof("b1[2:2]") == "bit[2:2]");
+
     // Casts
     declare("parameter int FOO = 1;");
     CHECK(typeof("(FOO + 2)'(b1)") == "bit[2:0]");

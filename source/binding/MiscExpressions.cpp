@@ -401,7 +401,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             return badExpr(compilation, result);
 
         selectionRange = { *lv, *rv };
-        if (selectionRange.isLittleEndian() != valueRange.isLittleEndian()) {
+        if (selectionRange.isLittleEndian() != valueRange.isLittleEndian() &&
+            selectionRange.width() > 1) {
             auto& diag = context.addDiag(diag::SelectEndianMismatch, errorRange);
             diag << *value.type;
             return badExpr(compilation, result);
