@@ -59,6 +59,8 @@ public:
 
 private:
     void appendMembers(const Scope& scope);
+    void printUnpackedArray(const Type& type);
+    void printUnpackedArrayDim(const Type& type);
     void printScope(const Scope* scope);
     void printAKA(const Type& type);
 

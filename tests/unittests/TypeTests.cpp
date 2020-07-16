@@ -796,10 +796,13 @@ TEST_CASE("$typename") {
 typedef bit node;
 node [2:0] X;
 int signed Y;
+logic [3:0][1:4] foo[$][][4][*][logic[3:0]][2:1][$:99];
+
 package A;
     enum {A,B,C=99} X;
     typedef bit [9:1'b1] word;
 endpackage : A
+
 import A::*;
 module top;
     if (1) begin : foo
@@ -819,6 +822,7 @@ endmodule
     CHECK(tn("A::word") == "bit[9:1]");
     CHECK(tn("top.foo.AB") == "struct{bit A;bit B;}top.foo.AB_t$[0:9]");
     CHECK(tn("top.foo.bar") == "struct{bit A;bit B;}top.foo.s$2");
+    CHECK(tn("foo") == "logic[3:0][1:4]$[$][][0:3][*][logic[3:0]][2:1][$:99]");
 
     NO_SESSION_ERRORS;
 }

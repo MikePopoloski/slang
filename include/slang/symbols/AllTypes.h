@@ -177,7 +177,6 @@ class AssociativeArrayType : public Type {
 public:
     const Type& elementType;
     const Type* indexType = nullptr;
-    const ConstantValue* defaultElementValue = nullptr;
 
     AssociativeArrayType(const Type& elementType, const Type* indexType);
 
