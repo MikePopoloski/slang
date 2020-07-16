@@ -134,10 +134,16 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
 
 void TypePrinter::visit(const PackedArrayType& type, string_view) {
     SmallVectorSized<ConstantRange, 8> dims;
-    const Type* elemType = type.getFullArrayBounds(dims);
-    ASSERT(elemType);
+    const PackedArrayType* curr = &type;
+    while (true) {
+        dims.append(curr->range);
+        if (!curr->elementType.isPackedArray())
+            break;
 
-    elemType->visit(*this, "");
+        curr = &curr->elementType.getCanonicalType().as<PackedArrayType>();
+    }
+
+    curr->elementType.visit(*this, ""sv);
     for (auto& range : dims)
         buffer->format("[{}:{}]", range.left, range.right);
 }
@@ -308,14 +314,14 @@ void TypePrinter::printUnpackedArray(const Type& type) {
 
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         buffer->append("unpacked array ");
-        printUnpackedArrayDim(type);
+        printUnpackedArrayDim(type.getCanonicalType());
         buffer->append(" of ");
         elemType->visit(*this, ""sv);
     }
     else {
         elemType->visit(*this, ""sv);
         buffer->append("$");
-        printUnpackedArrayDim(type);
+        printUnpackedArrayDim(type.getCanonicalType());
     }
 }
 
@@ -360,7 +366,7 @@ void TypePrinter::printUnpackedArrayDim(const Type& type) {
     }
 
     // We can only reach this if we know we have an array type.
-    printUnpackedArrayDim(*type.getArrayElementType());
+    printUnpackedArrayDim(type.getArrayElementType()->getCanonicalType());
 }
 
 void TypePrinter::printScope(const Scope* scope) {

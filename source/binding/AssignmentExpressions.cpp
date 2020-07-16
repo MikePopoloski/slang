@@ -143,8 +143,15 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
     const Type* ct = &expr.type->getCanonicalType();
     if (ct->kind == SymbolKind::FixedSizeUnpackedArrayType) {
         SmallVectorSized<ConstantRange, 8> unpackedDimVec;
-        ct = ct->getFullArrayBounds(unpackedDimVec);
-        ASSERT(ct);
+        const FixedSizeUnpackedArrayType* curr = &ct->as<FixedSizeUnpackedArrayType>();
+        while (true) {
+            unpackedDimVec.append(curr->range);
+            ct = &curr->elementType.getCanonicalType();
+            if (ct->kind != SymbolKind::FixedSizeUnpackedArrayType)
+                break;
+
+            curr = &ct->as<FixedSizeUnpackedArrayType>();
+        }
 
         // Select each element of the connection array based on the index of
         // the instance in the instance array path. Elements get matched

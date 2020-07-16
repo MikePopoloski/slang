@@ -474,36 +474,6 @@ bool Type::canBeStringLike() const {
     return t.isIntegral() || t.isString() || t.isByteArray();
 }
 
-const Type* Type::getFullArrayBounds(SmallVector<ConstantRange>& dimensions) const {
-    const Type& t = getCanonicalType();
-    if (t.kind == SymbolKind::PackedArrayType) {
-        const PackedArrayType* curr = &t.as<PackedArrayType>();
-        while (true) {
-            dimensions.append(curr->range);
-            if (!curr->elementType.isPackedArray())
-                break;
-
-            curr = &curr->elementType.getCanonicalType().as<PackedArrayType>();
-        }
-        return &curr->elementType;
-    }
-
-    // TODO: other array types
-    if (t.kind == SymbolKind::FixedSizeUnpackedArrayType) {
-        const FixedSizeUnpackedArrayType* curr = &t.as<FixedSizeUnpackedArrayType>();
-        while (true) {
-            dimensions.append(curr->range);
-            if (!curr->elementType.isUnpackedArray())
-                break;
-
-            curr = &curr->elementType.getCanonicalType().as<FixedSizeUnpackedArrayType>();
-        }
-        return &curr->elementType;
-    }
-
-    return nullptr;
-}
-
 std::string Type::toString() const {
     TypePrinter printer;
     printer.append(*this);

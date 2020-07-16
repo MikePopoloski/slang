@@ -34,7 +34,7 @@ public:
     /// @return a view of the emitted JSON text so far.
     /// @note the returned view is not guaranteed to remain valid once
     /// additional writes are performed.
-    [[nodiscard]] string_view view() const;
+    string_view view() const;
 
     /// Begins a new JSON object. It's expected that you will write zero or
     /// more properties and then end the object.
