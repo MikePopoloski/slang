@@ -293,7 +293,7 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     auto elems = cv.elements();
     optional<int32_t> index = cs.integer().as<int32_t>();
     if (!index || *index < 0 || *index >= elems.size()) {
-        context.addDiag(diag::ConstEvalDynamicArrayBounds, sourceRange)
+        context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
             << cs << valType << elems.size();
         return type->getDefaultValue();
     }
@@ -344,7 +344,7 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     auto elems = lval.load().elements();
     optional<int32_t> index = cs.integer().as<int32_t>();
     if (!index || *index < 0 || *index >= elems.size()) {
-        context.addDiag(diag::ConstEvalDynamicArrayBounds, sourceRange)
+        context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
             << cs << valType << elems.size();
         return nullptr;
     }
@@ -414,90 +414,123 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     if (!rv)
         return badExpr(compilation, result);
 
-    // TODO: non-fixed sizes
-    ConstantRange selectionRange;
-    ConstantRange valueRange = valueType.getFixedRange();
+    // If the array type has a fixed range, validate that the range we're selecting is allowed.
     SourceRange errorRange{ left.sourceRange.start(), right.sourceRange.end() };
+    if (valueType.hasFixedRange()) {
+        ConstantRange selectionRange;
+        ConstantRange valueRange = valueType.getFixedRange();
 
-    // Helper function for validating the bounds of the selection.
-    auto validateRange = [&](auto range) {
-        if (!valueRange.containsPoint(range.left) || !valueRange.containsPoint(range.right)) {
-            auto& diag = context.addDiag(diag::BadRangeExpression, errorRange);
-            diag << range.left << range.right;
-            diag << valueType;
-            return false;
-        }
-        return true;
-    };
+        // Helper function for validating the bounds of the selection.
+        auto validateRange = [&](auto range) {
+            if (!valueRange.containsPoint(range.left) || !valueRange.containsPoint(range.right)) {
+                auto& diag = context.addDiag(diag::BadRangeExpression, errorRange);
+                diag << range.left << range.right;
+                diag << valueType;
+                return false;
+            }
+            return true;
+        };
 
-    if (selectionKind == RangeSelectionKind::Simple) {
-        optional<int32_t> lv = context.evalInteger(left);
-        if (!lv)
-            return badExpr(compilation, result);
+        if (selectionKind == RangeSelectionKind::Simple) {
+            optional<int32_t> lv = context.evalInteger(left);
+            if (!lv)
+                return badExpr(compilation, result);
 
-        selectionRange = { *lv, *rv };
-        if (selectionRange.isLittleEndian() != valueRange.isLittleEndian() &&
-            selectionRange.width() > 1) {
-            auto& diag = context.addDiag(diag::SelectEndianMismatch, errorRange);
-            diag << valueType;
-            return badExpr(compilation, result);
-        }
-
-        if ((context.flags & BindFlags::UnevaluatedBranch) == 0 && !validateRange(selectionRange))
-            return badExpr(compilation, result);
-    }
-    else {
-        if (!context.requireGtZero(rv, right.sourceRange))
-            return badExpr(compilation, result);
-
-        if (bitwidth_t(*rv) > valueRange.width()) {
-            auto& diag = context.addDiag(diag::RangeWidthTooLarge, right.sourceRange);
-            diag << *rv;
-            diag << valueType;
-            return badExpr(compilation, result);
-        }
-
-        // If the lhs is a known constant, we can check that now too.
-        ConstantValue leftVal = context.tryEval(left);
-        if (leftVal && (context.flags & BindFlags::UnevaluatedBranch) == 0) {
-            optional<int32_t> index = leftVal.integer().as<int32_t>();
-            if (!index) {
-                auto& diag = context.addDiag(diag::IndexValueInvalid, left.sourceRange);
-                diag << leftVal;
+            selectionRange = { *lv, *rv };
+            if (selectionRange.isLittleEndian() != valueRange.isLittleEndian() &&
+                selectionRange.width() > 1) {
+                auto& diag = context.addDiag(diag::SelectEndianMismatch, errorRange);
                 diag << valueType;
                 return badExpr(compilation, result);
             }
 
-            selectionRange =
-                getIndexedRange(selectionKind, *index, *rv, valueRange.isLittleEndian());
-
-            if (!validateRange(selectionRange))
+            if ((context.flags & BindFlags::UnevaluatedBranch) == 0 &&
+                !validateRange(selectionRange)) {
                 return badExpr(compilation, result);
+            }
         }
         else {
-            // Otherwise, the resulting range will start with the fixed lower bound of the type.
-            int32_t count = *rv - 1;
-            if (selectionKind == RangeSelectionKind::IndexedUp) {
-                selectionRange.left = valueRange.lower() + count;
-                selectionRange.right = valueRange.lower();
+            if (!context.requireGtZero(rv, right.sourceRange))
+                return badExpr(compilation, result);
+
+            if (bitwidth_t(*rv) > valueRange.width()) {
+                auto& diag = context.addDiag(diag::RangeWidthTooLarge, right.sourceRange);
+                diag << *rv;
+                diag << valueType;
+                return badExpr(compilation, result);
+            }
+
+            // If the lhs is a known constant, we can check that now too.
+            ConstantValue leftVal = context.tryEval(left);
+            if (leftVal && (context.flags & BindFlags::UnevaluatedBranch) == 0) {
+                optional<int32_t> index = leftVal.integer().as<int32_t>();
+                if (!index) {
+                    auto& diag = context.addDiag(diag::IndexValueInvalid, left.sourceRange);
+                    diag << leftVal;
+                    diag << valueType;
+                    return badExpr(compilation, result);
+                }
+
+                selectionRange =
+                    getIndexedRange(selectionKind, *index, *rv, valueRange.isLittleEndian());
+
+                if (!validateRange(selectionRange))
+                    return badExpr(compilation, result);
             }
             else {
-                selectionRange.left = valueRange.upper();
-                selectionRange.right = valueRange.upper() - count;
-            }
+                // Otherwise, the resulting range will start with the fixed lower bound of the type.
+                int32_t count = *rv - 1;
+                if (selectionKind == RangeSelectionKind::IndexedUp) {
+                    selectionRange.left = valueRange.lower() + count;
+                    selectionRange.right = valueRange.lower();
+                }
+                else {
+                    selectionRange.left = valueRange.upper();
+                    selectionRange.right = valueRange.upper() - count;
+                }
 
-            if (!valueRange.isLittleEndian())
-                selectionRange.reverse();
+                if (!valueRange.isLittleEndian())
+                    selectionRange.reverse();
+            }
+        }
+
+        // At this point, all expressions are good, ranges have been validated and
+        // we know the final width of the selection, so pick the result type and we're done.
+        if (valueType.isUnpackedArray()) {
+            result->type =
+                compilation.emplace<FixedSizeUnpackedArrayType>(elementType, selectionRange);
+        }
+        else {
+            result->type = compilation.emplace<PackedArrayType>(elementType, selectionRange);
         }
     }
+    else {
+        // Otherwise, this is a dynamic array so we can't validate much. We should check that
+        // the selection endianness is correct for simple ranges -- dynamic arrays only
+        // permit big endian [0..N] ordering.
+        ConstantRange selectionRange;
+        if (selectionKind == RangeSelectionKind::Simple) {
+            optional<int32_t> lv = context.evalInteger(left);
+            if (!lv)
+                return badExpr(compilation, result);
 
-    // At this point, all expressions are good, ranges have been validated and
-    // we know the final width of the selection, so pick the result type and we're done.
-    // TODO: handle other kinds of arrays
-    if (valueType.isUnpackedArray())
+            selectionRange = { *lv, *rv };
+            if (selectionRange.isLittleEndian() && selectionRange.width() > 1) {
+                auto& diag = context.addDiag(diag::SelectEndianDynamic, errorRange);
+                diag << valueType;
+                return badExpr(compilation, result);
+            }
+        }
+        else {
+            if (!context.requireGtZero(rv, right.sourceRange))
+                return badExpr(compilation, result);
+
+            selectionRange.left = 0;
+            selectionRange.right = *rv - 1;
+        }
+
         result->type = compilation.emplace<FixedSizeUnpackedArrayType>(elementType, selectionRange);
-    else
-        result->type = compilation.emplace<PackedArrayType>(elementType, selectionRange);
+    }
 
     return *result;
 }
@@ -523,11 +556,11 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
     if (elementType.isError())
         return badExpr(compilation, result);
 
-    // TODO: non-fixed sizes
+    // This method is only called on expressions with a fixed range type.
     ConstantRange valueRange = valueType.getFixedRange();
     ASSERT(range.isLittleEndian() == valueRange.isLittleEndian());
+    ASSERT(valueType.hasFixedRange());
 
-    // TODO: handle other kinds of arrays
     if (valueType.isUnpackedArray())
         result->type = compilation.emplace<FixedSizeUnpackedArrayType>(elementType, range);
     else
@@ -543,11 +576,21 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv || !cl || !cr)
         return nullptr;
 
-    optional<ConstantRange> range = getRange(context, cl, cr);
-    if (!range)
-        return nullptr;
+    if (value().type->hasFixedRange()) {
+        optional<ConstantRange> range = getFixedRange(context, cl, cr);
+        if (!range)
+            return nullptr;
 
-    return cv.getSlice(range->upper(), range->lower());
+        return cv.getSlice(range->upper(), range->lower());
+    }
+    else {
+        optional<ConstantRange> range = getDynamicRange(context, cl, cr, cv);
+        if (!range)
+            return nullptr;
+
+        // TODO: provide default
+        return cv.getSlice(range->upper(), range->lower());
+    }
 }
 
 LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
@@ -557,11 +600,21 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval || !cl || !cr)
         return nullptr;
 
-    optional<ConstantRange> range = getRange(context, cl, cr);
-    if (!range)
-        return nullptr;
+    if (value().type->hasFixedRange()) {
+        optional<ConstantRange> range = getFixedRange(context, cl, cr);
+        if (!range)
+            return nullptr;
 
-    return lval.selectRange(*range);
+        return lval.selectRange(*range);
+    }
+    else {
+        optional<ConstantRange> range = getDynamicRange(context, cl, cr, lval.load());
+        if (!range)
+            return nullptr;
+
+        // LValue will handle out of bounds accesses
+        return lval.selectRange(*range);
+    }
 }
 
 bool RangeSelectExpression::verifyConstantImpl(EvalContext& context) const {
@@ -569,10 +622,9 @@ bool RangeSelectExpression::verifyConstantImpl(EvalContext& context) const {
            right().verifyConstant(context);
 }
 
-optional<ConstantRange> RangeSelectExpression::getRange(EvalContext& context,
-                                                        const ConstantValue& cl,
-                                                        const ConstantValue& cr) const {
-    // TODO: non-fixed sizes
+optional<ConstantRange> RangeSelectExpression::getFixedRange(EvalContext& context,
+                                                             const ConstantValue& cl,
+                                                             const ConstantValue& cr) const {
     ConstantRange result;
     const Type& valueType = *value().type;
     ConstantRange valueRange = valueType.getFixedRange();
@@ -612,6 +664,52 @@ optional<ConstantRange> RangeSelectExpression::getRange(EvalContext& context,
     result.left *= width;
     result.right *= width;
     result.left += width - 1;
+
+    return result;
+}
+
+optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& context,
+                                                               const ConstantValue& cl,
+                                                               const ConstantValue& cr,
+                                                               const ConstantValue& cv) const {
+    const Type& valueType = *value().type;
+    optional<int32_t> li = cl.integer().as<int32_t>();
+    optional<int32_t> ri = cr.integer().as<int32_t>();
+    if (!li) {
+        context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cl << valueType;
+        return std::nullopt;
+    }
+    if (!ri) {
+        context.addDiag(diag::ConstEvalArrayIndexInvalid, sourceRange) << cr << valueType;
+        return std::nullopt;
+    }
+
+    int32_t l = *li;
+    int32_t r = *ri;
+    ConstantRange result;
+
+    if (selectionKind == RangeSelectionKind::Simple) {
+        result = { l, r };
+    }
+    else {
+        int32_t count = r - 1;
+        if (selectionKind == RangeSelectionKind::IndexedUp) {
+            result.left = l;
+            result.right = l + count;
+        }
+        else {
+            result.left = l - count;
+            result.right = l;
+        }
+    }
+
+    // Out of bounds ranges are allowed, we just issue a warning.
+    if (l < 0 || r >= cv.elements().size()) {
+        auto& diag = context.addDiag(diag::ConstEvalDynamicArrayRange, sourceRange);
+        diag << result.left << result.right;
+        diag << valueType;
+        diag << cv.elements().size();
+    }
 
     return result;
 }

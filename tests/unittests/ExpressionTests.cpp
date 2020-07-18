@@ -268,6 +268,9 @@ TEST_CASE("Expression types") {
     CHECK(typeof("dar1 != arr1") == "<error>");
     CHECK(typeof("dar1[3]") == "bit[7:0]");
     CHECK(typeof("dar2[i]") == "bit[0:7]");
+    CHECK(typeof("dar1[2:3]") == "bit[7:0]$[2:3]");
+    CHECK(typeof("dar1[2+:3]") == "bit[7:0]$[0:2]");
+    CHECK(typeof("dar1[2-:5]") == "bit[7:0]$[0:4]");
 
     // Associative arrays
     declare("bit [7:0] aar1 [int];");

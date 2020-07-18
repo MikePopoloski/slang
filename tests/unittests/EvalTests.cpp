@@ -485,6 +485,49 @@ TEST_CASE("Unpacked array eval") {
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Dynamic array eval") {
+    ScriptSession session;
+    session.eval("int arr[] = '{1, 2, 3, 4};");
+    session.eval("arr[0] = 42;");
+    CHECK(session.eval("arr[0]").integer() == 42);
+    CHECK(session.eval("arr[3]").integer() == 4);
+    CHECK(session.eval("arr[-1]").integer() == 0);
+
+    session.eval("int arr2[2];");
+    session.eval("arr2[0] = 1234;");
+    session.eval("arr2[1] = 19;");
+    session.eval("arr[1:2] = arr2;");
+
+    // TODO: ordering of array being copied
+    auto cv = session.eval("arr");
+    CHECK(cv.elements()[0].integer() == 42);
+    CHECK(cv.elements()[1].integer() == 19);
+    CHECK(cv.elements()[2].integer() == 1234);
+    CHECK(cv.elements()[3].integer() == 4);
+
+    /*CHECK(session.eval("arr[1:2] == arr2").integer() == 1);
+
+    cv = session.eval("1 ? arr[1:2] : arr2");
+    CHECK(cv.elements()[1].integer() == 1234);
+    CHECK(cv.elements()[0].integer() == 19);
+
+    cv = session.eval("'x ? arr[1:2] : arr2");
+    CHECK(cv.elements()[1].integer() == 1234);
+    CHECK(cv.elements()[0].integer() == 19);
+
+    session.eval("arr2[0] = 1;");
+    cv = session.eval("'x ? arr[1:2] : arr2");
+    CHECK(cv.elements()[1].integer() == 0);
+    CHECK(cv.elements()[0].integer() == 19);
+
+    session.eval("arr2[0] = 142;");
+    CHECK(session.eval("arr2.xor").integer() == 157);
+
+    session.eval("arr2[1] = 63;");
+    CHECK(session.eval("arr2.or").integer() == 191);
+    CHECK(session.eval("arr2.and").integer() == 14);*/
+}
+
 TEST_CASE("Unpacked struct eval") {
     ScriptSession session;
     session.eval("struct { integer a[2:0]; bit b; } foo;");

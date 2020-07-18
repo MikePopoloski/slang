@@ -120,8 +120,10 @@ public:
 private:
     static ConstantRange getIndexedRange(RangeSelectionKind kind, int32_t l, int32_t r,
                                          bool littleEndian);
-    optional<ConstantRange> getRange(EvalContext& context, const ConstantValue& cl,
-                                     const ConstantValue& cr) const;
+    optional<ConstantRange> getFixedRange(EvalContext& context, const ConstantValue& cl,
+                                          const ConstantValue& cr) const;
+    optional<ConstantRange> getDynamicRange(EvalContext& context, const ConstantValue& cl,
+                                            const ConstantValue& cr, const ConstantValue& cv) const;
 
     Expression* value_;
     const Expression* left_;
