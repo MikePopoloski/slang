@@ -199,19 +199,55 @@ void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
 }
 
 void TypePrinter::visit(const FixedSizeUnpackedArrayType& type, string_view) {
-    printUnpackedArray(type);
+    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+        buffer->append("unpacked array ");
+        if (!type.range.isLittleEndian() && type.range.lower() == 0)
+            buffer->format("[{}]", type.range.width());
+        else
+            buffer->format("[{}:{}]", type.range.left, type.range.right);
+
+        buffer->append(" of ");
+        type.elementType.visit(*this, ""sv);
+    }
+    else {
+        printUnpackedArray(type);
+    }
 }
 
 void TypePrinter::visit(const DynamicArrayType& type, string_view) {
-    printUnpackedArray(type);
+    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+        buffer->append("dynamic array of ");
+        type.elementType.visit(*this, ""sv);
+    }
+    else {
+        printUnpackedArray(type);
+    }
 }
 
 void TypePrinter::visit(const AssociativeArrayType& type, string_view) {
-    printUnpackedArray(type);
+    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+        buffer->append("associative array [");
+        if (type.indexType)
+            type.indexType->visit(*this, ""sv);
+        else
+            buffer->append("*");
+
+        buffer->append("] of ");
+        type.elementType.visit(*this, ""sv);
+    }
+    else {
+        printUnpackedArray(type);
+    }
 }
 
 void TypePrinter::visit(const QueueType& type, string_view) {
-    printUnpackedArray(type);
+    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
+        buffer->append("queue of ");
+        type.elementType.visit(*this, ""sv);
+    }
+    else {
+        printUnpackedArray(type);
+    }
 }
 
 void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName) {
@@ -312,30 +348,16 @@ void TypePrinter::printUnpackedArray(const Type& type) {
         elemType = elemType->getArrayElementType();
     } while (elemType->isUnpackedArray());
 
-    if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        buffer->append("unpacked array ");
-        printUnpackedArrayDim(type.getCanonicalType());
-        buffer->append(" of ");
-        elemType->visit(*this, ""sv);
-    }
-    else {
-        elemType->visit(*this, ""sv);
-        buffer->append("$");
-        printUnpackedArrayDim(type.getCanonicalType());
-    }
+    elemType->visit(*this, ""sv);
+    buffer->append("$");
+    printUnpackedArrayDim(type.getCanonicalType());
 }
 
 void TypePrinter::printUnpackedArrayDim(const Type& type) {
     switch (type.kind) {
         case SymbolKind::FixedSizeUnpackedArrayType: {
             auto& at = type.as<FixedSizeUnpackedArrayType>();
-            if (!at.range.isLittleEndian() && at.range.lower() == 0 &&
-                options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-                buffer->format("[{}]", at.range.width());
-            }
-            else {
-                buffer->format("[{}:{}]", at.range.left, at.range.right);
-            }
+            buffer->format("[{}:{}]", at.range.left, at.range.right);
             break;
         }
         case SymbolKind::DynamicArrayType:
