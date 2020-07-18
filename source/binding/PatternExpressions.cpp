@@ -638,9 +638,10 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
 
             indexSetters.append(IndexSetter{ &indexExpr, &expr });
 
-            if (*index >= elements.size())
-                elements.extend(*index - elements.size() + 1);
-            elements[*index] = &expr;
+            size_t i = size_t(*index);
+            if (i >= elements.size())
+                elements.extend(i - elements.size() + 1);
+            elements[i] = &expr;
         }
     }
 

@@ -292,7 +292,7 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     // TODO: associative arrays
     auto elems = cv.elements();
     optional<int32_t> index = cs.integer().as<int32_t>();
-    if (!index || *index < 0 || *index >= elems.size()) {
+    if (!index || *index < 0 || size_t(*index) >= elems.size()) {
         context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
             << cs << valType << elems.size();
         return type->getDefaultValue();
@@ -343,7 +343,7 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     // TODO: associative arrays
     auto elems = lval.load().elements();
     optional<int32_t> index = cs.integer().as<int32_t>();
-    if (!index || *index < 0 || *index >= elems.size()) {
+    if (!index || *index < 0 || size_t(*index) >= elems.size()) {
         context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
             << cs << valType << elems.size();
         return nullptr;
@@ -704,7 +704,7 @@ optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& cont
     }
 
     // Out of bounds ranges are allowed, we just issue a warning.
-    if (l < 0 || r >= cv.elements().size()) {
+    if (l < 0 || r < 0 || size_t(r) >= cv.elements().size()) {
         auto& diag = context.addDiag(diag::ConstEvalDynamicArrayRange, sourceRange);
         diag << result.left << result.right;
         diag << valueType;
