@@ -52,11 +52,16 @@ public:
                                  const BindContext& context, const Type& type,
                                  const Scope& structScope, SourceRange sourceRange);
 
-    static Expression& forArray(Compilation& compilation,
-                                const SimpleAssignmentPatternSyntax& syntax,
-                                const BindContext& context, const Type& type,
-                                const Type& elementType, bitwidth_t numElements,
-                                SourceRange sourceRange);
+    static Expression& forFixedArray(Compilation& compilation,
+                                     const SimpleAssignmentPatternSyntax& syntax,
+                                     const BindContext& context, const Type& type,
+                                     const Type& elementType, bitwidth_t numElements,
+                                     SourceRange sourceRange);
+
+    static Expression& forDynamicArray(Compilation& compilation,
+                                       const SimpleAssignmentPatternSyntax& syntax,
+                                       const BindContext& context, const Type& type,
+                                       const Type& elementType, SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::SimpleAssignmentPattern;
@@ -106,10 +111,15 @@ public:
                                  const BindContext& context, const Type& type,
                                  const Scope& structScope, SourceRange sourceRange);
 
-    static Expression& forArray(Compilation& compilation,
-                                const StructuredAssignmentPatternSyntax& syntax,
-                                const BindContext& context, const Type& type,
-                                const Type& elementType, SourceRange sourceRange);
+    static Expression& forFixedArray(Compilation& compilation,
+                                     const StructuredAssignmentPatternSyntax& syntax,
+                                     const BindContext& context, const Type& type,
+                                     const Type& elementType, SourceRange sourceRange);
+
+    static Expression& forDynamicArray(Compilation& compilation,
+                                       const StructuredAssignmentPatternSyntax& syntax,
+                                       const BindContext& context, const Type& type,
+                                       const Type& elementType, SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::StructuredAssignmentPattern;
@@ -137,11 +147,16 @@ public:
                                  const BindContext& context, const Type& type,
                                  const Scope& structScope, SourceRange sourceRange);
 
-    static Expression& forArray(Compilation& compilation,
-                                const ReplicatedAssignmentPatternSyntax& syntax,
-                                const BindContext& context, const Type& type,
-                                const Type& elementType, bitwidth_t numElements,
-                                SourceRange sourceRange);
+    static Expression& forFixedArray(Compilation& compilation,
+                                     const ReplicatedAssignmentPatternSyntax& syntax,
+                                     const BindContext& context, const Type& type,
+                                     const Type& elementType, bitwidth_t numElements,
+                                     SourceRange sourceRange);
+
+    static Expression& forDynamicArray(Compilation& compilation,
+                                       const ReplicatedAssignmentPatternSyntax& syntax,
+                                       const BindContext& context, const Type& type,
+                                       const Type& elementType, SourceRange sourceRange);
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::ReplicatedAssignmentPattern;

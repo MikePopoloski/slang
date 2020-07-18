@@ -44,22 +44,29 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
     const Scope* structScope = nullptr;
     const Type* elementType = nullptr;
     bitwidth_t numElements = 0;
+    bool isDynArray = false;
 
     auto& ct = type.getCanonicalType();
-    if (ct.kind == SymbolKind::PackedStructType)
+    if (ct.kind == SymbolKind::PackedStructType) {
         structScope = &ct.as<PackedStructType>();
-    else if (ct.kind == SymbolKind::UnpackedStructType)
+    }
+    else if (ct.kind == SymbolKind::UnpackedStructType) {
         structScope = &ct.as<UnpackedStructType>();
+    }
     else if (ct.kind == SymbolKind::PackedArrayType) {
         auto& ua = ct.as<PackedArrayType>();
         elementType = &ua.elementType;
         numElements = ua.range.width();
     }
-    // TODO: other kinds of arrays
     else if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType) {
         auto& ua = ct.as<FixedSizeUnpackedArrayType>();
         elementType = &ua.elementType;
         numElements = ua.range.width();
+    }
+    else if (ct.kind == SymbolKind::DynamicArrayType) {
+        // TODO: queue, associative array
+        elementType = &ct.as<DynamicArrayType>().elementType;
+        isDynArray = true;
     }
     else if (ct.isIntegral() && ct.kind != SymbolKind::ScalarType) {
         elementType = ct.isFourState() ? &comp.getLogicType() : &comp.getBitType();
@@ -89,18 +96,36 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                 THROW_UNREACHABLE;
         }
     }
-    else {
+    else if (isDynArray) {
         switch (p.kind) {
             case SyntaxKind::SimpleAssignmentPattern:
-                return SimpleAssignmentPatternExpression::forArray(
+                return SimpleAssignmentPatternExpression::forDynamicArray(
                     comp, p.as<SimpleAssignmentPatternSyntax>(), context, type, *elementType,
-                    numElements, range);
+                    range);
             case SyntaxKind::StructuredAssignmentPattern:
-                return StructuredAssignmentPatternExpression::forArray(
+                return StructuredAssignmentPatternExpression::forDynamicArray(
                     comp, p.as<StructuredAssignmentPatternSyntax>(), context, type, *elementType,
                     range);
             case SyntaxKind::ReplicatedAssignmentPattern:
-                return ReplicatedAssignmentPatternExpression::forArray(
+                return ReplicatedAssignmentPatternExpression::forDynamicArray(
+                    comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *elementType,
+                    range);
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+    else {
+        switch (p.kind) {
+            case SyntaxKind::SimpleAssignmentPattern:
+                return SimpleAssignmentPatternExpression::forFixedArray(
+                    comp, p.as<SimpleAssignmentPatternSyntax>(), context, type, *elementType,
+                    numElements, range);
+            case SyntaxKind::StructuredAssignmentPattern:
+                return StructuredAssignmentPatternExpression::forFixedArray(
+                    comp, p.as<StructuredAssignmentPatternSyntax>(), context, type, *elementType,
+                    range);
+            case SyntaxKind::ReplicatedAssignmentPattern:
+                return ReplicatedAssignmentPatternExpression::forFixedArray(
                     comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *elementType,
                     numElements, range);
             default:
@@ -183,7 +208,7 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
     return *result;
 }
 
-Expression& SimpleAssignmentPatternExpression::forArray(
+Expression& SimpleAssignmentPatternExpression::forFixedArray(
     Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Type& elementType, bitwidth_t numElements, SourceRange sourceRange) {
 
@@ -210,6 +235,27 @@ Expression& SimpleAssignmentPatternExpression::forArray(
     return *result;
 }
 
+Expression& SimpleAssignmentPatternExpression::forDynamicArray(
+    Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const BindContext& context,
+    const Type& type, const Type& elementType, SourceRange sourceRange) {
+
+    bool bad = false;
+    SmallVectorSized<const Expression*, 8> elems;
+    for (auto item : syntax.items) {
+        auto& expr =
+            Expression::bindRValue(elementType, *item, item->getFirstToken().location(), context);
+        elems.append(&expr);
+        bad |= expr.bad();
+    }
+
+    auto result =
+        comp.emplace<SimpleAssignmentPatternExpression>(type, elems.copy(comp), sourceRange);
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
+}
+
 static bool matchMembers(const BindContext& context, const Scope& structScope,
                          SourceRange sourceRange,
                          SmallMap<const Symbol*, const Expression*, 8>& memberMap,
@@ -221,6 +267,8 @@ static bool matchMembers(const BindContext& context, const Scope& structScope,
         defaultSyntax = defaultSetter->syntax;
         ASSERT(defaultSyntax);
     }
+
+    // TODO: check that all memberMap entries are used
 
     // Every member of the structure must be covered by one of:
     // member:value     -- recorded in the memberMap
@@ -312,6 +360,8 @@ static bool matchElements(const BindContext& context, const Type& elementType,
         ASSERT(defaultSyntax);
     }
 
+    // TODO: check that all indexMap entries are used
+
     // Every element in the array must be covered by one of:
     // index:value      -- recorded in the indexMap
     // type:value       -- recorded in typeSetters, last one takes precedence
@@ -391,6 +441,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
     Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Scope& structScope, SourceRange sourceRange) {
 
+    // TODO: check for duplicate keys
     bool bad = false;
     const Expression* defaultSetter = nullptr;
     SmallMap<const Symbol*, const Expression*, 8> memberMap;
@@ -475,10 +526,11 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
     return *result;
 }
 
-Expression& StructuredAssignmentPatternExpression::forArray(
+Expression& StructuredAssignmentPatternExpression::forFixedArray(
     Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
+    // TODO: check for duplicate keys
     bool bad = false;
     const Expression* defaultSetter = nullptr;
     SmallMap<int32_t, const Expression*, 8> indexMap;
@@ -519,7 +571,6 @@ Expression& StructuredAssignmentPatternExpression::forArray(
                 continue;
             }
 
-            // TODO: non-fixed size
             if (!type.getFixedRange().containsPoint(*index)) {
                 auto& diag = context.addDiag(diag::IndexValueInvalid, indexExpr.sourceRange);
                 diag << *index;
@@ -537,7 +588,6 @@ Expression& StructuredAssignmentPatternExpression::forArray(
         }
     }
 
-    // TODO: non-fixed size
     SmallVectorSized<const Expression*, 8> elements;
     bad |= matchElements(context, elementType, type.getFixedRange(), syntax.sourceRange(), indexMap,
                          typeSetters, defaultSetter, elements);
@@ -545,6 +595,60 @@ Expression& StructuredAssignmentPatternExpression::forArray(
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
         type, span<const MemberSetter>{}, typeSetters.copy(comp), indexSetters.copy(comp),
         defaultSetter, elements.copy(comp), sourceRange);
+
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
+}
+
+Expression& StructuredAssignmentPatternExpression::forDynamicArray(
+    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
+    const Type& type, const Type& elementType, SourceRange sourceRange) {
+
+    // TODO: check for duplicate keys
+    bool bad = false;
+    SmallVectorSized<const Expression*, 8> elements;
+    SmallVectorSized<IndexSetter, 4> indexSetters;
+
+    for (auto item : syntax.items) {
+        if (item->key->kind == SyntaxKind::DefaultPatternKeyExpression) {
+            context.addDiag(diag::AssignmentPatternDynamicDefault, item->key->sourceRange());
+            bad = true;
+        }
+        else if (DataTypeSyntax::isKind(item->key->kind)) {
+            context.addDiag(diag::AssignmentPatternDynamicType, item->key->sourceRange());
+            bad = true;
+        }
+        else {
+            // TODO: check for type name here
+
+            auto& indexExpr = Expression::bind(*item->key, context, BindFlags::Constant);
+            optional<int32_t> index = context.evalInteger(indexExpr);
+            if (!index) {
+                bad = true;
+                continue;
+            }
+
+            // TODO: check gt zero
+
+            auto& expr = bindRValue(elementType, *item->expr,
+                                    item->expr->getFirstToken().location(), context);
+            bad |= expr.bad();
+
+            indexSetters.append(IndexSetter{ &indexExpr, &expr });
+
+            if (*index >= elements.size())
+                elements.extend(*index - elements.size() + 1);
+            elements[*index] = &expr;
+        }
+    }
+
+    // TODO: check that all elements have expressions assigned
+
+    auto result = comp.emplace<StructuredAssignmentPatternExpression>(
+        type, span<const MemberSetter>{}, span<const TypeSetter>{}, indexSetters.copy(comp),
+        nullptr, elements.copy(comp), sourceRange);
 
     if (bad)
         return badExpr(comp, result);
@@ -607,7 +711,7 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
     return *result;
 }
 
-Expression& ReplicatedAssignmentPatternExpression::forArray(
+Expression& ReplicatedAssignmentPatternExpression::forFixedArray(
     Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const BindContext& context,
     const Type& type, const Type& elementType, bitwidth_t numElements, SourceRange sourceRange) {
 
@@ -631,6 +735,34 @@ Expression& ReplicatedAssignmentPatternExpression::forArray(
         auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
         diag << type << numElements << elems.size();
         bad = true;
+    }
+
+    auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(
+        type, countExpr, elems.copy(comp), sourceRange);
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
+}
+
+Expression& ReplicatedAssignmentPatternExpression::forDynamicArray(
+    Compilation& comp, const ReplicatedAssignmentPatternSyntax& syntax, const BindContext& context,
+    const Type& type, const Type& elementType, SourceRange sourceRange) {
+
+    size_t count = 0;
+    auto& countExpr = bindReplCount(comp, *syntax.countExpr, context, count);
+    if (countExpr.bad())
+        return badExpr(comp, nullptr);
+
+    bool bad = false;
+    SmallVectorSized<const Expression*, 8> elems;
+    for (size_t i = 0; i < count; i++) {
+        for (auto item : syntax.items) {
+            auto& expr = Expression::bindRValue(elementType, *item,
+                                                item->getFirstToken().location(), context);
+            elems.append(&expr);
+            bad |= expr.bad();
+        }
     }
 
     auto result = comp.emplace<ReplicatedAssignmentPatternExpression>(
