@@ -839,6 +839,36 @@ endmodule
     CHECK(diags[0].code == diag::UnpackedArrayParamType);
 }
 
+TEST_CASE("Implicit param types") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter [9:1] a = 9'b0;
+    parameter b = '1;
+    parameter c = 3.4;
+    parameter signed d = 2'b10;
+    parameter signed e = 3.4;
+    parameter unsigned f = 3.4;
+    parameter signed [3:5] g = 3.4;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto typeof = [&](auto name) {
+        return compilation.getRoot().lookupName<ParameterSymbol>("m."s + name).getType().toString();
+    };
+
+    CHECK(typeof("a") == "logic[9:1]");
+    CHECK(typeof("b") == "logic[31:0]");
+    CHECK(typeof("c") == "real");
+    CHECK(typeof("d") == "logic signed[1:0]");
+    CHECK(typeof("e") == "logic signed[31:0]");
+    CHECK(typeof("f") == "logic[31:0]");
+    CHECK(typeof("g") == "logic signed[3:5]");
+}
+
 TEST_CASE("Static initializer missing static keyword") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

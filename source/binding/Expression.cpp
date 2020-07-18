@@ -179,6 +179,55 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
     THROW_UNREACHABLE;
 }
 
+const Expression& Expression::bindImplicitParam(const DataTypeSyntax& typeSyntax,
+                                                const ExpressionSyntax& rhs,
+                                                SourceLocation location,
+                                                const BindContext& context) {
+    Compilation& comp = context.scope.getCompilation();
+    Expression& expr = create(comp, rhs, context);
+    const Type* lhsType = expr.type;
+
+    // Rules are described in [6.20.2].
+    auto& it = typeSyntax.as<ImplicitTypeSyntax>();
+    if (!it.dimensions.empty()) {
+        // If we have a range provided, the result is always an integral value
+        // of the provided width -- getType() will do what we want here.
+        lhsType = &comp.getType(typeSyntax, context.lookupLocation, context.scope);
+    }
+    else if (it.signing) {
+        // If signing is provided, the result is always integral but we infer the width.
+        // If the type is non-integral or unsized, infer a width of 32.
+        bitwidth_t bits = lhsType->getBitWidth();
+        if (!lhsType->isIntegral() || expr.isUnsizedInteger())
+            bits = 32;
+
+        bitmask<IntegralFlags> flags = IntegralFlags::FourState;
+        if (it.signing.kind == TokenKind::SignedKeyword)
+            flags |= IntegralFlags::Signed;
+
+        lhsType = &comp.getType(bits, flags);
+    }
+    else {
+        // Neither range nor signing provided, so infer from the expression type.
+        // If integral, infer using rules mentioned above. Otherwise just take the type.
+        if (lhsType->isIntegral()) {
+            bitwidth_t bits = lhsType->getBitWidth();
+            if (expr.isUnsizedInteger())
+                bits = 32;
+
+            // Keep the signed flag but force four state.
+            auto flags = lhsType->getIntegralFlags();
+            flags |= IntegralFlags::FourState;
+
+            lhsType = &comp.getType(bits, flags);
+        }
+    }
+
+    const Expression& result = convertAssignment(context, *lhsType, expr, location);
+    checkBindFlags(result, context);
+    return result;
+}
+
 void Expression::checkBindFlags(const Expression& expr, const BindContext& context) {
     if ((context.flags & BindFlags::Constant) == 0)
         return;
@@ -278,6 +327,17 @@ bool Expression::isImplicitString() const {
             auto& range = as<OpenRangeExpression>();
             return range.left().isImplicitString() || range.right().isImplicitString();
         }
+        default:
+            return false;
+    }
+}
+
+bool Expression::isUnsizedInteger() const {
+    switch (kind) {
+        case ExpressionKind::UnbasedUnsizedIntegerLiteral:
+            return true;
+        case ExpressionKind::IntegerLiteral:
+            return as<IntegerLiteral>().isDeclaredUnsized;
         default:
             return false;
     }

@@ -139,6 +139,12 @@ public:
                                           const ExpressionSyntax& syntax,
                                           const BindContext& context);
 
+    /// Binds an initializer expression for an implicitly typed parameter.
+    /// There are special inference rules for parameters.
+    static const Expression& bindImplicitParam(const DataTypeSyntax& implicitType,
+                                               const ExpressionSyntax& rhs, SourceLocation location,
+                                               const BindContext& context);
+
     /// Converts the given expression to the specified type, as if the right hand side had been
     /// assigned (without a cast) to a left hand side of the specified type.
     static Expression& convertAssignment(const BindContext& context, const Type& type,
@@ -182,6 +188,10 @@ public:
     /// Indicates whether the expression is of type string, or if it
     /// is implicitly convertible to a string.
     bool isImplicitString() const;
+
+    /// Indicates whether the expression is represented by an unsized integer value.
+    /// For example, the integer literal "4" or the unbased unsized literal "'1";
+    bool isUnsizedInteger() const;
 
     /// Evaluates the expression under the given evaluation context. Any errors that occur
     /// will be stored in the evaluation context instead of issued to the compilation.

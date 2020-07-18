@@ -309,8 +309,10 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         rt = binaryOperatorType(compilation, &type, rt, false);
         contextDetermined(context, result, *rt);
 
-        if (type.isEquivalent(*rt))
+        if (type.isEquivalent(*rt)) {
+            result->type = &type;
             return *result;
+        }
 
         result =
             compilation.emplace<ConversionExpression>(type, true, *result, result->sourceRange);

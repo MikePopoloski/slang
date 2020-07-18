@@ -73,7 +73,8 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
             type = &comp.getErrorType();
         }
         else {
-            initializer = &Expression::bind(*initializerSyntax, initializerContext);
+            initializer = &Expression::bindImplicitParam(*typeSyntax, *initializerSyntax,
+                                                         initializerLocation, initializerContext);
             type = initializer->type;
         }
         return;
