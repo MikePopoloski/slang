@@ -290,6 +290,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("i ? l : pa") == "logic[15:0]");
     CHECK(typeof("r ? b1 : i") == "bit[31:0]");
     CHECK(typeof("i ? arr2 : arr3") == "bit[7:0]$[2:0]");
+    CHECK(typeof("i ? dar1 : dar2") == "bit[7:0]$[]");
     CHECK(typeof("i ? arr1: arr2") == "<error>");
     CHECK(typeof("arr2 ? 1 : 0") == "<error>");
     CHECK(typeof("i ? EVAL1 : EVAL2") == "enum{EVAL1=32'sd0,EVAL2=32'sd1}e$1");
@@ -330,7 +331,7 @@ TEST_CASE("Expression types") {
     declare("string s4 = {\"asdf\", 8'd42};");
 
     // Inside expressions
-    CHECK(typeof("i inside { 4, arr3, pa, sp }") == "logic");
+    CHECK(typeof("i inside { 4, arr3, pa, sp, dar1 }") == "logic");
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 8);

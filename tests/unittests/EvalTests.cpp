@@ -505,27 +505,28 @@ TEST_CASE("Dynamic array eval") {
     CHECK(cv.elements()[2].integer() == 1234);
     CHECK(cv.elements()[3].integer() == 4);
 
-    /*CHECK(session.eval("arr[1:2] == arr2").integer() == 1);
+    CHECK(session.eval("arr[1:2] == arr2").integer() == 1);
 
-    cv = session.eval("1 ? arr[1:2] : arr2");
-    CHECK(cv.elements()[1].integer() == 1234);
-    CHECK(cv.elements()[0].integer() == 19);
+    session.eval("int arr3[] = '{5, 6, 7};");
+    cv = session.eval("0 ? arr : arr3");
+    CHECK(cv.elements()[0].integer() == 5);
+    CHECK(cv.elements()[1].integer() == 6);
 
-    cv = session.eval("'x ? arr[1:2] : arr2");
-    CHECK(cv.elements()[1].integer() == 1234);
-    CHECK(cv.elements()[0].integer() == 19);
+    cv = session.eval("'x ? arr : arr3");
+    CHECK(cv.elements().empty());
 
-    session.eval("arr2[0] = 1;");
-    cv = session.eval("'x ? arr[1:2] : arr2");
+    session.eval("arr3 = '{42, 1, 3, 4};");
+    cv = session.eval("'x ? arr3 : arr");
+    CHECK(cv.elements()[0].integer() == 42);
     CHECK(cv.elements()[1].integer() == 0);
-    CHECK(cv.elements()[0].integer() == 19);
+    CHECK(cv.elements()[2].integer() == 0);
+    CHECK(cv.elements()[3].integer() == 4);
 
-    session.eval("arr2[0] = 142;");
-    CHECK(session.eval("arr2.xor").integer() == 157);
+    CHECK(session.eval("arr.xor").integer() == 1263);
+    CHECK(session.eval("arr.or").integer() == 1279);
 
-    session.eval("arr2[1] = 63;");
-    CHECK(session.eval("arr2.or").integer() == 191);
-    CHECK(session.eval("arr2.and").integer() == 14);*/
+    session.eval("arr[3] = 42;");
+    CHECK(session.eval("arr.and").integer() == 2);
 }
 
 TEST_CASE("Unpacked struct eval") {

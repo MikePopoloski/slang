@@ -922,34 +922,32 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
             return SVInt::conditional(cp.integer(), cvl.integer(), cvr.integer());
 
         if (cvl.isUnpacked()) {
+            // Sizes here might differ for dynamic arrays.
             span<const ConstantValue> la = cvl.elements();
             span<const ConstantValue> ra = cvr.elements();
-            ASSERT(la.size() == ra.size());
+            if (la.size() == ra.size()) {
+                // TODO: what if this is an unpacked struct?
+                // TODO: special handling for associative arrays
+                std::vector<ConstantValue> result(la.size());
+                ConstantValue defaultElement = type->getArrayElementType()->getDefaultValue();
 
-            ConstantValue resultValue = type->getDefaultValue();
-            span<ConstantValue> result = resultValue.elements();
-            ASSERT(la.size() == result.size());
+                // [11.4.11] says that if both sides are unpacked arrays, we
+                // check each element. If they are equal, take it in the result,
+                // otherwise use the default.
+                for (size_t i = 0; i < la.size(); i++) {
+                    ConstantValue comp = evalBinaryOperator(BinaryOperator::Equality, la[i], ra[i]);
+                    if (!comp)
+                        return nullptr;
 
-            // TODO: what if this is an unpacked struct?
-            // TODO: special handling for associative arrays
-            ConstantValue defaultElement = type->getArrayElementType()->getDefaultValue();
+                    logic_t l = (logic_t)comp.integer();
+                    if (l.isUnknown() || !l)
+                        result[i] = defaultElement;
+                    else
+                        result[i] = la[i];
+                }
 
-            // [11.4.11] says that if both sides are unpacked arrays, we
-            // check each element. If they are equal, take it in the result,
-            // otherwise use the default.
-            for (size_t i = 0; i < la.size(); i++) {
-                ConstantValue comp = evalBinaryOperator(BinaryOperator::Equality, la[i], ra[i]);
-                if (!comp)
-                    return nullptr;
-
-                logic_t l = (logic_t)comp.integer();
-                if (l.isUnknown() || !l)
-                    result[i] = defaultElement;
-                else
-                    result[i] = la[i];
+                return result;
             }
-
-            return resultValue;
         }
 
         return type->getDefaultValue();
