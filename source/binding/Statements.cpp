@@ -1256,7 +1256,8 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
     SmallVectorSized<ConstantRange, 4> dims;
     const Type* type = arrayRef.type;
     while (type->isArray()) {
-        dims.append(type->getArrayRange());
+        // TODO: non-fixed sizes
+        dims.append(type->getFixedRange());
         type = type->getArrayElementType();
     }
 

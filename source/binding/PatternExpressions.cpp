@@ -519,7 +519,8 @@ Expression& StructuredAssignmentPatternExpression::forArray(
                 continue;
             }
 
-            if (!type.getArrayRange().containsPoint(*index)) {
+            // TODO: non-fixed size
+            if (!type.getFixedRange().containsPoint(*index)) {
                 auto& diag = context.addDiag(diag::IndexValueInvalid, indexExpr.sourceRange);
                 diag << *index;
                 diag << type;
@@ -536,8 +537,9 @@ Expression& StructuredAssignmentPatternExpression::forArray(
         }
     }
 
+    // TODO: non-fixed size
     SmallVectorSized<const Expression*, 8> elements;
-    bad |= matchElements(context, elementType, type.getArrayRange(), syntax.sourceRange(), indexMap,
+    bad |= matchElements(context, elementType, type.getFixedRange(), syntax.sourceRange(), indexMap,
                          typeSetters, defaultSetter, elements);
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(

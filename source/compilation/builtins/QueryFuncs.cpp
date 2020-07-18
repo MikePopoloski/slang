@@ -117,32 +117,38 @@ SUBROUTINE(SizeFunction, ArrayQueryFunction, "$size", FUNC);
 SUBROUTINE(IncrementFunction, ArrayQueryFunction, "$increment", FUNC);
 
 ConstantValue LowFunction::eval(const Scope&, EvalContext&, const Args& args) const {
-    ConstantRange range = args[0]->type->getArrayRange();
+    // TODO: non-fixed size
+    ConstantRange range = args[0]->type->getFixedRange();
     return SVInt(32, (uint64_t)range.lower(), true);
 }
 
 ConstantValue HighFunction::eval(const Scope&, EvalContext&, const Args& args) const {
-    ConstantRange range = args[0]->type->getArrayRange();
+    // TODO: non-fixed size
+    ConstantRange range = args[0]->type->getFixedRange();
     return SVInt(32, (uint64_t)range.upper(), true);
 }
 
 ConstantValue LeftFunction::eval(const Scope&, EvalContext&, const Args& args) const {
-    ConstantRange range = args[0]->type->getArrayRange();
+    // TODO: non-fixed size
+    ConstantRange range = args[0]->type->getFixedRange();
     return SVInt(32, (uint64_t)range.left, true);
 }
 
 ConstantValue RightFunction::eval(const Scope&, EvalContext&, const Args& args) const {
-    ConstantRange range = args[0]->type->getArrayRange();
+    // TODO: non-fixed size
+    ConstantRange range = args[0]->type->getFixedRange();
     return SVInt(32, (uint64_t)range.right, true);
 }
 
 ConstantValue SizeFunction::eval(const Scope&, EvalContext&, const Args& args) const {
-    ConstantRange range = args[0]->type->getArrayRange();
+    // TODO: non-fixed size
+    ConstantRange range = args[0]->type->getFixedRange();
     return SVInt(32, range.width(), true);
 }
 
 ConstantValue IncrementFunction::eval(const Scope&, EvalContext&, const Args& args) const {
-    ConstantRange range = args[0]->type->getArrayRange();
+    // TODO: non-fixed size
+    ConstantRange range = args[0]->type->getFixedRange();
     return SVInt(32, (uint64_t)(range.isLittleEndian() ? 1 : -1), true);
 }
 

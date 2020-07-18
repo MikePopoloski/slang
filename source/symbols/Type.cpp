@@ -158,6 +158,11 @@ bool Type::isSimpleBitVector() const {
            ct.as<PackedArrayType>().elementType.isScalar();
 }
 
+bool Type::hasFixedRange() const {
+    const Type& ct = getCanonicalType();
+    return ct.isIntegral() || ct.kind == SymbolKind::FixedSizeUnpackedArrayType;
+}
+
 bool Type::isBooleanConvertible() const {
     switch (getCanonicalType().kind) {
         case SymbolKind::NullType:
@@ -439,13 +444,12 @@ ConstantValue Type::getDefaultValue() const {
     return visit(visitor);
 }
 
-ConstantRange Type::getArrayRange() const {
+ConstantRange Type::getFixedRange() const {
     const Type& t = getCanonicalType();
     if (t.isIntegral())
         return t.as<IntegralType>().getBitVectorRange();
 
-    // TODO: other array types
-    if (t.isUnpackedArray())
+    if (t.kind == SymbolKind::FixedSizeUnpackedArrayType)
         return t.as<FixedSizeUnpackedArrayType>().range;
 
     return {};
@@ -499,10 +503,23 @@ size_t Type::hash() const {
         auto& it = ct.as<IntegralType>();
         hash_combine(h, it.isSigned, it.isFourState, it.bitWidth);
     }
-    // TODO: other array types
     else if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType) {
         auto& uat = ct.as<FixedSizeUnpackedArrayType>();
         hash_combine(h, uat.range.left, uat.range.right, uat.elementType.hash());
+    }
+    else if (ct.kind == SymbolKind::DynamicArrayType) {
+        auto& dat = ct.as<DynamicArrayType>();
+        hash_combine(h, dat.elementType.hash());
+    }
+    else if (ct.kind == SymbolKind::AssociativeArrayType) {
+        auto& aat = ct.as<AssociativeArrayType>();
+        hash_combine(h, aat.elementType.hash());
+        if (aat.indexType)
+            hash_combine(h, aat.indexType->hash());
+    }
+    else if (ct.kind == SymbolKind::QueueType) {
+        auto& qt = ct.as<QueueType>();
+        hash_combine(h, qt.elementType.hash(), qt.maxSize);
     }
     else {
         h = std::hash<const Type*>()(&ct);

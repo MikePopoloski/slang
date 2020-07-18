@@ -368,6 +368,7 @@ error ConstEvalVoidNotConstant "cannot call a void function in a constant expres
 error ConstEvalFunctionArgDirection "cannot call a function with output, inout, or ref arguments in a constant expression"
 error ConstEvalFunctionInsideGenerate "cannot call a function declared inside a generate block in a constant expression"
 warning static-skipped ConstEvalStaticSkipped "static variable initialization is skipped in constant function calls"
+warning dynarray-index ConstEvalDynamicArrayBounds "invalid index {} for {} of length {}"
 
 subsystem Compilation
 error MaxInstanceDepthExceeded "module instantiation exceeded maximum depth of {}"

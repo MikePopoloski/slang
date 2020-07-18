@@ -255,9 +255,33 @@ TEST_CASE("Expression types") {
     declare("bit [7:0] arr1 [2];");
     declare("bit [7:0] arr2 [2:0];");
     declare("bit [7:0] arr3 [3];");
+    declare("logic [7:0] arr4 [3];");
     CHECK(typeof("arr1 == arr2") == "<error>");
     CHECK(typeof("arr2 == arr3") == "bit");
-    CHECK(typeof("arr1 == arr3[0:1]") == "bit");
+    CHECK(typeof("arr2 == arr4") == "<error>");
+
+    // Dynamic arrays
+    declare("bit [7:0] dar1 [];");
+    declare("bit [0:7] dar2 [];");
+    CHECK(typeof("dar1 == dar2") == "bit");
+    CHECK(typeof("dar1 != dar2") == "bit");
+    CHECK(typeof("dar1 != arr1") == "<error>");
+    CHECK(typeof("dar1[3]") == "bit[7:0]");
+    CHECK(typeof("dar2[i]") == "bit[0:7]");
+
+    // Associative arrays
+    declare("bit [7:0] aar1 [int];");
+    declare("bit [0:7] aar2 [int];");
+    declare("bit [0:7] aar3 [*];");
+    CHECK(typeof("aar1 == aar2") == "bit");
+    CHECK(typeof("aar1 != aar3") == "<error>");
+
+    // Queues
+    declare("bit [7:0] q1 [$];");
+    declare("bit [0:7] q2 [$];");
+    declare("bit [0:7] q3 [$:200];");
+    CHECK(typeof("q1 == q2") == "bit");
+    CHECK(typeof("q1 != q3") == "bit");
 
     // Conditional operator
     CHECK(typeof("i ? l : pa") == "logic[15:0]");
@@ -306,12 +330,15 @@ TEST_CASE("Expression types") {
     CHECK(typeof("i inside { 4, arr3, pa, sp }") == "logic");
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::BadUnaryExpression);
     CHECK(diags[1].code == diag::BadBinaryExpression);
     CHECK(diags[2].code == diag::BadBinaryExpression);
-    CHECK(diags[3].code == diag::BadConditionalExpression);
-    CHECK(diags[4].code == diag::NotBooleanConvertible);
+    CHECK(diags[3].code == diag::BadBinaryExpression);
+    CHECK(diags[4].code == diag::BadBinaryExpression);
+    CHECK(diags[5].code == diag::BadBinaryExpression);
+    CHECK(diags[6].code == diag::BadConditionalExpression);
+    CHECK(diags[7].code == diag::NotBooleanConvertible);
 }
 
 TEST_CASE("Expression - bad name references") {

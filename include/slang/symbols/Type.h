@@ -88,6 +88,11 @@ public:
     /// types as well as scalar and vector types.
     bool isSimpleBitVector() const;
 
+    /// Indicates whether this type has a statically fixed size range associated with it.
+    /// This is true for packed arrays and fixed size unpacked arrays, as well as all
+    /// integral types (their range is their bitwidth).
+    bool hasFixedRange() const;
+
     /// Indicates whether this type is convertible to a boolean predicate for use in
     /// a conditional expression.
     bool isBooleanConvertible() const;
@@ -188,9 +193,9 @@ public:
     /// type will have the given default value.
     ConstantValue getDefaultValue() const;
 
-    /// Returns the bounds of the array, if this is an array type.
-    /// Otherwise returns an empty range.
-    ConstantRange getArrayRange() const;
+    /// Returns the fixed range of the type, if it has one. This can be determined
+    /// via the hasFixedRange() method. If it does not, this returns an empty range.
+    ConstantRange getFixedRange() const;
 
     /// Returns the element type if this is an array type; otherwise returns nullptr.
     const Type* getArrayElementType() const;
