@@ -1503,6 +1503,37 @@ SVInt SVInt::resize(bitwidth_t bits) const {
     return *this;
 }
 
+SVInt SVInt::reverse() const {
+    if (isSingleWord()) {
+        uint64_t r = reverseBits64(val) >> (BITS_PER_WORD - bitWidth);
+        return SVInt(bitWidth, r, signFlag);
+    }
+
+    auto result = SVInt::allocUninitialized(bitWidth, signFlag, unknownFlag);
+    uint32_t words = getNumWords(bitWidth, false);
+    uint64_t* dst = result.getRawData();
+    const uint64_t* src = getRawData();
+
+    for (uint32_t i = 0; i < words; i++)
+        dst[i] = reverseBits64(src[words - i - 1]);
+
+    if (unknownFlag) {
+        dst += words;
+        src += words;
+        for (uint32_t i = 0; i < words; i++)
+            dst[i] = reverseBits64(src[words - i - 1]);
+    }
+
+    // If we aren't aligned to a multiple of 64 bits, we need to shift
+    // the result back down because we reversed some bits that weren't
+    // actually included in the number.
+    bitwidth_t msw = bitWidth % BITS_PER_WORD;
+    if (msw != 0)
+        return result.lshr(BITS_PER_WORD - msw);
+
+    return result;
+}
+
 SVInt SVInt::conditional(const SVInt& condition, const SVInt& lhs, const SVInt& rhs) {
     bool bothSigned = lhs.signFlag && rhs.signFlag;
     if (lhs.bitWidth != rhs.bitWidth) {

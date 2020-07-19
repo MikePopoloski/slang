@@ -65,9 +65,10 @@ static void lshrFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t o
     else {
         // shift low order words
         uint32_t breakWord = start + numWords - offset - 1;
-        for (uint32_t i = start; i < breakWord; i++)
+        for (uint32_t i = start; i < breakWord; i++) {
             dst[i] = (src[i + offset] >> wordShift) |
                      (src[i + offset + 1] << (SVInt::BITS_PER_WORD - wordShift));
+        }
 
         // shift the "break" word
         dst[breakWord] = src[breakWord + offset] >> wordShift;
@@ -82,9 +83,10 @@ static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t of
             dst[i] = src[i - offset];
     }
     else {
-        for (uint32_t i = start + numWords - 1; i > start + offset; i--)
+        for (uint32_t i = start + numWords - 1; i > start + offset; i--) {
             dst[i] = src[i - offset] << wordShift |
                      src[i - offset - 1] >> (SVInt::BITS_PER_WORD - wordShift);
+        }
         dst[start + offset] = src[start] << wordShift;
     }
 
@@ -669,6 +671,19 @@ static TVal toIEEE754(SVInt value) {
     TVal result;
     memcpy(&result, &ival, sizeof(TVal));
     return result;
+}
+
+// Reverses the bit ordering of the number.
+static uint32_t reverseBits32(uint32_t x) {
+    x = ((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1);
+    x = ((x & 0xcccccccc) >> 2) | ((x & 0x33333333) << 2);
+    x = ((x & 0xf0f0f0f0) >> 4) | ((x & 0x0f0f0f0f) << 4);
+    x = ((x & 0xff00ff00) >> 8) | ((x & 0x00ff00ff) << 8);
+    return (x >> 16) | (x << 16);
+}
+
+static uint64_t reverseBits64(uint64_t x) {
+    return (uint64_t(reverseBits32(uint32_t(x))) << 32) | reverseBits32(uint32_t(x >> 32));
 }
 
 } // namespace slang

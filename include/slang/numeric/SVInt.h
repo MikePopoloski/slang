@@ -275,7 +275,7 @@ public:
     static SVInt createFillX(bitwidth_t bitWidth, bool isSigned);
     static SVInt createFillZ(bitwidth_t bitWidth, bool isSigned);
 
-    size_t hash(size_t seed = Seed) const;
+    [[nodiscard]] size_t hash(size_t seed = Seed) const;
     void writeTo(SmallVector<char>& buffer, LiteralBase base) const;
     void writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBase) const;
     std::string toString() const;
@@ -284,27 +284,27 @@ public:
 
     /// Power function. Note that the result will have the same bitwidth
     /// as this object. The value will be modulo the bit width.
-    SVInt pow(const SVInt& rhs) const;
+    [[nodiscard]] SVInt pow(const SVInt& rhs) const;
 
     /// Left shifting.
-    SVInt shl(const SVInt& rhs) const;
-    SVInt shl(bitwidth_t amount) const;
+    [[nodiscard]] SVInt shl(const SVInt& rhs) const;
+    [[nodiscard]] SVInt shl(bitwidth_t amount) const;
 
     /// Arithmetic right shifting.
-    SVInt ashr(const SVInt& rhs) const;
-    SVInt ashr(bitwidth_t amount) const;
+    [[nodiscard]] SVInt ashr(const SVInt& rhs) const;
+    [[nodiscard]] SVInt ashr(bitwidth_t amount) const;
 
     /// Logical right shifting.
-    SVInt lshr(const SVInt& rhs) const;
-    SVInt lshr(bitwidth_t amount) const;
+    [[nodiscard]] SVInt lshr(const SVInt& rhs) const;
+    [[nodiscard]] SVInt lshr(bitwidth_t amount) const;
 
     /// Multiple concatenation/replication
-    SVInt replicate(const SVInt& times) const;
+    [[nodiscard]] SVInt replicate(const SVInt& times) const;
 
     /// Reduces all of the bits in the integer to one by applying OR, AND, or XOR.
-    logic_t reductionOr() const;
-    logic_t reductionAnd() const;
-    logic_t reductionXor() const;
+    [[nodiscard]] logic_t reductionOr() const;
+    [[nodiscard]] logic_t reductionAnd() const;
+    [[nodiscard]] logic_t reductionXor() const;
 
     /// Get the number of "active bits". An SVInt might have a large bit width but be set
     /// to a very small value, in which case it will have a low number of active bits.
@@ -351,7 +351,7 @@ public:
     bitwidth_t countZs() const;
 
     /// Return a subset of the integer's bit range as a new integer.
-    SVInt slice(int32_t msb, int32_t lsb) const;
+    [[nodiscard]] SVInt slice(int32_t msb, int32_t lsb) const;
 
     /// Replace a range of bits in the number with the given bit pattern.
     void set(int32_t msb, int32_t lsb, const SVInt& value);
@@ -373,6 +373,9 @@ public:
     /// making a copy if the same size, zero extending if larger and unsigned,
     /// and sign extending if larger and signed.
     [[nodiscard]] SVInt resize(bitwidth_t bits) const;
+
+    /// Reverses the bit ordering of the number.
+    [[nodiscard]] SVInt reverse() const;
 
     SVInt& operator=(const SVInt& rhs) {
         if (isSingleWord() && rhs.isSingleWord()) {
@@ -403,7 +406,7 @@ public:
     }
 
     /// Bitwise xnor.
-    SVInt xnor(const SVInt& rhs) const;
+    [[nodiscard]] SVInt xnor(const SVInt& rhs) const;
 
     SVInt& operator&=(const SVInt& rhs);
     SVInt& operator|=(const SVInt& rhs);

@@ -634,6 +634,11 @@ TEST_CASE("SVInt misc functions") {
 
     CHECK("128'hffff000000000000ffff00000000000"_si.countZs() == 0);
     CHECK("128'hffff000000000000ffff0zz00xz0000"_si.countZs() == 12);
+
+    CHECK("31'd12345"_si.reverse() == 0x4e060000);
+    CHECK("64'd1"_si.reverse() == 1ull << 63);
+    CHECK_THAT("129'b1x10"_si.shl(125).reverse(), exactlyEquals("129'b1x1"_si));
+    CHECK_THAT("128'b1x10"_si.shl(124).reverse(), exactlyEquals("128'b1x1"_si));
 }
 
 TEST_CASE("Double conversions") {
