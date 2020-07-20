@@ -46,7 +46,7 @@ public:
         if (c == 0 || index < 0 || size_t(index) >= str.length())
             return nullptr;
 
-        strCv.selectRange({ index, index }).store(SVInt(8, c, false));
+        strCv.selectRange({ index, index }, nullptr).store(SVInt(8, c, false));
         return nullptr;
     }
 };

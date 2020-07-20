@@ -88,7 +88,7 @@ public:
     std::string str() && { return std::get<std::string>(std::move(value)); }
     std::string str() const&& { return std::get<std::string>(std::move(value)); }
 
-    ConstantValue getSlice(int32_t upper, int32_t lower) const;
+    ConstantValue getSlice(int32_t upper, int32_t lower, const ConstantValue& defaultValue) const;
 
     const Variant& getVariant() const { return value; }
 
@@ -141,11 +141,11 @@ struct ConstantRange {
     bool isLittleEndian() const { return left >= right; }
 
     /// Reverses the bit ordering of the range.
-    ConstantRange reverse() const { return { right, left }; }
+    [[nodiscard]] ConstantRange reverse() const { return { right, left }; }
 
     /// Selects a subrange of this range, correctly handling both forms of
     /// bit endianness. This will assert that the given subrange is not wider.
-    ConstantRange subrange(ConstantRange select) const;
+    [[nodiscard]] ConstantRange subrange(ConstantRange select) const;
 
     /// Translates the given index to be relative to the range.
     /// For example, if the range is [7:2] and you pass in 3, the result will be 1.
@@ -185,18 +185,27 @@ public:
     ConstantValue load() const;
     void store(const ConstantValue& value);
 
-    LValue selectRange(ConstantRange range) const;
-    LValue selectIndex(int32_t index) const;
+    LValue selectRange(ConstantRange range, ConstantValue&& defaultValue) const;
+    LValue selectIndex(int32_t index, ConstantValue&& defaultValue) const;
 
 private:
-    LValue(ConstantValue& base, ConstantRange range) : value(CVRange{ &base, range }) {}
-
     struct CVRange {
         ConstantValue* cv;
         ConstantRange range;
+        ConstantValue defaultValue;
     };
 
-    std::variant<std::monostate, Concat, ConstantValue*, CVRange> value;
+    // Represents an out of bounds access, writing is a no-op,
+    // reading returns the default value.
+    struct OutOfRange {
+        ConstantValue defaultValue;
+    };
+
+    LValue(OutOfRange&& oor) : value(std::move(oor)) {}
+    LValue(ConstantValue& base, ConstantRange range, ConstantValue&& defaultValue) :
+        value(CVRange{ &base, range, std::move(defaultValue) }) {}
+
+    std::variant<std::monostate, Concat, ConstantValue*, CVRange, OutOfRange> value;
 };
 
 } // namespace slang

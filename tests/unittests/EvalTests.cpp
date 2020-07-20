@@ -455,25 +455,39 @@ TEST_CASE("Unpacked array eval") {
     session.eval("arr2[1] = 19;");
     session.eval("arr[1:2] = arr2;");
 
+    session.eval("int arr3[1:0];");
+    session.eval("arr3[0] = 1234;");
+    session.eval("arr3[1] = 19;");
+
+    session.eval("int sameArr[2] = '{1234, 19};");
+    session.eval("int sameArr2[1:0] = '{1234, 19};");
+    CHECK(session.eval("arr2 == sameArr").integer() == 1);
+    CHECK(session.eval("arr2 == sameArr2").integer() == 1);
+    CHECK(session.eval("arr2 == arr3").integer() == 0);
+
     auto cv = session.eval("arr");
-    CHECK(cv.elements()[7].integer() == 42);
-    CHECK(cv.elements()[6].integer() == 1234);
-    CHECK(cv.elements()[5].integer() == 19);
+    CHECK(cv.elements()[0].integer() == 42);
+    CHECK(cv.elements()[1].integer() == 1234);
+    CHECK(cv.elements()[2].integer() == 19);
+
+    cv = session.eval("arr3");
+    CHECK(cv.elements()[1].integer() == 1234);
+    CHECK(cv.elements()[0].integer() == 19);
 
     CHECK(session.eval("arr[1:2] == arr2").integer() == 1);
 
     cv = session.eval("1 ? arr[1:2] : arr2");
-    CHECK(cv.elements()[1].integer() == 1234);
-    CHECK(cv.elements()[0].integer() == 19);
+    CHECK(cv.elements()[0].integer() == 1234);
+    CHECK(cv.elements()[1].integer() == 19);
 
     cv = session.eval("'x ? arr[1:2] : arr2");
-    CHECK(cv.elements()[1].integer() == 1234);
-    CHECK(cv.elements()[0].integer() == 19);
+    CHECK(cv.elements()[0].integer() == 1234);
+    CHECK(cv.elements()[1].integer() == 19);
 
     session.eval("arr2[0] = 1;");
     cv = session.eval("'x ? arr[1:2] : arr2");
-    CHECK(cv.elements()[1].integer() == 0);
-    CHECK(cv.elements()[0].integer() == 19);
+    CHECK(cv.elements()[0].integer() == 0);
+    CHECK(cv.elements()[1].integer() == 19);
 
     session.eval("arr2[0] = 142;");
     CHECK(session.eval("arr2.xor").integer() == 157);
@@ -491,18 +505,16 @@ TEST_CASE("Dynamic array eval") {
     session.eval("arr[0] = 42;");
     CHECK(session.eval("arr[0]").integer() == 42);
     CHECK(session.eval("arr[3]").integer() == 4);
-    CHECK(session.eval("arr[-1]").integer() == 0);
 
     session.eval("int arr2[2];");
     session.eval("arr2[0] = 1234;");
     session.eval("arr2[1] = 19;");
     session.eval("arr[1:2] = arr2;");
 
-    // TODO: ordering of array being copied
     auto cv = session.eval("arr");
     CHECK(cv.elements()[0].integer() == 42);
-    CHECK(cv.elements()[1].integer() == 19);
-    CHECK(cv.elements()[2].integer() == 1234);
+    CHECK(cv.elements()[1].integer() == 1234);
+    CHECK(cv.elements()[2].integer() == 19);
     CHECK(cv.elements()[3].integer() == 4);
 
     CHECK(session.eval("arr[1:2] == arr2").integer() == 1);
@@ -527,6 +539,32 @@ TEST_CASE("Dynamic array eval") {
 
     session.eval("arr[3] = 42;");
     CHECK(session.eval("arr.and").integer() == 2);
+
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Dynamic array -- out of bounds") {
+    // Out of bounds accesses
+    ScriptSession session;
+    session.eval("int arr[] = '{1, 2, 3, 4};");
+
+    CHECK(session.eval("arr[-1]").integer() == 0);
+    session.eval("arr[-1] = 42;");
+    session.eval("arr[-1:1] = '{8,9,10};");
+
+    auto cv = session.eval("arr[-1:2]");
+    CHECK(cv.elements().size() == 4);
+    CHECK(cv.elements()[0].integer() == 0);
+    CHECK(cv.elements()[1].integer() == 9);
+    CHECK(cv.elements()[2].integer() == 10);
+    CHECK(cv.elements()[3].integer() == 3);
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ConstEvalDynamicArrayIndex);
+    CHECK(diags[1].code == diag::ConstEvalDynamicArrayIndex);
+    CHECK(diags[2].code == diag::ConstEvalDynamicArrayRange);
+    CHECK(diags[3].code == diag::ConstEvalDynamicArrayRange);
 }
 
 TEST_CASE("Unpacked struct eval") {
@@ -536,7 +574,7 @@ TEST_CASE("Unpacked struct eval") {
     session.eval("foo.b = 1;");
 
     auto cv = session.eval("foo");
-    CHECK(cv.elements()[0].elements()[0].integer() == 42);
+    CHECK(cv.elements()[0].elements()[2].integer() == 42);
 
     CHECK(session.eval("foo.a[0] == 42").integer() == 1);
     CHECK_THAT(session.eval("foo == foo").integer(), exactlyEquals(SVInt(logic_t::x)));

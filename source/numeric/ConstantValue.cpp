@@ -81,14 +81,24 @@ size_t ConstantValue::hash() const {
     return h;
 }
 
-ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower) const {
+ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower,
+                                      const ConstantValue& defaultValue) const {
     if (isInteger())
         return integer().slice(upper, lower);
 
     if (isUnpacked()) {
-        int32_t count = upper - lower + 1;
-        auto slice = elements().subspan(size_t(lower), size_t(count));
-        return std::vector<ConstantValue>(slice.begin(), slice.end());
+        span<const ConstantValue> elems = elements();
+        std::vector<ConstantValue> result{size_t(upper - lower + 1)};
+        ConstantValue* dest = result.data();
+
+        for (int32_t i = lower; i <= upper; i++) {
+            if (i < 0 || i >= elems.size())
+                *dest++ = defaultValue;
+            else
+                *dest++ = elems[size_t(i)];
+        }
+
+        return result;
     }
 
     if (isString()) {
@@ -301,12 +311,15 @@ ConstantValue LValue::load() const {
             else if constexpr (std::is_same_v<T, ConstantValue*>)
                 return *arg;
             else if constexpr (std::is_same_v<T, CVRange>)
-                return arg.cv->getSlice(arg.range.upper(), arg.range.lower());
+                return arg.cv->getSlice(arg.range.upper(), arg.range.lower(), arg.defaultValue);
             else if constexpr (std::is_same_v<T, Concat>) {
                 SmallVectorSized<SVInt, 4> vals;
                 for (auto& elem : arg)
                     vals.append(elem.load().integer());
                 return SVInt::concat(vals);
+            }
+            else if constexpr (std::is_same_v<T, OutOfRange>) {
+                return arg.defaultValue;
             }
             else
                 static_assert(always_false<T>::value, "Missing case");
@@ -336,7 +349,8 @@ void LValue::store(const ConstantValue& newValue) {
                     auto src = newValue.elements();
                     auto dest = cv.elements();
 
-                    for (int32_t i = l; i <= u; i++)
+                    u = std::min(u, int32_t(dest.size()));
+                    for (int32_t i = std::max(l, 0); i <= u; i++)
                         dest[size_t(i)] = src[size_t(i - l)];
                 }
                 else if (cv.isString()) {
@@ -360,6 +374,9 @@ void LValue::store(const ConstantValue& newValue) {
                     msb -= width;
                 }
             }
+            else if constexpr (std::is_same_v<T, OutOfRange>) {
+                // This is a no-op, per the LRM.
+            }
             else {
                 static_assert(always_false<T>::value, "Missing case");
             }
@@ -367,42 +384,55 @@ void LValue::store(const ConstantValue& newValue) {
         value);
 }
 
-LValue LValue::selectRange(ConstantRange range) const {
+LValue LValue::selectRange(ConstantRange range, ConstantValue&& defaultValue) const {
     return std::visit(
-        [&range](auto&& arg) noexcept(
+        [&range, def = std::move(defaultValue)](auto&& arg) mutable noexcept(
             !std::is_same_v<std::decay_t<decltype(arg)>, Concat>) -> LValue {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return nullptr;
             else if constexpr (std::is_same_v<T, ConstantValue*>)
-                return LValue(*arg, range);
+                return LValue(*arg, range, std::move(def));
             else if constexpr (std::is_same_v<T, CVRange>)
-                return LValue(*arg.cv, arg.range.subrange(range));
+                return LValue(*arg.cv, arg.range.subrange(range), std::move(def));
             else if constexpr (std::is_same_v<T, Concat>)
                 THROW_UNREACHABLE;
+            else if constexpr (std::is_same_v<T, OutOfRange>)
+                return OutOfRange{ std::move(def) };
             else
                 static_assert(always_false<T>::value, "Missing case");
         },
         value);
 }
 
-LValue LValue::selectIndex(int32_t index) const {
+LValue LValue::selectIndex(int32_t index, ConstantValue&& defaultValue) const {
     return std::visit(
-        [index](auto&& arg) noexcept(
+        [index, def = std::move(defaultValue)](auto&& arg) mutable noexcept(
             !std::is_same_v<std::decay_t<decltype(arg)>, Concat>) -> LValue {
             using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, std::monostate>)
+            if constexpr (std::is_same_v<T, std::monostate>) {
                 return nullptr;
-            else if constexpr (std::is_same_v<T, ConstantValue*>)
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue*>) {
+                if (index < 0 || size_t(index) >= arg->elements().size())
+                    return OutOfRange{ std::move(def) };
                 return LValue(arg->elements()[size_t(index)]);
+            }
             else if constexpr (std::is_same_v<T, CVRange>) {
                 int32_t elem = index + arg.range.lower();
+                if (elem < 0 || size_t(elem) >= arg.cv->elements().size())
+                    return OutOfRange{ std::move(def) };
                 return LValue(arg.cv->elements()[size_t(elem)]);
             }
-            else if constexpr (std::is_same_v<T, Concat>)
+            else if constexpr (std::is_same_v<T, OutOfRange>) {
+                return OutOfRange{ std::move(def) };
+            }
+            else if constexpr (std::is_same_v<T, Concat>) {
                 THROW_UNREACHABLE;
-            else
+            }
+            else {
                 static_assert(always_false<T>::value, "Missing case");
+            }
         },
         value);
 }

@@ -918,7 +918,7 @@ private:
                 // is not little endian.
                 auto& array = symbol->as<InstanceArraySymbol>();
                 if (!array.range.isLittleEndian())
-                    index = array.range.upper() - index; // TODO: check this
+                    index = array.range.upper() - index - array.range.lower();
 
                 symbol = array.elements[size_t(index)];
             }
