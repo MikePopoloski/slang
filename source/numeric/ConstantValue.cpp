@@ -92,7 +92,7 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower,
         ConstantValue* dest = result.data();
 
         for (int32_t i = lower; i <= upper; i++) {
-            if (i < 0 || i >= elems.size())
+            if (i < 0 || size_t(i) >= elems.size())
                 *dest++ = defaultValue;
             else
                 *dest++ = elems[size_t(i)];
