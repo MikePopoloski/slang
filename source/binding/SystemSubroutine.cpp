@@ -58,6 +58,11 @@ const Type& SystemSubroutine::badArg(const BindContext& context, const Expressio
     return context.getCompilation().getErrorType();
 }
 
+bool SystemSubroutine::notConst(EvalContext& context, SourceRange range) const {
+    context.addDiag(diag::SysFuncNotConst, range) << name;
+    return false;
+}
+
 BindContext SystemSubroutine::makeNonConst(const BindContext& ctx) {
     BindContext nonConstCtx(ctx);
     if (nonConstCtx.flags & BindFlags::Constant) {

@@ -1155,7 +1155,7 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
 
     if (isSystemCall()) {
         auto& callInfo = std::get<1>(subroutine);
-        return callInfo.subroutine->verifyConstant(context, arguments());
+        return callInfo.subroutine->verifyConstant(context, arguments(), sourceRange);
     }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);

@@ -33,7 +33,7 @@ public:
         return *elemType;
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 #define MAKE_REDUCTION_METHOD(typeName, sourceName, op)                                        \

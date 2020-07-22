@@ -55,7 +55,7 @@ public:
         return value->getValue();
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
 private:
     bool first;
@@ -144,7 +144,7 @@ public:
         return values[i]->getValue();
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
 private:
     bool next;

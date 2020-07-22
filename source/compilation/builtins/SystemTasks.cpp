@@ -18,7 +18,7 @@ public:
     explicit SystemTaskBase(const std::string& name) :
         SystemSubroutine(name, SubroutineKind::Task) {}
     ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class SimpleSystemTask : public SimpleSystemSubroutine {
@@ -29,7 +29,9 @@ public:
                                false) {}
 
     ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
-    bool verifyConstant(EvalContext&, const Args&) const final { return false; }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
 };
 
 class DisplayTask : public SystemTaskBase {

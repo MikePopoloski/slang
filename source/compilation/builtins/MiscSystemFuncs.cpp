@@ -47,7 +47,7 @@ public:
         return *result;
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class ValuePlusArgsFunction : public SystemSubroutine {
@@ -79,7 +79,9 @@ public:
     }
 
     ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
-    bool verifyConstant(EvalContext&, const Args&) const final { return false; }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
 };
 
 void registerMiscSystemFuncs(Compilation& c) {

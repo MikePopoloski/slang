@@ -34,7 +34,8 @@ public:
                                        SourceRange range) const = 0;
     virtual ConstantValue eval(const Scope& scope, EvalContext& context,
                                const Args& args) const = 0;
-    virtual bool verifyConstant(EvalContext& context, const Args& args) const = 0;
+    virtual bool verifyConstant(EvalContext& context, const Args& args,
+                                SourceRange range) const = 0;
 
     virtual void lower(mir::Procedure&, const Args&) const {}
 
@@ -43,6 +44,8 @@ protected:
 
     string_view kindStr() const;
     const Type& badArg(const BindContext& context, const Expression& arg) const;
+
+    bool notConst(EvalContext& context, SourceRange range) const;
 
     static bool checkArgCount(const BindContext& context, bool isMethod, const Args& args,
                               SourceRange callRange, size_t min, size_t max);
@@ -58,7 +61,7 @@ public:
                                    const ExpressionSyntax& syntax) const final;
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final;
-    bool verifyConstant(EvalContext&, const Args&) const override { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const override { return true; }
 
 protected:
     SimpleSystemSubroutine(const std::string& name, SubroutineKind kind, size_t requiredArgs,

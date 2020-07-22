@@ -26,7 +26,7 @@ public:
         return comp.getIntegerType();
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
     ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         ConstantValue v = args[0]->eval(context);
@@ -58,7 +58,7 @@ public:
         return comp.getIntType();
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
     ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         ConstantValue value = args[0]->eval(context);
@@ -128,7 +128,7 @@ public:
         return comp.getIntType();
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
     ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         ConstantValue value = args[0]->eval(context);
@@ -162,7 +162,7 @@ public:
         return comp.getBitType();
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
     ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         ConstantValue value = args[0]->eval(context);

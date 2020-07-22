@@ -17,7 +17,9 @@ public:
                                false) {}
 
     ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
-    bool verifyConstant(EvalContext&, const Args&) const final { return false; }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
 };
 
 void registerNonConstFuncs(Compilation& c) {

@@ -41,7 +41,7 @@ public:
         return val.convertToInt(to.getBitWidth(), toSigned, to.isFourState());
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
 private:
     bool toSigned;

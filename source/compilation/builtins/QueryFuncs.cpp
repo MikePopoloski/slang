@@ -40,7 +40,7 @@ public:
         return SVInt(32, args[0]->type->getBitWidth(), true);
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class TypenameFunction : public SystemSubroutine {
@@ -69,7 +69,7 @@ public:
         return printer.toString();
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 class ArrayQueryFunction : public SystemSubroutine {
@@ -97,7 +97,7 @@ public:
         return comp.getIntegerType();
     }
 
-    bool verifyConstant(EvalContext&, const Args&) const final { return true; }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
 #define SUBROUTINE(className, base, ...)                                                      \
