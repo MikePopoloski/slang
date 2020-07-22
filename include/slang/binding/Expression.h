@@ -242,7 +242,7 @@ protected:
     static ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
                                             const ConstantValue& cvr);
 
-    static void checkBindFlags(const Expression& expr, const BindContext& context);
+    static const Expression& checkBindFlags(const Expression& expr, const BindContext& context);
 
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax,
                               const BindContext& context,

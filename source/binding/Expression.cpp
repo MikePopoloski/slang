@@ -125,8 +125,7 @@ const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindCon
                                    bitmask<BindFlags> extraFlags) {
     const Expression& result =
         selfDetermined(context.scope.getCompilation(), syntax, context, extraFlags);
-    checkBindFlags(result, context.resetFlags(extraFlags));
-    return result;
+    return checkBindFlags(result, context.resetFlags(extraFlags));
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
@@ -156,8 +155,7 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
     Expression& expr = create(comp, rhs, context, BindFlags::None, &lhs);
 
     const Expression& result = convertAssignment(context, lhs, expr, location);
-    checkBindFlags(result, context);
-    return result;
+    return checkBindFlags(result, context);
 }
 
 const Expression& Expression::bindArgument(const Type& argType, ArgumentDirection direction,
@@ -224,17 +222,20 @@ const Expression& Expression::bindImplicitParam(const DataTypeSyntax& typeSyntax
     }
 
     const Expression& result = convertAssignment(context, *lhsType, expr, location);
-    checkBindFlags(result, context);
-    return result;
+    return checkBindFlags(result, context);
 }
 
-void Expression::checkBindFlags(const Expression& expr, const BindContext& context) {
+const Expression& Expression::checkBindFlags(const Expression& expr, const BindContext& context) {
     if ((context.flags & BindFlags::Constant) == 0)
-        return;
+        return expr;
 
     EvalContext verifyContext(context.getCompilation(), EvalFlags::IsVerifying);
-    expr.verifyConstant(verifyContext);
+    bool ok = expr.verifyConstant(verifyContext);
     verifyContext.reportDiags(context);
+
+    if (!ok)
+        return badExpr(context.getCompilation(), &expr);
+    return expr;
 }
 
 ConstantValue Expression::eval(EvalContext& context) const {
