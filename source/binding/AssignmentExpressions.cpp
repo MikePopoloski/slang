@@ -560,6 +560,22 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
     if (to.isString())
         return value.convertToStr();
 
+    if (to.isUnpackedArray() && from.isUnpackedArray()) {
+        // Conversion to a dynamic array just resizes. Conversion to a fixed array
+        // must have the same number of elements in the source.
+        ASSERT(!to.hasFixedRange() || !from.hasFixedRange());
+        if (to.hasFixedRange()) {
+            size_t size = value.elements().size();
+            if (size != to.getFixedRange().width()) {
+                context.addDiag(diag::ConstEvalDynamicToFixedSize, sourceRange)
+                    << from << size << to;
+                return nullptr;
+            }
+        }
+
+        return value;
+    }
+
     // TODO: other types
     THROW_UNREACHABLE;
 }

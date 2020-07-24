@@ -1010,3 +1010,49 @@ endmodule
     auto& r = compilation.getRoot().lookupName<ParameterSymbol>("m.r");
     CHECK(r.getValue().real() == 234.057);
 }
+
+TEST_CASE("Fixed / dynamic array assignments") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int bar[2] = '{5, 6};
+    function automatic int func;
+        int foo[] = '{1, 2, 3};
+        foo = bar;
+        return $size(foo);
+    endfunction
+
+    localparam int asdf = func();
+
+    function automatic int func2;
+        int bar[3];
+        int foo[] = '{1, 2, 3};
+        bar = foo;
+        return bar[2];
+    endfunction
+
+    localparam int asdf2 = func2();
+
+    function automatic int func3;
+        int bar[4];
+        int foo[] = '{1, 2, 3};
+        bar = foo;
+        return bar[2];
+    endfunction
+
+    localparam int asdf3 = func3();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& asdf = compilation.getRoot().lookupName<ParameterSymbol>("m.asdf");
+    CHECK(asdf.getValue().integer() == 2);
+
+    auto& asdf2 = compilation.getRoot().lookupName<ParameterSymbol>("m.asdf2");
+    CHECK(asdf2.getValue().integer() == 3);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalDynamicToFixedSize);
+}
