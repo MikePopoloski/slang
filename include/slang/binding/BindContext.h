@@ -104,6 +104,7 @@ public:
         lookupLocation(lookupLocation), flags(flags) {}
 
     Compilation& getCompilation() const;
+    bool inUnevaluatedBranch() const { return (flags & BindFlags::UnevaluatedBranch) != 0; }
 
     void setAttributes(const Statement& stmt,
                        span<const AttributeInstanceSyntax* const> syntax) const;

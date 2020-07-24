@@ -270,8 +270,8 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     // we can do checking at compile time that it's within bounds.
     // Only do that if we're not in an unevaluated conditional branch.
     if (valueType.hasFixedRange()) {
-        ConstantValue selVal = context.tryEval(selector);
-        if (selVal && (context.flags & BindFlags::UnevaluatedBranch) == 0) {
+        ConstantValue selVal;
+        if (!context.inUnevaluatedBranch() && (selVal = context.tryEval(selector))) {
             optional<int32_t> index = selVal.integer().as<int32_t>();
             if (!index || !valueType.getFixedRange().containsPoint(*index)) {
                 auto& diag = context.addDiag(diag::IndexValueInvalid, selector.sourceRange);
@@ -461,10 +461,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                 return badExpr(compilation, result);
             }
 
-            if ((context.flags & BindFlags::UnevaluatedBranch) == 0 &&
-                !validateRange(selectionRange)) {
+            if (!context.inUnevaluatedBranch() && !validateRange(selectionRange))
                 return badExpr(compilation, result);
-            }
         }
         else {
             if (!context.requireGtZero(rv, right.sourceRange))
@@ -478,8 +476,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             }
 
             // If the lhs is a known constant, we can check that now too.
-            ConstantValue leftVal = context.tryEval(left);
-            if (leftVal && (context.flags & BindFlags::UnevaluatedBranch) == 0) {
+            ConstantValue leftVal;
+            if (!context.inUnevaluatedBranch() && (leftVal = context.tryEval(left))) {
                 optional<int32_t> index = leftVal.integer().as<int32_t>();
                 if (!index) {
                     auto& diag = context.addDiag(diag::IndexValueInvalid, left.sourceRange);

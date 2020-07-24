@@ -371,34 +371,6 @@ TEST_CASE("bit select weird indices") {
     NO_SESSION_ERRORS;
 }
 
-TEST_CASE("dimension based system functions") {
-    ScriptSession session;
-    session.eval("logic [0 : 15] up_vect = 5'b10111;");
-    session.eval("logic [15 : 0] down_vect = 5'd25;");
-
-    EVAL("$left(up_vect)", 0);
-    EVAL("$right(up_vect)", 15);
-    EVAL("$left(down_vect)", 15);
-    EVAL("$right(down_vect)", 0);
-
-    EVAL("$low(up_vect)", 0);
-    EVAL("$high(up_vect)", 15);
-    EVAL("$low(down_vect)", 0);
-    EVAL("$high(down_vect)", 15);
-
-    EVAL("$size(up_vect)", 16);
-    EVAL("$size(down_vect)", 16);
-
-    EVAL("$bits(up_vect)", 16);
-    EVAL("$bits(down_vect)", 16);
-
-    EVAL("$increment(up_vect)", -1);
-    EVAL("$increment(down_vect)", 1);
-#undef EVAL
-
-    NO_SESSION_ERRORS;
-}
-
 TEST_CASE("Unary inc-dec operators") {
     ScriptSession session;
     session.eval("logic [7:0] a = 123;");
@@ -1224,6 +1196,66 @@ TEST_CASE("Bit vector functions") {
     CHECK(session.eval("$isunknown(asdf)").integer() == 1);
     CHECK(session.eval("$isunknown(14'b101010101)").integer() == 0);
     CHECK(session.eval("$isunknown(14'b101z10101)").integer() == 1);
+
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Array query functions") {
+    ScriptSession session;
+    session.eval("logic [-1:15] up_vect = 5'b10111;");
+    session.eval("logic [15:2] down_vect = 5'd25;");
+
+    EVAL("$left(up_vect)", -1);
+    EVAL("$right(up_vect)", 15);
+    EVAL("$left(down_vect)", 15);
+    EVAL("$right(down_vect)", 2);
+
+    EVAL("$low(up_vect)", -1);
+    EVAL("$high(up_vect)", 15);
+    EVAL("$low(down_vect)", 2);
+    EVAL("$high(down_vect)", 15);
+
+    EVAL("$size(up_vect)", 17);
+    EVAL("$size(down_vect)", 14);
+
+    EVAL("$bits(up_vect)", 17);
+    EVAL("$bits(down_vect)", 14);
+
+    EVAL("$increment(up_vect)", -1);
+    EVAL("$increment(down_vect)", 1);
+
+    session.eval("integer i = -1;");
+    session.eval("integer j = 10;");
+    session.eval("integer k = 5;");
+    session.eval("logic [3:1][2:4] arr [3][];");
+
+    EVAL("$left(arr, i)", SVInt::createFillX(32, true));
+    EVAL("$low(arr, k)", SVInt::createFillX(32, true));
+    EVAL("$increment(arr, 3)", 1);
+
+    for (auto& func : { "$left", "$right", "$low", "$high", "$increment", "$size" }) {
+        EVAL(func + "(arr, j)"s, SVInt::createFillX(32, true));
+    }
+
+    session.eval("arr[1] = '{1, 2, 3};");
+    EVAL("$left(arr[1])", 0);
+    EVAL("$right(arr[1])", 2);
+    EVAL("$low(arr[1])", 0);
+    EVAL("$high(arr[1])", 2);
+    EVAL("$increment(arr[1])", -1);
+    EVAL("$size(arr[1])", 3);
+    EVAL("$size(arr[0])", 0);
+    EVAL("$right(arr[0])", -1);
+
+    session.eval("string s = \"asdf\";");
+    EVAL("$left(s)", 0);
+    EVAL("$right(s)", 3);
+    EVAL("$low(s)", 0);
+    EVAL("$high(s)", 3);
+    EVAL("$increment(s)", -1);
+    EVAL("$size(s)", 4);
+
+#undef EVAL
 
     NO_SESSION_ERRORS;
 }

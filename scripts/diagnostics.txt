@@ -347,6 +347,9 @@ error InvalidStringArg "value of type {} is not a valid string argument"
 error ArrayReductionIntegral "array reduction methods can only be called on unpacked arrays of integral values"
 error BadFinishNum "finish argument must have value of 0, 1, or 2"
 error SysFuncNotConst "'{}' is not allowed in a constant context"
+error QueryOnDynamicType "array query function '{}' cannot be called on a dynamically sized type identifier"
+error DimensionIndexInvalid "{} is not a valid dimension for {}"
+error DynamicDimensionIndex "cannot refer to a dynamically sized dimension with index {} greater than 1"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 
 subsystem ConstEval

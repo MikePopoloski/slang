@@ -245,3 +245,70 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Array query functions -- errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [3:1][2:5] foo [3][][$];
+    
+    localparam int p1 = $left(foo, 4);  // fine
+    localparam int p2 = $right(foo[0]); // not constant
+    localparam int p3 = $left(foo, p2);
+    localparam int p4 = $right(foo, p2);
+    localparam int p5 = $low(foo, p2);
+    localparam int p6 = $high(foo, p2);
+    localparam int p7 = $increment(foo, p2);
+    localparam int p8 = $size(foo, p2);
+
+    localparam int p9 = $size(foo[0], 2);
+    localparam int p10 = $size(foo[0], getIndex(2));
+    localparam int p11 = $size(foo, 6);
+    localparam int p12 = $size(foo, 7);
+    localparam int p13 = $size(foo[0]);
+
+    localparam int p14 = $size(foo, 1, 2);
+    localparam int p15 = $size(logic);
+    localparam int p16 = $size(foo, 3.4);
+
+    typedef int asdf_t[];
+    localparam int p17 = $size(asdf_t);
+
+    function int getIndex(int i);
+        return i;
+    endfunction
+
+    localparam int p18 = baz(2);
+
+    function int baz(int j);
+        int i[3][];
+        return $size(i, j);
+    endfunction
+
+    localparam int asdfasdf[] = '{p2};
+    localparam int p19 = boz();
+    
+    function int boz;
+        automatic int i = $size(asdfasdf);
+        return i;
+    endfunction
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 11);
+    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[1].code == diag::DynamicDimensionIndex);
+    CHECK(diags[2].code == diag::DynamicDimensionIndex);
+    CHECK(diags[3].code == diag::DimensionIndexInvalid);
+    CHECK(diags[4].code == diag::DimensionIndexInvalid);
+    CHECK(diags[5].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[6].code == diag::TooManyArguments);
+    CHECK(diags[7].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[8].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[9].code == diag::QueryOnDynamicType);
+    CHECK(diags[10].code == diag::DynamicDimensionIndex);
+}
