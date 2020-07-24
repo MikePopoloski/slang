@@ -254,6 +254,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(ReplicatedAssignmentPattern, ReplicatedAssignmentPatternExpression);
         CASE(EmptyArgument, EmptyArgumentExpression);
         CASE(OpenRange, OpenRangeExpression);
+        CASE(NewArray, NewArrayExpression);
     }
 #undef CASE
     // clang-format on

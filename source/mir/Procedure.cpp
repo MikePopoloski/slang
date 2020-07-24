@@ -109,6 +109,7 @@ public:
     }
 
     MIRValue visit(const ConversionExpression&) { return {}; }
+    MIRValue visit(const NewArrayExpression&) { return {}; }
     MIRValue visit(const DataTypeExpression&) { return {}; }
     MIRValue visit(const SimpleAssignmentPatternExpression&) { return {}; }
     MIRValue visit(const StructuredAssignmentPatternExpression&) { return {}; }

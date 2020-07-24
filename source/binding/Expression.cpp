@@ -503,6 +503,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             context.addDiag(diag::TimingControlNotAllowed, syntax.sourceRange());
             result = &badExpr(compilation, nullptr);
             break;
+        case SyntaxKind::NewArrayExpression:
+            result = &NewArrayExpression::fromSyntax(
+                compilation, syntax.as<NewArrayExpressionSyntax>(), context, assignmentTarget);
+            break;
         case SyntaxKind::AcceptOnPropertyExpression:
         case SyntaxKind::AlwaysPropertyExpression:
         case SyntaxKind::AndSequenceExpression:
@@ -516,7 +520,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::ImpliesPropertyExpression:
         case SyntaxKind::IntersectSequenceExpression:
         case SyntaxKind::MinTypMaxExpression:
-        case SyntaxKind::NewArrayExpression:
         case SyntaxKind::NewClassExpression:
         case SyntaxKind::NewExpression:
         case SyntaxKind::NextTimePropertyExpression:

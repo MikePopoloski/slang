@@ -1056,3 +1056,34 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalDynamicToFixedSize);
 }
+
+TEST_CASE("New array expression") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo[] = new [3];
+    int bar[2];
+    initial begin
+        foo = new [8] (foo);
+        foo = new [9] (bar);
+        bar = new [2] (bar); // invalid target
+        foo = new [asdf];
+        foo = new [3.4];
+        foo = new [2] (3.4);
+    end
+
+    localparam int i = '{};
+    localparam int baz[] = new [i];
+    localparam int baz[] = new [3] (baz);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::NewArrayTarget);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::ExprMustBeIntegral);
+    CHECK(diags[3].code == diag::BadAssignment);
+}

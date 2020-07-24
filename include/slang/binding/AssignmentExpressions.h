@@ -65,7 +65,7 @@ private:
 struct CastExpressionSyntax;
 struct SignedCastExpressionSyntax;
 
-/// Represents a type conversion expression.
+/// Represents a type conversion expression (implicit or explicit).
 class ConversionExpression : public Expression {
 public:
     bool isImplicit;
@@ -98,6 +98,41 @@ public:
 
 private:
     Expression* operand_;
+};
+
+struct NewArrayExpressionSyntax;
+
+/// Represents a new[] expression that creates a dynamic array.
+class NewArrayExpression : public Expression {
+public:
+    NewArrayExpression(const Type& type, const Expression& sizeExpr, const Expression* initializer,
+                       SourceRange sourceRange) :
+        Expression(ExpressionKind::NewArray, type, sourceRange),
+        sizeExpr_(&sizeExpr), initializer_(initializer) {}
+
+    const Expression& sizeExpr() const { return *sizeExpr_; }
+    const Expression* initExpr() const { return initializer_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const NewArrayExpressionSyntax& syntax,
+                                  const BindContext& context, const Type* assignmentTarget);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NewArray; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        sizeExpr().visit(visitor);
+        if (initExpr())
+            initExpr()->visit(visitor);
+    }
+
+private:
+    const Expression* sizeExpr_;
+    const Expression* initializer_;
 };
 
 } // namespace slang

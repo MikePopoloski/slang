@@ -265,6 +265,7 @@ error NonblockingAssignmentToAuto "nonblocking assignment to automatic variable 
 error AssignmentToConst "cannot assign to read-only variable '{}'"
 error EmptyConcatNotAllowed "concatenation cannot be empty"
 error TimingControlNotAllowed "timing control is not allowed in this context"
+error NewArrayTarget "new array expression can only be used in an assignment to a dynamic array type"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -295,6 +296,7 @@ error PackedMemberNotIntegral "packed members must be of integral type (type is 
 error PackedMemberHasInitializer "packed members can not have initializers"
 error PackedDimsOnPredefinedType "packed dimensions not allowed on predefined integer type '{}'"
 error PackedUnionWidthMismatch "all members of a packed union must have the same width"
+error InvalidArraySize "{} is not a valid size for an array"
 
 subsystem Lookup
 error Redefinition "redefinition of '{}'"

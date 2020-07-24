@@ -512,6 +512,12 @@ TEST_CASE("Dynamic array eval") {
     session.eval("arr[3] = 42;");
     CHECK(session.eval("arr.and").integer() == 2);
 
+    cv = session.eval("arr = new [5] (arr2);");
+    REQUIRE(cv.elements().size() == 5);
+    CHECK(cv.elements()[0].integer() == 1234);
+    CHECK(cv.elements()[1].integer() == 19);
+    CHECK(cv.elements()[2].integer() == 0);
+
     NO_SESSION_ERRORS;
 }
 

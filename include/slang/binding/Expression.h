@@ -47,7 +47,8 @@ struct InvocationExpressionSyntax;
     x(StructuredAssignmentPattern) \
     x(ReplicatedAssignmentPattern) \
     x(EmptyArgument) \
-    x(OpenRange)
+    x(OpenRange) \
+    x(NewArray)
 ENUM(ExpressionKind, EXPRESSION);
 #undef EXPRESSION
 

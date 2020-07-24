@@ -14,6 +14,7 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/InstanceSymbols.h"
@@ -586,6 +587,85 @@ bool ConversionExpression::verifyConstantImpl(EvalContext& context) const {
 
 void ConversionExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("operand", operand());
+}
+
+Expression& NewArrayExpression::fromSyntax(Compilation& compilation,
+                                           const NewArrayExpressionSyntax& syntax,
+                                           const BindContext& context,
+                                           const Type* assignmentTarget) {
+    if (!assignmentTarget ||
+        assignmentTarget->getCanonicalType().kind != SymbolKind::DynamicArrayType) {
+        context.addDiag(diag::NewArrayTarget, syntax.sourceRange());
+        return badExpr(compilation, nullptr);
+    }
+
+    auto& sizeExpr = selfDetermined(compilation, *syntax.sizeExpr, context);
+    const Expression* initExpr = nullptr;
+    if (syntax.initializer)
+        initExpr = &selfDetermined(compilation, *syntax.initializer->expression, context);
+
+    auto result = compilation.emplace<NewArrayExpression>(*assignmentTarget, sizeExpr, initExpr,
+                                                          syntax.sourceRange());
+    if (sizeExpr.bad() || (initExpr && initExpr->bad()))
+        return badExpr(compilation, result);
+
+    if (!sizeExpr.type->isIntegral()) {
+        context.addDiag(diag::ExprMustBeIntegral, sizeExpr.sourceRange);
+        return badExpr(compilation, result);
+    }
+
+    if (initExpr && !assignmentTarget->isAssignmentCompatible(*initExpr->type)) {
+        context.addDiag(diag::BadAssignment, initExpr->sourceRange)
+            << *initExpr->type << *assignmentTarget;
+        return badExpr(compilation, result);
+    }
+
+    return *result;
+}
+
+ConstantValue NewArrayExpression::evalImpl(EvalContext& context) const {
+    ConstantValue sz = sizeExpr().eval(context);
+    if (!sz)
+        return nullptr;
+
+    optional<int64_t> size = sz.integer().as<int64_t>();
+    if (!size || *size < 0) {
+        context.addDiag(diag::InvalidArraySize, sizeExpr().sourceRange) << sz;
+        return nullptr;
+    }
+
+    size_t count = size_t(*size);
+    size_t index = 0;
+    std::vector<ConstantValue> result(count);
+
+    ConstantValue iv;
+    if (initExpr()) {
+        iv = initExpr()->eval(context);
+        if (!iv)
+            return nullptr;
+
+        auto elems = iv.elements();
+        for (; index < count && index < elems.size(); index++)
+            result[index] = elems[index];
+    }
+
+    // Any remaining elements are default initialized.
+    ConstantValue def = type->getArrayElementType()->getDefaultValue();
+    for (; index < count; index++)
+        result[index] = def;
+
+    return result;
+}
+
+bool NewArrayExpression::verifyConstantImpl(EvalContext& context) const {
+    return sizeExpr().verifyConstant(context) &&
+           (!initExpr() || initExpr()->verifyConstant(context));
+}
+
+void NewArrayExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("sizeExpr", sizeExpr());
+    if (initExpr())
+        serializer.write("initExpr", initExpr());
 }
 
 } // namespace slang
