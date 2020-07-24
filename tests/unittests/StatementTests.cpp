@@ -45,12 +45,22 @@ TEST_CASE("Foreach loop errors") {
 module m;
     int foo;
     bit [3:0][2:1] asdf;
+    int bar [3][][4];
 
     initial begin
         foreach (foo[i]) begin end
         foreach (asdf[i,j,]) begin end
         foreach (asdf[i,asdf]) begin end
+        foreach (blah[]) begin end
+        foreach (bar[, b, c]) begin end
     end
+
+    localparam int asdfasdf[3] = '{1};
+    function automatic func;
+        foreach (asdfasdf[a]) begin end
+    endfunction
+
+    localparam logic f = func();
 
 endmodule
 )");
@@ -59,10 +69,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::NotAnArray);
     CHECK(diags[1].code == diag::TooManyForeachVars);
     CHECK(diags[2].code == diag::LoopVarShadowsArray);
+    CHECK(diags[3].code == diag::UndeclaredIdentifier);
+    CHECK(diags[4].code == diag::ForeachDynamicDimAfterSkipped);
+    CHECK(diags[5].code == diag::WrongNumberAssignmentPatterns);
 }
 
 TEST_CASE("Delay statements") {

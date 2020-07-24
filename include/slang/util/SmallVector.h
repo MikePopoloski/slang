@@ -111,7 +111,7 @@ public:
         if constexpr (std::is_trivially_copyable<T>()) {
             size_t count = (size_t)std::distance(begin, end);
             size_t newLen = len + count;
-            ensureSize(newLen);
+            ensureCapacity(newLen);
 
             T* ptr = data_ + len;
             memcpy(ptr, begin, count * sizeof(T));
@@ -128,7 +128,7 @@ public:
     void appendIterator(It begin, It end) {
         size_t count = (size_t)(end - begin);
         size_t newLen = len + count;
-        ensureSize(newLen);
+        ensureCapacity(newLen);
 
         T* ptr = data_ + len;
         while (begin != end)
@@ -146,12 +146,28 @@ public:
 
     /// Adds @a size elements to the array (default constructed).
     void extend(size_t size) {
-        ensureSize(len + size);
+        ensureCapacity(len + size);
         len += size;
     }
 
     /// Ensure that there is enough allocated memory in the array for at least @a size objects.
-    void reserve(size_t size) { ensureSize(size); }
+    void reserve(size_t size) { ensureCapacity(size); }
+
+    /// Resize the array. If larger than the current size, default construct new elements to
+    /// fill the gap. If smaller than the current size, the length is shrunk as if by repeatedly
+    /// calling pop().
+    void resize(size_t size) {
+        if (size > len) {
+            ensureCapacity(size);
+        }
+        else {
+            if constexpr (!std::is_trivially_destructible<T>()) {
+                for (size_t i = size; i < len; i++)
+                    data_[i].~T();
+            }
+        }
+        len = size;
+    }
 
     /// Creates a copy of the array using the given allocator.
     span<T> copy(BumpAllocator& alloc) const {
@@ -199,7 +215,7 @@ protected:
     // Don't put any variables after firstElement; we expect that the derived
     // class will fill in stack space here.
 
-    void resize() {
+    void realloc() {
         T* newData = (T*)malloc(capacity * sizeof(T));
         if constexpr (std::is_trivially_copyable<T>())
             memcpy(newData, data_, len * sizeof(T));
@@ -219,14 +235,14 @@ protected:
             capacity = capacity * 2;
             if (capacity == 0)
                 capacity = 4;
-            resize();
+            realloc();
         }
     }
 
-    void ensureSize(size_t size) {
+    void ensureCapacity(size_t size) {
         if (size > capacity) {
             capacity = size;
-            resize();
+            realloc();
         }
     }
 

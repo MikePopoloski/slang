@@ -1253,16 +1253,15 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
         bad = true;
     }
 
-    SmallVectorSized<ConstantRange, 4> dims;
+    SmallVectorSized<LoopDim, 4> dims;
     const Type* type = arrayRef.type;
     while (type->isArray()) {
-        // TODO: non-fixed sizes
-        dims.append(type->getFixedRange());
+        if (type->hasFixedRange())
+            dims.append({ type->getFixedRange() });
+        else
+            dims.emplace();
         type = type->getArrayElementType();
     }
-
-    SmallVectorSized<ConstantRange, 4> filteredDims;
-    SmallVectorSized<const ValueSymbol*, 4> loopVars;
 
     if (syntax.loopList->loopVariables.size() > dims.size()) {
         if (!bad) {
@@ -1274,24 +1273,37 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
     else {
         // Find a reference to all of our loop variables, which should always be
         // in the parent block symbol.
+        size_t count = 0;
         auto dimIt = dims.begin();
         for (auto loopVar : syntax.loopList->loopVariables) {
             if (loopVar->kind != SyntaxKind::EmptyIdentifierName) {
                 auto& idName = loopVar->as<IdentifierNameSyntax>();
-                auto sym = context.scope.find(idName.identifier.valueText());
-                if (sym) {
-                    loopVars.append(&sym->as<ValueSymbol>());
-                    filteredDims.append(*dimIt);
+                string_view name = idName.identifier.valueText();
+
+                // If we previously had skipped dimensions this one can't be dynamically
+                // sized (there would be no way to reach it duration iteration).
+                size_t currIndex = size_t(dimIt - dims.begin());
+                if (!dimIt->range && currIndex != count) {
+                    context.addDiag(diag::ForeachDynamicDimAfterSkipped, idName.sourceRange())
+                        << name;
+                    bad = true;
+                    break;
+                }
+
+                if (auto sym = context.scope.find(name)) {
+                    dimIt->loopVar = &sym->as<ValueSymbol>();
+                    count = currIndex + 1;
                 }
             }
             dimIt++;
         }
+
+        dims.resize(count);
     }
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
-    auto result = compilation.emplace<ForeachLoopStatement>(
-        arrayRef, filteredDims.copy(compilation), loopVars.copy(compilation), bodyStmt,
-        syntax.sourceRange());
+    auto result = compilation.emplace<ForeachLoopStatement>(arrayRef, dims.copy(compilation),
+                                                            bodyStmt, syntax.sourceRange());
 
     if (bad || bodyStmt.bad())
         return badStmt(compilation, result);
@@ -1299,7 +1311,15 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
 }
 
 ER ForeachLoopStatement::evalImpl(EvalContext& context) const {
-    ER result = evalRecursive(context, loopRanges, loopVariables);
+    // If there are no loop dimensions, this does nothing.
+    if (loopDims.empty())
+        return ER::Success;
+
+    ConstantValue cv = arrayRef.eval(context);
+    if (!cv)
+        return ER::Fail;
+
+    ER result = evalRecursive(context, cv, loopDims);
     if (result == ER::Break || result == ER::Continue)
         return ER::Success;
 
@@ -1307,26 +1327,53 @@ ER ForeachLoopStatement::evalImpl(EvalContext& context) const {
 }
 
 bool ForeachLoopStatement::verifyConstantImpl(EvalContext& context) const {
-    // TODO: dynamic arrays need to check whether the array itself is constant here
-    return body.verifyConstant(context);
+    return arrayRef.verifyConstant(context) && body.verifyConstant(context);
 }
 
-ER ForeachLoopStatement::evalRecursive(EvalContext& context, span<const ConstantRange> curRanges,
-                                       span<const ValueSymbol* const> curVars) const {
-    auto local = context.findLocal(curVars[0]);
+ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue& cv,
+                                       span<const LoopDim> currDims) const {
+    // If there is no loop var just skip this index.
+    auto& dim = currDims[0];
+    if (!dim.loopVar) {
+        // Shouldn't ever be at the end here.
+        return evalRecursive(context, nullptr, currDims.subspan(1));
+    }
+
+    auto local = context.findLocal(dim.loopVar);
     ASSERT(local);
 
-    ConstantRange range = curRanges[0];
-    for (int32_t i = range.left; range.isLittleEndian() ? i >= range.right : i <= range.right;
-         range.isLittleEndian() ? i-- : i++) {
+    span<const ConstantValue> elements;
+    if (cv.isUnpacked())
+        elements = cv.elements();
+
+    ConstantRange range;
+    bool isLittleEndian;
+    if (dim.range) {
+        range = *dim.range;
+        isLittleEndian = range.isLittleEndian();
+    }
+    else {
+        range = { 0, int32_t(elements.size()) - 1 };
+        isLittleEndian = false;
+    }
+
+    for (int32_t i = range.left; isLittleEndian ? i >= range.right : i <= range.right;
+        isLittleEndian ? i-- : i++) {
 
         *local = SVInt(32, uint64_t(i), true);
 
         ER result;
-        if (curRanges.size() > 1)
-            result = evalRecursive(context, curRanges.subspan(1), curVars.subspan(1));
-        else
+        if (currDims.size() > 1) {
+            size_t index(i);
+            if (dim.range)
+                index = (size_t)range.reverse().translateIndex(i);
+
+            result = evalRecursive(context, elements.empty() ? nullptr : elements[index],
+                                   currDims.subspan(1));
+        }
+        else {
             result = body.eval(context);
+        }
 
         if (result != ER::Success && result != ER::Continue)
             return result;
@@ -1338,16 +1385,13 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, span<const Constant
 void ForeachLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("arrayRef", arrayRef);
 
-    serializer.startArray("loopRanges");
-    for (auto const& r : loopRanges) {
-        serializer.serialize(r.toString());
-    }
-    serializer.endArray();
-
-    serializer.startArray("loopVariables");
-    for (auto v : loopVariables) {
-        if (v)
-            serializer.serialize(*v);
+    serializer.startArray("loopDims");
+    for (auto& r : loopDims) {
+        serializer.startObject();
+        serializer.write("range", r.range ? r.range->toString() : "[]");
+        if (r.loopVar)
+            serializer.write("var", *r.loopVar);
+        serializer.endObject();
     }
     serializer.endArray();
 

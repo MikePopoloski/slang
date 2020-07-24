@@ -999,11 +999,38 @@ function automatic int foo();
         result += d * 100;
     end
 
+    foreach (asdf[]) begin
+        result += 99;
+    end
+
     return result;
 endfunction
 )");
 
     CHECK(session.eval("foo()").integer() == 1510);
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Eval foreach loop dynamic") {
+    ScriptSession session;
+    session.eval(R"(
+function automatic int foo();
+    int result = 0;
+    int asdf [3][];
+    asdf[0] = '{1, 2, 3, 4};
+    asdf[2] = '{10, 11};
+
+    foreach (asdf[a, b]) begin
+        result += asdf[a][b];
+        if (a == 2 && b == 1)
+            break;
+    end
+
+    return result;
+endfunction
+)");
+
+    CHECK(session.eval("foo()").integer() == 31);
     NO_SESSION_ERRORS;
 }
 

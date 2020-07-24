@@ -501,16 +501,25 @@ struct ForeachLoopStatementSyntax;
 
 class ForeachLoopStatement : public Statement {
 public:
+    /// Describes one dimension that will be iterated by the loop.
+    struct LoopDim {
+        /// The static range of the dimension, or nullopt if the
+        /// dimension is dynamically sized.
+        optional<ConstantRange> range;
+
+        /// The loop variable for this dimension, or nullptr if
+        /// the dimension is being skipped.
+        const ValueSymbol* loopVar = nullptr;
+    };
+
     const Expression& arrayRef;
-    span<const ConstantRange> loopRanges;
-    span<const ValueSymbol* const> loopVariables;
+    span<const LoopDim> loopDims;
     const Statement& body;
 
-    ForeachLoopStatement(const Expression& arrayRef, span<const ConstantRange> loopRanges,
-                         span<const ValueSymbol* const> loopVariables, const Statement& body,
-                         SourceRange sourceRange) :
+    ForeachLoopStatement(const Expression& arrayRef, span<const LoopDim> loopDims,
+                         const Statement& body, SourceRange sourceRange) :
         Statement(StatementKind::ForeachLoop, sourceRange),
-        arrayRef(arrayRef), loopRanges(loopRanges), loopVariables(loopVariables), body(body) {}
+        arrayRef(arrayRef), loopDims(loopDims), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -528,8 +537,8 @@ public:
     }
 
 private:
-    EvalResult evalRecursive(EvalContext& context, span<const ConstantRange> curRanges,
-                             span<const ValueSymbol* const> curVars) const;
+    EvalResult evalRecursive(EvalContext& context, const ConstantValue& cv,
+                             span<const LoopDim> loopDims) const;
 };
 
 class WhileLoopStatement : public Statement {

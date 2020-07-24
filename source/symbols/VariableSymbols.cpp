@@ -117,6 +117,7 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
 
 VariableSymbol& VariableSymbol::fromForeachVar(Compilation& compilation,
                                                const IdentifierNameSyntax& syntax) {
+    // TODO: needs to be read-only
     auto nameToken = syntax.identifier;
     auto var = compilation.emplace<VariableSymbol>(nameToken.valueText(), nameToken.location(),
                                                    VariableLifetime::Automatic);
