@@ -1255,6 +1255,13 @@ TEST_CASE("Array query functions") {
     EVAL("$increment(s)", -1);
     EVAL("$size(s)", 4);
 
+    EVAL("$dimensions(s)", 1);
+    EVAL("$unpacked_dimensions(s)", 0);
+    EVAL("$dimensions(arr)", 4);
+    EVAL("$unpacked_dimensions(arr)", 2);
+    EVAL("$dimensions(logic)", 0);
+    EVAL("$unpacked_dimensions(logic)", 0);
+
 #undef EVAL
 
     NO_SESSION_ERRORS;

@@ -30,7 +30,7 @@ public:
         if (!args[0]->type->isBitstreamType())
             return badArg(context, *args[0]);
 
-        // TODO: not allowed on some dynamic types
+        // TODO: dynamic types, bitstream casting
 
         return comp.getIntegerType();
     }
@@ -110,14 +110,7 @@ public:
         return comp.getIntegerType();
     }
 
-    bool verifyConstant(EvalContext& , const Args& , SourceRange ) const final {
-        /*if (!args[0]->type->hasFixedRange()) {
-            context.addDiag(diag::DynamicDimensionNotConst, range) << name << *args[0]->type;
-            return false;
-        }*/
-
-        return true;
-    }
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
 protected:
     struct DimResult {
@@ -327,6 +320,61 @@ ConstantValue IncrementFunction::eval(const Scope&, EvalContext& context, const 
     return SVInt(32, uint64_t(dim.range.isLittleEndian() ? 1 : -1), true);
 }
 
+class ArrayDimensionFunction : public SystemSubroutine {
+public:
+    ArrayDimensionFunction(const std::string& name, bool unpackedOnly) :
+        SystemSubroutine(name, FUNC), unpackedOnly(unpackedOnly) {}
+
+    const Expression& bindArgument(size_t, const BindContext& context,
+                                   const ExpressionSyntax& syntax) const final {
+        return Expression::bind(syntax, makeNonConst(context), BindFlags::AllowDataType);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 1))
+            return comp.getErrorType();
+
+        auto& type = *args[0]->type;
+        if (!type.isIntegral() && !type.isUnpackedArray() && !type.isString())
+            return badArg(context, *args[0]);
+
+        // Spec says we have to disallow this case.
+        if (!type.hasFixedRange() && args[0]->kind == ExpressionKind::DataType) {
+            context.addDiag(diag::QueryOnDynamicType, args[0]->sourceRange) << name;
+            return comp.getErrorType();
+        }
+
+        return comp.getIntegerType();
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+
+    ConstantValue eval(const Scope&, EvalContext&, const Args& args) const final {
+        // Count the number of dimensions by unwrapping arrays.
+        uint64_t count = 0;
+        const Type* type = args[0]->type;
+        while (type->isArray()) {
+            if (unpackedOnly && !type->isUnpackedArray())
+                break;
+
+            count++;
+            type = type->getArrayElementType();
+        }
+
+        // Strings and simple bit vectors count as a (packed) dimension.
+        if (!unpackedOnly && (type->isString() || (type->isIntegral() && !type->isScalar()))) {
+            count++;
+        }
+
+        return SVInt(32, count, true);
+    }
+
+private:
+    bool unpackedOnly;
+};
+
 void registerQueryFuncs(Compilation& c) {
 #define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(Bits);
@@ -338,6 +386,9 @@ void registerQueryFuncs(Compilation& c) {
     REGISTER(Size);
     REGISTER(Increment);
 #undef REGISTER
+
+    c.addSystemSubroutine(std::make_unique<ArrayDimensionFunction>("$dimensions", false));
+    c.addSystemSubroutine(std::make_unique<ArrayDimensionFunction>("$unpacked_dimensions", true));
 }
 
 } // namespace slang::Builtins

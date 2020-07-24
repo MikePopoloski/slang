@@ -292,6 +292,10 @@ module m;
         return i;
     endfunction
 
+    localparam int p20 = $dimensions(1, 2);
+    localparam int p21 = $unpacked_dimensions(real);
+    localparam int p22 = $dimensions(asdf_t);
+
 endmodule
 )");
 
@@ -299,7 +303,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 11);
+    REQUIRE(diags.size() == 14);
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[1].code == diag::DynamicDimensionIndex);
     CHECK(diags[2].code == diag::DynamicDimensionIndex);
@@ -311,4 +315,7 @@ endmodule
     CHECK(diags[8].code == diag::BadSystemSubroutineArg);
     CHECK(diags[9].code == diag::QueryOnDynamicType);
     CHECK(diags[10].code == diag::DynamicDimensionIndex);
+    CHECK(diags[11].code == diag::TooManyArguments);
+    CHECK(diags[12].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[13].code == diag::QueryOnDynamicType);
 }
