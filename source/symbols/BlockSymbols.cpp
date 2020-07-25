@@ -328,7 +328,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
             // Have to keep incrementing the iterator here so that we stay in sync.
             auto expr = *boundIt++;
             ConstantValue val = bindContext.eval(*expr);
-            if (!currentFound && val && val.equivalentTo(condVal)) {
+            if (!currentFound && val && val == condVal) {
                 currentFound = true;
                 currentMatchRange = expr->sourceRange;
             }

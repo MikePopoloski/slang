@@ -47,6 +47,20 @@ std::string ConstantValue::toString() const {
             }
             else if constexpr (std::is_same_v<T, std::string>)
                 return arg;
+            else if constexpr (std::is_same_v<T, Map>) {
+                FormatBuffer buffer;
+                buffer.append("[");
+                for (auto& [key, val] : *arg)
+                    buffer.format("{}:{},", key.toString(), val.toString());
+
+                if (arg->defaultValue)
+                    buffer.format("default:{}", arg->defaultValue.toString());
+                else if (!arg->empty())
+                    buffer.pop_back();
+
+                buffer.append("]");
+                return buffer.str();
+            }
             else
                 static_assert(always_false<T>::value, "Missing case");
         },
@@ -74,6 +88,12 @@ size_t ConstantValue::hash() const {
             }
             else if constexpr (std::is_same_v<T, std::string>)
                 hash_combine(h, std::hash<std::string>()(arg));
+            else if constexpr (std::is_same_v<T, Map>) {
+                for (auto& [key, val] : *arg) {
+                    hash_combine(h, key.hash());
+                    hash_combine(h, val.hash());
+                }
+            }
             else
                 static_assert(always_false<T>::value, "Missing case");
         },
@@ -142,43 +162,6 @@ bool ConstantValue::isFalse() const {
                 return true;
             else
                 return false;
-        },
-        value);
-}
-
-bool ConstantValue::equivalentTo(const ConstantValue& rhs) const {
-    return std::visit(
-        [&](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Elements>) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, std::monostate>)
-                return rhs.bad();
-            else if constexpr (std::is_same_v<T, SVInt>)
-                return rhs.isInteger() && exactlyEqual(arg, rhs.integer());
-            else if constexpr (std::is_same_v<T, real_t>)
-                return rhs.isReal() && arg == rhs.real();
-            else if constexpr (std::is_same_v<T, shortreal_t>)
-                return rhs.isShortReal() && arg == rhs.shortReal();
-            else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
-                return rhs.isNullHandle();
-            else if constexpr (std::is_same_v<T, Elements>) {
-                if (!rhs.isUnpacked())
-                    return false;
-
-                auto rhsElements = rhs.elements();
-                if (arg.size() != rhsElements.size())
-                    return false;
-
-                for (size_t i = 0; i < arg.size(); i++) {
-                    if (!arg[i].equivalentTo(rhsElements[i]))
-                        return false;
-                }
-
-                return true;
-            }
-            else if constexpr (std::is_same_v<T, std::string>)
-                return rhs.isString() && arg == rhs.str();
-            else
-                static_assert(always_false<T>::value, "Missing case");
         },
         value);
 }
@@ -267,6 +250,76 @@ ConstantValue ConstantValue::convertToStr() const {
 
 std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {
     return os << cv.toString();
+}
+
+bool operator==(const ConstantValue& lhs, const ConstantValue& rhs) {
+    return std::visit(
+        [&](auto&& arg) noexcept(
+            !std::is_same_v<std::decay_t<decltype(arg)>, ConstantValue::Elements>) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::monostate>)
+                return rhs.bad();
+            else if constexpr (std::is_same_v<T, SVInt>)
+                return rhs.isInteger() && exactlyEqual(arg, rhs.integer());
+            else if constexpr (std::is_same_v<T, real_t>)
+                return rhs.isReal() && arg == double(rhs.real());
+            else if constexpr (std::is_same_v<T, shortreal_t>)
+                return rhs.isShortReal() && arg == float(rhs.shortReal());
+            else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
+                return rhs.isNullHandle();
+            else if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
+                if (!rhs.isUnpacked())
+                    return false;
+
+                return arg == std::get<ConstantValue::Elements>(rhs.value);
+            }
+            else if constexpr (std::is_same_v<T, std::string>)
+                return rhs.isString() && arg == rhs.str();
+            else if constexpr (std::is_same_v<T, ConstantValue::Map>) {
+                if (!rhs.isMap())
+                    return false;
+
+                return *arg == *rhs.map();
+            }
+            else
+                static_assert(always_false<T>::value, "Missing case");
+        },
+        lhs.value);
+}
+
+bool operator<(const ConstantValue& lhs, const ConstantValue& rhs) {
+    return std::visit(
+        [&](auto&& arg) noexcept(
+            !std::is_same_v<std::decay_t<decltype(arg)>, ConstantValue::Elements>) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::monostate>)
+                return false;
+            else if constexpr (std::is_same_v<T, SVInt>)
+                return rhs.isInteger() && arg < rhs.integer();
+            else if constexpr (std::is_same_v<T, real_t>)
+                return rhs.isReal() && arg < double(rhs.real());
+            else if constexpr (std::is_same_v<T, shortreal_t>)
+                return rhs.isShortReal() && arg < float(rhs.shortReal());
+            else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
+                return false;
+            else if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
+                if (!rhs.isUnpacked())
+                    return false;
+
+                return arg < std::get<ConstantValue::Elements>(rhs.value);
+            }
+            else if constexpr (std::is_same_v<T, std::string>)
+                return rhs.isString() && arg < rhs.str();
+            else if constexpr (std::is_same_v<T, ConstantValue::Map>) {
+                if (!rhs.isMap())
+                    return false;
+
+                return *arg < *rhs.map();
+            }
+            else
+                static_assert(always_false<T>::value, "Missing case");
+        },
+        lhs.value);
 }
 
 ConstantRange ConstantRange::subrange(ConstantRange select) const {

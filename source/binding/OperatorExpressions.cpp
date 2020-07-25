@@ -1015,7 +1015,7 @@ static logic_t checkInsideMatch(const ConstantValue& cvl, const ConstantValue& c
     if (cvl.isInteger() && cvr.isInteger())
         return condWildcardEqual(cvl.integer(), cvr.integer());
 
-    return logic_t(cvl.equivalentTo(cvr));
+    return logic_t(cvl == cvr);
 }
 
 ConstantValue InsideExpression::evalImpl(EvalContext& context) const {

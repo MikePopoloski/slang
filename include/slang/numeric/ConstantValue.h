@@ -6,13 +6,17 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <map>
 #include <string>
 #include <variant>
 #include <vector>
 
 #include "slang/numeric/SVInt.h"
+#include "slang/util/CopyPtr.h"
 
 namespace slang {
+
+struct AssociativeArray;
 
 /// Represents an IEEE754 double precision floating point number.
 /// This is a separate type from `double` to make it less likely that
@@ -45,8 +49,10 @@ public:
     /// This type represents the null value (class handles, etc) in expressions.
     struct NullPlaceholder : std::monostate {};
     using Elements = std::vector<ConstantValue>;
+    using Map = CopyPtr<AssociativeArray>;
+
     using Variant = std::variant<std::monostate, SVInt, real_t, shortreal_t, NullPlaceholder,
-                                 Elements, std::string>;
+                                 Elements, std::string, Map>;
 
     ConstantValue() = default;
     ConstantValue(nullptr_t) {}
@@ -61,6 +67,10 @@ public:
     ConstantValue(Elements&& elements) : value(std::move(elements)) {}
     ConstantValue(const std::string& str) : value(str) {}
     ConstantValue(std::string&& str) : value(std::move(str)) {}
+    ConstantValue(const Map& map) : value(map) {}
+    ConstantValue(Map&& map) : value(std::move(map)) {}
+    ConstantValue(const AssociativeArray& aa) : value(Map(aa)) {}
+    ConstantValue(AssociativeArray&& aa) : value(Map(std::move(aa))) {}
 
     bool bad() const { return std::holds_alternative<std::monostate>(value); }
     explicit operator bool() const { return !bad(); }
@@ -71,6 +81,7 @@ public:
     bool isNullHandle() const { return std::holds_alternative<NullPlaceholder>(value); }
     bool isUnpacked() const { return std::holds_alternative<Elements>(value); }
     bool isString() const { return std::holds_alternative<std::string>(value); }
+    bool isMap() const { return std::holds_alternative<Map>(value); }
 
     SVInt& integer() & { return std::get<SVInt>(value); }
     const SVInt& integer() const& { return std::get<SVInt>(value); }
@@ -88,6 +99,9 @@ public:
     std::string str() && { return std::get<std::string>(std::move(value)); }
     std::string str() const&& { return std::get<std::string>(std::move(value)); }
 
+    Map& map() { return std::get<Map>(value); }
+    const Map& map() const { return std::get<Map>(value); }
+
     ConstantValue getSlice(int32_t upper, int32_t lower, const ConstantValue& defaultValue) const;
 
     const Variant& getVariant() const { return value; }
@@ -97,7 +111,6 @@ public:
 
     bool isTrue() const;
     bool isFalse() const;
-    bool equivalentTo(const ConstantValue& rhs) const;
 
     ConstantValue convertToInt(bitwidth_t width, bool isSigned, bool isFourState) const;
     ConstantValue convertToReal() const;
@@ -107,9 +120,17 @@ public:
     static const ConstantValue Invalid;
 
     friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
+    friend bool operator==(const ConstantValue& lhs, const ConstantValue& rhs);
+    friend bool operator<(const ConstantValue& lhs, const ConstantValue& rhs);
 
 private:
     Variant value;
+};
+
+/// Represents a SystemVerilog associative array, for use during constant evaluation.
+struct AssociativeArray : public std::map<ConstantValue, ConstantValue> {
+    using std::map<ConstantValue, ConstantValue>::map;
+    ConstantValue defaultValue;
 };
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative

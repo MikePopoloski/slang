@@ -56,7 +56,7 @@ bool InstanceCacheKey::operator==(const InstanceCacheKey& other) const {
         const ConstantValue* l = *lit;
         const ConstantValue* r = *rit;
         if (l && r) {
-            if (!l->equivalentTo(*r))
+            if (!(*l == *r))
                 return false;
         }
         else {

@@ -475,7 +475,7 @@ AssociativeArrayType::AssociativeArrayType(const Type& elementType, const Type* 
 }
 
 ConstantValue AssociativeArrayType::getDefaultValueImpl() const {
-    return std::vector<ConstantValue>();
+    return AssociativeArray();
 }
 
 QueueType::QueueType(const Type& elementType, uint32_t maxSize) :

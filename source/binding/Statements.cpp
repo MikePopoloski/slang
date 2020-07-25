@@ -956,7 +956,7 @@ static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cv
             return caseXWildcardEqual(l, r);
     }
 
-    return cvl.equivalentTo(cvr);
+    return cvl == cvr;
 }
 
 ER CaseStatement::evalImpl(EvalContext& context) const {
