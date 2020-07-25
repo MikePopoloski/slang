@@ -496,6 +496,8 @@ TEST_CASE("Dynamic array eval") {
     CHECK(cv.elements()[0].integer() == 5);
     CHECK(cv.elements()[1].integer() == 6);
 
+    CHECK(session.eval("arr == arr3").integer() == 0);
+
     cv = session.eval("'x ? arr : arr3");
     CHECK(cv.elements().empty());
 

@@ -1596,7 +1596,8 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
     else if (cvl.isUnpacked()) {
         span<const ConstantValue> la = cvl.elements();
         span<const ConstantValue> ra = cvr.elements();
-        ASSERT(la.size() == ra.size());
+        if (la.size() != ra.size())
+            return SVInt(false);
 
         for (size_t i = 0; i < la.size(); i++) {
             ConstantValue result = evalBinaryOperator(op, la[i], ra[i]);
