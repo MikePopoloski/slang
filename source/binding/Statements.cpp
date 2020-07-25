@@ -942,6 +942,15 @@ static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cv
             return false;
         }
 
+        // Same for associative arrays.
+        if (cvr.isMap()) {
+            for (auto& [key, val] : *cvr.map()) {
+                if (checkMatch(condition, cvl, val))
+                    return true;
+            }
+            return false;
+        }
+
         // Otherwise, we do a wildcard comparison if both sides are integers
         // and an equivalence comparison if not.
         if (cvl.isInteger() && cvr.isInteger())

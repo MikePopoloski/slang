@@ -930,7 +930,6 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
             span<const ConstantValue> ra = cvr.elements();
             if (la.size() == ra.size()) {
                 // TODO: what if this is an unpacked struct?
-                // TODO: special handling for associative arrays
                 std::vector<ConstantValue> result(la.size());
                 ConstantValue defaultElement = type->getArrayElementType()->getDefaultValue();
 
@@ -1000,6 +999,21 @@ static logic_t checkInsideMatch(const ConstantValue& cvl, const ConstantValue& c
         bool anyUnknown = false;
         for (auto& elem : cvr.elements()) {
             logic_t result = checkInsideMatch(cvl, elem);
+            if (result)
+                return logic_t(true);
+
+            if (result.isUnknown())
+                anyUnknown = true;
+        }
+
+        return anyUnknown ? logic_t::x : logic_t(0);
+    }
+
+    // Same handling for associative arrays.
+    if (cvr.isMap()) {
+        bool anyUnknown = false;
+        for (auto& [key, val] : *cvr.map()) {
+            logic_t result = checkInsideMatch(cvl, val);
             if (result)
                 return logic_t(true);
 
@@ -1601,6 +1615,28 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
 
         for (size_t i = 0; i < la.size(); i++) {
             ConstantValue result = evalBinaryOperator(op, la[i], ra[i]);
+            if (!result)
+                return nullptr;
+
+            logic_t l = (logic_t)result.integer();
+            if (l.isUnknown() || !l)
+                return SVInt(l);
+        }
+
+        return SVInt(true);
+    }
+    else if (cvl.isMap()) {
+        auto& la = *cvl.map();
+        auto& ra = *cvr.map();
+        if (la.size() != ra.size())
+            return SVInt(false);
+
+        for (auto li = la.begin(); li != la.end(); li++) {
+            auto ri = ra.find(li->first);
+            if (ri == ra.end())
+                return SVInt(false);
+
+            ConstantValue result = evalBinaryOperator(op, li->second, ri->second);
             if (!result)
                 return nullptr;
 

@@ -549,12 +549,12 @@ TEST_CASE("Dynamic array -- out of bounds") {
 
 TEST_CASE("Associative array eval") {
     ScriptSession session;
-    session.eval("int arr[string] = '{\"Hello\":4, \"World\":8, default:-1};");
+    session.eval("integer arr[string] = '{\"Hello\":4, \"World\":8, default:-1};");
 
     auto cv = session.eval("arr");
     auto& map = *cv.map();
     CHECK(map.size() == 2);
-    
+
     auto it = map.begin();
     CHECK(it->first.str() == "Hello");
     CHECK(it->second.integer() == 4);
@@ -563,6 +563,27 @@ TEST_CASE("Associative array eval") {
     CHECK(it->second.integer() == 8);
 
     CHECK(map.defaultValue.integer() == -1);
+
+    session.eval("integer arr2[string] = arr;");
+    CHECK(session.eval("arr2") == cv);
+
+    CHECK(session.eval("4 inside { arr2 }").integer() == 1);
+    CHECK(session.eval("-1 inside { arr2 }").integer() == 0);
+    CHECK(session.eval("arr == arr2").integer() == 1);
+
+    cv = session.eval("'x ? arr : arr2");
+    CHECK(cv.map()->empty());
+
+    session.eval(R"(
+function int func(int i, integer arr[string]);
+    case (i) inside
+        [5'd1:5'd2]: return 1;
+        arr: return 2;
+    endcase
+    return 3;
+endfunction
+)");
+    CHECK(session.eval("func(4, arr2)").integer() == 2);
 
     NO_SESSION_ERRORS;
 }
