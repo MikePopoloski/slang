@@ -121,6 +121,11 @@ public:
                                        const BindContext& context, const Type& type,
                                        const Type& elementType, SourceRange sourceRange);
 
+    static Expression& forAssociativeArray(Compilation& compilation,
+                                           const StructuredAssignmentPatternSyntax& syntax,
+                                           const BindContext& context, const Type& type,
+                                           const Type& elementType, SourceRange sourceRange);
+
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::StructuredAssignmentPattern;
     }

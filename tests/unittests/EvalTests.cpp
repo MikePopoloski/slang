@@ -547,6 +547,26 @@ TEST_CASE("Dynamic array -- out of bounds") {
     CHECK(diags[3].code == diag::ConstEvalDynamicArrayRange);
 }
 
+TEST_CASE("Associative array eval") {
+    ScriptSession session;
+    session.eval("int arr[string] = '{\"Hello\":4, \"World\":8, default:-1};");
+
+    auto cv = session.eval("arr");
+    auto& map = *cv.map();
+    CHECK(map.size() == 2);
+    
+    auto it = map.begin();
+    CHECK(it->first.str() == "Hello");
+    CHECK(it->second.integer() == 4);
+    it++;
+    CHECK(it->first.str() == "World");
+    CHECK(it->second.integer() == 8);
+
+    CHECK(map.defaultValue.integer() == -1);
+
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Unpacked struct eval") {
     ScriptSession session;
     session.eval("struct { integer a[2:0]; bit b; } foo;");

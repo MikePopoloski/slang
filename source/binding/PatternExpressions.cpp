@@ -44,7 +44,6 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
     const Scope* structScope = nullptr;
     const Type* elementType = nullptr;
     bitwidth_t numElements = 0;
-    bool isDynArray = false;
 
     auto& ct = type.getCanonicalType();
     if (ct.kind == SymbolKind::PackedStructType) {
@@ -63,10 +62,10 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
         elementType = &ua.elementType;
         numElements = ua.range.width();
     }
-    else if (ct.kind == SymbolKind::DynamicArrayType) {
-        // TODO: queue, associative array
-        elementType = &ct.as<DynamicArrayType>().elementType;
-        isDynArray = true;
+    else if (ct.kind == SymbolKind::DynamicArrayType ||
+             ct.kind == SymbolKind::AssociativeArrayType) {
+        // TODO: queue
+        elementType = ct.getArrayElementType();
     }
     else if (ct.isIntegral() && ct.kind != SymbolKind::ScalarType) {
         elementType = ct.isFourState() ? &comp.getLogicType() : &comp.getBitType();
@@ -96,7 +95,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                 THROW_UNREACHABLE;
         }
     }
-    else if (isDynArray) {
+    else if (ct.kind == SymbolKind::DynamicArrayType) {
         switch (p.kind) {
             case SyntaxKind::SimpleAssignmentPattern:
                 return SimpleAssignmentPatternExpression::forDynamicArray(
@@ -109,6 +108,20 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
             case SyntaxKind::ReplicatedAssignmentPattern:
                 return ReplicatedAssignmentPatternExpression::forDynamicArray(
                     comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *elementType,
+                    range);
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+    else if (ct.kind == SymbolKind::AssociativeArrayType) {
+        switch (p.kind) {
+            case SyntaxKind::SimpleAssignmentPattern:
+            case SyntaxKind::ReplicatedAssignmentPattern:
+                context.addDiag(diag::AssignmentPatternAssociativeType, range);
+                return badExpr(comp, nullptr);
+            case SyntaxKind::StructuredAssignmentPattern:
+                return StructuredAssignmentPatternExpression::forAssociativeArray(
+                    comp, p.as<StructuredAssignmentPatternSyntax>(), context, type, *elementType,
                     range);
             default:
                 THROW_UNREACHABLE;
@@ -146,6 +159,30 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
         }
 
         return SVInt::concat(values);
+    }
+    else if (type->getCanonicalType().kind == SymbolKind::AssociativeArrayType) {
+        // Special casing for associative arrays: there is no contiguous set of
+        // elements, so downcast to the known type (must be a Structured pattern)
+        // and build the map from the index setters.
+        AssociativeArray values;
+        auto& sap = as<StructuredAssignmentPatternExpression>();
+        for (auto& setter : sap.indexSetters) {
+            ASSERT(setter.expr && setter.index);
+            ConstantValue key = setter.index->eval(context);
+            ConstantValue val = setter.expr->eval(context);
+            if (!key || !val)
+                return nullptr;
+
+            values.try_emplace(std::move(key), std::move(val));
+        }
+
+        if (sap.defaultSetter) {
+            values.defaultValue = sap.defaultSetter->eval(context);
+            if (!values.defaultValue)
+                return nullptr;
+        }
+
+        return values;
     }
     else {
         std::vector<ConstantValue> values;
@@ -650,6 +687,63 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
         type, span<const MemberSetter>{}, span<const TypeSetter>{}, indexSetters.copy(comp),
         nullptr, elements.copy(comp), sourceRange);
+
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
+}
+
+Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
+    Compilation& comp, const StructuredAssignmentPatternSyntax& syntax, const BindContext& context,
+    const Type& type, const Type& elementType, SourceRange sourceRange) {
+
+    // TODO: check for duplicate keys
+    bool bad = false;
+    const Expression* defaultSetter = nullptr;
+    SmallVectorSized<IndexSetter, 4> indexSetters;
+
+    const Type* indexType = type.getCanonicalType().as<AssociativeArrayType>().indexType;
+
+    for (auto item : syntax.items) {
+        if (item->key->kind == SyntaxKind::DefaultPatternKeyExpression) {
+            if (defaultSetter) {
+                context.addDiag(diag::AssignmentPatternKeyDupDefault, item->key->sourceRange());
+                bad = true;
+            }
+            defaultSetter = &selfDetermined(comp, *item->expr, context);
+            bad |= defaultSetter->bad();
+        }
+        else if (DataTypeSyntax::isKind(item->key->kind)) {
+            context.addDiag(diag::AssignmentPatternDynamicType, item->key->sourceRange());
+            bad = true;
+        }
+        else {
+            // TODO: check for type name here
+
+            const Expression* indexExpr;
+            if (indexType) {
+                indexExpr =
+                    &bindRValue(*indexType, *item->key, item->key->getFirstToken().location(),
+                                context.resetFlags(BindFlags::Constant));
+            }
+            else {
+                indexExpr = &Expression::bind(*item->key, context, BindFlags::Constant);
+            }
+
+            // TODO: check constant index value for validity
+
+            auto& expr = bindRValue(elementType, *item->expr,
+                                    item->expr->getFirstToken().location(), context);
+            bad |= expr.bad() || indexExpr->bad();
+
+            indexSetters.append(IndexSetter{ indexExpr, &expr });
+        }
+    }
+
+    auto result = comp.emplace<StructuredAssignmentPatternExpression>(
+        type, span<const MemberSetter>{}, span<const TypeSetter>{}, indexSetters.copy(comp),
+        defaultSetter, span<const Expression*>{}, sourceRange);
 
     if (bad)
         return badExpr(comp, result);
