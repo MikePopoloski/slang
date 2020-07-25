@@ -11,8 +11,10 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/Type.h"
+#include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {
@@ -230,6 +232,34 @@ optional<ConstantRange> BindContext::evalUnpackedDimension(
     return result.range;
 }
 
+static bool checkIndexType(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    if (ct.isFloating())
+        return false;
+
+    if (ct.isArray())
+        return checkIndexType(*ct.getArrayElementType());
+
+    switch (ct.kind) {
+        case SymbolKind::PackedStructType:
+        case SymbolKind::PackedUnionType:
+        case SymbolKind::UnpackedStructType:
+        case SymbolKind::UnpackedUnionType:
+            break;
+        default:
+            // All other types are ok.
+            return true;
+    }
+
+    // Check members recursively.
+    for (auto& member : ct.as<Scope>().members()) {
+        if (!checkIndexType(member.as<FieldSymbol>().getType()))
+            return false;
+    }
+
+    return true;
+}
+
 void BindContext::evalRangeDimension(const SelectorSyntax& syntax,
                                      EvaluatedDimension& result) const {
     switch (syntax.kind) {
@@ -242,6 +272,21 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax,
             if (expr.kind == ExpressionKind::DataType) {
                 result.kind = DimensionKind::Associative;
                 result.associativeType = expr.as<DataTypeExpression>().type;
+                switch (result.associativeType->kind) {
+                    case SymbolKind::PackedStructType:
+                    case SymbolKind::PackedUnionType:
+                    case SymbolKind::UnpackedStructType:
+                    case SymbolKind::UnpackedUnionType:
+                    case SymbolKind::EnumType:
+                        addDiag(diag::CannotDeclareType, expr.sourceRange);
+                        return;
+                    default:
+                        break;
+                }
+
+                // It's invalid for the index type to be floating or having floating members.
+                if (!checkIndexType(*result.associativeType))
+                    addDiag(diag::InvalidAssociativeIndexType, expr.sourceRange);
             }
             else {
                 auto value = evalInteger(expr);

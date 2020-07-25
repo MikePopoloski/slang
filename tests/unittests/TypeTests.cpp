@@ -490,6 +490,29 @@ endmodule
     CHECK(e.as<QueueType>().maxSize == 9999);
 }
 
+TEST_CASE("Associative array -- invalid index type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    real a[struct { int i; }];
+
+    typedef struct { int i; } t;
+    real b[t]; // this is ok
+
+    typedef struct { real r[3][*]; } t2;
+    int c[t2]; // invalid
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::CannotDeclareType);
+    CHECK(diags[1].code == diag::InvalidAssociativeIndexType);
+}
+
 TEST_CASE("Invalid unpacked dimensions") {
     auto tree = SyntaxTree::fromText(R"(
 module Top(logic f[3'b1x0],
@@ -649,7 +672,7 @@ TEST_CASE("Type matching") {
     declare("logic da3[];");
     declare("bit aa1[int];");
     declare("bit aa2[*];");
-    declare("bit aa3[real];");
+    declare("bit aa3[string];");
     declare("bit aa4[int];");
     declare("logic q1[$:1];");
     declare("logic q2[$];");

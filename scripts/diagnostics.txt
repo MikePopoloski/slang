@@ -297,6 +297,8 @@ error PackedMemberHasInitializer "packed members can not have initializers"
 error PackedDimsOnPredefinedType "packed dimensions not allowed on predefined integer type '{}'"
 error PackedUnionWidthMismatch "all members of a packed union must have the same width"
 error InvalidArraySize "{} is not a valid size for an array"
+error CannotDeclareType "cannot declare a type here"
+error InvalidAssociativeIndexType "index type cannot be or contain floating point types"
 
 subsystem Lookup
 error Redefinition "redefinition of '{}'"
