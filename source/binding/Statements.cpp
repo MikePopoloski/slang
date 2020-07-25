@@ -1358,13 +1358,13 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue
     }
 
     for (int32_t i = range.left; isLittleEndian ? i >= range.right : i <= range.right;
-        isLittleEndian ? i-- : i++) {
+         isLittleEndian ? i-- : i++) {
 
         *local = SVInt(32, uint64_t(i), true);
 
         ER result;
         if (currDims.size() > 1) {
-            size_t index(i);
+            size_t index = size_t(i);
             if (dim.range)
                 index = (size_t)range.reverse().translateIndex(i);
 

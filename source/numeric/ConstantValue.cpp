@@ -88,7 +88,7 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower,
 
     if (isUnpacked()) {
         span<const ConstantValue> elems = elements();
-        std::vector<ConstantValue> result{size_t(upper - lower + 1)};
+        std::vector<ConstantValue> result{ size_t(upper - lower + 1) };
         ConstantValue* dest = result.data();
 
         for (int32_t i = lower; i <= upper; i++) {
@@ -304,7 +304,8 @@ std::ostream& operator<<(std::ostream& os, const ConstantRange& cr) {
 ConstantValue LValue::load() const {
     return std::visit(
         [](auto&& arg) noexcept(
-            !std::is_same_v<std::decay_t<decltype(arg)>, Concat>) -> ConstantValue {
+            !std::is_same_v<std::decay_t<decltype(arg)>, Concat> &&
+            !std::is_same_v<std::decay_t<decltype(arg)>, CVRange>) -> ConstantValue {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return ConstantValue();
