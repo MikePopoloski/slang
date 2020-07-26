@@ -28,9 +28,10 @@ enum class DeclaredTypeFlags : uint8_t {
     ForceSigned = 4,
     LookupMax = 8,
     InProceduralContext = 16,
-    AutomaticInitializer = 32
+    AutomaticInitializer = 32,
+    ForeachVar = 64
 };
-BITMASK(DeclaredTypeFlags, AutomaticInitializer);
+BITMASK(DeclaredTypeFlags, ForeachVar);
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type.
@@ -85,6 +86,7 @@ public:
 private:
     const Scope& getScope() const;
     void resolveType(const BindContext& initializerContext) const;
+    const Type* resolveForeachVar(const BindContext& context) const;
 
     template<typename T = BindContext> // templated to avoid having to include BindContext.h
     T getBindContext() const;

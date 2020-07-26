@@ -1301,6 +1301,8 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
 
                 if (auto sym = context.scope.find(name)) {
                     dimIt->loopVar = &sym->as<ValueSymbol>();
+                    if (dimIt->loopVar->getType().isError())
+                        bad = true;
                     count = currIndex + 1;
                 }
             }
@@ -1351,41 +1353,59 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue
     auto local = context.findLocal(dim.loopVar);
     ASSERT(local);
 
-    span<const ConstantValue> elements;
-    if (cv.isUnpacked())
-        elements = cv.elements();
+    // If this is an associative array, looping happens over the keys.
+    if (cv.isMap()) {
+        auto& map = *cv.map();
+        for (auto& [key, val] : map) {
+            *local = key;
 
-    ConstantRange range;
-    bool isLittleEndian;
-    if (dim.range) {
-        range = *dim.range;
-        isLittleEndian = range.isLittleEndian();
+            ER result;
+            if (currDims.size() > 1)
+                result = evalRecursive(context, val, currDims.subspan(1));
+            else
+                result = body.eval(context);
+
+            if (result != ER::Success && result != ER::Continue)
+                return result;
+        }
     }
     else {
-        range = { 0, int32_t(elements.size()) - 1 };
-        isLittleEndian = false;
-    }
+        span<const ConstantValue> elements;
+        if (cv.isUnpacked())
+            elements = cv.elements();
 
-    for (int32_t i = range.left; isLittleEndian ? i >= range.right : i <= range.right;
-         isLittleEndian ? i-- : i++) {
-
-        *local = SVInt(32, uint64_t(i), true);
-
-        ER result;
-        if (currDims.size() > 1) {
-            size_t index = size_t(i);
-            if (dim.range)
-                index = (size_t)range.reverse().translateIndex(i);
-
-            result = evalRecursive(context, elements.empty() ? nullptr : elements[index],
-                                   currDims.subspan(1));
+        ConstantRange range;
+        bool isLittleEndian;
+        if (dim.range) {
+            range = *dim.range;
+            isLittleEndian = range.isLittleEndian();
         }
         else {
-            result = body.eval(context);
+            range = { 0, int32_t(elements.size()) - 1 };
+            isLittleEndian = false;
         }
 
-        if (result != ER::Success && result != ER::Continue)
-            return result;
+        for (int32_t i = range.left; isLittleEndian ? i >= range.right : i <= range.right;
+             isLittleEndian ? i-- : i++) {
+
+            *local = SVInt(32, uint64_t(i), true);
+
+            ER result;
+            if (currDims.size() > 1) {
+                size_t index = size_t(i);
+                if (dim.range)
+                    index = (size_t)range.reverse().translateIndex(i);
+
+                result = evalRecursive(context, elements.empty() ? nullptr : elements[index],
+                                       currDims.subspan(1));
+            }
+            else {
+                result = body.eval(context);
+            }
+
+            if (result != ER::Success && result != ER::Continue)
+                return result;
+        }
     }
 
     return ER::Success;

@@ -116,16 +116,15 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
 }
 
 VariableSymbol& VariableSymbol::fromForeachVar(Compilation& compilation,
-                                               const IdentifierNameSyntax& syntax) {
+                                               const IdentifierNameSyntax& syntax,
+                                               int32_t foreachIndex) {
     // TODO: needs to be read-only
     auto nameToken = syntax.identifier;
     auto var = compilation.emplace<VariableSymbol>(nameToken.valueText(), nameToken.location(),
                                                    VariableLifetime::Automatic);
     var->setSyntax(syntax);
-
-    // TODO: for associative arrays the type needs to be the index type
-    var->setType(compilation.getIntType());
-
+    var->foreachIndex = foreachIndex;
+    var->getDeclaredType()->addFlags(DeclaredTypeFlags::ForeachVar);
     return *var;
 }
 

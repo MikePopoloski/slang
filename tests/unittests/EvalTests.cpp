@@ -1071,6 +1071,8 @@ TEST_CASE("Eval foreach loop dynamic") {
 function automatic int foo();
     int result = 0;
     int asdf [3][];
+    int baz [2][string][];
+
     asdf[0] = '{1, 2, 3, 4};
     asdf[2] = '{10, 11};
 
@@ -1080,11 +1082,19 @@ function automatic int foo();
             break;
     end
 
+    baz[0] = '{"hello": '{6, 4}, "world": '{9, -1}};
+
+    foreach (baz[a, b, c]) begin
+        result += baz[a][b][c];
+        if (b == "world")
+            result++;
+    end
+
     return result;
 endfunction
 )");
 
-    CHECK(session.eval("foo()").integer() == 31);
+    CHECK(session.eval("foo()").integer() == 51);
     NO_SESSION_ERRORS;
 }
 

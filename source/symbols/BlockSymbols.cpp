@@ -121,8 +121,10 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     if (nameSyntax->kind == SyntaxKind::IdentifierName)
         arrayName = nameSyntax->as<IdentifierNameSyntax>().identifier.valueText();
 
-    // Creates loop iteration variables.
+    // Create loop iteration variables.
+    int32_t index = 0;
     for (auto loopVar : syntax.loopList->loopVariables) {
+        index++;
         if (loopVar->kind == SyntaxKind::EmptyIdentifierName)
             continue;
 
@@ -136,7 +138,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
             continue;
         }
 
-        result->addMember(VariableSymbol::fromForeachVar(comp, idName));
+        result->addMember(VariableSymbol::fromForeachVar(comp, idName, index));
     }
 
     result->binder.setSyntax(*result, syntax);
