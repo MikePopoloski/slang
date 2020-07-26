@@ -52,7 +52,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
         SmallVectorSized<SourceLocation, 8> includeStack;
         getIncludeStack(diag.location.buffer(), includeStack);
 
-        // Show the stack in reverse. TODO: make this a reverse iterator
+        // Show the stack in reverse.
         for (int i = int(includeStack.size()) - 1; i >= 0; i--) {
             SourceLocation loc = includeStack[size_t(i)];
             buffer->format("in file included from {}:{}:\n", sourceManager->getFileName(loc),

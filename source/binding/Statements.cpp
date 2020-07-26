@@ -851,7 +851,6 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     SmallVectorSized<const Statement*, 8> statements;
     const Statement* defStmt = nullptr;
 
-    // TODO: check for cases we statically know we can never hit
     for (auto item : syntax.items) {
         switch (item->kind) {
             case SyntaxKind::StandardCaseItem: {

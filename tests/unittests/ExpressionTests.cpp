@@ -595,22 +595,6 @@ TEST_CASE("Crazy long hex literal") {
     CHECK(diags[0].code == diag::LiteralSizeTooLarge);
 }
 
-// TODO: optimize and re-enable
-// TEST_CASE("Crazy long decimal literal") {
-//    std::string str = "int i = 'd";
-//    str += std::string(5050446, '9');
-//    str += ';';
-//
-//    auto tree = SyntaxTree::fromText(str);
-//
-//    Compilation compilation;
-//    compilation.addSyntaxTree(tree);
-//
-//    auto& diags = compilation.getAllDiagnostics();
-//    REQUIRE(diags.size() == 1);
-//    CHECK(diags[0].code == diag::LiteralSizeTooLarge);
-//}
-
 TEST_CASE("Simple assignment patterns") {
     auto tree = SyntaxTree::fromText(R"(
 module n(input int frob[3]);

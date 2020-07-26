@@ -92,7 +92,6 @@ optional<int32_t> getDynamicIndex(const ConstantValue& cs, const ConstantValue& 
     }
 
     // For dynamic arrays and queues, elements out of bounds only issue a warning.
-    // TODO: associative arrays
     auto elems = cv.elements();
     if (!index || *index < 0 || size_t(*index) >= elems.size()) {
         context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
