@@ -574,6 +574,11 @@ TEST_CASE("Associative array eval") {
     cv = session.eval("'x ? arr : arr2");
     CHECK(cv.map()->empty());
 
+    session.eval("arr[\"bye\"] += 20;");
+    CHECK(session.eval("arr[\"bye\"]").integer() == 19);
+    CHECK(session.eval("arr[\"foo\"]").integer() == -1);
+    CHECK(session.eval("arr[\"World\"]").integer() == 8);
+
     session.eval(R"(
 function int func(int i, integer arr[string]);
     case (i) inside

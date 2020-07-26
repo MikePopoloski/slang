@@ -191,7 +191,6 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         -Wlogical-op
         -Wlogical-not-parentheses
         -Wvla
-        -Wnoexcept
         -Wduplicated-cond
         -Wtype-limits
         -Wno-maybe-uninitialized

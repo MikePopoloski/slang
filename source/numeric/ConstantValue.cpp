@@ -94,8 +94,9 @@ size_t ConstantValue::hash() const {
                     hash_combine(h, val.hash());
                 }
             }
-            else
+            else {
                 static_assert(always_false<T>::value, "Missing case");
+            }
         },
         value);
     return h;
@@ -162,6 +163,34 @@ bool ConstantValue::isFalse() const {
                 return true;
             else
                 return false;
+        },
+        value);
+}
+
+bool ConstantValue::hasUnknown() const {
+    return std::visit(
+        [](auto&& arg) noexcept {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, SVInt>) {
+                return arg.hasUnknown();
+            }
+            else if constexpr (std::is_same_v<T, Elements>) {
+                for (auto& element : arg) {
+                    if (element.hasUnknown())
+                        return true;
+                }
+                return false;
+            }
+            else if constexpr (std::is_same_v<T, Map>) {
+                for (auto& [key, val] : *arg) {
+                    if (key.hasUnknown() || val.hasUnknown())
+                        return true;
+                }
+                return false;
+            }
+            else {
+                return false;
+            }
         },
         value);
 }
@@ -295,7 +324,7 @@ bool operator<(const ConstantValue& lhs, const ConstantValue& rhs) {
             if constexpr (std::is_same_v<T, std::monostate>)
                 return false;
             else if constexpr (std::is_same_v<T, SVInt>)
-                return rhs.isInteger() && arg < rhs.integer();
+                return rhs.isInteger() && bool(arg < rhs.integer());
             else if constexpr (std::is_same_v<T, real_t>)
                 return rhs.isReal() && arg < double(rhs.real());
             else if constexpr (std::is_same_v<T, shortreal_t>)
@@ -356,9 +385,7 @@ std::ostream& operator<<(std::ostream& os, const ConstantRange& cr) {
 
 ConstantValue LValue::load() const {
     return std::visit(
-        [](auto&& arg) noexcept(
-            !std::is_same_v<std::decay_t<decltype(arg)>, Concat> &&
-            !std::is_same_v<std::decay_t<decltype(arg)>, CVRange>) -> ConstantValue {
+        [](auto&& arg) -> ConstantValue {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return ConstantValue();
@@ -372,19 +399,32 @@ ConstantValue LValue::load() const {
                     vals.append(elem.load().integer());
                 return SVInt::concat(vals);
             }
+            else if constexpr (std::is_same_v<T, CVLookup>) {
+                // If we find the index in the target map, return the value.
+                auto& map = *arg.target->map();
+                if (auto it = map.find(arg.index); it != map.end())
+                    return it->second;
+
+                // Otherwise, if the map itself has a default set, use that.
+                if (map.defaultValue)
+                    return map.defaultValue;
+
+                // Finally, fall back on whatever the default default is.
+                return arg.defaultValue;
+            }
             else if constexpr (std::is_same_v<T, OutOfRange>) {
                 return arg.defaultValue;
             }
-            else
+            else {
                 static_assert(always_false<T>::value, "Missing case");
+            }
         },
         value);
 }
 
 void LValue::store(const ConstantValue& newValue) {
     std::visit(
-        [&newValue](auto&& arg) noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat> &&
-                                         !std::is_same_v<std::decay_t<decltype(arg)>, CVRange>) {
+        [&newValue](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>) {
                 return;
@@ -428,6 +468,10 @@ void LValue::store(const ConstantValue& newValue) {
                     msb -= width;
                 }
             }
+            else if constexpr (std::is_same_v<T, CVLookup>) {
+                ConstantValue& cv = *arg.target;
+                cv.map()->insert_or_assign(std::move(arg.index), newValue);
+            }
             else if constexpr (std::is_same_v<T, OutOfRange>) {
                 // This is a no-op, per the LRM.
             }
@@ -440,8 +484,7 @@ void LValue::store(const ConstantValue& newValue) {
 
 LValue LValue::selectRange(ConstantRange range, ConstantValue&& defaultValue) const {
     return std::visit(
-        [&range, def = std::move(defaultValue)](auto&& arg) mutable noexcept(
-            !std::is_same_v<std::decay_t<decltype(arg)>, Concat>) -> LValue {
+        [&range, def = std::move(defaultValue)](auto&& arg) mutable -> LValue {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return nullptr;
@@ -450,6 +493,8 @@ LValue LValue::selectRange(ConstantRange range, ConstantValue&& defaultValue) co
             else if constexpr (std::is_same_v<T, CVRange>)
                 return LValue(*arg.cv, arg.range.subrange(range), std::move(def));
             else if constexpr (std::is_same_v<T, Concat>)
+                THROW_UNREACHABLE;
+            else if constexpr (std::is_same_v<T, CVLookup>)
                 THROW_UNREACHABLE;
             else if constexpr (std::is_same_v<T, OutOfRange>)
                 return OutOfRange{ std::move(def) };
@@ -461,8 +506,7 @@ LValue LValue::selectRange(ConstantRange range, ConstantValue&& defaultValue) co
 
 LValue LValue::selectIndex(int32_t index, ConstantValue&& defaultValue) const {
     return std::visit(
-        [index, def = std::move(defaultValue)](auto&& arg) mutable noexcept(
-            !std::is_same_v<std::decay_t<decltype(arg)>, Concat>) -> LValue {
+        [index, def = std::move(defaultValue)](auto&& arg) mutable -> LValue {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>) {
                 return nullptr;
@@ -482,6 +526,39 @@ LValue LValue::selectIndex(int32_t index, ConstantValue&& defaultValue) const {
                 return OutOfRange{ std::move(def) };
             }
             else if constexpr (std::is_same_v<T, Concat>) {
+                THROW_UNREACHABLE;
+            }
+            else if constexpr (std::is_same_v<T, CVLookup>) {
+                THROW_UNREACHABLE;
+            }
+            else {
+                static_assert(always_false<T>::value, "Missing case");
+            }
+        },
+        value);
+}
+
+LValue LValue::lookupIndex(ConstantValue&& index, ConstantValue&& defaultValue) const {
+    // TODO: handle nested lookups
+    return std::visit(
+        [idx = std::move(index), def = std::move(defaultValue)](auto&& arg) mutable -> LValue {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::monostate>) {
+                return nullptr;
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue*>) {
+                return LValue(*arg, std::move(idx), std::move(def));
+            }
+            else if constexpr (std::is_same_v<T, CVRange>) {
+                THROW_UNREACHABLE;
+            }
+            else if constexpr (std::is_same_v<T, OutOfRange>) {
+                THROW_UNREACHABLE;
+            }
+            else if constexpr (std::is_same_v<T, Concat>) {
+                THROW_UNREACHABLE;
+            }
+            else if constexpr (std::is_same_v<T, CVLookup>) {
                 THROW_UNREACHABLE;
             }
             else {

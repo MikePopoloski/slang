@@ -39,7 +39,7 @@ public:
 /// Represents a single element selection expression.
 class ElementSelectExpression : public Expression {
 public:
-    ElementSelectExpression(const Type& type, Expression& value, Expression& selector,
+    ElementSelectExpression(const Type& type, Expression& value, const Expression& selector,
                             SourceRange sourceRange) :
         Expression(ExpressionKind::ElementSelect, type, sourceRange),
         value_(&value), selector_(&selector) {}
@@ -48,7 +48,6 @@ public:
     Expression& value() { return *value_; }
 
     const Expression& selector() const { return *selector_; }
-    Expression& selector() { return *selector_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
@@ -73,7 +72,7 @@ public:
 
 private:
     Expression* value_;
-    Expression* selector_;
+    const Expression* selector_;
 };
 
 struct RangeSelectSyntax;

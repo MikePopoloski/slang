@@ -251,30 +251,41 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     if (value.bad())
         return badExpr(compilation, nullptr);
 
-    Expression& selector = selfDetermined(compilation, syntax, context);
     const Type& valueType = *value.type;
     const Type& resultType = getIndexedType(compilation, context, valueType, syntax.sourceRange(),
                                             value.sourceRange, false);
 
-    auto result =
-        compilation.emplace<ElementSelectExpression>(resultType, value, selector, fullRange);
-    if (selector.bad() || result->bad())
-        return badExpr(compilation, result);
-
-    if (!selector.type->isIntegral()) {
-        context.addDiag(diag::ExprMustBeIntegral, selector.sourceRange);
-        return badExpr(compilation, result);
+    // If this is an associative array with a specific index target, we need to bind
+    // as an rvalue to get the right conversion applied.
+    const Expression* selector = nullptr;
+    if (valueType.isAssociativeArray()) {
+        auto indexType = valueType.getCanonicalType().as<AssociativeArrayType>().indexType;
+        if (indexType)
+            selector = &bindRValue(*indexType, syntax, syntax.getFirstToken().location(), context);
     }
+
+    if (!selector) {
+        selector = &selfDetermined(compilation, syntax, context);
+        if (!selector->bad() && !selector->type->isIntegral()) {
+            context.addDiag(diag::ExprMustBeIntegral, selector->sourceRange);
+            return badExpr(compilation, nullptr);
+        }
+    }
+
+    auto result =
+        compilation.emplace<ElementSelectExpression>(resultType, value, *selector, fullRange);
+    if (selector->bad() || result->bad())
+        return badExpr(compilation, result);
 
     // If the selector is constant, and the underlying type has a fixed range,
     // we can do checking at compile time that it's within bounds.
     // Only do that if we're not in an unevaluated conditional branch.
     if (valueType.hasFixedRange()) {
         ConstantValue selVal;
-        if (!context.inUnevaluatedBranch() && (selVal = context.tryEval(selector))) {
+        if (!context.inUnevaluatedBranch() && (selVal = context.tryEval(*selector))) {
             optional<int32_t> index = selVal.integer().as<int32_t>();
             if (!index || !valueType.getFixedRange().containsPoint(*index)) {
-                auto& diag = context.addDiag(diag::IndexValueInvalid, selector.sourceRange);
+                auto& diag = context.addDiag(diag::IndexValueInvalid, selector->sourceRange);
                 diag << selVal;
                 diag << *value.type;
                 return badExpr(compilation, result);
@@ -321,7 +332,28 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
             return cv.integer().slice(range->left, range->right);
     }
 
-    // Handling for strings, dynamic arrays, associative arrays, queues.
+    // Handling for associative arrays.
+    if (valType.isAssociativeArray()) {
+        if (cs.hasUnknown()) {
+            context.addDiag(diag::ConstEvalAssociativeIndexInvalid, selector().sourceRange) << cs;
+            return nullptr;
+        }
+
+        auto& map = *cv.map();
+        if (auto it = map.find(cs); it != map.end())
+            return it->second;
+
+        // If there is a user specified default, return that without warning.
+        if (map.defaultValue)
+            return map.defaultValue;
+
+        // Otherwise issue a warning and use the default default.
+        context.addDiag(diag::ConstEvalAssociativeElementNotFound, selector().sourceRange)
+            << value().sourceRange << cs;
+        return type->getDefaultValue();
+    }
+
+    // Handling for strings, dynamic arrays, and queues.
     auto index = getDynamicIndex(cs, cv, valType, context, sourceRange);
     if (!index)
         return nullptr;
@@ -356,7 +388,17 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
             return lval.selectRange(*range, nullptr);
     }
 
-    // Handling for strings, dynamic arrays, associative arrays, queues.
+    // Handling for associative arrays.
+    if (valType.isAssociativeArray()) {
+        if (cs.hasUnknown()) {
+            context.addDiag(diag::ConstEvalAssociativeIndexInvalid, selector().sourceRange) << cs;
+            return nullptr;
+        }
+
+        return lval.lookupIndex(std::move(cs), type->getDefaultValue());
+    }
+
+    // Handling for strings, dynamic arrays, and queues.
     auto index = getDynamicIndex(cs, lval.load(), valType, context, sourceRange);
     if (!index)
         return nullptr;
@@ -397,6 +439,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             break;
         default:
             THROW_UNREACHABLE;
+    }
+
+    if (!value.bad() && value.type->isAssociativeArray()) {
+        context.addDiag(diag::RangeSelectAssociative, fullRange);
+        return badExpr(compilation, nullptr);
     }
 
     const Expression& left = selectionKind == RangeSelectionKind::Simple

@@ -111,6 +111,7 @@ public:
 
     bool isTrue() const;
     bool isFalse() const;
+    bool hasUnknown() const;
 
     ConstantValue convertToInt(bitwidth_t width, bool isSigned, bool isFourState) const;
     ConstantValue convertToReal() const;
@@ -208,11 +209,20 @@ public:
 
     LValue selectRange(ConstantRange range, ConstantValue&& defaultValue) const;
     LValue selectIndex(int32_t index, ConstantValue&& defaultValue) const;
+    LValue lookupIndex(ConstantValue&& index, ConstantValue&& defaultValue) const;
 
 private:
+    // Represents a selection of a range from an existing value.
     struct CVRange {
         ConstantValue* cv;
         ConstantRange range;
+        ConstantValue defaultValue;
+    };
+
+    // Represents a lookup of an element in an associative array.
+    struct CVLookup {
+        ConstantValue* target;
+        ConstantValue index;
         ConstantValue defaultValue;
     };
 
@@ -225,8 +235,10 @@ private:
     LValue(OutOfRange&& oor) : value(std::move(oor)) {}
     LValue(ConstantValue& base, ConstantRange range, ConstantValue&& defaultValue) :
         value(CVRange{ &base, range, std::move(defaultValue) }) {}
+    LValue(ConstantValue& base, ConstantValue&& index, ConstantValue&& defaultValue) :
+        value(CVLookup{ &base, std::move(index), std::move(defaultValue) }) {}
 
-    std::variant<std::monostate, Concat, ConstantValue*, CVRange, OutOfRange> value;
+    std::variant<std::monostate, Concat, ConstantValue*, CVRange, CVLookup, OutOfRange> value;
 };
 
 } // namespace slang

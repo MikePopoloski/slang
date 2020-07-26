@@ -160,7 +160,7 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
 
         return SVInt::concat(values);
     }
-    else if (type->getCanonicalType().kind == SymbolKind::AssociativeArrayType) {
+    else if (type->isAssociativeArray()) {
         // Special casing for associative arrays: there is no contiguous set of
         // elements, so downcast to the known type (must be a Structured pattern)
         // and build the map from the index setters.
