@@ -72,6 +72,10 @@ public:
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
+static const Type* getIndexType(const Type& type) {
+    return type.getCanonicalType().as<AssociativeArrayType>().indexType;
+}
+
 class ArrayQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
@@ -98,13 +102,38 @@ public:
             return comp.getErrorType();
         }
 
+        int32_t knownIndex = 0;
         if (args.size() > 1) {
             if (!args[1]->type->isIntegral())
                 return badArg(context, *args[1]);
 
             // Try to verify the dimension index if it's a constant.
-            if (!context.inUnevaluatedBranch() && !checkDim(context, args))
+            if (!context.inUnevaluatedBranch() && !checkDim(context, args, knownIndex))
                 return comp.getErrorType();
+        }
+        else {
+            // Index defaults to 1 if not provided.
+            knownIndex = 1;
+        }
+
+        if (type.isAssociativeArray()) {
+            // If the first argument is an associative array and we know we're selecting it,
+            // ensure that the index type is integral.
+            auto indexType = getIndexType(type);
+            if (knownIndex && (!indexType || !indexType->isIntegral())) {
+                context.addDiag(diag::QueryOnAssociativeInvalid, args[0]->sourceRange) << name;
+                return comp.getErrorType();
+            }
+
+            // If the index is known, the result type is the index type.
+            if (knownIndex)
+                return *indexType;
+
+            // If the index is unknown, we don't know if they will select the associative array
+            // or some other dimension. Use the index type if it's larger than a normal integer,
+            // and otherwise just use an integer result type.
+            if (indexType->getBitWidth() > 32)
+                return *indexType;
         }
 
         return comp.getIntegerType();
@@ -114,6 +143,8 @@ public:
 
 protected:
     struct DimResult {
+        AssociativeArray map;
+        const Type* indexType = nullptr;
         ConstantRange range;
         bool hardFail = false;
         bool isDynamic = false;
@@ -122,6 +153,8 @@ protected:
         DimResult() : hardFail(true) {}
         DimResult(ConstantRange range) : range(range) {}
         DimResult(size_t dynamicSize) : range{ 0, int32_t(dynamicSize) - 1 }, isDynamic(true) {}
+        DimResult(AssociativeArray&& map, const Type* indexType) :
+            map(std::move(map)), indexType(indexType) {}
 
         static DimResult OutOfRange() {
             DimResult result;
@@ -131,7 +164,7 @@ protected:
         }
     };
 
-    static DimResult getDim(EvalContext& context, const Args& args) {
+    DimResult getDim(EvalContext& context, const Args& args) const {
         // If an index expression is provided, evaluate it. Otherwise default to 1.
         ConstantValue iv;
         int32_t index = 1;
@@ -176,6 +209,16 @@ protected:
             return {};
         }
 
+        // This only works on associative arrays if they have an integral index type.
+        const Type* indexType = nullptr;
+        if (type->isAssociativeArray()) {
+            indexType = getIndexType(*type);
+            if (!indexType || !indexType->isIntegral()) {
+                context.addDiag(diag::QueryOnAssociativeInvalid, args[0]->sourceRange) << name;
+                return {};
+            }
+        }
+
         ConstantValue cv = args[0]->eval(context);
         if (!cv)
             return {};
@@ -183,10 +226,15 @@ protected:
         if (cv.isString())
             return cv.str().size();
 
+        // This silly collection of std::moves is to avoid copying the array out
+        // when the constant value owning it will not survive this function.
+        if (cv.isMap())
+            return DimResult(std::move(*std::move(cv).map()), indexType);
+
         return cv.elements().size();
     }
 
-    static bool checkDim(const BindContext& context, const Args& args) {
+    static bool checkDim(const BindContext& context, const Args& args, int32_t& resultIndex) {
         // Similar logic to what's above, except we're just verifying a constant index here.
         // It's ok for it not to be constant, it will be evaluated at runtime.
         ConstantValue iv = context.tryEval(*args[1]);
@@ -203,6 +251,7 @@ protected:
         if (!index || *index <= 0)
             return error();
 
+        resultIndex = *index;
         const Type* type = args[0]->type;
         for (int32_t i = 0; i < *index - 1; i++) {
             if (!type->isArray())
@@ -253,6 +302,13 @@ ConstantValue LowFunction::eval(const Scope&, EvalContext& context, const Args& 
     if (dim.isDynamic)
         return SVInt(32, 0, true);
 
+    // For associative arrays, $low returns the first key, or 'x if no elements.
+    if (dim.indexType) {
+        if (dim.map.empty())
+            return SVInt::createFillX(dim.indexType->getBitWidth(), dim.indexType->isSigned());
+        return dim.map.begin()->first;
+    }
+
     return SVInt(32, uint64_t(dim.range.lower()), true);
 }
 
@@ -267,6 +323,13 @@ ConstantValue HighFunction::eval(const Scope&, EvalContext& context, const Args&
     if (dim.isDynamic)
         return SVInt(32, uint64_t(dim.range.right), true);
 
+    // For associative arrays, $high returns the last key, or 'x if no elements.
+    if (dim.indexType) {
+        if (dim.map.empty())
+            return SVInt::createFillX(dim.indexType->getBitWidth(), dim.indexType->isSigned());
+        return dim.map.rbegin()->first;
+    }
+
     return SVInt(32, uint64_t(dim.range.upper()), true);
 }
 
@@ -278,6 +341,9 @@ ConstantValue LeftFunction::eval(const Scope&, EvalContext& context, const Args&
     if (dim.outOfRange)
         return SVInt::createFillX(32, true);
 
+    if (dim.indexType)
+        return SVInt(dim.indexType->getBitWidth(), 0, dim.indexType->isSigned());
+
     return SVInt(32, uint64_t(dim.range.left), true);
 }
 
@@ -288,6 +354,13 @@ ConstantValue RightFunction::eval(const Scope&, EvalContext& context, const Args
 
     if (dim.outOfRange)
         return SVInt::createFillX(32, true);
+
+    // For associative arrays, $right returns maximum possible index value.
+    if (dim.indexType) {
+        SVInt result(dim.indexType->getBitWidth(), 0, dim.indexType->isSigned());
+        result.setAllOnes();
+        return result;
+    }
 
     return SVInt(32, uint64_t(dim.range.right), true);
 }
@@ -303,6 +376,9 @@ ConstantValue SizeFunction::eval(const Scope&, EvalContext& context, const Args&
     if (dim.isDynamic)
         return SVInt(32, uint64_t(dim.range.right + 1), true);
 
+    if (dim.indexType)
+        return SVInt(dim.indexType->getBitWidth(), dim.map.size(), dim.indexType->isSigned());
+
     return SVInt(32, dim.range.width(), true);
 }
 
@@ -314,7 +390,7 @@ ConstantValue IncrementFunction::eval(const Scope&, EvalContext& context, const 
     if (dim.outOfRange)
         return SVInt::createFillX(32, true);
 
-    if (dim.isDynamic)
+    if (dim.isDynamic || dim.indexType)
         return SVInt(32, uint64_t(-1), true);
 
     return SVInt(32, uint64_t(dim.range.isLittleEndian() ? 1 : -1), true);

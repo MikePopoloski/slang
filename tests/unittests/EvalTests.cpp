@@ -1353,6 +1353,26 @@ TEST_CASE("Array query functions") {
     EVAL("$dimensions(logic)", 0);
     EVAL("$unpacked_dimensions(logic)", 0);
 
+    SVInt highVal(67, 0, false);
+    highVal.setAllOnes();
+
+    session.eval("int aa[logic[66:0]] = '{999999:4, 123:9, 5:72};");
+    EVAL("$left(aa)", 0);
+    EVAL("$right(aa)", highVal);
+    EVAL("$low(aa)", 5);
+    EVAL("$high(aa)", 999999);
+    EVAL("$size(aa)", 3);
+    EVAL("$increment(aa)", -1);
+    EVAL("$dimensions(aa)", 2);
+    EVAL("$unpacked_dimensions(aa)", 1);
+
+    SVInt allX = SVInt::createFillX(67, false);
+    session.eval("var type(aa) bb;");
+    session.eval("aa = bb;");
+    EVAL("$size(aa)", 0);
+    EVAL("$low(aa)", allX);
+    EVAL("$high(aa)", allX);
+
 #undef EVAL
 
     NO_SESSION_ERRORS;

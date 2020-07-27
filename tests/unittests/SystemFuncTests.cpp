@@ -296,14 +296,31 @@ module m;
     localparam int p21 = $unpacked_dimensions(real);
     localparam int p22 = $dimensions(asdf_t);
 
+    localparam int aa[string] = '{default: -1};
+    localparam int p23 = $size(aa);
+
+    int bb[logic[67:0]];
+    integer dynindex;
+    localparam string p24 = $typename($size(bb, dynindex));
+
+    function int func3(int q);
+        int cc[string];
+        return $size(cc, q);
+    endfunction
+
+    localparam int p25 = func3(1);
+
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
+    auto& p24 = compilation.getRoot().lookupName<ParameterSymbol>("m.p24");
+    CHECK(p24.getValue().str() == "logic[67:0]");
+
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 14);
+    REQUIRE(diags.size() == 16);
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[1].code == diag::DynamicDimensionIndex);
     CHECK(diags[2].code == diag::DynamicDimensionIndex);
@@ -318,4 +335,6 @@ endmodule
     CHECK(diags[11].code == diag::TooManyArguments);
     CHECK(diags[12].code == diag::BadSystemSubroutineArg);
     CHECK(diags[13].code == diag::QueryOnDynamicType);
+    CHECK(diags[14].code == diag::QueryOnAssociativeInvalid);
+    CHECK(diags[15].code == diag::QueryOnAssociativeInvalid);
 }

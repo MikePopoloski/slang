@@ -99,8 +99,10 @@ public:
     std::string str() && { return std::get<std::string>(std::move(value)); }
     std::string str() const&& { return std::get<std::string>(std::move(value)); }
 
-    Map& map() { return std::get<Map>(value); }
-    const Map& map() const { return std::get<Map>(value); }
+    Map& map() & { return std::get<Map>(value); }
+    const Map& map() const& { return std::get<Map>(value); }
+    Map map() && { return std::get<Map>(std::move(value)); }
+    Map map() const&& { return std::get<Map>(std::move(value)); }
 
     ConstantValue getSlice(int32_t upper, int32_t lower, const ConstantValue& defaultValue) const;
 
