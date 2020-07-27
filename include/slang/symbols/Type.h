@@ -205,6 +205,10 @@ public:
     /// Returns the element type if this is an array type; otherwise returns nullptr.
     const Type* getArrayElementType() const;
 
+    /// Returns the index type if this is an associative array and it has a non-wildcard
+    /// index type specified. Otherwise, returns nullptr.
+    const Type* getAssociativeIndexType() const;
+
     /// Returns true if the type can represent a string-like value; this includes
     /// the string type itself as well as byte arrays and all integral types.
     bool canBeStringLike() const;

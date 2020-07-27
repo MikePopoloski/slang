@@ -258,7 +258,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     // as an rvalue to get the right conversion applied.
     const Expression* selector = nullptr;
     if (valueType.isAssociativeArray()) {
-        auto indexType = valueType.getCanonicalType().as<AssociativeArrayType>().indexType;
+        auto indexType = valueType.getAssociativeIndexType();
         if (indexType)
             selector = &bindRValue(*indexType, syntax, syntax.getFirstToken().location(), context);
     }

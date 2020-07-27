@@ -471,13 +471,13 @@ endmodule
     auto& b = compilation.getRoot().lookupName<VariableSymbol>("m.b").getType();
     CHECK(b.kind == SymbolKind::AssociativeArrayType);
     CHECK(b.getArrayElementType()->toString() == "real");
-    CHECK(b.as<AssociativeArrayType>().indexType == nullptr);
+    CHECK(b.getAssociativeIndexType() == nullptr);
 
     auto& c = compilation.getRoot().lookupName<VariableSymbol>("m.c").getType();
     CHECK(c.kind == SymbolKind::AssociativeArrayType);
     CHECK(c.getArrayElementType()->toString() == "real");
-    REQUIRE(c.as<AssociativeArrayType>().indexType);
-    CHECK(c.as<AssociativeArrayType>().indexType->toString() == "int");
+    REQUIRE(c.getAssociativeIndexType());
+    CHECK(c.getAssociativeIndexType()->toString() == "int");
 
     auto& d = compilation.getRoot().lookupName<VariableSymbol>("m.d").getType();
     CHECK(d.kind == SymbolKind::QueueType);

@@ -335,6 +335,6 @@ endmodule
     CHECK(diags[11].code == diag::TooManyArguments);
     CHECK(diags[12].code == diag::BadSystemSubroutineArg);
     CHECK(diags[13].code == diag::QueryOnDynamicType);
-    CHECK(diags[14].code == diag::QueryOnAssociativeInvalid);
-    CHECK(diags[15].code == diag::QueryOnAssociativeInvalid);
+    CHECK(diags[14].code == diag::QueryOnAssociativeWildcard);
+    CHECK(diags[15].code == diag::QueryOnAssociativeWildcard);
 }

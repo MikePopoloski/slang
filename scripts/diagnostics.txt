@@ -358,7 +358,8 @@ error SysFuncNotConst "'{}' is not allowed in a constant context"
 error QueryOnDynamicType "array query function '{}' cannot be called on a dynamically sized type identifier"
 error DimensionIndexInvalid "{} is not a valid dimension for {}"
 error DynamicDimensionIndex "cannot refer to a dynamically sized dimension with index {} greater than 1"
-error QueryOnAssociativeInvalid "'{}' cannot be called on an associative array with non-integral (or wildcard) index types"
+error QueryOnAssociativeNonIntegral "'{}' cannot be called with an associative array with non-integral index type"
+error QueryOnAssociativeWildcard "'{}' cannot be called with an associative array with non-integral (or wildcard) index type"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 
 subsystem ConstEval

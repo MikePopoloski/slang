@@ -298,8 +298,8 @@ bool Type::isMatching(const Type& rhs) const {
         }
         else if (l->kind == SymbolKind::AssociativeArrayType) {
             // If associative, index types must match.
-            auto li = l->as<AssociativeArrayType>().indexType;
-            auto ri = r->as<AssociativeArrayType>().indexType;
+            auto li = l->getAssociativeIndexType();
+            auto ri = r->getAssociativeIndexType();
             if (li) {
                 if (!ri || !li->isMatching(*ri))
                     return false;
@@ -353,8 +353,8 @@ bool Type::isEquivalent(const Type& rhs) const {
     if (l->isUnpackedArray() && l->kind == r->kind) {
         // Associative arrays additionally must have the same index type.
         if (l->kind == SymbolKind::AssociativeArrayType) {
-            auto li = l->as<AssociativeArrayType>().indexType;
-            auto ri = r->as<AssociativeArrayType>().indexType;
+            auto li = l->getAssociativeIndexType();
+            auto ri = r->getAssociativeIndexType();
             if (li) {
                 if (!ri || !li->isEquivalent(*ri))
                     return false;
@@ -471,6 +471,13 @@ const Type* Type::getArrayElementType() const {
         default:
             return nullptr;
     }
+}
+
+const Type* Type::getAssociativeIndexType() const {
+    const Type& t = getCanonicalType();
+    if (t.kind == SymbolKind::AssociativeArrayType)
+        return t.as<AssociativeArrayType>().indexType;
+    return nullptr;
 }
 
 bool Type::canBeStringLike() const {

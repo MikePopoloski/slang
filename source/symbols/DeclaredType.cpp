@@ -129,7 +129,7 @@ const Type* DeclaredType::resolveForeachVar(const BindContext& context) const {
     // If this is an associative array, we take the type from the index type.
     // Otherwise, for all this work, we just end up with an int index.
     if (currType->isAssociativeArray()) {
-        currType = currType->getCanonicalType().as<AssociativeArrayType>().indexType;
+        currType = currType->getAssociativeIndexType();
         if (!currType) {
             context.addDiag(diag::ForeachWildcardIndex, syntax->sourceRange())
                 << arrayName->sourceRange();

@@ -703,7 +703,7 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
     const Expression* defaultSetter = nullptr;
     SmallVectorSized<IndexSetter, 4> indexSetters;
 
-    const Type* indexType = type.getCanonicalType().as<AssociativeArrayType>().indexType;
+    const Type* indexType = type.getAssociativeIndexType();
 
     for (auto item : syntax.items) {
         if (item->key->kind == SyntaxKind::DefaultPatternKeyExpression) {

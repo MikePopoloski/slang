@@ -72,10 +72,6 @@ public:
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
-static const Type* getIndexType(const Type& type) {
-    return type.getCanonicalType().as<AssociativeArrayType>().indexType;
-}
-
 class ArrayQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
@@ -119,9 +115,9 @@ public:
         if (type.isAssociativeArray()) {
             // If the first argument is an associative array and we know we're selecting it,
             // ensure that the index type is integral.
-            auto indexType = getIndexType(type);
+            auto indexType = type.getAssociativeIndexType();
             if (knownIndex && (!indexType || !indexType->isIntegral())) {
-                context.addDiag(diag::QueryOnAssociativeInvalid, args[0]->sourceRange) << name;
+                context.addDiag(diag::QueryOnAssociativeWildcard, args[0]->sourceRange) << name;
                 return comp.getErrorType();
             }
 
@@ -212,9 +208,9 @@ protected:
         // This only works on associative arrays if they have an integral index type.
         const Type* indexType = nullptr;
         if (type->isAssociativeArray()) {
-            indexType = getIndexType(*type);
+            indexType = type->getAssociativeIndexType();
             if (!indexType || !indexType->isIntegral()) {
-                context.addDiag(diag::QueryOnAssociativeInvalid, args[0]->sourceRange) << name;
+                context.addDiag(diag::QueryOnAssociativeWildcard, args[0]->sourceRange) << name;
                 return {};
             }
         }
