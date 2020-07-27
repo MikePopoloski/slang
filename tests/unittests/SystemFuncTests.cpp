@@ -126,6 +126,7 @@ module m;
     real foo[3];
     int baz[3];
     string s;
+    int aa[string];
 
     initial begin
         $readmemb("F");
@@ -135,6 +136,7 @@ module m;
         $readmemb("asdf", bar);
         $readmemb("asdf", baz, s);
         $readmemb("asdf", baz, 1, s);
+        $readmemb("asdf", aa);
     end
 endmodule
 )");
@@ -143,7 +145,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::TooFewArguments);
     CHECK(diags[1].code == diag::ExpressionNotAssignable);
     CHECK(diags[2].code == diag::BadSystemSubroutineArg);
@@ -151,6 +153,7 @@ endmodule
     CHECK(diags[4].code == diag::BadSystemSubroutineArg);
     CHECK(diags[5].code == diag::BadSystemSubroutineArg);
     CHECK(diags[6].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[7].code == diag::QueryOnAssociativeNonIntegral);
 }
 
 TEST_CASE("Methods allowed in constant context") {

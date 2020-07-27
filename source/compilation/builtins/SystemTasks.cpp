@@ -210,9 +210,16 @@ public:
         if (!args[1]->type->isUnpackedArray())
             return badArg(context, *args[1]);
 
-        // TODO: rules for associative arrays
         const Type* t = args[1]->type;
         do {
+            if (t->isAssociativeArray()) {
+                auto indexType = t->getAssociativeIndexType();
+                if (indexType && !indexType->isIntegral()) {
+                    context.addDiag(diag::QueryOnAssociativeNonIntegral, args[1]->sourceRange)
+                        << name;
+                    return comp.getErrorType();
+                }
+            }
             t = t->getArrayElementType();
         } while (t->isUnpackedArray());
 
