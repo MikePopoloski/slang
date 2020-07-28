@@ -114,6 +114,7 @@ add_library(slangcompiler
     binding/EvalContext.cpp
     binding/Expression.cpp
     binding/LiteralExpressions.cpp
+    binding/LValue.cpp
     binding/MiscExpressions.cpp
     binding/OperatorExpressions.cpp
     binding/PatternExpressions.cpp

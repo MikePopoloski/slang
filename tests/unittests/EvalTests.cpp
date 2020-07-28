@@ -1395,3 +1395,19 @@ endfunction
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalStaticSkipped);
 }
+
+TEST_CASE("Complicated lvalue path") {
+    ScriptSession session;
+    session.eval(R"(
+struct { logic [4:1][2:9] foo[3][]; } asdf [4][][string][int];
+)");
+    session.eval("asdf[1] = new[3];");
+    session.eval("asdf[1][2][\"hello\"][-9876].foo[0] = new[9];");
+    session.eval("asdf[1][2][\"hello\"][-9876].foo[0][7][4] = 0;");
+    session.eval("asdf[1][2][\"hello\"][-9876].foo[0][7][4][2:4] += 3'd7;");
+    
+    auto cv = session.eval("asdf[1][2][\"hello\"][-9876].foo[0][7][4]");
+    CHECK(cv.integer() == 224);
+
+    NO_SESSION_ERRORS;
+}

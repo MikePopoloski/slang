@@ -8,6 +8,7 @@
 
 #include "slang/binding/BindContext.h"
 #include "slang/binding/EvalContext.h"
+#include "slang/binding/LValue.h"
 #include "slang/symbols/SemanticFacts.h"
 
 namespace slang {

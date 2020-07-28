@@ -382,9 +382,10 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
 
         // For fixed types, we know we will always be in range, so just do the selection.
         if (valType.isUnpackedArray())
-            return lval.selectIndex(range->left, type->getDefaultValue());
+            lval.addIndex(range->left, type->getDefaultValue());
         else
-            return lval.selectRange(*range, nullptr);
+            lval.addBitSlice(*range);
+        return lval;
     }
 
     // Handling for associative arrays.
@@ -394,7 +395,8 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
             return nullptr;
         }
 
-        return lval.lookupIndex(std::move(cs), type->getDefaultValue());
+        lval.addArrayLookup(std::move(cs), type->getDefaultValue());
+        return lval;
     }
 
     // Handling for strings, dynamic arrays, and queues.
@@ -402,12 +404,15 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!index)
         return nullptr;
 
-    if (valType.isString())
-        return lval.selectRange({ *index, *index }, nullptr);
-
-    // -1 is returned for dynamic array indices that are out of bounds.
-    // LValue handles selecting elements out of bounds and ignores accesses to those locations.
-    return lval.selectIndex(*index, type->getDefaultValue());
+    if (valType.isString()) {
+        lval.addIndex(*index, nullptr);
+    }
+    else {
+        // -1 is returned for dynamic array indices that are out of bounds.
+        // LValue handles selecting elements out of bounds and ignores accesses to those locations.
+        lval.addIndex(*index, type->getDefaultValue());
+    }
+    return lval;
 }
 
 bool ElementSelectExpression::verifyConstantImpl(EvalContext& context) const {
@@ -666,15 +671,20 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
         if (!range)
             return nullptr;
 
-        return lval.selectRange(*range, nullptr);
+        if (value().type->isIntegral())
+            lval.addBitSlice(*range);
+        else
+            lval.addArraySlice(*range, nullptr);
     }
     else {
         optional<ConstantRange> range = getDynamicRange(context, cl, cr, lval.load());
         if (!range)
             return nullptr;
 
-        return lval.selectRange(*range, type->getArrayElementType()->getDefaultValue());
+        lval.addArraySlice(*range, type->getArrayElementType()->getDefaultValue());
     }
+
+    return lval;
 }
 
 bool RangeSelectExpression::verifyConstantImpl(EvalContext& context) const {
@@ -882,11 +892,15 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
 
     // TODO: handle unpacked unions
     int32_t offset = (int32_t)field.offset;
-    if (value().type->isUnpackedStruct())
-        return lval.selectIndex(offset, nullptr);
+    if (value().type->isUnpackedStruct()) {
+        lval.addIndex(offset, nullptr);
+    }
+    else {
+        int32_t width = (int32_t)type->getBitWidth();
+        lval.addBitSlice({ width + offset - 1, offset });
+    }
 
-    int32_t width = (int32_t)type->getBitWidth();
-    return lval.selectRange({ width + offset - 1, offset }, nullptr);
+    return lval;
 }
 
 bool MemberAccessExpression::verifyConstantImpl(EvalContext& context) const {
