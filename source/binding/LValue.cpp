@@ -42,7 +42,7 @@ ConstantValue LValue::load() const {
                     }
                     else {
                         auto elems = result.elements();
-                        if (arg.index < 0 || arg.index >= elems.size())
+                        if (arg.index < 0 || size_t(arg.index) >= elems.size())
                             result = arg.defaultValue;
                         else {
                             // Be careful not to assign to the result while
@@ -124,7 +124,7 @@ void LValue::store(const ConstantValue& newValue) {
                     }
                     else {
                         auto elems = target->elements();
-                        if (arg.index < 0 || arg.index >= elems.size())
+                        if (arg.index < 0 || size_t(arg.index) >= elems.size())
                             target = nullptr;
                         else
                             target = &elems[size_t(arg.index)];

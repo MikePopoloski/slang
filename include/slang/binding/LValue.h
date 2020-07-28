@@ -25,7 +25,7 @@ public:
     LValue(LValue&& other) = default;
 
     explicit LValue(Concat&& concat) : value(std::move(concat)) {}
-    explicit LValue(ConstantValue& base) : value(Path{ &base }) {}
+    explicit LValue(ConstantValue& base) : value(Path{ base }) {}
 
     bool bad() const { return std::holds_alternative<std::monostate>(value); }
     explicit operator bool() const { return !bad(); }
@@ -66,6 +66,8 @@ private:
     struct Path {
         ConstantValue* base = nullptr;
         SmallVectorSized<PathElement, 4> elements;
+
+        explicit Path(ConstantValue& base) : base(&base) {}
     };
 
     // Every LValue is either a pointer to some variable plus a path of selections,
