@@ -11,6 +11,20 @@ namespace slang {
 template<typename T>
 struct always_false : std::false_type {};
 
+ConstantValue* LValue::resolve() {
+    if (!std::holds_alternative<Path>(value))
+        return nullptr;
+
+    optional<ConstantRange> range;
+    ConstantValue* target = resolveInternal(range);
+
+    // If there is no singular target, return nullptr to indicate.
+    if (range.has_value())
+        return nullptr;
+
+    return target;
+}
+
 ConstantValue LValue::load() const {
     if (bad())
         return nullptr;
@@ -100,14 +114,51 @@ void LValue::store(const ConstantValue& newValue) {
         return;
     }
 
+    optional<ConstantRange> range;
+    ConstantValue* target = resolveInternal(range);
+    if (!target || target->bad())
+        return;
+
+    // We have the final target, now assign to it.
+    // If there is no range specified, we should be able to assign straight to the target.
+    if (!range) {
+        *target = newValue;
+        return;
+    }
+
+    // Otherwise, assign to the slice.
+    if (target->isInteger()) {
+        target->integer().set(range->upper(), range->lower(), newValue.integer());
+    }
+    else if (target->isString()) {
+        ASSERT(range->left == range->right);
+        ASSERT(range->left >= 0);
+
+        char c = (char)*newValue.integer().as<uint8_t>();
+        if (c)
+            target->str()[size_t(range->left)] = c;
+    }
+    else {
+        int32_t l = range->lower();
+        int32_t u = range->upper();
+
+        auto src = newValue.elements();
+        auto dest = target->elements();
+
+        u = std::min(u, int32_t(dest.size()));
+        for (int32_t i = std::max(l, 0); i <= u; i++)
+            dest[size_t(i)] = src[size_t(i - l)];
+    }
+}
+
+ConstantValue* LValue::resolveInternal(optional<ConstantRange>& range) {
     // Otherwise, we have an lvalue path. Walk the path and apply each element.
     auto& path = std::get<Path>(value);
     ConstantValue* target = path.base;
-    optional<ConstantRange> range;
 
     for (auto& elem : path.elements) {
         if (!target || target->bad())
-            return;
+            break;
 
         std::visit(
             [&target, &range](auto&& arg) {
@@ -147,39 +198,7 @@ void LValue::store(const ConstantValue& newValue) {
             elem);
     }
 
-    if (!target || target->bad())
-        return;
-
-    // We have the final target, now assign to it.
-    // If there is no range specified, we should be able to assign straight to the target.
-    if (!range) {
-        *target = newValue;
-        return;
-    }
-
-    // Otherwise, assign to the slice.
-    if (target->isInteger()) {
-        target->integer().set(range->upper(), range->lower(), newValue.integer());
-    }
-    else if (target->isString()) {
-        ASSERT(range->left == range->right);
-        ASSERT(range->left >= 0);
-
-        char c = (char)*newValue.integer().as<uint8_t>();
-        if (c)
-            target->str()[size_t(range->left)] = c;
-    }
-    else {
-        int32_t l = range->lower();
-        int32_t u = range->upper();
-
-        auto src = newValue.elements();
-        auto dest = target->elements();
-
-        u = std::min(u, int32_t(dest.size()));
-        for (int32_t i = std::max(l, 0); i <= u; i++)
-            dest[size_t(i)] = src[size_t(i - l)];
-    }
+    return target;
 }
 
 void LValue::addBitSlice(ConstantRange range) {
