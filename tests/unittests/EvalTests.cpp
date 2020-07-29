@@ -514,11 +514,17 @@ TEST_CASE("Dynamic array eval") {
     session.eval("arr[3] = 42;");
     CHECK(session.eval("arr.and").integer() == 2);
 
+    CHECK(session.eval("arr.size").integer() == 4);
+
     cv = session.eval("arr = new [5] (arr2);");
     REQUIRE(cv.elements().size() == 5);
     CHECK(cv.elements()[0].integer() == 1234);
     CHECK(cv.elements()[1].integer() == 19);
     CHECK(cv.elements()[2].integer() == 0);
+
+    CHECK(session.eval("arr.size()").integer() == 5);
+    session.eval("arr.delete");
+    CHECK(session.eval("arr.size()").integer() == 0);
 
     NO_SESSION_ERRORS;
 }
@@ -578,6 +584,20 @@ TEST_CASE("Associative array eval") {
     CHECK(session.eval("arr[\"bye\"]").integer() == 19);
     CHECK(session.eval("arr[\"foo\"]").integer() == -1);
     CHECK(session.eval("arr[\"World\"]").integer() == 8);
+
+    CHECK(session.eval("arr.size").integer() == 3);
+    CHECK(session.eval("arr.num").integer() == 3);
+
+    session.eval("arr.delete(\"foo\")");
+    CHECK(session.eval("arr.size").integer() == 3);
+
+    session.eval("arr.delete(\"bye\")");
+    CHECK(session.eval("arr.size").integer() == 2);
+
+    session.eval("arr.delete");
+    CHECK(session.eval("arr.size").integer() == 0);
+    cv = session.eval("arr");
+    CHECK(cv.map()->empty());
 
     session.eval(R"(
 function int func(int i, integer arr[string]);
