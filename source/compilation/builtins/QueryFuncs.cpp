@@ -16,7 +16,7 @@ public:
     BitsFunction() : SystemSubroutine("$bits", SubroutineKind::Function) {}
 
     const Expression& bindArgument(size_t, const BindContext& context,
-                                   const ExpressionSyntax& syntax) const final {
+                                   const ExpressionSyntax& syntax, const Args&) const final {
         BindContext nonConstCtx = makeNonConst(context);
         return Expression::bind(syntax, nonConstCtx, BindFlags::AllowDataType);
     }
@@ -48,7 +48,7 @@ public:
     TypenameFunction() : SystemSubroutine("$typename", SubroutineKind::Function) {}
 
     const Expression& bindArgument(size_t, const BindContext& context,
-                                   const ExpressionSyntax& syntax) const final {
+                                   const ExpressionSyntax& syntax, const Args&) const final {
         BindContext nonConstCtx = makeNonConst(context);
         return Expression::bind(syntax, nonConstCtx, BindFlags::AllowDataType);
     }
@@ -77,7 +77,7 @@ public:
     using SystemSubroutine::SystemSubroutine;
 
     const Expression& bindArgument(size_t index, const BindContext& context,
-                                   const ExpressionSyntax& syntax) const final {
+                                   const ExpressionSyntax& syntax, const Args&) const final {
         BindFlags flags = index == 0 ? BindFlags::AllowDataType : BindFlags::None;
         return Expression::bind(syntax, makeNonConst(context), flags);
     }
@@ -398,7 +398,7 @@ public:
         SystemSubroutine(name, FUNC), unpackedOnly(unpackedOnly) {}
 
     const Expression& bindArgument(size_t, const BindContext& context,
-                                   const ExpressionSyntax& syntax) const final {
+                                   const ExpressionSyntax& syntax, const Args&) const final {
         return Expression::bind(syntax, makeNonConst(context), BindFlags::AllowDataType);
     }
 

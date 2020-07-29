@@ -10,7 +10,6 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
-#include "slang/syntax/AllSyntax.h"
 
 namespace slang {
 
@@ -19,7 +18,8 @@ bool SystemSubroutine::allowEmptyArgument(size_t) const {
 }
 
 const Expression& SystemSubroutine::bindArgument(size_t, const BindContext& context,
-                                                 const ExpressionSyntax& syntax) const {
+                                                 const ExpressionSyntax& syntax,
+                                                 const Args&) const {
     return Expression::bind(syntax, context);
 }
 
@@ -73,7 +73,8 @@ BindContext SystemSubroutine::makeNonConst(const BindContext& ctx) {
 }
 
 const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const BindContext& context,
-                                                       const ExpressionSyntax& syntax) const {
+                                                       const ExpressionSyntax& syntax,
+                                                       const Args& args) const {
     optional<BindContext> nonConstCtx;
     const BindContext* ctx = &context;
     if (allowNonConst) {
@@ -81,11 +82,13 @@ const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const Bi
         ctx = &nonConstCtx.value();
     }
 
-    if (argIndex >= argTypes.size())
-        return SystemSubroutine::bindArgument(argIndex, *ctx, syntax);
+    if (isMethod)
+        argIndex--;
 
-    return Expression::bindRValue(*argTypes[argIndex], syntax, syntax.getFirstToken().location(),
-                                  *ctx);
+    if (argIndex >= argTypes.size())
+        return SystemSubroutine::bindArgument(argIndex, *ctx, syntax, args);
+
+    return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax, *ctx);
 }
 
 const Type& SimpleSystemSubroutine::checkArguments(const BindContext& context, const Args& args,

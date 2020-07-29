@@ -29,7 +29,8 @@ public:
 
     virtual bool allowEmptyArgument(size_t argIndex) const;
     virtual const Expression& bindArgument(size_t argIndex, const BindContext& context,
-                                           const ExpressionSyntax& syntax) const;
+                                           const ExpressionSyntax& syntax,
+                                           const Args& previousArgs) const;
     virtual const Type& checkArguments(const BindContext& context, const Args& args,
                                        SourceRange range) const = 0;
     virtual ConstantValue eval(const Scope& scope, EvalContext& context,
@@ -58,7 +59,8 @@ protected:
 class SimpleSystemSubroutine : public SystemSubroutine {
 public:
     const Expression& bindArgument(size_t argIndex, const BindContext& context,
-                                   const ExpressionSyntax& syntax) const final;
+                                   const ExpressionSyntax& syntax,
+                                   const Args& previousArgs) const final;
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final;
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const override { return true; }

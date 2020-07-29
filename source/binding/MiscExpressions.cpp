@@ -1118,17 +1118,18 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
     if (syntax && syntax->arguments) {
         auto actualArgs = syntax->arguments->parameters;
         for (size_t i = 0; i < actualArgs.size(); i++) {
+            size_t index = i + firstArg ? 1 : 0;
             switch (actualArgs[i]->kind) {
                 case SyntaxKind::OrderedArgument: {
                     const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-                    buffer.append(&subroutine.bindArgument(i, context, *arg.expr));
+                    buffer.append(&subroutine.bindArgument(index, context, *arg.expr, buffer));
                     break;
                 }
                 case SyntaxKind::NamedArgument:
                     context.addDiag(diag::NamedArgNotAllowed, actualArgs[i]->sourceRange());
                     return badExpr(compilation, nullptr);
                 case SyntaxKind::EmptyArgument:
-                    if (subroutine.allowEmptyArgument(i)) {
+                    if (subroutine.allowEmptyArgument(index)) {
                         buffer.append(compilation.emplace<EmptyArgumentExpression>(
                             compilation.getVoidType(), actualArgs[i]->sourceRange()));
                     }

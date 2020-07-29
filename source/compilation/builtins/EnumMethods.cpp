@@ -7,7 +7,6 @@
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
-#include "slang/syntax/AllSyntax.h"
 
 namespace slang::Builtins {
 
@@ -17,7 +16,7 @@ public:
         SystemSubroutine(name, SubroutineKind::Function), first(first) {}
 
     const Expression& bindArgument(size_t, const BindContext& context,
-                                   const ExpressionSyntax& syntax) const final {
+                                   const ExpressionSyntax& syntax, const Args&) const final {
         return Expression::bind(syntax, makeNonConst(context));
     }
 
@@ -67,12 +66,12 @@ public:
         SystemSubroutine(name, SubroutineKind::Function), next(next) {}
 
     const Expression& bindArgument(size_t argIndex, const BindContext& context,
-                                   const ExpressionSyntax& syntax) const final {
-        if (argIndex > 0)
-            return SystemSubroutine::bindArgument(argIndex, context, syntax);
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        if (argIndex > 1)
+            return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
 
-        return Expression::bindRValue(context.getCompilation().getUnsignedIntType(), syntax,
-                                      syntax.getFirstToken().location(), context);
+        return Expression::bindArgument(context.getCompilation().getUnsignedIntType(),
+                                        ArgumentDirection::In, syntax, context);
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args,
