@@ -193,6 +193,9 @@ TEST_CASE("Utility system functions") {
     CHECK(typeof("$stime") == "bit[31:0]");
     CHECK(typeof("$realtime") == "realtime");
 
+    // [20.4] Timescale system tasks
+    CHECK(typeof("$printtimescale") == "void");
+
     // [20.15] Probabilistic distribution functions
     CHECK(typeof("$random") == "int");
 
@@ -340,4 +343,37 @@ endmodule
     CHECK(diags[13].code == diag::QueryOnDynamicType);
     CHECK(diags[14].code == diag::QueryOnAssociativeWildcard);
     CHECK(diags[15].code == diag::QueryOnAssociativeWildcard);
+}
+
+TEST_CASE("printtimescale -- errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module j;
+endmodule
+
+module k;
+    j j1();
+endmodule
+
+module m;
+    k k1();
+
+    int foo;
+    initial begin
+        $printtimescale(m.k1.j1); // ok
+        $printtimescale(5);
+        $printtimescale(m.k1.j1, 5);
+        $printtimescale(foo);
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ExpectedModuleName);
+    CHECK(diags[1].code == diag::TooManyArguments);
+    CHECK(diags[2].code == diag::ExpectedModuleName);
 }

@@ -6,10 +6,13 @@
 //------------------------------------------------------------------------------
 #include "FormatHelpers.h"
 
+#include "slang/binding/MiscExpressions.h"
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/mir/Procedure.h"
+#include "slang/symbols/InstanceSymbols.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang::Builtins {
 
@@ -243,6 +246,44 @@ private:
     bool isInput;
 };
 
+class PrintTimeScaleTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        if (argIndex == 0) {
+            auto& comp = context.getCompilation();
+            if (!NameSyntax::isKind(syntax.kind)) {
+                context.addDiag(diag::ExpectedModuleName, syntax.sourceRange());
+                return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
+            }
+
+            return HierarchicalReferenceExpression::fromSyntax(comp, syntax.as<NameSyntax>(),
+                                                               context);
+        }
+
+        return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, 1))
+            return comp.getErrorType();
+
+        if (args.size() > 0) {
+            auto& sym = *args[0]->as<HierarchicalReferenceExpression>().symbol;
+            if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
+                context.addDiag(diag::ExpectedModuleName, args[0]->sourceRange);
+                return comp.getErrorType();
+            }
+        }
+
+        return comp.getVoidType();
+    }
+};
+
 void registerSystemTasks(Compilation& c) {
 #define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
     REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
@@ -296,6 +337,9 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(FinishControlTask, "$stop");
 
     REGISTER(StringFormatTask, "$sformat");
+
+    REGISTER(PrintTimeScaleTask, "$printtimescale");
+
 #undef REGISTER
 
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemb", true));

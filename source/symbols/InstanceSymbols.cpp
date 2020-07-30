@@ -393,6 +393,10 @@ const Definition& InstanceSymbol::getDefinition() const {
     return body.getDefinition();
 }
 
+bool InstanceSymbol::isModule() const {
+    return getDefinition().definitionKind == DefinitionKind::Module;
+}
+
 bool InstanceSymbol::isInterface() const {
     return getDefinition().definitionKind == DefinitionKind::Interface;
 }

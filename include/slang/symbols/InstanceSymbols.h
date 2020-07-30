@@ -37,6 +37,7 @@ public:
                    span<const ParameterSymbolBase* const> parameters);
 
     const Definition& getDefinition() const;
+    bool isModule() const;
     bool isInterface() const;
 
     const PortConnection* getPortConnection(const PortSymbol& port) const;
