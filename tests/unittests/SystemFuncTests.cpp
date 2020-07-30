@@ -188,6 +188,9 @@ TEST_CASE("Utility system functions") {
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };
 
+    // [18.13] Constrained pseudo-random value generation
+    CHECK(typeof("$urandom") == "bit[31:0]");
+
     // [20.3] Simulation time functions
     CHECK(typeof("$time") == "time");
     CHECK(typeof("$stime") == "bit[31:0]");
@@ -195,12 +198,15 @@ TEST_CASE("Utility system functions") {
 
     // [20.4] Timescale system tasks
     CHECK(typeof("$printtimescale") == "void");
+    CHECK(typeof("$timeformat") == "void");
+    CHECK(typeof("$timeformat(5, 4, \"asdf\", 10)") == "void");
 
     // [20.15] Probabilistic distribution functions
     CHECK(typeof("$random") == "int");
 
-    // [18.13] Constrained pseudo-random value generation
-    CHECK(typeof("$urandom") == "bit[31:0]");
+    // [20.18] Miscellaneous tasks and functions
+    CHECK(typeof("$system") == "int");
+    CHECK(typeof("$system(\"foo bar\")") == "int");
 
     // [21.3] File input/output system functions
     CHECK(typeof("$fopen(\"dsa\")") == "int");
@@ -376,4 +382,52 @@ endmodule
     CHECK(diags[0].code == diag::ExpectedModuleName);
     CHECK(diags[1].code == diag::TooManyArguments);
     CHECK(diags[2].code == diag::ExpectedModuleName);
+}
+
+TEST_CASE("dumpvars / dumpports") {
+    auto tree = SyntaxTree::fromText(R"(
+module j;
+endmodule
+
+module k;
+    j j1();
+endmodule
+
+module m;
+    k k1();
+
+    int foo[];
+    initial begin : asdf
+        $dumpvars;
+        $dumpvars(1);
+        $dumpvars(1, foo, m.k1, m.k1.j1);
+        $dumpvars(1, 2);
+        $dumpvars(1, m.asdf);
+        $dumpvars(foo);
+
+        $dumpports;
+        $dumpports(m.k1, m.k1.j1);
+        $dumpports(m.k1, m.k1.j1, 5);
+        $dumpports(m.k1, m.k1.j1, "asdf");
+        $dumpports(, "asdf");
+        $dumpports("asdf");
+        $dumpports(foo);
+        $dumpports(foo, "asdf");
+        $dumpports(3.4);
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::ExpectedModOrVarName);
+    CHECK(diags[1].code == diag::ExpectedModOrVarName);
+    CHECK(diags[2].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[3].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[4].code == diag::ExpectedModuleName);
+    CHECK(diags[5].code == diag::BadSystemSubroutineArg);
 }

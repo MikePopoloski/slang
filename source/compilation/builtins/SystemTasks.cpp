@@ -284,6 +284,104 @@ public:
     }
 };
 
+class DumpVarsTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        if (argIndex > 0) {
+            auto& comp = context.getCompilation();
+            if (!NameSyntax::isKind(syntax.kind)) {
+                context.addDiag(diag::ExpectedModOrVarName, syntax.sourceRange());
+                return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
+            }
+
+            auto& ref =
+                HierarchicalReferenceExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context);
+
+            if (ref.kind == ExpressionKind::HierarchicalReference) {
+                auto& sym = *ref.as<HierarchicalReferenceExpression>().symbol;
+                if (sym.kind != SymbolKind::Variable &&
+                    (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule())) {
+                    context.addDiag(diag::ExpectedModOrVarName, ref.sourceRange);
+                    return *comp.emplace<InvalidExpression>(&ref, comp.getErrorType());
+                }
+            }
+
+            return ref;
+        }
+
+        return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, INT32_MAX))
+            return comp.getErrorType();
+
+        if (args.size() > 0) {
+            if (!args[0]->type->isIntegral())
+                return badArg(context, *args[0]);
+        }
+
+        return comp.getVoidType();
+    }
+};
+
+class DumpPortsTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+
+    bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 0; }
+
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        if (NameSyntax::isKind(syntax.kind)) {
+            return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
+                                                               syntax.as<NameSyntax>(), context);
+        }
+
+        return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, INT32_MAX))
+            return comp.getErrorType();
+
+        for (size_t i = 0; i < args.size(); i++) {
+            if (args[i]->kind == ExpressionKind::EmptyArgument)
+                continue;
+
+            if (args[i]->kind == ExpressionKind::HierarchicalReference) {
+                auto& sym = *args[i]->as<HierarchicalReferenceExpression>().symbol;
+                if (i == args.size() - 1 && sym.isValue()) {
+                    // Last arg can be a string-like value; all others must be module names.
+                    auto& type = sym.as<ValueSymbol>().getType();
+                    if (!type.canBeStringLike()) {
+                        context.addDiag(diag::BadSystemSubroutineArg, args[i]->sourceRange)
+                            << type << kindStr();
+                        return context.getCompilation().getErrorType();
+                    }
+                }
+                else if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
+                    context.addDiag(diag::ExpectedModuleName, args[i]->sourceRange);
+                    return comp.getErrorType();
+                }
+            }
+            else if (i != args.size() - 1 || !args[i]->type->canBeStringLike()) {
+                // Last arg can be a string-like value; all others must be module names.
+                return badArg(context, *args[i]);
+            }
+        }
+
+        return comp.getVoidType();
+    }
+};
+
 void registerSystemTasks(Compilation& c) {
 #define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
     REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
@@ -340,12 +438,20 @@ void registerSystemTasks(Compilation& c) {
 
     REGISTER(PrintTimeScaleTask, "$printtimescale");
 
+    REGISTER(DumpVarsTask, "$dumpvars");
+    REGISTER(DumpPortsTask, "$dumpports");
+
 #undef REGISTER
+
+    auto int_t = &c.getIntType();
+    auto string_t = &c.getStringType();
 
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemb", true));
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemh", true));
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememb", false));
     c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememh", false));
+    c.addSystemSubroutine(std::make_unique<SimpleSystemTask>("$system", *int_t, 0,
+                                                             std::vector<const Type*>{ string_t }));
 
 #define TASK(name, required, ...)                             \
     c.addSystemSubroutine(std::make_unique<SimpleSystemTask>( \
@@ -353,20 +459,22 @@ void registerSystemTasks(Compilation& c) {
 
     TASK("$exit", 0, );
 
+    TASK("$timeformat", 0, int_t, int_t, string_t, int_t);
+
     TASK("$monitoron", 0, );
     TASK("$monitoroff", 0, );
 
-    TASK("$dumpfile", 0, &c.getStringType());
+    TASK("$dumpfile", 0, string_t);
     TASK("$dumpon", 0, );
     TASK("$dumpoff", 0, );
     TASK("$dumpall", 0, );
-    TASK("$dumplimit", 1, &c.getIntType());
+    TASK("$dumplimit", 1, int_t);
     TASK("$dumpflush", 0, );
-    TASK("$dumpportson", 0, &c.getStringType());
-    TASK("$dumpportsoff", 0, &c.getStringType());
-    TASK("$dumpportsall", 0, &c.getStringType());
-    TASK("$dumpportslimit", 1, &c.getIntType(), &c.getStringType());
-    TASK("$dumpportsflush", 0, &c.getStringType());
+    TASK("$dumpportson", 0, string_t);
+    TASK("$dumpportsoff", 0, string_t);
+    TASK("$dumpportsall", 0, string_t);
+    TASK("$dumpportslimit", 1, int_t, string_t);
+    TASK("$dumpportsflush", 0, string_t);
 
 #undef TASK
 }

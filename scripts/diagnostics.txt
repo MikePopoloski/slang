@@ -361,6 +361,7 @@ error DynamicDimensionIndex "cannot refer to a dynamically sized dimension with 
 error QueryOnAssociativeNonIntegral "'{}' cannot be called with an associative array with non-integral index type"
 error QueryOnAssociativeWildcard "'{}' cannot be called with an associative array with non-integral (or wildcard) index type"
 error ExpectedModuleName "expected module name"
+error ExpectedModOrVarName "expected module or variable name"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 
 subsystem ConstEval
