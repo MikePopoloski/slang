@@ -143,7 +143,7 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower,
         auto& q = *queue();
         SVQueue result;
         for (int32_t i = lower; i <= upper; i++) {
-            if (i >= 0 && i < q.size())
+            if (i >= 0 && size_t(i) < q.size())
                 result.push_back(q[size_t(i)]);
         }
 
