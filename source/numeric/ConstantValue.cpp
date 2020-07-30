@@ -197,7 +197,7 @@ bool ConstantValue::isFalse() const {
 
 bool ConstantValue::hasUnknown() const {
     return std::visit(
-        [](auto&& arg) noexcept {
+        [](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, SVInt>) {
                 return arg.hasUnknown();
@@ -318,8 +318,7 @@ std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {
 
 bool operator==(const ConstantValue& lhs, const ConstantValue& rhs) {
     return std::visit(
-        [&](auto&& arg) noexcept(
-            !std::is_same_v<std::decay_t<decltype(arg)>, ConstantValue::Elements>) {
+        [&](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return rhs.bad();
@@ -360,8 +359,7 @@ bool operator==(const ConstantValue& lhs, const ConstantValue& rhs) {
 
 bool operator<(const ConstantValue& lhs, const ConstantValue& rhs) {
     return std::visit(
-        [&](auto&& arg) noexcept(
-            !std::is_same_v<std::decay_t<decltype(arg)>, ConstantValue::Elements>) {
+        [&](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
                 return false;

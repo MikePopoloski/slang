@@ -491,7 +491,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
 
     // If this is selecting from a queue, the result is always a queue.
     if (isQueue) {
-        result->type = compilation.emplace<QueueType>(elementType, 0);
+        result->type = compilation.emplace<QueueType>(elementType, 0u);
         return *result;
     }
 
@@ -1142,7 +1142,7 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
     if (syntax && syntax->arguments) {
         auto actualArgs = syntax->arguments->parameters;
         for (size_t i = 0; i < actualArgs.size(); i++) {
-            size_t index = i + firstArg ? 1 : 0;
+            size_t index = i + (firstArg ? 1 : 0);
             switch (actualArgs[i]->kind) {
                 case SyntaxKind::OrderedArgument: {
                     const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();

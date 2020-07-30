@@ -1667,12 +1667,12 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
         if (la.size() != ra.size())
             return SVInt(false);
 
-        for (auto li = la.begin(); li != la.end(); li++) {
-            auto ri = ra.find(li->first);
+        for (auto& [key, val] : la) {
+            auto ri = ra.find(key);
             if (ri == ra.end())
                 return SVInt(false);
 
-            ConstantValue result = evalBinaryOperator(op, li->second, ri->second);
+            ConstantValue result = evalBinaryOperator(op, val, ri->second);
             if (!result)
                 return nullptr;
 
