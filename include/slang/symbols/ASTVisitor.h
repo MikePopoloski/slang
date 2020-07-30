@@ -249,6 +249,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(Call, CallExpression);
         CASE(Conversion, ConversionExpression);
         CASE(DataType, DataTypeExpression);
+        CASE(HierarchicalReference, HierarchicalReferenceExpression);
         CASE(SimpleAssignmentPattern, SimpleAssignmentPatternExpression);
         CASE(StructuredAssignmentPattern, StructuredAssignmentPatternExpression);
         CASE(ReplicatedAssignmentPattern, ReplicatedAssignmentPatternExpression);

@@ -1334,8 +1334,27 @@ Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataT
     return *compilation.emplace<DataTypeExpression>(type, syntax.sourceRange());
 }
 
-ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {
-    return nullptr;
+Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation,
+                                                        const NameSyntax& syntax,
+                                                        const BindContext& context) {
+    LookupResult result;
+    Lookup::name(context.scope, syntax, context.lookupLocation, LookupFlags::AllowDeclaredAfter,
+                 result);
+
+    if (result.hasError())
+        compilation.addDiagnostics(result.getDiagnostics());
+
+    const Symbol* symbol = result.found;
+    if (!symbol)
+        return badExpr(compilation, nullptr);
+
+    return *compilation.emplace<HierarchicalReferenceExpression>(*symbol, compilation.getVoidType(),
+                                                                 syntax.sourceRange());
+}
+
+void HierarchicalReferenceExpression::serializeTo(ASTSerializer& serializer) const {
+    if (symbol)
+        serializer.writeLink("symbol", *symbol);
 }
 
 } // namespace slang

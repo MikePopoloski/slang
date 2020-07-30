@@ -239,7 +239,7 @@ public:
     DataTypeExpression(const Type& type, SourceRange sourceRange) :
         Expression(ExpressionKind::DataType, type, sourceRange) {}
 
-    ConstantValue evalImpl(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext&) const { return nullptr; }
     bool verifyConstantImpl(EvalContext&) const { return true; }
 
     void serializeTo(ASTSerializer&) const {}
@@ -248,6 +248,31 @@ public:
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::DataType; }
+};
+
+/// Adapts a hierarchical symbol reference for use in an expression tree. This is for cases
+/// like the $printtimescale system function that require a module name to be passed.
+/// Note that the type of this expression is always void.
+class HierarchicalReferenceExpression : public Expression {
+public:
+    not_null<const Symbol*> symbol;
+
+    HierarchicalReferenceExpression(const Symbol& symbol, const Type& type,
+                                    SourceRange sourceRange) :
+        Expression(ExpressionKind::HierarchicalReference, type, sourceRange),
+        symbol(&symbol) {}
+
+    ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const NameSyntax& syntax,
+                                  const BindContext& context);
+
+    static bool isKind(ExpressionKind kind) {
+        return kind == ExpressionKind::HierarchicalReference;
+    }
 };
 
 /// Represents an empty argument. There's no actual syntax to go along with this,

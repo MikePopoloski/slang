@@ -44,6 +44,7 @@ struct InvocationExpressionSyntax;
     x(Call) \
     x(Conversion) \
     x(DataType) \
+    x(HierarchicalReference) \
     x(SimpleAssignmentPattern) \
     x(StructuredAssignmentPattern) \
     x(ReplicatedAssignmentPattern) \
