@@ -1378,12 +1378,12 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue
     }
     else if (cv.isQueue()) {
         auto& q = *cv.queue();
-        for (int32_t i = 0; i < q.size(); i++) {
-            *local = SVInt(32, uint64_t(i), true);
+        for (size_t i = 0; i < q.size(); i++) {
+            *local = SVInt(32, i, true);
 
             ER result;
             if (currDims.size() > 1)
-                result = evalRecursive(context, q[size_t(i)], currDims.subspan(1));
+                result = evalRecursive(context, q[i], currDims.subspan(1));
             else
                 result = body.eval(context);
 
