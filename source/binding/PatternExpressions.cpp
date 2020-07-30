@@ -63,8 +63,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
         numElements = ua.range.width();
     }
     else if (ct.kind == SymbolKind::DynamicArrayType ||
-             ct.kind == SymbolKind::AssociativeArrayType) {
-        // TODO: queue
+             ct.kind == SymbolKind::AssociativeArrayType || ct.kind == SymbolKind::QueueType) {
         elementType = ct.getArrayElementType();
     }
     else if (ct.isIntegral() && ct.kind != SymbolKind::ScalarType) {
@@ -95,7 +94,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                 THROW_UNREACHABLE;
         }
     }
-    else if (ct.kind == SymbolKind::DynamicArrayType) {
+    else if (ct.kind == SymbolKind::DynamicArrayType || ct.kind == SymbolKind::QueueType) {
         switch (p.kind) {
             case SyntaxKind::SimpleAssignmentPattern:
                 return SimpleAssignmentPatternExpression::forDynamicArray(
@@ -183,6 +182,16 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
         }
 
         return values;
+    }
+    else if (type->isQueue()) {
+        SVQueue result;
+        for (auto elem : elements()) {
+            result.emplace_back(elem->eval(context));
+            if (result.back().bad())
+                return nullptr;
+        }
+
+        return result;
     }
     else {
         std::vector<ConstantValue> values;

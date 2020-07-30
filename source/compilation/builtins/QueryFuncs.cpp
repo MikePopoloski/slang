@@ -227,6 +227,9 @@ protected:
         if (cv.isMap())
             return DimResult(std::move(*std::move(cv).map()), indexType);
 
+        if (cv.isQueue())
+            return cv.queue()->size();
+
         return cv.elements().size();
     }
 

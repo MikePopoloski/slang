@@ -924,6 +924,27 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
         if (cvl.isInteger() && cvr.isInteger())
             return SVInt::conditional(cp.integer(), cvl.integer(), cvr.integer());
 
+        auto combineArrays = [&](auto& result, auto& la, auto& ra) -> ConstantValue {
+            ConstantValue defaultElement = type->getArrayElementType()->getDefaultValue();
+
+            // [11.4.11] says that if both sides are unpacked arrays, we
+            // check each element. If they are equal, take it in the result,
+            // otherwise use the default.
+            for (size_t i = 0; i < la.size(); i++) {
+                ConstantValue comp = evalBinaryOperator(BinaryOperator::Equality, la[i], ra[i]);
+                if (!comp)
+                    return nullptr;
+
+                logic_t l = (logic_t)comp.integer();
+                if (l.isUnknown() || !l)
+                    result[i] = defaultElement;
+                else
+                    result[i] = la[i];
+            }
+
+            return result;
+        };
+
         if (cvl.isUnpacked()) {
             // Sizes here might differ for dynamic arrays.
             span<const ConstantValue> la = cvl.elements();
@@ -931,24 +952,15 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
             if (la.size() == ra.size()) {
                 // TODO: what if this is an unpacked struct?
                 std::vector<ConstantValue> result(la.size());
-                ConstantValue defaultElement = type->getArrayElementType()->getDefaultValue();
-
-                // [11.4.11] says that if both sides are unpacked arrays, we
-                // check each element. If they are equal, take it in the result,
-                // otherwise use the default.
-                for (size_t i = 0; i < la.size(); i++) {
-                    ConstantValue comp = evalBinaryOperator(BinaryOperator::Equality, la[i], ra[i]);
-                    if (!comp)
-                        return nullptr;
-
-                    logic_t l = (logic_t)comp.integer();
-                    if (l.isUnknown() || !l)
-                        result[i] = defaultElement;
-                    else
-                        result[i] = la[i];
-                }
-
-                return result;
+                return combineArrays(result, la, ra);
+            }
+        }
+        else if (cvl.isQueue()) {
+            auto& la = *cvl.queue();
+            auto& ra = *cvr.queue();
+            if (la.size() == ra.size()) {
+                SVQueue result(la.size());
+                return combineArrays(result, la, ra);
             }
         }
 
@@ -995,9 +1007,9 @@ Expression& InsideExpression::fromSyntax(Compilation& compilation,
 
 static logic_t checkInsideMatch(const ConstantValue& cvl, const ConstantValue& cvr) {
     // Unpacked arrays get unwrapped into their members for comparison.
-    if (cvr.isUnpacked()) {
+    auto unwrapArray = [&cvl](auto&& arr) {
         bool anyUnknown = false;
-        for (auto& elem : cvr.elements()) {
+        for (auto& elem : arr) {
             logic_t result = checkInsideMatch(cvl, elem);
             if (result)
                 return logic_t(true);
@@ -1007,7 +1019,13 @@ static logic_t checkInsideMatch(const ConstantValue& cvl, const ConstantValue& c
         }
 
         return anyUnknown ? logic_t::x : logic_t(0);
-    }
+    };
+
+    if (cvr.isUnpacked())
+        return unwrapArray(cvr.elements());
+
+    if (cvr.isQueue())
+        return unwrapArray(*cvr.queue());
 
     // Same handling for associative arrays.
     if (cvr.isMap()) {
@@ -1610,6 +1628,24 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
     else if (cvl.isUnpacked()) {
         span<const ConstantValue> la = cvl.elements();
         span<const ConstantValue> ra = cvr.elements();
+        if (la.size() != ra.size())
+            return SVInt(false);
+
+        for (size_t i = 0; i < la.size(); i++) {
+            ConstantValue result = evalBinaryOperator(op, la[i], ra[i]);
+            if (!result)
+                return nullptr;
+
+            logic_t l = (logic_t)result.integer();
+            if (l.isUnknown() || !l)
+                return SVInt(l);
+        }
+
+        return SVInt(true);
+    }
+    else if (cvl.isQueue()) {
+        auto& la = *cvl.queue();
+        auto& ra = *cvr.queue();
         if (la.size() != ra.size())
             return SVInt(false);
 

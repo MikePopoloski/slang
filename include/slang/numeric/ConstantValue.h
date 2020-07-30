@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <deque>
 #include <map>
 #include <string>
 #include <variant>
@@ -17,6 +18,7 @@
 namespace slang {
 
 struct AssociativeArray;
+struct SVQueue;
 
 /// Represents an IEEE754 double precision floating point number.
 /// This is a separate type from `double` to make it less likely that
@@ -50,9 +52,10 @@ public:
     struct NullPlaceholder : std::monostate {};
     using Elements = std::vector<ConstantValue>;
     using Map = CopyPtr<AssociativeArray>;
+    using Queue = CopyPtr<SVQueue>;
 
     using Variant = std::variant<std::monostate, SVInt, real_t, shortreal_t, NullPlaceholder,
-                                 Elements, std::string, Map>;
+                                 Elements, std::string, Map, Queue>;
 
     ConstantValue() = default;
     ConstantValue(nullptr_t) {}
@@ -67,10 +70,16 @@ public:
     ConstantValue(Elements&& elements) : value(std::move(elements)) {}
     ConstantValue(const std::string& str) : value(str) {}
     ConstantValue(std::string&& str) : value(std::move(str)) {}
+
     ConstantValue(const Map& map) : value(map) {}
     ConstantValue(Map&& map) : value(std::move(map)) {}
     ConstantValue(const AssociativeArray& aa) : value(Map(aa)) {}
     ConstantValue(AssociativeArray&& aa) : value(Map(std::move(aa))) {}
+
+    ConstantValue(const Queue& queue) : value(queue) {}
+    ConstantValue(Queue&& queue) : value(std::move(queue)) {}
+    ConstantValue(const SVQueue& queue) : value(Queue(queue)) {}
+    ConstantValue(SVQueue&& queue) : value(Queue(std::move(queue))) {}
 
     bool bad() const { return std::holds_alternative<std::monostate>(value); }
     explicit operator bool() const { return !bad(); }
@@ -82,6 +91,7 @@ public:
     bool isUnpacked() const { return std::holds_alternative<Elements>(value); }
     bool isString() const { return std::holds_alternative<std::string>(value); }
     bool isMap() const { return std::holds_alternative<Map>(value); }
+    bool isQueue() const { return std::holds_alternative<Queue>(value); }
 
     SVInt& integer() & { return std::get<SVInt>(value); }
     const SVInt& integer() const& { return std::get<SVInt>(value); }
@@ -103,6 +113,11 @@ public:
     const Map& map() const& { return std::get<Map>(value); }
     Map map() && { return std::get<Map>(std::move(value)); }
     Map map() const&& { return std::get<Map>(std::move(value)); }
+
+    Queue& queue() & { return std::get<Queue>(value); }
+    const Queue& queue() const& { return std::get<Queue>(value); }
+    Queue queue() && { return std::get<Queue>(std::move(value)); }
+    Queue queue() const&& { return std::get<Queue>(std::move(value)); }
 
     ConstantValue getSlice(int32_t upper, int32_t lower, const ConstantValue& defaultValue) const;
 
@@ -134,6 +149,12 @@ private:
 struct AssociativeArray : public std::map<ConstantValue, ConstantValue> {
     using std::map<ConstantValue, ConstantValue>::map;
     ConstantValue defaultValue;
+};
+
+/// Represents a SystemVerilog queue, for use during constant evaluation.
+struct SVQueue : public std::deque<ConstantValue> {
+    using std::deque<ConstantValue>::deque;
+    uint32_t maxSize = 0;
 };
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative

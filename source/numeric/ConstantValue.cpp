@@ -61,6 +61,19 @@ std::string ConstantValue::toString() const {
                 buffer.append("]");
                 return buffer.str();
             }
+            else if constexpr (std::is_same_v<T, Queue>) {
+                FormatBuffer buffer;
+                buffer.append("[");
+                for (auto& element : *arg) {
+                    buffer.append(element.toString());
+                    buffer.append(",");
+                }
+
+                if (!arg->empty())
+                    buffer.pop_back();
+                buffer.append("]");
+                return buffer.str();
+            }
             else
                 static_assert(always_false<T>::value, "Missing case");
         },
@@ -94,6 +107,10 @@ size_t ConstantValue::hash() const {
                     hash_combine(h, val.hash());
                 }
             }
+            else if constexpr (std::is_same_v<T, Queue>) {
+                for (auto& element : *arg)
+                    hash_combine(h, element.hash());
+            }
             else {
                 static_assert(always_false<T>::value, "Missing case");
             }
@@ -117,6 +134,17 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower,
                 *dest++ = defaultValue;
             else
                 *dest++ = elems[size_t(i)];
+        }
+
+        return result;
+    }
+
+    if (isQueue()) {
+        auto& q = *queue();
+        SVQueue result;
+        for (int32_t i = lower; i <= upper; i++) {
+            if (i >= 0 && i < q.size())
+                result.push_back(q[size_t(i)]);
         }
 
         return result;
@@ -184,6 +212,13 @@ bool ConstantValue::hasUnknown() const {
             else if constexpr (std::is_same_v<T, Map>) {
                 for (auto& [key, val] : *arg) {
                     if (key.hasUnknown() || val.hasUnknown())
+                        return true;
+                }
+                return false;
+            }
+            else if constexpr (std::is_same_v<T, Queue>) {
+                for (auto& element : *arg) {
+                    if (element.hasUnknown())
                         return true;
                 }
                 return false;
@@ -310,8 +345,15 @@ bool operator==(const ConstantValue& lhs, const ConstantValue& rhs) {
 
                 return *arg == *rhs.map();
             }
-            else
+            else if constexpr (std::is_same_v<T, ConstantValue::Queue>) {
+                if (!rhs.isQueue())
+                    return false;
+
+                return *arg == *rhs.queue();
+            }
+            else {
                 static_assert(always_false<T>::value, "Missing case");
+            }
         },
         lhs.value);
 }
@@ -345,8 +387,15 @@ bool operator<(const ConstantValue& lhs, const ConstantValue& rhs) {
 
                 return *arg < *rhs.map();
             }
-            else
+            else if constexpr (std::is_same_v<T, ConstantValue::Queue>) {
+                if (!rhs.isQueue())
+                    return false;
+
+                return *arg < *rhs.queue();
+            }
+            else {
                 static_assert(always_false<T>::value, "Missing case");
+            }
         },
         lhs.value);
 }

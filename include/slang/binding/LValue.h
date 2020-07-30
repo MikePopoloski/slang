@@ -43,7 +43,6 @@ public:
 private:
     ConstantValue* resolveInternal(optional<ConstantRange>& range);
 
-
     // A selection of a range of bits from an integral value.
     struct BitSlice {
         ConstantRange range;

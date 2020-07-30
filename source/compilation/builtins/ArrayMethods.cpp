@@ -46,11 +46,21 @@ public:
             if (!arr)                                                                          \
                 return nullptr;                                                                \
                                                                                                \
-            SVInt result = arr.elements()[0].integer();                                        \
-            for (auto& elem : arr.elements().subspan(1))                                       \
-                result op elem.integer();                                                      \
+            if (arr.isQueue()) {                                                               \
+                auto& q = *arr.queue();                                                        \
+                SVInt result = q[0].integer();                                                 \
+                for (size_t i = 1; i < q.size(); i++)                                          \
+                    result op q[i].integer();                                                  \
                                                                                                \
-            return result;                                                                     \
+                return result;                                                                 \
+            }                                                                                  \
+            else {                                                                             \
+                SVInt result = arr.elements()[0].integer();                                    \
+                for (auto& elem : arr.elements().subspan(1))                                   \
+                    result op elem.integer();                                                  \
+                                                                                               \
+                return result;                                                                 \
+            }                                                                                  \
         }                                                                                      \
     };
 
@@ -73,6 +83,8 @@ public:
         size_t size;
         if (val.isMap())
             size = val.map()->size();
+        else if (val.isQueue())
+            size = val.queue()->size();
         else
             size = val.elements().size();
 

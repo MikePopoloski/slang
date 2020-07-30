@@ -613,6 +613,57 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Queue eval") {
+    ScriptSession session;
+    session.eval("int arr[$] = '{1, 2, 3, 4};");
+    session.eval("arr[0] = 42;");
+    CHECK(session.eval("arr[0]").integer() == 42);
+    CHECK(session.eval("arr[3]").integer() == 4);
+
+    session.eval("int arr2[2];");
+    session.eval("arr2[0] = 1234;");
+    session.eval("arr2[1] = 19;");
+    session.eval("arr[1:2] = arr2;");
+
+    auto cv = session.eval("arr");
+    CHECK(cv.queue()->at(0).integer() == 42);
+    CHECK(cv.queue()->at(1).integer() == 1234);
+    CHECK(cv.queue()->at(2).integer() == 19);
+    CHECK(cv.queue()->at(3).integer() == 4);
+
+    session.eval("int queueArr2[$] = arr2;");
+    CHECK(session.eval("arr[1:2] == queueArr2").integer() == 1);
+
+    session.eval("int arr3[$] = '{5, 6, 7};");
+    cv = session.eval("0 ? arr : arr3");
+    CHECK(cv.queue()->at(0).integer() == 5);
+    CHECK(cv.queue()->at(1).integer() == 6);
+
+    CHECK(session.eval("arr == arr3").integer() == 0);
+
+    cv = session.eval("'x ? arr : arr3");
+    CHECK(cv.queue()->empty());
+
+    session.eval("arr3 = '{42, 1, 3, 4};");
+    cv = session.eval("'x ? arr3 : arr");
+    CHECK(cv.queue()->at(0).integer() == 42);
+    CHECK(cv.queue()->at(1).integer() == 0);
+    CHECK(cv.queue()->at(2).integer() == 0);
+    CHECK(cv.queue()->at(3).integer() == 4);
+
+    CHECK(session.eval("arr.xor").integer() == 1263);
+    CHECK(session.eval("arr.or").integer() == 1279);
+
+    session.eval("arr[3] = 42;");
+    CHECK(session.eval("arr.and").integer() == 2);
+
+    CHECK(session.eval("arr.size").integer() == 4);
+    session.eval("arr[4] = 22;");
+    CHECK(session.eval("arr.size").integer() == 5);
+
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Unpacked struct eval") {
     ScriptSession session;
     session.eval("struct { integer a[2:0]; bit b; } foo;");

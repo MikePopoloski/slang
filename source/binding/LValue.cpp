@@ -54,6 +54,17 @@ ConstantValue LValue::load() const {
                     if (result.isString()) {
                         result = SVInt(8, (uint64_t)result.str()[size_t(arg.index)], false);
                     }
+                    else if (result.isQueue()) {
+                        auto& q = *result.queue();
+                        if (arg.index < 0 || size_t(arg.index) >= q.size())
+                            result = arg.defaultValue;
+                        else {
+                            // Be careful not to assign to the result while
+                            // still referencing its elements.
+                            ConstantValue temp(std::move(q[size_t(arg.index)]));
+                            result = std::move(temp);
+                        }
+                    }
                     else {
                         auto elems = result.elements();
                         if (arg.index < 0 || size_t(arg.index) >= elems.size())
@@ -138,6 +149,17 @@ void LValue::store(const ConstantValue& newValue) {
         if (c)
             target->str()[size_t(range->left)] = c;
     }
+    else if (target->isQueue()) {
+        int32_t l = range->lower();
+        int32_t u = range->upper();
+
+        auto& src = *newValue.queue();
+        auto& dest = *target->queue();
+
+        u = std::min(u, int32_t(dest.size()));
+        for (int32_t i = std::max(l, 0); i <= u; i++)
+            dest[size_t(i)] = src[size_t(i - l)];
+    }
     else {
         int32_t l = range->lower();
         int32_t u = range->upper();
@@ -172,6 +194,22 @@ ConstantValue* LValue::resolveInternal(optional<ConstantRange>& range) {
                 else if constexpr (std::is_same_v<T, ElementIndex>) {
                     if (target->isString()) {
                         range = ConstantRange{ arg.index, arg.index };
+                    }
+                    else if (target->isQueue()) {
+                        auto& q = *target->queue();
+                        if (arg.index < 0)
+                            target = nullptr;
+                        else {
+                            // Queues can reference one past the end to insert a new element.
+                            size_t idx = size_t(arg.index);
+                            if (idx == q.size())
+                                q.push_back(arg.defaultValue);
+
+                            if (idx >= q.size())
+                                target = nullptr;
+                            else
+                                target = &q[size_t(arg.index)];
+                        }
                     }
                     else {
                         auto elems = target->elements();

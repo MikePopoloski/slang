@@ -92,10 +92,15 @@ optional<int32_t> getDynamicIndex(const ConstantValue& cs, const ConstantValue& 
     }
 
     // For dynamic arrays and queues, elements out of bounds only issue a warning.
-    auto elems = cv.elements();
-    if (!index || *index < 0 || size_t(*index) >= elems.size()) {
+    size_t maxIndex;
+    if (cv.isQueue())
+        maxIndex = cv.queue()->size() + 1;
+    else
+        maxIndex = cv.elements().size();
+
+    if (!index || *index < 0 || size_t(*index) >= maxIndex) {
         context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
-            << cs << valueType << elems.size();
+            << cs << valueType << maxIndex;
 
         // Return a sentinel value (which is never valid as a dynamic array index).
         return -1;
@@ -364,6 +369,9 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (*index == -1)
         return type->getDefaultValue();
 
+    if (cv.isQueue())
+        return (*cv.queue())[size_t(*index)];
+
     return cv.elements()[size_t(*index)];
 }
 
@@ -450,11 +458,15 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         return badExpr(compilation, nullptr);
     }
 
-    const Expression& left = selectionKind == RangeSelectionKind::Simple
-                                 ? bind(*syntax.left, context, BindFlags::Constant)
-                                 : selfDetermined(compilation, *syntax.left, context);
+    // Selection expressions don't need to be const if we're selecting from a queue.
+    bool isQueue = value.type->isQueue();
+    bool leftConst = !isQueue && selectionKind == RangeSelectionKind::Simple;
+    bool rightConst = !isQueue;
 
-    const Expression& right = bind(*syntax.right, context, BindFlags::Constant);
+    const Expression& left = leftConst ? bind(*syntax.left, context, BindFlags::Constant)
+                                       : selfDetermined(compilation, *syntax.left, context);
+    const Expression& right = rightConst ? bind(*syntax.right, context, BindFlags::Constant)
+                                         : selfDetermined(compilation, *syntax.right, context);
 
     auto result = compilation.emplace<RangeSelectExpression>(
         selectionKind, compilation.getErrorType(), value, left, right, fullRange);
@@ -477,7 +489,13 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     if (elementType.isError())
         return badExpr(compilation, result);
 
-    // As mentioned, rhs must always be a constant integer.
+    // If this is selecting from a queue, the result is always a queue.
+    if (isQueue) {
+        result->type = compilation.emplace<QueueType>(elementType, 0);
+        return *result;
+    }
+
+    // If not a queue, rhs must always be a constant integer.
     optional<int32_t> rv = context.evalInteger(right);
     if (!rv)
         return badExpr(compilation, result);
@@ -774,11 +792,17 @@ optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& cont
     }
 
     // Out of bounds ranges are allowed, we just issue a warning.
-    if (l < 0 || r < 0 || size_t(r) >= cv.elements().size()) {
+    size_t size;
+    if (cv.isQueue())
+        size = cv.queue()->size();
+    else
+        size = cv.elements().size();
+
+    if (l < 0 || r < 0 || size_t(r) >= size) {
         auto& diag = context.addDiag(diag::ConstEvalDynamicArrayRange, sourceRange);
         diag << result.left << result.right;
         diag << valueType;
-        diag << cv.elements().size();
+        diag << size;
     }
 
     return result;

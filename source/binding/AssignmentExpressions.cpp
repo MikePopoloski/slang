@@ -566,12 +566,24 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
         // must have the same number of elements in the source.
         ASSERT(!to.hasFixedRange() || !from.hasFixedRange());
         if (to.hasFixedRange()) {
-            size_t size = value.elements().size();
+            size_t size = value.isQueue() ? value.queue()->size() : value.elements().size();
             if (size != to.getFixedRange().width()) {
                 context.addDiag(diag::ConstEvalDynamicToFixedSize, sourceRange)
                     << from << size << to;
                 return nullptr;
             }
+        }
+
+        if (!to.isQueue() && from.isQueue()) {
+            // Convert from queue to vector.
+            auto& q = *value.queue();
+            return std::vector(q.begin(), q.end());
+        }
+
+        if (to.isQueue() && !from.isQueue()) {
+            // Convert from vector to queue.
+            auto elems = value.elements();
+            return SVQueue(elems.begin(), elems.end());
         }
 
         return value;

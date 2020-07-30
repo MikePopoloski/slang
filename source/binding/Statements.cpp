@@ -941,6 +941,14 @@ static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cv
             return false;
         }
 
+        if (cvr.isQueue()) {
+            for (auto& elem : *cvr.queue()) {
+                if (checkMatch(condition, cvl, elem))
+                    return true;
+            }
+            return false;
+        }
+
         // Same for associative arrays.
         if (cvr.isMap()) {
             for (auto& [key, val] : *cvr.map()) {
@@ -1361,6 +1369,21 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue
             ER result;
             if (currDims.size() > 1)
                 result = evalRecursive(context, val, currDims.subspan(1));
+            else
+                result = body.eval(context);
+
+            if (result != ER::Success && result != ER::Continue)
+                return result;
+        }
+    }
+    else if (cv.isQueue()) {
+        auto& q = *cv.queue();
+        for (int32_t i = 0; i < q.size(); i++) {
+            *local = SVInt(32, uint64_t(i), true);
+
+            ER result;
+            if (currDims.size() > 1)
+                result = evalRecursive(context, q[size_t(i)], currDims.subspan(1));
             else
                 result = body.eval(context);
 

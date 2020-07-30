@@ -483,7 +483,9 @@ QueueType::QueueType(const Type& elementType, uint32_t maxSize) :
 }
 
 ConstantValue QueueType::getDefaultValueImpl() const {
-    return std::vector<ConstantValue>();
+    SVQueue result;
+    result.maxSize = maxSize;
+    return result;
 }
 
 PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned,
