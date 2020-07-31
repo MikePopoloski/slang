@@ -431,3 +431,52 @@ endmodule
     CHECK(diags[4].code == diag::ExpectedModuleName);
     CHECK(diags[5].code == diag::BadSystemSubroutineArg);
 }
+
+TEST_CASE("file i/o functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    string str;
+    integer i;
+    int mem[4];
+    real r;
+    initial begin
+        i = $ferror(i, str);
+        i = $fgets(str, i);
+        i = $fscanf(i, "%d", i);
+        i = $sscanf(str, "%d", i);
+        i = $fread(i, i);
+        i = $fread(mem, i);
+        i = $fread(mem, i, 4);
+        i = $fread(mem, i, , 5);
+
+        $ferror(1, 2, 3);
+        $ferror(mem, 2);
+        $ferror(1, 2);
+        $ferror(1, mem);
+
+        $fgets(1, 2, 3);
+        $fgets(1, 2);
+        $fgets(mem, 2);
+        $fgets(i, mem);
+
+        $fscanf(1);
+        $fscanf(mem, "str");
+        $sscanf(mem, "str");
+        $fscanf(1, mem);
+
+        $fread(1);
+        $fread(1, 2);
+        $fread(r, 1);
+        $fread(i, r);
+        $fread(i, i, r);
+        $fread(i, i, i, r);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK(diags.size() == 18);
+}
