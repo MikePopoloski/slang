@@ -394,6 +394,7 @@ warning elem-not-found ConstEvalAssociativeElementNotFound "element {} does not 
 warning static-skipped ConstEvalStaticSkipped "static variable initialization is skipped in constant function calls"
 warning dynarray-index ConstEvalDynamicArrayIndex "invalid index {} for {} of length {}"
 warning dynarray-range ConstEvalDynamicArrayRange "invalid range [{}:{}] for {} of length {}"
+warning queue-range ConstEvalQueueRange "reversed selection range [{}:{}] for queue will always yield an empty result"
 
 subsystem Compilation
 error MaxInstanceDepthExceeded "module instantiation exceeded maximum depth of {}"

@@ -672,6 +672,13 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
         if (!range)
             return nullptr;
 
+        // If this is a queue, we didn't verify the endianness of the selection.
+        // Check if it's reversed here and issue a warning if so.
+        if (value().type->isQueue() && range->isLittleEndian() && range->left != range->right) {
+            context.addDiag(diag::ConstEvalQueueRange, sourceRange) << range->left << range->right;
+            return value().type->getDefaultValue();
+        }
+
         return cv.getSlice(range->upper(), range->lower(),
                            type->getArrayElementType()->getDefaultValue());
     }

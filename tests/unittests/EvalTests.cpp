@@ -529,7 +529,7 @@ TEST_CASE("Dynamic array eval") {
     NO_SESSION_ERRORS;
 }
 
-TEST_CASE("Dynamic array -- out of bounds") {
+TEST_CASE("Dynamic arrays -- out of bounds") {
     // Out of bounds accesses
     ScriptSession session;
     session.eval("int arr[] = '{1, 2, 3, 4};");
@@ -545,12 +545,18 @@ TEST_CASE("Dynamic array -- out of bounds") {
     CHECK(cv.elements()[2].integer() == 10);
     CHECK(cv.elements()[3].integer() == 3);
 
+    // Reversed queue selection results in a warning
+    session.eval("int q[$] = '{1, 2, 3, 4};");
+    cv = session.eval("q[1:0]");
+    CHECK(cv.queue()->empty());
+
     auto diags = session.getDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::ConstEvalDynamicArrayIndex);
     CHECK(diags[1].code == diag::ConstEvalDynamicArrayIndex);
     CHECK(diags[2].code == diag::ConstEvalDynamicArrayRange);
     CHECK(diags[3].code == diag::ConstEvalDynamicArrayRange);
+    CHECK(diags[4].code == diag::ConstEvalQueueRange);
 }
 
 TEST_CASE("Associative array eval") {
@@ -660,6 +666,18 @@ TEST_CASE("Queue eval") {
     CHECK(session.eval("arr.size").integer() == 4);
     session.eval("arr[4] = 22;");
     CHECK(session.eval("arr.size").integer() == 5);
+    CHECK(session.eval("$size(arr)").integer() == 5);
+
+    session.eval(R"(
+function int func(int i, int arr[$]);
+    case (i) inside
+        [5'd1:5'd2]: return 1;
+        arr: return 2;
+    endcase
+    return 3;
+endfunction
+)");
+    CHECK(session.eval("func(22, arr)").integer() == 2);
 
     NO_SESSION_ERRORS;
 }
@@ -1142,7 +1160,7 @@ TEST_CASE("Eval foreach loop dynamic") {
 function automatic int foo();
     int result = 0;
     int asdf [3][];
-    int baz [2][string][];
+    int baz [2][string][$];
 
     asdf[0] = '{1, 2, 3, 4};
     asdf[2] = '{10, 11};
