@@ -552,13 +552,18 @@ TEST_CASE("Dynamic arrays -- out of bounds") {
     cv = session.eval("q[1:0]");
     CHECK(cv.queue()->empty());
 
+    // Pop from empty queue
+    session.eval("for (int i = 0; i < 4; i++) void'(q.pop_front());");
+    CHECK(session.eval("q.pop_back()").integer() == 0);
+
     auto diags = session.getDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ConstEvalDynamicArrayIndex);
     CHECK(diags[1].code == diag::ConstEvalDynamicArrayIndex);
     CHECK(diags[2].code == diag::ConstEvalDynamicArrayRange);
     CHECK(diags[3].code == diag::ConstEvalDynamicArrayRange);
     CHECK(diags[4].code == diag::ConstEvalQueueRange);
+    CHECK(diags[5].code == diag::ConstEvalEmptyQueue);
 }
 
 TEST_CASE("Associative array eval") {
@@ -687,6 +692,21 @@ endfunction
 
     session.eval("int empty[$];");
     CHECK(session.eval("empty.and").integer() == 0);
+
+    session.eval("empty.push_back(5);");
+    session.eval("empty.push_back(6);");
+    session.eval("empty.push_front(9);");
+    cv = session.eval("empty");
+    REQUIRE(cv.queue()->size() == 3);
+    CHECK((*cv.queue())[0].integer() == 9);
+    CHECK((*cv.queue())[1].integer() == 5);
+    CHECK((*cv.queue())[2].integer() == 6);
+
+    CHECK(session.eval("empty.pop_back()").integer() == 6);
+    CHECK(session.eval("empty.pop_front()").integer() == 9);
+    cv = session.eval("empty");
+    REQUIRE(cv.queue()->size() == 1);
+    CHECK((*cv.queue())[0].integer() == 5);
 
     NO_SESSION_ERRORS;
 }
@@ -1529,7 +1549,7 @@ struct { logic [4:1][2:9] foo[3][]; } asdf [4][][string][int];
     session.eval("asdf[1][2][\"hello\"][-9876].foo[0] = new[9];");
     session.eval("asdf[1][2][\"hello\"][-9876].foo[0][7][4] = 0;");
     session.eval("asdf[1][2][\"hello\"][-9876].foo[0][7][4][2:4] += 3'd7;");
-    
+
     auto cv = session.eval("asdf[1][2][\"hello\"][-9876].foo[0][7][4]");
     CHECK(cv.integer() == 224);
 

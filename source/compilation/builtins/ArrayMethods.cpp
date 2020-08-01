@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/util/Function.h"
 
@@ -180,6 +181,99 @@ public:
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
+class QueuePopMethod : public SystemSubroutine {
+public:
+    QueuePopMethod(const std::string& name, bool front) :
+        SystemSubroutine(name, SubroutineKind::Function), front(front) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        return *args[0]->type->getArrayElementType();
+    }
+
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+        auto lval = args[0]->evalLValue(context);
+        if (!lval)
+            return nullptr;
+
+        auto target = lval.resolve();
+        ASSERT(target && target->isQueue());
+
+        auto& q = *target->queue();
+        if (q.empty()) {
+            context.addDiag(diag::ConstEvalEmptyQueue, args[0]->sourceRange);
+            return args[0]->type->getArrayElementType()->getDefaultValue();
+        }
+
+        ConstantValue result = front ? std::move(q.front()) : std::move(q.back());
+        if (front)
+            q.pop_front();
+        else
+            q.pop_back();
+
+        return result;
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+
+private:
+    bool front;
+};
+
+class QueuePushMethod : public SystemSubroutine {
+public:
+    QueuePushMethod(const std::string& name, bool front) :
+        SystemSubroutine(name, SubroutineKind::Function), front(front) {}
+
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        // Argument type comes from the element type of the queue.
+        if (argIndex == 1) {
+            auto elemType = args[0]->type->getArrayElementType();
+            if (elemType)
+                return Expression::bindArgument(*elemType, ArgumentDirection::In, syntax, context);
+        }
+
+        return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 1, 1))
+            return comp.getErrorType();
+
+        return comp.getVoidType();
+    }
+
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+        auto lval = args[0]->evalLValue(context);
+        auto cv = args[1]->eval(context);
+        if (!lval || !cv)
+            return nullptr;
+
+        auto target = lval.resolve();
+        ASSERT(target && target->isQueue());
+
+        auto& q = *target->queue();
+        if (front)
+            q.push_front(std::move(cv));
+        else
+            q.push_back(std::move(cv));
+
+        return nullptr;
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+
+private:
+    bool front;
+};
+
 void registerArrayMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -202,6 +296,12 @@ void registerArrayMethods(Compilation& c) {
     // "delete" methods
     REGISTER(SymbolKind::DynamicArrayType, DynArrayDelete, c);
     REGISTER(SymbolKind::AssociativeArrayType, AssocArrayDelete, );
+
+    // Queue methods
+    REGISTER(SymbolKind::QueueType, QueuePop, "pop_front", true);
+    REGISTER(SymbolKind::QueueType, QueuePop, "pop_back", false);
+    REGISTER(SymbolKind::QueueType, QueuePush, "push_front", true);
+    REGISTER(SymbolKind::QueueType, QueuePush, "push_back", false);
 }
 
 } // namespace slang::Builtins

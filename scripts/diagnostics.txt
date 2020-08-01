@@ -395,6 +395,7 @@ warning static-skipped ConstEvalStaticSkipped "static variable initialization is
 warning dynarray-index ConstEvalDynamicArrayIndex "invalid index {} for {} of length {}"
 warning dynarray-range ConstEvalDynamicArrayRange "invalid range [{}:{}] for {} of length {}"
 warning queue-range ConstEvalQueueRange "reversed selection range [{}:{}] for queue will always yield an empty result"
+warning empty-queue ConstEvalEmptyQueue "pop from empty queue"
 
 subsystem Compilation
 error MaxInstanceDepthExceeded "module instantiation exceeded maximum depth of {}"
