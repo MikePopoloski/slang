@@ -526,6 +526,8 @@ TEST_CASE("Dynamic array eval") {
     session.eval("arr.delete");
     CHECK(session.eval("arr.size()").integer() == 0);
 
+    CHECK(session.eval("arr.xor").integer() == 0);
+
     NO_SESSION_ERRORS;
 }
 
@@ -594,6 +596,8 @@ TEST_CASE("Associative array eval") {
     CHECK(session.eval("arr.size").integer() == 3);
     CHECK(session.eval("arr.num").integer() == 3);
 
+    CHECK(session.eval("arr.or").integer() == 31);
+
     session.eval("arr.delete(\"foo\")");
     CHECK(session.eval("arr.size").integer() == 3);
 
@@ -604,6 +608,8 @@ TEST_CASE("Associative array eval") {
     CHECK(session.eval("arr.size").integer() == 0);
     cv = session.eval("arr");
     CHECK(cv.map()->empty());
+
+    CHECK(session.eval("arr.or").integer() == 0);
 
     session.eval(R"(
 function int func(int i, integer arr[string]);
@@ -678,6 +684,9 @@ function int func(int i, int arr[$]);
 endfunction
 )");
     CHECK(session.eval("func(22, arr)").integer() == 2);
+
+    session.eval("int empty[$];");
+    CHECK(session.eval("empty.and").integer() == 0);
 
     NO_SESSION_ERRORS;
 }

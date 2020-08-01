@@ -7,13 +7,16 @@
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/util/Function.h"
 
 namespace slang::Builtins {
 
 class ArrayReductionMethod : public SystemSubroutine {
 public:
-    explicit ArrayReductionMethod(const std::string& name) :
-        SystemSubroutine(name, SubroutineKind::Function) {}
+    using Operator = function_ref<void(SVInt&, const SVInt&)>;
+
+    ArrayReductionMethod(const std::string& name, Operator op) :
+        SystemSubroutine(name, SubroutineKind::Function), op(op) {}
 
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final {
@@ -33,42 +36,53 @@ public:
         return *elemType;
     }
 
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+        ConstantValue arr = args[0]->eval(context);
+        if (!arr)
+            return nullptr;
+
+        auto elemType = args[0]->type->getArrayElementType();
+        if (arr.isQueue()) {
+            auto& q = *arr.queue();
+            if (q.empty())
+                return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
+
+            SVInt result = q[0].integer();
+            for (size_t i = 1; i < q.size(); i++)
+                op(result, q[i].integer());
+
+            return result;
+        }
+        else if (arr.isMap()) {
+            auto& map = *arr.map();
+            if (map.empty())
+                return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
+
+            auto it = map.begin();
+            SVInt result = it->second.integer();
+            for (; it != map.end(); it++)
+                op(result, it->second.integer());
+
+            return result;
+        }
+        else {
+            auto elems = arr.elements();
+            if (elems.empty())
+                return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
+
+            SVInt result = elems[0].integer();
+            for (auto& elem : elems.subspan(1))
+                op(result, elem.integer());
+
+            return result;
+        }
+    }
+
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+
+private:
+    Operator op;
 };
-
-#define MAKE_REDUCTION_METHOD(typeName, sourceName, op)                                        \
-    class Array##typeName##Method : public ArrayReductionMethod {                              \
-    public:                                                                                    \
-        Array##typeName##Method() : ArrayReductionMethod(sourceName) {}                        \
-                                                                                               \
-        ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final { \
-            ConstantValue arr = args[0]->eval(context);                                        \
-            if (!arr)                                                                          \
-                return nullptr;                                                                \
-                                                                                               \
-            if (arr.isQueue()) {                                                               \
-                auto& q = *arr.queue();                                                        \
-                SVInt result = q[0].integer();                                                 \
-                for (size_t i = 1; i < q.size(); i++)                                          \
-                    result op q[i].integer();                                                  \
-                                                                                               \
-                return result;                                                                 \
-            }                                                                                  \
-            else {                                                                             \
-                SVInt result = arr.elements()[0].integer();                                    \
-                for (auto& elem : arr.elements().subspan(1))                                   \
-                    result op elem.integer();                                                  \
-                                                                                               \
-                return result;                                                                 \
-            }                                                                                  \
-        }                                                                                      \
-    };
-
-MAKE_REDUCTION_METHOD(Or, "or", |=)
-MAKE_REDUCTION_METHOD(And, "and", &=)
-MAKE_REDUCTION_METHOD(Xor, "xor", ^=)
-
-#undef MAKE_REDUCTION_METHOD
 
 class ArraySizeMethod : public SimpleSystemSubroutine {
 public:
@@ -172,9 +186,9 @@ void registerArrayMethods(Compilation& c) {
 
     for (auto kind : { SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
                        SymbolKind::AssociativeArrayType, SymbolKind::QueueType }) {
-        REGISTER(kind, ArrayOr, );
-        REGISTER(kind, ArrayAnd, );
-        REGISTER(kind, ArrayXor, );
+        REGISTER(kind, ArrayReduction, "or", [](auto& l, auto& r) { l |= r; });
+        REGISTER(kind, ArrayReduction, "and", [](auto& l, auto& r) { l &= r; });
+        REGISTER(kind, ArrayReduction, "xor", [](auto& l, auto& r) { l ^= r; });
     }
 
     for (auto kind : { SymbolKind::DynamicArrayType, SymbolKind::AssociativeArrayType,
