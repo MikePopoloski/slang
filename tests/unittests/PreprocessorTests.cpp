@@ -1571,3 +1571,17 @@ endmodule
     preprocess(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Non-macro replacement with backtick -- crash regress") {
+    auto& text = R"(
+`define FOO(a = `BAR) `a
+`define BAR ,
+`FOO(`BAR)
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == "\n,\n");
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::MisplacedDirectiveChar);
+}

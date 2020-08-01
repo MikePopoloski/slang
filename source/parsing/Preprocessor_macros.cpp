@@ -4,6 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
+#include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
@@ -356,9 +357,17 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         // See note above about weird macro usage being argument replaced.
         // In that case we want to fabricate the correct directive token here.
         if (token.kind == TokenKind::Directive) {
-            Token grave(alloc, TokenKind::Directive, first.trivia(), "`"sv, firstLoc,
+            Token grave(alloc, TokenKind::Unknown, first.trivia(), "`"sv, firstLoc,
                         SyntaxKind::Unknown);
-            first = Lexer::concatenateTokens(alloc, grave, first);
+
+            Token combined = Lexer::concatenateTokens(alloc, grave, first);
+            if (combined) {
+                first = combined;
+            }
+            else {
+                // Failed to combine, so ignore the grave and issue an error.
+                addDiag(diag::MisplacedDirectiveChar, firstLoc);
+            }
         }
 
         expansion.append(first, argLoc, firstLoc, argRange);
