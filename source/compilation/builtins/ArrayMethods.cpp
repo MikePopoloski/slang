@@ -274,6 +274,107 @@ private:
     bool front;
 };
 
+class QueueInsertMethod : public SystemSubroutine {
+public:
+    QueueInsertMethod() : SystemSubroutine("insert", SubroutineKind::Function) {}
+
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        // Argument type comes from the element type of the queue.
+        if (argIndex == 2) {
+            auto elemType = args[0]->type->getArrayElementType();
+            if (elemType)
+                return Expression::bindArgument(*elemType, ArgumentDirection::In, syntax, context);
+        }
+
+        return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 2, 2))
+            return comp.getErrorType();
+
+        if (!args[1]->type->isIntegral())
+            return badArg(context, *args[1]);
+
+        return comp.getVoidType();
+    }
+
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+        auto lval = args[0]->evalLValue(context);
+        auto ci = args[1]->eval(context);
+        auto cv = args[2]->eval(context);
+        if (!lval || !ci || !cv)
+            return nullptr;
+
+        auto target = lval.resolve();
+        ASSERT(target && target->isQueue());
+
+        auto& q = *target->queue();
+        optional<int32_t> index = ci.integer().as<int32_t>();
+        if (!index || *index < 0 || size_t(*index) >= q.size() + 1) {
+            context.addDiag(diag::ConstEvalDynamicArrayIndex, args[1]->sourceRange)
+                << ci << *args[0]->type << q.size() + 1;
+            return nullptr;
+        }
+
+        q.insert(q.begin() + *index, std::move(cv));
+        return nullptr;
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+};
+
+class QueueDeleteMethod : public SystemSubroutine {
+public:
+    QueueDeleteMethod() : SystemSubroutine("delete", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 1))
+            return comp.getErrorType();
+
+        if (args.size() > 1) {
+            if (!args[1]->type->isIntegral())
+                return badArg(context, *args[1]);
+        }
+
+        return comp.getVoidType();
+    }
+
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+        auto lval = args[0]->evalLValue(context);
+        if (!lval)
+            return nullptr;
+
+        auto target = lval.resolve();
+        ASSERT(target && target->isQueue());
+        auto& q = *target->queue();
+
+        // If no arguments, clear the queue.
+        if (args.size() == 1) {
+            q.clear();
+            return nullptr;
+        }
+
+        auto ci = args[1]->eval(context);
+        optional<int32_t> index = ci.integer().as<int32_t>();
+        if (!index || *index < 0 || size_t(*index) >= q.size()) {
+            context.addDiag(diag::ConstEvalDynamicArrayIndex, args[1]->sourceRange)
+                << ci << *args[0]->type << q.size();
+            return nullptr;
+        }
+
+        q.erase(q.begin() + *index);
+        return nullptr;
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+};
+
 void registerArrayMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -296,12 +397,14 @@ void registerArrayMethods(Compilation& c) {
     // "delete" methods
     REGISTER(SymbolKind::DynamicArrayType, DynArrayDelete, c);
     REGISTER(SymbolKind::AssociativeArrayType, AssocArrayDelete, );
+    REGISTER(SymbolKind::QueueType, QueueDelete, );
 
     // Queue methods
     REGISTER(SymbolKind::QueueType, QueuePop, "pop_front", true);
     REGISTER(SymbolKind::QueueType, QueuePop, "pop_back", false);
     REGISTER(SymbolKind::QueueType, QueuePush, "push_front", true);
     REGISTER(SymbolKind::QueueType, QueuePush, "push_back", false);
+    REGISTER(SymbolKind::QueueType, QueueInsert, );
 }
 
 } // namespace slang::Builtins

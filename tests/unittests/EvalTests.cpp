@@ -696,17 +696,23 @@ endfunction
     session.eval("empty.push_back(5);");
     session.eval("empty.push_back(6);");
     session.eval("empty.push_front(9);");
+    session.eval("empty.insert(2, 12);");
     cv = session.eval("empty");
-    REQUIRE(cv.queue()->size() == 3);
+    REQUIRE(cv.queue()->size() == 4);
     CHECK((*cv.queue())[0].integer() == 9);
     CHECK((*cv.queue())[1].integer() == 5);
-    CHECK((*cv.queue())[2].integer() == 6);
+    CHECK((*cv.queue())[2].integer() == 12);
+    CHECK((*cv.queue())[3].integer() == 6);
 
+    session.eval("empty.delete(1)");
     CHECK(session.eval("empty.pop_back()").integer() == 6);
     CHECK(session.eval("empty.pop_front()").integer() == 9);
     cv = session.eval("empty");
     REQUIRE(cv.queue()->size() == 1);
-    CHECK((*cv.queue())[0].integer() == 5);
+    CHECK((*cv.queue())[0].integer() == 12);
+
+    session.eval("empty.delete");
+    CHECK(session.eval("empty.size").integer() == 0);
 
     NO_SESSION_ERRORS;
 }
