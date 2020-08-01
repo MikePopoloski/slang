@@ -20,6 +20,7 @@ public:
 
     ConstantValue eval(string_view text);
     ConstantValue evalExpression(const ExpressionSyntax& expr);
+    void evalStatement(const StatementSyntax& expr);
 
     Diagnostics getDiagnostics();
 

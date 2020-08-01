@@ -7,6 +7,8 @@
 #include "slang/compilation/ScriptSession.h"
 
 #include "slang/binding/Expression.h"
+#include "slang/binding/Statements.h"
+#include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 
@@ -51,12 +53,18 @@ ConstantValue ScriptSession::eval(string_view text) {
                 scope.addMembers(*member);
             return nullptr;
         default:
-            if (ExpressionSyntax::isKind(node.kind))
+            if (ExpressionSyntax::isKind(node.kind)) {
                 return evalExpression(node.as<ExpressionSyntax>());
-            else
+            }
+            else if (StatementSyntax::isKind(node.kind)) {
+                evalStatement(node.as<StatementSyntax>());
+                return nullptr;
+            }
+            else {
                 // If this throws, ScriptSession doesn't currently support whatever construct
                 // you were trying to evaluate. Add support to the case above.
                 THROW_UNREACHABLE;
+            }
     }
 }
 
@@ -64,6 +72,16 @@ ConstantValue ScriptSession::evalExpression(const ExpressionSyntax& expr) {
     BindContext context(scope, LookupLocation::max, BindFlags::ProceduralStatement);
     auto& bound = Expression::bind(expr, context, BindFlags::AssignmentAllowed);
     return bound.eval(evalContext);
+}
+
+void ScriptSession::evalStatement(const StatementSyntax& stmt) {
+    StatementBinder binder;
+    binder.setSyntax(scope, stmt, false);
+    for (auto block : binder.getBlocks())
+        scope.addMember(*block);
+
+    BindContext context(scope, LookupLocation::max, BindFlags::ProceduralStatement);
+    binder.getStatement(context).eval(evalContext);
 }
 
 Diagnostics ScriptSession::getDiagnostics() {
