@@ -187,6 +187,7 @@ decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
         CASE(Return, ReturnStatement);
         CASE(Break, BreakStatement);
         CASE(Continue, ContinueStatement);
+        CASE(Disable, DisableStatement);
         CASE(Conditional, ConditionalStatement);
         CASE(Case, CaseStatement);
         CASE(ForLoop, ForLoopStatement);

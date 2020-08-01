@@ -108,6 +108,8 @@ struct LookupResult {
     void clear();
     void copyFrom(const LookupResult& other);
 
+    void reportErrors(const BindContext& context);
+
 private:
     Diagnostics diagnostics;
 };

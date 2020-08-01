@@ -123,6 +123,10 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                 result = &ContinueStatement::fromSyntax(comp, jump, context, stmtCtx);
             break;
         }
+        case SyntaxKind::DisableStatement:
+            result =
+                &DisableStatement::fromSyntax(comp, syntax.as<DisableStatementSyntax>(), context);
+            break;
         case SyntaxKind::ConditionalStatement:
             result = &ConditionalStatement::fromSyntax(
                 comp, syntax.as<ConditionalStatementSyntax>(), context, stmtCtx);
@@ -196,7 +200,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::ProceduralForceStatement:
         case SyntaxKind::ProceduralDeassignStatement:
         case SyntaxKind::ProceduralReleaseStatement:
-        case SyntaxKind::DisableStatement:
         case SyntaxKind::DisableForkStatement:
         case SyntaxKind::BlockingEventTriggerStatement:
         case SyntaxKind::NonblockingEventTriggerStatement:
@@ -586,7 +589,20 @@ ER BlockStatement::evalImpl(EvalContext& context) const {
     if (blockKind != StatementBlockKind::Sequential)
         return ER::Fail;
 
-    return getStatements().eval(context);
+    ER result = getStatements().eval(context);
+    if (result == ER::Disable) {
+        // Check if the disable statement we evaluated was targeting this block.
+        // If it was, we've already skipped enough statements, so just clear out
+        // the target and continue on.
+        auto target = context.getDisableTarget();
+        ASSERT(target);
+        if (target == block) {
+            result = ER::Success;
+            context.setDisableTarget(nullptr, {});
+        }
+    }
+
+    return result;
 }
 
 bool BlockStatement::verifyConstantImpl(EvalContext& context) const {
@@ -689,6 +705,49 @@ ER ContinueStatement::evalImpl(EvalContext&) const {
 
 bool ContinueStatement::verifyConstantImpl(EvalContext&) const {
     return true;
+}
+
+Statement& DisableStatement::fromSyntax(Compilation& compilation,
+                                        const DisableStatementSyntax& syntax,
+                                        const BindContext& context) {
+    LookupResult result;
+    Lookup::name(context.scope, *syntax.name, context.lookupLocation,
+                 LookupFlags::AllowDeclaredAfter, result);
+    result.reportErrors(context);
+
+    const Symbol* symbol = result.found;
+    if (!symbol)
+        return badStmt(compilation, nullptr);
+
+    if (symbol->kind != SymbolKind::StatementBlock &&
+        (symbol->kind != SymbolKind::Subroutine ||
+         symbol->as<SubroutineSymbol>().subroutineKind != SubroutineKind::Task)) {
+        context.addDiag(diag::InvalidDisableTarget, syntax.name->sourceRange());
+        return badStmt(compilation, nullptr);
+    }
+
+    return *compilation.emplace<DisableStatement>(*symbol, result.isHierarchical,
+                                                  syntax.sourceRange());
+}
+
+ER DisableStatement::evalImpl(EvalContext& context) const {
+    ASSERT(!context.getDisableTarget());
+    context.setDisableTarget(&target, sourceRange);
+    return ER::Disable;
+}
+
+bool DisableStatement::verifyConstantImpl(EvalContext& context) const {
+    // Hierarchical names are disallowed in constant expressions and constant functions
+    if (isHierarchical) {
+        context.addDiag(diag::ConstEvalHierarchicalNameInCE, sourceRange) << target.name;
+        return false;
+    }
+
+    return true;
+}
+
+void DisableStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("target", target);
 }
 
 ER VariableDeclStatement::evalImpl(EvalContext& context) const {
@@ -1144,7 +1203,7 @@ ER ForLoopStatement::evalImpl(EvalContext& context) const {
         if (result != ER::Success) {
             if (result == ER::Break)
                 break;
-            else if (result == ER::Fail || result == ER::Return)
+            else if (result != ER::Continue)
                 return result;
         }
 
@@ -1236,7 +1295,7 @@ ER RepeatLoopStatement::evalImpl(EvalContext& context) const {
         if (result != ER::Success) {
             if (result == ER::Break)
                 break;
-            else if (result == ER::Fail || result == ER::Return)
+            else if (result != ER::Continue)
                 return result;
         }
     }
@@ -1480,7 +1539,7 @@ ER WhileLoopStatement::evalImpl(EvalContext& context) const {
         if (result != ER::Success) {
             if (result == ER::Break)
                 break;
-            else if (result == ER::Fail || result == ER::Return)
+            else if (result != ER::Continue)
                 return result;
         }
     }
@@ -1522,7 +1581,7 @@ ER DoWhileLoopStatement::evalImpl(EvalContext& context) const {
         if (result != ER::Success) {
             if (result == ER::Break)
                 break;
-            else if (result == ER::Fail || result == ER::Return)
+            else if (result != ER::Continue)
                 return result;
         }
 
@@ -1565,7 +1624,7 @@ ER ForeverLoopStatement::evalImpl(EvalContext& context) const {
         if (result != ER::Success) {
             if (result == ER::Break)
                 break;
-            else if (result == ER::Fail || result == ER::Return)
+            else if (result != ER::Continue)
                 return result;
         }
     }

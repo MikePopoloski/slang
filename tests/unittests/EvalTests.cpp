@@ -1169,6 +1169,32 @@ endfunction
     NO_SESSION_ERRORS;
 }
 
+TEST_CASE("Eval disable statement") {
+    ScriptSession session;
+    session.eval(R"(
+function int foo;
+    automatic int result = 0;
+    begin : bar
+        for (int i = 0; i < 5; i++) begin : baz
+            for (int j = 0; j < 4; j++) begin : boz
+                if (j == 2)
+                    disable boz;
+                result++;
+                if (j == 3)
+                    disable baz;
+            end
+            if (i == 3)
+                disable bar;
+        end
+    end
+    return result;
+  endfunction
+)");
+
+    CHECK(session.eval("foo()").integer() == 15);
+    NO_SESSION_ERRORS;
+}
+
 TEST_CASE("Eval enum methods") {
     ScriptSession session;
     session.eval("typedef enum { SDF = 2, BAR[5] = 4, BAZ = 99 } e_t;");

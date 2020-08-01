@@ -43,6 +43,7 @@ public:
     void visit(const ReturnStatement&) {}
     void visit(const BreakStatement&) {}
     void visit(const ContinueStatement&) {}
+    void visit(const DisableStatement&) {}
     void visit(const ConditionalStatement&) {}
     void visit(const CaseStatement&) {}
     void visit(const ForLoopStatement&) {}

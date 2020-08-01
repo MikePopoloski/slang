@@ -32,6 +32,7 @@ struct StatementSyntax;
     x(Return) \
     x(Continue) \
     x(Break) \
+    x(Disable) \
     x(Conditional) \
     x(Case) \
     x(ForLoop) \
@@ -91,7 +92,10 @@ public:
         Break,
 
         /// A continue statement was invoked; we should continue the current loop.
-        Continue
+        Continue,
+
+        /// A disable statement was invoked; we should exit blocks until we find the target.
+        Disable
     };
 
     /// Evaluates the statement under the given evaluation context.
@@ -322,9 +326,31 @@ public:
     static Statement& fromSyntax(Compilation& compilation, const JumpStatementSyntax& syntax,
                                  const BindContext& context, StatementContext& stmtCtx);
 
-    void serializeTo(const ASTSerializer&) const {}
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Continue; }
+};
+
+struct DisableStatementSyntax;
+
+class DisableStatement : public Statement {
+public:
+    const Symbol& target;
+    bool isHierarchical;
+
+    DisableStatement(const Symbol& target, bool isHierarchical, SourceRange sourceRange) :
+        Statement(StatementKind::Disable, sourceRange),
+        target(target), isHierarchical(isHierarchical) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const DisableStatementSyntax& syntax,
+                                 const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Disable; }
 };
 
 class VariableDeclStatement : public Statement {

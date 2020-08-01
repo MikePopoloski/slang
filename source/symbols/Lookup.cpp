@@ -79,6 +79,21 @@ void LookupResult::copyFrom(const LookupResult& other) {
     diagnostics.appendRange(other.diagnostics);
 }
 
+void LookupResult::reportErrors(const BindContext& context) {
+    if (!hasError())
+        return;
+
+    // If we failed to find the symbol because of restrictions on hierarchical names
+    // inside constant expressions (which we know if evalContext is set) then issue
+    // a backtrace to give the user a bit more context.
+    if (!found && isHierarchical && context.evalContext) {
+        Diagnostic& first = diagnostics.front();
+        context.evalContext->reportStack(first);
+    }
+
+    context.getCompilation().addDiagnostics(diagnostics);
+}
+
 namespace {
 
 struct NamePlusLoc {

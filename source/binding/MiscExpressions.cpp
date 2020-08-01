@@ -1220,10 +1220,16 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     using ER = Statement::EvalResult;
     ER er = symbol.getBody(&context).eval(context);
 
+    // If we got a disable result, it means a disable statement was evaluated that
+    // targeted a block that wasn't executing. This isn't allowed in a constant expression.
+    // Handle this before popping the frame so that we get the stack reported.
+    if (er == ER::Disable)
+        context.addDiag(diag::ConstEvalDisableTarget, context.getDisableRange());
+
     ConstantValue result = std::move(*context.findLocal(symbol.returnValVar));
     context.popFrame();
 
-    if (er == ER::Fail)
+    if (er == ER::Fail || er == ER::Disable)
         return nullptr;
 
     ASSERT(er == ER::Success || er == ER::Return);

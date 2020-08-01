@@ -75,6 +75,23 @@ public:
     /// Gets the top of the call stack.
     const Frame& topFrame() const { return stack.back(); }
 
+    /// If a disable statement has been evaluated, this returns a pointer to the
+    /// block that should be disabled (presumed to be higher up in the stack).
+    /// Otherwise returns nullptr.
+    const Symbol* getDisableTarget() const { return disableTarget; }
+
+    /// If a disable statement has been evaluated, this returns the source
+    /// range denoting where that statement occurred. Otherwise returns an empty range.
+    SourceRange getDisableRange() const { return disableRange; }
+
+    /// Sets the target block that should be disabled, based on evaluating a
+    /// disable statement. This can be set to nullptr to clear out the target
+    /// once it has been found the disable is completed.
+    void setDisableTarget(const Symbol* symbol, SourceRange range) {
+        disableTarget = symbol;
+        disableRange = range;
+    }
+
     /// Dumps the contents of the call stack to a string for debugging.
     std::string dumpStack() const;
 
@@ -93,11 +110,13 @@ public:
     void reportStack(Diagnostic& diag) const;
 
 private:
-    SmallVectorSized<Frame, 4> stack;
-    Diagnostics diags;
-    bitmask<EvalFlags> flags;
     const Compilation& compilation;
     uint32_t steps = 0;
+    bitmask<EvalFlags> flags;
+    const Symbol* disableTarget = nullptr;
+    SmallVectorSized<Frame, 4> stack;
+    Diagnostics diags;
+    SourceRange disableRange;
 };
 
 } // namespace slang

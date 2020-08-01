@@ -78,6 +78,68 @@ endmodule
     CHECK(diags[5].code == diag::WrongNumberAssignmentPatterns);
 }
 
+TEST_CASE("Disable statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin : foo
+    end
+
+    task t; endtask
+
+    initial begin : bar
+        baz: for (int i = 0; i < 10; i++) begin
+            if (i == 4)
+                disable m.bar.baz;
+            else if (i == 5)
+                disable foo;
+            else if (i == 6)
+                disable bar;
+            else if (i == 7)
+                disable t;
+        end
+    end
+
+    int asdf;
+    function f; endfunction
+
+    initial begin
+        disable asdf;
+        disable f;
+    end
+
+    function int func;
+        disable m.bar.baz;
+        return 1;
+    endfunction
+
+    localparam int ip = func();
+
+    function int func2;
+        automatic int i = 0;
+        begin : baz
+            for (int j = 0; j < 10; j++) begin : boz
+                if (j == 3)
+                    disable bar; // illegal in constexpr, target not executing
+            end
+        end
+    endfunction
+
+    localparam int ip2 = func2();
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::InvalidDisableTarget);
+    CHECK(diags[1].code == diag::InvalidDisableTarget);
+    CHECK(diags[2].code == diag::ConstEvalHierarchicalNameInCE);
+    CHECK(diags[3].code == diag::ConstEvalDisableTarget);
+}
+
 TEST_CASE("Delay statements") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
