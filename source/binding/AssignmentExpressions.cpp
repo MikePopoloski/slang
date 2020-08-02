@@ -623,8 +623,10 @@ Expression& NewArrayExpression::fromSyntax(Compilation& compilation,
 
     auto& sizeExpr = selfDetermined(compilation, *syntax.sizeExpr, context);
     const Expression* initExpr = nullptr;
-    if (syntax.initializer)
-        initExpr = &selfDetermined(compilation, *syntax.initializer->expression, context);
+    if (syntax.initializer) {
+        initExpr = &bindRValue(*assignmentTarget, *syntax.initializer->expression,
+                               syntax.initializer->getFirstToken().location(), context);
+    }
 
     auto result = compilation.emplace<NewArrayExpression>(*assignmentTarget, sizeExpr, initExpr,
                                                           syntax.sourceRange());
@@ -633,12 +635,6 @@ Expression& NewArrayExpression::fromSyntax(Compilation& compilation,
 
     if (!sizeExpr.type->isIntegral()) {
         context.addDiag(diag::ExprMustBeIntegral, sizeExpr.sourceRange);
-        return badExpr(compilation, result);
-    }
-
-    if (initExpr && !assignmentTarget->isAssignmentCompatible(*initExpr->type)) {
-        context.addDiag(diag::BadAssignment, initExpr->sourceRange)
-            << *initExpr->type << *assignmentTarget;
         return badExpr(compilation, result);
     }
 
