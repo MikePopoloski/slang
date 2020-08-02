@@ -148,6 +148,7 @@ error DeclModifierOrdering "modifier '{}' must come before '{}' in a declaration
 error DeclModifierConflict "modifier '{}' cannot be used together with '{}' in a declaration"
 error TypeRefDeclVar "a type reference cannot be used in a variable declaration without a preceeding 'var' keyword"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
+warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 note NoteToMatchThis "to match this '{}'"
 
 subsystem Declarations
@@ -414,6 +415,9 @@ group default = { real-underflow real-overflow literal-overflow ignored-macro-pa
                   case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
                   redef-macro nonstandard-generate pointless-void-cast unused-result
                   not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg
-                  pragma-diag-level explicit-static static-skipped }
+                  pragma-diag-level explicit-static static-skipped format-real elem-not-found
+                  dynarray-index dynarray-range queue-range empty-queue }
 
 group extra = { empty-member empty-stmt dup-import }
+
+group pedantic = { empty-pattern implicit-net-port }

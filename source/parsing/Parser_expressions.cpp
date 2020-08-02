@@ -384,10 +384,20 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
 
     // we either have an expression here, or the default keyword for a pattern key
     ExpressionSyntax* firstExpr;
-    if (peek(TokenKind::DefaultKeyword))
+    if (peek(TokenKind::DefaultKeyword)) {
         firstExpr = &factory.literalExpression(SyntaxKind::DefaultPatternKeyExpression, consume());
-    else
+    }
+    else if (peek(TokenKind::CloseBrace)) {
+        // This is an empty pattern -- we'll just warn and continue on.
+        addDiag(diag::EmptyAssignmentPattern, openBrace.location());
+
+        auto pattern =
+            &factory.simpleAssignmentPattern(openBrace, span<TokenOrSyntax>{}, consume());
+        return factory.assignmentPatternExpression(type, *pattern);
+    }
+    else {
         firstExpr = &parseExpression();
+    }
 
     Token closeBrace;
     AssignmentPatternSyntax* pattern;

@@ -1065,12 +1065,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::NewArrayTarget);
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
     CHECK(diags[2].code == diag::ExprMustBeIntegral);
     CHECK(diags[3].code == diag::BadAssignment);
-    CHECK(diags[4].code == diag::ExpectedExpression);
+    CHECK(diags[4].code == diag::WrongNumberAssignmentPatterns);
+    CHECK(diags[5].code == diag::EmptyAssignmentPattern);
 }
 
 TEST_CASE("Unpacked array concatentions") {
@@ -1124,6 +1125,12 @@ module m;
     int a3[2] = {};
     int a4[] = {}; // ok
     int a5[$] = {}; // ok
+
+    int a6 = '{};
+    int a7[int] = '{};
+    int a8[2] = '{};
+    int a9[] = '{}; // ok
+    int aa[$] = '{}; // ok
 endmodule
 )");
 
@@ -1131,8 +1138,16 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::EmptyConcatNotAllowed);
     CHECK(diags[1].code == diag::UnpackedConcatAssociative);
     CHECK(diags[2].code == diag::UnpackedConcatSize);
+    CHECK(diags[3].code == diag::WrongNumberAssignmentPatterns);
+    CHECK(diags[4].code == diag::EmptyAssignmentPattern);
+    CHECK(diags[5].code == diag::AssignmentPatternAssociativeType);
+    CHECK(diags[6].code == diag::EmptyAssignmentPattern);
+    CHECK(diags[7].code == diag::WrongNumberAssignmentPatterns);
+    CHECK(diags[8].code == diag::EmptyAssignmentPattern);
+    CHECK(diags[9].code == diag::EmptyAssignmentPattern);
+    CHECK(diags[10].code == diag::EmptyAssignmentPattern);
 }
