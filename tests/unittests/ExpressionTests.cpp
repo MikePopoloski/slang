@@ -1115,3 +1115,24 @@ endmodule
     CHECK(diags[5].code == diag::UnpackedConcatAssociative);
     CHECK(diags[6].code == diag::BadConcatExpression);
 }
+
+TEST_CASE("Empty array concatenations") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a1 = {};
+    int a2[int] = {};
+    int a3[2] = {};
+    int a4[] = {}; // ok
+    int a5[$] = {}; // ok
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::EmptyConcatNotAllowed);
+    CHECK(diags[1].code == diag::UnpackedConcatAssociative);
+    CHECK(diags[2].code == diag::UnpackedConcatSize);
+}

@@ -1255,6 +1255,31 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     return *compilation.emplace<ConcatenationExpression>(*type, elements, syntax.sourceRange());
 }
 
+Expression& ConcatenationExpression::fromEmpty(Compilation& compilation,
+                                               const EmptyQueueExpressionSyntax& syntax,
+                                               const BindContext& context,
+                                               const Type* assignmentTarget) {
+    // Empty concatenation can only target arrays.
+    if (!assignmentTarget || !assignmentTarget->isUnpackedArray()) {
+        context.addDiag(diag::EmptyConcatNotAllowed, syntax.sourceRange());
+        return badExpr(compilation, nullptr);
+    }
+
+    if (assignmentTarget->isAssociativeArray()) {
+        context.addDiag(diag::UnpackedConcatAssociative, syntax.sourceRange());
+        return badExpr(compilation, nullptr);
+    }
+
+    if (assignmentTarget->hasFixedRange()) {
+        context.addDiag(diag::UnpackedConcatSize, syntax.sourceRange())
+            << *assignmentTarget << assignmentTarget->getFixedRange().width() << 0;
+        return badExpr(compilation, nullptr);
+    }
+
+    return *compilation.emplace<ConcatenationExpression>(
+        *assignmentTarget, span<const Expression* const>{}, syntax.sourceRange());
+}
+
 ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
     if (type->isUnpackedArray()) {
         auto& elemType = *type->getArrayElementType();

@@ -472,6 +472,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &ConcatenationExpression::fromSyntax(
                 compilation, syntax.as<ConcatenationExpressionSyntax>(), context, assignmentTarget);
             break;
+        case SyntaxKind::EmptyQueueExpression:
+            result = &ConcatenationExpression::fromEmpty(
+                compilation, syntax.as<EmptyQueueExpressionSyntax>(), context, assignmentTarget);
+            break;
         case SyntaxKind::MultipleConcatenationExpression:
             result = &ReplicationExpression::fromSyntax(
                 compilation, syntax.as<MultipleConcatenationExpressionSyntax>(), context);
@@ -513,7 +517,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::ArrayOrRandomizeMethodExpression:
         case SyntaxKind::BinarySequenceDelayExpression:
         case SyntaxKind::DefaultPatternKeyExpression:
-        case SyntaxKind::EmptyQueueExpression:
         case SyntaxKind::EventuallyPropertyExpression:
         case SyntaxKind::ExpressionOrDist:
         case SyntaxKind::IffPropertyExpression:

@@ -172,6 +172,7 @@ private:
 };
 
 struct ConcatenationExpressionSyntax;
+struct EmptyQueueExpressionSyntax;
 
 /// Represents a concatenation expression.
 class ConcatenationExpression : public Expression {
@@ -192,6 +193,9 @@ public:
     static Expression& fromSyntax(Compilation& compilation,
                                   const ConcatenationExpressionSyntax& syntax,
                                   const BindContext& context, const Type* assignmentTarget);
+
+    static Expression& fromEmpty(Compilation& compilation, const EmptyQueueExpressionSyntax& syntax,
+                                 const BindContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Concatenation; }
 
