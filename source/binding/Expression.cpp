@@ -511,12 +511,16 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &NewArrayExpression::fromSyntax(
                 compilation, syntax.as<NewArrayExpressionSyntax>(), context, assignmentTarget);
             break;
+        case SyntaxKind::DefaultPatternKeyExpression:
+            // This should not be reachable from any valid expression binding.
+            context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
+            result = &badExpr(compilation, nullptr);
+            break;
         case SyntaxKind::AcceptOnPropertyExpression:
         case SyntaxKind::AlwaysPropertyExpression:
         case SyntaxKind::AndSequenceExpression:
         case SyntaxKind::ArrayOrRandomizeMethodExpression:
         case SyntaxKind::BinarySequenceDelayExpression:
-        case SyntaxKind::DefaultPatternKeyExpression:
         case SyntaxKind::EventuallyPropertyExpression:
         case SyntaxKind::ExpressionOrDist:
         case SyntaxKind::IffPropertyExpression:

@@ -1151,3 +1151,18 @@ endmodule
     CHECK(diags[9].code == diag::EmptyAssignmentPattern);
     CHECK(diags[10].code == diag::EmptyAssignmentPattern);
 }
+
+TEST_CASE("Assignment pattern - invalid default") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i[] = '{default, 5};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpectedExpression);
+}
