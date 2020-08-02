@@ -552,7 +552,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         return nullptr;
 
     if (from.isMatching(to))
-        return value;
+        return std::move(value);
 
     if (to.isIntegral())
         return value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
@@ -596,7 +596,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
             return SVQueue(elems.begin(), elems.end());
         }
 
-        return value;
+        return std::move(value);
     }
 
     // TODO: other types
