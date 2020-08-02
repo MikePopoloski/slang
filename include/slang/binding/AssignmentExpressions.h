@@ -89,6 +89,9 @@ public:
                                   const SignedCastExpressionSyntax& syntax,
                                   const BindContext& context);
 
+    static ConstantValue convert(EvalContext& context, const Type& from, const Type& to,
+                                 SourceRange sourceRange, ConstantValue&& value);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 
     template<typename TVisitor>

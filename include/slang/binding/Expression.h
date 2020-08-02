@@ -214,6 +214,10 @@ public:
     bool verifyAssignable(const BindContext& context, bool isNonBlocking = false,
                           SourceLocation location = {}) const;
 
+    /// Returns true if this expression can be implicitly assigned to value
+    /// of the given type.
+    bool isImplicitlyAssignableTo(const Type& type) const;
+
     template<typename T>
     T& as() {
         ASSERT(T::isKind(kind));

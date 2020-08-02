@@ -470,7 +470,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         case SyntaxKind::ConcatenationExpression:
             result = &ConcatenationExpression::fromSyntax(
-                compilation, syntax.as<ConcatenationExpressionSyntax>(), context);
+                compilation, syntax.as<ConcatenationExpressionSyntax>(), context, assignmentTarget);
             break;
         case SyntaxKind::MultipleConcatenationExpression:
             result = &ReplicationExpression::fromSyntax(

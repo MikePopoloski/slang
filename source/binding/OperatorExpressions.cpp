@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/OperatorExpressions.h"
 
+#include "slang/binding/AssignmentExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -1087,7 +1088,81 @@ void InsideExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                                                 const ConcatenationExpressionSyntax& syntax,
-                                                const BindContext& context) {
+                                                const BindContext& context,
+                                                const Type* assignmentTarget) {
+    // If we are in an assignment-like context with a target type that is an unpacked array,
+    // this is an array concatenation (as opposed to a vector or string concatenation).
+    if (assignmentTarget && assignmentTarget->isUnpackedArray()) {
+        if (assignmentTarget->isAssociativeArray()) {
+            context.addDiag(diag::UnpackedConcatAssociative, syntax.sourceRange());
+            return badExpr(compilation, nullptr);
+        }
+
+        bool bad = false;
+        bool anyDynamic = false;
+        size_t totalElems = 0;
+        const Type& type = *assignmentTarget;
+        const Type& elemType = *type.getArrayElementType();
+        SmallVectorSized<Expression*, 8> buffer;
+
+        for (auto argSyntax : syntax.expressions) {
+            Expression* arg = &create(compilation, *argSyntax, context);
+            if (arg->bad()) {
+                bad = true;
+                continue;
+            }
+
+            if (arg->isImplicitlyAssignableTo(elemType)) {
+                buffer.append(&convertAssignment(context, elemType, *arg,
+                                                 argSyntax->getFirstToken().location()));
+                totalElems++;
+                continue;
+            }
+
+            // The argument can be an unpacked array as long as its element type is
+            // assignment compatible with the target.
+            auto& argType = *arg->type;
+            if (argType.isUnpackedArray() &&
+                elemType.isAssignmentCompatible(*argType.getArrayElementType())) {
+                // If this is a dynamic array we can't check element counts statically.
+                // Otherwise we should count each fixed element in the total.
+                if (argType.hasFixedRange())
+                    totalElems += argType.getFixedRange().width();
+                else
+                    anyDynamic = true;
+
+                selfDetermined(context, arg);
+                buffer.append(arg);
+                continue;
+            }
+
+            // Otherwise this is an error.
+            // TODO: handle null values for classes
+            bad = true;
+            context.addDiag(diag::BadConcatExpression, arg->sourceRange) << argType;
+            selfDetermined(context, arg);
+            buffer.append(arg);
+        }
+
+        // If we have a fixed size source and target, check that they match in size.
+        if (!bad && !anyDynamic && type.hasFixedRange() &&
+            type.getFixedRange().width() != totalElems) {
+            context.addDiag(diag::UnpackedConcatSize, syntax.sourceRange())
+                << type << type.getFixedRange().width() << totalElems;
+            bad = true;
+        }
+
+        // TODO: Workaround GCC bugs
+        auto copied = buffer.copy(compilation);
+        span<const Expression* const> elements(copied.data(), copied.size());
+        auto result =
+            compilation.emplace<ConcatenationExpression>(type, elements, syntax.sourceRange());
+        if (bad)
+            return badExpr(compilation, result);
+
+        return *result;
+    }
+
     bool errored = false;
     bool anyStrings = false;
     bitmask<IntegralFlags> flags;
@@ -1181,6 +1256,52 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
 }
 
 ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
+    if (type->isUnpackedArray()) {
+        auto& elemType = *type->getArrayElementType();
+        auto build = [&](auto&& result) {
+            for (auto op : operands()) {
+                ConstantValue cv = op->eval(context);
+                if (!cv)
+                    return false;
+
+                // Check if we can take this element as-is or if we need to
+                // unwrap it into constituents.
+                if (elemType.isEquivalent(*op->type))
+                    result.emplace_back(std::move(cv));
+                else {
+                    ASSERT(cv.isContainer());
+                    const Type& from = *op->type->getArrayElementType();
+                    for (auto& elem : cv) {
+                        result.emplace_back(ConversionExpression::convert(
+                            context, from, elemType, op->sourceRange, std::move(elem)));
+                    }
+                }
+            }
+            return true;
+        };
+
+        if (type->isQueue()) {
+            SVQueue result;
+            if (!build(result))
+                return nullptr;
+            return result;
+        }
+        else {
+            std::vector<ConstantValue> result;
+            if (!build(result))
+                return nullptr;
+
+            // If we have a fixed size target, check that they match in size.
+            if (type->hasFixedRange() && type->getFixedRange().width() != result.size()) {
+                context.addDiag(diag::UnpackedConcatSize, sourceRange)
+                    << *type << type->getFixedRange().width() << result.size();
+                return nullptr;
+            }
+
+            return result;
+        }
+    }
+
     if (type->isString()) {
         std::string result;
         for (auto operand : operands()) {

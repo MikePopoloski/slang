@@ -468,6 +468,9 @@ TEST_CASE("Unpacked array eval") {
     CHECK(session.eval("arr2.or").integer() == 191);
     CHECK(session.eval("arr2.and").integer() == 14);
 
+    session.eval("arr = {sameArr2, 32, 4'd2, arr3, -9, -10}");
+    CHECK(session.eval("arr[5]").integer() == 1234);
+
     NO_SESSION_ERRORS;
 }
 
@@ -527,6 +530,12 @@ TEST_CASE("Dynamic array eval") {
     CHECK(session.eval("arr.size()").integer() == 0);
 
     CHECK(session.eval("arr.xor").integer() == 0);
+
+    // TODO: session.eval("arr = {}");
+    CHECK(session.eval("arr.size").integer() == 0);
+
+    session.eval("arr = {1, 2, arr2}");
+    CHECK(session.eval("arr.size").integer() == 4);
 
     NO_SESSION_ERRORS;
 }
@@ -713,6 +722,11 @@ endfunction
 
     session.eval("empty.delete");
     CHECK(session.eval("empty.size").integer() == 0);
+
+    session.eval("empty = {arr, arr2, 5, 3.4}");
+    CHECK(session.eval("empty.size").integer() == 9);
+    CHECK(session.eval("empty[4]").integer() == 22);
+    CHECK(session.eval("empty[8]").integer() == 3);
 
     NO_SESSION_ERRORS;
 }
@@ -1560,4 +1574,39 @@ struct { logic [4:1][2:9] foo[3][]; } asdf [4][][string][int];
     CHECK(cv.integer() == 224);
 
     NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Unpacked array concat") {
+    ScriptSession session;
+    session.eval("string S, hello = \"hello\";");
+    session.eval("string SA[2];");
+    session.eval("byte B;");
+    session.eval("byte BA[2];");
+
+    session.eval("S = {hello, \" world\"};");
+    session.eval("SA = {hello, \" world\"};");
+    session.eval("B = {4'h6, 4'hf};");
+    session.eval("BA = {4'h6, 4'hf};");
+
+    CHECK(session.eval("S").str() == "hello world");
+    auto cv = session.eval("SA");
+    CHECK(cv.elements()[0].str() == "hello");
+    CHECK(cv.elements()[1].str() == " world");
+
+    CHECK(session.eval("B").integer() == 0x6f);
+    cv = session.eval("BA");
+    CHECK(cv.elements()[0].integer() == 0x6);
+    CHECK(cv.elements()[1].integer() == 0xf);
+
+    session.eval("real RA[] = {1.2, 3.6};");
+    cv = session.eval("BA = {RA}");
+    CHECK(cv.elements()[0].integer() == 1);
+    CHECK(cv.elements()[1].integer() == 4);
+
+    session.eval("string SAD[] = {\"asdf\", \"foo\", \"bar\"};");
+    CHECK(session.eval("SA = {SAD}").bad());
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnpackedConcatSize);
 }

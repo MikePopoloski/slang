@@ -251,6 +251,12 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
     return &RangeSelectExpression::fromConstant(comp, *result, range, context);
 }
 
+bool Expression::isImplicitlyAssignableTo(const Type& targetType) const {
+    return targetType.isAssignmentCompatible(*type) ||
+           (targetType.isString() && isImplicitString()) ||
+           (targetType.isEnum() && isSameEnum(*this, *type));
+}
+
 Expression& Expression::convertAssignment(const BindContext& context, const Type& type,
                                           Expression& expr, SourceLocation location,
                                           optional<SourceRange> lhsRange) {
@@ -537,10 +543,14 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
-    ConstantValue value = operand().eval(context);
+    return convert(context, *operand().type, *type, sourceRange, operand().eval(context));
+}
 
-    const Type& from = *operand().type;
-    const Type& to = *type;
+ConstantValue ConversionExpression::convert(EvalContext& context, const Type& from, const Type& to,
+                                            SourceRange sourceRange, ConstantValue&& value) {
+    if (!value)
+        return nullptr;
+
     if (from.isMatching(to))
         return value;
 

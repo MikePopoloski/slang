@@ -1057,7 +1057,48 @@ module m;
 
     localparam int i = '{};
     localparam int baz[] = new [i];
-    localparam int baz[] = new [3] (baz);
+    localparam int boz[] = new [3] (baz);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::NewArrayTarget);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::ExprMustBeIntegral);
+    CHECK(diags[3].code == diag::BadAssignment);
+    CHECK(diags[4].code == diag::ExpectedExpression);
+}
+
+TEST_CASE("Unpacked array concatentions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        typedef int AI3[1:3];
+        AI3 A3;
+        int AA[int];
+        int A9[1:9];
+        real R1[][1:9];
+        A3 = '{1, 2, 3};
+        A9 = '{3{A3}};                  // illegal, A3 is wrong element type
+        A9 = '{A3, 4, 5, 6, 7, 8, 9};   // illegal, A3 is wrong element type
+        A9 = {A3, 4, 5, A3, 6};         // legal, gives A9='{1,2,3,4,5,1,2,3,6}
+        A9 = '{9{1}};                   // legal, gives A9='{1,1,1,1,1,1,1,1,1}
+        A9 = {9{1}};                    // illegal, no replication in unpacked array concatenation
+        A9 = {A3, {4,5,6,7,8,9} };      // illegal, {...} is not self-determined here
+        A9 = {A3, '{4,5,6,7,8,9} };     // illegal, '{...} is not self-determined
+        A9 = {A3, 4, AI3'{5, 6, 7}, 8, 9}; // legal, A9='{1,2,3,4,5,6,7,8,9}
+        AA = {4, 5};                    // illegal, associative arrays
+        A9 = {4, 5, R1};                // illegal, bad element type
+    end
+
+    initial begin
+        typedef int T_QI[$];
+        static T_QI jagged_array[$] = '{ {1}, T_QI'{2,3,4}, {5,6} };
+    end
 endmodule
 )");
 
@@ -1066,8 +1107,11 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 7);
-    CHECK(diags[0].code == diag::NewArrayTarget);
-    CHECK(diags[1].code == diag::UndeclaredIdentifier);
-    CHECK(diags[2].code == diag::ExprMustBeIntegral);
-    CHECK(diags[3].code == diag::BadAssignment);
+    CHECK(diags[0].code == diag::BadAssignment);
+    CHECK(diags[1].code == diag::BadAssignment);
+    CHECK(diags[2].code == diag::BadAssignment);
+    CHECK(diags[3].code == diag::UnpackedConcatSize);
+    CHECK(diags[4].code == diag::AssignmentPatternNoContext);
+    CHECK(diags[5].code == diag::UnpackedConcatAssociative);
+    CHECK(diags[6].code == diag::BadConcatExpression);
 }

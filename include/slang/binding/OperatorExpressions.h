@@ -191,7 +191,7 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const ConcatenationExpressionSyntax& syntax,
-                                  const BindContext& context);
+                                  const BindContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Concatenation; }
 

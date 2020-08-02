@@ -267,7 +267,7 @@ Expression& SimpleAssignmentPatternExpression::forFixedArray(
         bad |= expr.bad();
     }
 
-    if (numElements != syntax.items.size()) {
+    if (!bad && numElements != syntax.items.size()) {
         auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
         diag << type << numElements << elems.size();
         bad = true;
@@ -835,7 +835,7 @@ Expression& ReplicatedAssignmentPatternExpression::forFixedArray(
         }
     }
 
-    if (numElements != elems.size()) {
+    if (!bad && numElements != elems.size()) {
         auto& diag = context.addDiag(diag::WrongNumberAssignmentPatterns, sourceRange);
         diag << type << numElements << elems.size();
         bad = true;
