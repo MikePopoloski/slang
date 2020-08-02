@@ -54,27 +54,14 @@ ConstantValue LValue::load() const {
                     if (result.isString()) {
                         result = SVInt(8, (uint64_t)result.str()[size_t(arg.index)], false);
                     }
-                    else if (result.isQueue()) {
-                        auto& q = *result.queue();
-                        if (arg.index < 0 || size_t(arg.index) >= q.size())
-                            result = arg.defaultValue;
-                        else {
-                            // Be careful not to assign to the result while
-                            // still referencing its elements.
-                            ConstantValue temp(std::move(q[size_t(arg.index)]));
-                            result = std::move(temp);
-                        }
+                    else if (arg.index < 0 || size_t(arg.index) >= result.size()) {
+                        result = arg.defaultValue;
                     }
                     else {
-                        auto elems = result.elements();
-                        if (arg.index < 0 || size_t(arg.index) >= elems.size())
-                            result = arg.defaultValue;
-                        else {
-                            // Be careful not to assign to the result while
-                            // still referencing its elements.
-                            ConstantValue temp(std::move(elems[size_t(arg.index)]));
-                            result = std::move(temp);
-                        }
+                        // Be careful not to assign to the result while
+                        // still referencing its elements.
+                        ConstantValue temp(std::move(result.at(size_t(arg.index))));
+                        result = std::move(temp);
                     }
                 }
                 else if constexpr (std::is_same_v<T, ArraySlice>) {

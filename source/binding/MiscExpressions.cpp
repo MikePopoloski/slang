@@ -92,11 +92,9 @@ optional<int32_t> getDynamicIndex(const ConstantValue& cs, const ConstantValue& 
     }
 
     // For dynamic arrays and queues, elements out of bounds only issue a warning.
-    size_t maxIndex;
+    size_t maxIndex = cv.size();
     if (cv.isQueue())
-        maxIndex = cv.queue()->size() + 1;
-    else
-        maxIndex = cv.elements().size();
+        maxIndex++;
 
     if (!index || *index < 0 || size_t(*index) >= maxIndex) {
         context.addDiag(diag::ConstEvalDynamicArrayIndex, sourceRange)
@@ -369,10 +367,7 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (*index == -1)
         return type->getDefaultValue();
 
-    if (cv.isQueue())
-        return (*cv.queue())[size_t(*index)];
-
-    return cv.elements()[size_t(*index)];
+    return std::move(cv).at(size_t(*index));
 }
 
 LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
@@ -799,12 +794,7 @@ optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& cont
     }
 
     // Out of bounds ranges are allowed, we just issue a warning.
-    size_t size;
-    if (cv.isQueue())
-        size = cv.queue()->size();
-    else
-        size = cv.elements().size();
-
+    size_t size = cv.size();
     if (l < 0 || r < 0 || size_t(r) >= size) {
         auto& diag = context.addDiag(diag::ConstEvalDynamicArrayRange, sourceRange);
         diag << result.left << result.right;

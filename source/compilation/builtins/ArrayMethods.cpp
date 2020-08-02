@@ -43,40 +43,15 @@ public:
             return nullptr;
 
         auto elemType = args[0]->type->getArrayElementType();
-        if (arr.isQueue()) {
-            auto& q = *arr.queue();
-            if (q.empty())
-                return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
+        if (arr.empty())
+            return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
 
-            SVInt result = q[0].integer();
-            for (size_t i = 1; i < q.size(); i++)
-                op(result, q[i].integer());
+        auto it = begin(arr);
+        SVInt result = it->integer();
+        for (++it; it != end(arr); ++it)
+            op(result, it->integer());
 
-            return result;
-        }
-        else if (arr.isMap()) {
-            auto& map = *arr.map();
-            if (map.empty())
-                return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
-
-            auto it = map.begin();
-            SVInt result = it->second.integer();
-            for (; it != map.end(); it++)
-                op(result, it->second.integer());
-
-            return result;
-        }
-        else {
-            auto elems = arr.elements();
-            if (elems.empty())
-                return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
-
-            SVInt result = elems[0].integer();
-            for (auto& elem : elems.subspan(1))
-                op(result, elem.integer());
-
-            return result;
-        }
+        return result;
     }
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
@@ -95,15 +70,7 @@ public:
         if (!val)
             return nullptr;
 
-        size_t size;
-        if (val.isMap())
-            size = val.map()->size();
-        else if (val.isQueue())
-            size = val.queue()->size();
-        else
-            size = val.elements().size();
-
-        return SVInt(32, size, true);
+        return SVInt(32, val.size(), true);
     }
 };
 

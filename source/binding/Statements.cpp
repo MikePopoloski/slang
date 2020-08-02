@@ -992,26 +992,9 @@ static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cv
                        const ConstantValue& cvr) {
     if (condition == CaseStatementCondition::Inside) {
         // Unpacked arrays get unwrapped into their members for comparison.
-        if (cvr.isUnpacked()) {
-            for (auto& elem : cvr.elements()) {
+        if (cvr.isContainer()) {
+            for (auto& elem : cvr) {
                 if (checkMatch(condition, cvl, elem))
-                    return true;
-            }
-            return false;
-        }
-
-        if (cvr.isQueue()) {
-            for (auto& elem : *cvr.queue()) {
-                if (checkMatch(condition, cvl, elem))
-                    return true;
-            }
-            return false;
-        }
-
-        // Same for associative arrays.
-        if (cvr.isMap()) {
-            for (auto& [key, val] : *cvr.map()) {
-                if (checkMatch(condition, cvl, val))
                     return true;
             }
             return false;

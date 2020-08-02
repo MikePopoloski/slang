@@ -119,6 +119,54 @@ size_t ConstantValue::hash() const {
     return h;
 }
 
+bool ConstantValue::empty() const {
+    return size() == 0;
+}
+
+size_t ConstantValue::size() const {
+    return std::visit(
+        [](auto&& arg) noexcept {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, Elements>)
+                return arg.size();
+            else if constexpr (std::is_same_v<T, Map>)
+                return arg->size();
+            else if constexpr (std::is_same_v<T, Queue>)
+                return arg->size();
+            else
+                return size_t(0);
+        },
+        value);
+}
+
+ConstantValue& ConstantValue::at(size_t index) {
+    return std::visit(
+        [index](auto&& arg) -> ConstantValue& {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, Elements>)
+                return arg.at(index);
+            else if constexpr (std::is_same_v<T, Queue>)
+                return arg->at(index);
+            else
+                THROW_UNREACHABLE;
+        },
+        value);
+}
+
+const ConstantValue& ConstantValue::at(size_t index) const {
+    return std::visit(
+        [index](auto&& arg) -> const ConstantValue& {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, Elements>)
+                return arg.at(index);
+            else if constexpr (std::is_same_v<T, Queue>)
+                return arg->at(index);
+            else
+                THROW_UNREACHABLE;
+        },
+        value);
+}
+
 ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower,
                                       const ConstantValue& defaultValue) const {
     if (isInteger())
@@ -396,6 +444,134 @@ bool operator<(const ConstantValue& lhs, const ConstantValue& rhs) {
             }
         },
         lhs.value);
+}
+
+const ConstantValue& CVIterator::operator*() const {
+    return std::visit(
+        [](auto&& arg) -> const ConstantValue& {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, AssociativeArray::iterator>)
+                return arg->second;
+            else
+                return *arg;
+        },
+        current);
+}
+
+ConstantValue& CVIterator::operator*() {
+    return std::visit(
+        [](auto&& arg) -> ConstantValue& {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, AssociativeArray::iterator>)
+                return arg->second;
+            else
+                return *arg;
+        },
+        current);
+}
+
+CVIterator& CVIterator::operator++() {
+    std::visit([](auto&& arg) { ++arg; }, current);
+    return *this;
+}
+
+CVIterator& CVIterator::operator--() {
+    std::visit([](auto&& arg) { --arg; }, current);
+    return *this;
+}
+
+const ConstantValue& CVConstIterator::operator*() const {
+    return std::visit(
+        [](auto&& arg) -> const ConstantValue& {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, AssociativeArray::const_iterator>)
+                return arg->second;
+            else
+                return *arg;
+        },
+        current);
+}
+
+CVConstIterator& CVConstIterator::operator++() {
+    std::visit([](auto&& arg) { ++arg; }, current);
+    return *this;
+}
+
+CVConstIterator& CVConstIterator::operator--() {
+    std::visit([](auto&& arg) { --arg; }, current);
+    return *this;
+}
+
+CVIterator begin(ConstantValue& cv) {
+    return std::visit(
+        [](auto&& arg) -> CVIterator {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
+                return arg.begin();
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Map> ||
+                               std::is_same_v<T, ConstantValue::Queue>) {
+                return arg->begin();
+            }
+            else {
+                THROW_UNREACHABLE;
+            }
+        },
+        cv.getVariant());
+}
+
+CVIterator end(ConstantValue& cv) {
+    return std::visit(
+        [](auto&& arg) -> CVIterator {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
+                return arg.end();
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Map> ||
+                               std::is_same_v<T, ConstantValue::Queue>) {
+                return arg->end();
+            }
+            else {
+                THROW_UNREACHABLE;
+            }
+        },
+        cv.getVariant());
+}
+
+CVConstIterator begin(const ConstantValue& cv) {
+    return std::visit(
+        [](auto&& arg) -> CVConstIterator {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
+                return arg.begin();
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Map> ||
+                               std::is_same_v<T, ConstantValue::Queue>) {
+                return arg->begin();
+            }
+            else {
+                THROW_UNREACHABLE;
+            }
+        },
+        cv.getVariant());
+}
+
+CVConstIterator end(const ConstantValue& cv) {
+    return std::visit(
+        [](auto&& arg) -> CVConstIterator {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
+                return arg.end();
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Map> ||
+                               std::is_same_v<T, ConstantValue::Queue>) {
+                return arg->end();
+            }
+            else {
+                THROW_UNREACHABLE;
+            }
+        },
+        cv.getVariant());
 }
 
 ConstantRange ConstantRange::subrange(ConstantRange select) const {

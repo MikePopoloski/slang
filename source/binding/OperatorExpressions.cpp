@@ -1007,31 +1007,10 @@ Expression& InsideExpression::fromSyntax(Compilation& compilation,
 
 static logic_t checkInsideMatch(const ConstantValue& cvl, const ConstantValue& cvr) {
     // Unpacked arrays get unwrapped into their members for comparison.
-    auto unwrapArray = [&cvl](auto&& arr) {
+    if (cvr.isContainer()) {
         bool anyUnknown = false;
-        for (auto& elem : arr) {
+        for (auto& elem : cvr) {
             logic_t result = checkInsideMatch(cvl, elem);
-            if (result)
-                return logic_t(true);
-
-            if (result.isUnknown())
-                anyUnknown = true;
-        }
-
-        return anyUnknown ? logic_t::x : logic_t(0);
-    };
-
-    if (cvr.isUnpacked())
-        return unwrapArray(cvr.elements());
-
-    if (cvr.isQueue())
-        return unwrapArray(*cvr.queue());
-
-    // Same handling for associative arrays.
-    if (cvr.isMap()) {
-        bool anyUnknown = false;
-        for (auto& [key, val] : *cvr.map()) {
-            logic_t result = checkInsideMatch(cvl, val);
             if (result)
                 return logic_t(true);
 
@@ -1625,54 +1604,14 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
         else if (cvr.isReal())
             return evalLogicalOp(op, (bool)l, (bool)cvr.real());
     }
-    else if (cvl.isUnpacked()) {
-        span<const ConstantValue> la = cvl.elements();
-        span<const ConstantValue> ra = cvr.elements();
-        if (la.size() != ra.size())
+    else if (cvl.isContainer()) {
+        if (cvl.size() != cvr.size())
             return SVInt(false);
 
-        for (size_t i = 0; i < la.size(); i++) {
-            ConstantValue result = evalBinaryOperator(op, la[i], ra[i]);
-            if (!result)
-                return nullptr;
-
-            logic_t l = (logic_t)result.integer();
-            if (l.isUnknown() || !l)
-                return SVInt(l);
-        }
-
-        return SVInt(true);
-    }
-    else if (cvl.isQueue()) {
-        auto& la = *cvl.queue();
-        auto& ra = *cvr.queue();
-        if (la.size() != ra.size())
-            return SVInt(false);
-
-        for (size_t i = 0; i < la.size(); i++) {
-            ConstantValue result = evalBinaryOperator(op, la[i], ra[i]);
-            if (!result)
-                return nullptr;
-
-            logic_t l = (logic_t)result.integer();
-            if (l.isUnknown() || !l)
-                return SVInt(l);
-        }
-
-        return SVInt(true);
-    }
-    else if (cvl.isMap()) {
-        auto& la = *cvl.map();
-        auto& ra = *cvr.map();
-        if (la.size() != ra.size())
-            return SVInt(false);
-
-        for (auto& [key, val] : la) {
-            auto ri = ra.find(key);
-            if (ri == ra.end())
-                return SVInt(false);
-
-            ConstantValue result = evalBinaryOperator(op, val, ri->second);
+        auto li = begin(cvl);
+        auto ri = begin(cvr);
+        for (; li != end(cvl); li++, ri++) {
+            ConstantValue result = evalBinaryOperator(op, *li, *ri);
             if (!result)
                 return nullptr;
 

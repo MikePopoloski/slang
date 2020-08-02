@@ -14,6 +14,7 @@
 
 #include "slang/numeric/SVInt.h"
 #include "slang/util/CopyPtr.h"
+#include "slang/util/Iterator.h"
 
 namespace slang {
 
@@ -93,6 +94,8 @@ public:
     bool isMap() const { return std::holds_alternative<Map>(value); }
     bool isQueue() const { return std::holds_alternative<Queue>(value); }
 
+    bool isContainer() const { return isUnpacked() || isQueue() || isMap(); }
+
     SVInt& integer() & { return std::get<SVInt>(value); }
     const SVInt& integer() const& { return std::get<SVInt>(value); }
     SVInt integer() && { return std::get<SVInt>(std::move(value)); }
@@ -121,10 +124,17 @@ public:
 
     ConstantValue getSlice(int32_t upper, int32_t lower, const ConstantValue& defaultValue) const;
 
+    Variant& getVariant() { return value; }
     const Variant& getVariant() const { return value; }
 
     std::string toString() const;
     size_t hash() const;
+
+    [[nodiscard]] bool empty() const;
+    size_t size() const;
+
+    ConstantValue& at(size_t index);
+    const ConstantValue& at(size_t index) const;
 
     bool isTrue() const;
     bool isFalse() const;
@@ -156,6 +166,71 @@ struct SVQueue : public std::deque<ConstantValue> {
     using std::deque<ConstantValue>::deque;
     uint32_t maxSize = 0;
 };
+
+/// An iterator for child elements in a ConstantValue, if it represents an
+/// array, map, or queue.
+class CVIterator
+    : public iterator_facade<CVIterator, std::bidirectional_iterator_tag, ConstantValue> {
+public:
+    CVIterator(ConstantValue::Elements::iterator it) : current(it) {}
+    CVIterator(AssociativeArray::iterator it) : current(it) {}
+    CVIterator(SVQueue::iterator it) : current(it) {}
+    CVIterator(const CVIterator& other) : current(other.current) {}
+
+    CVIterator& operator=(const CVIterator& other) {
+        current = other.current;
+        return *this;
+    }
+
+    bool operator==(const CVIterator& other) const { return current == other.current; }
+
+    const ConstantValue& operator*() const;
+    ConstantValue& operator*();
+
+    using iterator_facade::operator++;
+    using iterator_facade::operator--;
+    CVIterator& operator++();
+    CVIterator& operator--();
+
+private:
+    std::variant<ConstantValue::Elements::iterator, AssociativeArray::iterator, SVQueue::iterator>
+        current;
+};
+
+/// A constant iterator for child elements in a ConstantValue, if it represents an
+/// array, map, or queue.
+class CVConstIterator : public iterator_facade<CVConstIterator, std::bidirectional_iterator_tag,
+                                               const ConstantValue> {
+public:
+    CVConstIterator(ConstantValue::Elements::const_iterator it) : current(it) {}
+    CVConstIterator(AssociativeArray::const_iterator it) : current(it) {}
+    CVConstIterator(SVQueue::const_iterator it) : current(it) {}
+    CVConstIterator(const CVConstIterator& other) : current(other.current) {}
+
+    CVConstIterator& operator=(const CVConstIterator& other) {
+        current = other.current;
+        return *this;
+    }
+
+    bool operator==(const CVConstIterator& other) const { return current == other.current; }
+
+    const ConstantValue& operator*() const;
+
+    using iterator_facade::operator++;
+    using iterator_facade::operator--;
+    CVConstIterator& operator++();
+    CVConstIterator& operator--();
+
+private:
+    std::variant<ConstantValue::Elements::const_iterator, AssociativeArray::const_iterator,
+                 SVQueue::const_iterator>
+        current;
+};
+
+CVIterator begin(ConstantValue& cv);
+CVIterator end(ConstantValue& cv);
+CVConstIterator begin(const ConstantValue& cv);
+CVConstIterator end(const ConstantValue& cv);
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative
 /// indices, and for the left side to be less, equal, or greater than the right.

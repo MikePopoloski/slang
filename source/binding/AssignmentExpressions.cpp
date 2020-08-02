@@ -566,7 +566,7 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
         // must have the same number of elements in the source.
         ASSERT(!to.hasFixedRange() || !from.hasFixedRange());
         if (to.hasFixedRange()) {
-            size_t size = value.isQueue() ? value.queue()->size() : value.elements().size();
+            size_t size = value.size();
             if (size != to.getFixedRange().width()) {
                 context.addDiag(diag::ConstEvalDynamicToFixedSize, sourceRange)
                     << from << size << to;
