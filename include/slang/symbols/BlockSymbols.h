@@ -77,6 +77,8 @@ public:
         Symbol(SymbolKind::GenerateBlock, name, loc),
         Scope(compilation, this), constructIndex(constructIndex), isInstantiated(isInstantiated) {}
 
+    std::string getExternalName() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
@@ -111,6 +113,8 @@ public:
                              uint32_t constructIndex) :
         Symbol(SymbolKind::GenerateBlockArray, name, loc),
         Scope(compilation, this), constructIndex(constructIndex) {}
+
+    std::string getExternalName() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

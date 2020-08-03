@@ -362,7 +362,7 @@ LRM | Feature | Supported
 {{m-success}} 27.3 | Generate construct syntax | v0.2
 {{m-success}} 27.4 | Loop generate constructs | v0.2
 {{m-success}} 27.5 | Conditional generate constructs | v0.2
-{{m-danger}}  27.6 | External names for unnamed generate blocks | no
+{{m-success}} 27.6 | External names for unnamed generate blocks | v0.4
 
 ## 28. Gate-level and switch-level modeling
 

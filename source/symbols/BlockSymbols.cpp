@@ -389,6 +389,28 @@ GenerateBlockSymbol& GenerateBlockSymbol::fromSyntax(const Scope& scope,
     return *block;
 }
 
+static std::string createGenBlkName(uint32_t constructIndex, const Scope& parent) {
+    std::string base = "genblk";
+    std::string index = std::to_string(constructIndex);
+    std::string current = base + index;
+    while (parent.find(current)) {
+        base += '0';
+        current = base + index;
+    }
+
+    return current;
+}
+
+std::string GenerateBlockSymbol::getExternalName() const {
+    if (!name.empty())
+        return std::string(name);
+
+    auto parent = getParentScope();
+    ASSERT(parent);
+
+    return createGenBlkName(constructIndex, *parent);
+}
+
 void GenerateBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("constructIndex", constructIndex);
     serializer.write("isInstantiated", isInstantiated);
@@ -566,6 +588,16 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     }
 
     return *result;
+}
+
+std::string GenerateBlockArraySymbol::getExternalName() const {
+    if (!name.empty())
+        return std::string(name);
+
+    auto parent = getParentScope();
+    ASSERT(parent);
+
+    return createGenBlkName(constructIndex, *parent);
 }
 
 void GenerateBlockArraySymbol::serializeTo(ASTSerializer& serializer) const {
