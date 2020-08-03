@@ -153,7 +153,7 @@ LRM | Feature | Supported
 {{m-success}} 10.7 | Assignment extension and truncation | v0.2
 {{m-success}} 10.8 | Assignment-like contexts | v0.2
 {{m-warning}} 10.9 | Assignment patterns | partial
-{{m-danger}}  10.10 | Unpacked array concatenation | no
+{{m-success}} 10.10 | Unpacked array concatenation | v0.4
 {{m-danger}}  10.11 | Net aliasing | no
 
 ## 11. Operators and expressions
