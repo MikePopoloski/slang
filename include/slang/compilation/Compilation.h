@@ -38,6 +38,19 @@ struct ModuleDeclarationSyntax;
 enum class IntegralFlags : uint8_t;
 enum class UnconnectedDrive;
 
+/// Specifies which set of min:typ:max expressions should
+/// be used during compilation.
+enum class MinTypMax {
+    /// Use the "min" delay expressions.
+    Min,
+
+    /// Use the "typical" delay expressions.
+    Typ,
+
+    /// Use the "max" delay expressions.
+    Max
+};
+
 /// Contains various options that can control compilation behavior.
 struct CompilationOptions {
     /// The maximum depth of nested module instances (and interfaces/programs),
@@ -68,6 +81,10 @@ struct CompilationOptions {
     /// giving up. This is to prevent very slow compilation times if the
     /// source text is hopelessly broken.
     uint32_t typoCorrectionLimit = 32;
+
+    /// Specifies which set of min:typ:max expressions should
+    /// be used during compilation.
+    MinTypMax minTypMax = MinTypMax::Typ;
 };
 
 /// A centralized location for creating and caching symbols. This includes

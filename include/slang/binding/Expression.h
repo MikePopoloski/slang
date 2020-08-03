@@ -50,7 +50,8 @@ struct InvocationExpressionSyntax;
     x(ReplicatedAssignmentPattern) \
     x(EmptyArgument) \
     x(OpenRange) \
-    x(NewArray)
+    x(NewArray) \
+    x(MinTypMax)
 ENUM(ExpressionKind, EXPRESSION);
 #undef EXPRESSION
 

@@ -257,6 +257,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(EmptyArgument, EmptyArgumentExpression);
         CASE(OpenRange, OpenRangeExpression);
         CASE(NewArray, NewArrayExpression);
+        CASE(MinTypMax, MinTypMaxExpression);
     }
 #undef CASE
     // clang-format on

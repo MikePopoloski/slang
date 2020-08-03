@@ -290,4 +290,51 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::EmptyArgument; }
 };
 
+struct MinTypMaxExpressionSyntax;
+
+/// Represents a min:typ:max expression.
+class MinTypMaxExpression : public Expression {
+public:
+    MinTypMaxExpression(const Type& type, Expression& min, Expression& typ, Expression& max,
+                        Expression* selected, SourceRange sourceRange) :
+        Expression(ExpressionKind::MinTypMax, type, sourceRange),
+        selected_(selected), min_(&min), typ_(&typ), max_(&max) {}
+
+    const Expression& min() const { return *min_; }
+    Expression& min() { return *min_; }
+
+    const Expression& typ() const { return *typ_; }
+    Expression& typ() { return *typ_; }
+
+    const Expression& max() const { return *max_; }
+    Expression& max() { return *max_; }
+
+    const Expression& selected() const { return *selected_; }
+    Expression& selected() { return *selected_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool propagateType(const BindContext& context, const Type& newType);
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const MinTypMaxExpressionSyntax& syntax,
+                                  const BindContext& context, const Type* assignmentTarget);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::MinTypMax; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        // This only visits the selected expression... you could imagine
+        // wanting to visit all three instead though.
+        selected().visit(visitor);
+    }
+
+private:
+    Expression* selected_;
+    Expression* min_;
+    Expression* typ_;
+    Expression* max_;
+};
+
 } // namespace slang

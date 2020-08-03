@@ -328,6 +328,10 @@ bool Expression::isImplicitString() const {
             auto& range = as<OpenRangeExpression>();
             return range.left().isImplicitString() || range.right().isImplicitString();
         }
+        case ExpressionKind::MinTypMax: {
+            auto& mtm = as<MinTypMaxExpression>();
+            return mtm.selected().isImplicitString();
+        }
         default:
             return false;
     }
@@ -339,6 +343,8 @@ bool Expression::isUnsizedInteger() const {
             return true;
         case ExpressionKind::IntegerLiteral:
             return as<IntegerLiteral>().isDeclaredUnsized;
+        case ExpressionKind::MinTypMax:
+            return as<MinTypMaxExpression>().selected().isUnsizedInteger();
         default:
             return false;
     }
@@ -516,6 +522,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
             result = &badExpr(compilation, nullptr);
             break;
+        case SyntaxKind::MinTypMaxExpression:
+            result = &MinTypMaxExpression::fromSyntax(
+                compilation, syntax.as<MinTypMaxExpressionSyntax>(), context, assignmentTarget);
+            break;
         case SyntaxKind::AcceptOnPropertyExpression:
         case SyntaxKind::AlwaysPropertyExpression:
         case SyntaxKind::AndSequenceExpression:
@@ -526,7 +536,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::IffPropertyExpression:
         case SyntaxKind::ImpliesPropertyExpression:
         case SyntaxKind::IntersectSequenceExpression:
-        case SyntaxKind::MinTypMaxExpression:
         case SyntaxKind::NewClassExpression:
         case SyntaxKind::NewExpression:
         case SyntaxKind::NextTimePropertyExpression:

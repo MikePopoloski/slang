@@ -46,6 +46,10 @@ bool recurseCheckEnum(const Expression& expr) {
             auto& conv = expr.as<ConversionExpression>();
             return conv.isImplicit && recurseCheckEnum(conv.operand());
         }
+        case ExpressionKind::MinTypMax: {
+            auto& mtm = expr.as<MinTypMaxExpression>();
+            return recurseCheckEnum(mtm.selected());
+        }
         default:
             return false;
     }

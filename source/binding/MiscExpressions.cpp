@@ -1360,4 +1360,68 @@ void HierarchicalReferenceExpression::serializeTo(ASTSerializer& serializer) con
         serializer.writeLink("symbol", *symbol);
 }
 
+Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,
+                                            const MinTypMaxExpressionSyntax& syntax,
+                                            const BindContext& context,
+                                            const Type* assignmentTarget) {
+    // Only one of the expressions will be considered evaluated.
+    auto minFlags = BindFlags::UnevaluatedBranch;
+    auto typFlags = BindFlags::UnevaluatedBranch;
+    auto maxFlags = BindFlags::UnevaluatedBranch;
+    switch (compilation.getOptions().minTypMax) {
+        case MinTypMax::Min:
+            minFlags = BindFlags::None;
+            break;
+        case MinTypMax::Typ:
+            typFlags = BindFlags::None;
+            break;
+        case MinTypMax::Max:
+            maxFlags = BindFlags::None;
+            break;
+    }
+
+    auto& min = create(compilation, *syntax.min, context, minFlags, assignmentTarget);
+    auto& typ = create(compilation, *syntax.typ, context, typFlags, assignmentTarget);
+    auto& max = create(compilation, *syntax.max, context, maxFlags, assignmentTarget);
+
+    Expression* selected = nullptr;
+    switch (compilation.getOptions().minTypMax) {
+        case MinTypMax::Min:
+            selected = &min;
+            break;
+        case MinTypMax::Typ:
+            selected = &typ;
+            break;
+        case MinTypMax::Max:
+            selected = &max;
+            break;
+    }
+
+    auto result = compilation.emplace<MinTypMaxExpression>(*selected->type, min, typ, max, selected,
+                                                           syntax.sourceRange());
+    if (min.bad() || typ.bad() || max.bad())
+        return badExpr(compilation, result);
+
+    return *result;
+}
+
+bool MinTypMaxExpression::propagateType(const BindContext& context, const Type& newType) {
+    // Only the selected expression gets a propagated type.
+    type = &newType;
+    contextDetermined(context, selected_, newType);
+    return true;
+}
+
+ConstantValue MinTypMaxExpression::evalImpl(EvalContext& context) const {
+    return selected().eval(context);
+}
+
+bool MinTypMaxExpression::verifyConstantImpl(EvalContext& context) const {
+    return selected().verifyConstant(context);
+}
+
+void MinTypMaxExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("selected", selected());
+}
+
 } // namespace slang

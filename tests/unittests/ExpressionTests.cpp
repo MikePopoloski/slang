@@ -333,6 +333,9 @@ TEST_CASE("Expression types") {
     // Inside expressions
     CHECK(typeof("i inside { 4, arr3, pa, sp, dar1 }") == "logic");
 
+    // Min-typ-max
+    CHECK(typeof("(arr1[99]:3'd4:99'd4) + 2'd1") == "bit[2:0]");
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::BadUnaryExpression);
@@ -1181,4 +1184,36 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Min/typ/max expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int i = (3:4:5);
+endmodule
+)");
+
+    auto compileVal = [&](auto&& compOptions) {
+        Bag options;
+        options.set(compOptions);
+
+        Compilation compilation(options);
+        compilation.addSyntaxTree(tree);
+        NO_COMPILATION_ERRORS;
+
+        return compilation.getRoot().lookupName<ParameterSymbol>("m.i").getValue();
+    };
+
+    // Defaults to "Typ"
+    CHECK(compileVal(CompilationOptions()).integer() == 4);
+
+    CompilationOptions options;
+    options.minTypMax = MinTypMax::Typ;
+    CHECK(compileVal(options).integer() == 4);
+
+    options.minTypMax = MinTypMax::Min;
+    CHECK(compileVal(options).integer() == 3);
+
+    options.minTypMax = MinTypMax::Max;
+    CHECK(compileVal(options).integer() == 5);
 }
