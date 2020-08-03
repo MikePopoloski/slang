@@ -377,7 +377,7 @@ MemberSyntax& Parser::parseModportPort() {
 
             ExpressionSyntax* expr = nullptr;
             if (!peek(TokenKind::CloseParenthesis))
-                expr = &parsePrimaryExpression();
+                expr = &parseExpression();
 
             buffer.append(&factory.modportExplicitPort(dot, name, openParen, expr,
                                                        expect(TokenKind::CloseParenthesis)));
@@ -1209,13 +1209,14 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
             parseList<isPossibleExpression, isBeforeOrSemicolon>(
                 beforeBuffer, TokenKind::BeforeKeyword, TokenKind::Comma, before,
                 RequireItems::True, diag::ExpectedExpression,
-                [this] { return &parsePrimaryExpression(); });
+                [this] { return &parsePrimaryExpression(/* disallowVector */ false); });
 
             Token semi;
             SmallVectorSized<TokenOrSyntax, 4> afterBuffer;
             parseList<isPossibleExpression, isSemicolon>(
                 afterBuffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-                diag::ExpectedExpression, [this] { return &parsePrimaryExpression(); });
+                diag::ExpectedExpression,
+                [this] { return &parsePrimaryExpression(/* disallowVector */ false); });
 
             return &factory.solveBeforeConstraint(solve, beforeBuffer.copy(alloc), before,
                                                   afterBuffer.copy(alloc), semi);
@@ -1492,7 +1493,7 @@ ClockingSkewSyntax* Parser::parseClockingSkew() {
 
     if (peek(TokenKind::Hash)) {
         hash = consume();
-        value = &parsePrimaryExpression();
+        value = &parsePrimaryExpression(/* disallowVector */ true);
     }
 
     if (!edge && !hash)

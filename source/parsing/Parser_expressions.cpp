@@ -35,7 +35,7 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     if (current.kind == TokenKind::NewKeyword)
         return parseNewExpression(nullptr);
     else if (isPossibleDelayOrEventControl(current.kind)) {
-        auto timingControl = parseTimingControl();
+        auto timingControl = parseTimingControl(/* isSequenceExpr */ false);
         ASSERT(timingControl);
 
         auto& expr = factory.timingControlExpression(*timingControl, parseExpression());
@@ -52,8 +52,10 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     SyntaxKind opKind = getUnaryPrefixExpression(current.kind);
     if (opKind != SyntaxKind::Unknown)
         leftOperand = &parsePrefixExpression(options, opKind);
-    else
-        leftOperand = &parsePrimaryExpression();
+    else {
+        leftOperand = &parsePrimaryExpression(false);
+        leftOperand = &parsePostfixExpression(*leftOperand);
+    }
 
     while (true) {
         // either a binary operator, or we're done
@@ -136,7 +138,7 @@ ExpressionSyntax& Parser::parsePrefixExpression(bitmask<ExpressionOptions> optio
     switch (opKind) {
         case SyntaxKind::UnarySequenceDelayExpression:
         case SyntaxKind::UnarySequenceEventExpression: {
-            auto timing = parseTimingControl();
+            auto timing = parseTimingControl(/* isSequenceExpr */ true);
             ASSERT(timing);
             return factory.timingControlExpression(*timing, parseExpression());
         }
@@ -165,8 +167,7 @@ ExpressionSyntax& Parser::parsePrefixExpression(bitmask<ExpressionOptions> optio
     return factory.prefixUnaryExpression(opKind, opToken, attributes, operand);
 }
 
-ExpressionSyntax& Parser::parsePrimaryExpression() {
-    ExpressionSyntax* expr;
+ExpressionSyntax& Parser::parsePrimaryExpression(bool disallowVector) {
     TokenKind kind = peek().kind;
     switch (kind) {
         case TokenKind::StringLiteral:
@@ -175,30 +176,23 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
         case TokenKind::OneStep:
         case TokenKind::Dollar: {
             auto literal = consume();
-            expr = &factory.literalExpression(getLiteralExpression(literal.kind), literal);
-            break;
+            return factory.literalExpression(getLiteralExpression(literal.kind), literal);
         }
-        case TokenKind::TimeLiteral: {
-            expr = &factory.literalExpression(SyntaxKind::TimeLiteralExpression,
-                                              numberParser.parseReal(*this));
-            break;
-        }
-        case TokenKind::RealLiteral: {
-            expr = &factory.literalExpression(SyntaxKind::RealLiteralExpression,
-                                              numberParser.parseReal(*this));
-            break;
-        }
+        case TokenKind::TimeLiteral:
+            return factory.literalExpression(SyntaxKind::TimeLiteralExpression,
+                                             numberParser.parseReal(*this));
+        case TokenKind::RealLiteral:
+            return factory.literalExpression(SyntaxKind::RealLiteralExpression,
+                                             numberParser.parseReal(*this));
         case TokenKind::IntegerLiteral:
         case TokenKind::IntegerBase:
-            expr = &parseIntegerExpression();
-            break;
+            return parseIntegerExpression(disallowVector);
         case TokenKind::OpenParenthesis: {
             auto openParen = consume();
-            expr = &parseMinTypMaxExpression();
+            auto expr = &parseMinTypMaxExpression();
 
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            expr = &factory.parenthesizedExpression(openParen, *expr, closeParen);
-            break;
+            return factory.parenthesizedExpression(openParen, *expr, closeParen);
         }
         case TokenKind::ApostropheOpenBrace:
             return parseAssignmentPatternExpression(nullptr);
@@ -211,27 +205,23 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             auto openBrace = consume();
             switch (peek().kind) {
                 case TokenKind::CloseBrace:
-                    expr = &factory.emptyQueueExpression(openBrace, consume());
-                    break;
+                    return factory.emptyQueueExpression(openBrace, consume());
                 case TokenKind::LeftShift:
                 case TokenKind::RightShift:
-                    expr = &parseStreamConcatenation(openBrace);
-                    break;
+                    return parseStreamConcatenation(openBrace);
                 default: {
                     auto& first = parseExpression();
                     if (!peek(TokenKind::OpenBrace))
-                        expr = &parseConcatenation(openBrace, &first);
+                        return parseConcatenation(openBrace, &first);
                     else {
                         auto openBraceInner = consume();
                         auto& concat = parseConcatenation(openBraceInner, nullptr);
                         auto closeBrace = expect(TokenKind::CloseBrace);
-                        expr = &factory.multipleConcatenationExpression(openBrace, first, concat,
-                                                                        closeBrace);
+                        return factory.multipleConcatenationExpression(openBrace, first, concat,
+                                                                       closeBrace);
                     }
-                    break;
                 }
             }
-            break;
         }
         case TokenKind::SignedKeyword:
         case TokenKind::UnsignedKeyword:
@@ -242,12 +232,10 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             auto& innerExpr = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
             auto& parenExpr = factory.parenthesizedExpression(openParen, innerExpr, closeParen);
-            expr = &factory.signedCastExpression(signing, apostrophe, parenExpr);
-            break;
+            return factory.signedCastExpression(signing, apostrophe, parenExpr);
         }
         case TokenKind::SystemIdentifier:
-            expr = &factory.systemName(consume());
-            break;
+            return factory.systemName(consume());
         default:
             // possibilities here:
             // 1. data type
@@ -261,27 +249,27 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
 
                 auto& type = parseDataType();
                 if (peek(TokenKind::ApostropheOpenBrace))
-                    expr = &parseAssignmentPatternExpression(&type);
+                    return parseAssignmentPatternExpression(&type);
                 else
-                    expr = &type;
+                    return type;
             }
             else {
                 // parseName() will insert a missing identifier token for the error case
                 auto& name = parseName(NameOptions::ExpectingExpression);
                 if (peek(TokenKind::ApostropheOpenBrace))
-                    expr = &parseAssignmentPatternExpression(&factory.namedType(name));
+                    return parseAssignmentPatternExpression(&factory.namedType(name));
                 else {
                     // otherwise just a name expression
-                    expr = &name;
+                    return name;
                 }
             }
-            break;
     }
-    return parsePostfixExpression(*expr);
 }
 
-ExpressionSyntax& Parser::parseIntegerExpression() {
-    auto result = numberParser.parseInteger(*this);
+ExpressionSyntax& Parser::parseIntegerExpression(bool disallowVector) {
+    auto result =
+        disallowVector ? numberParser.parseSimpleInt(*this) : numberParser.parseInteger(*this);
+
     if (result.isSimple)
         return factory.literalExpression(SyntaxKind::IntegerLiteralExpression, result.value);
 
@@ -569,7 +557,7 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
                 expr = &parseNewExpression(expr);
                 break;
             case TokenKind::DoubleHash: {
-                auto timing = parseTimingControl();
+                auto timing = parseTimingControl(/* isSequenceExpr */ true);
                 ASSERT(timing);
                 expr = &factory.timingControlExpressionConcatenation(*expr, *timing,
                                                                      parseExpression());
@@ -884,7 +872,7 @@ ExpressionSyntax& Parser::parseNewExpression(ExpressionSyntax* scope) {
                                       arguments);
 }
 
-TimingControlSyntax* Parser::parseTimingControl() {
+TimingControlSyntax* Parser::parseTimingControl(bool isSequenceExpr) {
     switch (peek().kind) {
         case TokenKind::Hash:
         case TokenKind::DoubleHash: {
@@ -902,7 +890,7 @@ TimingControlSyntax* Parser::parseTimingControl() {
                 }
             }
             else {
-                delay = &parsePrimaryExpression();
+                delay = &parsePrimaryExpression(!isSequenceExpr);
             }
 
             SyntaxKind kind =
@@ -943,7 +931,7 @@ TimingControlSyntax* Parser::parseTimingControl() {
             auto& expr = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
             return &factory.repeatedEventControl(repeat, openParen, expr, closeParen,
-                                                 parseTimingControl());
+                                                 parseTimingControl(/* isSequenceExpr */ false));
         }
         default:
             return nullptr;

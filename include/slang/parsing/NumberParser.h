@@ -34,6 +34,14 @@ public:
     };
 
     template<typename TStream>
+    IntResult parseSimpleInt(TStream& stream) {
+        auto token = stream.consume();
+        if (token.intValue() > INT32_MAX)
+            addDiag(diag::SignedIntegerOverflow, token.location());
+        return IntResult::simple(token);
+    }
+
+    template<typename TStream>
     IntResult parseInteger(TStream& stream) {
         Token sizeToken;
         Token baseToken;

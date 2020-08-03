@@ -141,8 +141,8 @@ private:
 
     // clang-format off
     ExpressionSyntax& parseMinTypMaxExpression();
-    ExpressionSyntax& parsePrimaryExpression();
-    ExpressionSyntax& parseIntegerExpression();
+    ExpressionSyntax& parsePrimaryExpression(bool disallowVector);
+    ExpressionSyntax& parseIntegerExpression(bool disallowVector);
     ExpressionSyntax& parseInsideExpression(ExpressionSyntax& expr);
     ExpressionSyntax& parsePostfixExpression(ExpressionSyntax& expr);
     ExpressionSyntax& parseNewExpression(ExpressionSyntax* expr);
@@ -163,7 +163,7 @@ private:
     AssignmentPatternItemSyntax& parseAssignmentPatternItem(ExpressionSyntax* key);
     EventExpressionSyntax& parseEventExpression();
     NamedBlockClauseSyntax* parseNamedBlockClause();
-    TimingControlSyntax* parseTimingControl();
+    TimingControlSyntax* parseTimingControl(bool isSequenceExpr);
     ConditionalPredicateSyntax& parseConditionalPredicate(ExpressionSyntax& first, TokenKind endKind, Token& end);
     ConditionalPatternSyntax& parseConditionalPattern();
     ConditionalStatementSyntax& parseConditionalStatement(NamedLabelSyntax* label, AttrList attributes, Token uniqueOrPriority);

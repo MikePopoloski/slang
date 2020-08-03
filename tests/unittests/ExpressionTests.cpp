@@ -1166,3 +1166,19 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpectedExpression);
 }
+
+TEST_CASE("Delay value ambiguity") {
+    // This tests ambiguity if delay values are parsed as vectors.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    initial begin
+        i = #3 'd7; // delay 3, assign 32'd7
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

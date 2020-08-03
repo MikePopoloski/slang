@@ -555,7 +555,7 @@ TimingControlSyntax* Parser::parseDelay3() {
         return nullptr;
 
     if (peek(1).kind != TokenKind::OpenParenthesis)
-        return parseTimingControl();
+        return parseTimingControl(/* isSequenceExpr */ false);
 
     auto hash = consume();
     auto openParen = consume();

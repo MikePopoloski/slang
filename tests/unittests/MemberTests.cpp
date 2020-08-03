@@ -775,6 +775,7 @@ module m;
     pullup (supply0, pull1) (1);
     cmos #3 asdf [3:0][4][5] (1, 2, 3), blah (4, 5), (5, 6);
     rtranif1 (1), asdf2(2);
+    pmos #6 (a, b, c);
 endmodule
 )");
 
