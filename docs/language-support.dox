@@ -137,9 +137,9 @@ LRM | Feature | Supported
 {{m-danger}}  9.4.2.3 | Conditional event controls | no
 {{m-danger}}  9.4.2.4 | Sequence events | no
 {{m-dim}}     9.5 | Process execution threads | N/A
-{{m-danger}}  9.6.1 | Wait fork statement | no
+{{m-success}} 9.6.1 | Wait fork statement | v0.4
 {{m-success}} 9.6.2 | Disable statement | v0.4
-{{m-danger}}  9.6.3 | Disable fork statement | no
+{{m-success}} 9.6.3 | Disable fork statement | v0.4
 {{m-danger}}  9.7 | Fine-grain process control | no
 
 ## 10. Assignment statements
@@ -169,7 +169,7 @@ LRM | Feature | Supported
 {{m-success}} 11.8 | Expression evaluation rules | v0.2
 {{m-danger}}  11.9 | Tagged union expressions | no
 {{m-warning}} 11.10 | String literal expressions | partial
-{{m-danger}}  11.11 | Min/typ/max expressions | no
+{{m-success}} 11.11 | Min/typ/max expressions | v0.4
 {{m-danger}}  11.12 | Let construct | no
 
 ## 12. Procedural programming statements
