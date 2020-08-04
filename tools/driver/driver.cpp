@@ -211,6 +211,7 @@ int driverMain(int argc, TArgs argv) try {
     optional<uint32_t> maxConstexprDepth;
     optional<uint32_t> maxConstexprSteps;
     optional<uint32_t> maxConstexprBacktrace;
+    optional<std::string> minTypMax;
     cmdLine.add("--max-hierarchy-depth", maxInstanceDepth, "Maximum depth of the design hierarchy",
                 "<depth>");
     cmdLine.add("--max-generate-steps", maxGenerateSteps,
@@ -227,6 +228,8 @@ int driverMain(int argc, TArgs argv) try {
                 "Maximum number of frames to show when printing a constant evaluation "
                 "backtrace; the rest will be abbreviated",
                 "<limit>");
+    cmdLine.add("-T,--timing", minTypMax,
+                "Select which value to consider in min:typ:max expressions", "min|typ|max");
 
     // Diagnostics control
     optional<bool> colorDiags;
@@ -315,6 +318,19 @@ int driverMain(int argc, TArgs argv) try {
         coptions.maxConstexprBacktrace = *maxConstexprBacktrace;
     if (errorLimit.has_value())
         coptions.errorLimit = *errorLimit * 2;
+
+    if (minTypMax.has_value()) {
+        if (minTypMax == "min")
+            coptions.minTypMax = MinTypMax::Min;
+        else if (minTypMax == "typ")
+            coptions.minTypMax = MinTypMax::Typ;
+        else if (minTypMax == "max")
+            coptions.minTypMax = MinTypMax::Max;
+        else {
+            OS::print("invalid value for timing option: '{}'", *minTypMax);
+            return 1;
+        }
+    }
 
     Bag options;
     options.set(ppoptions);
