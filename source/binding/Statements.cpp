@@ -196,14 +196,20 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             result = &AssertionStatement::fromSyntax(
                 comp, syntax.as<ImmediateAssertionStatementSyntax>(), context, stmtCtx);
             break;
+        case SyntaxKind::DisableForkStatement:
+            result = &DisableForkStatement::fromSyntax(
+                comp, syntax.as<DisableForkStatementSyntax>(), context, stmtCtx);
+            break;
+        case SyntaxKind::WaitForkStatement:
+            result = &WaitForkStatement::fromSyntax(comp, syntax.as<WaitForkStatementSyntax>(),
+                                                    context, stmtCtx);
+            break;
         case SyntaxKind::ProceduralAssignStatement:
         case SyntaxKind::ProceduralForceStatement:
         case SyntaxKind::ProceduralDeassignStatement:
         case SyntaxKind::ProceduralReleaseStatement:
-        case SyntaxKind::DisableForkStatement:
         case SyntaxKind::BlockingEventTriggerStatement:
         case SyntaxKind::NonblockingEventTriggerStatement:
-        case SyntaxKind::WaitForkStatement:
         case SyntaxKind::WaitStatement:
         case SyntaxKind::RandCaseStatement:
         case SyntaxKind::AssertPropertyStatement:
@@ -1824,6 +1830,36 @@ void AssertionStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("assertionKind", toString(assertionKind));
     serializer.write("isDeferred", isDeferred);
     serializer.write("isFinal", isFinal);
+}
+
+Statement& DisableForkStatement::fromSyntax(Compilation& compilation,
+                                            const DisableForkStatementSyntax& syntax,
+                                            const BindContext&, StatementContext&) {
+    return *compilation.emplace<DisableForkStatement>(syntax.sourceRange());
+}
+
+ER DisableForkStatement::evalImpl(EvalContext&) const {
+    return ER::Fail;
+}
+
+bool DisableForkStatement::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
+    return false;
+}
+
+Statement& WaitForkStatement::fromSyntax(Compilation& compilation,
+                                         const WaitForkStatementSyntax& syntax, const BindContext&,
+                                         StatementContext&) {
+    return *compilation.emplace<WaitForkStatement>(syntax.sourceRange());
+}
+
+ER WaitForkStatement::evalImpl(EvalContext&) const {
+    return ER::Fail;
+}
+
+bool WaitForkStatement::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
+    return false;
 }
 
 } // namespace slang

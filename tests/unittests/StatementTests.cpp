@@ -781,3 +781,18 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Disable / wait fork statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        disable fork;
+        wait fork;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

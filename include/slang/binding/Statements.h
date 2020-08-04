@@ -42,7 +42,9 @@ struct StatementSyntax;
     x(DoWhileLoop) \
     x(ForeverLoop) \
     x(Timed) \
-    x(Assertion)
+    x(Assertion) \
+    x(DisableFork) \
+    x(WaitFork)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
 
@@ -339,8 +341,8 @@ public:
     bool isHierarchical;
 
     DisableStatement(const Symbol& target, bool isHierarchical, SourceRange sourceRange) :
-        Statement(StatementKind::Disable, sourceRange),
-        target(target), isHierarchical(isHierarchical) {}
+        Statement(StatementKind::Disable, sourceRange), target(target),
+        isHierarchical(isHierarchical) {}
 
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -750,6 +752,42 @@ public:
         if (ifFalse)
             ifFalse->visit(visitor);
     }
+};
+
+struct DisableForkStatementSyntax;
+
+class DisableForkStatement : public Statement {
+public:
+    explicit DisableForkStatement(SourceRange sourceRange) :
+        Statement(StatementKind::DisableFork, sourceRange) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const DisableForkStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(const ASTSerializer&) const {}
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::DisableFork; }
+};
+
+struct WaitForkStatementSyntax;
+
+class WaitForkStatement : public Statement {
+public:
+    explicit WaitForkStatement(SourceRange sourceRange) :
+        Statement(StatementKind::WaitFork, sourceRange) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const WaitForkStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(const ASTSerializer&) const {}
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::WaitFork; }
 };
 
 } // namespace slang

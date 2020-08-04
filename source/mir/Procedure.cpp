@@ -54,6 +54,8 @@ public:
     void visit(const ForeverLoopStatement&) {}
     void visit(const TimedStatement&) {}
     void visit(const AssertionStatement&) {}
+    void visit(const DisableForkStatement&) {}
+    void visit(const WaitForkStatement&) {}
 
     MIRValue visit(const IntegerLiteral& expr) {
         return proc.emitConst(*expr.type, expr.getValue());
