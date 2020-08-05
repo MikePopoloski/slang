@@ -147,7 +147,7 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
 }
 
 template<typename TArgs>
-int driverMain(int argc, TArgs argv) try {
+int driverMain(int argc, TArgs argv, bool suppressColors) try {
     CommandLine cmdLine;
 
     // General
@@ -367,7 +367,7 @@ int driverMain(int argc, TArgs argv) try {
     if (colorDiags)
         showColors = *colorDiags;
     else
-        showColors = OS::fileSupportsColors(stdout);
+        showColors = !suppressColors && OS::fileSupportsColors(stdout);
 
     try {
         if (onlyPreprocess == true) {
@@ -414,6 +414,7 @@ void writeToFile(Stream& os, string_view fileName, String contents) {
 }
 
 #if defined(_MSC_VER)
+#    include <Windows.h>
 #    include <fcntl.h>
 #    include <io.h>
 
@@ -430,7 +431,20 @@ void writeToFile(string_view fileName, string_view contents) {
 #    ifndef FUZZ_TARGET
 int wmain(int argc, wchar_t** argv) {
     _setmode(_fileno(stdout), _O_U16TEXT);
-    return driverMain(argc, argv);
+
+    // Try to enable ANSI-style color handling.
+    bool suppressColors = true;
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut != INVALID_HANDLE_VALUE) {
+        DWORD mode = 0;
+        if (GetConsoleMode(hOut, &mode)) {
+            mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            if (SetConsoleMode(hOut, mode))
+                suppressColors = false;
+        }
+    }
+
+    return driverMain(argc, argv, suppressColors);
 }
 #    endif
 
@@ -448,7 +462,7 @@ void writeToFile(string_view fileName, string_view contents) {
 
 #    ifndef FUZZ_TARGET
 int main(int argc, char** argv) {
-    return driverMain(argc, argv);
+    return driverMain(argc, argv, false);
 }
 #    endif
 
