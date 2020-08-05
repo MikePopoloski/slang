@@ -21,15 +21,22 @@ class VariableSymbol;
 
 namespace mir {
 
+class Procedure;
+
 class MIRBuilder : public BumpAllocator {
 public:
     Compilation& compilation;
 
-    MIRBuilder(Compilation& compilation) : compilation(compilation) {}
+    explicit MIRBuilder(Compilation& compilation);
+    ~MIRBuilder();
+
+    void elaborate();
 
     MIRValue emitConst(const Type& type, const ConstantValue& val);
     MIRValue emitConst(const Type& type, ConstantValue&& val);
     MIRValue emitGlobal(const VariableSymbol& symbol);
+
+    span<const std::unique_ptr<Procedure>> getInitialProcs() const { return initialProcs; }
 
     const VariableSymbol& getGlobal(MIRValue val) const;
     span<const VariableSymbol* const> getGlobals() const { return globals; }
@@ -37,6 +44,7 @@ public:
 private:
     TypedBumpAllocator<TypedConstantValue> constantAlloc;
     std::vector<const VariableSymbol*> globals;
+    std::vector<std::unique_ptr<Procedure>> initialProcs;
     flat_hash_map<const VariableSymbol*, MIRValue> globalMap;
 };
 

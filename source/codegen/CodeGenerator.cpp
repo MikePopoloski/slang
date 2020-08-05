@@ -61,6 +61,11 @@ CodeGenerator::CodeGenerator(const Compilation& compilation) : compilation(compi
 
 CodeGenerator::~CodeGenerator() = default;
 
+void CodeGenerator::emitAll(const mir::MIRBuilder& design) {
+    for (auto& proc : design.getInitialProcs())
+        emit(*proc);
+}
+
 void CodeGenerator::emit(const mir::Procedure& proc) {
     CodeGenFunction cgf(*this, proc);
     llvm::IRBuilder<> caller(globalInitBlock);

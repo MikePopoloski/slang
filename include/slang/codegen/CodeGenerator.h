@@ -32,6 +32,7 @@ class Compilation;
 
 namespace mir {
 
+class MIRBuilder;
 class Procedure;
 enum class SysCallKind;
 
@@ -60,6 +61,8 @@ class CodeGenerator {
 public:
     explicit CodeGenerator(const Compilation& compilation);
     ~CodeGenerator();
+
+    void emitAll(const mir::MIRBuilder& design);
 
     void emit(const mir::Procedure& proc);
 

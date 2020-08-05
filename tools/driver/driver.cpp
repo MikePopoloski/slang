@@ -23,6 +23,11 @@
 #include "slang/util/String.h"
 #include "slang/util/Version.h"
 
+#if defined(INCLUDE_SIM)
+#    include "slang/codegen/JIT.h"
+#    include "slang/mir/MIRBuilder.h"
+#endif
+
 using namespace slang;
 
 void writeToFile(string_view fileName, string_view contents);
@@ -90,22 +95,10 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
     }
 }
 
-bool runCompiler(SourceManager& sourceManager, const Bag& options,
-                 const std::vector<SourceBuffer>& buffers,
-                 const std::vector<std::string>& warningOptions, uint32_t errorLimit,
-                 bool singleUnit, bool onlyParse, bool showColors,
+bool runCompiler(Compilation& compilation, const std::vector<std::string>& warningOptions,
+                 uint32_t errorLimit, bool onlyParse, bool showColors,
                  const optional<std::string>& astJsonFile) {
-
-    Compilation compilation(options);
-    if (singleUnit) {
-        compilation.addSyntaxTree(SyntaxTree::fromBuffers(buffers, sourceManager, options));
-    }
-    else {
-        for (const SourceBuffer& buffer : buffers)
-            compilation.addSyntaxTree(SyntaxTree::fromBuffer(buffer, sourceManager, options));
-    }
-
-    DiagnosticEngine diagEngine(sourceManager);
+    DiagnosticEngine diagEngine(*compilation.getSourceManager());
     Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
     Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
     diagEngine.setErrorLimit(errorLimit);
@@ -145,6 +138,22 @@ bool runCompiler(SourceManager& sourceManager, const Bag& options,
 
     return diagEngine.getNumErrors() == 0;
 }
+
+#if defined(INCLUDE_SIM)
+using namespace slang::mir;
+
+bool runSim(Compilation& compilation) {
+    MIRBuilder builder(compilation);
+    builder.elaborate();
+
+    CodeGenerator codegen(compilation);
+    codegen.emitAll(builder);
+
+    JIT jit;
+    jit.addCode(codegen.finish());
+    return jit.run() == 0;
+}
+#endif
 
 template<typename TArgs>
 int driverMain(int argc, TArgs argv, bool suppressColors) try {
@@ -250,6 +259,12 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
     std::vector<std::string> sourceFiles;
     cmdLine.add("--single-unit", singleUnit, "Treat all input files as a single compilation unit");
     cmdLine.setPositional(sourceFiles, "files");
+
+#if defined(INCLUDE_SIM)
+    // Simulation
+    optional<bool> shouldSim;
+    cmdLine.add("--sim", shouldSim, "After compiling, try to simulate the design");
+#endif
 
     if (!cmdLine.parse(argc, argv)) {
         for (auto& err : cmdLine.getErrors())
@@ -378,9 +393,24 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
             printMacros(sourceManager, options, buffers);
         }
         else {
-            anyErrors = !runCompiler(sourceManager, options, buffers, warningOptions,
-                                     errorLimit.value_or(20), singleUnit == true, onlyParse == true,
-                                     showColors, astJsonFile);
+            Compilation compilation(options);
+            if (singleUnit == true) {
+                compilation.addSyntaxTree(SyntaxTree::fromBuffers(buffers, sourceManager, options));
+            }
+            else {
+                for (const SourceBuffer& buffer : buffers)
+                    compilation.addSyntaxTree(
+                        SyntaxTree::fromBuffer(buffer, sourceManager, options));
+            }
+
+            anyErrors = !runCompiler(compilation, warningOptions, errorLimit.value_or(20),
+                                     onlyParse == true, showColors, astJsonFile);
+
+#if defined(INCLUDE_SIM)
+            if (!anyErrors && !onlyParse.value_or(false) && shouldSim == true) {
+                anyErrors = !runSim(compilation);
+            }
+#endif
         }
     }
     catch (const std::exception& e) {
@@ -473,12 +503,10 @@ int main(int argc, char** argv) {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     string_view text(reinterpret_cast<const char*>(data), size);
 
-    SourceManager sourceManager;
-    std::vector<SourceBuffer> buffers;
-    buffers.push_back(sourceManager.assignText("<source>", text));
+    Compilation compilation;
+    compilation.addSyntaxTree(SyntaxTree::fromText(text, "<source>"));
 
-    runCompiler(sourceManager, {}, buffers, {}, 0, /* singleUnit */ false, /* onlyParse */ false,
-                /* showColors */ false, {});
+    runCompiler(compilation, {}, 0, /* onlyParse */ false, /* showColors */ false, {});
 
     return 0;
 }

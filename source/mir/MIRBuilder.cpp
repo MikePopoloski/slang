@@ -6,9 +6,26 @@
 //------------------------------------------------------------------------------
 #include "slang/mir/MIRBuilder.h"
 
-#include "slang/symbols/VariableSymbols.h"
+#include "slang/compilation/Compilation.h"
+#include "slang/mir/Procedure.h"
+#include "slang/symbols/ASTVisitor.h"
 
 namespace slang::mir {
+
+MIRBuilder::MIRBuilder(Compilation& compilation) : compilation(compilation) {
+}
+
+MIRBuilder::~MIRBuilder() = default;
+
+void MIRBuilder::elaborate() {
+    // TODO: support more than just initial blocks
+    compilation.getRoot().visit(makeVisitor([&](const ProceduralBlockSymbol& block) {
+        if (block.procedureKind != ProceduralBlockKind::Initial)
+            return;
+
+        initialProcs.emplace_back(std::make_unique<Procedure>(*this, block));
+    }));
+}
 
 MIRValue MIRBuilder::emitConst(const Type& type, const ConstantValue& val) {
     return MIRValue(*constantAlloc.emplace(type, val));

@@ -13,6 +13,11 @@ if(STATIC_BUILD)
     target_link_libraries(rewriter PRIVATE -static -Wl,--whole-archive -lpthread -Wl,--no-whole-archive)
 endif()
 
+if(SLANG_INCLUDE_LLVM)
+    target_compile_definitions(driver PRIVATE INCLUDE_SIM)
+    target_link_libraries(driver PRIVATE slangcodegen slangruntime)
+endif()
+
 if(FUZZ_TARGET)
     message("Tweaking driver for fuzz testing")
     target_compile_definitions(driver PRIVATE FUZZ_TARGET)
