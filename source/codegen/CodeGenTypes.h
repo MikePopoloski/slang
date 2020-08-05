@@ -7,6 +7,7 @@
 #pragma once
 
 #include <flat_hash_map.hpp>
+#include <llvm/Support/Alignment.h>
 
 namespace llvm {
 
@@ -22,11 +23,16 @@ namespace slang {
 class CodeGenerator;
 class Type;
 
+struct AlignedType {
+    llvm::Type* type;
+    llvm::Align alignment;
+};
+
 class CodeGenTypes {
 public:
     explicit CodeGenTypes(CodeGenerator& codegen);
 
-    llvm::Type* convertType(const Type& type);
+    AlignedType convertType(const Type& type);
 
     llvm::Type* Void;
     llvm::IntegerType* Int1;
@@ -40,7 +46,7 @@ public:
 
 private:
     CodeGenerator& codegen;
-    flat_hash_map<const Type*, llvm::Type*> typeMap;
+    flat_hash_map<const Type*, AlignedType> typeMap;
 };
 
 } // namespace slang

@@ -28,7 +28,8 @@ struct TypedConstantValue {
 // clang-format off
 #define INSTR(x) \
     x(invalid) \
-    x(syscall)
+    x(syscall) \
+    x(store)
 ENUM(InstrKind, INSTR);
 #undef INSTR
 
@@ -77,6 +78,11 @@ class Instr {
 public:
     const Type& type;
     InstrKind kind;
+
+    Instr(InstrKind kind, const Type& returnType, MIRValue op) noexcept :
+        type(returnType), kind(kind), immOps{ op, MIRValue{} } {}
+    Instr(InstrKind kind, const Type& returnType, MIRValue op0, MIRValue op1) noexcept :
+        type(returnType), kind(kind), immOps{ op0, op1 } {}
 
     Instr(SysCallKind sysCall, const Type& returnType, span<const MIRValue> args) noexcept :
         type(returnType), kind(InstrKind::syscall), sysCallKind(sysCall), varOps(args) {}

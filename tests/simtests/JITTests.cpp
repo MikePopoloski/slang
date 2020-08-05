@@ -1,12 +1,16 @@
 #include "Test.h"
 
 #include "slang/codegen/JIT.h"
+#include "slang/runtime/Runtime.h"
 #include "slang/symbols/BlockSymbols.h"
 
 TEST_CASE("JIT test") {
     Compilation compilation = compile(R"(
 module m;
-    initial $display(3, , "Hello, World!");
+    initial begin
+        automatic int i = 4;
+        $display(3, i, , "Hello, World!");
+    end
 endmodule
 )");
 
@@ -19,7 +23,12 @@ endmodule
     CodeGenerator codegen(compilation);
     codegen.emit(proc);
 
+    std::string result;
+    slang::runtime::setOutputHandler([&](string_view text) { result += text; });
+
     JIT jit;
     jit.addCode(codegen.finish());
     CHECK(jit.run() == 0);
+
+    CHECK(result == "          3          4 Hello, World!\n");
 }

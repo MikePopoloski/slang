@@ -173,9 +173,10 @@ void Procedure::emitLocal(const VariableSymbol& symbol) {
     localMap.emplace(&symbol, val);
     locals.push_back(&symbol);
 
-    // TODO: initializer
-    /*if (auto init = symbol.getInitializer()) {
-    }*/
+    if (auto init = symbol.getInitializer()) {
+        auto iv = emitExpr(*init);
+        instructions.emplace_back(InstrKind::store, symbol.getType(), val, iv);
+    }
 }
 
 const VariableSymbol& Procedure::getLocalSymbol(MIRValue val) const {

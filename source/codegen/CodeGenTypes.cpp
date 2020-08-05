@@ -28,7 +28,7 @@ CodeGenTypes::CodeGenTypes(CodeGenerator& codegen) : codegen(codegen) {
     BoxedInt = llvm::StructType::get(Int64, Int32, Int8, Int8);
 }
 
-llvm::Type* CodeGenTypes::convertType(const Type& type) {
+AlignedType CodeGenTypes::convertType(const Type& type) {
     // Unwrap aliases.
     if (type.isAlias())
         return convertType(type.getCanonicalType());
@@ -51,12 +51,14 @@ llvm::Type* CodeGenTypes::convertType(const Type& type) {
     if (intType.isFourState)
         bits *= 2;
 
-    llvm::Type* result;
+    llvm::Type* lt;
     if (bits > codegen.getOptions().maxIntBits)
-        result = llvm::ArrayType::get(Int64, (bits + 63) / 64);
+        lt = llvm::ArrayType::get(Int64, (bits + 63) / 64);
     else
-        result = llvm::Type::getIntNTy(codegen.getContext(), bits);
+        lt = llvm::Type::getIntNTy(codegen.getContext(), bits);
 
+    // TODO: alignment
+    AlignedType result{ lt, llvm::Align::Constant<8>() };
     typeMap.emplace(&type, result);
     return result;
 }

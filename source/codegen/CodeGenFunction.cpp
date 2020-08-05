@@ -11,6 +11,7 @@
 #include "slang/codegen/CodeGenerator.h"
 #include "slang/mir/Procedure.h"
 #include "slang/symbols/AllTypes.h"
+#include "slang/symbols/VariableSymbols.h"
 
 namespace slang {
 
@@ -33,7 +34,15 @@ CodeGenFunction::CodeGenFunction(CodeGenerator& codegen, const Procedure& proc) 
     auto undef = llvm::UndefValue::get(types.Int32);
     allocaInsertionPoint = new llvm::BitCastInst(undef, types.Int32, "allocapt", bb);
 
-    // Start emitting instructions.
+    // Create all local variables.
+    locals.reserve(proc.getLocals().size());
+    for (auto local : proc.getLocals()) {
+        auto& astType = local->getType();
+        auto alignedType = types.convertType(astType);
+        locals.append({ createTempAlloca(alignedType), &astType, alignedType.type });
+    }
+
+    // Emit all instructions.
     builder.SetInsertPoint(bb);
     for (auto& instr : proc.getInstructions())
         emit(instr);
@@ -52,10 +61,12 @@ llvm::Function* CodeGenFunction::finalize() {
 
 llvm::Value* CodeGenFunction::emit(const Instr& instr) {
     switch (instr.kind) {
-        case InstrKind::syscall:
-            return emitSysCall(instr.getSysCallKind(), instr.getOperands());
         case InstrKind::invalid:
             return builder.CreateUnreachable();
+        case InstrKind::syscall:
+            return emitSysCall(instr.getSysCallKind(), instr.getOperands());
+        case InstrKind::store:
+            return emitStore(instr.getOperands()[0], instr.getOperands()[1]);
     }
     THROW_UNREACHABLE;
 }
@@ -68,9 +79,11 @@ llvm::Value* CodeGenFunction::emit(MIRValue val) {
         }
         case MIRValue::InstrSlot:
         case MIRValue::Global:
-        case MIRValue::Local:
-        case MIRValue::Empty:
             // TODO:
+            break;
+        case MIRValue::Local:
+            return emitLoad(val);
+        case MIRValue::Empty:
             break;
     }
     THROW_UNREACHABLE;
@@ -105,29 +118,47 @@ llvm::Value* CodeGenFunction::emitConstant(const Type& type, const SVInt& intege
         return llvm::ConstantDataArray::get(ctx, data);
 }
 
+llvm::Value* CodeGenFunction::emitLoad(mir::MIRValue val) {
+    auto& local = locals[val.asIndex()];
+    return builder.CreateLoad(local.addr, local.nativeType);
+}
+
+llvm::Value* CodeGenFunction::emitStore(MIRValue dest, MIRValue src) {
+    auto lval = emitLValue(dest);
+    return builder.CreateStore(emit(src), lval);
+}
+
+Address CodeGenFunction::emitLValue(MIRValue val) {
+    ASSERT(val.getKind() == MIRValue::Local);
+    return locals[val.asIndex()].addr;
+}
+
 const Type& CodeGenFunction::getTypeOf(MIRValue val) const {
     switch (val.getKind()) {
         case MIRValue::Constant:
             return val.asConstant().type;
         case MIRValue::InstrSlot:
         case MIRValue::Global:
-        case MIRValue::Local:
-        case MIRValue::Empty:
             // TODO:
+            break;
+        case MIRValue::Local:
+            return *locals[val.asIndex()].astType;
+        case MIRValue::Empty:
             break;
     }
     THROW_UNREACHABLE;
 }
 
-Address CodeGenFunction::createTempAlloca(llvm::Type* type, llvm::Align align) {
-    auto inst = new llvm::AllocaInst(type, codegen.getModule().getDataLayout().getAllocaAddrSpace(),
-                                     nullptr, align, "", allocaInsertionPoint);
-    return Address(inst, align);
+Address CodeGenFunction::createTempAlloca(AlignedType type) {
+    auto inst =
+        new llvm::AllocaInst(type.type, codegen.getModule().getDataLayout().getAllocaAddrSpace(),
+                             nullptr, type.alignment, "", allocaInsertionPoint);
+    return Address(inst, type.alignment);
 }
 
 Address CodeGenFunction::boxInt(llvm::Value* value, const Type& type) {
     // TODO: put alignment behind an ABI
-    auto addr = createTempAlloca(types.BoxedInt, llvm::Align::Constant<8>());
+    auto addr = createTempAlloca({ types.BoxedInt, llvm::Align::Constant<8>() });
 
     // TODO: fix int types
     bitwidth_t bits = type.getBitWidth();
