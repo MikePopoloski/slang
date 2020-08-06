@@ -38,6 +38,7 @@ static constexpr size_t getExtraSize(TokenKind kind) {
     size_t size = 0;
     switch (kind) {
         case TokenKind::StringLiteral:
+        case TokenKind::IncludeFileName:
             size = sizeof(string_view);
             break;
         case TokenKind::RealLiteral:
@@ -160,24 +161,28 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, st
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
              SourceLocation location, string_view strText) {
+    ASSERT(kind == TokenKind::StringLiteral || kind == TokenKind::IncludeFileName);
     init(alloc, kind, trivia, rawText, location);
     info->stringText() = strText;
 }
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
              SourceLocation location, SyntaxKind directive) {
+    ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
     init(alloc, kind, trivia, rawText, location);
     info->directiveKind() = directive;
 }
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
              SourceLocation location, logic_t bit) {
+    ASSERT(kind == TokenKind::UnbasedUnsizedLiteral);
     init(alloc, kind, trivia, rawText, location);
     info->bit() = bit;
 }
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
              SourceLocation location, const SVInt& value) {
+    ASSERT(kind == TokenKind::IntegerLiteral);
     init(alloc, kind, trivia, rawText, location);
 
     SVIntStorage storage(value.getBitWidth(), value.isSigned(), value.hasUnknown());
@@ -194,6 +199,7 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, st
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, span<Trivia const> trivia, string_view rawText,
              SourceLocation location, double value, bool outOfRange, optional<TimeUnit> timeUnit) {
+    ASSERT(kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
     init(alloc, kind, trivia, rawText, location);
     info->real() = value;
 

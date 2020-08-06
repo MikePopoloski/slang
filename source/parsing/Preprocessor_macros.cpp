@@ -357,9 +357,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         // See note above about weird macro usage being argument replaced.
         // In that case we want to fabricate the correct directive token here.
         if (token.kind == TokenKind::Directive) {
-            Token grave(alloc, TokenKind::Unknown, first.trivia(), "`"sv, firstLoc,
-                        SyntaxKind::Unknown);
-
+            Token grave(alloc, TokenKind::Unknown, first.trivia(), "`"sv, firstLoc);
             Token combined = Lexer::concatenateTokens(alloc, grave, first);
             if (combined) {
                 first = combined;
