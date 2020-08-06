@@ -796,3 +796,34 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Lifetimes of nested statement blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+module automatic m;
+    function automatic func1;
+        int i = 4;
+        for (int j = 0; j < 10; j++) begin
+            int k = j + i;
+            i = j + k;
+        end
+        return i;
+    endfunction
+
+    function func2;
+        int i = 4;
+        for (int j = 0; j < 10; j++) begin
+            int k = j + i;
+            i = j + k;
+        end
+        return i;
+    endfunction
+
+    localparam int p1 = func1();
+    localparam int p2 = func2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

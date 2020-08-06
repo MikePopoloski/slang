@@ -15,11 +15,12 @@ namespace slang {
 class StatementBlockSymbol : public Symbol, public Scope {
 public:
     StatementBlockKind blockKind;
+    VariableLifetime defaultLifetime;
 
     StatementBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                         StatementBlockKind blockKind) :
+                         StatementBlockKind blockKind, VariableLifetime defaultLifetime) :
         Symbol(SymbolKind::StatementBlock, name, loc),
-        Scope(compilation, this), blockKind(blockKind) {}
+        Scope(compilation, this), blockKind(blockKind), defaultLifetime(defaultLifetime) {}
 
     void setTemporaryParent(const Scope& scope, SymbolIndex index) { setParent(scope, index); }
     const Statement& getBody() const;

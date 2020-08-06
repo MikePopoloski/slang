@@ -47,7 +47,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     StatementBlockKind blockKind = SemanticFacts::getStatementBlockKind(syntax);
 
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind);
+    auto result =
+        comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, scope.getDefaultLifetime());
     result->binder.setItems(*result, syntax.items, syntax.sourceRange());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
@@ -70,8 +71,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     }
 
     auto& comp = scope.getCompilation();
-    auto result =
-        comp.emplace<StatementBlockSymbol>(comp, name, loc, StatementBlockKind::Sequential);
+    auto result = comp.emplace<StatementBlockSymbol>(
+        comp, name, loc, StatementBlockKind::Sequential, scope.getDefaultLifetime());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
@@ -107,8 +108,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     }
 
     auto& comp = scope.getCompilation();
-    auto result =
-        comp.emplace<StatementBlockSymbol>(comp, name, loc, StatementBlockKind::Sequential);
+    auto result = comp.emplace<StatementBlockSymbol>(
+        comp, name, loc, StatementBlockKind::Sequential, scope.getDefaultLifetime());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
@@ -155,8 +156,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
     SourceLocation loc = token.location();
 
     auto& comp = scope.getCompilation();
-    auto result =
-        comp.emplace<StatementBlockSymbol>(comp, name, loc, StatementBlockKind::Sequential);
+    auto result = comp.emplace<StatementBlockSymbol>(
+        comp, name, loc, StatementBlockKind::Sequential, scope.getDefaultLifetime());
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
@@ -504,8 +505,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    auto& iterScope = *compilation.emplace<StatementBlockSymbol>(compilation, "", loc,
-                                                                 StatementBlockKind::Sequential);
+    auto& iterScope = *compilation.emplace<StatementBlockSymbol>(
+        compilation, "", loc, StatementBlockKind::Sequential, VariableLifetime::Automatic);
     auto& local = *compilation.emplace<VariableSymbol>(genvar.valueText(), genvar.location(),
                                                        VariableLifetime::Automatic);
     local.setType(compilation.getIntegerType());

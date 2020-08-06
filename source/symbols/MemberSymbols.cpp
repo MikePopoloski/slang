@@ -8,11 +8,13 @@
 
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -120,8 +122,20 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     auto proto = syntax.prototype;
     Token nameToken = proto->name->getFirstToken();
     auto lifetime = SemanticFacts::getVariableLifetime(proto->lifetime);
-    if (!lifetime.has_value())
-        lifetime = parent.getDefaultLifetime();
+    if (!lifetime.has_value()) {
+        // Walk up to the nearest instance and use its default lifetime.
+        // If we're not within an instance, default to static.
+        lifetime = VariableLifetime::Static;
+        auto scope = &parent;
+        do {
+            auto& sym = scope->asSymbol();
+            if (sym.kind == SymbolKind::InstanceBody) {
+                lifetime = sym.as<InstanceBodySymbol>().getDefinition().defaultLifetime;
+                break;
+            }
+            scope = sym.getParentScope();
+        } while (scope);
+    }
 
     auto subroutineKind = syntax.kind == SyntaxKind::TaskDeclaration ? SubroutineKind::Task
                                                                      : SubroutineKind::Function;

@@ -96,23 +96,11 @@ VariableLifetime Scope::getDefaultLifetime() const {
     const Symbol* sym = &asSymbol();
     switch (sym->kind) {
         case SymbolKind::StatementBlock:
-            break;
+            return sym->as<StatementBlockSymbol>().defaultLifetime;
         case SymbolKind::Subroutine:
             return sym->as<SubroutineSymbol>().defaultLifetime;
         default:
             return VariableLifetime::Static;
-    }
-
-    while (true) {
-        auto scope = sym->getParentScope();
-        if (!scope)
-            return VariableLifetime::Static;
-
-        sym = &scope->asSymbol();
-        if (sym->kind == SymbolKind::Subroutine)
-            return sym->as<SubroutineSymbol>().defaultLifetime;
-        else if (sym->kind == SymbolKind::InstanceBody)
-            return sym->as<InstanceBodySymbol>().getDefinition().defaultLifetime;
     }
 }
 
