@@ -882,6 +882,9 @@ module m;
     // This is ok
     initial i = 1 + (j = 1);
 
+    function func(int k);
+    endfunction
+
     // Initialization in a procedural context is also ok
     initial begin
         automatic int k = 1;
@@ -890,6 +893,8 @@ module m;
         static int n = m++;
 
         static int foo = k; // disallowed
+
+        func.k = 4; // ok, param is static
     end
 endmodule
 )");

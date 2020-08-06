@@ -167,7 +167,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
             auto declarator = portSyntax->declarator;
             auto arg = compilation.emplace<FormalArgumentSymbol>(
-                declarator->name.valueText(), declarator->name.location(), direction);
+                declarator->name.valueText(), declarator->name.location(), direction, *lifetime);
 
             // If we're given a type, use that. Otherwise, if we were given a
             // direction, default to logic. Otherwise, use the last type.
@@ -236,7 +236,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
         for (auto declarator : portDecl.declarators) {
             auto arg = compilation.emplace<FormalArgumentSymbol>(
-                declarator->name.valueText(), declarator->name.location(), direction);
+                declarator->name.valueText(), declarator->name.location(), direction, *lifetime);
             arg->setDeclaredType(*header.dataType);
             arg->setFromDeclarator(*declarator);
             arg->setAttributes(*result, syntax.attributes);

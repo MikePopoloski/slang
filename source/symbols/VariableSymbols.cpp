@@ -145,8 +145,8 @@ void VariableSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation loc,
-                                           ArgumentDirection direction) :
-    VariableSymbol(SymbolKind::FormalArgument, name, loc, VariableLifetime::Automatic),
+                                           ArgumentDirection direction, VariableLifetime lifetime) :
+    VariableSymbol(SymbolKind::FormalArgument, name, loc, lifetime),
     direction(direction) {
     if (direction == ArgumentDirection::ConstRef)
         isConstant = true;

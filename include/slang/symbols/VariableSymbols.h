@@ -67,8 +67,8 @@ class FormalArgumentSymbol : public VariableSymbol {
 public:
     ArgumentDirection direction = ArgumentDirection::In;
 
-    FormalArgumentSymbol(string_view name, SourceLocation loc,
-                         ArgumentDirection direction = ArgumentDirection::In);
+    FormalArgumentSymbol(string_view name, SourceLocation loc, ArgumentDirection direction,
+                         VariableLifetime lifetime);
 
     void serializeTo(ASTSerializer& serializer) const;
 
