@@ -63,6 +63,7 @@ Option | Description | Default
 ------ | ----------- | -------
 SLANG_INCLUDE_TESTS | Include tests in the build | ON
 SLANG_INCLUDE_DOCS | Include docs in the build | OFF
+SLANG_INCLUDE_LLVM | Include LLVM in the build for generating simulation binaries | OFF
 BUILD_SHARED_LIBS | Build a shared library instead of static | OFF
 SLANG_COVERAGE | Enable Clang code coverage | OFF
 SLANG_SANITIZERS | A list of Clang sanitizers to include in the build | ""
@@ -70,6 +71,8 @@ FUZZ_TARGET | Turn on to enable some changes to make binaries easier to fuzz tes
 CI_BUILD | Enable additional longer-running tests for automated builds | OFF
 SLANG_MSVC_W4 | Enable /W4 for MSVC builds | ON
 SLANG_MSVC_STATIC_RUNTIME | Enable linking to the MSVC static runtime | ON
+LLVM_DIR | When building with LLVM, a path to where the LLVM cmake system lives | ""
+DOXYGENPY_PATH | When building docs, the path to the doxygen.py tool | ""
 
 @section build-scripts Build Scripts
 

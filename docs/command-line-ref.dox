@@ -104,7 +104,7 @@ The default is 64.
 
 Dump the compiled AST in JSON format to the specified file, or '-' for stdout.
 
-@section compilation-limits Compilation Limits
+@section compilation-limits Compilation
 
 `--max-hierarchy-depth <depth>`
 
@@ -132,6 +132,11 @@ The default is 100000.
 Set the maximum number of frames to show when printing a constant evaluation
 backtrace in diagnostics; the rest will be abbreviated to avoid spamming output.
 The default is 10.
+
+`-T,--timing min|typ|max`
+
+Select which expressions in min:typ:max triplets should be processed as part of
+the compilation. By default this will be the "typical", or middle expression.
 
 @section diag-control Diagnostic Control
 
