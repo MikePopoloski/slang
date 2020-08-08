@@ -23,7 +23,8 @@ public:
     Procedure& proc;
     EvalContext evalCtx;
 
-    ProcedureVisitor(Procedure& proc) : proc(proc), evalCtx(proc.getCompilation()) {}
+    ProcedureVisitor(Procedure& proc) :
+        proc(proc), evalCtx(proc.getCompilation(), EvalFlags::CacheResults) {}
 
     void visit(const EmptyStatement&) {}
     void visit(const StatementList& list) {

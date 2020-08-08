@@ -119,6 +119,11 @@ public:
     /// The type of the expression.
     not_null<const Type*> type;
 
+    /// A pointer to a constant value if the expression has been evaluated.
+    /// The value may be empty to indicate that the expression is known to not be constant.
+    /// If the pointer is null, the expression hasn't been evaluated yet.
+    mutable const ConstantValue* constant = nullptr;
+
     /// The syntax used to create the expression, if any. An expression tree can
     /// be created manually in which case it may not have a syntax representation.
     const ExpressionSyntax* syntax = nullptr;

@@ -133,9 +133,7 @@ void ASTSerializer::visit(const T& elem) {
             elem.serializeTo(*this);
         }
 
-        // This isn't the most efficient thing in the world; it could be improved
-        // with some kind of caching of values for individual expressions.
-        EvalContext ctx(compilation);
+        EvalContext ctx(compilation, EvalFlags::CacheResults);
         ConstantValue constant = elem.eval(ctx);
         if (constant)
             write("constant", constant);

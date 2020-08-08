@@ -17,7 +17,7 @@
 
 namespace slang {
 
-EvalContext::EvalContext(const Compilation& compilation, bitmask<EvalFlags> flags) :
+EvalContext::EvalContext(Compilation& compilation, bitmask<EvalFlags> flags) :
     compilation(compilation), flags(flags) {
     stack.emplace(Frame{});
 }

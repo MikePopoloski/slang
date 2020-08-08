@@ -1412,7 +1412,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     }
 
     // If the multiplier isn't constant this must be a string replication.
-    EvalContext evalCtx(compilation);
+    EvalContext evalCtx(compilation, EvalFlags::CacheResults);
     if (ConstantValue leftVal = left.eval(evalCtx); !leftVal) {
         if (!right->isImplicitString()) {
             // They probably meant for this to be a constant (non-string) replication,

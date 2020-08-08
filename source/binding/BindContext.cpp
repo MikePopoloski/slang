@@ -112,14 +112,14 @@ bool BindContext::requireValidBitWidth(bitwidth_t width, SourceRange range) cons
 }
 
 ConstantValue BindContext::eval(const Expression& expr) const {
-    EvalContext ctx(getCompilation());
+    EvalContext ctx(getCompilation(), EvalFlags::CacheResults);
     ConstantValue result = expr.eval(ctx);
     ctx.reportDiags(*this);
     return result;
 }
 
 ConstantValue BindContext::tryEval(const Expression& expr) const {
-    EvalContext ctx(getCompilation());
+    EvalContext ctx(getCompilation(), EvalFlags::CacheResults);
     return expr.eval(ctx);
 }
 

@@ -19,14 +19,32 @@ namespace slang {
 class BindContext;
 class SubroutineSymbol;
 
-enum class EvalFlags : uint8_t { None = 0, IsScript = 1, IsVerifying = 2 };
-BITMASK(EvalFlags, IsVerifying);
+/// Various flags that can be applied to a constant expression evaluation.
+enum class EvalFlags : uint8_t {
+    /// No special flags specified.
+    None = 0,
+
+    /// This evaluation is happening inside of a script, so some
+    /// language rules should be relaxed.
+    IsScript = 1,
+
+    /// This evaluation is happening to verify the const-ness of
+    /// an expression, not to figure out a final result.
+    IsVerifying = 2,
+
+    /// The results of the evaluation can be cached in each expression's
+    /// `constant` pointer.
+    CacheResults = 4
+};
+BITMASK(EvalFlags, CacheResults);
 
 /// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining
 /// storage for local variables.
 class EvalContext {
 public:
+    Compilation& compilation;
+
     /// Represents a single frame in the call stack.
     struct Frame {
         /// A set of temporary values materialized within the stack frame.
@@ -43,7 +61,7 @@ public:
         LookupLocation lookupLocation;
     };
 
-    explicit EvalContext(const Compilation& compilation, bitmask<EvalFlags> flags = {});
+    explicit EvalContext(Compilation& compilation, bitmask<EvalFlags> flags = {});
 
     /// Creates storage for a local variable in the current frame.
     ConstantValue* createLocal(const ValueSymbol* symbol, ConstantValue value = nullptr);
@@ -64,6 +82,10 @@ public:
     /// a single constant function for too long.
     [[nodiscard]] bool step(SourceLocation loc);
 
+    /// Returns true if the context is currently within a function call, and false if
+    /// this is a top-level expression.
+    bool inFunction() const { return stack.size() > 1; }
+
     /// Indicates whether this evaluation context is for a script session
     /// (not used during normal compilation flow).
     bool isScriptEval() const { return (flags & EvalFlags::IsScript) != 0; }
@@ -71,6 +93,10 @@ public:
     /// Indicates whether this context is for verifying const-ness
     /// without actually evaluating anything.
     bool isVerifying() const { return (flags & EvalFlags::IsVerifying) != 0; }
+
+    /// Indicates whether the results of evaluating expressions using this context
+    /// can be cached in each expression's `constant` pointer.
+    bool cacheResults() const { return !inFunction() && (flags & EvalFlags::CacheResults) != 0; }
 
     /// Gets the top of the call stack.
     const Frame& topFrame() const { return stack.back(); }
@@ -110,7 +136,6 @@ public:
     void reportStack(Diagnostic& diag) const;
 
 private:
-    const Compilation& compilation;
     uint32_t steps = 0;
     bitmask<EvalFlags> flags;
     const Symbol* disableTarget = nullptr;

@@ -25,7 +25,17 @@ struct EvalVisitor {
     ConstantValue visit(const T& expr, EvalContext& context) {
         if (expr.bad())
             return nullptr;
-        return expr.evalImpl(context);
+
+        if (expr.constant)
+            return *expr.constant;
+
+        ConstantValue cv = expr.evalImpl(context);
+        if (cv && context.cacheResults()) {
+            expr.constant = context.compilation.allocConstant(std::move(cv));
+            return *expr.constant;
+        }
+
+        return cv;
     }
 
     ConstantValue visitInvalid(const Expression&, EvalContext&) { return nullptr; }
