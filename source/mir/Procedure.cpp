@@ -21,8 +21,9 @@ using namespace slang::mir;
 class ProcedureVisitor {
 public:
     Procedure& proc;
+    EvalContext evalCtx;
 
-    ProcedureVisitor(Procedure& proc) : proc(proc) {}
+    ProcedureVisitor(Procedure& proc) : proc(proc), evalCtx(proc.getCompilation()) {}
 
     void visit(const EmptyStatement&) {}
     void visit(const StatementList& list) {
@@ -57,31 +58,18 @@ public:
     void visit(const DisableForkStatement&) {}
     void visit(const WaitForkStatement&) {}
 
-    MIRValue visit(const IntegerLiteral& expr) {
-        return proc.emitConst(*expr.type, expr.getValue());
-    }
-
-    MIRValue visit(const RealLiteral& expr) {
-        return proc.emitConst(*expr.type, real_t(expr.getValue()));
-    }
-
-    MIRValue visit(const TimeLiteral& expr) {
-        return proc.emitConst(*expr.type, real_t(expr.getValue()));
-    }
-
-    MIRValue visit(const UnbasedUnsizedIntegerLiteral& expr) {
-        return proc.emitConst(*expr.type, expr.getValue());
-    }
-
-    MIRValue visit(const NullLiteral& expr) {
-        return proc.emitConst(*expr.type, ConstantValue::NullPlaceholder{});
-    }
-
-    MIRValue visit(const StringLiteral& expr) {
-        return proc.emitConst(*expr.type, expr.getIntValue());
-    }
+    MIRValue visit(const IntegerLiteral& expr) { return emitConst(expr); }
+    MIRValue visit(const RealLiteral& expr) { return emitConst(expr); }
+    MIRValue visit(const TimeLiteral& expr) { return emitConst(expr); }
+    MIRValue visit(const UnbasedUnsizedIntegerLiteral& expr) { return emitConst(expr); }
+    MIRValue visit(const NullLiteral& expr) { return emitConst(expr); }
+    MIRValue visit(const StringLiteral& expr) { return emitConst(expr); }
 
     MIRValue visit(const NamedValueExpression& expr) {
+        // Some symbols are always constants, so just eval those.
+        if (expr.symbol.kind == SymbolKind::Parameter || expr.symbol.kind == SymbolKind::EnumValue)
+            return emitConst(expr);
+
         // Either we find this in our locals map, or we assume it's a global
         // declared somewhere else. emitGlobal will check first if we've
         // already allocated a slot, so it's fine to just call it as-is.
@@ -92,7 +80,47 @@ public:
         return proc.emitGlobal(var);
     }
 
-    MIRValue visit(const UnaryExpression&) { return {}; }
+    MIRValue visit(const UnaryExpression& expr) {
+        MIRValue val = expr.operand().visit(*this);
+        if (val.isConstant())
+            return emitConst(expr);
+
+#define INSTR(x) proc.emitInstr(InstrKind::x, *expr.type, val)
+        switch (expr.op) {
+            case UnaryOperator::Plus:
+                return val;
+            case UnaryOperator::Minus:
+                return INSTR(negate);
+            case UnaryOperator::BitwiseNot:
+                return INSTR(bitnot);
+            case UnaryOperator::BitwiseAnd:
+                return INSTR(reducand);
+            case UnaryOperator::BitwiseOr:
+                return INSTR(reducor);
+            case UnaryOperator::BitwiseXor:
+                return INSTR(reducxor);
+            case UnaryOperator::BitwiseNand:
+                val = INSTR(reducand);
+                return INSTR(bitnot);
+            case UnaryOperator::BitwiseNor:
+                val = INSTR(reducor);
+                return INSTR(bitnot);
+            case UnaryOperator::BitwiseXnor:
+                val = INSTR(reducxor);
+                return INSTR(bitnot);
+            case UnaryOperator::LogicalNot:
+            case UnaryOperator::Preincrement:
+            case UnaryOperator::Predecrement:
+            case UnaryOperator::Postincrement:
+            case UnaryOperator::Postdecrement:
+                // TODO:
+                break;
+        }
+#undef INSTR
+
+        return {};
+    }
+
     MIRValue visit(const BinaryExpression&) { return {}; }
     MIRValue visit(const ConditionalExpression&) { return {}; }
     MIRValue visit(const InsideExpression&) { return {}; }
@@ -124,6 +152,11 @@ public:
 
     void visitInvalid(const Statement&) {}
     MIRValue visitInvalid(const Expression&) { return {}; }
+
+private:
+    MIRValue emitConst(const Expression& expr) {
+        return proc.emitConst(*expr.type, expr.eval(evalCtx));
+    }
 };
 
 } // namespace
@@ -153,6 +186,16 @@ void Procedure::emitCall(SysCallKind sysCall, span<const MIRValue> args) {
 
 void Procedure::emitCall(SysCallKind sysCall, MIRValue arg0) {
     emitCall(sysCall, { &arg0, 1 });
+}
+
+MIRValue Procedure::emitInstr(InstrKind kind, const Type& type, MIRValue op0) {
+    instructions.emplace_back(kind, type, op0);
+    return MIRValue::slot(instructions.size() - 1);
+}
+
+MIRValue Procedure::emitInstr(InstrKind kind, const Type& type, MIRValue op0, MIRValue op1) {
+    instructions.emplace_back(kind, type, op0, op1);
+    return MIRValue::slot(instructions.size() - 1);
 }
 
 MIRValue Procedure::emitInt(bitwidth_t width, uint64_t value, bool isSigned) {

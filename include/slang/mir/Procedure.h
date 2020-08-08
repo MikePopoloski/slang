@@ -25,6 +25,9 @@ public:
     void emitCall(SysCallKind sysCall, span<const MIRValue> args);
     void emitCall(SysCallKind sysCall, MIRValue arg0);
 
+    MIRValue emitInstr(InstrKind kind, const Type& type, MIRValue op0);
+    MIRValue emitInstr(InstrKind kind, const Type& type, MIRValue op0, MIRValue op1);
+
     MIRValue emitConst(const Type& type, const ConstantValue& val) {
         return builder.emitConst(type, val);
     }

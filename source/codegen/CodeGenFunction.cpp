@@ -43,9 +43,11 @@ CodeGenFunction::CodeGenFunction(CodeGenerator& codegen, const Procedure& proc) 
     }
 
     // Emit all instructions.
+    instrValues.reserve(proc.getInstructions().size());
     builder.SetInsertPoint(bb);
-    for (auto& instr : proc.getInstructions())
-        emit(instr);
+    for (auto& instr : proc.getInstructions()) {
+        instrValues.append({ emit(instr), &instr.type });
+    }
 
     // All done!
     builder.CreateRetVoid();
@@ -67,6 +69,8 @@ llvm::Value* CodeGenFunction::emit(const Instr& instr) {
             return emitSysCall(instr.getSysCallKind(), instr.getOperands());
         case InstrKind::store:
             return emitStore(instr.getOperands()[0], instr.getOperands()[1]);
+        case InstrKind::negate:
+            return emitNegate(instr.type, instr.getOperands()[0]);
     }
     THROW_UNREACHABLE;
 }
@@ -78,11 +82,12 @@ llvm::Value* CodeGenFunction::emit(MIRValue val) {
             return emitConstant(tcv.type, tcv.value);
         }
         case MIRValue::InstrSlot:
+            return instrValues[val.asIndex()].val;
+        case MIRValue::Local:
+            return emitLoad(val);
         case MIRValue::Global:
             // TODO:
             break;
-        case MIRValue::Local:
-            return emitLoad(val);
         case MIRValue::Empty:
             break;
     }
@@ -138,11 +143,12 @@ const Type& CodeGenFunction::getTypeOf(MIRValue val) const {
         case MIRValue::Constant:
             return val.asConstant().type;
         case MIRValue::InstrSlot:
+            return *instrValues[val.asIndex()].astType;
+        case MIRValue::Local:
+            return *locals[val.asIndex()].astType;
         case MIRValue::Global:
             // TODO:
             break;
-        case MIRValue::Local:
-            return *locals[val.asIndex()].astType;
         case MIRValue::Empty:
             break;
     }

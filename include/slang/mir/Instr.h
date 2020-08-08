@@ -29,7 +29,12 @@ struct TypedConstantValue {
 #define INSTR(x) \
     x(invalid) \
     x(syscall) \
-    x(store)
+    x(store) \
+    x(negate) \
+    x(bitnot) \
+    x(reducand) \
+    x(reducor) \
+    x(reducxor)
 ENUM(InstrKind, INSTR);
 #undef INSTR
 
@@ -63,8 +68,10 @@ public:
         return *reinterpret_cast<const TypedConstantValue*>(val & ~7ull);
     }
 
+    bool isConstant() const { return getKind() == Constant; }
+
     size_t asIndex() const {
-        ASSERT(getKind() != Constant);
+        ASSERT(!isConstant());
         return val >> 3;
     }
 
@@ -79,10 +86,10 @@ public:
     const Type& type;
     InstrKind kind;
 
-    Instr(InstrKind kind, const Type& returnType, MIRValue op) noexcept :
-        type(returnType), kind(kind), immOps{ op, MIRValue{} } {}
-    Instr(InstrKind kind, const Type& returnType, MIRValue op0, MIRValue op1) noexcept :
-        type(returnType), kind(kind), immOps{ op0, op1 } {}
+    Instr(InstrKind kind, const Type& type, MIRValue op) noexcept :
+        type(type), kind(kind), immOps{ op, MIRValue{} } {}
+    Instr(InstrKind kind, const Type& type, MIRValue op0, MIRValue op1) noexcept :
+        type(type), kind(kind), immOps{ op0, op1 } {}
 
     Instr(SysCallKind sysCall, const Type& returnType, span<const MIRValue> args) noexcept :
         type(returnType), kind(InstrKind::syscall), sysCallKind(sysCall), varOps(args) {}

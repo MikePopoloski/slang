@@ -178,6 +178,7 @@ target_link_libraries(slangruntime INTERFACE slangcore)
 #-------- Codegen library
 if(SLANG_INCLUDE_LLVM)
     add_library(slangcodegen
+        codegen/CGExpr.cpp
         codegen/CGSysCall.cpp
         codegen/CodeGenerator.cpp
         codegen/CodeGenFunction.cpp
@@ -193,7 +194,6 @@ if(SLANG_INCLUDE_LLVM)
     message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
     message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
     target_include_directories(slangcodegen SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
-    target_compile_options(slangcodegen PRIVATE ${LLVM_DEFINITIONS})
 
     llvm_map_components_to_libnames(llvm_libs support core orcjit native nativecodegen)
     target_link_libraries(slangcodegen PRIVATE ${llvm_libs})

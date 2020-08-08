@@ -8,8 +8,9 @@ TEST_CASE("JIT test") {
     Compilation compilation = compile(R"(
 module m;
     initial begin
-        automatic int i = 4;
-        $display(3, i, , "Hello, World!");
+        localparam int j = 4;
+        automatic int i = -4;
+        $display(3, -i, j, , "Hello, World!");
     end
 endmodule
 )");
@@ -30,5 +31,5 @@ endmodule
     jit.addCode(codegen.finish());
     CHECK(jit.run() == 0);
 
-    CHECK(result == "          3          4 Hello, World!\n");
+    CHECK(result == "          3          4          4 Hello, World!\n");
 }
