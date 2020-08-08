@@ -5,7 +5,6 @@ function(slang_define_lib libname)
     target_include_directories(${libname} PUBLIC ../include/)
     target_include_directories(${libname} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
     target_include_directories(${libname} SYSTEM PUBLIC ../external/)
-    target_link_libraries(${libname} PUBLIC CONAN_PKG::fmt)
     install(TARGETS ${libname}
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib)
@@ -63,6 +62,9 @@ add_library(slangcore
     util/Hash.cpp
     util/OS.cpp
     util/String.cpp
+
+    ../external/fmt/format.cc
+    ../external/fmt/os.cc
 )
 slang_define_lib(slangcore)
 add_dependencies(slangcore gen_version)
