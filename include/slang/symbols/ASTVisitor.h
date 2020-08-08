@@ -11,6 +11,7 @@
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/OperatorExpressions.h"
 #include "slang/binding/PatternExpressions.h"
+#include "slang/binding/SelectExpressions.h"
 #include "slang/binding/Statements.h"
 #include "slang/binding/TimingControl.h"
 #include "slang/symbols/AllTypes.h"

@@ -120,6 +120,7 @@ add_library(slangcompiler
     binding/MiscExpressions.cpp
     binding/OperatorExpressions.cpp
     binding/PatternExpressions.cpp
+    binding/SelectExpressions.cpp
     binding/Statements.cpp
     binding/SystemSubroutine.cpp
     binding/TimingControl.cpp
