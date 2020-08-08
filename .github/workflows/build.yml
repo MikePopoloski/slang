@@ -12,11 +12,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: microsoft/setup-msbuild@v1.0.0
-    - name: Install dependencies
-      run: |
-        pip install conan
-        conan user
-        conan --version
     - name: Configure
       shell: bash
       run: |
@@ -54,11 +49,7 @@ jobs:
       run: |
         export PATH="$HOME/.local/bin:$PATH"
         sudo apt-get update
-        sudo apt-get install -y python3-setuptools g++-10 clang++-10 clang-tidy-10
-        pip3 install wheel
-        pip3 install conan
-        conan user
-        conan --version
+        sudo apt-get install -y g++-10 clang++-10 clang-tidy-10
     - name: Build
       run: |
         export PATH="$HOME/.local/bin:$PATH"
