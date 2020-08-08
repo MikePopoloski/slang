@@ -15,6 +15,8 @@
 #include <set>
 #include <shared_mutex>
 #include <variant>
+#include <unordered_map>
+#include <vector>
 
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"

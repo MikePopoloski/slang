@@ -69,7 +69,7 @@ add_library(slangcore
 slang_define_lib(slangcore)
 add_dependencies(slangcore gen_version)
 
-if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC" AND NOT APPLE)
     # Link against C++17 filesystem
     target_link_libraries(slangcore PUBLIC stdc++fs)
 endif()

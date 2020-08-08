@@ -500,7 +500,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
         }
         case MacroIntrinsic::Line: {
             size_t lineNum = sourceManager.getLineNumber(loc);
-            uintToStr(text, lineNum);
+            uintToStr(text, static_cast<uint64_t>(lineNum));
 
             string_view rawText = toStringView(text.copy(alloc));
             Token token(alloc, TokenKind::IntegerLiteral, {}, rawText, loc, lineNum);
