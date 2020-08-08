@@ -4,6 +4,6 @@ add_executable(simtests
     main.cpp
 )
 
-target_link_libraries(simtests PRIVATE slangruntime slangcodegen CONAN_PKG::catch2)
+target_link_libraries(simtests PRIVATE slangruntime slangcodegen)
 
 add_test(NAME simtests COMMAND simtests)

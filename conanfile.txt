@@ -1,5 +1,4 @@
 [requires]
-catch2/2.12.4
 fmt/7.0.1
 
 [generators]
