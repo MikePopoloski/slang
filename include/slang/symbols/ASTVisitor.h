@@ -75,8 +75,7 @@ public:
                 member.visit(DERIVED);
         }
 
-        // TODO: check VisitStatements
-        if constexpr (is_detected_v<getBody_t, T>) {
+        if constexpr (VisitStatements && is_detected_v<getBody_t, T>) {
             t.getBody().visit(DERIVED);
         }
 
