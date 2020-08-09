@@ -921,3 +921,24 @@ endmodule
     CHECK(diags[0].code == diag::PackedArrayTooLarge);
     CHECK(diags[1].code == diag::PackedArrayNotIntegral);
 }
+
+TEST_CASE("Unpacked struct/union errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct signed { int i; } s1;
+    struct { int i; } [3:0] s2;
+    union unsigned { int j; } u1;
+    union { int i; } [3:0] u2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::UnpackedSigned);
+    CHECK(diags[1].code == diag::PackedDimsOnUnpacked);
+    CHECK(diags[2].code == diag::UnpackedSigned);
+    CHECK(diags[3].code == diag::PackedDimsOnUnpacked);
+}

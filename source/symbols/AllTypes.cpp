@@ -630,8 +630,12 @@ const Type& UnpackedStructType::fromSyntax(const Scope& scope, LookupLocation lo
         }
     }
 
-    // TODO: error if dimensions
-    // TODO: error if signing
+    if (!syntax.dimensions.empty())
+        scope.addDiag(diag::PackedDimsOnUnpacked, syntax.dimensions.sourceRange());
+
+    if (syntax.signing)
+        scope.addDiag(diag::UnpackedSigned, syntax.signing.range());
+
     // TODO: check for void types
 
     result->setSyntax(syntax);
@@ -759,8 +763,12 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
         }
     }
 
-    // TODO: error if dimensions
-    // TODO: error if signing
+    if (!syntax.dimensions.empty())
+        scope.addDiag(diag::PackedDimsOnUnpacked, syntax.dimensions.sourceRange());
+
+    if (syntax.signing)
+        scope.addDiag(diag::UnpackedSigned, syntax.signing.range());
+
     // TODO: check for void types
 
     result->setSyntax(syntax);

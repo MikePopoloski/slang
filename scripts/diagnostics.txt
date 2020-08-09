@@ -302,12 +302,14 @@ error ForwardTypedefDoesNotMatch "forward typedef basic type '{}' does not match
 error PackedMemberNotIntegral "packed members must be of integral type (not {})"
 error PackedMemberHasInitializer "packed members can not have initializers"
 error PackedDimsOnPredefinedType "packed dimensions not allowed on predefined integer type '{}'"
+error PackedDimsOnUnpacked "unpacked types cannot have packed dimensions"
 error PackedUnionWidthMismatch "all members of a packed union must have the same width"
 error InvalidArraySize "{} is not a valid size for an array"
 error CannotDeclareType "cannot declare a type here"
 error InvalidAssociativeIndexType "index type cannot be or contain floating point types"
 error PackedArrayNotIntegral "packed array elements must be of integral type (not {})"
 error PackedArrayTooLarge "packed array is too large; maximum width is {} bits"
+error UnpackedSigned "unpacked type cannot have signedness declared"
 
 subsystem Lookup
 error Redefinition "redefinition of '{}'"
