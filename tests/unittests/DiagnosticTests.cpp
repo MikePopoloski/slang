@@ -86,7 +86,7 @@ TEST_CASE("Diag within macro arg") {
 `define BAR(blah) `FOO(blah)
 
 module m;
-    struct { } asdf;
+    struct { int i; } asdf;
     int i = `BAR(asdf.bar);
 endmodule
 )",
@@ -110,7 +110,7 @@ TEST_CASE("Diag within macro body") {
 `define BAR(blah) `FOO(blah)
 
 module m;
-    struct { } asdf;
+    struct { int i; } asdf;
     int i = `BAR(asdf);
 endmodule
 )",
@@ -140,7 +140,7 @@ TEST_CASE("Diag range within arg and caret within body") {
 `define BAR(blah) `FOO(blah)
 
 module m;
-    struct { } asdf;
+    struct { int i; } asdf;
     int i;
     initial i = `BAR(asdf);
 endmodule
@@ -195,8 +195,8 @@ TEST_CASE("Diag range split across args") {
 `define BAR(blah, flurb) `FOO(blah, flurb)
 
 module m;
-    struct { } asdf;
-    struct { } bar;
+    struct { int i; } asdf;
+    struct { int i; } bar;
     int i = `BAR(asdf, bar);
 endmodule
 )",
@@ -226,8 +226,8 @@ TEST_CASE("Diag macro args with split locations") {
 `define BAR(blah, flurb) `FOO(blah + flurb)
 
 module m;
-    struct { } asdf;
-    struct { } bar;
+    struct { int i; } asdf;
+    struct { int i; } bar;
     int i = `BAR(asdf, bar);
 endmodule
 )",

@@ -313,3 +313,18 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ExpectedContinuousAssignment);
 }
+
+TEST_CASE("Error for empty struct / union") {
+    auto& text = R"(
+module m;
+    struct { } foo;
+    union { } bar;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::ExpectedMember);
+    CHECK(diagnostics[0].code == diag::ExpectedMember);
+}

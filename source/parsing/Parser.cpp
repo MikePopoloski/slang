@@ -428,6 +428,9 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
             kind = peek().kind;
         }
         closeBrace = expect(TokenKind::CloseBrace);
+
+        if (buffer.empty() && !closeBrace.isMissing())
+            addDiag(diag::ExpectedMember, closeBrace.location());
     }
 
     return factory.structUnionType(syntaxKind, keyword, tagged, packed, signing, openBrace,

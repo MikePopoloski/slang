@@ -576,7 +576,6 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
         }
     }
 
-    // TODO: cannot be empty
     if (!bitWidth)
         return compilation.getErrorType();
 
@@ -634,7 +633,6 @@ const Type& UnpackedStructType::fromSyntax(const Scope& scope, LookupLocation lo
     // TODO: error if dimensions
     // TODO: error if signing
     // TODO: check for void types
-    // TODO: cannot be empty
 
     result->setSyntax(syntax);
     return *result;
@@ -709,7 +707,6 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
         }
     }
 
-    // TODO: cannot be empty
     if (!bitWidth)
         return compilation.getErrorType();
 
@@ -765,7 +762,6 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
     // TODO: error if dimensions
     // TODO: error if signing
     // TODO: check for void types
-    // TODO: cannot be empty
 
     result->setSyntax(syntax);
     return *result;
