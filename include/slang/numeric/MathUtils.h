@@ -8,9 +8,10 @@
 
 #include <climits>
 #include <cmath>
+#include <optional>
 
 #if defined(_MSC_VER)
-#include <intrin.h>
+#    include <intrin.h>
 #endif
 
 namespace slang {
@@ -66,6 +67,19 @@ inline uint32_t countPopulation64(uint64_t value) {
     return (uint32_t)__popcnt64(value);
 #else
     return (uint32_t)__builtin_popcountll(value);
+#endif
+}
+
+/// Performs a multiplication of two unsigned 32-bit integers and return the
+/// result if it does not overflow. If it does, nullopt is returned instead.
+inline std::optional<uint32_t> checkedMulU32(uint32_t a, uint32_t b) {
+#if defined(_MSC_VER)
+    uint64_t p = uint64_t(a) * uint64_t(b);
+    return p <= std::numeric_limits<uint32_t>::max() ? std::make_optional(uint32_t(p))
+                                                     : std::nullopt;
+#else
+    uint32_t result;
+    return __builtin_mul_overflow(a, b, &result) ? std::nullopt : std::make_optional(result);
 #endif
 }
 

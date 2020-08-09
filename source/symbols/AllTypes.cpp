@@ -59,15 +59,14 @@ bool getFourState(PredefinedIntegerType::Kind kind) {
 
 const Type& createPackedDims(const BindContext& context, const Type* type,
                              SyntaxList<VariableDimensionSyntax> dimensions) {
-    auto& comp = context.getCompilation();
     size_t count = dimensions.size();
     for (size_t i = 0; i < count; i++) {
         auto& dimSyntax = *dimensions[count - i - 1];
         auto dim = context.evalPackedDimension(dimSyntax);
         if (!dim)
-            return comp.getErrorType();
+            return context.getCompilation().getErrorType();
 
-        type = &PackedArrayType::fromSyntax(comp, *type, *dim, dimSyntax);
+        type = &PackedArrayType::fromSyntax(context.scope, *type, *dim, dimSyntax);
     }
 
     return *type;
@@ -152,7 +151,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
     size_t count = dims.size();
     for (size_t i = 0; i < count; i++) {
         auto& pair = dims[count - i - 1];
-        result = &PackedArrayType::fromSyntax(compilation, *result, pair.first, *pair.second);
+        result = &PackedArrayType::fromSyntax(scope, *result, pair.first, *pair.second);
     }
 
     return *result;
@@ -439,14 +438,24 @@ PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
     elementType(elementType), range(range) {
 }
 
-const Type& PackedArrayType::fromSyntax(Compilation& compilation, const Type& elementType,
+const Type& PackedArrayType::fromSyntax(const Scope& scope, const Type& elementType,
                                         ConstantRange range, const SyntaxNode& syntax) {
     if (elementType.isError())
         return elementType;
 
-    // TODO: check bitwidth of array
-    // TODO: ensure integral
-    auto result = compilation.emplace<PackedArrayType>(elementType, range);
+    auto& comp = scope.getCompilation();
+    if (!elementType.isIntegral()) {
+        scope.addDiag(diag::PackedArrayNotIntegral, syntax.sourceRange()) << elementType;
+        return comp.getErrorType();
+    }
+
+    auto width = checkedMulU32(elementType.getBitWidth(), range.width());
+    if (!width || width > (uint32_t)SVInt::MAX_BITS) {
+        scope.addDiag(diag::PackedArrayTooLarge, syntax.sourceRange()) << (uint32_t)SVInt::MAX_BITS;
+        return comp.getErrorType();
+    }
+
+    auto result = comp.emplace<PackedArrayType>(elementType, range);
     result->setSyntax(syntax);
     return *result;
 }

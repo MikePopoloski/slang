@@ -550,7 +550,7 @@ source:4:14: error: 72'hffffffffffffffffff is out of allowed range (-2147483648 
 source:5:14: error: value must be positive
            i[0]);
              ^
-source:7:27: error: packed members must be of integral type (type is 'unpacked array [3] of logic')
+source:7:27: error: packed members must be of integral type (not 'unpacked array [3] of logic')
     struct packed { logic j[3]; } foo;
                           ^~~~
 )");
@@ -899,4 +899,25 @@ endmodule
         REQUIRE(type.isPackedArray());
         CHECK(type.as<PackedArrayType>().range.upper() == 4);
     }
+}
+
+TEST_CASE("Packed array errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef logic [31:0] int_t;
+    int_t [31:0][80:0][99:0][128:0] asdf;
+
+    typedef real r_t;
+    r_t [3:0] foo;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::PackedArrayTooLarge);
+    CHECK(diags[1].code == diag::PackedArrayNotIntegral);
 }

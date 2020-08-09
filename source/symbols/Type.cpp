@@ -723,7 +723,7 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
         if (!dim)
             return compilation.getErrorType();
 
-        finalType = &PackedArrayType::fromSyntax(compilation, *finalType, *dim, *selectSyntax);
+        finalType = &PackedArrayType::fromSyntax(parent, *finalType, *dim, *selectSyntax);
     }
 
     return *finalType;
