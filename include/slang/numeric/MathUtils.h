@@ -70,7 +70,35 @@ inline uint32_t countPopulation64(uint64_t value) {
 #endif
 }
 
-/// Performs a multiplication of two unsigned 32-bit integers and return the
+/// Performs an addition of two signed 32-bit integers and returns the
+/// result if it does not overflow. If it does, nullopt is returned instead.
+inline std::optional<int32_t> checkedAddS32(int32_t a, int32_t b) {
+#if defined(_MSC_VER)
+    int64_t p = int64_t(a) + int64_t(b);
+    bool fits =
+        p >= std::numeric_limits<int32_t>::min() && p <= std::numeric_limits<int32_t>::max();
+    return fits ? std::make_optional(int32_t(p)) : std::nullopt;
+#else
+    int32_t result;
+    return __builtin_add_overflow(a, b, &result) ? std::nullopt : std::make_optional(result);
+#endif
+}
+
+/// Performs a subtraction of two signed 32-bit integers and returns the
+/// result if it does not overflow. If it does, nullopt is returned instead.
+inline std::optional<int32_t> checkedSubS32(int32_t a, int32_t b) {
+#if defined(_MSC_VER)
+    int64_t p = int64_t(a) - int64_t(b);
+    bool fits =
+        p >= std::numeric_limits<int32_t>::min() && p <= std::numeric_limits<int32_t>::max();
+    return fits ? std::make_optional(int32_t(p)) : std::nullopt;
+#else
+    int32_t result;
+    return __builtin_sub_overflow(a, b, &result) ? std::nullopt : std::make_optional(result);
+#endif
+}
+
+/// Performs a multiplication of two unsigned 32-bit integers and returns the
 /// result if it does not overflow. If it does, nullopt is returned instead.
 inline std::optional<uint32_t> checkedMulU32(uint32_t a, uint32_t b) {
 #if defined(_MSC_VER)

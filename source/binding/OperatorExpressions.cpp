@@ -1401,7 +1401,6 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     if (left.bad() || right->bad())
         return badExpr(compilation, result);
 
-    // TODO: unpacked arrays
     if (!left.type->isIntegral() || (!right->type->isIntegral() && !right->type->isString())) {
         auto& diag = context.addDiag(diag::BadReplicationExpression,
                                      syntax.concatenation->getFirstToken().location());

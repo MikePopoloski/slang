@@ -419,18 +419,10 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             }
             else {
                 // Otherwise, the resulting range will start with the fixed lower bound of the type.
-                int32_t count = *rv - 1;
-                if (selectionKind == RangeSelectionKind::IndexedUp) {
-                    selectionRange.left = valueRange.lower() + count;
-                    selectionRange.right = valueRange.lower();
-                }
-                else {
-                    selectionRange.left = valueRange.upper();
-                    selectionRange.right = valueRange.upper() - count;
-                }
-
-                if (!valueRange.isLittleEndian())
-                    selectionRange = selectionRange.reverse();
+                int32_t l = selectionKind == RangeSelectionKind::IndexedUp ? valueRange.lower()
+                                                                           : valueRange.upper();
+                selectionRange =
+                    getIndexedRange(selectionKind, l, *rv, valueRange.isLittleEndian());
             }
         }
 
@@ -591,6 +583,7 @@ optional<ConstantRange> RangeSelectExpression::getFixedRange(EvalContext& contex
         }
 
         optional<int32_t> r = cr.integer().as<int32_t>();
+        ASSERT(r);
         result = getIndexedRange(selectionKind, *l, *r, valueRange.isLittleEndian());
     }
 
@@ -668,16 +661,23 @@ optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& cont
 
 ConstantRange RangeSelectExpression::getIndexedRange(RangeSelectionKind kind, int32_t l, int32_t r,
                                                      bool littleEndian) {
-    // TODO: avoid overflow
     ConstantRange result;
     int32_t count = r - 1;
     if (kind == RangeSelectionKind::IndexedUp) {
-        result.left = l + count;
+        auto upper = checkedAddS32(l, count);
+        if (!upper)
+            upper = INT32_MAX;
+
+        result.left = *upper;
         result.right = l;
     }
     else {
+        auto lower = checkedSubS32(l, count);
+        if (!lower)
+            lower = INT32_MIN;
+
         result.left = l;
-        result.right = l - count;
+        result.right = *lower;
     }
 
     if (!littleEndian)

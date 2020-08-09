@@ -1222,3 +1222,21 @@ endmodule
     options.minTypMax = MinTypMax::Max;
     CHECK(compileVal(options).integer() == 5);
 }
+
+TEST_CASE("Range select overflow") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [4:0] asdf;
+    int i = asdf[2147483647+:2];
+    int j = asdf[-2147483647-:3];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BadRangeExpression);
+    CHECK(diags[1].code == diag::BadRangeExpression);
+}
