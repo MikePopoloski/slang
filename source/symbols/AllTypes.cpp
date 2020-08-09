@@ -57,6 +57,22 @@ bool getFourState(PredefinedIntegerType::Kind kind) {
 }
 // clang-format on
 
+const Type& createPackedDims(const BindContext& context, const Type* type,
+                             SyntaxList<VariableDimensionSyntax> dimensions) {
+    auto& comp = context.getCompilation();
+    size_t count = dimensions.size();
+    for (size_t i = 0; i < count; i++) {
+        auto& dimSyntax = *dimensions[count - i - 1];
+        auto dim = context.evalPackedDimension(dimSyntax);
+        if (!dim)
+            return comp.getErrorType();
+
+        type = &PackedArrayType::fromSyntax(comp, *type, *dim, dimSyntax);
+    }
+
+    return *type;
+}
+
 } // namespace
 
 namespace slang {
@@ -358,9 +374,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         }
     }
 
-    // TODO: packed dimensions?
-
-    return *resultType;
+    return createPackedDims(context, resultType, syntax.dimensions);
 }
 
 EnumValueSymbol::EnumValueSymbol(string_view name, SourceLocation loc) :
@@ -559,26 +573,12 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
 
     auto structType = compilation.emplace<PackedStructType>(
         compilation, bitWidth, isSigned, isFourState, syntax.keyword.location(), location, scope);
+    structType->setSyntax(syntax);
 
     for (auto member : make_reverse_range(members))
         structType->addMember(*member);
 
-    structType->setSyntax(syntax);
-
-    const Type* result = structType;
-    BindContext context(scope, location);
-
-    size_t count = syntax.dimensions.size();
-    for (size_t i = 0; i < count; i++) {
-        auto& dimSyntax = *syntax.dimensions[count - i - 1];
-        auto dim = context.evalPackedDimension(dimSyntax);
-        if (!dim)
-            return compilation.getErrorType();
-
-        result = &PackedArrayType::fromSyntax(compilation, *result, *dim, dimSyntax);
-    }
-
-    return *result;
+    return createPackedDims(BindContext(scope, location), structType, syntax.dimensions);
 }
 
 UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation loc,
@@ -706,26 +706,12 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
 
     auto unionType = compilation.emplace<PackedUnionType>(
         compilation, bitWidth, isSigned, isFourState, syntax.keyword.location(), location, scope);
+    unionType->setSyntax(syntax);
 
     for (auto member : members)
         unionType->addMember(*member);
 
-    unionType->setSyntax(syntax);
-
-    const Type* result = unionType;
-    BindContext context(scope, location);
-
-    size_t count = syntax.dimensions.size();
-    for (size_t i = 0; i < count; i++) {
-        auto& dimSyntax = *syntax.dimensions[count - i - 1];
-        auto dim = context.evalPackedDimension(dimSyntax);
-        if (!dim)
-            return compilation.getErrorType();
-
-        result = &PackedArrayType::fromSyntax(compilation, *result, *dim, dimSyntax);
-    }
-
-    return *result;
+    return createPackedDims(BindContext(scope, location), unionType, syntax.dimensions);
 }
 
 UnpackedUnionType::UnpackedUnionType(Compilation& compilation, SourceLocation loc,

@@ -879,3 +879,24 @@ endmodule
     compilation.addSyntaxTree(tree2);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Packed dimensions on struct / union / enum") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { logic [3:0] a; int b; } [4:1] s;
+    union packed { logic [3:0] a; bit [1:4] b; } [4:1] u;
+    enum { A, B, C } [4:1] e;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
+    for (auto name : { "s"s, "u"s, "e"s }) {
+        auto& type = m.find<VariableSymbol>(name).getType();
+        REQUIRE(type.isPackedArray());
+        CHECK(type.as<PackedArrayType>().range.upper() == 4);
+    }
+}
