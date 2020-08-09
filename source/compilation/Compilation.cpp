@@ -715,7 +715,7 @@ const Type& Compilation::getType(const Type& elementType,
 }
 
 const Type& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags) {
-    ASSERT(width > 0);
+    ASSERT(width > 0 && width <= SVInt::MAX_BITS);
     uint32_t key = width;
     key |= uint32_t(flags.bits()) << SVInt::BITWIDTH_BITS;
     auto it = vectorTypeCache.find(key);

@@ -1027,7 +1027,7 @@ optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() cons
 
     SmallVectorSized<ConstantRange, 4> buffer;
     for (auto dimSyntax : syntax->as<DeclaratorSyntax>().dimensions) {
-        EvaluatedDimension dim = context.evalDimension(*dimSyntax, true);
+        auto dim = context.evalDimension(*dimSyntax, /* requireRange */ true, /* isPacked */ false);
         if (!dim.isRange())
             return std::nullopt;
 

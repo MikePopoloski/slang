@@ -429,7 +429,7 @@ Symbol* recurseGateArray(Compilation& compilation, GateType gateType,
     // make up an empty array so that we don't get further errors when
     // things try to reference this symbol.
     auto nameToken = instance.decl->name;
-    EvaluatedDimension dim = context.evalDimension(**it, true);
+    auto dim = context.evalDimension(**it, /* requireRange */ true, /* isPacked */ false);
     if (!dim.isRange()) {
         return compilation.emplace<GateArraySymbol>(compilation, nameToken.valueText(),
                                                     nameToken.location(),

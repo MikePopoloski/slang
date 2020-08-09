@@ -624,7 +624,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const Type& elementType,
     size_t count = dimensions.size();
     for (size_t i = 0; i < count; i++) {
         auto& syntax = *dimensions[count - i - 1];
-        auto dim = context.evalDimension(syntax, /* requireRange */ false);
+        auto dim = context.evalDimension(syntax, /* requireRange */ false, /* isPacked */ false);
 
         Type* next = nullptr;
         switch (dim.kind) {

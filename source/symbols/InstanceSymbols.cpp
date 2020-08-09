@@ -80,7 +80,7 @@ private:
         // make up an empty array so that we don't get further errors when
         // things try to reference this symbol.
         auto nameToken = syntax.name;
-        EvaluatedDimension dim = context.evalDimension(**it, true);
+        auto dim = context.evalDimension(**it, /* requireRange */ true, /* isPacked */ false);
         if (!dim.isRange()) {
             return compilation.emplace<InstanceArraySymbol>(
                 compilation, nameToken.valueText(), nameToken.location(),

@@ -157,7 +157,7 @@ optional<int32_t> BindContext::evalInteger(const Expression& expr) const {
 }
 
 EvaluatedDimension BindContext::evalDimension(const VariableDimensionSyntax& syntax,
-                                              bool requireRange) const {
+                                              bool requireRange, bool isPacked) const {
     EvaluatedDimension result;
     if (!syntax.specifier) {
         result.kind = DimensionKind::Dynamic;
@@ -180,7 +180,7 @@ EvaluatedDimension BindContext::evalDimension(const VariableDimensionSyntax& syn
                 break;
             case SyntaxKind::RangeDimensionSpecifier:
                 evalRangeDimension(*syntax.specifier->as<RangeDimensionSpecifierSyntax>().selector,
-                                   result);
+                                   isPacked, result);
                 break;
             default:
                 THROW_UNREACHABLE;
@@ -195,13 +195,9 @@ EvaluatedDimension BindContext::evalDimension(const VariableDimensionSyntax& syn
 
 optional<ConstantRange> BindContext::evalPackedDimension(
     const VariableDimensionSyntax& syntax) const {
-
-    EvaluatedDimension result = evalDimension(syntax, true);
+    EvaluatedDimension result = evalDimension(syntax, /* requireRange */ true, /* isPacked */ true);
     if (!result.isRange())
         return std::nullopt;
-
-    if (result.kind == DimensionKind::AbbreviatedRange)
-        addDiag(diag::PackedDimsRequireFullRange, syntax.sourceRange());
 
     return result.range;
 }
@@ -209,12 +205,10 @@ optional<ConstantRange> BindContext::evalPackedDimension(
 optional<ConstantRange> BindContext::evalPackedDimension(const ElementSelectSyntax& syntax) const {
     EvaluatedDimension result;
     if (syntax.selector)
-        evalRangeDimension(*syntax.selector, result);
+        evalRangeDimension(*syntax.selector, /* isPacked */ true, result);
 
     if (!syntax.selector || result.kind == DimensionKind::Associative)
         addDiag(diag::DimensionRequiresConstRange, syntax.sourceRange());
-    else if (result.kind == DimensionKind::AbbreviatedRange)
-        addDiag(diag::PackedDimsRequireFullRange, syntax.sourceRange());
 
     if (!result.isRange())
         return std::nullopt;
@@ -224,8 +218,8 @@ optional<ConstantRange> BindContext::evalPackedDimension(const ElementSelectSynt
 
 optional<ConstantRange> BindContext::evalUnpackedDimension(
     const VariableDimensionSyntax& syntax) const {
-
-    EvaluatedDimension result = evalDimension(syntax, true);
+    EvaluatedDimension result =
+        evalDimension(syntax, /* requireRange */ true, /* isPacked */ false);
     if (!result.isRange())
         return std::nullopt;
 
@@ -260,7 +254,7 @@ static bool checkIndexType(const Type& type) {
     return true;
 }
 
-void BindContext::evalRangeDimension(const SelectorSyntax& syntax,
+void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
                                      EvaluatedDimension& result) const {
     switch (syntax.kind) {
         case SyntaxKind::BitSelect: {
@@ -312,6 +306,20 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax,
         default:
             addDiag(diag::InvalidDimensionRange, syntax.sourceRange());
             return;
+    }
+
+    if (result.isRange()) {
+        if (isPacked && result.kind == DimensionKind::AbbreviatedRange) {
+            addDiag(diag::PackedDimsRequireFullRange, syntax.sourceRange());
+            result.kind = DimensionKind::Unknown;
+        }
+        else if (result.range.width() > SVInt::MAX_BITS) {
+            if (isPacked)
+                addDiag(diag::PackedArrayTooLarge, syntax.sourceRange()) << (int)SVInt::MAX_BITS;
+            else
+                addDiag(diag::ArrayDimTooLarge, syntax.sourceRange()) << (int)SVInt::MAX_BITS;
+            result.kind = DimensionKind::Unknown;
+        }
     }
 }
 

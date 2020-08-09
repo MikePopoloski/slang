@@ -128,8 +128,8 @@ public:
 
     optional<int32_t> evalInteger(const ExpressionSyntax& syntax) const;
     optional<int32_t> evalInteger(const Expression& expr) const;
-    EvaluatedDimension evalDimension(const VariableDimensionSyntax& syntax,
-                                     bool requireRange) const;
+    EvaluatedDimension evalDimension(const VariableDimensionSyntax& syntax, bool requireRange,
+                                     bool isPacked) const;
 
     optional<ConstantRange> evalPackedDimension(const VariableDimensionSyntax& syntax) const;
     optional<ConstantRange> evalPackedDimension(const ElementSelectSyntax& syntax) const;
@@ -138,7 +138,8 @@ public:
     BindContext resetFlags(bitmask<BindFlags> addedFlags) const;
 
 private:
-    void evalRangeDimension(const SelectorSyntax& syntax, EvaluatedDimension& result) const;
+    void evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
+                            EvaluatedDimension& result) const;
 };
 
 } // namespace slang

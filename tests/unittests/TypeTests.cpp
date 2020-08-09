@@ -910,6 +910,7 @@ module m;
     typedef real r_t;
     r_t [3:0] foo;
 
+    logic [12] asdfasdf;
 endmodule
 )");
 
@@ -917,9 +918,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::PackedArrayTooLarge);
     CHECK(diags[1].code == diag::PackedArrayNotIntegral);
+    CHECK(diags[2].code == diag::PackedDimsRequireFullRange);
 }
 
 TEST_CASE("Unpacked struct/union errors") {
@@ -941,4 +943,21 @@ endmodule
     CHECK(diags[1].code == diag::PackedDimsOnUnpacked);
     CHECK(diags[2].code == diag::UnpackedSigned);
     CHECK(diags[3].code == diag::PackedDimsOnUnpacked);
+}
+
+TEST_CASE("Array elements max size") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [2147483647:0] pa;
+    logic ua [2147483647:0];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::PackedArrayTooLarge);
+    CHECK(diags[1].code == diag::ArrayDimTooLarge);
 }
