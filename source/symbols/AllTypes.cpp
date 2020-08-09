@@ -55,6 +55,36 @@ bool getFourState(PredefinedIntegerType::Kind kind) {
         default: THROW_UNREACHABLE;
     }
 }
+
+string_view getName(PredefinedIntegerType::Kind kind) {
+    switch (kind) {
+        case PredefinedIntegerType::ShortInt: return "shortint"sv;
+        case PredefinedIntegerType::Int: return "int"sv;
+        case PredefinedIntegerType::LongInt: return "longint"sv;
+        case PredefinedIntegerType::Byte: return "byte"sv;
+        case PredefinedIntegerType::Integer: return "integer"sv;
+        case PredefinedIntegerType::Time: return "time"sv;
+        default: THROW_UNREACHABLE;
+    }
+}
+
+string_view getName(ScalarType::Kind kind) {
+    switch (kind) {
+        case ScalarType::Bit: return "bit"sv;
+        case ScalarType::Logic: return "logic"sv;
+        case ScalarType::Reg: return "reg"sv;
+        default: THROW_UNREACHABLE;
+    }
+}
+
+string_view getName(FloatingType::Kind kind) {
+    switch (kind) {
+        case FloatingType::Real: return "real"sv;
+        case FloatingType::ShortReal: return "shortreal"sv;
+        case FloatingType::RealTime: return "realtime"sv;
+        default: THROW_UNREACHABLE;
+    }
+}
 // clang-format on
 
 const Type& createPackedDims(const BindContext& context, const Type* type,
@@ -180,8 +210,8 @@ PredefinedIntegerType::PredefinedIntegerType(Kind integerKind) :
 }
 
 PredefinedIntegerType::PredefinedIntegerType(Kind integerKind, bool isSigned) :
-    IntegralType(SymbolKind::PredefinedIntegerType, "", SourceLocation(), getWidth(integerKind),
-                 isSigned, getFourState(integerKind)),
+    IntegralType(SymbolKind::PredefinedIntegerType, getName(integerKind), SourceLocation(),
+                 getWidth(integerKind), isSigned, getFourState(integerKind)),
     integerKind(integerKind) {
 }
 
@@ -193,13 +223,13 @@ ScalarType::ScalarType(Kind scalarKind) : ScalarType(scalarKind, false) {
 }
 
 ScalarType::ScalarType(Kind scalarKind, bool isSigned) :
-    IntegralType(SymbolKind::ScalarType, "", SourceLocation(), 1, isSigned,
+    IntegralType(SymbolKind::ScalarType, getName(scalarKind), SourceLocation(), 1, isSigned,
                  scalarKind != Kind::Bit),
     scalarKind(scalarKind) {
 }
 
 FloatingType::FloatingType(Kind floatKind_) :
-    Type(SymbolKind::FloatingType, "", SourceLocation()), floatKind(floatKind_) {
+    Type(SymbolKind::FloatingType, getName(floatKind_), SourceLocation()), floatKind(floatKind_) {
 }
 
 ConstantValue FloatingType::getDefaultValueImpl() const {

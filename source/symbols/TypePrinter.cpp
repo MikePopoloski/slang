@@ -58,45 +58,19 @@ std::string TypePrinter::toString() const {
 }
 
 void TypePrinter::visit(const ScalarType& type, string_view) {
-    // clang-format off
-    switch (type.scalarKind) {
-        case ScalarType::Bit: buffer->append("bit"); break;
-        case ScalarType::Logic: buffer->append("logic"); break;
-        case ScalarType::Reg: buffer->append("reg"); break;
-        default: THROW_UNREACHABLE;
-    }
-    // clang-format on
-
+    buffer->append(type.name);
     if (type.isSigned)
         buffer->append(" signed");
 }
 
 void TypePrinter::visit(const PredefinedIntegerType& type, string_view) {
-    // clang-format off
-    switch (type.integerKind) {
-        case PredefinedIntegerType::ShortInt: buffer->append("shortint"); break;
-        case PredefinedIntegerType::Int: buffer->append("int"); break;
-        case PredefinedIntegerType::LongInt: buffer->append("longint"); break;
-        case PredefinedIntegerType::Byte: buffer->append("byte"); break;
-        case PredefinedIntegerType::Integer: buffer->append("integer"); break;
-        case PredefinedIntegerType::Time: buffer->append("time"); break;
-        default: THROW_UNREACHABLE;
-    }
-    // clang-format on
-
+    buffer->append(type.name);
     if (type.isSigned != PredefinedIntegerType::isDefaultSigned(type.integerKind))
         buffer->append(type.isSigned ? " signed" : " unsigned");
 }
 
 void TypePrinter::visit(const FloatingType& type, string_view) {
-    // clang-format off
-    switch (type.floatKind) {
-        case FloatingType::Real: buffer->append("real"); break;
-        case FloatingType::ShortReal: buffer->append("shortreal"); break;
-        case FloatingType::RealTime: buffer->append("realtime"); break;
-        default: THROW_UNREACHABLE;
-    }
-    // clang-format on
+    buffer->append(type.name);
 }
 
 void TypePrinter::visit(const EnumType& type, string_view overrideName) {
