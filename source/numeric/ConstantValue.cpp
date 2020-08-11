@@ -343,7 +343,7 @@ ConstantValue ConstantValue::convertToStr() const {
     int32_t extraBits = int32_t(val.getBitWidth() % 8);
 
     std::string result;
-    result.reserve(msb / 8 + 1);
+    result.reserve((val.getBitWidth() + 7) / 8);
     if (extraBits) {
         auto c = val.slice(msb, msb - extraBits + 1).as<uint8_t>();
         if (c && *c)
@@ -369,7 +369,7 @@ ConstantValue ConstantValue::convertToByteArray(bitwidth_t size, bool isSigned) 
         const SVInt& val = integer();
         int32_t msb = int32_t(val.getBitWidth() - 1);
         int32_t extraBits = int32_t(val.getBitWidth() % 8);
-        result.reserve(msb / 8 + 1);
+        result.reserve((val.getBitWidth() + 7) / 8);
         if (extraBits) {
             auto c = val.slice(msb, msb - extraBits + 1).as<uint8_t>();
             if (c && *c)
@@ -392,7 +392,7 @@ ConstantValue ConstantValue::convertToByteArray(bitwidth_t size, bool isSigned) 
     for (auto ch: result) {
         if (array.size() >= size)
             break;
-        array.emplace_back(SVInt(8, ch, isSigned));
+        array.emplace_back(SVInt(8, static_cast<uint64_t>(ch), isSigned));
     }
     while (array.size() < size) {
         array.emplace_back(SVInt(8, 0, isSigned));
