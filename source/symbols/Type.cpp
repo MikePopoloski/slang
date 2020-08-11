@@ -239,6 +239,13 @@ bool Type::isUnpackedArray() const {
     }
 }
 
+bool Type::isUnpackedArrayOfByte() const {
+    if (getCanonicalType().kind != SymbolKind::FixedSizeUnpackedArrayType)
+        return false;
+    auto elemType = &getArrayElementType()->getCanonicalType();
+    return elemType->isIntegral() && !elemType->isEnum() && elemType->getBitWidth() == 8;
+}
+
 bool Type::isMatching(const Type& rhs) const {
     // See [6.22.1] for Matching Types.
     const Type* l = &getCanonicalType();

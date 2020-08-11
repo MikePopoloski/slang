@@ -343,6 +343,7 @@ ConstantValue ConstantValue::convertToStr() const {
     int32_t extraBits = int32_t(val.getBitWidth() % 8);
 
     std::string result;
+    result.reserve(msb / 8 + 1);
     if (extraBits) {
         auto c = val.slice(msb, msb - extraBits + 1).as<uint8_t>();
         if (c && *c)
@@ -358,6 +359,45 @@ ConstantValue ConstantValue::convertToStr() const {
     }
 
     return result;
+}
+
+ConstantValue ConstantValue::convertToByteArray(bitwidth_t size, bool isSigned) const {
+    if (isUnpacked())
+        return *this;
+    std::string result;
+    if (isInteger()) {
+        const SVInt& val = integer();
+        int32_t msb = int32_t(val.getBitWidth() - 1);
+        int32_t extraBits = int32_t(val.getBitWidth() % 8);
+        result.reserve(msb / 8 + 1);
+        if (extraBits) {
+            auto c = val.slice(msb, msb - extraBits + 1).as<uint8_t>();
+            if (c && *c)
+                result.push_back(char(*c));
+            msb -= extraBits;
+        }
+        while (msb >= 7) {
+            auto c = val.slice(msb, msb - 7).as<uint8_t>();
+            if (c && *c)
+                result.push_back(char(*c));
+            msb -= 8;
+        }
+    } else if (isString()) {
+        result = str();
+    } else {
+        return nullptr;
+    }
+    Elements array;
+    array.reserve(size);
+    for (auto ch: result) {
+        if (array.size() >= size)
+            break;
+        array.emplace_back(SVInt(8, ch, isSigned));
+    }
+    while (array.size() < size) {
+        array.emplace_back(SVInt(8, 0, isSigned));
+    }
+    return array;
 }
 
 std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {
