@@ -165,6 +165,9 @@ public:
     /// Indicates whether this is a string type.
     bool isString() const { return getCanonicalType().kind == SymbolKind::StringType; }
 
+    /// Indicates unpacked array of bytes to accept string literals conversion
+    bool isUnpackedArrayOfByte() const;
+
     /// Indicates whether this is an event type.
     bool isEvent() const { return getCanonicalType().kind == SymbolKind::EventType; }
 

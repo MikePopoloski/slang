@@ -144,6 +144,7 @@ public:
     ConstantValue convertToReal() const;
     ConstantValue convertToShortReal() const;
     ConstantValue convertToStr() const;
+    ConstantValue convertToByteArray(bitwidth_t size, bool isSigned = false) const;
 
     static const ConstantValue Invalid;
 
