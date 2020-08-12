@@ -105,7 +105,7 @@ namespace slang {
 Expression& Expression::implicitConversion(const BindContext& context, const Type& targetType,
                                            Expression& expr) {
     ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
-           (targetType.isString() && expr.isImplicitString()) ||
+           ((targetType.isString() || targetType.isByteArray()) && expr.isImplicitString()) ||
            (targetType.isEnum() && isSameEnum(expr, targetType)));
 
     Expression* result = &expr;
@@ -292,7 +292,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     if (!type.isAssignmentCompatible(*rt)) {
         // String literals have a type of integer, but are allowed to implicitly convert to the
         // string type. See comments on isSameEnum for why that's here as well.
-        if ((type.isString() && expr.isImplicitString()) ||
+        if (((type.isString() || type.isByteArray()) && expr.isImplicitString()) ||
             (type.isEnum() && isSameEnum(expr, type))) {
 
             result = &implicitConversion(context, type, *result);
@@ -602,6 +602,22 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         }
 
         return std::move(value);
+    }
+
+    if (to.isByteArray()) {
+        const auto& ct = to.getCanonicalType();
+        const auto isSigned = ct.getArrayElementType()->isSigned();
+        if (ct.isQueue()) {
+            return value.convertToByteQueue(isSigned);
+        }
+        else {
+            bitwidth_t size;
+            if (ct.hasFixedRange())
+                size = ct.as<FixedSizeUnpackedArrayType>().range.width();
+            else
+                size = 0; // dynamic array use string size
+            return value.convertToByteArray(size, isSigned);
+        }
     }
 
     // TODO: other types

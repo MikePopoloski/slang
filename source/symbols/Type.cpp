@@ -221,7 +221,8 @@ bool Type::isByteArray() const {
     const Type& ct = getCanonicalType();
     if (!ct.isUnpackedArray())
         return false;
-
+    if (ct.kind == SymbolKind::AssociativeArrayType)
+        return false;
     auto& elem = ct.getArrayElementType()->getCanonicalType();
     return elem.isPredefinedInteger() &&
            elem.as<PredefinedIntegerType>().integerKind == PredefinedIntegerType::Byte;
