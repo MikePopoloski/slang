@@ -1250,17 +1250,13 @@ std::string testStringLiteralsToByteArray(const std::string& text) {
     NO_COMPILATION_ERRORS;
 
     const auto& module = *compilation.getRoot().topInstances[0];
-    if (!tree->diagnostics().empty())
-        WARN(report(tree->diagnostics()));
-
     const ParameterSymbol& param = module.body.memberAt<ParameterSymbol>(0);
     const auto& value = param.getValue();
     std::string result;
     if (value.isUnpacked()) {
         for (const auto& svInt : value.elements()) {
-            REQUIRE(svInt.isInteger());
             REQUIRE(svInt.integer().getBitWidth() == 8);
-            auto ch = static_cast<char>(*svInt.integer().getRawPtr());
+            auto ch = *svInt.integer().as<char>();
             if (!ch)
                 break;
             result.push_back(ch);
@@ -1269,9 +1265,8 @@ std::string testStringLiteralsToByteArray(const std::string& text) {
     else {
         REQUIRE(value.isQueue());
         for (const auto& svInt : *value.queue().get()) {
-            REQUIRE(svInt.isInteger());
             REQUIRE(svInt.integer().getBitWidth() == 8);
-            auto ch = static_cast<char>(*svInt.integer().getRawPtr());
+            auto ch = *svInt.integer().as<char>();
             if (!ch)
                 break;
             result.push_back(ch);
