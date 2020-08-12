@@ -1260,15 +1260,21 @@ std::string testStringLiteralsToByteArray(const std::string& text) {
         for (const auto& svInt : value.elements()) {
             REQUIRE(svInt.isInteger());
             REQUIRE(svInt.integer().getBitWidth() == 8);
-            result.push_back(static_cast<char>(*svInt.integer().getRawPtr()));
+            auto ch = static_cast<char>(*svInt.integer().getRawPtr());
+            if (!ch)
+                break;
+            result.push_back(ch);
         }
     }
     else {
         REQUIRE(value.isQueue());
-        for (const auto& svInt : value.queue()) {
+        for (const auto& svInt : *value.queue().get()) {
             REQUIRE(svInt.isInteger());
             REQUIRE(svInt.integer().getBitWidth() == 8);
-            result.push_back(static_cast<char>(*svInt.integer().getRawPtr()));
+            auto ch = static_cast<char>(*svInt.integer().getRawPtr());
+            if (!ch)
+                break;
+            result.push_back(ch);
         }
     }
     return result;
@@ -1284,4 +1290,18 @@ TEST_CASE("String literal assigned to unpacked array of bytes") {
     // Queue
     CHECK(testStringLiteralsToByteArray("localparam byte q[$] = \"hello world\";") ==
           "hello world");
+
+    // Associative array should fail
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam byte a[string] = "associative";
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
 }

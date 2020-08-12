@@ -105,7 +105,7 @@ namespace slang {
 Expression& Expression::implicitConversion(const BindContext& context, const Type& targetType,
                                            Expression& expr) {
     ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
-           (targetType.canBeStringLike() && expr.isImplicitString()) ||
+           ((targetType.isString() || targetType.isByteArray()) && expr.isImplicitString()) ||
            (targetType.isEnum() && isSameEnum(expr, targetType)));
 
     Expression* result = &expr;
@@ -292,7 +292,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
     if (!type.isAssignmentCompatible(*rt)) {
         // String literals have a type of integer, but are allowed to implicitly convert to the
         // string type. See comments on isSameEnum for why that's here as well.
-        if ((type.canBeStringLike() && expr.isImplicitString()) ||
+        if (((type.isString() || type.isByteArray()) && expr.isImplicitString()) ||
             (type.isEnum() && isSameEnum(expr, type))) {
 
             result = &implicitConversion(context, type, *result);
