@@ -1240,3 +1240,48 @@ endmodule
     CHECK(diags[0].code == diag::BadRangeExpression);
     CHECK(diags[1].code == diag::BadRangeExpression);
 }
+
+std::string testStringLiteralsToByteArray(const std::string& text) {
+    const auto& fullText = "module Top; " + text + " endmodule";
+    auto tree = SyntaxTree::fromText(string_view(fullText));
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    const auto& module = *compilation.getRoot().topInstances[0];
+    if (!tree->diagnostics().empty())
+        WARN(report(tree->diagnostics()));
+
+    const ParameterSymbol& param = module.body.memberAt<ParameterSymbol>(0);
+    const auto& value = param.getValue();
+    std::string result;
+    if (value.isUnpacked()) {
+        for (const auto& svInt : value.elements()) {
+            REQUIRE(svInt.isInteger());
+            REQUIRE(svInt.integer().getBitWidth() == 8);
+            result.push_back(static_cast<char>(*svInt.integer().getRawPtr()));
+        }
+    }
+    else {
+        REQUIRE(value.isQueue());
+        for (const auto& svInt : value.queue()) {
+            REQUIRE(svInt.isInteger());
+            REQUIRE(svInt.integer().getBitWidth() == 8);
+            result.push_back(static_cast<char>(*svInt.integer().getRawPtr()));
+        }
+    }
+    return result;
+}
+
+TEST_CASE("String literal assigned to unpacked array of bytes") {
+    // Unpacked array size shorter than string literals
+    CHECK(testStringLiteralsToByteArray("localparam byte a[3:0] = \"hello world\";") == "hell");
+    // Unpacked array size longer than string literals
+    CHECK(testStringLiteralsToByteArray("localparam byte a[1:4] = \"hi\";") == "hi");
+    // Dynamaic array
+    CHECK(testStringLiteralsToByteArray("localparam byte d[] = \"hello world\";") == "hello world");
+    // Queue
+    CHECK(testStringLiteralsToByteArray("localparam byte q[$] = \"hello world\";") ==
+          "hello world");
+}

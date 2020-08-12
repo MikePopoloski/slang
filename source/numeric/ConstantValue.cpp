@@ -365,39 +365,40 @@ ConstantValue ConstantValue::convertToByteArray(bitwidth_t size, bool isSigned) 
     if (isUnpacked())
         return *this;
     std::string result;
-    if (isInteger()) {
-        const SVInt& val = integer();
-        int32_t msb = int32_t(val.getBitWidth() - 1);
-        int32_t extraBits = int32_t(val.getBitWidth() % 8);
-        result.reserve((val.getBitWidth() + 7) / 8);
-        if (extraBits) {
-            auto c = val.slice(msb, msb - extraBits + 1).as<uint8_t>();
-            if (c && *c)
-                result.push_back(char(*c));
-            msb -= extraBits;
-        }
-        while (msb >= 7) {
-            auto c = val.slice(msb, msb - 7).as<uint8_t>();
-            if (c && *c)
-                result.push_back(char(*c));
-            msb -= 8;
-        }
-    } else if (isString()) {
+    if (isInteger())
+        result = convertToStr().str();
+    else if (isString())
         result = str();
-    } else {
+    else
         return nullptr;
-    }
     Elements array;
+    if (!size) // dynamic array use string size
+        size = static_cast<bitwidth_t>(result.size());
     array.reserve(size);
-    for (auto ch: result) {
+    for (auto ch : result) {
         if (array.size() >= size)
             break;
         array.emplace_back(SVInt(8, static_cast<uint64_t>(ch), isSigned));
     }
-    while (array.size() < size) {
+    while (array.size() < size)
         array.emplace_back(SVInt(8, 0, isSigned));
-    }
     return array;
+}
+
+ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
+    if (isQueue())
+        return *this;
+    std::string result;
+    if (isInteger())
+        result = convertToStr().str();
+    else if (isString())
+        result = str();
+    else
+        return nullptr;
+    SVQueue queue;
+    for (auto ch : result)
+        queue.emplace_back(SVInt(8, static_cast<uint64_t>(ch), isSigned));
+    return queue;
 }
 
 std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {

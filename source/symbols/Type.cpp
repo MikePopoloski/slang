@@ -221,7 +221,8 @@ bool Type::isByteArray() const {
     const Type& ct = getCanonicalType();
     if (!ct.isUnpackedArray())
         return false;
-
+    if (ct.kind == SymbolKind::AssociativeArrayType)
+        return false;
     auto& elem = ct.getArrayElementType()->getCanonicalType();
     return elem.isPredefinedInteger() &&
            elem.as<PredefinedIntegerType>().integerKind == PredefinedIntegerType::Byte;
@@ -237,13 +238,6 @@ bool Type::isUnpackedArray() const {
         default:
             return false;
     }
-}
-
-bool Type::isUnpackedArrayOfByte() const {
-    if (getCanonicalType().kind != SymbolKind::FixedSizeUnpackedArrayType)
-        return false;
-    auto elemType = &getArrayElementType()->getCanonicalType();
-    return elemType->isIntegral() && !elemType->isEnum() && elemType->getBitWidth() == 8;
 }
 
 bool Type::isMatching(const Type& rhs) const {

@@ -144,7 +144,8 @@ public:
     ConstantValue convertToReal() const;
     ConstantValue convertToShortReal() const;
     ConstantValue convertToStr() const;
-    ConstantValue convertToByteArray(bitwidth_t size, bool isSigned = false) const;
+    ConstantValue convertToByteArray(bitwidth_t size, bool isSigned) const;
+    ConstantValue convertToByteQueue(bool isSigned) const;
 
     static const ConstantValue Invalid;
 
