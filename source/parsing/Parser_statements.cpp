@@ -688,7 +688,13 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
     while (isPossibleExpression(peek().kind)) {
         auto& expr = parseExpression();
         auto colon = expect(TokenKind::Colon);
-        itemBuffer.append(&factory.randCaseItem(expr, colon, parseStatement()));
+        const auto loc = peek().location();
+        auto& stmt = parseStatement();
+        if (stmt.kind == SyntaxKind::EmptyStatement &&
+            stmt.as<EmptyStatementSyntax>().semicolon.isMissing() && loc == peek().location()) {
+            skipToken(std::nullopt);
+        }
+        itemBuffer.append(&factory.randCaseItem(expr, colon, stmt));
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
