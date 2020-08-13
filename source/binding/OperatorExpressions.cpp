@@ -1152,11 +1152,8 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             bad = true;
         }
 
-        // TODO: Workaround GCC bugs
-        auto copied = buffer.copy(compilation);
-        span<const Expression* const> elements(copied.data(), copied.size());
-        auto result =
-            compilation.emplace<ConcatenationExpression>(type, elements, syntax.sourceRange());
+        auto result = compilation.emplace<ConcatenationExpression>(type, buffer.ccopy(compilation),
+                                                                   syntax.sourceRange());
         if (bad)
             return badExpr(compilation, result);
 
@@ -1249,10 +1246,8 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     else
         type = &compilation.getType(totalWidth, flags);
 
-    // TODO: Workaround GCC bugs
-    auto copied = buffer.copy(compilation);
-    span<const Expression* const> elements(copied.data(), copied.size());
-    return *compilation.emplace<ConcatenationExpression>(*type, elements, syntax.sourceRange());
+    return *compilation.emplace<ConcatenationExpression>(*type, buffer.ccopy(compilation),
+                                                         syntax.sourceRange());
 }
 
 Expression& ConcatenationExpression::fromEmpty(Compilation& compilation,

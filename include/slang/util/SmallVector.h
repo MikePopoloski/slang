@@ -181,6 +181,16 @@ public:
         return span<T>(dest, len);
     }
 
+    using ConstElem = std::add_const_t<std::conditional_t<
+        std::is_pointer_v<T>, std::add_pointer_t<std::add_const_t<std::remove_pointer_t<T>>>, T>>;
+
+    /// Creates a constant copy of the array using the given allocator.
+    /// If the array holds pointers, const is added to the pointed-to type as well.
+    span<ConstElem> ccopy(BumpAllocator& alloc) const {
+        auto copied = copy(alloc);
+        return span<ConstElem>(copied.data(), copied.size());
+    }
+
     T& operator[](size_t index) { return data_[index]; }
     const T& operator[](size_t index) const { return data_[index]; }
 
