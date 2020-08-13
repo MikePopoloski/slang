@@ -592,6 +592,11 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
         }
         else if (isPossibleStatement(kind)) {
             newNode = &parseStatement();
+            if (newNode->kind == SyntaxKind::EmptyStatement &&
+                newNode->as<EmptyStatementSyntax>().semicolon.isMissing() &&
+                loc == peek().location()) {
+                skipToken(std::nullopt);
+            }
             isStmt = true;
             sawStatement = true;
         }
