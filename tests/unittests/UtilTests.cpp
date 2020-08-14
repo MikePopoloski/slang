@@ -260,7 +260,6 @@ TEST_CASE("Test CommandLine -- grouping no value") {
 
 TEST_CASE("Test CommandLine -- grouping error") {
     optional<bool> a;
-    optional<bool> b;
     optional<std::string> foo;
 
     CommandLine cmdLine;
