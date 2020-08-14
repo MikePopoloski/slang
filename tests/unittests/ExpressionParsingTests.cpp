@@ -510,6 +510,61 @@ TEST_CASE("Simple class new expression") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Scoped class new expression") {
+    auto& text = "A::B#(3, \"foo\", bar[baz])::new";
+    auto& expr = parseExpression(text);
+
+    REQUIRE(expr.kind == SyntaxKind::NewClassExpression);
+    CHECK(expr.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("New class with args") {
+    auto& text = "A::B#(3, \"foo\", bar[baz])::new (a, , c)";
+    auto& expr = parseExpression(text);
+
+    REQUIRE(expr.kind == SyntaxKind::NewClassExpression);
+    CHECK(expr.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Copy class expression") {
+    auto& text = "new foo";
+    auto& expr = parseExpression(text);
+
+    REQUIRE(expr.kind == SyntaxKind::CopyClassExpression);
+    CHECK(expr.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Scoped copy class expression -- error") {
+    auto& text = "A::B::new foo";
+    auto& expr = parseExpression(text);
+
+    REQUIRE(expr.kind == SyntaxKind::CopyClassExpression);
+    CHECK(expr.toString() == text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ScopedClassCopy);
+}
+
+TEST_CASE("New array expression parsing") {
+    auto& text = "new [3]";
+    auto& expr = parseExpression(text);
+
+    REQUIRE(expr.kind == SyntaxKind::NewArrayExpression);
+    CHECK(expr.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("New array expression with initializer") {
+    auto& text = "new [3] (foo[bar])";
+    auto& expr = parseExpression(text);
+
+    REQUIRE(expr.kind == SyntaxKind::NewArrayExpression);
+    CHECK(expr.toString() == text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Error at EOF") {
     auto& text = "'d\n";
     parseExpression(text);

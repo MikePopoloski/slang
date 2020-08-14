@@ -163,10 +163,9 @@ bool SyntaxFacts::isSpecialMethodName(SyntaxKind kind) {
         case SyntaxKind::ArrayAndMethod:
         case SyntaxKind::ArrayOrMethod:
         case SyntaxKind::ArrayXorMethod:
-        case SyntaxKind::ConstructorName:
             return true;
-            default:
-                return false;
+        default:
+            return false;
         }
     }
 

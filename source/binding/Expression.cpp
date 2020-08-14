@@ -547,7 +547,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::ImpliesPropertyExpression:
         case SyntaxKind::IntersectSequenceExpression:
         case SyntaxKind::NewClassExpression:
-        case SyntaxKind::NewExpression:
+        case SyntaxKind::CopyClassExpression:
         case SyntaxKind::NextTimePropertyExpression:
         case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
         case SyntaxKind::NonOverlappedImplicationPropertyExpression:

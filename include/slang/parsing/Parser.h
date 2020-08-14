@@ -145,7 +145,7 @@ private:
     ExpressionSyntax& parseIntegerExpression(bool disallowVector);
     ExpressionSyntax& parseInsideExpression(ExpressionSyntax& expr);
     ExpressionSyntax& parsePostfixExpression(ExpressionSyntax& expr);
-    ExpressionSyntax& parseNewExpression(ExpressionSyntax* expr);
+    ExpressionSyntax& parseNewExpression(NameSyntax& expr);
     ConcatenationExpressionSyntax& parseConcatenation(Token openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax& parseStreamConcatenation(Token openBrace);
     StreamExpressionSyntax& parseStreamExpression();
@@ -299,7 +299,7 @@ private:
     bool isPlainPortName();
     bool isConditionalExpression();
     bool scanDimensionList(uint32_t& index);
-    bool scanQualifiedName(uint32_t& index);
+    bool scanQualifiedName(uint32_t& index, bool allowNew);
     bool scanAttributes(uint32_t& index);
 
     template<bool (*IsEnd)(TokenKind)>

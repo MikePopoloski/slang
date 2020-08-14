@@ -128,12 +128,28 @@ const MemberSyntax* parseClassMember(const std::string& text, SyntaxKind kind) {
     return classDecl.items[0];
 }
 
-TEST_CASE("Class members", "[parser:class]") {
+TEST_CASE("Class members") {
     parseClassMember("function void blah(); endfunction", SyntaxKind::ClassMethodDeclaration);
     parseClassMember("virtual function void blah(); endfunction",
                      SyntaxKind::ClassMethodDeclaration);
     parseClassMember("static function type_id blah(); endfunction",
                      SyntaxKind::ClassMethodDeclaration);
+    parseClassMember("function new; endfunction", SyntaxKind::ClassMethodDeclaration);
+    parseClassMember("function new (integer i); endfunction", SyntaxKind::ClassMethodDeclaration);
+}
+
+TEST_CASE("Out of band constructor") {
+    auto& text = R"(
+class C;
+    extern function new(int i);
+endclass
+
+function C::new(int i);
+endfunction : new
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Property declarations") {

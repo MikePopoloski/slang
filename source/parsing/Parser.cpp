@@ -513,7 +513,7 @@ DataTypeSyntax& Parser::parseDataType(bitmask<TypeOptions> options) {
             // type should be implicit. Check if there's another identifier right after us
             // before deciding which one we're looking at.
             uint32_t index = 0;
-            if (scanQualifiedName(index) && scanDimensionList(index) &&
+            if (scanQualifiedName(index, /* allowNew */ false) && scanDimensionList(index) &&
                 peek(index).kind == TokenKind::Identifier) {
                 return factory.namedType(parseName());
             }
@@ -946,7 +946,7 @@ bool Parser::isVariableDeclaration() {
         case TokenKind::VirtualKeyword:
             if (peek(++index).kind == TokenKind::InterfaceKeyword)
                 return true;
-            if (!scanQualifiedName(index))
+            if (!scanQualifiedName(index, /* allowNew */ false))
                 return false;
             if (peek(index).kind == TokenKind::Dot)
                 return true;
@@ -990,7 +990,7 @@ bool Parser::isVariableDeclaration() {
             break;
     }
 
-    if (!scanQualifiedName(index))
+    if (!scanQualifiedName(index, /* allowNew */ false))
         return false;
 
     // might be a list of dimensions here
@@ -1038,14 +1038,15 @@ bool Parser::scanDimensionList(uint32_t& index) {
     return true;
 }
 
-bool Parser::scanQualifiedName(uint32_t& index) {
+bool Parser::scanQualifiedName(uint32_t& index, bool allowNew) {
     auto next = peek(index);
-    if (next.kind != TokenKind::Identifier && next.kind != TokenKind::UnitSystemName)
+    if (next.kind != TokenKind::Identifier && next.kind != TokenKind::UnitSystemName &&
+        (!allowNew || next.kind != TokenKind::NewKeyword)) {
         return false;
+    }
 
-    index++;
     while (true) {
-        if (peek(index).kind == TokenKind::Hash) {
+        if (peek(++index).kind == TokenKind::Hash) {
             // scan parameter value assignment
             if (peek(++index).kind != TokenKind::OpenParenthesis)
                 return false;
@@ -1060,8 +1061,8 @@ bool Parser::scanQualifiedName(uint32_t& index) {
         if (peek(index).kind != TokenKind::DoubleColon)
             break;
 
-        index++;
-        if (peek(index++).kind != TokenKind::Identifier)
+        next = peek(++index);
+        if (next.kind != TokenKind::Identifier && (!allowNew || next.kind != TokenKind::NewKeyword))
             return false;
     }
     return true;

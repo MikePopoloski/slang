@@ -28,13 +28,23 @@ ExpressionSyntax& Parser::parseMinTypMaxExpression() {
     return factory.minTypMaxExpression(first, colon1, typ, colon2, max);
 }
 
+static bool isNewExpr(const ExpressionSyntax* expr) {
+    while (true) {
+        if (expr->kind == SyntaxKind::ConstructorName)
+            return true;
+
+        if (expr->kind != SyntaxKind::ScopedName)
+            return false;
+
+        expr = expr->as<ScopedNameSyntax>().right;
+    }
+}
+
 ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options, int precedence) {
     auto dg = setDepthGuard();
 
     auto current = peek();
-    if (current.kind == TokenKind::NewKeyword)
-        return parseNewExpression(nullptr);
-    else if (isPossibleDelayOrEventControl(current.kind)) {
+    if (isPossibleDelayOrEventControl(current.kind)) {
         auto timingControl = parseTimingControl(/* isSequenceExpr */ false);
         ASSERT(timingControl);
 
@@ -54,6 +64,12 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         leftOperand = &parsePrefixExpression(options, opKind);
     else {
         leftOperand = &parsePrimaryExpression(false);
+
+        // If the primary is a new or scoped new operator we should handle
+        // that separately (it doesn't participate in postfix expression parsing).
+        if (isNewExpr(leftOperand))
+            return parseNewExpression(leftOperand->as<NameSyntax>());
+
         leftOperand = &parsePostfixExpression(*leftOperand);
     }
 
@@ -553,9 +569,6 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
                     return *expr;
                 expr = &parseArrayOrRandomizeMethod(*expr);
                 break;
-            case TokenKind::NewKeyword:
-                expr = &parseNewExpression(expr);
-                break;
             case TokenKind::DoubleHash: {
                 auto timing = parseTimingControl(/* isSequenceExpr */ true);
                 ASSERT(timing);
@@ -591,8 +604,6 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
             addDiag(diag::InvalidAccessDotColon, separator.location()) << "::"sv
                                                                        << "."sv;
         }
-        else if (peek().kind == TokenKind::NewKeyword)
-            return factory.classScope(*name, separator);
 
         switch (previousKind) {
             case SyntaxKind::UnitScope:
@@ -651,11 +662,28 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
 NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
     auto kind = getKeywordNameExpression(peek().kind);
     if (kind != SyntaxKind::Unknown) {
+        // This is a keyword name such as "super", "xor", or "new".
         bool isFirst = (options & NameOptions::IsFirst) != 0;
-        if ((isFirst != isSpecialMethodName(kind)) ||
-            (kind == SyntaxKind::SuperHandle && (options & NameOptions::PreviousWasThis))) {
+        if (isSpecialMethodName(kind)) {
+            // The built-in methods ("xor", "unique", etc) and are not allowed
+            // to be the first element in the name.
+            if (!isFirst)
+                return factory.keywordName(kind, consume());
+        }
+        else if (kind == SyntaxKind::ConstructorName) {
+            // "new" names are always allowed.
             return factory.keywordName(kind, consume());
         }
+        else {
+            // Otherwise this is "$unit", "$root", "local", "this", "super".
+            // These are only allowed to be the first element in a path, except
+            // for "super" which can follow "this".
+            if (isFirst ||
+                (kind == SyntaxKind::SuperHandle && (options & NameOptions::PreviousWasThis)))
+                return factory.keywordName(kind, consume());
+        }
+
+        // Otherwise fall through to the handling below to get an error emitted.
     }
 
     TokenKind next = peek().kind;
@@ -833,19 +861,10 @@ EventExpressionSyntax& Parser::parseEventExpression() {
     return *left;
 }
 
-ExpressionSyntax& Parser::parseNewExpression(ExpressionSyntax* scope) {
-    if (scope && scope->kind != SyntaxKind::ClassScope) {
-        // TODO: verify this error message makes sense
-        // TODO: this needs to consume or skip the new keyword
-        addDiag(diag::ExpectedClassScope, scope->getFirstToken().location());
-        return *scope;
-    }
-
-    auto newKeyword = expect(TokenKind::NewKeyword);
+ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword) {
+    // If we see an open bracket, this is a dynamic array new expression.
     auto kind = peek().kind;
-
     if (kind == TokenKind::OpenBracket) {
-        // new array
         auto openBracket = consume();
         auto& sizeExpr = parseExpression();
         auto closeBracket = expect(TokenKind::CloseBracket);
@@ -861,15 +880,20 @@ ExpressionSyntax& Parser::parseNewExpression(ExpressionSyntax* scope) {
                                           initializer);
     }
 
-    // new class
-    ArgumentListSyntax* arguments = nullptr;
+    // Otherwise this is a new-class or copy-class expression.
+    // new-class has an optional argument list, copy-class has a required expression.
+    // An open paren here would be ambiguous between an arg list and a parenthesized
+    // expression -- we resolve by always taking the arg list.
     if (kind == TokenKind::OpenParenthesis)
-        arguments = &parseArgumentList();
-    else if (!scope && isPossibleExpression(kind))
-        return factory.newExpression(newKeyword, parseExpression());
+        return factory.newClassExpression(newKeyword, &parseArgumentList());
 
-    return factory.newClassExpression(scope ? &scope->as<ClassScopeSyntax>() : nullptr, newKeyword,
-                                      arguments);
+    if (isPossibleExpression(kind)) {
+        if (newKeyword.kind != SyntaxKind::ConstructorName)
+            addDiag(diag::ScopedClassCopy, peek().location()) << newKeyword.sourceRange();
+        return factory.copyClassExpression(newKeyword, parseExpression());
+    }
+
+    return factory.newClassExpression(newKeyword, nullptr);
 }
 
 TimingControlSyntax* Parser::parseTimingControl(bool isSequenceExpr) {

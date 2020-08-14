@@ -286,10 +286,6 @@ Name left
 token separator
 Name right
 
-ClassScope base=Name kind=ClassScope
-Name left
-token separator
-
 // ----- PRIMARY EXPRESSIONS -----
 
 LiteralExpression base=PrimaryExpression
@@ -343,20 +339,19 @@ token openParen
 Expression expression
 token closeParen
 
-NewClassExpression base=Expression kind=NewClassExpression
-ClassScope? classScope
-token newKeyword
-ArgumentList? arguments
-
 NewArrayExpression base=Expression kind=NewArrayExpression
-token newKeyword
+Name newKeyword
 token openBracket
 Expression sizeExpr
 token closeBracket
 ParenthesizedExpression? initializer
 
-NewExpression base=Expression kind=NewExpression
-token newKeyword
+NewClassExpression base=Expression kind=NewClassExpression
+Name scopedNew
+ArgumentList? argList
+
+CopyClassExpression base=Expression kind=CopyClassExpression
+Name scopedNew
 Expression expr
 
 // ----- POSTFIX EXPRESSIONS -----

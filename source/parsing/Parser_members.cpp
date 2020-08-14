@@ -465,7 +465,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
     // check for a return type here
     DataTypeSyntax* returnType = nullptr;
     uint32_t index = 0;
-    if (!scanQualifiedName(index))
+    if (!scanQualifiedName(index, /* allowNew */ true))
         returnType = &parseDataType(TypeOptions::AllowImplicit | TypeOptions::AllowVoid);
     else {
         auto next = peek(index);
