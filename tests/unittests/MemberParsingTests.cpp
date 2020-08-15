@@ -107,6 +107,20 @@ TEST_CASE("Module members") {
     parseModuleMember("for (genvar i = 1; i != 10; i++) parameter foo = i;",
                       SyntaxKind::LoopGenerate);
     parseModuleMember("typedef foo #(T, B) bar;", SyntaxKind::TypedefDeclaration);
+    parseModuleMember("global clocking clk @foo; endclocking : clk",
+                      SyntaxKind::ClockingDeclaration);
+    parseModuleMember("default clocking @(posedge clk); endclocking",
+                      SyntaxKind::ClockingDeclaration);
+    parseModuleMember("default clocking asdf;", SyntaxKind::DefaultClockingReference);
+    parseModuleMember(R"(
+clocking clk @foo;
+    default input #5 output #(2:1:4);
+    inout foo = 3;
+    input output bar, baz = 1, biz;
+    output #5 boz, buz;
+endclocking : clk
+)",
+                      SyntaxKind::ClockingDeclaration);
 }
 
 TEST_CASE("Parse buffer resize") {

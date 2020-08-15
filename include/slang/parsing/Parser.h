@@ -229,7 +229,8 @@ private:
     ParameterDeclarationBaseSyntax& parseParameterDecl(Token keyword, Token* semi);
     TypeAssignmentSyntax& parseTypeAssignment();
     ClockingSkewSyntax* parseClockingSkew();
-    ClockingDeclarationSyntax& parseClockingDeclaration(AttrList attributes);
+    MemberSyntax* parseClockingItem();
+    MemberSyntax& parseClockingDeclaration(AttrList attributes);
     MemberSyntax& parseVariableDeclaration(AttrList attributes);
     MemberSyntax& parseNetDeclaration(AttrList attributes);
     DriveStrengthSyntax* parseDriveStrength();

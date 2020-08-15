@@ -1292,34 +1292,40 @@ token semi
 
 ClockingSkew kind=ClockingSkew
 token edge
-token hash
-Expression? value
+Delay? delay
 
 ClockingDirection kind=ClockingDirection
 token input
 ClockingSkew? inputSkew
 token output
 ClockingSkew? ouputSkew
-token inout
 
-ClockingItem kind=ClockingItem
-token defaultKeyword
-ClockingDirection? direction
-separated_list<AttributeSpec> assignments
+DefaultSkewItem base=Member kind=DefaultSkewItem
+token keyword
+ClockingDirection direction
 token semi
-Member? declaration
+
+ClockingItem base=Member kind=ClockingItem
+ClockingDirection direction
+separated_list<AttributeSpec> decls
+token semi
 
 ClockingDeclaration base=Member kind=ClockingDeclaration
 token globalOrDefault
 token clocking
 token blockName
 token at
-ParenthesizedEventExpression? event
-token eventIdentifier
+EventExpression event
 token semi
-list<ClockingItem> items
+list<Member> items
 token endClocking
 NamedBlockClause? endBlockName
+
+DefaultClockingReference base=Member kind=DefaultClockingReference
+token defaultKeyword
+token clocking
+token name
+token semi
 
 DPIImportExport base=Member kind=DPIImportExport
 token keyword
