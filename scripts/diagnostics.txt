@@ -25,7 +25,6 @@ error ExpectedIntegerBaseAfterSigned "expected integer base specifier after sign
 error MissingFractionalDigits "expected fractional digits after decimal"
 error OctalEscapeCodeTooBig "octal escape code is too large to be an ASCII character"
 error InvalidHexEscapeCode "invalid hexadecimal number"
-error UnknownEscapeCode "unknown character escape sequence"
 error MissingExponentDigits "expected exponent digits"
 error DigitsLeadingUnderscore "numeric literals must not start with a leading underscore"
 error DecimalDigitMultipleUnknown "decimal literals cannot have multiple digits if at least one of them is X or Z"
@@ -34,6 +33,8 @@ error BadOctalDigit "expected octal digit"
 error BadDecimalDigit "expected decimal digit"
 error BadHexDigit "expected hexadecimal digit"
 error TooManyLexerErrors "lexer has encountered too many errors (input is a binary file?)"
+warning unknown-escape-code UnknownEscapeCode "unknown character escape sequence '\\\\{}'"
+warning nonstandard-escape-code NonstandardEscapeCode "non-standard character escape sequence '\\\\{}'"
 
 subsystem Numeric
 error LiteralSizeIsZero "size of vector literal cannot be zero"
@@ -423,8 +424,8 @@ group default = { real-underflow real-overflow literal-overflow ignored-macro-pa
                   redef-macro nonstandard-generate pointless-void-cast unused-result
                   not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg
                   pragma-diag-level explicit-static static-skipped format-real elem-not-found
-                  dynarray-index dynarray-range queue-range empty-queue }
+                  dynarray-index dynarray-range queue-range empty-queue unknown-escape-code }
 
 group extra = { empty-member empty-stmt dup-import }
 
-group pedantic = { empty-pattern implicit-net-port }
+group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code }

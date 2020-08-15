@@ -604,10 +604,15 @@ Token Lexer::lexStringLiteral() {
                         stringBuffer.append((char)charCode);
                     }
                     break;
-                default:
-                    addDiag(diag::UnknownEscapeCode, offset);
+                default: {
+                    // '\%' is not an actual escape code but other tools silently allow it
+                    // and major UVM headers use it, so we'll issue a (fairly quiet) warning about it.
+                    // Otherwise issue a louder warning (on by default).
+                    DiagCode code = c == '%' ? diag::NonstandardEscapeCode : diag::UnknownEscapeCode;
+                    addDiag(code, offset) << c;
                     stringBuffer.append(c);
                     break;
+                }
             }
         }
         else if (c == '"') {

@@ -391,6 +391,17 @@ TEST_CASE("String literal (unknown escape)") {
     CHECK(diagnostics.back().code == diag::UnknownEscapeCode);
 }
 
+TEST_CASE("String literal (nonstandard escape)") {
+    auto& text = "\"literal\\%\"";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == text);
+    CHECK(token.valueText() == "literal%");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == diag::NonstandardEscapeCode);
+}
+
 TEST_CASE("Integer literal") {
     auto& text = "19248";
     Token token = lexToken(text);
