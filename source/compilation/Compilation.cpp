@@ -334,24 +334,37 @@ const RootSymbol& Compilation::getRoot() {
         // - Have no non-defaulted parameters
         // - Not instantiated anywhere
         if (std::get<1>(key) != root.get() ||
-            definition->definitionKind != DefinitionKind::Module) {
+            globalInstantiations.find(definition->name) != globalInstantiations.end()) {
             continue;
         }
 
-        if (globalInstantiations.find(definition->name) != globalInstantiations.end())
-            continue;
+        if (definition->definitionKind == DefinitionKind::Module) {
+            bool allDefaulted = true;
+            for (auto& param : definition->parameters) {
+                if (!param.hasDefault()) {
+                    allDefaulted = false;
+                    break;
+                }
+            }
 
-        bool allDefaulted = true;
-        for (auto& param : definition->parameters) {
-            if (!param.hasDefault()) {
-                allDefaulted = false;
-                break;
+            // If all parameters are defaulted, check that we also don't have
+            // any interface ports.
+            if (allDefaulted) {
+                bool anyIfaces = false;
+                for (auto& port : definition->getPorts()) {
+                    if (port.likelyInterface) {
+                        anyIfaces = true;
+                        break;
+                    }
+                }
+
+                if (!anyIfaces) {
+                    // This module can be automatically instantiated.
+                    topDefs.append(definition.get());
+                    continue;
+                }
             }
         }
-        if (!allDefaulted)
-            continue;
-
-        topDefs.append(definition.get());
     }
 
     // Sort the list of definitions so that we get deterministic ordering of instances;

@@ -110,37 +110,51 @@ module m6(I.bar bar); endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    auto& diags = compilation.getAllDiagnostics();
 
-#define checkIfacePort(moduleName, portName, ifaceName, modportName)     \
-    {                                                                    \
-        auto def = compilation.getRoot().find(moduleName);               \
-        REQUIRE(def);                                                    \
-        auto& body = def->as<InstanceSymbol>().body;                     \
-        auto& port = body.findPort(portName)->as<InterfacePortSymbol>(); \
-        REQUIRE(port.interfaceDef);                                      \
-        CHECK(port.interfaceDef->name == (ifaceName));                   \
-        if (*(modportName)) {                                            \
-            CHECK(port.modport == (modportName));                        \
-        }                                                                \
-        else {                                                           \
-            CHECK(port.modport.empty());                                 \
-        }                                                                \
+#define checkWirePort(moduleName, name, dir, nt, type)                          \
+    {                                                                           \
+        auto def = compilation.getDefinition(moduleName);                       \
+        REQUIRE(def);                                                           \
+        InstanceSymbol inst(compilation, "", SourceLocation::NoLocation, *def); \
+        auto& port = inst.body.findPort(name)->as<PortSymbol>();                \
+        CHECK(port.direction == (dir));                                         \
+        CHECK(port.getType().toString() == (type));                             \
+        if (nt) {                                                               \
+            auto& net = port.internalSymbol->as<NetSymbol>();                   \
+            CHECK(&net.netType == (nt));                                        \
+        }                                                                       \
+    };
+
+#define checkIfacePort(moduleName, portName, ifaceName, modportName)            \
+    {                                                                           \
+        auto def = compilation.getDefinition(moduleName);                       \
+        REQUIRE(def);                                                           \
+        InstanceSymbol inst(compilation, "", SourceLocation::NoLocation, *def); \
+        auto& port = inst.body.findPort(portName)->as<InterfacePortSymbol>();   \
+        REQUIRE(port.interfaceDef);                                             \
+        CHECK(port.interfaceDef->name == (ifaceName));                          \
+        if (*(modportName)) {                                                   \
+            CHECK(port.modport == (modportName));                               \
+        }                                                                       \
+        else {                                                                  \
+            CHECK(port.modport.empty());                                        \
+        }                                                                       \
     };
 
     auto wire = &compilation.getWireNetType();
 
     checkIfacePort("m0", "a", "I", "");
     checkIfacePort("m0", "b", "I", "");
-    checkPort("m0", "c", PortDirection::In, wire, "logic");
-    checkPort("m1", "j", PortDirection::InOut, wire, "struct{logic f;}J");
+    checkWirePort("m0", "c", PortDirection::In, wire, "logic");
+    checkWirePort("m1", "j", PortDirection::InOut, wire, "struct{logic f;}J");
     checkIfacePort("m3", "k", "K", "");
-    checkPort("m3", "w", PortDirection::InOut, wire, "logic");
-    checkPort("m4", "v", PortDirection::Out, nullptr, "logic");
+    checkWirePort("m3", "w", PortDirection::InOut, wire, "logic");
+    checkWirePort("m4", "v", PortDirection::Out, nullptr, "logic");
     checkIfacePort("m5", "a1", "J", "foo");
     checkIfacePort("m5", "a2", "K", "f");
     checkIfacePort("m6", "bar", "I", "bar");
 
+    auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::PortTypeNotInterfaceOrData);
     CHECK(diags[1].code == diag::VarWithInterfacePort);
