@@ -327,6 +327,7 @@ const RootSymbol& Compilation::getRoot() {
     // before instantiating any top level modules, since that can cause changes
     // to the definition map itself.
     SmallVectorSized<const Definition*, 8> topDefs;
+    SmallVectorSized<const Definition*, 8> unreferencedDefs;
     for (auto& [key, definition] : definitionMap) {
         // Ignore definitions that are not top level. Top level definitions are:
         // - Always modules
@@ -365,17 +366,28 @@ const RootSymbol& Compilation::getRoot() {
                 }
             }
         }
+
+        // Otherwise this definition is unreferenced and not automatically instantiated.
+        unreferencedDefs.append(definition.get());
     }
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
     // the order is otherwise dependent on iterating over a hash table.
-    std::sort(topDefs.begin(), topDefs.end(), [](auto a, auto b) { return a->name < b->name; });
+    auto byName = [](auto a, auto b) { return a->name < b->name; };
+    std::sort(topDefs.begin(), topDefs.end(), byName);
+    std::sort(unreferencedDefs.begin(), unreferencedDefs.end(), byName);
 
     SmallVectorSized<const InstanceSymbol*, 4> topList;
     for (auto def : topDefs) {
-        auto instance = emplace<InstanceSymbol>(*this, def->name, def->location, *def);
-        root->addMember(*instance);
-        topList.append(instance);
+        auto& instance = InstanceSymbol::createDefault(*this, *def);
+        root->addMember(instance);
+        topList.append(&instance);
+    }
+
+    // For unreferenced definitions, go through and instantiate them with all empty
+    // parameter values so that we get at least some semantic checking of the contents.
+    for (auto def : unreferencedDefs) {
+        root->addMember(InstanceSymbol::createInvalid(*this, *def));
     }
 
     root->topInstances = topList.copy(*this);

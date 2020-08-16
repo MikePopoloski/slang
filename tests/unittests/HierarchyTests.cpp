@@ -947,3 +947,27 @@ endmodule
     auto& g1 = top.find<GenerateBlockArraySymbol>("g1");
     CHECK(g1.getExternalName() == "g1");
 }
+
+TEST_CASE("Error checking in uninstantiated modules") {
+    auto tree = SyntaxTree::fromText(R"(
+module bar #(parameter int foo);
+    localparam int bar = foo;
+    int j = bar[foo];
+    if (j != 10) begin
+        int k = j[3.4];
+    end
+    int k = {};
+endmodule
+
+module top;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[1].code == diag::EmptyConcatNotAllowed);
+}

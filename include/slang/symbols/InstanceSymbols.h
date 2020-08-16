@@ -31,7 +31,8 @@ public:
     span<const int32_t> arrayPath;
 
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                   const Definition& definition);
+                   const InstanceBodySymbol& body);
+
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                    const InstanceCacheKey& cacheKey,
                    span<const ParameterSymbolBase* const> parameters);
@@ -58,6 +59,14 @@ public:
                            LookupLocation location, const Scope& scope,
                            SmallVector<const Symbol*>& results);
 
+    /// Creates a default-instantiated instance of the given definition. All parameters must
+    /// have defaults specified.
+    static InstanceSymbol& createDefault(Compilation& compilation, const Definition& definition);
+
+    /// Creates an intentionally invalid instance by forcing all parameters to null values.
+    /// This allows type checking instance members as long as they don't depend on any parameters.
+    static InstanceSymbol& createInvalid(Compilation& compilation, const Definition& definition);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Instance; }
 
     template<typename TVisitor>
@@ -82,7 +91,8 @@ public:
     const InstanceCacheKey& getCacheKey() const { return cacheKey; }
 
     static const InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                                    const Definition& definition);
+                                                    const Definition& definition,
+                                                    bool forceInvalidParams);
 
     static const InstanceBodySymbol& fromDefinition(
         Compilation& compilation, const InstanceCacheKey& cacheKey,

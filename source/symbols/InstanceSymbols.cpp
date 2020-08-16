@@ -115,7 +115,7 @@ void createParams(Compilation& compilation, const Definition& definition, const 
                   SmallMap<string_view, const ExpressionSyntax*, 8>& paramOverrides,
                   SmallVector<const ParameterSymbolBase*>& parameters,
                   SmallVector<const ConstantValue*>& paramValues,
-                  SmallVector<const Type*>& typeParams) {
+                  SmallVector<const Type*>& typeParams, bool forceInvalidParams) {
     // Construct a temporary scope that has the right parent to house instance parameters
     // as we're evaluating them. We hold on to the initializer expressions and give them
     // to the instances later when we create them.
@@ -145,6 +145,11 @@ void createParams(Compilation& compilation, const Definition& definition, const 
             if (newParam.isLocalParam())
                 continue;
 
+            if (forceInvalidParams) {
+                paramValues.append(&ConstantValue::Invalid);
+                continue;
+            }
+
             // For all port params, if we were provided a parameter override save
             // that value now for use with the cache key. Otherwise use a nullptr
             // to represent that the default will be used. We can't evaluate the
@@ -171,6 +176,11 @@ void createParams(Compilation& compilation, const Definition& definition, const 
             parameters.append(&newParam);
             if (newParam.isLocalParam())
                 continue;
+
+            if (forceInvalidParams) {
+                typeParams.append(&compilation.getErrorType());
+                continue;
+            }
 
             if (newInitializer)
                 typeParams.append(&newParam.targetType.getType());
@@ -228,18 +238,34 @@ void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindCo
 namespace slang {
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                               const Definition& definition) :
+                               const InstanceBodySymbol& body) :
     Symbol(SymbolKind::Instance, name, loc),
-    body(InstanceBodySymbol::fromDefinition(compilation, definition)) {
+    body(body) {
     compilation.addInstance(*this);
 }
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                                const InstanceCacheKey& cacheKey,
                                span<const ParameterSymbolBase* const> parameters) :
-    Symbol(SymbolKind::Instance, name, loc),
-    body(InstanceBodySymbol::fromDefinition(compilation, cacheKey, parameters)) {
-    compilation.addInstance(*this);
+    InstanceSymbol(compilation, name, loc,
+                   InstanceBodySymbol::fromDefinition(compilation, cacheKey, parameters)) {
+}
+
+InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
+                                              const Definition& definition) {
+    return *compilation.emplace<InstanceSymbol>(
+        compilation, definition.name, definition.location,
+        InstanceBodySymbol::fromDefinition(compilation, definition,
+                                           /* forceInvalidParams */ false));
+}
+
+InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
+                                              const Definition& definition) {
+    // Give this instance an empty name so that it can't be referenced by name.
+    return *compilation.emplace<InstanceSymbol>(
+        compilation, "", SourceLocation::NoLocation,
+        InstanceBodySymbol::fromDefinition(compilation, definition,
+                                           /* forceInvalidParams */ true));
 }
 
 void InstanceSymbol::fromSyntax(Compilation& compilation,
@@ -361,7 +387,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     SmallVectorSized<const ConstantValue*, 8> paramValues;
     SmallVectorSized<const Type*, 8> typeParams;
     createParams(compilation, *definition, scope, location, syntax.getFirstToken().location(),
-                 paramOverrides, parameters, paramValues, typeParams);
+                 paramOverrides, parameters, paramValues, typeParams,
+                 /* forceInvalidParams */ false);
 
     BindContext context(scope, location);
     InstanceCacheKey cacheKey(*definition, paramValues.copy(compilation),
@@ -482,7 +509,8 @@ InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceC
 }
 
 const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
-                                                             const Definition& definition) {
+                                                             const Definition& definition,
+                                                             bool forceInvalidParams) {
     // Create parameters with all default values set.
     SmallMap<string_view, const ExpressionSyntax*, 8> unused;
     SmallVectorSized<const ParameterSymbolBase*, 2> parameters;
@@ -490,7 +518,8 @@ const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compil
     SmallVectorSized<const Type*, 2> typeParams;
 
     createParams(compilation, definition, definition.scope, LookupLocation::max,
-                 definition.location, unused, parameters, paramValues, typeParams);
+                 definition.location, unused, parameters, paramValues, typeParams,
+                 forceInvalidParams);
 
     return fromDefinition(compilation, InstanceCacheKey(definition, {}, {}), parameters);
 }

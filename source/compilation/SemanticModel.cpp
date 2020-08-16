@@ -39,8 +39,7 @@ const Symbol* SemanticModel::getDeclaredSymbol(const SyntaxNode& syntax) {
             return nullptr;
 
         // There is no symbol to use here so create a placeholder instance.
-        auto result =
-            compilation.emplace<InstanceSymbol>(compilation, def->name, def->location, *def);
+        auto result = &InstanceSymbol::createDefault(compilation, *def);
         symbolCache[&syntax] = result;
         return result;
     }
