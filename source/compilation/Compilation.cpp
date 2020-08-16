@@ -419,6 +419,9 @@ const RootSymbol& Compilation::getRoot() {
         topList.append(&instance);
     }
 
+    if (!options.suppressUnused && topDefs.empty())
+        root->addDiag(diag::NoTopModules, SourceLocation::NoLocation);
+
     // For unreferenced definitions, go through and instantiate them with all empty
     // parameter values so that we get at least some semantic checking of the contents.
     for (auto def : unreferencedDefs)

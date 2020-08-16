@@ -1032,3 +1032,22 @@ endmodule
     CHECK(diags[1].code == diag::InvalidTopModule);
     CHECK(diags[2].code == diag::InvalidTopModule);
 }
+
+TEST_CASE("No top warning") {
+    auto tree = SyntaxTree::fromText(R"(
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Bag options;
+    options.set(coptions);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NoTopModules);
+}
+
