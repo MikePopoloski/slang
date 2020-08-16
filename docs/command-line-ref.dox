@@ -106,6 +106,15 @@ Dump the compiled AST in JSON format to the specified file, or '-' for stdout.
 
 @section compilation-limits Compilation
 
+`--top <name>`
+
+Specifies the name of a module that should be instantiated at the root of the design.
+Can be specified more than once to instantiate multiple top-level modules. The module
+specified must not have any non-defaulted parameters or interface ports.
+
+If no top modules are specified manually, they will be automatically inferred by
+finding all modules that are not instantiated elsewhere in the design.
+
 `--max-hierarchy-depth <depth>`
 
 Set the maximum depth of the design hierarchy. Used to detect infinite
