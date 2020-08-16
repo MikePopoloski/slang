@@ -326,51 +326,84 @@ const RootSymbol& Compilation::getRoot() {
     finalizing = true;
     auto guard = ScopeGuard([this] { finalizing = false; });
 
-    // Find modules that have no instantiations. Iterate the definitions map
-    // before instantiating any top level modules, since that can cause changes
-    // to the definition map itself.
-    SmallVectorSized<const Definition*, 8> topDefs;
-    for (auto& [key, definition] : definitionMap) {
-        // Ignore definitions that are not top level. Top level definitions are:
-        // - Always modules
-        // - Not nested
-        // - Have no non-defaulted parameters
-        // - Not instantiated anywhere
-        if (std::get<1>(key) != root.get() ||
-            globalInstantiations.find(definition->name) != globalInstantiations.end()) {
-            continue;
+    auto isValidTop = [&](auto& definition) {
+        // All parameters must have defaults.
+        for (auto& param : definition.parameters) {
+            if (!param.hasDefault())
+                return false;
         }
 
-        if (definition->definitionKind == DefinitionKind::Module) {
-            bool allDefaulted = true;
-            for (auto& param : definition->parameters) {
-                if (!param.hasDefault()) {
-                    allDefaulted = false;
-                    break;
-                }
+        // Can't have interface ports.
+        for (auto& port : definition.getPorts()) {
+            if (port.likelyInterface)
+                return false;
+        }
+
+        return true;
+    };
+
+    // Find top level modules that form the root of the design. Iterate the definitions
+    // map before instantiating any top level modules, since that can cause changes
+    // to the definition map itself.
+    SmallVectorSized<const Definition*, 8> topDefs;
+    if (options.topModules.empty()) {
+        for (auto& [key, definition] : definitionMap) {
+            // Ignore definitions that are not top level. Top level definitions are:
+            // - Always modules
+            // - Not nested
+            // - Have no non-defaulted parameters
+            // - Not instantiated anywhere
+            if (std::get<1>(key) != root.get() ||
+                globalInstantiations.find(definition->name) != globalInstantiations.end()) {
+                continue;
             }
 
-            // If all parameters are defaulted, check that we also don't have
-            // any interface ports.
-            if (allDefaulted) {
-                bool anyIfaces = false;
-                for (auto& port : definition->getPorts()) {
-                    if (port.likelyInterface) {
-                        anyIfaces = true;
-                        break;
-                    }
-                }
-
-                if (!anyIfaces) {
+            if (definition->definitionKind == DefinitionKind::Module) {
+                if (isValidTop(*definition)) {
                     // This module can be automatically instantiated.
                     topDefs.append(definition.get());
                     continue;
                 }
             }
+
+            // Otherwise this definition is unreferenced and not automatically instantiated.
+            unreferencedDefs.push_back(definition.get());
+        }
+    }
+    else {
+        // If the list of top modules has already been provided we just need to
+        // find and instantiate them.
+        auto& tm = options.topModules;
+        for (auto& [key, definition] : definitionMap) {
+            if (std::get<1>(key) != root.get())
+                continue;
+
+            if (definition->definitionKind == DefinitionKind::Module) {
+                if (auto it = tm.find(definition->name); it != tm.end()) {
+                    // Remove from the top modules set so that we know we visited it.
+                    tm.erase(it);
+
+                    // Make sure this is actually valid as a top-level module.
+                    if (isValidTop(*definition)) {
+                        topDefs.append(definition.get());
+                        continue;
+                    }
+
+                    // Otherwise, issue an error because the user asked us to instantiate this.
+                    definition->scope.addDiag(diag::InvalidTopModule, SourceLocation::NoLocation)
+                        << definition->name;
+                    continue;
+                }
+            }
+
+            // Otherwise this definition might be unreferenced and not automatically instantiated.
+            if (globalInstantiations.find(definition->name) == globalInstantiations.end())
+                unreferencedDefs.push_back(definition.get());
         }
 
-        // Otherwise this definition is unreferenced and not automatically instantiated.
-        unreferencedDefs.push_back(definition.get());
+        // If any top modules were not found, issue an error.
+        for (auto& name : tm)
+            root->addDiag(diag::InvalidTopModule, SourceLocation::NoLocation) << name;
     }
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
@@ -631,6 +664,13 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
     Diagnostics results;
     for (auto& [key, diagList] : diagMap) {
+        // If the location is NoLocation, just issue each diagnostic.
+        if (std::get<1>(key) == SourceLocation::NoLocation) {
+            for (auto& diag : diagList)
+                results.emplace(diag);
+            continue;
+        }
+
         // Try to find a diagnostic in an instance that isn't at the top-level
         // (printing such a path seems silly).
         const Diagnostic* found = nullptr;

@@ -1001,3 +1001,34 @@ endmodule
     CHECK(diags[0].code == diag::UnusedDefinition);
     CHECK(diags[1].code == diag::UnusedDefinition);
 }
+
+TEST_CASE("Manually specify top modules") {
+    auto tree = SyntaxTree::fromText(R"(
+module nottop;
+endmodule
+
+module invalid #(parameter int i);
+endmodule
+
+module top;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+    coptions.topModules.emplace("invalid"sv);
+    coptions.topModules.emplace("unknown"sv);
+    coptions.topModules.emplace("top"sv);
+
+    Bag options;
+    options.set(coptions);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UnusedDefinition);
+    CHECK(diags[1].code == diag::InvalidTopModule);
+    CHECK(diags[2].code == diag::InvalidTopModule);
+}

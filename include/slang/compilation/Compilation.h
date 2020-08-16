@@ -89,6 +89,11 @@ struct CompilationOptions {
     /// If true, suppress warnings about unused code elements. This is intended
     /// for tests; for end users, they can use warning flags to control output.
     bool suppressUnused = true;
+
+    /// If non-empty, specifies the list of modules that should serve as the
+    /// top modules in the design. If empty, this will be automatically determined
+    /// based on which modules are unreferenced elsewhere.
+    flat_hash_set<string_view> topModules;
 };
 
 /// A centralized location for creating and caching symbols. This includes

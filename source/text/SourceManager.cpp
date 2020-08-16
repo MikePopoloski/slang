@@ -133,10 +133,16 @@ string_view SourceManager::getMacroName(SourceLocation location) const {
 }
 
 bool SourceManager::isFileLoc(SourceLocation location) const {
+    if (location == SourceLocation::NoLocation)
+        return false;
+
     return getFileInfo(location.buffer());
 }
 
 bool SourceManager::isMacroLoc(SourceLocation location) const {
+    if (location == SourceLocation::NoLocation)
+        return false;
+
     auto buffer = location.buffer();
     if (!buffer)
         return false;
@@ -148,6 +154,9 @@ bool SourceManager::isMacroLoc(SourceLocation location) const {
 }
 
 bool SourceManager::isMacroArgLoc(SourceLocation location) const {
+    if (location == SourceLocation::NoLocation)
+        return false;
+
     auto buffer = location.buffer();
     if (!buffer)
         return false;
