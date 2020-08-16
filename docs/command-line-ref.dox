@@ -13,6 +13,10 @@ Display help text about command line options and exit.
 
 Display slang version information and exit.
 
+`-q,--quiet`
+
+Don't print non-essential output status.
+
 `positional arguments`
 
 Paths to files that should be included in the compilation.
