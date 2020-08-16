@@ -321,6 +321,7 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
         poptions.maxRecursionDepth = *maxParseDepth;
 
     CompilationOptions coptions;
+    coptions.suppressUnused = false;
     if (maxInstanceDepth.has_value())
         coptions.maxInstanceDepth = *maxInstanceDepth;
     if (maxGenerateSteps.has_value())

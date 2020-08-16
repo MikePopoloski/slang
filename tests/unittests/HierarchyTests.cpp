@@ -971,3 +971,33 @@ endmodule
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[1].code == diag::EmptyConcatNotAllowed);
 }
+
+TEST_CASE("Diagnose unused modules / interfaces") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+interface J;
+endinterface
+
+module bar (I i);
+endmodule
+
+module top;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.suppressUnused = false;
+
+    Bag options;
+    options.set(coptions);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnusedDefinition);
+    CHECK(diags[1].code == diag::UnusedDefinition);
+}

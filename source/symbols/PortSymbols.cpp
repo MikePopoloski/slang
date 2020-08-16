@@ -95,7 +95,7 @@ public:
                         }
                     }
 
-                    return add(decl, definition, ""sv, syntax.attributes);
+                    return add(decl, *definition, ""sv, syntax.attributes);
                 }
 
                 // Rules from [23.2.2.3]:
@@ -152,7 +152,7 @@ public:
                     }
                 }
 
-                return add(decl, definition, modport, syntax.attributes);
+                return add(decl, *definition, modport, syntax.attributes);
             }
             case SyntaxKind::InterconnectPortHeader:
                 scope.addDiag(diag::NotYetSupported, syntax.header->sourceRange());
@@ -191,7 +191,7 @@ private:
                          span<const AttributeInstanceSyntax* const> attrs) {
         if (lastInterface) {
             // TODO: inherit modport
-            return add(decl, lastInterface, ""sv, attrs);
+            return add(decl, *lastInterface, ""sv, attrs);
         }
 
         return add(decl, lastDirection, *lastType, lastNetType, attrs);
@@ -239,12 +239,14 @@ private:
         return port;
     }
 
-    Symbol* add(const DeclaratorSyntax& decl, const Definition* iface, string_view modport,
+    Symbol* add(const DeclaratorSyntax& decl, const Definition& iface, string_view modport,
                 span<const AttributeInstanceSyntax* const> attrs) {
         auto port =
             compilation.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
 
-        port->interfaceDef = iface;
+        compilation.noteInterfacePort(iface);
+
+        port->interfaceDef = &iface;
         port->modport = modport;
         port->setSyntax(decl);
         port->setAttributes(scope, attrs);
@@ -252,7 +254,7 @@ private:
         lastDirection = PortDirection::InOut;
         lastType = &UnsetType;
         lastNetType = nullptr;
-        lastInterface = iface;
+        lastInterface = &iface;
 
         return port;
     }

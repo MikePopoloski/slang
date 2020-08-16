@@ -85,6 +85,10 @@ struct CompilationOptions {
     /// Specifies which set of min:typ:max expressions should
     /// be used during compilation.
     MinTypMax minTypMax = MinTypMax::Typ;
+
+    /// If true, suppress warnings about unused code elements. This is intended
+    /// for tests; for end users, they can use warning flags to control output.
+    bool suppressUnused = true;
 };
 
 /// A centralized location for creating and caching symbols. This includes
@@ -181,6 +185,10 @@ public:
 
     /// Returns the list of instances that share the same instance body.
     span<const InstanceSymbol* const> getParentInstances(const InstanceBodySymbol& body) const;
+
+    /// Notes the fact that the given definition has been used in an interface port.
+    /// This prevents warning about that interface definition being unused in the design.
+    void noteInterfacePort(const Definition& definition);
 
     /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
     /// This is mostly for testing and API purposes; normal compilation never does this.
@@ -411,6 +419,13 @@ private:
 
     // Storage for syntax trees that have been added to the compilation.
     std::vector<std::shared_ptr<SyntaxTree>> syntaxTrees;
+
+    // A list of definitions that are unreferenced in any instantiations and
+    // are also not automatically instantiated as top-level.
+    std::vector<const Definition*> unreferencedDefs;
+
+    // A list of interface definitions used in interface ports.
+    flat_hash_set<const Definition*> usedIfacePorts;
 };
 
 } // namespace slang

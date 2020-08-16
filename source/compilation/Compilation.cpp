@@ -20,6 +20,8 @@
 
 namespace {
 
+static const string_view DefinitionKindStrs[3] = { "module"sv, "interface"sv, "program"sv };
+
 using namespace slang;
 
 // This visitor is used to touch every node in the AST to ensure that all lazily
@@ -99,6 +101,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (hierarchyDepth > compilation.getOptions().maxInstanceDepth) {
             auto& diag =
                 symbol.getParentScope()->addDiag(diag::MaxInstanceDepthExceeded, symbol.location);
+            diag << DefinitionKindStrs[int(symbol.getDefinition().definitionKind)];
             diag << compilation.getOptions().maxInstanceDepth;
             return;
         }
@@ -327,7 +330,6 @@ const RootSymbol& Compilation::getRoot() {
     // before instantiating any top level modules, since that can cause changes
     // to the definition map itself.
     SmallVectorSized<const Definition*, 8> topDefs;
-    SmallVectorSized<const Definition*, 8> unreferencedDefs;
     for (auto& [key, definition] : definitionMap) {
         // Ignore definitions that are not top level. Top level definitions are:
         // - Always modules
@@ -368,7 +370,7 @@ const RootSymbol& Compilation::getRoot() {
         }
 
         // Otherwise this definition is unreferenced and not automatically instantiated.
-        unreferencedDefs.append(definition.get());
+        unreferencedDefs.push_back(definition.get());
     }
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
@@ -386,9 +388,8 @@ const RootSymbol& Compilation::getRoot() {
 
     // For unreferenced definitions, go through and instantiate them with all empty
     // parameter values so that we get at least some semantic checking of the contents.
-    for (auto def : unreferencedDefs) {
+    for (auto def : unreferencedDefs)
         root->addMember(InstanceSymbol::createInvalid(*this, *def));
-    }
 
     root->topInstances = topList.copy(*this);
     root->compilationUnits = compilationUnits;
@@ -566,6 +567,10 @@ span<const InstanceSymbol* const> Compilation::getParentInstances(
     return it->second;
 }
 
+void Compilation::noteInterfacePort(const Definition& definition) {
+    usedIfacePorts.emplace(&definition);
+}
+
 const NameSyntax& Compilation::parseName(string_view name) {
     Diagnostics localDiags;
     SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
@@ -611,6 +616,18 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     DiagnosticVisitor visitor(*this, numErrors,
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
+
+    // Report on unused definitions.
+    if (!options.suppressUnused) {
+        for (auto def : unreferencedDefs) {
+            // If this is an interface, it may have been referenced in a port.
+            if (usedIfacePorts.find(def) != usedIfacePorts.end())
+                continue;
+
+            def->scope.addDiag(diag::UnusedDefinition, def->location)
+                << DefinitionKindStrs[int(def->definitionKind)];
+        }
+    }
 
     Diagnostics results;
     for (auto& [key, diagList] : diagMap) {

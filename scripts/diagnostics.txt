@@ -409,7 +409,8 @@ warning queue-range ConstEvalQueueRange "reversed selection range [{}:{}] for qu
 warning empty-queue ConstEvalEmptyQueue "pop from empty queue"
 
 subsystem Compilation
-error MaxInstanceDepthExceeded "module instantiation exceeded maximum depth of {}"
+error MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
+warning unused-def UnusedDefinition "{} definition is unused"
 
 subsystem Meta
 error TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
@@ -424,7 +425,7 @@ group default = { real-underflow real-overflow literal-overflow ignored-macro-pa
                   redef-macro nonstandard-generate pointless-void-cast unused-result
                   not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg
                   pragma-diag-level explicit-static static-skipped format-real elem-not-found
-                  dynarray-index dynarray-range queue-range empty-queue unknown-escape-code }
+                  dynarray-index dynarray-range queue-range empty-queue unknown-escape-code unused-def }
 
 group extra = { empty-member empty-stmt dup-import }
 
