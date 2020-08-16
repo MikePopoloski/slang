@@ -14,6 +14,7 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
+#include "slang/symbols/InstanceSymbols.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
@@ -29,6 +30,11 @@
 #endif
 
 using namespace slang;
+
+static constexpr auto noteColor = fmt::terminal_color::bright_black;
+static constexpr auto warningColor = fmt::terminal_color::bright_yellow;
+static constexpr auto errorColor = fmt::terminal_color::bright_red;
+static constexpr auto highlightColor = fmt::terminal_color::bright_green;
 
 void writeToFile(string_view fileName, string_view contents);
 
@@ -96,7 +102,7 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
 }
 
 bool runCompiler(Compilation& compilation, const std::vector<std::string>& warningOptions,
-                 uint32_t errorLimit, bool onlyParse, bool showColors,
+                 uint32_t errorLimit, bool quiet, bool onlyParse, bool showColors,
                  const optional<std::string>& astJsonFile) {
     DiagnosticEngine diagEngine(*compilation.getSourceManager());
     Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
@@ -118,13 +124,19 @@ bool runCompiler(Compilation& compilation, const std::vector<std::string>& warni
             diagEngine.issue(diag);
     }
     else {
+#ifndef FUZZ_TARGET
+        auto topInstances = compilation.getRoot().topInstances;
+        if (!quiet && !topInstances.empty()) {
+            OS::print(fg(warningColor), "Top level design units:\n");
+            for (auto inst : topInstances)
+                OS::print("    {}\n", inst->name);
+            OS::print("\n");
+        }
+#endif
+
         for (auto& diag : compilation.getAllDiagnostics())
             diagEngine.issue(diag);
     }
-
-#ifndef FUZZ_TARGET
-    OS::print("{}", client->getString());
-#endif
 
     if (astJsonFile) {
         JsonWriter writer;
@@ -136,7 +148,28 @@ bool runCompiler(Compilation& compilation, const std::vector<std::string>& warni
         writeToFile(*astJsonFile, writer.view());
     }
 
-    return diagEngine.getNumErrors() == 0;
+    bool succeeded = diagEngine.getNumErrors() == 0;
+
+#ifndef FUZZ_TARGET
+    std::string diagStr = client->getString();
+    OS::print("{}", diagStr);
+
+    if (!quiet && !onlyParse) {
+        if (diagStr.size() > 1)
+            OS::print("\n");
+
+        if (succeeded)
+            OS::print(fg(highlightColor), "Build succeeded: ");
+        else
+            OS::print(fg(errorColor), "Build failed: ");
+
+        OS::print("{} error{}, {} warning{}\n", diagEngine.getNumErrors(),
+                  diagEngine.getNumErrors() == 1 ? "" : "s", diagEngine.getNumWarnings(),
+                  diagEngine.getNumWarnings() == 1 ? "" : "s");
+    }
+#endif
+
+    return succeeded;
 }
 
 #if defined(INCLUDE_SIM)
@@ -162,8 +195,10 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
     // General
     optional<bool> showHelp;
     optional<bool> showVersion;
+    optional<bool> quiet;
     cmdLine.add("-h,--help", showHelp, "Display available options");
     cmdLine.add("-v,--version", showVersion, "Display version information and exit");
+    cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
 
     // Output control
     optional<bool> onlyPreprocess;
@@ -288,6 +323,15 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
         return 0;
     }
 
+    bool showColors;
+    if (colorDiags)
+        showColors = *colorDiags;
+    else
+        showColors = !suppressColors && OS::fileSupportsColors(stdout);
+
+    if (showColors)
+        OS::setColorsEnabled(true);
+
     bool anyErrors = false;
     SourceManager sourceManager;
     for (const std::string& dir : includeDirs) {
@@ -295,7 +339,8 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
             sourceManager.addUserDirectory(string_view(dir));
         }
         catch (const std::exception&) {
-            OS::print("error: include directory '{}' does not exist\n", dir);
+            OS::print(fg(errorColor), "error: ");
+            OS::print("include directory '{}' does not exist\n", dir);
             anyErrors = true;
         }
     }
@@ -305,7 +350,8 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
             sourceManager.addSystemDirectory(string_view(dir));
         }
         catch (const std::exception&) {
-            OS::print("error: include directory '{}' does not exist\n", dir);
+            OS::print(fg(errorColor), "error: ");
+            OS::print("include directory '{}' does not exist\n", dir);
             anyErrors = true;
         }
     }
@@ -351,6 +397,7 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
         else if (minTypMax == "max")
             coptions.minTypMax = MinTypMax::Max;
         else {
+            OS::print(fg(errorColor), "error: ");
             OS::print("invalid value for timing option: '{}'", *minTypMax);
             return 1;
         }
@@ -366,7 +413,8 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
     for (const std::string& file : sourceFiles) {
         SourceBuffer buffer = sourceManager.readSource(file);
         if (!buffer) {
-            OS::print("error: no such file or directory: '{}'\n", file);
+            OS::print(fg(errorColor), "error: ");
+            OS::print("no such file or directory: '{}'\n", file);
             anyErrors = true;
             continue;
         }
@@ -378,20 +426,16 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
         return 2;
 
     if (buffers.empty()) {
-        OS::print("error: no input files\n");
+        OS::print(fg(errorColor), "error: ");
+        OS::print("no input files\n");
         return 3;
     }
 
     if (onlyParse.has_value() + onlyPreprocess.has_value() + onlyMacros.has_value() > 1) {
-        OS::print("Can only specify one of --preprocess, --macros-only, --parse-only");
+        OS::print(fg(errorColor), "error: ");
+        OS::print("can only specify one of --preprocess, --macros-only, --parse-only");
         return 4;
     }
-
-    bool showColors;
-    if (colorDiags)
-        showColors = *colorDiags;
-    else
-        showColors = !suppressColors && OS::fileSupportsColors(stdout);
 
     try {
         if (onlyPreprocess == true) {
@@ -413,7 +457,7 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
             }
 
             anyErrors = !runCompiler(compilation, warningOptions, errorLimit.value_or(20),
-                                     onlyParse == true, showColors, astJsonFile);
+                                     quiet == true, onlyParse == true, showColors, astJsonFile);
 
 #if defined(INCLUDE_SIM)
             if (!anyErrors && !onlyParse.value_or(false) && shouldSim == true) {
@@ -515,7 +559,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     Compilation compilation;
     compilation.addSyntaxTree(SyntaxTree::fromText(text, "<source>"));
 
-    runCompiler(compilation, {}, 0, /* onlyParse */ false, /* showColors */ false, {});
+    runCompiler(compilation, {}, 0, /* quiet */ false, /* onlyParse */ false,
+                /* showColors */ false, {});
 
     return 0;
 }
