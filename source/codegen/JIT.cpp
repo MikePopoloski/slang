@@ -37,9 +37,18 @@ JIT::JIT() {
 
     // Register all exported simrt functions with the JIT.
     auto exported = slang::runtime::getExportedFunctions();
+#ifdef __APPLE__
+    // Mangle names according to https://llvm.org/docs/ORCv2.html
+    auto& dl = jit->getDataLayout();
+    MangleAndInterner Mangle(jit->getExecutionSession(), dl);
+#endif
     for (auto& [name, ptr] : exported) {
         llvm::JITEvaluatedSymbol sym(static_cast<llvm::JITTargetAddress>(ptr), {});
+#ifdef __APPLE__
+        auto err = jit->defineAbsolute(*Mangle(llvm::StringRef(name.data(), name.length())), sym);
+#else
         auto err = jit->defineAbsolute(llvm::StringRef(name.data(), name.length()), sym);
+#endif
         if (err)
             report(std::move(err));
     }

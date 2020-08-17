@@ -86,8 +86,13 @@ GeneratedCode CodeGenerator::finish() {
 
     // Verify all generated code.
     bool bad = llvm::verifyModule(*module, &llvm::errs());
-    if (bad)
+    if (bad) {
+#ifdef __APPLE__
+        module->print(llvm::errs(), nullptr); // ld: undefined symbol llvm::Module::dump()
+#else
         module->dump();
+#endif
+    }
 
     return GeneratedCode(std::move(ctx), std::move(module));
 }

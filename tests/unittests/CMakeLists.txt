@@ -36,3 +36,8 @@ add_custom_command(
 )
 
 add_test(NAME unittests COMMAND unittests)
+if(CI_BUILD)
+    set_tests_properties(unittests PROPERTIES TIMEOUT 10)
+else()
+    set_tests_properties(unittests PROPERTIES TIMEOUT 5)
+endif()
