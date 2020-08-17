@@ -151,6 +151,7 @@ add_library(slangcompiler
     symbols/ASTSerializer.cpp
     symbols/AttributeSymbol.cpp
     symbols/BlockSymbols.cpp
+    symbols/ClassSymbols.cpp
     symbols/CompilationUnitSymbols.cpp
     symbols/DeclaredType.cpp
     symbols/InstanceSymbols.cpp

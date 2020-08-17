@@ -1,4 +1,5 @@
 add_executable(unittests
+    ClassTests.cpp
     DiagnosticTests.cpp
     EvalTests.cpp
     ExpressionParsingTests.cpp

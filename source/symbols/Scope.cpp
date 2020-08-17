@@ -12,6 +12,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
@@ -310,6 +311,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 addMember(*genvar);
             break;
         }
+        case SyntaxKind::ClassDeclaration:
+            addMember(ClassType::fromSyntax(*this, syntax.as<ClassDeclarationSyntax>()));
+            break;
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:
             // TODO: these aren't supported yet but we can compile everything else successfully

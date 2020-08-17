@@ -504,7 +504,7 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
     auto endBlockName = parseNamedBlockClause();
 
     Token nameToken = prototype.name->getLastToken();
-    if (nameToken.kind == TokenKind::Identifier)
+    if (nameToken.kind == TokenKind::Identifier || nameToken.kind == TokenKind::NewKeyword)
         checkBlockNames(nameToken, endBlockName);
 
     return factory.functionDeclaration(functionKind, attributes, prototype, semi, items, end,

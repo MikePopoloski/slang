@@ -17,6 +17,7 @@
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/BlockSymbols.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
@@ -157,6 +158,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         TYPE(UnpackedStructType);
         TYPE(PackedUnionType);
         TYPE(UnpackedUnionType);
+        TYPE(ClassType);
         TYPE(VoidType);
         TYPE(NullType);
         TYPE(CHandleType);
@@ -164,8 +166,6 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         TYPE(EventType);
         TYPE(ErrorType);
         TYPE(NetType);
-
-        case SymbolKind::ClassType: THROW_UNREACHABLE;
     }
 #undef TYPE
 #undef SYMBOL

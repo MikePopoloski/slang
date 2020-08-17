@@ -231,14 +231,21 @@ endmodule : m1;
 
 function foo;
 endfunction : foo
+
+class C;
+    function new;
+    endfunction : bar
+endclass : Baz
 )";
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 3);
+    REQUIRE(diagnostics.size() == 5);
     CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
     CHECK(diagnostics[1].code == diag::EndNameNotEmpty);
     CHECK(diagnostics[2].code == diag::EndNameMismatch);
+    CHECK(diagnostics[3].code == diag::EndNameMismatch);
+    CHECK(diagnostics[4].code == diag::EndNameMismatch);
 }
 
 TEST_CASE("Struct member invalid token") {
