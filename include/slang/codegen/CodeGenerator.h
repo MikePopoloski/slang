@@ -72,6 +72,7 @@ public:
     llvm::Module& getModule() { return *module; }
     CodeGenTypes& getTypes() { return *types; }
     const CodegenOptions& getOptions() const { return options; }
+    const Compilation& getCompilation() const { return compilation; }
 
     llvm::Function* getOrCreateSystemFunction(mir::SysCallKind kind,
                                               function_ref<llvm::Function*()> factory);
