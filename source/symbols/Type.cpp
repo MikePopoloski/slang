@@ -211,6 +211,7 @@ bool Type::isSimpleType() const {
         case SymbolKind::ScalarType:
         case SymbolKind::FloatingType:
         case SymbolKind::TypeAlias:
+        case SymbolKind::ClassType:
             return true;
         default:
             return false;
@@ -221,8 +222,10 @@ bool Type::isByteArray() const {
     const Type& ct = getCanonicalType();
     if (!ct.isUnpackedArray())
         return false;
+
     if (ct.kind == SymbolKind::AssociativeArrayType)
         return false;
+
     auto& elem = ct.getArrayElementType()->getCanonicalType();
     return elem.isPredefinedInteger() &&
            elem.as<PredefinedIntegerType>().integerKind == PredefinedIntegerType::Byte;
@@ -400,6 +403,10 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
         // until runtime.
         return l->getArrayElementType()->isEquivalent(*r->getArrayElementType());
     }
+
+    // Null is assignment compatible to all class types.
+    if (l->isClass() && r->isNull())
+        return true;
 
     return false;
 }

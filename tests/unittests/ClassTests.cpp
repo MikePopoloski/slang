@@ -50,12 +50,16 @@ TEST_CASE("Class handle expressions") {
 
     auto typeof = [&](const std::string& source) {
         auto tree = SyntaxTree::fromText(string_view(source));
-        BindContext context(scope, LookupLocation::max);
+        BindContext context(scope, LookupLocation::max, BindFlags::ProceduralStatement);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };
 
     declare(PacketClass + "\nPacket p;"s);
     CHECK(typeof("p") == "Packet");
+    CHECK(typeof("p == p") == "bit");
+    CHECK(typeof("p !== p") == "bit");
+    CHECK(typeof("(p = null)") == "Packet");
+    CHECK(typeof("(p = p)") == "Packet");
 
     NO_COMPILATION_ERRORS;
 }
