@@ -139,9 +139,8 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     auto subroutineKind = syntax.kind == SyntaxKind::TaskDeclaration ? SubroutineKind::Task
                                                                      : SubroutineKind::Function;
-    auto result = compilation.emplace<SubroutineSymbol>(compilation, nameToken.valueText(),
-                                                        nameToken.location(), *lifetime,
-                                                        subroutineKind, parent);
+    auto result = compilation.emplace<SubroutineSymbol>(
+        compilation, nameToken.valueText(), nameToken.location(), *lifetime, subroutineKind);
 
     result->setSyntax(syntax);
     result->setAttributes(parent, syntax.attributes);
@@ -277,6 +276,45 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     result->arguments = arguments.copy(compilation);
     result->binder.setItems(*result, syntax.items, syntax.sourceRange());
     return *result;
+}
+
+SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
+                                               const ClassMethodDeclarationSyntax& syntax,
+                                               const Scope& parent) {
+    auto& result = fromSyntax(compilation, *syntax.declaration, parent);
+    result.setAttributes(parent, syntax.attributes);
+
+    for (Token qual : syntax.qualifiers) {
+        switch (qual.kind) {
+            case TokenKind::LocalKeyword:
+                result.visibility = Visibility::Local;
+                break;
+            case TokenKind::ProtectedKeyword:
+                result.visibility = Visibility::Protected;
+                break;
+            case TokenKind::StaticKeyword:
+                result.flags |= MethodFlags::Static;
+                break;
+            case TokenKind::PureKeyword:
+                result.flags |= MethodFlags::Pure;
+                break;
+            case TokenKind::VirtualKeyword:
+                result.flags |= MethodFlags::Virtual;
+                break;
+            case TokenKind::ConstKeyword:
+            case TokenKind::ExternKeyword:
+            case TokenKind::RandKeyword:
+                // so just ignore them here.
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    if (result.name == "new")
+        result.flags |= MethodFlags::Constructor;
+
+    return result;
 }
 
 void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {

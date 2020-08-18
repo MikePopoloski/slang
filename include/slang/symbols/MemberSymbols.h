@@ -9,6 +9,7 @@
 #include "slang/binding/Statements.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
+#include "slang/util/Enum.h"
 
 namespace slang {
 
@@ -93,6 +94,10 @@ private:
     mutable optional<const PackageSymbol*> package;
 };
 
+enum class MethodFlags : uint8_t { None = 0, Virtual = 1, Pure = 2, Static = 4, Constructor = 8 };
+BITMASK(MethodFlags, Constructor);
+
+struct ClassMethodDeclarationSyntax;
 struct FunctionDeclarationSyntax;
 
 /// Represents a subroutine (task or function).
@@ -105,10 +110,11 @@ public:
     ArgList arguments;
     VariableLifetime defaultLifetime;
     SubroutineKind subroutineKind;
+    Visibility visibility = Visibility::Public;
+    bitmask<MethodFlags> flags = MethodFlags::None;
 
     SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     VariableLifetime defaultLifetime, SubroutineKind subroutineKind,
-                     const Scope&) :
+                     VariableLifetime defaultLifetime, SubroutineKind subroutineKind) :
         Symbol(SymbolKind::Subroutine, name, loc),
         Scope(compilation, this), declaredReturnType(*this), defaultLifetime(defaultLifetime),
         subroutineKind(subroutineKind) {}
@@ -120,6 +126,10 @@ public:
 
     static SubroutineSymbol& fromSyntax(Compilation& compilation,
                                         const FunctionDeclarationSyntax& syntax,
+                                        const Scope& parent);
+
+    static SubroutineSymbol& fromSyntax(Compilation& compilation,
+                                        const ClassMethodDeclarationSyntax& syntax,
                                         const Scope& parent);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }

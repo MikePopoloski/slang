@@ -344,6 +344,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             }
             break;
         }
+        case SyntaxKind::ClassMethodDeclaration:
+            addMember(SubroutineSymbol::fromSyntax(
+                compilation, syntax.as<ClassMethodDeclarationSyntax>(), *this));
+            break;
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:
             // TODO: these aren't supported yet but we can compile everything else successfully
