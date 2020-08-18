@@ -11,13 +11,11 @@ class Packet;
     integer status;
     typedef enum { ERR_OVERFLOW = 10, ERR_UNDERFLOW = 1123} PCKT_TYPE;
     const integer buffer_size = 100;
-    const integer header_size;
 
     function new();
         command = 4'd0;
         address = 41'b0;
         master_id = 5'bx;
-        header_size = 10;
     endfunction : new
 
     task clean();
