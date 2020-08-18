@@ -1,7 +1,6 @@
 #include "Test.h"
 
-TEST_CASE("Basic class") {
-    auto tree = SyntaxTree::fromText(R"(
+static constexpr const char* PacketClass = R"(
 class Packet;
     bit [3:0] command;
     bit [40:0] address;
@@ -29,9 +28,34 @@ class Packet;
         current_status = status;
     endfunction
 endclass : Packet
-)");
+)";
+
+TEST_CASE("Basic class") {
+    auto tree = SyntaxTree::fromText(PacketClass);
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Class handle expressions") {
+    Compilation compilation;
+
+    auto& scope = compilation.createScriptScope();
+    auto declare = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        scope.getCompilation().addSyntaxTree(tree);
+        scope.addMembers(tree->root());
+    };
+
+    auto typeof = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        BindContext context(scope, LookupLocation::max);
+        return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
+    };
+
+    declare(PacketClass + "\nPacket p;"s);
+    CHECK(typeof("p") == "Packet");
+
     NO_COMPILATION_ERRORS;
 }

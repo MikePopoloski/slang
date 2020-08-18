@@ -24,6 +24,14 @@ void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {
         SemanticFacts::populateTimeScale(timeScale, *this, syntax.as<TimeUnitsDeclarationSyntax>(),
                                          unitsRange, precisionRange, !anyMembers);
     }
+    else if (syntax.kind == SyntaxKind::CompilationUnit) {
+        auto& cu = syntax.as<CompilationUnitSyntax>();
+        if (!cu.members.empty()) {
+            anyMembers = true;
+            for (auto member : cu.members)
+                Scope::addMembers(*member);
+        }
+    }
     else {
         anyMembers = true;
         Scope::addMembers(syntax);

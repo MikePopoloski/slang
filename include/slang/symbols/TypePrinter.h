@@ -11,6 +11,7 @@
 
 namespace slang {
 
+class ClassType;
 class FormatBuffer;
 
 struct TypePrintingOptions {
@@ -51,6 +52,7 @@ public:
     void visit(const CHandleType& type, string_view overrideName);
     void visit(const StringType& type, string_view overrideName);
     void visit(const EventType& type, string_view overrideName);
+    void visit(const ClassType& type, string_view overrideName);
     void visit(const TypeAliasType& type, string_view overrideName);
     void visit(const ErrorType& type, string_view overrideName);
 

@@ -288,6 +288,10 @@ void TypePrinter::visit(const EventType&, string_view) {
     buffer->append("event");
 }
 
+void TypePrinter::visit(const ClassType& type, string_view) {
+    buffer->append(type.name);
+}
+
 void TypePrinter::visit(const TypeAliasType& type, string_view overrideName) {
     if (!overrideName.empty()) {
         type.targetType.getType().visit(*this, overrideName);
