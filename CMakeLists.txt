@@ -198,7 +198,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Wno-missing-braces
     )
     if (APPLE)
-        set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup -v")
+        set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
         if(STATIC_BUILD)
           message(SEND_ERROR "STATIC_BUILD=ON not supported on macOS." )
         endif()
