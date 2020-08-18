@@ -8,8 +8,26 @@
 
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Type.h"
+#include "slang/symbols/VariableSymbols.h"
 
 namespace slang {
+
+struct ClassPropertyDeclarationSyntax;
+
+class ClassPropertySymbol : public VariableSymbol {
+public:
+    Visibility visibility;
+
+    ClassPropertySymbol(string_view name, SourceLocation loc, VariableLifetime lifetime,
+                        Visibility visibility);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static void fromSyntax(const Scope& scope, const ClassPropertyDeclarationSyntax& syntax,
+                           SmallVector<const ClassPropertySymbol*>& results);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassProperty; }
+};
 
 struct ClassDeclarationSyntax;
 

@@ -314,6 +314,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EventType; }
 };
 
+struct ClassPropertyDeclarationSyntax;
 struct ForwardInterfaceClassTypedefDeclarationSyntax;
 struct ForwardTypedefDeclarationSyntax;
 
@@ -327,15 +328,19 @@ public:
 #undef CATEGORY
 
     Category category;
+    Visibility visibility = Visibility::Public;
 
     ForwardingTypedefSymbol(string_view name, SourceLocation loc, Category category) :
         Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}
 
-    static const ForwardingTypedefSymbol& fromSyntax(const Scope& scope,
-                                                     const ForwardTypedefDeclarationSyntax& syntax);
+    static ForwardingTypedefSymbol& fromSyntax(const Scope& scope,
+                                               const ForwardTypedefDeclarationSyntax& syntax);
 
-    static const ForwardingTypedefSymbol& fromSyntax(
+    static ForwardingTypedefSymbol& fromSyntax(
         const Scope& scope, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax);
+
+    static ForwardingTypedefSymbol& fromSyntax(const Scope& scope,
+                                               const ClassPropertyDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getNextForwardDecl() const { return next; }
@@ -354,14 +359,16 @@ struct TypedefDeclarationSyntax;
 class TypeAliasType : public Type {
 public:
     DeclaredType targetType;
+    Visibility visibility = Visibility::Public;
 
     TypeAliasType(string_view name, SourceLocation loc) :
         Type(SymbolKind::TypeAlias, name, loc), targetType(*this) {
         canonical = nullptr;
     }
 
-    static const TypeAliasType& fromSyntax(const Scope& scope,
-                                           const TypedefDeclarationSyntax& syntax);
+    static TypeAliasType& fromSyntax(const Scope& scope, const TypedefDeclarationSyntax& syntax);
+    static TypeAliasType& fromSyntax(const Scope& scope,
+                                     const ClassPropertyDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getFirstForwardDecl() const { return firstForward; }

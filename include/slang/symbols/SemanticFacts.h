@@ -22,6 +22,11 @@ struct TimeUnitsDeclarationSyntax;
 ENUM(VariableLifetime, LIFETIME);
 #undef LIFETIME
 
+#define VISIBILITY(x) x(Public) x(Protected) x(Local)
+/// Specifies the visibility of class members.
+ENUM(Visibility, VISIBILITY);
+#undef VISIBILITY
+
 #define FORMAL(x) x(In) x(Out) x(InOut) x(Ref) x(ConstRef)
 /// Specifies behavior of an argument passed to a subroutine.
 ENUM(ArgumentDirection, FORMAL);

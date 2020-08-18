@@ -821,7 +821,7 @@ ConstantValue EventType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
 }
 
-const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
+ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     const Scope& scope, const ForwardTypedefDeclarationSyntax& syntax) {
 
     Category category;
@@ -851,13 +851,44 @@ const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     return *result;
 }
 
-const ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
+ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     const Scope& scope, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ForwardingTypedefSymbol>(
         syntax.name.valueText(), syntax.name.location(), Category::InterfaceClass);
     result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+    return *result;
+}
+
+ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
+    const Scope& scope, const ClassPropertyDeclarationSyntax& syntax) {
+
+    ForwardingTypedefSymbol* result;
+    if (syntax.declaration->kind == SyntaxKind::ForwardInterfaceClassTypedefDeclaration) {
+        result = &fromSyntax(
+            scope, syntax.declaration->as<ForwardInterfaceClassTypedefDeclarationSyntax>());
+    }
+    else {
+        result = &fromSyntax(scope, syntax.declaration->as<ForwardTypedefDeclarationSyntax>());
+    }
+
+    for (Token qual : syntax.qualifiers) {
+        switch (qual.kind) {
+            case TokenKind::LocalKeyword:
+                result->visibility = Visibility::Local;
+                break;
+            case TokenKind::ProtectedKeyword:
+                result->visibility = Visibility::Protected;
+                break;
+            default:
+                // Everything else is not allowed on typedefs; the parser will issue
+                // a diagnostic so just ignore them here.
+                break;
+        }
+    }
+
     result->setAttributes(scope, syntax.attributes);
     return *result;
 }
@@ -875,8 +906,8 @@ void ForwardingTypedefSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("next", *next);
 }
 
-const TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
-                                               const TypedefDeclarationSyntax& syntax) {
+TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
+                                         const TypedefDeclarationSyntax& syntax) {
     // TODO: interface based typedefs
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
@@ -885,6 +916,28 @@ const TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return *result;
+}
+
+TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
+                                         const ClassPropertyDeclarationSyntax& syntax) {
+    auto& result = fromSyntax(scope, syntax.declaration->as<TypedefDeclarationSyntax>());
+    for (Token qual : syntax.qualifiers) {
+        switch (qual.kind) {
+            case TokenKind::LocalKeyword:
+                result.visibility = Visibility::Local;
+                break;
+            case TokenKind::ProtectedKeyword:
+                result.visibility = Visibility::Protected;
+                break;
+            default:
+                // Everything else is not allowed on typedefs; the parser will issue
+                // a diagnostic so just ignore them here.
+                break;
+        }
+    }
+
+    result.setAttributes(scope, syntax.attributes);
+    return result;
 }
 
 void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {

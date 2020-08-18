@@ -52,7 +52,7 @@ public:
 
     static bool isKind(SymbolKind kind) {
         return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument ||
-               kind == SymbolKind::Field;
+               kind == SymbolKind::Field || kind == SymbolKind::ClassProperty;
     }
 
 protected:

@@ -139,6 +139,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(Variable);
         SYMBOL(FormalArgument);
         SYMBOL(Field);
+        SYMBOL(ClassProperty);
         SYMBOL(Subroutine);
         SYMBOL(Modport);
         SYMBOL(ContinuousAssign);

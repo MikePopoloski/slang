@@ -72,6 +72,7 @@ struct AttributeInstanceSyntax;
     x(Variable) \
     x(FormalArgument) \
     x(Field) \
+    x(ClassProperty) \
     x(Subroutine) \
     x(ContinuousAssign) \
     x(Gate) \

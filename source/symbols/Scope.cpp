@@ -281,14 +281,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(TypeAliasType::fromSyntax(*this, syntax.as<TypedefDeclarationSyntax>()));
             break;
         case SyntaxKind::ForwardTypedefDeclaration: {
-            const auto& symbol = ForwardingTypedefSymbol::fromSyntax(
+            auto& symbol = ForwardingTypedefSymbol::fromSyntax(
                 *this, syntax.as<ForwardTypedefDeclarationSyntax>());
             addMember(symbol);
             getOrAddDeferredData().addForwardingTypedef(symbol);
             break;
         }
         case SyntaxKind::ForwardInterfaceClassTypedefDeclaration: {
-            const auto& symbol = ForwardingTypedefSymbol::fromSyntax(
+            auto& symbol = ForwardingTypedefSymbol::fromSyntax(
                 *this, syntax.as<ForwardInterfaceClassTypedefDeclarationSyntax>());
             addMember(symbol);
             getOrAddDeferredData().addForwardingTypedef(symbol);
@@ -314,6 +314,36 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ClassDeclaration:
             addMember(ClassType::fromSyntax(*this, syntax.as<ClassDeclarationSyntax>()));
             break;
+        case SyntaxKind::ClassPropertyDeclaration: {
+            auto& cpd = syntax.as<ClassPropertyDeclarationSyntax>();
+            switch (cpd.declaration->kind) {
+                case SyntaxKind::DataDeclaration: {
+                    SmallVectorSized<const ClassPropertySymbol*, 4> symbols;
+                    ClassPropertySymbol::fromSyntax(*this, cpd, symbols);
+                    for (auto symbol : symbols)
+                        addMember(*symbol);
+                    break;
+                }
+                case SyntaxKind::TypedefDeclaration:
+                    addMember(TypeAliasType::fromSyntax(*this, cpd));
+                    break;
+                case SyntaxKind::ForwardTypedefDeclaration:
+                case SyntaxKind::ForwardInterfaceClassTypedefDeclaration: {
+                    auto& symbol = ForwardingTypedefSymbol::fromSyntax(*this, cpd);
+                    addMember(symbol);
+                    getOrAddDeferredData().addForwardingTypedef(symbol);
+                    break;
+                }
+                case SyntaxKind::ParameterDeclarationStatement:
+                    addDiag(diag::NotYetSupported, syntax.sourceRange());
+                    break;
+                default:
+                    // All other possible member kinds here are illegal and will
+                    // be diagnosed in the parser, so just ignore them.
+                    break;
+            }
+            break;
+        }
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:
             // TODO: these aren't supported yet but we can compile everything else successfully
