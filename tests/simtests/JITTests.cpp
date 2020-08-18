@@ -4,6 +4,10 @@
 #include "slang/runtime/Runtime.h"
 #include "slang/symbols/BlockSymbols.h"
 
+#ifdef __APPLE__
+// Work around a clang optimization bug on deallocating "result" before lambda call
+[[clang::optnone]]
+#endif
 TEST_CASE("JIT test") {
     Compilation compilation = compile(R"(
 module m;

@@ -7,3 +7,4 @@ add_executable(simtests
 target_link_libraries(simtests PRIVATE slangruntime slangcodegen)
 
 add_test(NAME simtests COMMAND simtests)
+set_tests_properties(simtests PROPERTIES TIMEOUT 60)

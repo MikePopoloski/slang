@@ -71,6 +71,8 @@ llvm::Value* CodeGenFunction::emit(const Instr& instr) {
             return emitStore(instr.getOperands()[0], instr.getOperands()[1]);
         case InstrKind::negate:
             return emitNegate(instr.type, instr.getOperands()[0]);
+        default:
+            break;
     }
     THROW_UNREACHABLE;
 }

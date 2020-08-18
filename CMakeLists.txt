@@ -197,6 +197,12 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Wzero-as-null-pointer-constant
         -Wno-missing-braces
     )
+    if (APPLE)
+        set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
+        if(STATIC_BUILD)
+          message(SEND_ERROR "STATIC_BUILD=ON not supported on macOS." )
+        endif()
+    endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(SLANG_WARN_FLAGS
         -Wall

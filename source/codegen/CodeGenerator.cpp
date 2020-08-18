@@ -87,7 +87,7 @@ GeneratedCode CodeGenerator::finish() {
     // Verify all generated code.
     bool bad = llvm::verifyModule(*module, &llvm::errs());
     if (bad)
-        module->dump();
+        module->print(llvm::errs(), nullptr); // ld: undefined symbol llvm::Module::dump()
 
     return GeneratedCode(std::move(ctx), std::move(module));
 }
