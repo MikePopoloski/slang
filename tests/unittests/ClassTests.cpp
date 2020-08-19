@@ -60,6 +60,10 @@ TEST_CASE("Class handle expressions") {
     CHECK(typeof("p !== p") == "bit");
     CHECK(typeof("(p = null)") == "Packet");
     CHECK(typeof("(p = p)") == "Packet");
+    CHECK(typeof("1 ? p : p") == "Packet");
+    CHECK(typeof("p.buffer_size") == "integer");
+    CHECK(typeof("p.current_status()") == "integer");
+    CHECK(typeof("p.clean") == "void");
 
     NO_COMPILATION_ERRORS;
 }

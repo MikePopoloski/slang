@@ -13,9 +13,10 @@
 namespace slang {
 
 ClassPropertySymbol::ClassPropertySymbol(string_view name, SourceLocation loc,
-                                         VariableLifetime lifetime, Visibility visibility) :
+                                         VariableLifetime lifetime, Visibility visibility,
+                                         uint32_t index) :
     VariableSymbol(SymbolKind::ClassProperty, name, loc, lifetime),
-    visibility(visibility) {
+    visibility(visibility), index(index) {
 }
 
 void ClassPropertySymbol::fromSyntax(const Scope& scope,
@@ -73,9 +74,12 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
         }
     }
 
+    // TODO: set correct index of property among all other properties
+    uint32_t index = 0;
+
     for (auto declarator : dataSyntax.declarators) {
         auto var = comp.emplace<ClassPropertySymbol>(
-            declarator->name.valueText(), declarator->name.location(), lifetime, visibility);
+            declarator->name.valueText(), declarator->name.location(), lifetime, visibility, index);
         var->isConstant = isConst;
         var->setDeclaredType(*dataSyntax.type);
         var->setFromDeclarator(*declarator);

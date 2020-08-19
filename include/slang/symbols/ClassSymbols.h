@@ -17,9 +17,10 @@ struct ClassPropertyDeclarationSyntax;
 class ClassPropertySymbol : public VariableSymbol {
 public:
     Visibility visibility;
+    uint32_t index;
 
     ClassPropertySymbol(string_view name, SourceLocation loc, VariableLifetime lifetime,
-                        Visibility visibility);
+                        Visibility visibility, uint32_t index);
 
     void serializeTo(ASTSerializer& serializer) const;
 

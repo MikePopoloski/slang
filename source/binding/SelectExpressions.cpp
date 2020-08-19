@@ -14,6 +14,8 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
+#include "slang/symbols/ClassSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -697,6 +699,10 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
                                                  const LookupResult::MemberSelector& selector,
                                                  const InvocationExpressionSyntax* invocation,
                                                  const BindContext& context) {
+    // If the selector name is invalid just give up early.
+    if (selector.name.empty())
+        return badExpr(compilation, &expr);
+
     // This might look like a member access but actually be a built-in type method.
     const Type& type = expr.type->getCanonicalType();
     switch (type.kind) {
@@ -704,6 +710,7 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
         case SymbolKind::UnpackedStructType:
         case SymbolKind::PackedUnionType:
         case SymbolKind::UnpackedUnionType:
+        case SymbolKind::ClassType:
             break;
         case SymbolKind::EnumType:
         case SymbolKind::StringType:
@@ -733,8 +740,30 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
 
     // The source range of the entire member access starts from the value being selected.
     SourceRange range{ expr.sourceRange.start(), selector.nameRange.end() };
-    const auto& field = member->as<FieldSymbol>();
-    return *compilation.emplace<MemberAccessExpression>(field.getType(), expr, field, range);
+
+    switch (member->kind) {
+        case SymbolKind::Field: {
+            auto& field = member->as<FieldSymbol>();
+            return *compilation.emplace<MemberAccessExpression>(field.getType(), expr, field,
+                                                                field.offset, range);
+        }
+        case SymbolKind::ClassProperty: {
+            auto& prop = member->as<ClassPropertySymbol>();
+            return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop,
+                                                                prop.index, range);
+        }
+        case SymbolKind::Subroutine:
+            return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(),
+                                              invocation, range, context);
+        default:
+            // TODO: support class params
+            auto& diag = context.addDiag(diag::InvalidClassAccess, selector.dotLocation);
+            diag << selector.nameRange;
+            diag << expr.sourceRange;
+            diag << selector.name;
+            diag << *expr.type;
+            return badExpr(compilation, &expr);
+    }
 }
 
 Expression& MemberAccessExpression::fromSyntax(Compilation& compilation,
@@ -760,11 +789,11 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
 
     // TODO: handle unpacked unions
     if (value().type->isUnpackedStruct())
-        return cv.elements()[field.offset];
+        return cv.elements()[offset];
 
-    int32_t offset = (int32_t)field.offset;
+    int32_t io = (int32_t)offset;
     int32_t width = (int32_t)type->getBitWidth();
-    return cv.integer().slice(width + offset - 1, offset);
+    return cv.integer().slice(width + io - 1, io);
 }
 
 LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
@@ -773,13 +802,13 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
         return nullptr;
 
     // TODO: handle unpacked unions
-    int32_t offset = (int32_t)field.offset;
+    int32_t io = (int32_t)offset;
     if (value().type->isUnpackedStruct()) {
-        lval.addIndex(offset, nullptr);
+        lval.addIndex(io, nullptr);
     }
     else {
         int32_t width = (int32_t)type->getBitWidth();
-        lval.addBitSlice({ width + offset - 1, offset });
+        lval.addBitSlice({ width + io - 1, io });
     }
 
     return lval;
@@ -790,7 +819,7 @@ bool MemberAccessExpression::verifyConstantImpl(EvalContext& context) const {
 }
 
 void MemberAccessExpression::serializeTo(ASTSerializer& serializer) const {
-    serializer.writeLink("field", field);
+    serializer.writeLink("member", member);
     serializer.write("value", value());
 }
 

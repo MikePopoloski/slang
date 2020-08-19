@@ -109,12 +109,13 @@ struct MemberAccessExpressionSyntax;
 /// Represents an access of a structure variable's members.
 class MemberAccessExpression : public Expression {
 public:
-    const FieldSymbol& field;
+    const Symbol& member;
+    uint32_t offset;
 
-    MemberAccessExpression(const Type& type, Expression& value, const FieldSymbol& field,
-                           SourceRange sourceRange) :
+    MemberAccessExpression(const Type& type, Expression& value, const Symbol& member,
+                           uint32_t offset, SourceRange sourceRange) :
         Expression(ExpressionKind::MemberAccess, type, sourceRange),
-        field(field), value_(&value) {}
+        member(member), offset(offset), value_(&value) {}
 
     const Expression& value() const { return *value_; }
     Expression& value() { return *value_; }
