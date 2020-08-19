@@ -961,3 +961,23 @@ endmodule
     CHECK(diags[0].code == diag::PackedArrayTooLarge);
     CHECK(diags[1].code == diag::ArrayDimTooLarge);
 }
+
+TEST_CASE("Unpacked array assignment") {
+    auto tree = SyntaxTree::fromText(R"(
+ module test;
+     localparam int a [1:0] = {1, 2};
+     localparam int b [0:2] = a;
+     int A[10:1];
+     int C[24:1];
+     assign A = C;
+ endmodule
+ )");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BadAssignment);
+    CHECK(diags[1].code == diag::BadAssignment);
+}
