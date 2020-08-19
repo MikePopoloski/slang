@@ -981,3 +981,25 @@ TEST_CASE("Unpacked array assignment") {
     CHECK(diags[0].code == diag::BadAssignment);
     CHECK(diags[1].code == diag::BadAssignment);
 }
+
+TEST_CASE("Unpacked array/struct bit-streaming types") {
+    auto tree = SyntaxTree::fromText(R"(
+ module test;
+     event a;
+     localparam bits_a = $bits(a);
+     event b [3:0];
+     localparam bits_b = $bits(b);
+     struct { event a; } c;
+     localparam bits_c = $bits(c);
+ endmodule
+ )");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[1].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[2].code == diag::BadSystemSubroutineArg);
+}

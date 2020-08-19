@@ -202,7 +202,19 @@ bool Type::isStruct() const {
 
 bool Type::isBitstreamType() const {
     // TODO: classes
-    return isIntegral() || isUnpackedArray() || isUnpackedStruct();
+    if (isIntegral())
+        return true;
+    if (isUnpackedArray())
+        return getArrayElementType()->isBitstreamType();
+    if (isUnpackedStruct()) {
+        auto& us = as<UnpackedStructType>();
+        for (auto& field : us.membersOfType<FieldSymbol>()) {
+            if (!field.getType().isBitstreamType())
+                return false;
+        }
+        return true;
+    }
+    return false;
 }
 
 bool Type::isSimpleType() const {
