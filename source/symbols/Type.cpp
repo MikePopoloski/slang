@@ -401,6 +401,8 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
         // need to check the fixed size condition here, since the only way it would
         // matter is if the source (rhs) is dynamically sized, which can't be checked
         // until runtime.
+        if (l->kind == r->kind && l->kind == SymbolKind::FixedSizeUnpackedArrayType)
+            return false; // !isEquivalent implies unequal widths or non-eqivalent elements
         return l->getArrayElementType()->isEquivalent(*r->getArrayElementType());
     }
 
