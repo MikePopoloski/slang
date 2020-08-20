@@ -146,6 +146,8 @@ public:
     ConstantValue convertToStr() const;
     ConstantValue convertToByteArray(bitwidth_t size, bool isSigned) const;
     ConstantValue convertToByteQueue(bool isSigned) const;
+    /// Gets $bits of the constant expression.
+    bitwidth_t dollarBits() const;
 
     static const ConstantValue Invalid;
 

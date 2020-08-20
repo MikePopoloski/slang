@@ -95,6 +95,31 @@ bitwidth_t Type::getBitWidth() const {
     return 0;
 }
 
+bitwidth_t Type::dollarBits() const {
+    auto width = getBitWidth();
+    if (width > 0)
+        return width;
+    if (isUnpackedArray()) {
+        const auto& ct = getCanonicalType();
+        if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
+            return 0;
+        const auto& ct1 = ct.as<FixedSizeUnpackedArrayType>();
+        width = ct1.elementType.dollarBits() * ct1.range.width();
+    }
+    else if (isUnpackedStruct()) {
+        auto& us = getCanonicalType().as<UnpackedStructType>();
+        width = 0;
+        for (auto& field : us.membersOfType<FieldSymbol>()) {
+            auto width1 = field.getType().dollarBits();
+            if (!width1)
+                return 0;
+            width += width1;
+        }
+    }
+    // TODO: classes
+    return width;
+}
+
 bool Type::isSigned() const {
     const Type& ct = getCanonicalType();
     return ct.isIntegral() && ct.as<IntegralType>().isSigned;
@@ -201,7 +226,7 @@ bool Type::isStruct() const {
 }
 
 bool Type::isBitstreamType() const {
-    if (isIntegral())
+    if (isIntegral() || isString())
         return true;
     if (isUnpackedArray())
         return getArrayElementType()->isBitstreamType();

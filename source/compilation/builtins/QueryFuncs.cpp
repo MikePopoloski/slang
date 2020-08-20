@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/symbols/TypePrinter.h"
 
@@ -35,9 +36,17 @@ public:
         return comp.getIntegerType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args& args) const final {
-        // TODO: support for unpacked sizes
-        return SVInt(32, args[0]->type->getBitWidth(), true);
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+        auto width = args[0]->type->dollarBits();
+        if (!width) {
+            ConstantValue cv = args[0]->eval(context);
+            if (!cv) {
+                context.addDiag(diag::ConstEvalBitsNotFixedSize, args[0]->sourceRange);
+                return nullptr;
+            }
+            width = cv.dollarBits();
+        }
+        return SVInt(32, width, true);
     }
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }

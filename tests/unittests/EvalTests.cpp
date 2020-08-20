@@ -1610,3 +1610,23 @@ TEST_CASE("Unpacked array concat") {
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnpackedConcatSize);
 }
+
+TEST_CASE("$bits unpacked types") {
+    ScriptSession session;
+    session.eval(R"(
+localparam string str = "hello";
+logic [0:2] fixed [17:13];
+struct { time a; enum bit [0:1] {red, yellow, blue} b; } record;
+localparam bit dynamic[] = '{1, 0};
+localparam shortint queue[$] = '{8, 1, 3};
+localparam byte asso[string] = '{ "Jon": 20, "Paul":22, "Al":23, default:-1 };
+)");
+    CHECK(session.eval("$bits(str)").integer() == 40);
+    CHECK(session.eval("$bits(fixed)").integer() == 15);
+    CHECK(session.eval("$bits(record)").integer() == 66);
+    CHECK(session.eval("$bits(dynamic)").integer() == 2);
+    CHECK(session.eval("$bits(queue)").integer() == 48);
+    CHECK(session.eval("$bits(asso)").integer() == 24);
+
+    NO_SESSION_ERRORS;
+}

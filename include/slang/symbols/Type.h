@@ -54,6 +54,9 @@ public:
     /// Gets the total width of the type in bits. Returns zero if the type does not have a
     /// statically known size.
     bitwidth_t getBitWidth() const;
+    /// Gets $bits of the type.
+    /// Returns zero if the type does not have a statically known size.
+    bitwidth_t dollarBits() const;
 
     /// Indicates whether the type can represent negative numeric values. For non-numeric types,
     /// this always returns false.

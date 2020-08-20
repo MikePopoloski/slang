@@ -1300,3 +1300,28 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadAssignment);
 }
+
+bool testBitsNonFixedSizeArray(const std::string& text) {
+    const auto& fullText = "module Top; " + text + " endmodule";
+    auto tree = SyntaxTree::fromText(string_view(fullText));
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    return diags.size() == 0;
+}
+
+TEST_CASE("$bits on non-fixed-size array") {
+    std::string intBits = "int b = $bits(a);";
+    std::string paramBits = "localparam b = $bits(a);";
+    const char* types[] = {
+        "string a;",
+        "logic[1:0] a[];",
+        "bit a[$];",
+        "byte a[int];",
+    };
+    int num = sizeof(types) / sizeof(const char*);
+    for (int i = 0; i < num; ++i) {
+        CHECK(testBitsNonFixedSizeArray(types[i] + intBits));
+        CHECK(!testBitsNonFixedSizeArray(types[i] + paramBits));
+    }
+}
