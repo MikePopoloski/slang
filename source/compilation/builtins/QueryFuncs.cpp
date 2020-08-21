@@ -32,7 +32,9 @@ public:
             return badArg(context, *args[0]);
 
         if (args[0]->kind == ExpressionKind::DataType && !args[0]->type->isFixedSize()) {
-            context.addDiag(diag::QueryOnDynamicType, args[0]->sourceRange) << name;
+            auto& diag = context.addDiag(diag::QueryOnDynamicType, args[0]->sourceRange) << name;
+            if (args[0]->type->location)
+                diag.addNote(diag::NoteDeclarationHere, args[0]->type->location);
             return comp.getErrorType();
         }
         return comp.getIntegerType();
