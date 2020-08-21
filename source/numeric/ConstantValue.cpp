@@ -401,26 +401,24 @@ ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
     return queue;
 }
 
-bitwidth_t ConstantValue::dollarBits() const {
+bitwidth_t ConstantValue::bitstreamWidth() const {
     if (isInteger())
         return integer().getBitWidth();
-    if (isReal() || isShortReal() || isNullHandle())
-        return 0; // not bit-stream type
     if (isString())
         return static_cast<bitwidth_t>(str().length() * CHAR_BIT);
     bitwidth_t width = 0;
     if (isUnpacked()) {
         for (const auto& cv : elements())
-            width += cv.dollarBits();
+            width += cv.bitstreamWidth();
     }
     else if (isMap()) {
         for (const auto& kv : *map()) {
-            width += kv.second.dollarBits();
+            width += kv.second.bitstreamWidth();
         }
     }
     else if (isQueue()) {
         for (const auto& cv : *queue())
-            width += cv.dollarBits();
+            width += cv.bitstreamWidth();
     }
     return width;
 }

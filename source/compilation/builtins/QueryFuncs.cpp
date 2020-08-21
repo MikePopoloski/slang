@@ -31,21 +31,25 @@ public:
         if (!args[0]->type->isBitstreamType())
             return badArg(context, *args[0]);
 
-        // TODO: dynamic types, bitstream casting
-
+        if (args[0]->kind == ExpressionKind::DataType && !args[0]->type->isFixedSize()) {
+            context.addDiag(diag::QueryOnDynamicType, args[0]->sourceRange) << name;
+            return comp.getErrorType();
+        }
         return comp.getIntegerType();
     }
 
     ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
-        auto width = args[0]->type->dollarBits();
+        auto width = args[0]->type->bitstreamWidth();
         if (!width) {
             ConstantValue cv = args[0]->eval(context);
             if (!cv) {
-                context.addDiag(diag::ConstEvalBitsNotFixedSize, args[0]->sourceRange);
+                auto& diag = context.addDiag(diag::ConstEvalBitsNotFixedSize, args[0]->sourceRange);
+                diag << *args[0]->type;
                 return nullptr;
             }
-            width = cv.dollarBits();
+            width = cv.bitstreamWidth();
         }
+        // TODO: width > SVInt::MAX_INT
         return SVInt(32, width, true);
     }
 

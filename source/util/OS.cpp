@@ -10,7 +10,7 @@
 #    include <fcntl.h>
 #    include <io.h>
 #else
-#   include <unistd.h>
+#    include <unistd.h>
 #endif
 
 namespace slang {
@@ -28,7 +28,11 @@ bool OS::fileSupportsColors(FILE* file) {
 #else
 
 bool OS::fileSupportsColors(int fd) {
+#    ifdef __APPLE__
+    return isatty(fd) && std::getenv("TERM") != nullptr;
+#    else
     return isatty(fd);
+#    endif
 }
 
 bool OS::fileSupportsColors(FILE* file) {

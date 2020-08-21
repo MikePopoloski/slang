@@ -95,7 +95,7 @@ bitwidth_t Type::getBitWidth() const {
     return 0;
 }
 
-bitwidth_t Type::dollarBits() const {
+bitwidth_t Type::bitstreamWidth() const {
     auto width = getBitWidth();
     if (width > 0)
         return width;
@@ -104,13 +104,13 @@ bitwidth_t Type::dollarBits() const {
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
             return 0;
         const auto& ct1 = ct.as<FixedSizeUnpackedArrayType>();
-        width = ct1.elementType.dollarBits() * ct1.range.width();
+        width = ct1.elementType.bitstreamWidth() * ct1.range.width();
     }
     else if (isUnpackedStruct()) {
         auto& us = getCanonicalType().as<UnpackedStructType>();
         width = 0;
         for (auto& field : us.membersOfType<FieldSymbol>()) {
-            auto width1 = field.getType().dollarBits();
+            auto width1 = field.getType().bitstreamWidth();
             if (!width1)
                 return 0;
             width += width1;
@@ -234,6 +234,30 @@ bool Type::isBitstreamType() const {
         auto& us = getCanonicalType().as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
             if (!field.getType().isBitstreamType())
+                return false;
+        }
+        return true;
+    }
+    // TODO: classes
+    return false;
+}
+
+bool Type::isFixedSize() const {
+    if (isIntegral())
+        return true;
+    if (isString())
+        return false;
+    if (isUnpackedArray()) {
+        const auto& ct = getCanonicalType();
+        if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
+            return false;
+        const auto& ct1 = ct.as<FixedSizeUnpackedArrayType>();
+        return ct1.elementType.isFixedSize();
+    }
+    if (isUnpackedStruct()) {
+        auto& us = getCanonicalType().as<UnpackedStructType>();
+        for (auto& field : us.membersOfType<FieldSymbol>()) {
+            if (!field.getType().isFixedSize())
                 return false;
         }
         return true;
