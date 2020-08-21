@@ -404,12 +404,8 @@ ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
 bitwidth_t ConstantValue::dollarBits() const {
     if (isInteger())
         return integer().getBitWidth();
-    if (isReal())
-        return 64;
-    if (isShortReal())
-        return 32;
-    if (isNullHandle())
-        return 0;
+    if (isReal() || isShortReal() || isNullHandle())
+        return 0; // not bit-stream type
     if (isString())
         return static_cast<bitwidth_t>(str().length() * CHAR_BIT);
     bitwidth_t width = 0;

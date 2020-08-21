@@ -1301,27 +1301,32 @@ endmodule
     CHECK(diags[0].code == diag::BadAssignment);
 }
 
-bool testBitsNonFixedSizeArray(const std::string& text) {
+auto testBitsNonFixedSizeArray(const std::string& text) {
     const auto& fullText = "module Top; " + text + " endmodule";
     auto tree = SyntaxTree::fromText(string_view(fullText));
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     auto& diags = compilation.getAllDiagnostics();
-    return diags.size() == 0;
+    if (diags.size() > 0)
+        CHECK(diags.back().code == diag::ConstEvalBitsNotFixedSize);
+    return diags.size();
 }
 
 TEST_CASE("$bits on non-fixed-size array") {
     std::string intBits = "int b = $bits(a);";
     std::string paramBits = "localparam b = $bits(a);";
-    const char* types[] = {
-        "string a;",
-        "logic[1:0] a[];",
-        "bit a[$];",
-        "byte a[int];",
-    };
+    const char* types[] = { "string a;",
+                            "logic[1:0] a[];",
+                            "bit a[$];",
+                            "byte a[int];",
+                            "struct { string a; int b; } a;",
+                            "string a[1:0];",
+                            "bit a[1:0][];",
+                            "bit a[1:0][$];",
+                            "bit a[1:0][int];" };
     int num = sizeof(types) / sizeof(const char*);
     for (int i = 0; i < num; ++i) {
-        CHECK(testBitsNonFixedSizeArray(types[i] + intBits));
-        CHECK(!testBitsNonFixedSizeArray(types[i] + paramBits));
+        CHECK(testBitsNonFixedSizeArray(types[i] + intBits) == 0);
+        CHECK(testBitsNonFixedSizeArray(types[i] + paramBits) > 0);
     }
 }
