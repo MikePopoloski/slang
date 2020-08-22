@@ -43,14 +43,17 @@ public:
     ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto width = args[0]->type->bitstreamWidth();
         if (!width) {
-            EvalContext ctx(context.compilation, EvalFlags::CacheResults);
-            ConstantValue cv = args[0]->eval(ctx);
-            if (!cv) {
+            if (args[0]->kind == ExpressionKind::DataType) {
                 auto& diag = context.addDiag(diag::ConstEvalBitsNotFixedSize, args[0]->sourceRange);
                 diag << *args[0]->type;
                 return nullptr;
             }
-            width = cv.bitstreamWidth();
+            else {
+                ConstantValue cv = args[0]->eval(context);
+                if (!cv)
+                    return nullptr;
+                width = cv.bitstreamWidth();
+            }
         }
         // TODO: width > INT_MAX
         return SVInt(32, width, true);

@@ -1307,9 +1307,8 @@ auto testBitsNonFixedSizeArray(const std::string& text, bool typeId = false) {
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     auto& diags = compilation.getAllDiagnostics();
-    if (diags.size() > 0)
-        CHECK(diags.back().code ==
-              (typeId ? diag::QueryOnDynamicType : diag::ConstEvalBitsNotFixedSize));
+    if (!diags.empty() && typeId)
+        CHECK(diags.back().code == diag::QueryOnDynamicType);
     return diags.size();
 }
 

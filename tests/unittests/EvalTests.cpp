@@ -1627,6 +1627,8 @@ localparam byte asso[string] = '{ "Jon": 20, "Paul":22, "Al":23, default:-1 };
     CHECK(session.eval("$bits(dynamic)").integer() == 2);
     CHECK(session.eval("$bits(queue)").integer() == 48);
     CHECK(session.eval("$bits(asso)").integer() == 24);
+    CHECK(session.eval("$bits(\"abcefghijk\")").integer() == 80);
+    CHECK(session.eval("$bits(0)").integer() == 32);
 
     NO_SESSION_ERRORS;
 }
