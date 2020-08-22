@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/symbols/TypePrinter.h"
 
@@ -30,14 +31,32 @@ public:
         if (!args[0]->type->isBitstreamType())
             return badArg(context, *args[0]);
 
-        // TODO: dynamic types, bitstream casting
-
+        if (args[0]->kind == ExpressionKind::DataType && !args[0]->type->isFixedSize()) {
+            auto& diag = context.addDiag(diag::QueryOnDynamicType, args[0]->sourceRange) << name;
+            if (args[0]->type->location)
+                diag.addNote(diag::NoteDeclarationHere, args[0]->type->location);
+            return comp.getErrorType();
+        }
         return comp.getIntegerType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args& args) const final {
-        // TODO: support for unpacked sizes
-        return SVInt(32, args[0]->type->getBitWidth(), true);
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+        auto width = args[0]->type->bitstreamWidth();
+        if (!width) {
+            if (args[0]->kind == ExpressionKind::DataType) {
+                auto& diag = context.addDiag(diag::ConstEvalBitsNotFixedSize, args[0]->sourceRange);
+                diag << *args[0]->type;
+                return nullptr;
+            }
+            else {
+                ConstantValue cv = args[0]->eval(context);
+                if (!cv)
+                    return nullptr;
+                width = cv.bitstreamWidth();
+            }
+        }
+        // TODO: width > INT_MAX
+        return SVInt(32, width, true);
     }
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }

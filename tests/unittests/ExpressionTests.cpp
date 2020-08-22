@@ -1300,3 +1300,35 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadAssignment);
 }
+
+auto testBitsNonFixedSizeArray(const std::string& text, bool typeId = false) {
+    const auto& fullText = "module Top; " + text + " endmodule";
+    auto tree = SyntaxTree::fromText(string_view(fullText));
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    if (!diags.empty() && typeId)
+        CHECK(diags.back().code == diag::QueryOnDynamicType);
+    return diags.size();
+}
+
+TEST_CASE("$bits on non-fixed-size array") {
+    std::string intBits = "int b = $bits(a);";
+    std::string paramBits = "localparam b = $bits(a);";
+    const char* types[] = { "string a;",
+                            "logic[1:0] a[];",
+                            "bit a[$];",
+                            "byte a[int];",
+                            "struct { string a; int b; } a;",
+                            "string a[1:0];",
+                            "bit a[1:0][];",
+                            "bit a[1:0][$];",
+                            "bit a[1:0][int];" };
+    int num = sizeof(types) / sizeof(const char*);
+    std::string typeDef = "typedef ";
+    for (int i = 0; i < num; ++i) {
+        CHECK(testBitsNonFixedSizeArray(types[i] + intBits) == 0);
+        CHECK(testBitsNonFixedSizeArray(types[i] + paramBits) > 0);
+        CHECK(testBitsNonFixedSizeArray(typeDef + types[i] + paramBits, true) == 1);
+    }
+}

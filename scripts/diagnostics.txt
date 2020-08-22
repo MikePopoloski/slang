@@ -381,6 +381,7 @@ subsystem ConstEval
 note NoteInCallTo "in call to '{}'"
 note NoteSkippingFrames "(skipping {} calls in backtrace; use --constexpr-backtrace-limit=0 to see all)"
 error ConstEvalNonConstVariable "reference to non-constant variable '{}' is not allowed in a constant expression"
+error ConstEvalBitsNotFixedSize "$bits argument type {} is not fixed-size in a constant expression"
 error ConstEvalArrayIndexInvalid "cannot refer to element {} of {} in a constant expression"
 error ConstEvalPartSelectInvalid "cannot select range of [{}:{}] from {} in a constant expression"
 error ConstEvalStringIndexInvalid "cannot select index {} from string of length {} in a constant expression"

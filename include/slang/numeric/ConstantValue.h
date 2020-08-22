@@ -147,6 +147,9 @@ public:
     ConstantValue convertToByteArray(bitwidth_t size, bool isSigned) const;
     ConstantValue convertToByteQueue(bool isSigned) const;
 
+    /// Gets $bits of the constant expression.
+    bitwidth_t bitstreamWidth() const;
+
     static const ConstantValue Invalid;
 
     friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);

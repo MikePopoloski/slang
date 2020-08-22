@@ -55,6 +55,9 @@ public:
     /// statically known size.
     bitwidth_t getBitWidth() const;
 
+    /// Gets $bits of the type. Returns zero if the type does not have a statically known size.
+    bitwidth_t bitstreamWidth() const;
+
     /// Indicates whether the type can represent negative numeric values. For non-numeric types,
     /// this always returns false.
     bool isSigned() const;
@@ -105,6 +108,9 @@ public:
 
     /// Indicates whether this type can be packed into a stream of bits.
     bool isBitstreamType() const;
+
+    ///  Check whether the type size is fixed for $bits.
+    bool isFixedSize() const;
 
     /// Indicates whether this type is considered a "simple type", which includes
     /// built-in integers, reals, and alias types.
