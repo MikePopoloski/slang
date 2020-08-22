@@ -96,27 +96,29 @@ bitwidth_t Type::getBitWidth() const {
 }
 
 bitwidth_t Type::bitstreamWidth() const {
-    auto width = getBitWidth();
+    bitwidth_t width = getBitWidth();
     if (width > 0)
         return width;
-    // TODO: bitwidth_t overflow
+
+    // TODO: check for overflow
     if (isUnpackedArray()) {
         const auto& ct = getCanonicalType();
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
             return 0;
-        const auto& ct1 = ct.as<FixedSizeUnpackedArrayType>();
-        width = ct1.elementType.bitstreamWidth() * ct1.range.width();
+
+        const auto& fsa = ct.as<FixedSizeUnpackedArrayType>();
+        return fsa.elementType.bitstreamWidth() * fsa.range.width();
     }
     else if (isUnpackedStruct()) {
         auto& us = getCanonicalType().as<UnpackedStructType>();
-        width = 0;
         for (auto& field : us.membersOfType<FieldSymbol>()) {
-            auto width1 = field.getType().bitstreamWidth();
-            if (!width1)
+            bitwidth_t fieldWidth = field.getType().bitstreamWidth();
+            if (!fieldWidth)
                 return 0;
-            width += width1;
+            width += fieldWidth;
         }
     }
+
     // TODO: classes
     return width;
 }
@@ -229,8 +231,10 @@ bool Type::isStruct() const {
 bool Type::isBitstreamType() const {
     if (isIntegral() || isString())
         return true;
+
     if (isUnpackedArray())
         return getArrayElementType()->isBitstreamType();
+
     if (isUnpackedStruct()) {
         auto& us = getCanonicalType().as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
@@ -239,6 +243,7 @@ bool Type::isBitstreamType() const {
         }
         return true;
     }
+
     // TODO: classes
     return false;
 }
@@ -246,15 +251,15 @@ bool Type::isBitstreamType() const {
 bool Type::isFixedSize() const {
     if (isIntegral())
         return true;
-    if (isString())
-        return false;
+
     if (isUnpackedArray()) {
         const auto& ct = getCanonicalType();
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
             return false;
-        const auto& ct1 = ct.as<FixedSizeUnpackedArrayType>();
-        return ct1.elementType.isFixedSize();
+
+        return ct.as<FixedSizeUnpackedArrayType>().elementType.isFixedSize();
     }
+
     if (isUnpackedStruct()) {
         auto& us = getCanonicalType().as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
@@ -263,6 +268,7 @@ bool Type::isFixedSize() const {
         }
         return true;
     }
+
     // TODO: classes
     return false;
 }

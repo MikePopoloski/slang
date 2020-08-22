@@ -109,7 +109,8 @@ public:
     /// Indicates whether this type can be packed into a stream of bits.
     bool isBitstreamType() const;
 
-    ///  Check whether the type size is fixed for $bits.
+    /// Check whether this type has a fixed bitstream size, as opposed to a dynamically
+    /// sized type like a dynamic array or string.
     bool isFixedSize() const;
 
     /// Indicates whether this type is considered a "simple type", which includes
