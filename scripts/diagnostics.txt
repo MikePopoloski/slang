@@ -436,9 +436,9 @@ group default = { real-underflow real-overflow literal-overflow ignored-macro-pa
                   redef-macro nonstandard-generate pointless-void-cast unused-result
                   not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg
                   pragma-diag-level explicit-static static-skipped format-real elem-not-found
-                  dynarray-index dynarray-range queue-range empty-queue unknown-escape-code unused-def
+                  dynarray-index dynarray-range queue-range empty-queue unknown-escape-code
                   no-top }
 
-group extra = { empty-member empty-stmt dup-import }
+group extra = { empty-member empty-stmt dup-import unused-def }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code }
