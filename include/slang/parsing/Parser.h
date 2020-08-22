@@ -290,6 +290,8 @@ private:
     bool parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& itemBuffer,
                         IsItemFunc&& isItem, ParseItemFunc&& parseItem);
 
+    span<Token> parseClassQualifiers(bool& isPureOrExtern);
+
     // ---- Lookahead routines, for determining which kind of syntax to parse ----
 
     bool isPortDeclaration();

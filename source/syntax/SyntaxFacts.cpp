@@ -897,6 +897,34 @@ bool SyntaxFacts::isMemberQualifier(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isMethodQualifier(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::PureKeyword:
+        case TokenKind::VirtualKeyword:
+        case TokenKind::ExternKeyword:
+        case TokenKind::StaticKeyword:
+        case TokenKind::LocalKeyword:
+        case TokenKind::ProtectedKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SyntaxFacts::isPropertyQualifier(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::ConstKeyword:
+        case TokenKind::RandKeyword:
+        case TokenKind::RandCKeyword:
+        case TokenKind::StaticKeyword:
+        case TokenKind::LocalKeyword:
+        case TokenKind::ProtectedKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool SyntaxFacts::isDriveStrength(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:

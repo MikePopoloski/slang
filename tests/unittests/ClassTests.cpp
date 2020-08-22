@@ -67,3 +67,44 @@ TEST_CASE("Class handle expressions") {
 
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Class qualifier error checking") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    const static const int i = 4;
+    protected local int j;
+    static const int k = 5;
+    const randc int l = 6;
+
+    virtual pure function foo1;
+    local extern function foo2;
+    pure function foo3;
+    pure local function foo4;
+    virtual static function foo5; endfunction
+
+    virtual int m;
+    static automatic int n;
+    static var static int o;
+
+    const function foo5; endfunction
+    static task static foo6; endtask
+endclass
+)");
+
+    auto& diags = tree->diagnostics();
+    REQUIRE(diags.size() == 14);
+    CHECK(diags[0].code == diag::DuplicateQualifier);
+    CHECK(diags[1].code == diag::QualifierConflict);
+    CHECK(diags[2].code == diag::QualifierNotFirst);
+    CHECK(diags[3].code == diag::QualifierConflict);
+    CHECK(diags[4].code == diag::QualifierNotFirst);
+    CHECK(diags[5].code == diag::QualifierNotFirst);
+    CHECK(diags[6].code == diag::PureRequiresVirtual);
+    CHECK(diags[7].code == diag::PureRequiresVirtual);
+    CHECK(diags[8].code == diag::QualifierConflict);
+    CHECK(diags[9].code == diag::InvalidPropertyQualifier);
+    CHECK(diags[10].code == diag::QualifierConflict);
+    CHECK(diags[11].code == diag::DuplicateQualifier);
+    CHECK(diags[12].code == diag::InvalidMethodQualifier);
+    CHECK(diags[13].code == diag::MethodStaticLifetime);
+}

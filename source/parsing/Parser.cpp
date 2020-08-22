@@ -695,7 +695,7 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
         if (auto [it, inserted] = modifierSet.emplace(t.kind, t); !inserted) {
             if (!errorDup) {
                 auto& diag = addDiag(diag::DuplicateDeclModifier, t.location());
-                diag << LexerFacts::getTokenKindText(t.kind) << t.range() << it->second.range();
+                diag << t.rawText() << t.range() << it->second.range();
                 errorDup = true;
             }
             continue;
@@ -705,8 +705,8 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
             if (lastLifetime) {
                 if (!errorLifetime) {
                     auto& diag = addDiag(diag::DeclModifierConflict, t.location());
-                    diag << LexerFacts::getTokenKindText(t.kind) << t.range();
-                    diag << LexerFacts::getTokenKindText(lastLifetime.kind) << lastLifetime.range();
+                    diag << t.rawText() << t.range();
+                    diag << lastLifetime.rawText() << lastLifetime.range();
                     errorLifetime = true;
                 }
                 continue;
@@ -718,8 +718,8 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
             Token prev = modifiers[modifiers.size() - 2];
             if (!SyntaxFacts::isModifierAllowedAfter(t.kind, prev.kind)) {
                 auto& diag = addDiag(diag::DeclModifierOrdering, t.location());
-                diag << LexerFacts::getTokenKindText(t.kind) << t.range();
-                diag << LexerFacts::getTokenKindText(prev.kind) << prev.range();
+                diag << t.rawText() << t.range();
+                diag << prev.rawText() << prev.range();
                 errorOrdering = true;
             }
         }

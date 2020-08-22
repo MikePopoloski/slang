@@ -743,6 +743,103 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
                                     endClass, endBlockName);
 }
 
+span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
+    SmallVectorSized<Token, 4> qualifierBuffer;
+    SmallMap<TokenKind, Token, 4> qualifierSet;
+    Token lastRand;
+    Token lastVisibility;
+    Token lastStaticOrVirtual;
+    Token lastPure;
+    bool isVirtual = false;
+    bool errorDup = false;
+    bool errorRand = false;
+    bool errorVisibility = false;
+    bool errorStaticVirtual = false;
+    bool errorFirst = false;
+    bool errorPure = false;
+
+    auto checkConflict = [this](Token curr, bool isKind, Token& lastSeen, bool& alreadyErrored) {
+        if (isKind) {
+            if (lastSeen) {
+                if (!alreadyErrored) {
+                    auto& diag = addDiag(diag::QualifierConflict, curr.location());
+                    diag << curr.rawText() << curr.range();
+                    diag << lastSeen.rawText() << lastSeen.range();
+                    alreadyErrored = true;
+                }
+                return;
+            }
+            lastSeen = curr;
+        }
+    };
+
+    while (isMemberQualifier(peek().kind)) {
+        Token t = consume();
+        qualifierBuffer.append(t);
+        if (t.kind == TokenKind::PureKeyword) {
+            lastPure = t;
+            isPureOrExtern = true;
+        }
+        else if (t.kind == TokenKind::ExternKeyword) {
+            isPureOrExtern = true;
+        }
+        else if (t.kind == TokenKind::VirtualKeyword) {
+            isVirtual = true;
+        }
+
+        // Don't allow duplicates of any qualifier.
+        if (auto [it, inserted] = qualifierSet.emplace(t.kind, t); !inserted) {
+            if (!errorDup) {
+                auto& diag = addDiag(diag::DuplicateQualifier, t.location());
+                diag << t.rawText() << t.range() << it->second.range();
+                errorDup = true;
+            }
+            continue;
+        }
+
+        // Some qualifiers are required to come first in the list.
+        if (qualifierBuffer.size() > 1 &&
+            (t.kind == TokenKind::ConstKeyword || t.kind == TokenKind::PureKeyword ||
+             t.kind == TokenKind::ExternKeyword)) {
+            if (!errorFirst) {
+                auto& diag = addDiag(diag::QualifierNotFirst, t.location());
+                diag << t.rawText() << t.range();
+                errorFirst = true;
+            }
+            continue;
+        }
+
+        // Pure keyword must be followed by virtual, always.
+        if (lastPure && t.kind != TokenKind::VirtualKeyword && t.kind != TokenKind::PureKeyword) {
+            if (!errorPure) {
+                auto& diag = addDiag(diag::PureRequiresVirtual, t.location());
+                diag << lastPure.range() << t.range();
+                errorPure = true;
+            }
+            continue;
+        }
+
+        // rand, randc, and const are mutually exclusive.
+        checkConflict(t,
+                      t.kind == TokenKind::RandKeyword || t.kind == TokenKind::RandCKeyword ||
+                          t.kind == TokenKind::ConstKeyword,
+                      lastRand, errorRand);
+
+        // local and protected are mutually exclusive.
+        checkConflict(t, t.kind == TokenKind::LocalKeyword || t.kind == TokenKind::ProtectedKeyword,
+                      lastVisibility, errorVisibility);
+
+        // static and virtual are mutually exclusive.
+        checkConflict(t, t.kind == TokenKind::StaticKeyword || t.kind == TokenKind::VirtualKeyword,
+                      lastStaticOrVirtual, errorStaticVirtual);
+    }
+
+    if (lastPure && !errorPure && !isVirtual)
+        addDiag(diag::PureRequiresVirtual, lastPure.location()) << lastPure.range();
+
+    return qualifierBuffer.copy(alloc);
+}
+
 MemberSyntax* Parser::parseClassMember() {
     auto attributes = parseAttributes();
 
@@ -761,27 +858,72 @@ MemberSyntax* Parser::parseClassMember() {
     }
 
     bool isPureOrExtern = false;
-    SmallVectorSized<Token, 4> qualifierBuffer;
-    auto kind = peek().kind;
-    while (isMemberQualifier(kind)) {
-        // TODO: error on bad combination / ordering
-        qualifierBuffer.append(consume());
-        if (kind == TokenKind::PureKeyword || kind == TokenKind::ExternKeyword)
-            isPureOrExtern = true;
-        kind = peek().kind;
-    }
-    auto qualifiers = qualifierBuffer.copy(alloc);
+    auto qualifiers = parseClassQualifiers(isPureOrExtern);
 
     if (isVariableDeclaration()) {
+        // Check that all qualifiers are allowed specifically for properties.
+        Token lastLifetime;
+        for (auto qual : qualifiers) {
+            if (!isPropertyQualifier(qual.kind)) {
+                auto& diag = addDiag(diag::InvalidPropertyQualifier, qual.location());
+                diag << qual.range() << qual.rawText();
+                break;
+            }
+
+            if (isLifetimeModifier(qual.kind))
+                lastLifetime = qual;
+        }
+
         auto& decl = parseVariableDeclaration({});
         if (decl.kind == SyntaxKind::ParameterDeclarationStatement)
             errorIfAttributes(attributes);
+        else if (decl.kind == SyntaxKind::DataDeclaration) {
+            // Make sure qualifiers weren't duplicated in the data declaration's modifiers.
+            // Note that we don't have to check for `const` here because parseVariableDeclaration
+            // will error if the const keyword isn't first, but if it was first we would have
+            // already consumed it ourselves as a qualifier.
+            for (auto mod : decl.as<DataDeclarationSyntax>().modifiers) {
+                if (isLifetimeModifier(mod.kind) && lastLifetime) {
+                    if (mod.kind == lastLifetime.kind) {
+                        auto& diag = addDiag(diag::DuplicateQualifier, mod.location());
+                        diag << mod.rawText() << mod.range() << lastLifetime.range();
+                    }
+                    else {
+                        auto& diag = addDiag(diag::QualifierConflict, mod.location());
+                        diag << mod.rawText() << mod.range();
+                        diag << lastLifetime.rawText() << lastLifetime.range();
+                    }
+                    break;
+                }
+            }
+        }
+
         return &factory.classPropertyDeclaration(attributes, qualifiers, decl);
     }
 
+    auto kind = peek().kind;
     if (kind == TokenKind::TaskKeyword || kind == TokenKind::FunctionKeyword) {
+        // Check that qualifiers are allowed specifically for methods.
+        for (auto qual : qualifiers) {
+            if (!isMethodQualifier(qual.kind)) {
+                auto& diag = addDiag(diag::InvalidMethodQualifier, qual.location());
+                diag << qual.range() << qual.rawText();
+                break;
+            }
+        }
+
+        auto checkLifetime = [this](auto& proto) {
+            if (proto.lifetime.kind == TokenKind::StaticKeyword) {
+                auto& diag = addDiag(diag::MethodStaticLifetime, proto.lifetime.location());
+                diag << proto.lifetime.range();
+            }
+        };
+
+        // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
             auto& proto = parseFunctionPrototype();
+            checkLifetime(proto);
+
             return &factory.classMethodPrototype(attributes, qualifiers, proto,
                                                  expect(TokenKind::Semicolon));
         }
@@ -790,8 +932,10 @@ MemberSyntax* Parser::parseClassMember() {
                                                            : SyntaxKind::FunctionDeclaration;
             auto endKind = kind == TokenKind::TaskKeyword ? TokenKind::EndTaskKeyword
                                                           : TokenKind::EndFunctionKeyword;
-            return &factory.classMethodDeclaration(attributes, qualifiers,
-                                                   parseFunctionDeclaration({}, declKind, endKind));
+            auto& funcDecl = parseFunctionDeclaration({}, declKind, endKind);
+            checkLifetime(*funcDecl.prototype);
+
+            return &factory.classMethodDeclaration(attributes, qualifiers, funcDecl);
         }
     }
 

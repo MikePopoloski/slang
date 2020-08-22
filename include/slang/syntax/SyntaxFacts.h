@@ -154,6 +154,12 @@ public:
     /// @return true if the given token is a member qualifer (like "virtual" or "extern").
     static bool isMemberQualifier(TokenKind kind);
 
+    /// @return true if the given token is a valid qualifier for a class method.
+    static bool isMethodQualifier(TokenKind kind);
+
+    /// @return true if the given token is a valid qualifier for a class property.
+    static bool isPropertyQualifier(TokenKind kind);
+
     /// @return true if the given token is a drive strength.
     static bool isDriveStrength(TokenKind kind);
 
