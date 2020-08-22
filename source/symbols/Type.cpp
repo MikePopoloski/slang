@@ -99,6 +99,7 @@ bitwidth_t Type::bitstreamWidth() const {
     auto width = getBitWidth();
     if (width > 0)
         return width;
+    // TODO: bitwidth_t overflow
     if (isUnpackedArray()) {
         const auto& ct = getCanonicalType();
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)

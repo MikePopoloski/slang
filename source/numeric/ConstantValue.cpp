@@ -404,6 +404,7 @@ ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
 bitwidth_t ConstantValue::bitstreamWidth() const {
     if (isInteger())
         return integer().getBitWidth();
+    // TODO: bitwidth_t overflow
     if (isString())
         return static_cast<bitwidth_t>(str().length() * CHAR_BIT);
     bitwidth_t width = 0;
