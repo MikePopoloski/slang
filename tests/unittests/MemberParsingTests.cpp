@@ -363,5 +363,43 @@ endmodule
 
     REQUIRE(diagnostics.size() == 2);
     CHECK(diagnostics[0].code == diag::ExpectedMember);
-    CHECK(diagnostics[0].code == diag::ExpectedMember);
+    CHECK(diagnostics[1].code == diag::ExpectedMember);
+}
+
+TEST_CASE("Error for disallowed members") {
+    auto& text = R"(
+interface I;
+    module m; endmodule
+endinterface
+
+assign foo = 3;
+
+module m;
+    if (1) begin input i; end
+    modport m(input a);
+endmodule
+
+program p;
+    always begin end
+
+    clocking f @bar;
+        int i = 4;
+    endclocking
+endprogram
+
+package p;
+    assign foo = 3;
+endpackage
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 7);
+    CHECK(diagnostics[0].code == diag::NotAllowedInInterface);
+    CHECK(diagnostics[1].code == diag::NotAllowedInCU);
+    CHECK(diagnostics[2].code == diag::NotAllowedInGenerate);
+    CHECK(diagnostics[3].code == diag::NotAllowedInModule);
+    CHECK(diagnostics[4].code == diag::NotAllowedInProgram);
+    CHECK(diagnostics[5].code == diag::NotAllowedInClocking);
+    CHECK(diagnostics[6].code == diag::NotAllowedInPackage);
 }

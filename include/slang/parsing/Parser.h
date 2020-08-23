@@ -284,7 +284,8 @@ private:
     span<TokenOrSyntax> parseDeclarators(Token& semi, bool allowMinTypMax = false);
 
     template<typename TMember, typename TParseFunc>
-    span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);
+    span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, SyntaxKind parentKind,
+                                   TParseFunc&& parseFunc);
 
     template<typename IsItemFunc, typename ParseItemFunc>
     bool parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& itemBuffer,
@@ -341,6 +342,9 @@ private:
     void checkBlockNames(Token nameToken, const NamedBlockClauseSyntax* endBlock);
     void checkBlockNames(const NamedBlockClauseSyntax* beginBlock,
                          const NamedBlockClauseSyntax* endBlock, const NamedLabelSyntax* label);
+
+    // Report errors for invalid members in specific kinds of blocks.
+    void checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind);
 
     // ---- Member variables ----
 

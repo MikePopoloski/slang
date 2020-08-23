@@ -13,8 +13,9 @@ namespace slang {
 CompilationUnitSyntax& Parser::parseCompilationUnit() {
     try {
         auto members = parseMemberList<MemberSyntax>(
-            TokenKind::EndOfFile, eofToken, [this](bool& anyLocalModules) {
-                return parseMember(SyntaxKind::CompilationUnit, anyLocalModules);
+            TokenKind::EndOfFile, eofToken, SyntaxKind::CompilationUnit,
+            [this](SyntaxKind parentKind, bool& anyLocalModules) {
+                return parseMember(parentKind, anyLocalModules);
             });
         return factory.compilationUnit(members, eofToken);
     }
@@ -51,20 +52,22 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind par
         }
     }
 
+    SyntaxKind declKind = getModuleDeclarationKind(header.moduleKeyword.kind);
     NodeMetadata meta{ pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale() };
 
     Token endmodule;
-    auto members = parseMemberList<MemberSyntax>(endKind, endmodule, [this](bool& anyLocalModules) {
-        return parseMember(SyntaxKind::ModuleDeclaration, anyLocalModules);
-    });
+    auto members = parseMemberList<MemberSyntax>(
+        endKind, endmodule, declKind, [this](SyntaxKind parentKind, bool& anyLocalModules) {
+            return parseMember(parentKind, anyLocalModules);
+        });
 
     pp.popDesignElementStack();
 
     auto endName = parseNamedBlockClause();
     checkBlockNames(header.name, endName);
 
-    auto& result = factory.moduleDeclaration(getModuleDeclarationKind(header.moduleKeyword.kind),
-                                             attributes, header, members, endmodule, endName);
+    auto& result =
+        factory.moduleDeclaration(declKind, attributes, header, members, endmodule, endName);
 
     metadataMap[&result] = meta;
     return result;
@@ -99,8 +102,9 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
 
             Token endgenerate;
             auto members = parseMemberList<MemberSyntax>(
-                TokenKind::EndGenerateKeyword, endgenerate, [this](bool& anyLocalModules) {
-                    return parseMember(SyntaxKind::GenerateRegion, anyLocalModules);
+                TokenKind::EndGenerateKeyword, endgenerate, SyntaxKind::GenerateRegion,
+                [this](SyntaxKind parentKind, bool& anyLocalModules) {
+                    return parseMember(parentKind, anyLocalModules);
                 });
             return &factory.generateRegion(attributes, keyword, members, endgenerate);
         }
@@ -270,11 +274,15 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
     if (anyLocalModules)
         moduleDeclStack.pop();
 
+    if (result)
+        checkMemberAllowed(*result, parentKind);
+
     return result;
 }
 
 template<typename TMember, typename TParseFunc>
-span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc) {
+span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, SyntaxKind parentKind,
+                                       TParseFunc&& parseFunc) {
     SmallVectorSized<TMember*, 16> members;
     bool errored = false;
     bool anyLocalModules = false;
@@ -284,8 +292,9 @@ span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TPars
         if (kind == TokenKind::EndOfFile || kind == endKind)
             break;
 
-        auto member = parseFunc(anyLocalModules);
+        auto member = parseFunc(parentKind, anyLocalModules);
         if (member) {
+            checkMemberAllowed(*member, parentKind);
             members.append(member);
             errored = false;
         }
@@ -679,9 +688,10 @@ MemberSyntax& Parser::parseGenerateBlock() {
 
     Token end;
     auto members =
-        parseMemberList<MemberSyntax>(TokenKind::EndKeyword, end, [this](bool& anyLocalModules) {
-            return parseMember(SyntaxKind::GenerateBlock, anyLocalModules);
-        });
+        parseMemberList<MemberSyntax>(TokenKind::EndKeyword, end, SyntaxKind::GenerateBlock,
+                                      [this](SyntaxKind parentKind, bool& anyLocalModules) {
+                                          return parseMember(parentKind, anyLocalModules);
+                                      });
 
     auto endName = parseNamedBlockClause();
     checkBlockNames(beginName, endName, label);
@@ -733,8 +743,10 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
     }
 
     Token endClass;
-    auto members = parseMemberList<MemberSyntax>(TokenKind::EndClassKeyword, endClass,
-                                                 [this](bool&) { return parseClassMember(); });
+    auto members = parseMemberList<MemberSyntax>(
+        TokenKind::EndClassKeyword, endClass, SyntaxKind::ClassDeclaration,
+        [this](SyntaxKind, bool&) { return parseClassMember(); });
+
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
 
@@ -1090,7 +1102,9 @@ CoverpointSyntax* Parser::parseCoverpoint(AttrList attributes, DataTypeSyntax* t
 
         Token closeBrace;
         auto members = parseMemberList<MemberSyntax>(
-            TokenKind::CloseBrace, closeBrace, [this](bool&) { return parseCoverpointMember(); });
+            TokenKind::CloseBrace, closeBrace, SyntaxKind::Coverpoint,
+            [this](SyntaxKind, bool&) { return parseCoverpointMember(); });
+
         return &factory.coverpoint(attributes, type, label, keyword, expr, openBrace, members,
                                    closeBrace, Token());
     }
@@ -1307,8 +1321,10 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
     auto semi = expect(TokenKind::Semicolon);
 
     Token endGroup;
-    auto members = parseMemberList<MemberSyntax>(TokenKind::EndGroupKeyword, endGroup,
-                                                 [this](bool&) { return parseCoverageMember(); });
+    auto members = parseMemberList<MemberSyntax>(
+        TokenKind::EndGroupKeyword, endGroup, SyntaxKind::CovergroupDeclaration,
+        [this](SyntaxKind, bool&) { return parseCoverageMember(); });
+
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
 
@@ -1331,7 +1347,9 @@ ConstraintBlockSyntax& Parser::parseConstraintBlock() {
     Token closeBrace;
     auto openBrace = expect(TokenKind::OpenBrace);
     auto members = parseMemberList<ConstraintItemSyntax>(
-        TokenKind::CloseBrace, closeBrace, [this](bool&) { return parseConstraintItem(false); });
+        TokenKind::CloseBrace, closeBrace, SyntaxKind::ConstraintBlock,
+        [this](SyntaxKind, bool&) { return parseConstraintItem(false); });
+
     return factory.constraintBlock(openBrace, members, closeBrace);
 }
 
@@ -1734,8 +1752,9 @@ MemberSyntax& Parser::parseClockingDeclaration(AttrList attributes) {
 
     Token semi = expect(TokenKind::Semicolon);
     Token endClocking;
-    auto members = parseMemberList<MemberSyntax>(TokenKind::EndClockingKeyword, endClocking,
-                                                 [this](bool&) { return parseClockingItem(); });
+    auto members = parseMemberList<MemberSyntax>(
+        TokenKind::EndClockingKeyword, endClocking, SyntaxKind::ClockingDeclaration,
+        [this](SyntaxKind, bool&) { return parseClockingItem(); });
 
     if (globalOrDefault.kind == TokenKind::GlobalKeyword && !members.empty())
         addDiag(diag::GlobalClockingEmpty, members[0]->getFirstToken().location());
@@ -1827,6 +1846,63 @@ GateInstanceSyntax& Parser::parseGateInstance() {
         [this] { return &parseExpression(); });
 
     return factory.gateInstance(decl, openParen, items, closeParen);
+}
+
+void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {
+    // If this is an empty member with a missing semicolon, it was some kind
+    // of error that has already been reported so don't pile on here.
+    if (member.kind == SyntaxKind::EmptyMember) {
+        if (member.as<EmptyMemberSyntax>().semi.isMissing())
+            return;
+    }
+
+    auto error = [&](DiagCode code) {
+        SourceRange range = member.sourceRange();
+        addDiag(code, range.start()) << range;
+    };
+
+    switch (parentKind) {
+        case SyntaxKind::CompilationUnit:
+            if (!isAllowedInCompilationUnit(member.kind))
+                error(diag::NotAllowedInCU);
+            return;
+        case SyntaxKind::GenerateBlock:
+        case SyntaxKind::GenerateRegion:
+            if (!isAllowedInGenerate(member.kind))
+                error(diag::NotAllowedInGenerate);
+            return;
+        case SyntaxKind::ModuleDeclaration:
+            if (!isAllowedInModule(member.kind))
+                error(diag::NotAllowedInModule);
+            return;
+        case SyntaxKind::InterfaceDeclaration:
+            if (!isAllowedInInterface(member.kind))
+                error(diag::NotAllowedInInterface);
+            return;
+        case SyntaxKind::ProgramDeclaration:
+            if (!isAllowedInProgram(member.kind))
+                error(diag::NotAllowedInProgram);
+            return;
+        case SyntaxKind::PackageDeclaration:
+            if (!isAllowedInPackage(member.kind))
+                error(diag::NotAllowedInPackage);
+            return;
+        case SyntaxKind::ClockingItem:
+            if (!isAllowedInClocking(member.kind))
+                error(diag::NotAllowedInClocking);
+            return;
+
+        // Some kinds of parents already restrict the members they will parse
+        // so there's no need to check them here.
+        case SyntaxKind::ClassDeclaration:
+        case SyntaxKind::Coverpoint:
+        case SyntaxKind::CovergroupDeclaration:
+        case SyntaxKind::ConstraintBlock:
+        case SyntaxKind::ClockingDeclaration:
+            return;
+        default:
+            THROW_UNREACHABLE;
+    }
 }
 
 } // namespace slang
