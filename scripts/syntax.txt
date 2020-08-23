@@ -1336,6 +1336,11 @@ token equals
 FunctionPrototype method
 token semi
 
+ElabSystemTask base=Member kind=ElabSystemTask
+token name
+ArgumentList? arguments
+token semi
+
 // ----- CONSTRAINTS -----
 
 ConstraintItem final=false

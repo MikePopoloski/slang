@@ -76,7 +76,8 @@ struct AttributeInstanceSyntax;
     x(Subroutine) \
     x(ContinuousAssign) \
     x(Gate) \
-    x(GateArray)
+    x(GateArray) \
+    x(ElabSystemTask)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)

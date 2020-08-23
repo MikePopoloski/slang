@@ -216,6 +216,10 @@ error MixingSubroutinePortKinds "port declarations not allowed when subroutine d
 error UnpackedArrayParamType "unpacked array parameter requires explicit data type"
 error AutomaticNotAllowed "automatic variables can only be declared in procedural contexts"
 error ForeachWildcardIndex "foreach loops cannot be used with associative arrays that have a wildcard index"
+error FatalTask "$fatal encountered{}"
+error ErrorTask "$error encountered{}"
+warning warning-task WarningTask "$warning encountered{}"
+note InfoTask "$info encountered{}"
 warning explicit-static StaticInitializerMustBeExplicit "initializing a static variable in a procedural context requires an explicit 'static' keyword"
 warning case-gen-dup CaseGenerateDup "more than one case generate block matches the value {}"
 warning case-gen-none CaseGenerateNoBlock "no case generate expression matches the value {}"
@@ -446,7 +450,7 @@ group default = { real-underflow real-overflow literal-overflow ignored-macro-pa
                   not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg
                   pragma-diag-level explicit-static static-skipped format-real elem-not-found
                   dynarray-index dynarray-range queue-range empty-queue unknown-escape-code
-                  no-top }
+                  no-top warning-task }
 
 group extra = { empty-member empty-stmt dup-import unused-def }
 

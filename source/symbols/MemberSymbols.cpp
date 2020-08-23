@@ -524,4 +524,66 @@ void GateArraySymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("range", range.toString());
 }
 
+ElabSystemTaskSymbol::ElabSystemTaskSymbol(ElabSystemTaskKind taskKind, SourceLocation loc) :
+    Symbol(SymbolKind::ElabSystemTask, "", loc), taskKind(taskKind) {
+}
+
+ElabSystemTaskSymbol& ElabSystemTaskSymbol::fromSyntax(Compilation& compilation,
+                                                       const ElabSystemTaskSyntax& syntax) {
+    // Just create the symbol now. The diagnostic will be issued later
+    // when someone visit the symbol and asks for it.
+    auto taskKind = SemanticFacts::getElabSystemTaskKind(syntax.name);
+    auto result = compilation.emplace<ElabSystemTaskSymbol>(taskKind, syntax.name.location());
+    result->setSyntax(syntax);
+    return *result;
+}
+
+string_view ElabSystemTaskSymbol::getMessage() const {
+    if (message)
+        return *message;
+
+    auto syntax = getSyntax();
+    ASSERT(syntax);
+
+    auto args = syntax->as<ElabSystemTaskSyntax>().arguments;
+    if (!args) {
+        message = ""sv;
+        return *message;
+    }
+
+    // TODO: custom messages
+    message = ""sv;
+    return *message;
+}
+
+void ElabSystemTaskSymbol::issueDiagnostic() const {
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    DiagCode code;
+    switch (taskKind) {
+        case ElabSystemTaskKind::Fatal:
+            code = diag::FatalTask;
+            break;
+        case ElabSystemTaskKind::Error:
+            code = diag::ErrorTask;
+            break;
+        case ElabSystemTaskKind::Warning:
+            code = diag::WarningTask;
+            break;
+        case ElabSystemTaskKind::Info:
+            code = diag::InfoTask;
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    scope->addDiag(code, location) << getMessage();
+}
+
+void ElabSystemTaskSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("taskKind", toString(taskKind));
+    serializer.write("message", getMessage());
+}
+
 } // namespace slang

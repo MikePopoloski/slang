@@ -1176,6 +1176,7 @@ static bool isModuleCommonItem(SyntaxKind kind) {
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::CaseGenerate:
         case SyntaxKind::IfGenerate:
+        case SyntaxKind::ElabSystemTask:
             return true;
         default:
             return isModuleCommonDecl(kind);
@@ -1245,6 +1246,7 @@ bool SyntaxFacts::isAllowedInProgram(SyntaxKind kind) {
         case SyntaxKind::CaseGenerate:
         case SyntaxKind::IfGenerate:
         case SyntaxKind::GenerateRegion:
+        case SyntaxKind::ElabSystemTask:
             return true;
         default:
             return isModuleCommonDecl(kind);

@@ -249,6 +249,12 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             break;
         case TokenKind::ClockingKeyword:
             return &parseClockingDeclaration(attributes);
+        case TokenKind::SystemIdentifier: {
+            auto result = parseElabSystemTask(attributes);
+            if (result)
+                return result;
+            break;
+        }
         default:
             break;
     }
@@ -1558,6 +1564,19 @@ DPIImportExportSyntax& Parser::parseDPIImportExport(AttrList attributes) {
     auto semi = expect(TokenKind::Semicolon);
     return factory.dPIImportExport(attributes, keyword, stringLiteral, property, name, equals,
                                    method, semi);
+}
+
+ElabSystemTaskSyntax* Parser::parseElabSystemTask(AttrList attributes) {
+    auto name = peek().valueText();
+    if (name != "$fatal"sv && name != "$error"sv && name != "$warning"sv && name != "$info"sv)
+        return nullptr;
+
+    auto nameToken = consume();
+    ArgumentListSyntax* argList = nullptr;
+    if (peek(TokenKind::OpenParenthesis))
+        argList = &parseArgumentList();
+
+    return &factory.elabSystemTask(attributes, nameToken, argList, expect(TokenKind::Semicolon));
 }
 
 AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declarationKind) {

@@ -222,6 +222,7 @@ private:
     PackageImportItemSyntax& parsePackageImportItem();
     NetTypeDeclarationSyntax& parseNetTypeDecl(AttrList attributes);
     DPIImportExportSyntax& parseDPIImportExport(AttrList attributes);
+    ElabSystemTaskSyntax* parseElabSystemTask(AttrList attributes);
     AssertionItemPortListSyntax* parseAssertionItemPortList(TokenKind declarationKind);
     PropertyDeclarationSyntax& parsePropertyDeclaration(AttrList attributes);
     SequenceDeclarationSyntax& parseSequenceDeclaration(AttrList attributes);

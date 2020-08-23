@@ -348,6 +348,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(SubroutineSymbol::fromSyntax(
                 compilation, syntax.as<ClassMethodDeclarationSyntax>(), *this));
             break;
+        case SyntaxKind::ElabSystemTask:
+            addMember(
+                ElabSystemTaskSymbol::fromSyntax(compilation, syntax.as<ElabSystemTaskSyntax>()));
+            break;
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:
             // TODO: these aren't supported yet but we can compile everything else successfully

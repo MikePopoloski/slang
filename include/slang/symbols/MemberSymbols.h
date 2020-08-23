@@ -228,4 +228,27 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GateArray; }
 };
 
+struct ElabSystemTaskSyntax;
+
+/// Represents an elaboration system task, such as $error or $warning.
+class ElabSystemTaskSymbol : public Symbol {
+public:
+    ElabSystemTaskKind taskKind;
+
+    ElabSystemTaskSymbol(ElabSystemTaskKind taskKind, SourceLocation loc);
+
+    string_view getMessage() const;
+    void issueDiagnostic() const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static ElabSystemTaskSymbol& fromSyntax(Compilation& compilation,
+                                            const ElabSystemTaskSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ElabSystemTask; }
+
+private:
+    mutable optional<string_view> message;
+};
+
 } // namespace slang

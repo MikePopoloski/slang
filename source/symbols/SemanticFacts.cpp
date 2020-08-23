@@ -114,6 +114,19 @@ GateType SemanticFacts::getGateType(TokenKind kind) {
     }
 }
 
+ElabSystemTaskKind SemanticFacts::getElabSystemTaskKind(Token token) {
+    auto name = token.valueText();
+    if (name == "$fatal"sv)
+        return ElabSystemTaskKind::Fatal;
+    if (name == "$error"sv)
+        return ElabSystemTaskKind::Error;
+    if (name == "$warning"sv)
+        return ElabSystemTaskKind::Warning;
+    if (name == "$info"sv)
+        return ElabSystemTaskKind::Info;
+    THROW_UNREACHABLE;
+}
+
 // clang-format on
 
 StatementBlockKind SemanticFacts::getStatementBlockKind(const BlockStatementSyntax& syntax) {
