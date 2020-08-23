@@ -73,7 +73,6 @@ TEST_CASE("Class qualifier error checking") {
 class C;
     const static const int i = 4;
     protected local int j;
-    static const int k = 5;
     const randc int l = 6;
 
     virtual pure function foo1;
@@ -92,19 +91,18 @@ endclass
 )");
 
     auto& diags = tree->diagnostics();
-    REQUIRE(diags.size() == 14);
+    REQUIRE(diags.size() == 13);
     CHECK(diags[0].code == diag::DuplicateQualifier);
     CHECK(diags[1].code == diag::QualifierConflict);
-    CHECK(diags[2].code == diag::QualifierNotFirst);
-    CHECK(diags[3].code == diag::QualifierConflict);
+    CHECK(diags[2].code == diag::QualifierConflict);
+    CHECK(diags[3].code == diag::QualifierNotFirst);
     CHECK(diags[4].code == diag::QualifierNotFirst);
-    CHECK(diags[5].code == diag::QualifierNotFirst);
+    CHECK(diags[5].code == diag::PureRequiresVirtual);
     CHECK(diags[6].code == diag::PureRequiresVirtual);
-    CHECK(diags[7].code == diag::PureRequiresVirtual);
-    CHECK(diags[8].code == diag::QualifierConflict);
-    CHECK(diags[9].code == diag::InvalidPropertyQualifier);
-    CHECK(diags[10].code == diag::QualifierConflict);
-    CHECK(diags[11].code == diag::DuplicateQualifier);
-    CHECK(diags[12].code == diag::InvalidMethodQualifier);
-    CHECK(diags[13].code == diag::MethodStaticLifetime);
+    CHECK(diags[7].code == diag::QualifierConflict);
+    CHECK(diags[8].code == diag::InvalidPropertyQualifier);
+    CHECK(diags[9].code == diag::QualifierConflict);
+    CHECK(diags[10].code == diag::DuplicateQualifier);
+    CHECK(diags[11].code == diag::InvalidMethodQualifier);
+    CHECK(diags[12].code == diag::MethodStaticLifetime);
 }

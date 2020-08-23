@@ -811,8 +811,7 @@ span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
 
         // Some qualifiers are required to come first in the list.
         if (qualifierBuffer.size() > 1 &&
-            (t.kind == TokenKind::ConstKeyword || t.kind == TokenKind::PureKeyword ||
-             t.kind == TokenKind::ExternKeyword)) {
+            (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)) {
             if (!errorFirst) {
                 auto& diag = addDiag(diag::QualifierNotFirst, t.location());
                 diag << t.rawText() << t.range();
