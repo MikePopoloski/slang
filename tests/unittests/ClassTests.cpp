@@ -87,11 +87,14 @@ class C;
 
     const function foo5; endfunction
     static task static foo6; endtask
+
+    static parameter int x = 4;
+    import p::*;
 endclass
 )");
 
     auto& diags = tree->diagnostics();
-    REQUIRE(diags.size() == 13);
+    REQUIRE(diags.size() == 15);
     CHECK(diags[0].code == diag::DuplicateQualifier);
     CHECK(diags[1].code == diag::QualifierConflict);
     CHECK(diags[2].code == diag::QualifierConflict);
@@ -105,4 +108,6 @@ endclass
     CHECK(diags[10].code == diag::DuplicateQualifier);
     CHECK(diags[11].code == diag::InvalidMethodQualifier);
     CHECK(diags[12].code == diag::MethodStaticLifetime);
+    CHECK(diags[13].code == diag::InvalidQualifierForMember);
+    CHECK(diags[14].code == diag::NotAllowedInClass);
 }

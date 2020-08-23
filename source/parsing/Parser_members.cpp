@@ -886,9 +886,7 @@ MemberSyntax* Parser::parseClassMember() {
         }
 
         auto& decl = parseVariableDeclaration({});
-        if (decl.kind == SyntaxKind::ParameterDeclarationStatement)
-            errorIfAttributes(attributes);
-        else if (decl.kind == SyntaxKind::DataDeclaration) {
+        if (decl.kind == SyntaxKind::DataDeclaration) {
             // Make sure qualifiers weren't duplicated in the data declaration's modifiers.
             // Note that we don't have to check for `const` here because parseVariableDeclaration
             // will error if the const keyword isn't first, but if it was first we would have
@@ -905,6 +903,27 @@ MemberSyntax* Parser::parseClassMember() {
                         diag << lastLifetime.rawText() << lastLifetime.range();
                     }
                     break;
+                }
+            }
+        }
+        else if (decl.kind == SyntaxKind::PackageImportDeclaration ||
+                 decl.kind == SyntaxKind::NetTypeDeclaration) {
+            // Nettypes and package imports are disallowed in classes.
+            SourceRange range = decl.sourceRange();
+            addDiag(diag::NotAllowedInClass, range.start()) << range;
+        }
+        else {
+            // Otherwise, check for invalid qualifiers.
+            for (auto qual : qualifiers) {
+                switch (qual.kind) {
+                    case TokenKind::RandKeyword:
+                    case TokenKind::RandCKeyword:
+                    case TokenKind::ConstKeyword:
+                    case TokenKind::StaticKeyword:
+                        addDiag(diag::InvalidQualifierForMember, qual.location()) << qual.range();
+                        break;
+                    default:
+                        break;
                 }
             }
         }
