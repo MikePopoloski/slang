@@ -115,6 +115,7 @@ add_library(slangcompiler
     binding/BindContext.cpp
     binding/EvalContext.cpp
     binding/Expression.cpp
+    binding/FormatHelpers.cpp
     binding/LiteralExpressions.cpp
     binding/LValue.cpp
     binding/MiscExpressions.cpp
@@ -128,7 +129,6 @@ add_library(slangcompiler
     compilation/builtins/ArrayMethods.cpp
     compilation/builtins/ConversionFuncs.cpp
     compilation/builtins/EnumMethods.cpp
-    compilation/builtins/FormatHelpers.cpp
     compilation/builtins/MathFuncs.cpp
     compilation/builtins/MiscSystemFuncs.cpp
     compilation/builtins/NonConstFuncs.cpp

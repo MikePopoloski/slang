@@ -4,8 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "FormatHelpers.h"
-
+#include "slang/binding/FormatHelpers.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
@@ -49,28 +48,16 @@ public:
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange) const final {
         auto& comp = context.getCompilation();
-        if (!checkDisplayArgs(context, args))
+        if (!FmtHelpers::checkDisplayArgs(context, args))
             return comp.getErrorType();
 
         return comp.getVoidType();
     }
 
     void lower(mir::Procedure& proc, const Args& args) const final {
-        lowerFormatArgs(proc, args, defaultIntFmt, /* newline */ true);
+        FmtHelpers::lowerFormatArgs(proc, args, defaultIntFmt, /* newline */ true);
     }
 };
-
-static bool checkFinishNum(const BindContext& context, const Expression& arg) {
-    ConstantValue cv = context.tryEval(arg);
-    if (cv.isInteger()) {
-        auto& val = cv.integer();
-        if (val == 0 || val == 1 || val == 2)
-            return true;
-    }
-
-    context.addDiag(diag::BadFinishNum, arg.sourceRange);
-    return false;
-}
 
 class FinishControlTask : public SystemTaskBase {
 public:
@@ -83,7 +70,7 @@ public:
             return comp.getErrorType();
 
         if (args.size() == 1) {
-            if (!checkFinishNum(context, *args[0]))
+            if (!FmtHelpers::checkFinishNum(context, *args[0]))
                 return comp.getErrorType();
         }
 
@@ -104,10 +91,10 @@ public:
             if (args[0]->bad())
                 return comp.getErrorType();
 
-            if (!checkFinishNum(context, *args[0]))
+            if (!FmtHelpers::checkFinishNum(context, *args[0]))
                 return comp.getErrorType();
 
-            if (!checkDisplayArgs(context, args.subspan(1)))
+            if (!FmtHelpers::checkDisplayArgs(context, args.subspan(1)))
                 return comp.getErrorType();
         }
 
@@ -130,7 +117,7 @@ public:
         if (!args[0]->type->isIntegral())
             return badArg(context, *args[0]);
 
-        if (!checkDisplayArgs(context, args.subspan(1)))
+        if (!FmtHelpers::checkDisplayArgs(context, args.subspan(1)))
             return comp.getErrorType();
 
         return comp.getVoidType();
@@ -158,7 +145,7 @@ public:
             return comp.getErrorType();
         }
 
-        if (!checkDisplayArgs(context, args.subspan(1)))
+        if (!FmtHelpers::checkDisplayArgs(context, args.subspan(1)))
             return comp.getErrorType();
 
         return comp.getVoidType();
@@ -186,7 +173,7 @@ public:
             }
         }
 
-        if (!checkDisplayArgs(context, args.subspan(2)))
+        if (!FmtHelpers::checkDisplayArgs(context, args.subspan(2)))
             return comp.getErrorType();
 
         return comp.getVoidType();

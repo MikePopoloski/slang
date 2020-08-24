@@ -7,9 +7,12 @@
 #include "slang/symbols/MemberSymbols.h"
 
 #include "slang/binding/Expression.h"
+#include "slang/binding/FormatHelpers.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -545,14 +548,71 @@ string_view ElabSystemTaskSymbol::getMessage() const {
     auto syntax = getSyntax();
     ASSERT(syntax);
 
-    auto args = syntax->as<ElabSystemTaskSyntax>().arguments;
-    if (!args) {
+    auto empty = [&] {
         message = ""sv;
         return *message;
+    };
+
+    auto argSyntax = syntax->as<ElabSystemTaskSyntax>().arguments;
+    if (!argSyntax)
+        return empty();
+
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    // Bind all arguments.
+    auto& comp = scope->getCompilation();
+    BindContext bindCtx(*scope, LookupLocation::before(*this), BindFlags::Constant);
+    SmallVectorSized<const Expression*, 4> args;
+    for (auto arg : argSyntax->parameters) {
+        switch (arg->kind) {
+            case SyntaxKind::OrderedArgument: {
+                const auto& oa = arg->as<OrderedArgumentSyntax>();
+                args.append(&Expression::bind(*oa.expr, bindCtx));
+                break;
+            }
+            case SyntaxKind::NamedArgument:
+                bindCtx.addDiag(diag::NamedArgNotAllowed, arg->sourceRange());
+                return empty();
+            case SyntaxKind::EmptyArgument:
+                args.append(
+                    comp.emplace<EmptyArgumentExpression>(comp.getVoidType(), arg->sourceRange()));
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+
+        if (args.back()->bad())
+            return empty();
     }
 
-    // TODO: custom messages
-    message = ""sv;
+    // If this is a $fatal task, check the finish number. We don't use this
+    // for anything, but enforce that it's 0, 1, or 2.
+    span<const Expression* const> argSpan = args;
+    if (taskKind == ElabSystemTaskKind::Fatal && !argSpan.empty()) {
+        if (!FmtHelpers::checkFinishNum(bindCtx, *argSpan[0]))
+            return empty();
+
+        argSpan = argSpan.subspan(1);
+    }
+
+    // Check all arguments.
+    if (!FmtHelpers::checkDisplayArgs(bindCtx, argSpan))
+        return empty();
+
+    // Format the message to string.
+    EvalContext evalCtx(comp);
+    optional<std::string> str = FmtHelpers::formatDisplay(*scope, evalCtx, argSpan);
+    if (!str)
+        return empty();
+
+    str->insert(0, ": ");
+
+    // Copy the string into permanent memory.
+    auto mem = comp.allocate(str->size(), alignof(char));
+    memcpy(mem, str->data(), str->size());
+
+    message = string_view(reinterpret_cast<char*>(mem), str->size());
     return *message;
 }
 

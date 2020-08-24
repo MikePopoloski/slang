@@ -915,13 +915,20 @@ module m;
     end
         
 endmodule
-)");
+)",
+                                     "source");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::ErrorTask);
-    CHECK(diags[1].code == diag::InfoTask);
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:3:5: error: $error encountered
+    $error;
+    ^
+source:7:9: note: $info encountered:           43.200000Hello world          14!
+        $info(4, 3.2, "Hello world %d!", foo + 2);
+        ^
+)");
 }

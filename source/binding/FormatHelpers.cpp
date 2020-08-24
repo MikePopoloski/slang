@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "FormatHelpers.h"
+#include "slang/binding/FormatHelpers.h"
 
 #include "slang/binding/Expression.h"
 #include "slang/binding/LiteralExpressions.h"
@@ -146,7 +146,7 @@ static bool checkFormatString(const BindContext& context, const StringLiteral& a
     return ok;
 }
 
-bool checkDisplayArgs(const BindContext& context, const Args& args) {
+bool FmtHelpers::checkDisplayArgs(const BindContext& context, const Args& args) {
     auto argIt = args.begin();
     while (argIt != args.end()) {
         auto arg = *argIt++;
@@ -170,7 +170,7 @@ bool checkDisplayArgs(const BindContext& context, const Args& args) {
     return true;
 }
 
-bool checkSFormatArgs(const BindContext& context, const Args& args) {
+bool FmtHelpers::checkSFormatArgs(const BindContext& context, const Args& args) {
     // If the format string is known at compile time, check it for correctness now.
     // Otherwise this will wait until runtime.
     auto argIt = args.begin();
@@ -190,8 +190,9 @@ bool checkSFormatArgs(const BindContext& context, const Args& args) {
     return true;
 }
 
-optional<std::string> formatArgs(string_view formatString, SourceLocation loc, const Scope& scope,
-                                 EvalContext& context, const span<const Expression* const>& args) {
+optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLocation loc,
+                                             const Scope& scope, EvalContext& context,
+                                             const span<const Expression* const>& args) {
     auto getRange = [&](size_t offset, size_t len) {
         SourceLocation sl = loc + offset;
         return SourceRange{ sl, sl + len };
@@ -260,6 +261,85 @@ optional<std::string> formatArgs(string_view formatString, SourceLocation loc, c
     return result;
 }
 
+static char getDefaultSpecifier(const Expression& expr, LiteralBase defaultBase) {
+    auto& type = *expr.type;
+    if (type.isIntegral()) {
+        switch (defaultBase) {
+            case LiteralBase::Decimal:
+                return 'd';
+            case LiteralBase::Octal:
+                return 'o';
+            case LiteralBase::Hex:
+                return 'h';
+            case LiteralBase::Binary:
+                return 'b';
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    if (type.isFloating())
+        return 'f';
+
+    if (type.isString())
+        return 's';
+
+    return 'p';
+}
+
+optional<std::string> FmtHelpers::formatDisplay(const Scope&, EvalContext& context,
+                                                const span<const Expression* const>& args) {
+    std::string result;
+    auto argIt = args.begin();
+    while (argIt != args.end()) {
+        // Empty arguments always print a space.
+        auto arg = *argIt++;
+        if (arg->kind == ExpressionKind::EmptyArgument) {
+            result.push_back(' ');
+            continue;
+        }
+
+        // Handle string literals as format strings.
+        if (arg->kind == ExpressionKind::StringLiteral) {
+            // Strip quotes from the raw string.
+            auto& lit = arg->as<StringLiteral>();
+            string_view fmt = lit.getRawValue();
+            if (fmt.length() >= 2)
+                fmt = fmt.substr(1, fmt.length() - 2);
+
+            bool ok = true;
+            ok &= SFormat::parse(
+                fmt, [&](string_view text) { result += text; },
+                [&](char specifier, size_t, size_t, const SFormat::FormatOptions& options) {
+                    if (argIt != args.end()) {
+                        auto currentArg = *argIt++;
+                        auto&& value = currentArg->eval(context);
+                        if (!value) {
+                            ok = false;
+                            return;
+                        }
+
+                        SFormat::formatArg(result, value, specifier, options);
+                    }
+                },
+                [](DiagCode, size_t, size_t, optional<char>) {});
+
+            if (!ok)
+                return std::nullopt;
+        }
+        else {
+            // Otherwise, print the value with default options.
+            auto&& value = arg->eval(context);
+            if (!value)
+                return std::nullopt;
+
+            SFormat::formatArg(result, value, getDefaultSpecifier(*arg, LiteralBase::Decimal), {});
+        }
+    }
+
+    return result;
+}
+
 static void lowerFormatArg(mir::Procedure& proc, const Expression& arg, char,
                            const SFormat::FormatOptions& options, LiteralBase defaultBase) {
     // TODO: actually use the options
@@ -288,8 +368,8 @@ static void lowerFormatArg(mir::Procedure& proc, const Expression& arg, char,
     }
 }
 
-void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase defaultBase,
-                     bool newline) {
+void FmtHelpers::lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase defaultBase,
+                                 bool newline) {
     auto argIt = args.begin();
     while (argIt != args.end()) {
         auto arg = *argIt++;
@@ -334,6 +414,18 @@ void lowerFormatArgs(mir::Procedure& proc, const Args& args, LiteralBase default
     }
 
     proc.emitCall(mir::SysCallKind::flush, proc.emitBool(newline));
+}
+
+bool FmtHelpers::checkFinishNum(const BindContext& context, const Expression& arg) {
+    ConstantValue cv = context.tryEval(arg);
+    if (cv.isInteger()) {
+        auto& val = cv.integer();
+        if (val == 0 || val == 1 || val == 2)
+            return true;
+    }
+
+    context.addDiag(diag::BadFinishNum, arg.sourceRange);
+    return false;
 }
 
 } // namespace slang
