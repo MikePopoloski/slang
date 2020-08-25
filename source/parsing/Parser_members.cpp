@@ -794,16 +794,10 @@ span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
     while (isMemberQualifier(peek().kind)) {
         Token t = consume();
         qualifierBuffer.append(t);
-        if (t.kind == TokenKind::PureKeyword) {
-            lastPure = t;
+        if (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)
             isPureOrExtern = true;
-        }
-        else if (t.kind == TokenKind::ExternKeyword) {
-            isPureOrExtern = true;
-        }
-        else if (t.kind == TokenKind::VirtualKeyword) {
+        else if (t.kind == TokenKind::VirtualKeyword)
             isVirtual = true;
-        }
 
         // Don't allow duplicates of any qualifier.
         if (auto [it, inserted] = qualifierSet.emplace(t.kind, t); !inserted) {
@@ -827,13 +821,18 @@ span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
         }
 
         // Pure keyword must be followed by virtual, always.
-        if (lastPure && t.kind != TokenKind::VirtualKeyword && t.kind != TokenKind::PureKeyword) {
-            if (!errorPure) {
-                auto& diag = addDiag(diag::PureRequiresVirtual, t.location());
-                diag << lastPure.range() << t.range();
-                errorPure = true;
+        if (t.kind == TokenKind::PureKeyword)
+            lastPure = t;
+        else if (lastPure) {
+            if (t.kind != TokenKind::VirtualKeyword) {
+                if (!errorPure) {
+                    auto& diag = addDiag(diag::PureRequiresVirtual, t.location());
+                    diag << lastPure.range() << t.range();
+                    errorPure = true;
+                }
+                continue;
             }
-            continue;
+            lastPure = Token();
         }
 
         // rand, randc, and const are mutually exclusive.

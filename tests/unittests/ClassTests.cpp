@@ -90,6 +90,9 @@ class C;
 
     static parameter int x = 4;
     import p::*;
+
+    // This should be fine
+    pure virtual protected function func1;
 endclass
 )");
 
