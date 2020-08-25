@@ -150,6 +150,8 @@ public:
     /// Gets $bits of the constant expression.
     bitwidth_t bitstreamWidth() const;
 
+    std::vector<const ConstantValue*> bitstream() const;
+
     static const ConstantValue Invalid;
 
     friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);

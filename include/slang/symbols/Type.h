@@ -107,7 +107,7 @@ public:
     bool isStruct() const;
 
     /// Indicates whether this type can be packed into a stream of bits.
-    bool isBitstreamType() const;
+    bool isBitstreamType(bool destination = false) const;
 
     ///  Check whether the type size is fixed for $bits.
     bool isFixedSize() const;
@@ -199,7 +199,10 @@ public:
     /// Determines whether the given type is "cast compatible" to this one. This
     /// means that the type is either implicitly or explicitly convertible to
     /// this one. Note that the reverse operation is not necessarily true.
-    bool isCastCompatible(const Type& rhs) const;
+    bool isCastCompatible(const Type& rhs, bool useBitstreamCast = true) const;
+
+    ///  Bit-stream cast constant evaluation
+    ConstantValue bitstreamCast(const ConstantValue&) const;
 
     /// Gets a combination of flags for integral types; for non-integral types,
     /// this returns all zeros.

@@ -548,6 +548,18 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
+    if (!isImplicit && !type->isCastCompatible(*operand().type, false)) {
+        // bit-stream casting
+        auto value = operand().eval(context);
+        if (!(value == nullptr)) {
+            value = type->bitstreamCast(value);
+            if (value == nullptr) {
+                auto& diag = context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange);
+                diag << value.bitstreamWidth();
+            }
+        }
+        return value;
+    }
     return convert(context, *operand().type, *type, sourceRange, operand().eval(context));
 }
 

@@ -424,6 +424,32 @@ bitwidth_t ConstantValue::bitstreamWidth() const {
     return width;
 }
 
+using PackVector = decltype(std::declval<ConstantValue>().bitstream());
+static void pack(const ConstantValue& value, PackVector& packed) {
+    if (value.isInteger() || value.isString())
+        packed.push_back(&value);
+    else if (value.isUnpacked()) {
+        for (const auto& cv : value.elements())
+            pack(cv, packed);
+    }
+    else if (value.isMap()) {
+        for (const auto& kv : *value.map()) {
+            pack(kv.second, packed);
+        }
+    }
+    else if (value.isQueue()) {
+        for (const auto& cv : *value.queue())
+            pack(cv, packed);
+    }
+    // TODO: classes
+}
+
+PackVector ConstantValue::bitstream() const {
+    PackVector packed;
+    pack(*this, packed);
+    return packed;
+}
+
 std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {
     return os << cv.toString();
 }

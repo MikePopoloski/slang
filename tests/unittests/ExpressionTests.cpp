@@ -1118,7 +1118,7 @@ endmodule
     REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::BadAssignment);
     CHECK(diags[1].code == diag::BadAssignment);
-    CHECK(diags[2].code == diag::BadAssignment);
+    CHECK(diags[2].code == diag::NoImplicitConversion);
     CHECK(diags[3].code == diag::UnpackedConcatSize);
     CHECK(diags[4].code == diag::AssignmentPatternNoContext);
     CHECK(diags[5].code == diag::UnpackedConcatAssociative);
@@ -1301,14 +1301,14 @@ endmodule
     CHECK(diags[0].code == diag::BadAssignment);
 }
 
-auto testBitsNonFixedSizeArray(const std::string& text, bool typeId = false) {
+auto testBitsNonFixedSizeArray(const std::string& text, DiagCode code = DiagCode()) {
     const auto& fullText = "module Top; " + text + " endmodule";
     auto tree = SyntaxTree::fromText(string_view(fullText));
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     auto& diags = compilation.getAllDiagnostics();
-    if (!diags.empty() && typeId)
-        CHECK(diags.back().code == diag::QueryOnDynamicType);
+    if (!diags.empty() && code.getSubsystem() != DiagSubsystem::Invalid)
+        CHECK(diags.back().code == code);
     return diags.size();
 }
 
@@ -1326,9 +1326,63 @@ TEST_CASE("$bits on non-fixed-size array") {
                             "bit a[1:0][int];" };
     int num = sizeof(types) / sizeof(const char*);
     std::string typeDef = "typedef ";
-    for (int i = 0; i < num; ++i) {
+    for (int i = 0; i < num; i++) {
         CHECK(testBitsNonFixedSizeArray(types[i] + intBits) == 0);
         CHECK(testBitsNonFixedSizeArray(types[i] + paramBits) > 0);
-        CHECK(testBitsNonFixedSizeArray(typeDef + types[i] + paramBits, true) == 1);
+        CHECK(testBitsNonFixedSizeArray(typeDef + types[i] + paramBits, diag::QueryOnDynamicType) ==
+              1);
     }
+}
+
+TEST_CASE("bit-stream cast") {
+    std::string intBits = "int b = $bits(a);";
+    std::string paramBits = "localparam b = $bits(a);";
+    const char* illegal[] = {
+        R"(
+// Illegal conversion from 24-bit struct to 32 bit int - compile time error
+struct {bit[7:0] a; shortint b;} a;
+int b = int'(a);
+)",
+        R"(
+// Illegal conversion from int (32 bits) to struct dest_t (25 or 33 bits), // compile time error
+typedef struct {byte a[$]; bit b;} dest_t;
+int a;
+dest_t b = dest_t'(a);
+)",
+        R"(
+        typedef struct { bit a[int]; int b; } asso;
+        asso x = asso'(64'b0);
+)"
+    };
+    const char* legal[] = {
+        R"(
+// Illegal conversion from 20-bit struct to int (32 bits) - run time error
+struct {bit a[$]; shortint b;} a = '{{1,2,3,4}, 67};
+int b = int'(a);
+)",
+        R"(
+struct {bit[15:0] a; shortint b;} a;
+int b = int'(a);
+)",
+        R"(
+typedef struct { shortint address; logic [3:0] code; byte command [2]; } Control;
+typedef bit Bits [36:1];
+Control p;
+Bits stream = Bits'(p);
+Control q = Control'(stream);
+)",
+        R"(
+typedef struct { byte length; shortint address; byte payload[]; byte chksum; } Packet;
+typedef byte channel_type[$];
+Packet genPkt;
+channel_type channel = channel_type'(genPkt);
+Packet p = Packet'( channel[0 : 1] );
+)"
+    };
+    int num = sizeof(illegal) / sizeof(const char*);
+    for (int i = 0; i < num; i++)
+        CHECK(testBitsNonFixedSizeArray(illegal[i], diag::BadConversion) == 1);
+    num = sizeof(legal) / sizeof(const char*);
+    for (int i = 0; i < num; i++)
+        CHECK(testBitsNonFixedSizeArray(legal[i]) == 0);
 }
