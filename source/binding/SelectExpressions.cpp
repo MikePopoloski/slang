@@ -759,13 +759,13 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
         case SymbolKind::EnumValue: {
             // Index doesn't matter here, so we pass 0.
             auto& value = member->as<EnumValueSymbol>();
-            return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0,
+            return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0u,
                                                                 range);
         }
         case SymbolKind::Parameter: {
             // Index doesn't matter here, so we pass 0.
             auto& value = member->as<ParameterSymbol>();
-            return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0,
+            return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0u,
                                                                 range);
         }
         default:
