@@ -15,6 +15,59 @@
 
 namespace slang {
 
+void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
+                                          const ParameterDeclarationStatementSyntax& syntax,
+                                          SmallVector<Symbol*>& results) {
+    auto paramBase = syntax.parameter;
+    if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
+        SmallVectorSized<ParameterSymbol*, 8> params;
+        ParameterSymbol::fromSyntax(scope, paramBase->as<ParameterDeclarationSyntax>(),
+                                    /* isLocal */ true, /* isPort */ false, params);
+        for (auto param : params) {
+            param->setAttributes(scope, syntax.attributes);
+            results.append(param);
+        }
+    }
+    else {
+        SmallVectorSized<TypeParameterSymbol*, 8> params;
+        TypeParameterSymbol::fromSyntax(scope, paramBase->as<TypeParameterDeclarationSyntax>(),
+                                        /* isLocal */ true, /* isPort */ false, params);
+        for (auto param : params) {
+            param->setAttributes(scope, syntax.attributes);
+            results.append(param);
+        }
+    }
+}
+
+void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
+                                          const ClassPropertyDeclarationSyntax& syntax,
+                                          SmallVector<Symbol*>& results) {
+    fromLocalSyntax(scope, syntax.declaration->as<ParameterDeclarationStatementSyntax>(), results);
+
+    Visibility visibility = Visibility::Public;
+    for (Token qual : syntax.qualifiers) {
+        switch (qual.kind) {
+            case TokenKind::LocalKeyword:
+                visibility = Visibility::Local;
+                break;
+            case TokenKind::ProtectedKeyword:
+                visibility = Visibility::Protected;
+                break;
+            default:
+                // Everything else is not allowed on parameters; the parser will issue
+                // a diagnostic so just ignore them here.
+                break;
+        }
+    }
+
+    for (auto param : results) {
+        if (param->kind == SymbolKind::TypeParameter)
+            param->as<TypeParameterSymbol>().visibility = visibility;
+        else
+            param->as<ParameterSymbol>().visibility = visibility;
+    }
+}
+
 bool ParameterSymbolBase::hasDefault() const {
     if (symbol.kind == SymbolKind::Parameter)
         return symbol.as<ParameterSymbol>().getDeclaredType()->getInitializerSyntax();

@@ -10,6 +10,7 @@ class Packet;
     integer status;
     typedef enum { ERR_OVERFLOW = 10, ERR_UNDERFLOW = 1123} PCKT_TYPE;
     const integer buffer_size = 100;
+    parameter int bar = 99;
 
     function new();
         command = 4'd0;
@@ -64,6 +65,9 @@ TEST_CASE("Class handle expressions") {
     CHECK(typeof("p.buffer_size") == "integer");
     CHECK(typeof("p.current_status()") == "integer");
     CHECK(typeof("p.clean") == "void");
+    CHECK(typeof("p.ERR_OVERFLOW") ==
+          "enum{ERR_OVERFLOW=32'sd10,ERR_UNDERFLOW=32'sd1123}Packet::e$1");
+    CHECK(typeof("p.bar") == "int");
 
     NO_COMPILATION_ERRORS;
 }

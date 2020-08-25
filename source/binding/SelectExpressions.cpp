@@ -16,6 +16,7 @@
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -755,6 +756,18 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
         case SymbolKind::Subroutine:
             return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(),
                                               invocation, range, context);
+        case SymbolKind::EnumValue: {
+            // Index doesn't matter here, so we pass 0.
+            auto& value = member->as<EnumValueSymbol>();
+            return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0,
+                                                                range);
+        }
+        case SymbolKind::Parameter: {
+            // Index doesn't matter here, so we pass 0.
+            auto& value = member->as<ParameterSymbol>();
+            return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0,
+                                                                range);
+        }
         default:
             // TODO: support class params
             auto& diag = context.addDiag(diag::InvalidClassAccess, selector.dotLocation);
