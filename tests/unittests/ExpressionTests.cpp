@@ -1354,6 +1354,10 @@ dest_t b = dest_t'(a);
         asso x = asso'(64'b0);
 )"
     };
+    int num = sizeof(illegal) / sizeof(const char*);
+    for (int i = 0; i < num; i++)
+        CHECK(testBitsNonFixedSizeArray(illegal[i], diag::BadConversion) == 1);
+
     const char* legal[] = {
         R"(
 // Illegal conversion from 20-bit struct to int (32 bits) - run time error
@@ -1379,10 +1383,23 @@ channel_type channel = channel_type'(genPkt);
 Packet p = Packet'( channel[0 : 1] );
 )"
     };
-    int num = sizeof(illegal) / sizeof(const char*);
-    for (int i = 0; i < num; i++)
-        CHECK(testBitsNonFixedSizeArray(illegal[i], diag::BadConversion) == 1);
     num = sizeof(legal) / sizeof(const char*);
     for (int i = 0; i < num; i++)
         CHECK(testBitsNonFixedSizeArray(legal[i]) == 0);
+
+    const char* eval[] = {
+        R"(
+// Illegal conversion from 20-bit struct to int (32 bits) - run time error
+localparam struct {bit a[$]; shortint b;} a = '{{1,2,3,4}, 67};
+localparam b = int'(a);
+)",
+        R"(
+localparam string str = "hi";
+typedef struct { shortint a[]; byte b[-2:-4]; } c;
+localparam c d = c'(str);
+)"
+    };
+    num = sizeof(eval) / sizeof(const char*);
+    for (int i = 0; i < num; i++)
+        CHECK(testBitsNonFixedSizeArray(eval[i], diag::ConstEvalBitstreamCastSize) == 1);
 }

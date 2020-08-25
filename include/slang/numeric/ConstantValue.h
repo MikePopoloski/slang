@@ -150,6 +150,7 @@ public:
     /// Gets $bits of the constant expression.
     bitwidth_t bitstreamWidth() const;
 
+    /// Performs pack operation to create a bit stream
     std::vector<const ConstantValue*> bitstream() const;
 
     static const ConstantValue Invalid;

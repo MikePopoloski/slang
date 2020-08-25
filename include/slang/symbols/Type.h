@@ -146,9 +146,7 @@ public:
     }
 
     /// Indicates whether this is a queue type.
-    bool isQueue() const {
-        return getCanonicalType().kind == SymbolKind::QueueType;
-    }
+    bool isQueue() const { return getCanonicalType().kind == SymbolKind::QueueType; }
 
     /// Indicates whether this is an enum type.
     bool isEnum() const { return getCanonicalType().kind == SymbolKind::EnumType; }

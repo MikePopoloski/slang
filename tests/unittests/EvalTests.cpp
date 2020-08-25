@@ -1632,3 +1632,33 @@ localparam byte asso[string] = '{ "Jon": 20, "Paul":22, "Al":23, default:-1 };
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("bit-stream cast evaluation") {
+    ScriptSession session;
+    session.eval(R"(
+localparam struct {bit a[$]; shortint b; string c; logic[3:0]d;} a = '{{1,2,3,4}, 67, "$", 4'b1x1z};
+localparam integer tab [string] = '{"Peter":20, "Paul":22, "Mary":23, default:-1 };
+typedef int b[5:7];
+localparam string str = "hello!!";
+typedef struct { shortint a[]; byte b[-2:-4]; } c;
+                 localparam shortint y = "he";
+)");
+    CHECK(session.eval("int'(a)").integer() == -1610337718);
+    auto cv0 = session.eval("b'(tab)");
+    CHECK(cv0.elements()[0].integer() == 23);
+    CHECK(cv0.elements()[1].integer() == 22);
+    CHECK(cv0.elements()[2].integer() == 20);
+    CHECK(cv0.elements().size() == 3);
+    CHECK(session.eval("y").integer() == 26725);
+    auto cv1 = session.eval("c'(str)");
+    CHECK(cv1.elements()[0].elements()[0].integer() == 26725);
+    CHECK(cv1.elements()[0].elements()[1].integer() == 27756);
+    CHECK(cv1.elements()[0].elements().size() == 2);
+    CHECK(cv1.elements()[1].elements()[0].integer() == 'o');
+    CHECK(cv1.elements()[1].elements()[1].integer() == '!');
+    CHECK(cv1.elements()[1].elements()[2].integer() == '!');
+    CHECK(cv1.elements()[1].elements().size() == 3);
+    CHECK(cv1.elements().size() == 2);
+
+    NO_SESSION_ERRORS;
+}
