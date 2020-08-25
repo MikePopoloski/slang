@@ -156,8 +156,8 @@ private:
     NameSyntax& parseName(bitmask<NameOptions> options);
     NameSyntax& parseNamePart(bitmask<NameOptions> options);
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
-    ArgumentListSyntax& parseArgumentList(bool allowMinTypMax = false);
-    ArgumentSyntax& parseArgument(bool allowMinTypMax);
+    ArgumentListSyntax& parseArgumentList(bool isParamAssignment = false);
+    ArgumentSyntax& parseArgument(bool isParamAssignment);
     PatternSyntax& parsePattern();
     AssignmentPatternExpressionSyntax& parseAssignmentPatternExpression(DataTypeSyntax* type);
     AssignmentPatternItemSyntax& parseAssignmentPatternItem(ExpressionSyntax* key);
