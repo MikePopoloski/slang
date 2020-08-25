@@ -1088,8 +1088,11 @@ token semi
 PortConnection final=false
 list<AttributeInstance> attributes
 
+EmptyPortConnection base=PortConnection kind=EmptyPortConnection
+token placeholder
+
 OrderedPortConnection base=PortConnection kind=OrderedPortConnection
-Expression? expr
+Expression expr
 
 NamedPortConnection base=PortConnection kind=NamedPortConnection
 token dot

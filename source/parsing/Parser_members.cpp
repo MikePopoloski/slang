@@ -1841,7 +1841,7 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
     parseList<isPossiblePortConnection, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, items,
         closeParen, RequireItems::False, diag::ExpectedPortConnection,
-        [this] { return &parsePortConnection(); });
+        [this] { return &parsePortConnection(); }, AllowEmpty::True);
 
     return factory.hierarchicalInstance(name, dimensions, openParen, items, closeParen);
 }

@@ -547,3 +547,18 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Empty port connections") {
+    auto tree = SyntaxTree::fromText(R"(
+module n(input i, input j);
+endmodule
+
+module m;
+    n n1(,);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
