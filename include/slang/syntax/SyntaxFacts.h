@@ -154,6 +154,12 @@ public:
     /// @return true if the given token is a member qualifer (like "virtual" or "extern").
     static bool isMemberQualifier(TokenKind kind);
 
+    /// @return true if the given token is a valid qualifier for a class method.
+    static bool isMethodQualifier(TokenKind kind);
+
+    /// @return true if the given token is a valid qualifier for a class property.
+    static bool isPropertyQualifier(TokenKind kind);
+
     /// @return true if the given token is a drive strength.
     static bool isDriveStrength(TokenKind kind);
 
@@ -237,6 +243,27 @@ public:
 
     /// @return true if the given @a mod token is allowed after a token of kind @a prev
     static bool isModifierAllowedAfter(TokenKind mod, TokenKind prev);
+
+    /// @return true if the given syntax node is allowed within a compilation unit.
+    static bool isAllowedInCompilationUnit(SyntaxKind kind);
+
+    /// @return true if the given syntax node is allowed within a generate block or region.
+    static bool isAllowedInGenerate(SyntaxKind kind);
+
+    /// @return true if the given syntax node is allowed within a module definition.
+    static bool isAllowedInModule(SyntaxKind kind);
+
+    /// @return true if the given syntax node is allowed within an interface definition.
+    static bool isAllowedInInterface(SyntaxKind kind);
+
+    /// @return true if the given syntax node is allowed within a program definition.
+    static bool isAllowedInProgram(SyntaxKind kind);
+
+    /// @return true if the given syntax node is allowed within a package definition.
+    static bool isAllowedInPackage(SyntaxKind kind);
+
+    /// @return true if the given syntax node is allowed within a clocking block.
+    static bool isAllowedInClocking(SyntaxKind kind);
 
     /// @return a string representing the name of the given data type, if it has a simple name.
     static string_view getSimpleTypeName(const DataTypeSyntax& syntax);

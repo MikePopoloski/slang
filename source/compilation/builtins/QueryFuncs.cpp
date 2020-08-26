@@ -55,6 +55,7 @@ public:
                 width = cv.bitstreamWidth();
             }
         }
+
         // TODO: width > INT_MAX
         return SVInt(32, width, true);
     }

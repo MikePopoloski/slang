@@ -147,7 +147,7 @@ public:
     ConstantValue convertToByteArray(bitwidth_t size, bool isSigned) const;
     ConstantValue convertToByteQueue(bool isSigned) const;
 
-    /// Gets $bits of the constant expression.
+    /// Gets the size of this value when converted to a bitstream.
     bitwidth_t bitstreamWidth() const;
 
     /// Performs pack operation to create a bit stream

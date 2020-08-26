@@ -235,27 +235,11 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::ParameterDeclarationStatement: {
-            auto& statement = syntax.as<ParameterDeclarationStatementSyntax>();
-            auto paramBase = statement.parameter;
-            if (paramBase->kind == SyntaxKind::ParameterDeclaration) {
-                SmallVectorSized<ParameterSymbol*, 8> params;
-                ParameterSymbol::fromSyntax(*this, paramBase->as<ParameterDeclarationSyntax>(),
-                                            /* isLocal */ true, /* isPort */ false, params);
-                for (auto param : params) {
-                    param->setAttributes(*this, statement.attributes);
-                    addMember(*param);
-                }
-            }
-            else {
-                SmallVectorSized<TypeParameterSymbol*, 8> params;
-                TypeParameterSymbol::fromSyntax(*this,
-                                                paramBase->as<TypeParameterDeclarationSyntax>(),
-                                                /* isLocal */ true, /* isPort */ false, params);
-                for (auto param : params) {
-                    param->setAttributes(*this, statement.attributes);
-                    addMember(*param);
-                }
-            }
+            SmallVectorSized<Symbol*, 8> params;
+            ParameterSymbolBase::fromLocalSyntax(
+                *this, syntax.as<ParameterDeclarationStatementSyntax>(), params);
+            for (auto param : params)
+                addMember(*param);
             break;
         }
         case SyntaxKind::AlwaysBlock:
@@ -334,9 +318,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                     getOrAddDeferredData().addForwardingTypedef(symbol);
                     break;
                 }
-                case SyntaxKind::ParameterDeclarationStatement:
-                    addDiag(diag::NotYetSupported, syntax.sourceRange());
+                case SyntaxKind::ParameterDeclarationStatement: {
+                    SmallVectorSized<Symbol*, 8> params;
+                    ParameterSymbolBase::fromLocalSyntax(*this, cpd, params);
+                    for (auto param : params)
+                        addMember(*param);
                     break;
+                }
                 default:
                     // All other possible member kinds here are illegal and will
                     // be diagnosed in the parser, so just ignore them.
@@ -347,6 +335,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ClassMethodDeclaration:
             addMember(SubroutineSymbol::fromSyntax(
                 compilation, syntax.as<ClassMethodDeclarationSyntax>(), *this));
+            break;
+        case SyntaxKind::ElabSystemTask:
+            addMember(
+                ElabSystemTaskSymbol::fromSyntax(compilation, syntax.as<ElabSystemTaskSyntax>()));
             break;
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:

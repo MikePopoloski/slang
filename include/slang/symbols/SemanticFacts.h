@@ -105,6 +105,11 @@ ENUM(AssertionKind, ASK);
 ENUM(GateType, GATE)
 #undef GATE
 
+#define ELAB(x) x(Fatal) x(Error) x(Warning) x(Info)
+/// Specifies possible elaboration system task kinds.
+ENUM(ElabSystemTaskKind, ELAB);
+#undef ELAB
+
 class SemanticFacts {
 public:
     /// Interprets a keyword token as a variable lifetime value.
@@ -126,6 +131,8 @@ public:
     static ArgumentDirection getArgDirection(PortDirection direction);
 
     static GateType getGateType(TokenKind kind);
+
+    static ElabSystemTaskKind getElabSystemTaskKind(Token token);
 
     static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
                                   const TimeUnitsDeclarationSyntax& syntax,

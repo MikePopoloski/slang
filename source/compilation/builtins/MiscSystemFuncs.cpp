@@ -4,8 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "FormatHelpers.h"
-
+#include "slang/binding/FormatHelpers.h"
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
@@ -28,7 +27,7 @@ public:
             return comp.getErrorType();
         }
 
-        if (!checkSFormatArgs(context, args))
+        if (!FmtHelpers::checkSFormatArgs(context, args))
             return comp.getErrorType();
 
         return comp.getStringType();
@@ -39,8 +38,8 @@ public:
         if (!formatStr)
             return nullptr;
 
-        auto result = formatArgs(formatStr.str(), args[0]->sourceRange.start(), scope, context,
-                                 args.subspan(1));
+        auto result = FmtHelpers::formatArgs(formatStr.str(), args[0]->sourceRange.start(), scope,
+                                             context, args.subspan(1));
         if (!result)
             return nullptr;
 

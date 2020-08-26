@@ -897,6 +897,34 @@ bool SyntaxFacts::isMemberQualifier(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isMethodQualifier(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::PureKeyword:
+        case TokenKind::VirtualKeyword:
+        case TokenKind::ExternKeyword:
+        case TokenKind::StaticKeyword:
+        case TokenKind::LocalKeyword:
+        case TokenKind::ProtectedKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SyntaxFacts::isPropertyQualifier(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::ConstKeyword:
+        case TokenKind::RandKeyword:
+        case TokenKind::RandCKeyword:
+        case TokenKind::StaticKeyword:
+        case TokenKind::LocalKeyword:
+        case TokenKind::ProtectedKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool SyntaxFacts::isDriveStrength(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:
@@ -1092,6 +1120,154 @@ bool SyntaxFacts::isModifierAllowedAfter(TokenKind mod, TokenKind prev) {
         case TokenKind::StaticKeyword:
         case TokenKind::AutomaticKeyword:
             return prev == TokenKind::VarKeyword || prev == TokenKind::ConstKeyword;
+        default:
+            return false;
+    }
+}
+
+static bool isModuleOrPackageDecl(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::NetDeclaration:
+        case SyntaxKind::NetTypeDeclaration:
+        case SyntaxKind::TypedefDeclaration:
+        case SyntaxKind::ForwardTypedefDeclaration:
+        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
+        case SyntaxKind::PackageImportDeclaration:
+        case SyntaxKind::DataDeclaration:
+        case SyntaxKind::TaskDeclaration:
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::DPIImportExport:
+        case SyntaxKind::ClassDeclaration:
+        case SyntaxKind::ParameterDeclarationStatement:
+        case SyntaxKind::CovergroupDeclaration:
+        case SyntaxKind::EmptyMember:
+        case SyntaxKind::PropertyDeclaration:
+        case SyntaxKind::SequenceDeclaration:
+        case SyntaxKind::LetDeclaration:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static bool isModuleCommonDecl(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::GenvarDeclaration:
+        case SyntaxKind::ClockingDeclaration:
+        case SyntaxKind::DefaultClockingReference:
+            return true;
+        default:
+            return isModuleOrPackageDecl(kind);
+    }
+}
+
+static bool isModuleCommonItem(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::HierarchyInstantiation:
+        case SyntaxKind::DeferredAssertion:
+        case SyntaxKind::ConcurrentAssertionMember:
+        case SyntaxKind::ContinuousAssign:
+        case SyntaxKind::InitialBlock:
+        case SyntaxKind::FinalBlock:
+        case SyntaxKind::AlwaysBlock:
+        case SyntaxKind::AlwaysCombBlock:
+        case SyntaxKind::AlwaysFFBlock:
+        case SyntaxKind::AlwaysLatchBlock:
+        case SyntaxKind::LoopGenerate:
+        case SyntaxKind::CaseGenerate:
+        case SyntaxKind::IfGenerate:
+        case SyntaxKind::ElabSystemTask:
+            return true;
+        default:
+            return isModuleCommonDecl(kind);
+    }
+}
+
+bool SyntaxFacts::isAllowedInCompilationUnit(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::TimeUnitsDeclaration:
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+        case SyntaxKind::ProgramDeclaration:
+        case SyntaxKind::PackageDeclaration:
+            return true;
+        default:
+            return isAllowedInPackage(kind);
+    }
+}
+
+bool SyntaxFacts::isAllowedInGenerate(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::DefParam:
+        case SyntaxKind::GateInstantiation:
+            return true;
+        default:
+            return isModuleCommonItem(kind);
+    }
+}
+
+bool SyntaxFacts::isAllowedInModule(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::PortDeclaration:
+        case SyntaxKind::GenerateRegion:
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+        case SyntaxKind::ProgramDeclaration:
+        case SyntaxKind::TimeUnitsDeclaration:
+            return true;
+        default:
+            return isAllowedInGenerate(kind);
+    }
+}
+
+bool SyntaxFacts::isAllowedInInterface(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::PortDeclaration:
+        case SyntaxKind::GenerateRegion:
+        case SyntaxKind::ModportDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+        case SyntaxKind::ProgramDeclaration:
+        case SyntaxKind::TimeUnitsDeclaration:
+            return true;
+        default:
+            return isModuleCommonItem(kind);
+    }
+}
+
+bool SyntaxFacts::isAllowedInProgram(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::PortDeclaration:
+        case SyntaxKind::ContinuousAssign:
+        case SyntaxKind::InitialBlock:
+        case SyntaxKind::FinalBlock:
+        case SyntaxKind::ConcurrentAssertionMember:
+        case SyntaxKind::TimeUnitsDeclaration:
+        case SyntaxKind::LoopGenerate:
+        case SyntaxKind::CaseGenerate:
+        case SyntaxKind::IfGenerate:
+        case SyntaxKind::GenerateRegion:
+        case SyntaxKind::ElabSystemTask:
+            return true;
+        default:
+            return isModuleCommonDecl(kind);
+    }
+}
+
+bool SyntaxFacts::isAllowedInPackage(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::TimeUnitsDeclaration:
+            return true;
+        default:
+            return isModuleOrPackageDecl(kind);
+    }
+}
+
+bool SyntaxFacts::isAllowedInClocking(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::PropertyDeclaration:
+        case SyntaxKind::SequenceDeclaration:
+        case SyntaxKind::LetDeclaration:
+            return true;
         default:
             return false;
     }

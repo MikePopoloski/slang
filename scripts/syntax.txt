@@ -1088,8 +1088,11 @@ token semi
 PortConnection final=false
 list<AttributeInstance> attributes
 
+EmptyPortConnection base=PortConnection kind=EmptyPortConnection
+token placeholder
+
 OrderedPortConnection base=PortConnection kind=OrderedPortConnection
-Expression? expr
+Expression expr
 
 NamedPortConnection base=PortConnection kind=NamedPortConnection
 token dot
@@ -1334,6 +1337,11 @@ token property
 token c_identifier
 token equals
 FunctionPrototype method
+token semi
+
+ElabSystemTask base=Member kind=ElabSystemTask
+token name
+ArgumentList? arguments
 token semi
 
 // ----- CONSTRAINTS -----

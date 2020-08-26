@@ -81,6 +81,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getAssignment();
     }
 
+    void handle(const ElabSystemTaskSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.issueDiagnostic();
+    }
+
     void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit)
             return;

@@ -901,3 +901,34 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AutomaticNotAllowed);
 }
+
+TEST_CASE("Elaboration system tasks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    $error;
+
+    localparam int foo = 12;
+    if (foo == 12)
+        $info(4, 3.2, "Hello world %d!", foo + 2);
+    else begin
+        $warning("ASDFASDF");
+    end
+        
+endmodule
+)",
+                                     "source");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:3:5: error: $error encountered
+    $error;
+    ^
+source:7:9: note: $info encountered:           43.200000Hello world          14!
+        $info(4, 3.2, "Hello world %d!", foo + 2);
+        ^
+)");
+}

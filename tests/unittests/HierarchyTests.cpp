@@ -1051,3 +1051,22 @@ TEST_CASE("No top warning") {
     CHECK(diags[0].code == diag::NoTopModules);
 }
 
+TEST_CASE("Empty parameter assignments") {
+    auto tree = SyntaxTree::fromText(R"(
+module n;
+endmodule
+
+module m;
+    n #(,) n1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ExpectedExpression);
+    CHECK(diags[1].code == diag::MisplacedTrailingSeparator);
+    CHECK(diags[2].code == diag::TooManyParamAssignments);
+}

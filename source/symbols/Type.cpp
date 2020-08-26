@@ -237,8 +237,9 @@ bool Type::isBitstreamType(bool destination) const {
     if (isUnpackedArray()) {
         if (destination && getCanonicalType().kind == SymbolKind::AssociativeArrayType)
             return false;
-        return getArrayElementType()->isBitstreamType();
+        return getArrayElementType()->isBitstreamType(destination);
     }
+
     if (isUnpackedStruct()) {
         auto& us = getCanonicalType().as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
@@ -247,7 +248,8 @@ bool Type::isBitstreamType(bool destination) const {
         }
         return true;
     }
-    // TODO: classes if (!destination)
+
+    // TODO: classes
     return false;
 }
 
@@ -259,8 +261,10 @@ bool Type::isFixedSize() const {
         const auto& ct = getCanonicalType();
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
             return false;
+
         return ct.as<FixedSizeUnpackedArrayType>().elementType.isFixedSize();
     }
+
     if (isUnpackedStruct()) {
         auto& us = getCanonicalType().as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
@@ -269,6 +273,7 @@ bool Type::isFixedSize() const {
         }
         return true;
     }
+
     // TODO: classes
     return false;
 }

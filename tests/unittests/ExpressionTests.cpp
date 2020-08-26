@@ -1304,6 +1304,7 @@ endmodule
 auto testBitsNonFixedSizeArray(const std::string& text, DiagCode code = DiagCode()) {
     const auto& fullText = "module Top; " + text + " endmodule";
     auto tree = SyntaxTree::fromText(string_view(fullText));
+
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     auto& diags = compilation.getAllDiagnostics();

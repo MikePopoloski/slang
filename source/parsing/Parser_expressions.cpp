@@ -734,25 +734,27 @@ ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
         return nullptr;
 
     auto hash = consume();
-    return &factory.parameterValueAssignment(hash, parseArgumentList(/* allowMinTypMax */ true));
+    return &factory.parameterValueAssignment(hash, parseArgumentList(/* isParamAssignment */ true));
 }
 
-ArgumentListSyntax& Parser::parseArgumentList(bool allowMinTypMax) {
+ArgumentListSyntax& Parser::parseArgumentList(bool isParamAssignment) {
     Token openParen;
     Token closeParen;
     span<TokenOrSyntax> list;
 
+    auto allowEmpty = isParamAssignment ? AllowEmpty::False : AllowEmpty::True;
+
     parseList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
         closeParen, RequireItems::False, diag::ExpectedArgument,
-        [this, allowMinTypMax] { return &parseArgument(allowMinTypMax); }, AllowEmpty::True);
+        [this, isParamAssignment] { return &parseArgument(isParamAssignment); }, allowEmpty);
 
     return factory.argumentList(openParen, list, closeParen);
 }
 
-ArgumentSyntax& Parser::parseArgument(bool allowMinTypMax) {
+ArgumentSyntax& Parser::parseArgument(bool isParamAssignment) {
     // check for empty arguments
-    if (peek(TokenKind::Comma) || peek(TokenKind::CloseParenthesis))
+    if (!isParamAssignment && (peek(TokenKind::Comma) || peek(TokenKind::CloseParenthesis)))
         return factory.emptyArgument(placeholderToken());
 
     // check for named arguments
@@ -761,8 +763,8 @@ ArgumentSyntax& Parser::parseArgument(bool allowMinTypMax) {
         auto name = expect(TokenKind::Identifier);
 
         auto [innerOpenParen, innerCloseParen, expr] = parseGroupOrSkip(
-            TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, [this, allowMinTypMax]() {
-                return allowMinTypMax ? &parseMinTypMaxExpression() : &parseExpression();
+            TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, [this, isParamAssignment]() {
+                return isParamAssignment ? &parseMinTypMaxExpression() : &parseExpression();
             });
 
         return factory.namedArgument(dot, name, innerOpenParen, expr, innerCloseParen);

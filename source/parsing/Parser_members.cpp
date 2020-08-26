@@ -13,8 +13,9 @@ namespace slang {
 CompilationUnitSyntax& Parser::parseCompilationUnit() {
     try {
         auto members = parseMemberList<MemberSyntax>(
-            TokenKind::EndOfFile, eofToken, [this](bool& anyLocalModules) {
-                return parseMember(SyntaxKind::CompilationUnit, anyLocalModules);
+            TokenKind::EndOfFile, eofToken, SyntaxKind::CompilationUnit,
+            [this](SyntaxKind parentKind, bool& anyLocalModules) {
+                return parseMember(parentKind, anyLocalModules);
             });
         return factory.compilationUnit(members, eofToken);
     }
@@ -51,20 +52,22 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind par
         }
     }
 
+    SyntaxKind declKind = getModuleDeclarationKind(header.moduleKeyword.kind);
     NodeMetadata meta{ pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale() };
 
     Token endmodule;
-    auto members = parseMemberList<MemberSyntax>(endKind, endmodule, [this](bool& anyLocalModules) {
-        return parseMember(SyntaxKind::ModuleDeclaration, anyLocalModules);
-    });
+    auto members = parseMemberList<MemberSyntax>(
+        endKind, endmodule, declKind, [this](SyntaxKind parentKind, bool& anyLocalModules) {
+            return parseMember(parentKind, anyLocalModules);
+        });
 
     pp.popDesignElementStack();
 
     auto endName = parseNamedBlockClause();
     checkBlockNames(header.name, endName);
 
-    auto& result = factory.moduleDeclaration(getModuleDeclarationKind(header.moduleKeyword.kind),
-                                             attributes, header, members, endmodule, endName);
+    auto& result =
+        factory.moduleDeclaration(declKind, attributes, header, members, endmodule, endName);
 
     metadataMap[&result] = meta;
     return result;
@@ -99,8 +102,9 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
 
             Token endgenerate;
             auto members = parseMemberList<MemberSyntax>(
-                TokenKind::EndGenerateKeyword, endgenerate, [this](bool& anyLocalModules) {
-                    return parseMember(SyntaxKind::GenerateRegion, anyLocalModules);
+                TokenKind::EndGenerateKeyword, endgenerate, SyntaxKind::GenerateRegion,
+                [this](SyntaxKind parentKind, bool& anyLocalModules) {
+                    return parseMember(parentKind, anyLocalModules);
                 });
             return &factory.generateRegion(attributes, keyword, members, endgenerate);
         }
@@ -245,6 +249,12 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             break;
         case TokenKind::ClockingKeyword:
             return &parseClockingDeclaration(attributes);
+        case TokenKind::SystemIdentifier: {
+            auto result = parseElabSystemTask(attributes);
+            if (result)
+                return result;
+            break;
+        }
         default:
             break;
     }
@@ -270,11 +280,15 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
     if (anyLocalModules)
         moduleDeclStack.pop();
 
+    if (result)
+        checkMemberAllowed(*result, parentKind);
+
     return result;
 }
 
 template<typename TMember, typename TParseFunc>
-span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc) {
+span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, SyntaxKind parentKind,
+                                       TParseFunc&& parseFunc) {
     SmallVectorSized<TMember*, 16> members;
     bool errored = false;
     bool anyLocalModules = false;
@@ -284,8 +298,9 @@ span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TPars
         if (kind == TokenKind::EndOfFile || kind == endKind)
             break;
 
-        auto member = parseFunc(anyLocalModules);
+        auto member = parseFunc(parentKind, anyLocalModules);
         if (member) {
+            checkMemberAllowed(*member, parentKind);
             members.append(member);
             errored = false;
         }
@@ -679,9 +694,10 @@ MemberSyntax& Parser::parseGenerateBlock() {
 
     Token end;
     auto members =
-        parseMemberList<MemberSyntax>(TokenKind::EndKeyword, end, [this](bool& anyLocalModules) {
-            return parseMember(SyntaxKind::GenerateBlock, anyLocalModules);
-        });
+        parseMemberList<MemberSyntax>(TokenKind::EndKeyword, end, SyntaxKind::GenerateBlock,
+                                      [this](SyntaxKind parentKind, bool& anyLocalModules) {
+                                          return parseMember(parentKind, anyLocalModules);
+                                      });
 
     auto endName = parseNamedBlockClause();
     checkBlockNames(beginName, endName, label);
@@ -733,14 +749,111 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
     }
 
     Token endClass;
-    auto members = parseMemberList<MemberSyntax>(TokenKind::EndClassKeyword, endClass,
-                                                 [this](bool&) { return parseClassMember(); });
+    auto members = parseMemberList<MemberSyntax>(
+        TokenKind::EndClassKeyword, endClass, SyntaxKind::ClassDeclaration,
+        [this](SyntaxKind, bool&) { return parseClassMember(); });
+
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
 
     return factory.classDeclaration(attributes, virtualOrInterface, classKeyword, lifetime, name,
                                     parameterList, extendsClause, implementsClause, semi, members,
                                     endClass, endBlockName);
+}
+
+span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
+    SmallVectorSized<Token, 4> qualifierBuffer;
+    SmallMap<TokenKind, Token, 4> qualifierSet;
+    Token lastRand;
+    Token lastVisibility;
+    Token lastStaticOrVirtual;
+    Token lastPure;
+    bool isVirtual = false;
+    bool errorDup = false;
+    bool errorRand = false;
+    bool errorVisibility = false;
+    bool errorStaticVirtual = false;
+    bool errorFirst = false;
+    bool errorPure = false;
+
+    auto checkConflict = [this](Token curr, bool isKind, Token& lastSeen, bool& alreadyErrored) {
+        if (isKind) {
+            if (lastSeen) {
+                if (!alreadyErrored) {
+                    auto& diag = addDiag(diag::QualifierConflict, curr.location());
+                    diag << curr.rawText() << curr.range();
+                    diag << lastSeen.rawText() << lastSeen.range();
+                    alreadyErrored = true;
+                }
+                return;
+            }
+            lastSeen = curr;
+        }
+    };
+
+    while (isMemberQualifier(peek().kind)) {
+        Token t = consume();
+        qualifierBuffer.append(t);
+        if (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)
+            isPureOrExtern = true;
+        else if (t.kind == TokenKind::VirtualKeyword)
+            isVirtual = true;
+
+        // Don't allow duplicates of any qualifier.
+        if (auto [it, inserted] = qualifierSet.emplace(t.kind, t); !inserted) {
+            if (!errorDup) {
+                auto& diag = addDiag(diag::DuplicateQualifier, t.location());
+                diag << t.rawText() << t.range() << it->second.range();
+                errorDup = true;
+            }
+            continue;
+        }
+
+        // Some qualifiers are required to come first in the list.
+        if (qualifierBuffer.size() > 1 &&
+            (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)) {
+            if (!errorFirst) {
+                auto& diag = addDiag(diag::QualifierNotFirst, t.location());
+                diag << t.rawText() << t.range();
+                errorFirst = true;
+            }
+            continue;
+        }
+
+        // Pure keyword must be followed by virtual, always.
+        if (t.kind == TokenKind::PureKeyword)
+            lastPure = t;
+        else if (lastPure) {
+            if (t.kind != TokenKind::VirtualKeyword) {
+                if (!errorPure) {
+                    auto& diag = addDiag(diag::PureRequiresVirtual, t.location());
+                    diag << lastPure.range() << t.range();
+                    errorPure = true;
+                }
+                continue;
+            }
+            lastPure = Token();
+        }
+
+        // rand, randc, and const are mutually exclusive.
+        checkConflict(t,
+                      t.kind == TokenKind::RandKeyword || t.kind == TokenKind::RandCKeyword ||
+                          t.kind == TokenKind::ConstKeyword,
+                      lastRand, errorRand);
+
+        // local and protected are mutually exclusive.
+        checkConflict(t, t.kind == TokenKind::LocalKeyword || t.kind == TokenKind::ProtectedKeyword,
+                      lastVisibility, errorVisibility);
+
+        // static and virtual are mutually exclusive.
+        checkConflict(t, t.kind == TokenKind::StaticKeyword || t.kind == TokenKind::VirtualKeyword,
+                      lastStaticOrVirtual, errorStaticVirtual);
+    }
+
+    if (lastPure && !errorPure && !isVirtual)
+        addDiag(diag::PureRequiresVirtual, lastPure.location()) << lastPure.range();
+
+    return qualifierBuffer.copy(alloc);
 }
 
 MemberSyntax* Parser::parseClassMember() {
@@ -761,27 +874,91 @@ MemberSyntax* Parser::parseClassMember() {
     }
 
     bool isPureOrExtern = false;
-    SmallVectorSized<Token, 4> qualifierBuffer;
-    auto kind = peek().kind;
-    while (isMemberQualifier(kind)) {
-        // TODO: error on bad combination / ordering
-        qualifierBuffer.append(consume());
-        if (kind == TokenKind::PureKeyword || kind == TokenKind::ExternKeyword)
-            isPureOrExtern = true;
-        kind = peek().kind;
-    }
-    auto qualifiers = qualifierBuffer.copy(alloc);
+    auto qualifiers = parseClassQualifiers(isPureOrExtern);
 
     if (isVariableDeclaration()) {
+        // Check that all qualifiers are allowed specifically for properties.
+        Token lastLifetime;
+        for (auto qual : qualifiers) {
+            if (!isPropertyQualifier(qual.kind)) {
+                auto& diag = addDiag(diag::InvalidPropertyQualifier, qual.location());
+                diag << qual.range() << qual.rawText();
+                break;
+            }
+
+            if (isLifetimeModifier(qual.kind))
+                lastLifetime = qual;
+        }
+
         auto& decl = parseVariableDeclaration({});
-        if (decl.kind == SyntaxKind::ParameterDeclarationStatement)
-            errorIfAttributes(attributes);
+        if (decl.kind == SyntaxKind::DataDeclaration) {
+            // Make sure qualifiers weren't duplicated in the data declaration's modifiers.
+            // Note that we don't have to check for `const` here because parseVariableDeclaration
+            // will error if the const keyword isn't first, but if it was first we would have
+            // already consumed it ourselves as a qualifier.
+            for (auto mod : decl.as<DataDeclarationSyntax>().modifiers) {
+                if (isLifetimeModifier(mod.kind) && lastLifetime) {
+                    if (mod.kind == lastLifetime.kind) {
+                        auto& diag = addDiag(diag::DuplicateQualifier, mod.location());
+                        diag << mod.rawText() << mod.range() << lastLifetime.range();
+                    }
+                    else {
+                        auto& diag = addDiag(diag::QualifierConflict, mod.location());
+                        diag << mod.rawText() << mod.range();
+                        diag << lastLifetime.rawText() << lastLifetime.range();
+                    }
+                    break;
+                }
+            }
+        }
+        else if (decl.kind == SyntaxKind::PackageImportDeclaration ||
+                 decl.kind == SyntaxKind::NetTypeDeclaration) {
+            // Nettypes and package imports are disallowed in classes.
+            SourceRange range = decl.sourceRange();
+            addDiag(diag::NotAllowedInClass, range.start()) << range;
+        }
+        else {
+            // Otherwise, check for invalid qualifiers.
+            for (auto qual : qualifiers) {
+                switch (qual.kind) {
+                    case TokenKind::RandKeyword:
+                    case TokenKind::RandCKeyword:
+                    case TokenKind::ConstKeyword:
+                    case TokenKind::StaticKeyword:
+                        addDiag(diag::InvalidQualifierForMember, qual.location()) << qual.range();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
         return &factory.classPropertyDeclaration(attributes, qualifiers, decl);
     }
 
+    auto kind = peek().kind;
     if (kind == TokenKind::TaskKeyword || kind == TokenKind::FunctionKeyword) {
+        // Check that qualifiers are allowed specifically for methods.
+        for (auto qual : qualifiers) {
+            if (!isMethodQualifier(qual.kind)) {
+                auto& diag = addDiag(diag::InvalidMethodQualifier, qual.location());
+                diag << qual.range() << qual.rawText();
+                break;
+            }
+        }
+
+        auto checkLifetime = [this](auto& proto) {
+            if (proto.lifetime.kind == TokenKind::StaticKeyword) {
+                auto& diag = addDiag(diag::MethodStaticLifetime, proto.lifetime.location());
+                diag << proto.lifetime.range();
+            }
+        };
+
+        // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
             auto& proto = parseFunctionPrototype();
+            checkLifetime(proto);
+
             return &factory.classMethodPrototype(attributes, qualifiers, proto,
                                                  expect(TokenKind::Semicolon));
         }
@@ -790,8 +967,10 @@ MemberSyntax* Parser::parseClassMember() {
                                                            : SyntaxKind::FunctionDeclaration;
             auto endKind = kind == TokenKind::TaskKeyword ? TokenKind::EndTaskKeyword
                                                           : TokenKind::EndFunctionKeyword;
-            return &factory.classMethodDeclaration(attributes, qualifiers,
-                                                   parseFunctionDeclaration({}, declKind, endKind));
+            auto& funcDecl = parseFunctionDeclaration({}, declKind, endKind);
+            checkLifetime(*funcDecl.prototype);
+
+            return &factory.classMethodDeclaration(attributes, qualifiers, funcDecl);
         }
     }
 
@@ -946,7 +1125,9 @@ CoverpointSyntax* Parser::parseCoverpoint(AttrList attributes, DataTypeSyntax* t
 
         Token closeBrace;
         auto members = parseMemberList<MemberSyntax>(
-            TokenKind::CloseBrace, closeBrace, [this](bool&) { return parseCoverpointMember(); });
+            TokenKind::CloseBrace, closeBrace, SyntaxKind::Coverpoint,
+            [this](SyntaxKind, bool&) { return parseCoverpointMember(); });
+
         return &factory.coverpoint(attributes, type, label, keyword, expr, openBrace, members,
                                    closeBrace, Token());
     }
@@ -1163,8 +1344,10 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
     auto semi = expect(TokenKind::Semicolon);
 
     Token endGroup;
-    auto members = parseMemberList<MemberSyntax>(TokenKind::EndGroupKeyword, endGroup,
-                                                 [this](bool&) { return parseCoverageMember(); });
+    auto members = parseMemberList<MemberSyntax>(
+        TokenKind::EndGroupKeyword, endGroup, SyntaxKind::CovergroupDeclaration,
+        [this](SyntaxKind, bool&) { return parseCoverageMember(); });
+
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
 
@@ -1187,7 +1370,9 @@ ConstraintBlockSyntax& Parser::parseConstraintBlock() {
     Token closeBrace;
     auto openBrace = expect(TokenKind::OpenBrace);
     auto members = parseMemberList<ConstraintItemSyntax>(
-        TokenKind::CloseBrace, closeBrace, [this](bool&) { return parseConstraintItem(false); });
+        TokenKind::CloseBrace, closeBrace, SyntaxKind::ConstraintBlock,
+        [this](SyntaxKind, bool&) { return parseConstraintItem(false); });
+
     return factory.constraintBlock(openBrace, members, closeBrace);
 }
 
@@ -1378,6 +1563,19 @@ DPIImportExportSyntax& Parser::parseDPIImportExport(AttrList attributes) {
     auto semi = expect(TokenKind::Semicolon);
     return factory.dPIImportExport(attributes, keyword, stringLiteral, property, name, equals,
                                    method, semi);
+}
+
+ElabSystemTaskSyntax* Parser::parseElabSystemTask(AttrList attributes) {
+    auto name = peek().valueText();
+    if (name != "$fatal"sv && name != "$error"sv && name != "$warning"sv && name != "$info"sv)
+        return nullptr;
+
+    auto nameToken = consume();
+    ArgumentListSyntax* argList = nullptr;
+    if (peek(TokenKind::OpenParenthesis))
+        argList = &parseArgumentList();
+
+    return &factory.elabSystemTask(attributes, nameToken, argList, expect(TokenKind::Semicolon));
 }
 
 AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declarationKind) {
@@ -1590,8 +1788,9 @@ MemberSyntax& Parser::parseClockingDeclaration(AttrList attributes) {
 
     Token semi = expect(TokenKind::Semicolon);
     Token endClocking;
-    auto members = parseMemberList<MemberSyntax>(TokenKind::EndClockingKeyword, endClocking,
-                                                 [this](bool&) { return parseClockingItem(); });
+    auto members = parseMemberList<MemberSyntax>(
+        TokenKind::EndClockingKeyword, endClocking, SyntaxKind::ClockingDeclaration,
+        [this](SyntaxKind, bool&) { return parseClockingItem(); });
 
     if (globalOrDefault.kind == TokenKind::GlobalKeyword && !members.empty())
         addDiag(diag::GlobalClockingEmpty, members[0]->getFirstToken().location());
@@ -1642,7 +1841,7 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
     parseList<isPossiblePortConnection, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, items,
         closeParen, RequireItems::False, diag::ExpectedPortConnection,
-        [this] { return &parsePortConnection(); });
+        [this] { return &parsePortConnection(); }, AllowEmpty::True);
 
     return factory.hierarchicalInstance(name, dimensions, openParen, items, closeParen);
 }
@@ -1683,6 +1882,63 @@ GateInstanceSyntax& Parser::parseGateInstance() {
         [this] { return &parseExpression(); });
 
     return factory.gateInstance(decl, openParen, items, closeParen);
+}
+
+void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {
+    // If this is an empty member with a missing semicolon, it was some kind
+    // of error that has already been reported so don't pile on here.
+    if (member.kind == SyntaxKind::EmptyMember) {
+        if (member.as<EmptyMemberSyntax>().semi.isMissing())
+            return;
+    }
+
+    auto error = [&](DiagCode code) {
+        SourceRange range = member.sourceRange();
+        addDiag(code, range.start()) << range;
+    };
+
+    switch (parentKind) {
+        case SyntaxKind::CompilationUnit:
+            if (!isAllowedInCompilationUnit(member.kind))
+                error(diag::NotAllowedInCU);
+            return;
+        case SyntaxKind::GenerateBlock:
+        case SyntaxKind::GenerateRegion:
+            if (!isAllowedInGenerate(member.kind))
+                error(diag::NotAllowedInGenerate);
+            return;
+        case SyntaxKind::ModuleDeclaration:
+            if (!isAllowedInModule(member.kind))
+                error(diag::NotAllowedInModule);
+            return;
+        case SyntaxKind::InterfaceDeclaration:
+            if (!isAllowedInInterface(member.kind))
+                error(diag::NotAllowedInInterface);
+            return;
+        case SyntaxKind::ProgramDeclaration:
+            if (!isAllowedInProgram(member.kind))
+                error(diag::NotAllowedInProgram);
+            return;
+        case SyntaxKind::PackageDeclaration:
+            if (!isAllowedInPackage(member.kind))
+                error(diag::NotAllowedInPackage);
+            return;
+        case SyntaxKind::ClockingItem:
+            if (!isAllowedInClocking(member.kind))
+                error(diag::NotAllowedInClocking);
+            return;
+
+        // Some kinds of parents already restrict the members they will parse
+        // so there's no need to check them here.
+        case SyntaxKind::ClassDeclaration:
+        case SyntaxKind::Coverpoint:
+        case SyntaxKind::CovergroupDeclaration:
+        case SyntaxKind::ConstraintBlock:
+        case SyntaxKind::ClockingDeclaration:
+            return;
+        default:
+            THROW_UNREACHABLE;
+    }
 }
 
 } // namespace slang

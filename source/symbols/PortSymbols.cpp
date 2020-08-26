@@ -499,7 +499,8 @@ public:
 
         bool hasConnections = false;
         for (auto conn : portConnections) {
-            bool isOrdered = conn->kind == SyntaxKind::OrderedPortConnection;
+            bool isOrdered = conn->kind == SyntaxKind::OrderedPortConnection ||
+                             conn->kind == SyntaxKind::EmptyPortConnection;
             if (!hasConnections) {
                 hasConnections = true;
                 usingOrdered = isOrdered;
@@ -510,7 +511,7 @@ public:
             }
 
             if (isOrdered) {
-                orderedConns.append(&conn->as<OrderedPortConnectionSyntax>());
+                orderedConns.append(conn);
             }
             else if (conn->kind == SyntaxKind::WildcardPortConnection) {
                 if (!std::exchange(hasWildcard, true)) {
@@ -572,10 +573,10 @@ public:
                 return emptyConnection(port);
             }
 
-            const OrderedPortConnectionSyntax& opc = *orderedConns[orderedIndex++];
-            auto attrs = AttributeSymbol::fromSyntax(opc.attributes, scope, lookupLocation);
-            if (opc.expr)
-                return createConnection(port, *opc.expr, attrs);
+            const PortConnectionSyntax& pc = *orderedConns[orderedIndex++];
+            auto attrs = AttributeSymbol::fromSyntax(pc.attributes, scope, lookupLocation);
+            if (pc.kind == SyntaxKind::OrderedPortConnection)
+                return createConnection(port, *pc.as<OrderedPortConnectionSyntax>().expr, attrs);
             else
                 return createConnection(port, port.defaultValue, attrs);
         }
@@ -637,9 +638,10 @@ public:
             span<const AttributeSymbol* const> attributes;
 
             if (orderedIndex < orderedConns.size()) {
-                const OrderedPortConnectionSyntax& opc = *orderedConns[orderedIndex];
-                expr = opc.expr;
-                attributes = AttributeSymbol::fromSyntax(opc.attributes, scope, lookupLocation);
+                const PortConnectionSyntax& pc = *orderedConns[orderedIndex];
+                attributes = AttributeSymbol::fromSyntax(pc.attributes, scope, lookupLocation);
+                if (pc.kind == SyntaxKind::OrderedPortConnection)
+                    expr = pc.as<OrderedPortConnectionSyntax>().expr;
             }
 
             orderedIndex++;
@@ -938,7 +940,7 @@ private:
     const InstanceSymbol& instance;
     Compilation& comp;
     SmallVectorSized<ConstantRange, 4> instanceDims;
-    SmallVectorSized<const OrderedPortConnectionSyntax*, 8> orderedConns;
+    SmallVectorSized<const PortConnectionSyntax*, 8> orderedConns;
     SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
     span<const AttributeSymbol* const> wildcardAttrs;
     LookupLocation lookupLocation;

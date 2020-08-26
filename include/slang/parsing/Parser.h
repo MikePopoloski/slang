@@ -156,8 +156,8 @@ private:
     NameSyntax& parseName(bitmask<NameOptions> options);
     NameSyntax& parseNamePart(bitmask<NameOptions> options);
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
-    ArgumentListSyntax& parseArgumentList(bool allowMinTypMax = false);
-    ArgumentSyntax& parseArgument(bool allowMinTypMax);
+    ArgumentListSyntax& parseArgumentList(bool isParamAssignment = false);
+    ArgumentSyntax& parseArgument(bool isParamAssignment);
     PatternSyntax& parsePattern();
     AssignmentPatternExpressionSyntax& parseAssignmentPatternExpression(DataTypeSyntax* type);
     AssignmentPatternItemSyntax& parseAssignmentPatternItem(ExpressionSyntax* key);
@@ -222,6 +222,7 @@ private:
     PackageImportItemSyntax& parsePackageImportItem();
     NetTypeDeclarationSyntax& parseNetTypeDecl(AttrList attributes);
     DPIImportExportSyntax& parseDPIImportExport(AttrList attributes);
+    ElabSystemTaskSyntax* parseElabSystemTask(AttrList attributes);
     AssertionItemPortListSyntax* parseAssertionItemPortList(TokenKind declarationKind);
     PropertyDeclarationSyntax& parsePropertyDeclaration(AttrList attributes);
     SequenceDeclarationSyntax& parseSequenceDeclaration(AttrList attributes);
@@ -284,11 +285,14 @@ private:
     span<TokenOrSyntax> parseDeclarators(Token& semi, bool allowMinTypMax = false);
 
     template<typename TMember, typename TParseFunc>
-    span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);
+    span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, SyntaxKind parentKind,
+                                   TParseFunc&& parseFunc);
 
     template<typename IsItemFunc, typename ParseItemFunc>
     bool parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& itemBuffer,
                         IsItemFunc&& isItem, ParseItemFunc&& parseItem);
+
+    span<Token> parseClassQualifiers(bool& isPureOrExtern);
 
     // ---- Lookahead routines, for determining which kind of syntax to parse ----
 
@@ -339,6 +343,9 @@ private:
     void checkBlockNames(Token nameToken, const NamedBlockClauseSyntax* endBlock);
     void checkBlockNames(const NamedBlockClauseSyntax* beginBlock,
                          const NamedBlockClauseSyntax* endBlock, const NamedLabelSyntax* label);
+
+    // Report errors for invalid members in specific kinds of blocks.
+    void checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind);
 
     // ---- Member variables ----
 

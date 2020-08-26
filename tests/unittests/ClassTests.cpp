@@ -10,6 +10,7 @@ class Packet;
     integer status;
     typedef enum { ERR_OVERFLOW = 10, ERR_UNDERFLOW = 1123} PCKT_TYPE;
     const integer buffer_size = 100;
+    parameter int bar = 99;
 
     function new();
         command = 4'd0;
@@ -64,6 +65,56 @@ TEST_CASE("Class handle expressions") {
     CHECK(typeof("p.buffer_size") == "integer");
     CHECK(typeof("p.current_status()") == "integer");
     CHECK(typeof("p.clean") == "void");
+    CHECK(typeof("p.ERR_OVERFLOW") ==
+          "enum{ERR_OVERFLOW=32'sd10,ERR_UNDERFLOW=32'sd1123}Packet::e$1");
+    CHECK(typeof("p.bar") == "int");
 
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Class qualifier error checking") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    const static const int i = 4;
+    protected local int j;
+    const randc int l = 6;
+
+    virtual pure function foo1;
+    local extern function foo2;
+    pure function foo3;
+    pure local function foo4;
+    virtual static function foo5; endfunction
+
+    virtual int m;
+    static automatic int n;
+    static var static int o;
+
+    const function foo5; endfunction
+    static task static foo6; endtask
+
+    static parameter int x = 4;
+    import p::*;
+
+    // This should be fine
+    pure virtual protected function func1;
+endclass
+)");
+
+    auto& diags = tree->diagnostics();
+    REQUIRE(diags.size() == 15);
+    CHECK(diags[0].code == diag::DuplicateQualifier);
+    CHECK(diags[1].code == diag::QualifierConflict);
+    CHECK(diags[2].code == diag::QualifierConflict);
+    CHECK(diags[3].code == diag::QualifierNotFirst);
+    CHECK(diags[4].code == diag::QualifierNotFirst);
+    CHECK(diags[5].code == diag::PureRequiresVirtual);
+    CHECK(diags[6].code == diag::PureRequiresVirtual);
+    CHECK(diags[7].code == diag::QualifierConflict);
+    CHECK(diags[8].code == diag::InvalidPropertyQualifier);
+    CHECK(diags[9].code == diag::QualifierConflict);
+    CHECK(diags[10].code == diag::DuplicateQualifier);
+    CHECK(diags[11].code == diag::InvalidMethodQualifier);
+    CHECK(diags[12].code == diag::MethodStaticLifetime);
+    CHECK(diags[13].code == diag::InvalidQualifierForMember);
+    CHECK(diags[14].code == diag::NotAllowedInClass);
 }

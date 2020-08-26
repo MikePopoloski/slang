@@ -7,9 +7,12 @@
 #include "slang/symbols/MemberSymbols.h"
 
 #include "slang/binding/Expression.h"
+#include "slang/binding/FormatHelpers.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -522,6 +525,125 @@ void GateSymbol::serializeTo(ASTSerializer& serializer) const {
 
 void GateArraySymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("range", range.toString());
+}
+
+ElabSystemTaskSymbol::ElabSystemTaskSymbol(ElabSystemTaskKind taskKind, SourceLocation loc) :
+    Symbol(SymbolKind::ElabSystemTask, "", loc), taskKind(taskKind) {
+}
+
+ElabSystemTaskSymbol& ElabSystemTaskSymbol::fromSyntax(Compilation& compilation,
+                                                       const ElabSystemTaskSyntax& syntax) {
+    // Just create the symbol now. The diagnostic will be issued later
+    // when someone visit the symbol and asks for it.
+    auto taskKind = SemanticFacts::getElabSystemTaskKind(syntax.name);
+    auto result = compilation.emplace<ElabSystemTaskSymbol>(taskKind, syntax.name.location());
+    result->setSyntax(syntax);
+    return *result;
+}
+
+string_view ElabSystemTaskSymbol::getMessage() const {
+    if (message)
+        return *message;
+
+    auto syntax = getSyntax();
+    ASSERT(syntax);
+
+    auto empty = [&] {
+        message = ""sv;
+        return *message;
+    };
+
+    auto argSyntax = syntax->as<ElabSystemTaskSyntax>().arguments;
+    if (!argSyntax)
+        return empty();
+
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    // Bind all arguments.
+    auto& comp = scope->getCompilation();
+    BindContext bindCtx(*scope, LookupLocation::before(*this), BindFlags::Constant);
+    SmallVectorSized<const Expression*, 4> args;
+    for (auto arg : argSyntax->parameters) {
+        switch (arg->kind) {
+            case SyntaxKind::OrderedArgument: {
+                const auto& oa = arg->as<OrderedArgumentSyntax>();
+                args.append(&Expression::bind(*oa.expr, bindCtx));
+                break;
+            }
+            case SyntaxKind::NamedArgument:
+                bindCtx.addDiag(diag::NamedArgNotAllowed, arg->sourceRange());
+                return empty();
+            case SyntaxKind::EmptyArgument:
+                args.append(
+                    comp.emplace<EmptyArgumentExpression>(comp.getVoidType(), arg->sourceRange()));
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+
+        if (args.back()->bad())
+            return empty();
+    }
+
+    // If this is a $fatal task, check the finish number. We don't use this
+    // for anything, but enforce that it's 0, 1, or 2.
+    span<const Expression* const> argSpan = args;
+    if (taskKind == ElabSystemTaskKind::Fatal && !argSpan.empty()) {
+        if (!FmtHelpers::checkFinishNum(bindCtx, *argSpan[0]))
+            return empty();
+
+        argSpan = argSpan.subspan(1);
+    }
+
+    // Check all arguments.
+    if (!FmtHelpers::checkDisplayArgs(bindCtx, argSpan))
+        return empty();
+
+    // Format the message to string.
+    EvalContext evalCtx(comp);
+    optional<std::string> str = FmtHelpers::formatDisplay(*scope, evalCtx, argSpan);
+    if (!str)
+        return empty();
+
+    str->insert(0, ": ");
+
+    // Copy the string into permanent memory.
+    auto mem = comp.allocate(str->size(), alignof(char));
+    memcpy(mem, str->data(), str->size());
+
+    message = string_view(reinterpret_cast<char*>(mem), str->size());
+    return *message;
+}
+
+void ElabSystemTaskSymbol::issueDiagnostic() const {
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    DiagCode code;
+    switch (taskKind) {
+        case ElabSystemTaskKind::Fatal:
+            code = diag::FatalTask;
+            break;
+        case ElabSystemTaskKind::Error:
+            code = diag::ErrorTask;
+            break;
+        case ElabSystemTaskKind::Warning:
+            code = diag::WarningTask;
+            break;
+        case ElabSystemTaskKind::Info:
+            code = diag::InfoTask;
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    scope->addDiag(code, location) << getMessage();
+}
+
+void ElabSystemTaskSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("taskKind", toString(taskKind));
+    serializer.write("message", getMessage());
 }
 
 } // namespace slang
