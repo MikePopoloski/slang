@@ -1397,6 +1397,11 @@ localparam b = int'(a);
 localparam string str = "hi";
 typedef struct { shortint a[]; byte b[-2:-4]; } c;
 localparam c d = c'(str);
+)",
+        R"(
+localparam string str = "hello";
+typedef struct { shortint a[]; byte b[1:0]; } c;
+localparam c d = c'(str);
 )"
     };
     num = sizeof(eval) / sizeof(const char*);

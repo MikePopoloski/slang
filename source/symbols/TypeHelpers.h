@@ -31,7 +31,7 @@ static std::pair<bitwidth_t, bitwidth_t> linearCoefficients(const Type& type,
     if (width > 0)
         return { 0, width };
     if (type.isString())
-        return { 8, 0 };
+        return { destination == 1 ? 0 : CHAR_BIT, 0 };
     bitwidth_t gcd = 0;
     // TODO: bitwidth_t overflow
     if (type.isUnpackedArray()) {
@@ -92,38 +92,42 @@ static SVInt slicePacked(PackVector::const_iterator& iter, bitwidth_t& bit, bitw
                 break;
         }
         else {
-            if (bit < cp->str().length() * 8)
+            if (bit < cp->str().length() * CHAR_BIT)
                 break;
         }
         bit = 0;
         iter++;
     }
-    auto lsb = bit;
     if (cp->isInteger()) {
         const auto& ci = cp->integer();
-        auto msb = std::min(width, ci.getBitWidth());
-        bit += msb;
-        return ci.slice(static_cast<int32_t>(msb - 1), static_cast<int32_t>(lsb));
+        auto msb = ci.getBitWidth() - bit - 1;
+        auto lsb = std::min(bit + width, ci.getBitWidth());
+        lsb = ci.getBitWidth() - lsb;
+        bit += msb - lsb + 1;
+        return ci.slice(static_cast<int32_t>(msb), static_cast<int32_t>(lsb));
     }
     else {
         std::string_view str = cp->str();
-        auto byte0 = bit / 8;
-        auto byte1 = (bit + width - 1) / 8;
+        auto byte0 = bit / CHAR_BIT;
+        auto byte1 = (bit + width - 1) / CHAR_BIT;
         bitwidth_t len;
         if (byte1 < str.length())
             len = byte1 - byte0 + 1;
         else {
             len = static_cast<bitwidth_t>(str.length() - byte0);
-            width = len * 8 - bit % 8;
+            width = len * CHAR_BIT - bit % CHAR_BIT;
         }
         SmallVectorSized<byte, 8> buffer;
         const auto substr = str.substr(byte0, len);
         for (auto it = substr.rbegin(); it != substr.rend(); it++)
             buffer.append(static_cast<byte>(*it));
-        auto ci = SVInt(width, span(buffer), false);
+        len *= CHAR_BIT;
+        auto ci = SVInt(len, span(buffer), false);
+        auto msb = len - bit % CHAR_BIT - 1;
+        auto lsb = CHAR_BIT - 1 - (bit + width - 1) % CHAR_BIT;
         bit += width;
-        if (lsb % 8 || (lsb + width) % 8)
-            return ci.slice(static_cast<int32_t>(width + 7 - (bit + width - 1) % 8), lsb % 8);
+        if (lsb > 0 || msb < len - 1)
+            return ci.slice(static_cast<int32_t>(msb), static_cast<int32_t>(lsb));
         else
             return ci;
     }
@@ -150,7 +154,7 @@ static ConstantValue unpack(const Type& type, PackVector::const_iterator& iter, 
         if (!dynamic)
             return std::string();
         auto width = dynamic;
-        ASSERT(width % 8 == 0);
+        ASSERT(width % CHAR_BIT == 0);
         dynamic = 0;
         SmallVectorSized<SVInt, 8> buffer;
         while (width > 0) {
