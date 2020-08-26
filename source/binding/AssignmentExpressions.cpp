@@ -551,15 +551,14 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
     if (!isImplicit && !type->isCastCompatible(*operand().type, false)) {
         // bit-stream casting
         auto value = operand().eval(context);
-        if (!(value == nullptr)) {
-            auto v1 = type->bitstreamCast(value);
-            if (v1 == nullptr) {
-                auto& diag = context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange);
-                diag << value.bitstreamWidth() << *type;
-            }
-            return v1;
+        if (value == nullptr)
+            return value;
+        auto v1 = type->bitstreamCast(value);
+        if (v1 == nullptr) {
+            auto& diag = context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange);
+            diag << value.bitstreamWidth() << *type;
         }
-        return value;
+        return v1;
     }
     return convert(context, *operand().type, *type, sourceRange, operand().eval(context));
 }

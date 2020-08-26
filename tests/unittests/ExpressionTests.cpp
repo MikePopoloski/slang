@@ -1301,7 +1301,7 @@ endmodule
     CHECK(diags[0].code == diag::BadAssignment);
 }
 
-auto testBitsNonFixedSizeArray(const std::string& text, DiagCode code = DiagCode()) {
+auto testBitstream(const std::string& text, DiagCode code = DiagCode()) {
     const auto& fullText = "module Top; " + text + " endmodule";
     auto tree = SyntaxTree::fromText(string_view(fullText));
 
@@ -1329,9 +1329,9 @@ TEST_CASE("$bits on non-fixed-size array") {
 
     std::string typeDef = "typedef ";
     for (const auto& type : types) {
-        CHECK(testBitsNonFixedSizeArray(type + intBits) == 0);
-        CHECK(testBitsNonFixedSizeArray(type + paramBits) > 0);
-        CHECK(testBitsNonFixedSizeArray(typeDef + type + paramBits, diag::QueryOnDynamicType) == 1);
+        CHECK(testBitstream(type + intBits) == 0);
+        CHECK(testBitstream(type + paramBits) > 0);
+        CHECK(testBitstream(typeDef + type + paramBits, diag::QueryOnDynamicType) == 1);
     }
 }
 
@@ -1358,7 +1358,7 @@ dest_t b = dest_t'(a);
     };
 
     for (const auto& code : illegal)
-        CHECK(testBitsNonFixedSizeArray(code, diag::BadConversion) == 1);
+        CHECK(testBitstream(code, diag::BadConversion) == 1);
 
     std::string legal[] = {
         R"(
@@ -1387,7 +1387,7 @@ Packet p = Packet'( channel[0 : 1] );
     };
 
     for (const auto& code : legal)
-        CHECK(testBitsNonFixedSizeArray(code) == 0);
+        CHECK(testBitstream(code) == 0);
 
     std::string eval[] = {
         R"(
@@ -1408,5 +1408,8 @@ localparam c d = c'(str);
     };
 
     for (const auto& code : eval)
-        CHECK(testBitsNonFixedSizeArray(code, diag::ConstEvalBitstreamCastSize) == 1);
+        CHECK(testBitstream(code, diag::ConstEvalBitstreamCastSize) == 1);
+
+    CHECK(testBitstream("byte a[2]; localparam b = shortint'(a);",
+                        diag::ConstEvalNonConstVariable) == 1);
 }

@@ -104,6 +104,7 @@ static SVInt slicePacked(PackVector::const_iterator& iter, bitwidth_t& bit, bitw
         auto lsb = std::min(bit + width, ci.getBitWidth());
         lsb = ci.getBitWidth() - lsb;
         bit += msb - lsb + 1;
+        ASSERT(bit <= ci.getBitWidth());
         return ci.slice(static_cast<int32_t>(msb), static_cast<int32_t>(lsb));
     }
     else {
@@ -126,6 +127,7 @@ static SVInt slicePacked(PackVector::const_iterator& iter, bitwidth_t& bit, bitw
         auto msb = len - bit % CHAR_BIT - 1;
         auto lsb = CHAR_BIT - 1 - (bit + width - 1) % CHAR_BIT;
         bit += width;
+        ASSERT(bit <= str.length() * CHAR_BIT);
         if (lsb > 0 || msb < len - 1)
             return ci.slice(static_cast<int32_t>(msb), static_cast<int32_t>(lsb));
         else
@@ -141,6 +143,7 @@ static ConstantValue unpack(const Type& type, PackVector::const_iterator& iter, 
         SmallVectorSized<SVInt, 8> buffer;
         while (width > 0) {
             auto ci = slicePacked(iter, bit, width);
+            ASSERT(ci.getBitWidth() <= width);
             width -= ci.getBitWidth();
             if (!type.isFourState())
                 ci.flattenUnknowns();
@@ -159,6 +162,7 @@ static ConstantValue unpack(const Type& type, PackVector::const_iterator& iter, 
         SmallVectorSized<SVInt, 8> buffer;
         while (width > 0) {
             auto ci = slicePacked(iter, bit, width);
+            ASSERT(ci.getBitWidth() <= width);
             width -= ci.getBitWidth();
             ci.flattenUnknowns();
             buffer.emplace(ci);

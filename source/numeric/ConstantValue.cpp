@@ -428,8 +428,10 @@ bitwidth_t ConstantValue::bitstreamWidth() const {
 
 using PackVector = decltype(std::declval<ConstantValue>().bitstream());
 static void pack(const ConstantValue& value, PackVector& packed) {
-    if (value.isInteger() || value.isString())
-        packed.push_back(&value);
+    if (value.isInteger() || value.isString()) {
+        if (value.isInteger() || !value.str().empty())
+            packed.push_back(&value);
+    }
     else if (value.isUnpacked()) {
         for (const auto& cv : value.elements())
             pack(cv, packed);
