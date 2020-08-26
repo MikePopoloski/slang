@@ -769,7 +769,6 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
                                                                 range);
         }
         default:
-            // TODO: support class params
             auto& diag = context.addDiag(diag::InvalidClassAccess, selector.dotLocation);
             diag << selector.nameRange;
             diag << expr.sourceRange;
@@ -799,6 +798,13 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = value().eval(context);
     if (!cv)
         return nullptr;
+
+    // If we're picking a parameter or enum value from a class, we don't need to
+    // actually go through the class handle.
+    if (member.kind == SymbolKind::Parameter)
+        return member.as<ParameterSymbol>().getValue();
+    else if (member.kind == SymbolKind::EnumValue)
+        return member.as<EnumValueSymbol>().getValue();
 
     // TODO: handle unpacked unions
     if (value().type->isUnpackedStruct())

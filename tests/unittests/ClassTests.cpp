@@ -118,3 +118,45 @@ endclass
     CHECK(diags[13].code == diag::InvalidQualifierForMember);
     CHECK(diags[14].code == diag::NotAllowedInClass);
 }
+
+TEST_CASE("Class parameters in constants") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    parameter int p = 4;
+    enum { ASDF = 5 } asdf;
+endclass
+
+module m;
+    C c;
+    localparam int i = c.p;
+    localparam int j = c.ASDF;
+
+    function int f;
+        C c2;
+        return c2.p;
+    endfunction
+
+    function int f2;
+        C c2;
+        return c2.ASDF;
+    endfunction
+
+    localparam int k = f();
+    localparam int l = f2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& k = compilation.getRoot().lookupName<ParameterSymbol>("m.k");
+    CHECK(k.getValue().integer() == 4);
+
+    auto& l = compilation.getRoot().lookupName<ParameterSymbol>("m.l");
+    CHECK(l.getValue().integer() == 5);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
+}
