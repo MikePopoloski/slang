@@ -122,7 +122,7 @@ static SVInt slicePacked(PackVector::const_iterator& iter, bitwidth_t& bit, bitw
         for (auto it = substr.rbegin(); it != substr.rend(); it++)
             buffer.append(static_cast<byte>(*it));
         len *= CHAR_BIT;
-        auto ci = SVInt(len, span(buffer), false);
+        auto ci = SVInt(len, span<const byte>(buffer), false);
         auto msb = len - bit % CHAR_BIT - 1;
         auto lsb = CHAR_BIT - 1 - (bit + width - 1) % CHAR_BIT;
         bit += width;
