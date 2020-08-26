@@ -1309,13 +1309,14 @@ auto testBitsNonFixedSizeArray(const std::string& text, DiagCode code = DiagCode
     auto& diags = compilation.getAllDiagnostics();
     if (!diags.empty() && code.getSubsystem() != DiagSubsystem::Invalid)
         CHECK(diags.back().code == code);
+
     return diags.size();
 }
 
 TEST_CASE("$bits on non-fixed-size array") {
     std::string intBits = "int b = $bits(a);";
     std::string paramBits = "localparam b = $bits(a);";
-    const char* types[] = { "string a;",
+    std::string types[] = { "string a;",
                             "logic[1:0] a[];",
                             "bit a[$];",
                             "byte a[int];",
@@ -1324,20 +1325,20 @@ TEST_CASE("$bits on non-fixed-size array") {
                             "bit a[1:0][];",
                             "bit a[1:0][$];",
                             "bit a[1:0][int];" };
-    int num = sizeof(types) / sizeof(const char*);
+
     std::string typeDef = "typedef ";
-    for (int i = 0; i < num; i++) {
-        CHECK(testBitsNonFixedSizeArray(types[i] + intBits) == 0);
-        CHECK(testBitsNonFixedSizeArray(types[i] + paramBits) > 0);
-        CHECK(testBitsNonFixedSizeArray(typeDef + types[i] + paramBits, diag::QueryOnDynamicType) ==
-              1);
+    for (const auto& type : types) {
+        CHECK(testBitsNonFixedSizeArray(type + intBits) == 0);
+        CHECK(testBitsNonFixedSizeArray(type + paramBits) > 0);
+        CHECK(testBitsNonFixedSizeArray(typeDef + type + paramBits, diag::QueryOnDynamicType) == 1);
     }
 }
 
 TEST_CASE("bit-stream cast") {
     std::string intBits = "int b = $bits(a);";
     std::string paramBits = "localparam b = $bits(a);";
-    const char* illegal[] = {
+
+    std::string illegal[] = {
         R"(
 // Illegal conversion from 24-bit struct to 32 bit int - compile time error
 struct {bit[7:0] a; shortint b;} a;
@@ -1354,11 +1355,11 @@ dest_t b = dest_t'(a);
         asso x = asso'(64'b0);
 )"
     };
-    int num = sizeof(illegal) / sizeof(const char*);
-    for (int i = 0; i < num; i++)
-        CHECK(testBitsNonFixedSizeArray(illegal[i], diag::BadConversion) == 1);
 
-    const char* legal[] = {
+    for (const auto& code : illegal)
+        CHECK(testBitsNonFixedSizeArray(code, diag::BadConversion) == 1);
+
+    std::string legal[] = {
         R"(
 // Illegal conversion from 20-bit struct to int (32 bits) - run time error
 struct {bit a[$]; shortint b;} a = '{{1,2,3,4}, 67};
@@ -1383,11 +1384,11 @@ channel_type channel = channel_type'(genPkt);
 Packet p = Packet'( channel[0 : 1] );
 )"
     };
-    num = sizeof(legal) / sizeof(const char*);
-    for (int i = 0; i < num; i++)
-        CHECK(testBitsNonFixedSizeArray(legal[i]) == 0);
 
-    const char* eval[] = {
+    for (const auto& code : legal)
+        CHECK(testBitsNonFixedSizeArray(code) == 0);
+
+    std::string eval[] = {
         R"(
 // Illegal conversion from 20-bit struct to int (32 bits) - run time error
 localparam struct {bit a[$]; shortint b;} a = '{{1,2,3,4}, 67};
@@ -1404,7 +1405,7 @@ typedef struct { shortint a[]; byte b[1:0]; } c;
 localparam c d = c'(str);
 )"
     };
-    num = sizeof(eval) / sizeof(const char*);
-    for (int i = 0; i < num; i++)
-        CHECK(testBitsNonFixedSizeArray(eval[i], diag::ConstEvalBitstreamCastSize) == 1);
+
+    for (const auto& code : eval)
+        CHECK(testBitsNonFixedSizeArray(code, diag::ConstEvalBitstreamCastSize) == 1);
 }

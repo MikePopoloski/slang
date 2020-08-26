@@ -33,7 +33,7 @@ static std::pair<bitwidth_t, bitwidth_t> linearCoefficients(const Type& type,
     if (type.isString())
         return { destination == 1 ? 0 : CHAR_BIT, 0 };
     bitwidth_t gcd = 0;
-    // TODO: bitwidth_t overflow
+    // TODO: check for overflow
     if (type.isUnpackedArray()) {
         auto [gcd1, width1] = linearCoefficients(*type.getArrayElementType(), destination);
         const auto& ct = type.getCanonicalType();
