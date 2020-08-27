@@ -150,9 +150,6 @@ public:
     /// Gets the size of this value when converted to a bitstream.
     bitwidth_t bitstreamWidth() const;
 
-    /// Performs pack operation to create a bit stream
-    std::vector<const ConstantValue*> bitstream() const;
-
     static const ConstantValue Invalid;
 
     friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);

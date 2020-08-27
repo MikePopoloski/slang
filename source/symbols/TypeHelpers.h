@@ -1,4 +1,3 @@
-
 //------------------------------------------------------------------------------
 // TypeHelpers.h
 // Contains internal helper functions for Type implementations
@@ -78,11 +77,39 @@ static ConstantValue constContainer(const Type& type, span<const ConstantValue> 
         case SymbolKind::QueueType:
             return SVQueue(elems.cbegin(), elems.cend());
         default:
-            return nullptr;
+            THROW_UNREACHABLE;
     }
 }
 
-using PackVector = decltype(std::declval<ConstantValue>().bitstream());
+using PackVector = std::vector<const ConstantValue*>;
+
+/// Performs pack operation to create a bit stream
+static void pack(const ConstantValue& value, PackVector& packed) {
+    if (value.isInteger())
+        packed.push_back(&value);
+    else if (value.isString()) {
+        if (!value.str().empty())
+            packed.push_back(&value);
+    }
+    else if (value.isUnpacked()) {
+        for (const auto& cv : value.elements())
+            pack(cv, packed);
+    }
+    else if (value.isMap()) {
+        for (const auto& kv : *value.map()) {
+            pack(kv.second, packed);
+        }
+    }
+    else if (value.isQueue()) {
+        for (const auto& cv : *value.queue())
+            pack(cv, packed);
+    }
+    else {
+        // TODO: classes
+        THROW_UNREACHABLE;
+    }
+}
+
 static SVInt slicePacked(PackVector::const_iterator& iter, bitwidth_t& bit, bitwidth_t width) {
     const ConstantValue* cp;
     for (;;) {
@@ -109,17 +136,17 @@ static SVInt slicePacked(PackVector::const_iterator& iter, bitwidth_t& bit, bitw
     }
     else {
         std::string_view str = cp->str();
-        auto byte0 = bit / CHAR_BIT;
-        auto byte1 = (bit + width - 1) / CHAR_BIT;
+        auto firstByte = bit / CHAR_BIT;
+        auto lastByte = (bit + width - 1) / CHAR_BIT;
         bitwidth_t len;
-        if (byte1 < str.length())
-            len = byte1 - byte0 + 1;
+        if (lastByte < str.length())
+            len = lastByte - firstByte + 1;
         else {
-            len = static_cast<bitwidth_t>(str.length() - byte0);
+            len = static_cast<bitwidth_t>(str.length() - firstByte);
             width = len * CHAR_BIT - bit % CHAR_BIT;
         }
         SmallVectorSized<byte, 8> buffer;
-        const auto substr = str.substr(byte0, len);
+        const auto substr = str.substr(firstByte, len);
         for (auto it = substr.rbegin(); it != substr.rend(); it++)
             buffer.append(static_cast<byte>(*it));
         len *= CHAR_BIT;
@@ -138,42 +165,43 @@ static SVInt slicePacked(PackVector::const_iterator& iter, bitwidth_t& bit, bitw
 /// Performs unpack operation on a bit stream
 static ConstantValue unpack(const Type& type, PackVector::const_iterator& iter, bitwidth_t& bit,
                             bitwidth_t& dynamic) {
-    if (type.isIntegral()) {
-        auto width = type.getBitWidth();
+
+    auto concatPacked = [&](bitwidth_t width, bool isFourState) {
         SmallVectorSized<SVInt, 8> buffer;
         while (width > 0) {
             auto ci = slicePacked(iter, bit, width);
             ASSERT(ci.getBitWidth() <= width);
             width -= ci.getBitWidth();
-            if (!type.isFourState())
+            if (!isFourState)
                 ci.flattenUnknowns();
             buffer.emplace(ci);
         }
-        auto cc = SVInt::concat(span<SVInt const>(buffer.begin(), buffer.end()));
+        return SVInt::concat(span<SVInt const>(buffer.begin(), buffer.end()));
+    };
+
+    if (type.isIntegral()) {
+        auto cc = concatPacked(type.getBitWidth(), type.isFourState());
         cc.setSigned(type.isSigned());
         return cc;
     }
+
     if (type.isString()) {
         if (!dynamic)
             return std::string();
         auto width = dynamic;
         ASSERT(width % CHAR_BIT == 0);
         dynamic = 0;
-        SmallVectorSized<SVInt, 8> buffer;
-        while (width > 0) {
-            auto ci = slicePacked(iter, bit, width);
-            ASSERT(ci.getBitWidth() <= width);
-            width -= ci.getBitWidth();
-            ci.flattenUnknowns();
-            buffer.emplace(ci);
-        }
-        return ConstantValue(SVInt::concat(span<SVInt const>(buffer.begin(), buffer.end())))
-            .convertToStr();
+        return ConstantValue(concatPacked(width, false)).convertToStr();
     }
+
     if (type.isUnpackedArray()) {
         const auto& ct = type.getCanonicalType();
         SmallVectorSized<ConstantValue, 16> buffer;
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType) {
+            // dynamic is the remaining size: For unbounded dynamically sized types, the conversion
+            // process is greedy: adjust the size of the first dynamically sized item in the
+            // destination to the remaining size; any remaining dynamically sized items are left
+            // empty.
             if (dynamic > 0) {
                 auto elemWidth = type.getArrayElementType()->bitstreamWidth();
                 if (!elemWidth)
@@ -193,6 +221,7 @@ static ConstantValue unpack(const Type& type, PackVector::const_iterator& iter, 
         }
         return constContainer(ct, span<const ConstantValue>(buffer));
     }
+
     if (type.isUnpackedStruct()) {
         SmallVectorSized<ConstantValue, 16> buffer;
         const auto& ct = type.getCanonicalType();
@@ -201,6 +230,7 @@ static ConstantValue unpack(const Type& type, PackVector::const_iterator& iter, 
             buffer.emplace(unpack(field.getType(), iter, bit, dynamic));
         return constContainer(ct, span<const ConstantValue>(buffer));
     }
+
     // TODO: classes
     return nullptr;
 }

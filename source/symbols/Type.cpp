@@ -546,12 +546,13 @@ ConstantValue Type::bitstreamCast(const ConstantValue& value) const {
             dynmaic = srcSize - fixed2;
         }
     }
-    const auto cv0 = value.bitstream();
-    auto iter = cv0.cbegin();
+    PackVector packed;
+    pack(value, packed);
+    auto iter = packed.cbegin();
     const auto cv = unpack(*this, iter, bit, dynmaic);
     ASSERT(!dynmaic && bit == ((*iter)->isInteger() ? (*iter)->integer().getBitWidth()
                                                     : (*iter)->str().length() * 8));
-    ASSERT(iter != cv0.cend() && ++iter == cv0.cend());
+    ASSERT(iter != packed.cend() && ++iter == packed.cend());
     return cv;
 }
 
