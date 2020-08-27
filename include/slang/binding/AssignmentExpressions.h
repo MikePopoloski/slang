@@ -69,11 +69,12 @@ struct SignedCastExpressionSyntax;
 class ConversionExpression : public Expression {
 public:
     bool isImplicit;
+    bool isPropagated;
 
     ConversionExpression(const Type& type, bool isImplicit, Expression& operand,
-                         SourceRange sourceRange) :
+                         SourceRange sourceRange, bool isPropagated = false) :
         Expression(ExpressionKind::Conversion, type, sourceRange),
-        isImplicit(isImplicit), operand_(&operand) {}
+        isImplicit(isImplicit), isPropagated(isPropagated), operand_(&operand) {}
 
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }

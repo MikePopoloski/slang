@@ -1684,3 +1684,21 @@ typedef struct { logic[-2:5] a[][]; string b; bit c[$]; } f;
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Mixed unknowns or signedness") {
+    ScriptSession session;
+
+    // logical and reduction operators on mixed unknowns
+    CHECK(session.eval("! 3'b0x1").integer() == 0);
+    CHECK(session.eval("| 3'b0x1").integer() == 1);
+    CHECK(session.eval("& 3'b0x1").integer() == 0);
+    CHECK_THAT(session.eval("& 3'bx1").integer(), exactlyEquals(SVInt(logic_t::x)));
+    CHECK(session.eval("3'b0x1 || 1'b0").integer() == 1);
+    CHECK(session.eval("3'b0x1 && 1'b1").integer() == 1);
+
+    // propagated signed extension
+    CHECK(session.eval("1'b0 ? 7'd100: 3'sb101").integer() == 5);
+    // CHECK(session.eval("2'b1x ?16'h1234:16'h7890").integer() == 4660);
+
+    NO_SESSION_ERRORS;
+}

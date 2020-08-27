@@ -861,7 +861,7 @@ SVInt SVInt::pow(const SVInt& rhs) const {
 
 logic_t SVInt::reductionAnd() const {
     if (unknownFlag)
-        return logic_t::x;
+        return countZeros() > 0 ? logic_t(false) : logic_t::x;
 
     uint64_t mask;
     bitwidth_t bitsInMsw;
@@ -880,7 +880,7 @@ logic_t SVInt::reductionAnd() const {
 
 logic_t SVInt::reductionOr() const {
     if (unknownFlag)
-        return logic_t::x;
+        return countOnes() > 0 ? logic_t(true) : logic_t::x;
 
     if (isSingleWord())
         return logic_t(val != 0);

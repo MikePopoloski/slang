@@ -434,7 +434,7 @@ public:
 
     SVInt operator-() const;
     SVInt operator~() const;
-    logic_t operator!() const { return *this == 0; }
+    logic_t operator!() const { return !reductionOr(); }
 
     SVInt operator+(const SVInt& rhs) const;
     SVInt operator-(const SVInt& rhs) const;
@@ -459,8 +459,8 @@ public:
     logic_t operator<=(const SVInt& rhs) const { return (*this < rhs) || (*this == rhs); }
     logic_t operator>(const SVInt& rhs) const { return !(*this <= rhs); }
     logic_t operator>=(const SVInt& rhs) const { return !(*this < rhs); }
-    logic_t operator&&(const SVInt& rhs) const { return *this != 0 && rhs != 0; }
-    logic_t operator||(const SVInt& rhs) const { return *this != 0 || rhs != 0; }
+    logic_t operator&&(const SVInt& rhs) const { return reductionOr() && rhs.reductionOr(); }
+    logic_t operator||(const SVInt& rhs) const { return reductionOr() || rhs.reductionOr(); }
 
     logic_t operator[](const SVInt& index) const;
     logic_t operator[](int32_t index) const;

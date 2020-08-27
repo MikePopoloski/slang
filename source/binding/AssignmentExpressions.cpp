@@ -103,15 +103,15 @@ bool isSameEnum(const Expression& expr, const Type& enumType) {
 namespace slang {
 
 Expression& Expression::implicitConversion(const BindContext& context, const Type& targetType,
-                                           Expression& expr) {
+                                           Expression& expr, bool isPropagated) {
     ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
            ((targetType.isString() || targetType.isByteArray()) && expr.isImplicitString()) ||
            (targetType.isEnum() && isSameEnum(expr, targetType)));
 
     Expression* result = &expr;
     selfDetermined(context, result);
-    return *context.scope.getCompilation().emplace<ConversionExpression>(targetType, true, *result,
-                                                                         result->sourceRange);
+    return *context.scope.getCompilation().emplace<ConversionExpression>(
+        targetType, true, *result, result->sourceRange, isPropagated);
 }
 
 Expression* Expression::tryConnectPortArray(const BindContext& context, const Type& portType,
@@ -548,11 +548,11 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
+    auto value = operand().eval(context);
+    if (value == nullptr)
+        return value;
     if (!isImplicit && !type->isCastCompatible(*operand().type, false)) {
         // bit-stream casting
-        auto value = operand().eval(context);
-        if (value == nullptr)
-            return value;
         auto v1 = type->bitstreamCast(value);
         if (v1 == nullptr) {
             auto& diag = context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange);
@@ -560,7 +560,9 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
         }
         return v1;
     }
-    return convert(context, *operand().type, *type, sourceRange, operand().eval(context));
+    if (isPropagated && isImplicit && value.isInteger() && type->isIntegral())
+        value.integer().setSigned(type->isSigned());
+    return convert(context, *operand().type, *type, sourceRange, std::move(value));
 }
 
 ConstantValue ConversionExpression::convert(EvalContext& context, const Type& from, const Type& to,

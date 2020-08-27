@@ -121,7 +121,7 @@ struct Expression::PropagationVisitor {
 
         Expression* result = &expr;
         if (needConversion)
-            result = &Expression::implicitConversion(context, newType, expr);
+            result = &Expression::implicitConversion(context, newType, expr, true);
 
         return *result;
     }
