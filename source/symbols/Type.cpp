@@ -511,17 +511,8 @@ bool Type::isCastCompatible(const Type& rhs, bool useBitstreamCast) const {
         ASSERT(l->isAggregate() || r->isAggregate());
         if (l->isFixedSize() && r->isFixedSize())
             return l->bitstreamWidth() == r->bitstreamWidth();
-        else {
-            auto [gcd0, fixed0] = linearCoefficients(*r);
-            auto [gcd1, fixed1] = linearCoefficients(*l, 1);
-            ASSERT(!gcd1 && !gcd0 == r->isFixedSize());
-            if (fixed1 >= fixed0 && !((fixed1 - fixed0) % gcd0))
-                return true;
-            auto [gcd2, fixed2] = linearCoefficients(*l, 2);
-            ASSERT(!gcd2 == l->isFixedSize());
-            return (fixed2 >= fixed0 || gcd2 > 0) &&
-                   !((fixed0 > fixed2 ? fixed0 - fixed2 : fixed2 - fixed0) % std::gcd(gcd0, gcd2));
-        }
+        else
+            return dynamicSizeMatch(*l, *r);
     }
 
     return false;
@@ -529,29 +520,16 @@ bool Type::isCastCompatible(const Type& rhs, bool useBitstreamCast) const {
 
 ConstantValue Type::bitstreamCast(const ConstantValue& value) const {
     auto srcSize = value.bitstreamWidth();
-    bitwidth_t dynmaic = 0, bit = 0;
-    if (isFixedSize()) {
-        auto destSize = bitstreamWidth();
-        if (destSize != srcSize)
-            return nullptr;
-    }
-    else {
-        auto [gcd1, fixed1] = linearCoefficients(*this, 1);
-        if (fixed1 > srcSize)
-            return nullptr;
-        if (fixed1 < srcSize) {
-            auto [gcd2, fixed2] = linearCoefficients(*this, 2);
-            if (srcSize < fixed2 || (srcSize - fixed2) % gcd2 != 0)
-                return nullptr;
-            dynmaic = srcSize - fixed2;
-        }
-    }
+    bitwidth_t dynamicSize = bitstreamCastRemainingSize(*this, srcSize);
+    if (dynamicSize > srcSize)
+        return nullptr; // Sizes do not fit
+    bitwidth_t bit = 0;
     PackVector packed;
     pack(value, packed);
     auto iter = packed.cbegin();
-    const auto cv = unpack(*this, iter, bit, dynmaic);
-    ASSERT(!dynmaic && bit == ((*iter)->isInteger() ? (*iter)->integer().getBitWidth()
-                                                    : (*iter)->str().length() * 8));
+    const auto cv = unpack(*this, iter, bit, dynamicSize);
+    ASSERT(!dynamicSize && bit == ((*iter)->isInteger() ? (*iter)->integer().getBitWidth()
+                                                        : (*iter)->str().length() * 8));
     ASSERT(iter != packed.cend() && ++iter == packed.cend());
     return cv;
 }
