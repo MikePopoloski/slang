@@ -323,6 +323,7 @@ error EnumIncrementUnknown "cannot increment previous value {} because it has un
 error EnumValueDuplicate "redefinition of enum value {}"
 error EnumRangeMultiDimensional "enum range cannot be multidimensional"
 error ForwardTypedefDoesNotMatch "forward typedef basic type '{}' does not match declaration"
+error ForwardTypedefVisibility "declared visibility of forward typedef does not match the visibility of the actual type declaration"
 error PackedMemberNotIntegral "packed members must be of integral type (not {})"
 error PackedMemberHasInitializer "packed members can not have initializers"
 error PackedDimsOnPredefinedType "packed dimensions not allowed on predefined integer type '{}'"

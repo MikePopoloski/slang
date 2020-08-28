@@ -160,3 +160,35 @@ endmodule
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
     CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
 }
+
+TEST_CASE("Class typedefs") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef class C;
+module m;
+    C c;
+    initial c.baz = 1;
+endmodule
+
+class C;
+    int baz;
+
+    local typedef foo;
+    protected typedef bar;
+
+    typedef int foo;        // error, visibility must match
+    protected typedef int bar;
+endclass
+
+class D;
+endclass
+
+typedef class D;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ForwardTypedefVisibility);
+}

@@ -13,6 +13,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
@@ -557,12 +558,16 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
         bool locationGood = true;
         if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {
             locationGood = LookupLocation::before(*symbol) < location;
-            if (!locationGood && symbol->kind == SymbolKind::TypeAlias) {
+            if (!locationGood) {
                 // A type alias can have forward definitions, so check those locations as well.
                 // The forward decls form a linked list that are always ordered by location,
                 // so we only need to check the first one.
-                const ForwardingTypedefSymbol* forward =
-                    symbol->as<TypeAliasType>().getFirstForwardDecl();
+                const ForwardingTypedefSymbol* forward = nullptr;
+                if (symbol->kind == SymbolKind::TypeAlias)
+                    forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
+                else if (symbol->kind == SymbolKind::ClassType)
+                    forward = symbol->as<ClassType>().getFirstForwardDecl();
+
                 if (forward)
                     locationGood = LookupLocation::before(*forward) < location;
             }

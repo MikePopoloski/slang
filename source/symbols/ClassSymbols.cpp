@@ -8,6 +8,7 @@
 
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/AllTypes.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {
@@ -86,6 +87,18 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
         var->setAttributes(scope, syntax.attributes);
         results.append(var);
     }
+}
+
+void ClassType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
+    if (!firstForward)
+        firstForward = &decl;
+    else
+        firstForward->addForwardDecl(decl);
+}
+
+void ClassType::checkForwardDecls() const {
+    if (firstForward)
+        firstForward->checkType(ForwardingTypedefSymbol::Class, Visibility::Public, location);
 }
 
 void ClassPropertySymbol::serializeTo(ASTSerializer& serializer) const {

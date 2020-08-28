@@ -900,6 +900,43 @@ void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl
         next->addForwardDecl(decl);
 }
 
+void ForwardingTypedefSymbol::checkType(Category checkCategory, Visibility checkVisibility,
+                                        SourceLocation declLoc) const {
+    if (category != None && checkCategory != None && category != checkCategory) {
+        auto& diag = getParentScope()->addDiag(diag::ForwardTypedefDoesNotMatch, location);
+        switch (category) {
+            case ForwardingTypedefSymbol::Enum:
+                diag << "enum"sv;
+                break;
+            case ForwardingTypedefSymbol::Struct:
+                diag << "struct"sv;
+                break;
+            case ForwardingTypedefSymbol::Union:
+                diag << "union"sv;
+                break;
+            case ForwardingTypedefSymbol::Class:
+                diag << "class"sv;
+                break;
+            case ForwardingTypedefSymbol::InterfaceClass:
+                diag << "interface class"sv;
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+        diag.addNote(diag::NoteDeclarationHere, declLoc);
+        return;
+    }
+
+    if (visibility && visibility != checkVisibility) {
+        auto& diag = getParentScope()->addDiag(diag::ForwardTypedefVisibility, location);
+        diag.addNote(diag::NoteDeclarationHere, declLoc);
+        return;
+    }
+
+    if (next)
+        next->checkType(checkCategory, checkVisibility, declLoc);
+}
+
 void ForwardingTypedefSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("category", toString(category));
     if (next)
@@ -949,7 +986,7 @@ void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
 
 void TypeAliasType::checkForwardDecls() const {
     ForwardingTypedefSymbol::Category category;
-    switch (targetType.getType().kind) {
+    switch (targetType.getType().getCanonicalType().kind) {
         case SymbolKind::PackedStructType:
         case SymbolKind::UnpackedStructType:
             category = ForwardingTypedefSymbol::Struct;
@@ -961,40 +998,17 @@ void TypeAliasType::checkForwardDecls() const {
         case SymbolKind::EnumType:
             category = ForwardingTypedefSymbol::Enum;
             break;
+        case SymbolKind::ClassType:
+            category = ForwardingTypedefSymbol::Class;
+            break;
         default:
-            // TODO:
-            return;
+            // TODO: interface classes
+            category = ForwardingTypedefSymbol::None;
+            break;
     }
 
-    const ForwardingTypedefSymbol* forward = firstForward;
-    while (forward) {
-        if (forward->category != ForwardingTypedefSymbol::None && forward->category != category) {
-            auto& diag =
-                getParentScope()->addDiag(diag::ForwardTypedefDoesNotMatch, forward->location);
-            switch (forward->category) {
-                case ForwardingTypedefSymbol::Enum:
-                    diag << "enum"sv;
-                    break;
-                case ForwardingTypedefSymbol::Struct:
-                    diag << "struct"sv;
-                    break;
-                case ForwardingTypedefSymbol::Union:
-                    diag << "union"sv;
-                    break;
-                case ForwardingTypedefSymbol::Class:
-                    diag << "class"sv;
-                    break;
-                case ForwardingTypedefSymbol::InterfaceClass:
-                    diag << "interface class"sv;
-                    break;
-                default:
-                    THROW_UNREACHABLE;
-            }
-            diag.addNote(diag::NoteDeclarationHere, location);
-            return;
-        }
-        forward = forward->getNextForwardDecl();
-    }
+    if (firstForward)
+        firstForward->checkType(category, visibility, location);
 }
 
 ConstantValue TypeAliasType::getDefaultValueImpl() const {
