@@ -220,7 +220,6 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
         if (symbol->kind == SymbolKind::Instance)
             symbol = &symbol->as<InstanceSymbol>().body;
 
-
         std::tie(nameToken, selectors) = decomposeName(*it->name);
         if (nameToken.valueText().empty())
             return false;
@@ -351,7 +350,8 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
 
 bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
                        Token& nameToken, const SyntaxList<ElementSelectSyntax>*& selectors,
-                       LookupResult& result, const Scope& scope) {
+                       LookupResult& result, const Scope& scope, SourceRange fullRange) {
+    bool isClass = false;
     while (colonParts--) {
         if (selectors) {
             result.addDiag(scope, diag::InvalidScopeIndexExpression, selectors->sourceRange());
@@ -361,8 +361,9 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
 
         auto& part = nameParts.back();
         auto symbol = result.found;
-        if (symbol->kind != SymbolKind::Package &&
-            (!symbol->isType() || !symbol->as<Type>().isClass())) {
+        isClass = symbol->isType() && symbol->as<Type>().isClass();
+
+        if (symbol->kind != SymbolKind::Package && !isClass) {
             auto& diag = result.addDiag(scope, diag::NotAClass, part.dotLocation);
             diag << symbol->name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
@@ -390,6 +391,27 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         }
 
         nameParts.pop();
+    }
+
+    // If this was a class lookup, check that we are allowed to access the
+    // member via the scope resolution operator.
+    if (isClass && result.found) {
+        if (result.found->kind == SymbolKind::ClassProperty) {
+            auto& var = result.found->as<ClassPropertySymbol>();
+            if (var.lifetime == VariableLifetime::Automatic) {
+                result.addDiag(scope, diag::NonStaticClassProperty, fullRange) << var.name;
+                result.found = nullptr;
+                return false;
+            }
+        }
+        else if (result.found->kind == SymbolKind::Subroutine) {
+            auto& sub = result.found->as<SubroutineSymbol>();
+            if ((sub.flags & MethodFlags::Static) == 0) {
+                result.addDiag(scope, diag::NonStaticClassMethod, fullRange);
+                result.found = nullptr;
+                return false;
+            }
+        }
     }
 
     return true;
@@ -788,8 +810,10 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
         }
 
         // Drain all colon-qualified lookups here, which should always resolve to a nested type.
-        if (!resolveColonNames(nameParts, colonParts, nameToken, selectors, result, scope))
+        if (!resolveColonNames(nameParts, colonParts, nameToken, selectors, result, scope,
+                               syntax.sourceRange())) {
             return;
+        }
 
         // We can't do upwards name resolution if colon access is involved, so always return
         // after one downward lookup.
