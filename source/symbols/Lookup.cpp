@@ -348,6 +348,18 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
     }
 }
 
+bool isClassType(const Symbol& symbol) {
+    if (symbol.isType())
+        return symbol.as<Type>().isClass();
+
+    if (symbol.kind == SymbolKind::TypeParameter) {
+        auto& target = symbol.as<TypeParameterSymbol>().targetType.getType();
+        return target.isClass();
+    }
+
+    return false;
+}
+
 bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
                        Token& nameToken, const SyntaxList<ElementSelectSyntax>*& selectors,
                        LookupResult& result, const Scope& scope, SourceRange fullRange) {
@@ -361,7 +373,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
 
         auto& part = nameParts.back();
         auto symbol = result.found;
-        isClass = symbol->isType() && symbol->as<Type>().isClass();
+        isClass = isClassType(*symbol);
 
         if (symbol->kind != SymbolKind::Package && !isClass) {
             auto& diag = result.addDiag(scope, diag::NotAClass, part.dotLocation);
@@ -376,6 +388,9 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
             result.found = nullptr;
             return false;
         }
+
+        if (symbol->kind == SymbolKind::TypeParameter)
+            symbol = &symbol->as<TypeParameterSymbol>().targetType.getType();
 
         result.found = symbol->as<Scope>().find(nameToken.valueText());
         if (!result.found) {
@@ -801,7 +816,7 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     if (colonParts) {
         // If the prefix name resolved normally to a class object, use that. Otherwise we need
         // to look for a package with the corresponding name.
-        if (!result.found || !result.found->isType() || !result.found->as<Type>().isClass()) {
+        if (!result.found || !isClassType(*result.found)) {
             result.found = compilation.getPackage(name);
             if (!result.found) {
                 result.addDiag(scope, diag::UnknownClassOrPackage, nameToken.range()) << name;

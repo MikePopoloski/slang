@@ -1322,10 +1322,11 @@ package P;
     endclass
 endpackage
 
-module m;
+module m #(parameter type t = P::D);
     localparam int i = C::i;
     localparam int j = C::ASDF;
     localparam P::D::bar k = 9;
+    localparam t::bar l = 9;
 
     initial begin
         C::foo = 4;
