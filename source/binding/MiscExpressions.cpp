@@ -193,14 +193,26 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         return createSystemCall(compilation, *info.subroutine, nullptr, syntax, range, context);
     }
 
+    auto& result = fromArgs(compilation, subroutine, thisClass,
+                            syntax ? syntax->arguments : nullptr, range, context);
+    if (syntax)
+        context.setAttributes(result, syntax->attributes);
+
+    return result;
+}
+
+Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
+                                     const Expression* thisClass,
+                                     const ArgumentListSyntax* argSyntax, SourceRange range,
+                                     const BindContext& context) {
     // Collect all arguments into a list of ordered expressions (which can
     // optionally be nullptr to indicate an empty argument) and a map of
     // named argument assignments.
     SmallVectorSized<const SyntaxNode*, 8> orderedArgs;
     SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedArgs;
 
-    if (syntax && syntax->arguments) {
-        for (auto arg : syntax->arguments->parameters) {
+    if (argSyntax) {
+        for (auto arg : argSyntax->parameters) {
             if (arg->kind == SyntaxKind::NamedArgument) {
                 const NamedArgumentSyntax& nas = arg->as<NamedArgumentSyntax>();
                 auto name = nas.name.valueText();
@@ -327,9 +339,6 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(), thisClass,
                                                       boundArgs.copy(compilation),
                                                       context.lookupLocation, range);
-    if (syntax)
-        context.setAttributes(*result, syntax->attributes);
-
     if (bad)
         return badExpr(compilation, result);
 

@@ -211,3 +211,28 @@ endmodule
         CHECK(diags[i].code == diag::ConstEvalClassType);
     }
 }
+
+TEST_CASE("Class constructor calls") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    function new(int i, real j); endfunction
+endclass
+
+class D;
+endclass
+
+module m;
+    C c1 = new (3, 4.2);
+    C c2 = new;             // error
+    D d = new (1);          // error
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::TooFewArguments);
+    CHECK(diags[1].code == diag::TooManyArguments);
+}

@@ -34,6 +34,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 };
 
+struct ArgumentListSyntax;
+
 /// Represents a subroutine call.
 class CallExpression : public Expression {
 public:
@@ -77,6 +79,10 @@ public:
                                   const Expression* thisClass,
                                   const InvocationExpressionSyntax* syntax, SourceRange range,
                                   const BindContext& context);
+
+    static Expression& fromArgs(Compilation& compilation, const Subroutine& subroutine,
+                                const Expression* thisClass, const ArgumentListSyntax* argSyntax,
+                                SourceRange range, const BindContext& context);
 
     static Expression& fromSystemMethod(Compilation& compilation, const Expression& expr,
                                         const LookupResult::MemberSelector& selector,

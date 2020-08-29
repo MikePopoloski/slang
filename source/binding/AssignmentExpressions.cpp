@@ -18,7 +18,9 @@
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace {
@@ -717,9 +719,24 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
     }
 
     // TODO: typed constructor call
-    // TODO: constructor arguments
 
-    auto result = compilation.emplace<NewClassExpression>(*assignmentTarget, syntax.sourceRange());
+    auto& classType = assignmentTarget->getCanonicalType().as<ClassType>();
+    auto constructor = classType.find("new");
+
+    Expression* constructorCall = nullptr;
+    if (constructor) {
+        constructorCall =
+            &CallExpression::fromArgs(compilation, &constructor->as<SubroutineSymbol>(), nullptr,
+                                      syntax.argList, syntax.sourceRange(), context);
+    }
+    else if (syntax.argList && !syntax.argList->parameters.empty()) {
+        auto& diag = context.addDiag(diag::TooManyArguments, syntax.argList->sourceRange());
+        diag << 0;
+        diag << syntax.argList->parameters.size();
+    }
+
+    auto result = compilation.emplace<NewClassExpression>(*assignmentTarget, constructorCall,
+                                                          syntax.sourceRange());
     return *result;
 }
 
@@ -732,8 +749,9 @@ bool NewClassExpression::verifyConstantImpl(EvalContext& context) const {
     return false;
 }
 
-void NewClassExpression::serializeTo(ASTSerializer&) const {
-    // TODO:
+void NewClassExpression::serializeTo(ASTSerializer& serializer) const {
+    if (constructorCall())
+        serializer.write("constructorCall", *constructorCall());
 }
 
 } // namespace slang
