@@ -677,4 +677,34 @@ void MinTypMaxExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("selected", selected());
 }
 
+Expression& CopyClassExpression::fromSyntax(Compilation& compilation,
+                                            const CopyClassExpressionSyntax& syntax,
+                                            const BindContext& context) {
+    auto& source = selfDetermined(compilation, *syntax.expr, context);
+    auto result =
+        compilation.emplace<CopyClassExpression>(*source.type, source, syntax.sourceRange());
+    if (source.bad())
+        return badExpr(compilation, result);
+
+    if (!source.type->isClass()) {
+        context.addDiag(diag::CopyClassTarget, source.sourceRange) << *source.type;
+        return badExpr(compilation, result);
+    }
+
+    return *result;
+}
+
+ConstantValue CopyClassExpression::evalImpl(EvalContext&) const {
+    return nullptr;
+}
+
+bool CopyClassExpression::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalClassType, sourceRange);
+    return false;
+}
+
+void CopyClassExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("sourceExpr", sourceExpr());
+}
+
 } // namespace slang

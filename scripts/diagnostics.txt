@@ -302,6 +302,7 @@ error NewClassTarget "new class expression can only be used in an assignment to 
 error UnpackedConcatSize "array concatenation for {} requires {} elements but {} were provided"
 error UnpackedConcatAssociative "array concatenations cannot be used for associative arrays"
 error InvalidClassAccess "cannot access '{}' in {} with '.'"
+error CopyClassTarget "expected {} to be a class type for shallow copy expression"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

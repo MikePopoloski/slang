@@ -262,6 +262,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(OpenRange, OpenRangeExpression);
         CASE(NewArray, NewArrayExpression);
         CASE(NewClass, NewClassExpression);
+        CASE(CopyClass, CopyClassExpression);
         CASE(MinTypMax, MinTypMaxExpression);
     }
 #undef CASE

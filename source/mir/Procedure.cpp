@@ -143,6 +143,7 @@ public:
     MIRValue visit(const ConversionExpression&) { return {}; }
     MIRValue visit(const NewArrayExpression&) { return {}; }
     MIRValue visit(const NewClassExpression&) { return {}; }
+    MIRValue visit(const CopyClassExpression&) { return {}; }
     MIRValue visit(const MinTypMaxExpression&) { return {}; }
     MIRValue visit(const DataTypeExpression&) { return {}; }
     MIRValue visit(const HierarchicalReferenceExpression&) { return {}; }

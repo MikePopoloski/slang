@@ -251,3 +251,23 @@ endmodule
     CHECK(diags[4].code == diag::NotAClass);
     CHECK(diags[5].code == diag::NewClassTarget);
 }
+
+TEST_CASE("Copy class expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+endclass
+
+module m;
+    C c1 = new;
+    C c2 = new c1;
+    C c3 = new 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CopyClassTarget);
+}

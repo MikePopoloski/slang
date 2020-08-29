@@ -221,4 +221,33 @@ private:
     Expression* max_;
 };
 
+struct CopyClassExpressionSyntax;
+
+/// Represents a `new` expression that copies a class instance.
+class CopyClassExpression : public Expression {
+public:
+    CopyClassExpression(const Type& type, const Expression& sourceExpr, SourceRange sourceRange) :
+        Expression(ExpressionKind::CopyClass, type, sourceRange), sourceExpr_(sourceExpr) {}
+
+    const Expression& sourceExpr() const { return sourceExpr_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const CopyClassExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::CopyClass; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        sourceExpr().visit(visitor);
+    }
+
+private:
+    const Expression& sourceExpr_;
+};
+
 } // namespace slang
