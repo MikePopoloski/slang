@@ -486,72 +486,52 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
     return false;
 }
 
-bool Type::isCastCompatible(const Type& rhs, bool useBitstreamCast) const {
+bool Type::isCastCompatible(const Type& rhs) const {
     // See [6.22.4] for Cast Compatible
     const Type* l = &getCanonicalType();
     const Type* r = &rhs.getCanonicalType();
     if (l->isAssignmentCompatible(*r))
         return true;
 
-    if (l->isEnum()) {
-        if (r->isIntegral() || r->isFloating())
-            return true;
-    }
-    else if (l->isString()) {
-        if (r->isIntegral())
-            return true;
-    }
-    else if (r->isString()) {
-        if (l->isIntegral())
-            return true;
-    }
+    if (l->isEnum())
+        return r->isIntegral() || r->isFloating();
 
-    if (useBitstreamCast && l->isBitstreamType(true) && r->isBitstreamType()) {
+    if (l->isString())
+        return r->isIntegral();
+
+    if (r->isString())
+        return l->isIntegral();
+
+    return false;
+}
+
+bool Type::isBitstreamCastable(const Type& rhs) const {
+    const Type* l = &getCanonicalType();
+    const Type* r = &rhs.getCanonicalType();
+    if (l->isBitstreamType(true) && r->isBitstreamType()) {
         // bit-stream casting
         ASSERT(l->isAggregate() || r->isAggregate());
         if (l->isFixedSize() && r->isFixedSize())
             return l->bitstreamWidth() == r->bitstreamWidth();
-        else {
-            auto [gcd0, fixed0] = linearCoefficients(*r);
-            auto [gcd1, fixed1] = linearCoefficients(*l, 1);
-            ASSERT(!gcd1 && !gcd0 == r->isFixedSize());
-            if (fixed1 >= fixed0 && !((fixed1 - fixed0) % gcd0))
-                return true;
-            auto [gcd2, fixed2] = linearCoefficients(*l, 2);
-            ASSERT(!gcd2 == l->isFixedSize());
-            return (fixed2 >= fixed0 || gcd2 > 0) &&
-                   !((fixed0 > fixed2 ? fixed0 - fixed2 : fixed2 - fixed0) % std::gcd(gcd0, gcd2));
-        }
+        else
+            return dynamicSizeMatch(*l, *r);
     }
-
     return false;
 }
 
 ConstantValue Type::bitstreamCast(const ConstantValue& value) const {
     auto srcSize = value.bitstreamWidth();
-    bitwidth_t dynmaic = 0, bit = 0;
-    if (isFixedSize()) {
-        auto destSize = bitstreamWidth();
-        if (destSize != srcSize)
-            return nullptr;
-    }
-    else {
-        auto [gcd1, fixed1] = linearCoefficients(*this, 1);
-        if (fixed1 > srcSize)
-            return nullptr;
-        if (fixed1 < srcSize) {
-            auto [gcd2, fixed2] = linearCoefficients(*this, 2);
-            if (srcSize < fixed2 || (srcSize - fixed2) % gcd2 != 0)
-                return nullptr;
-            dynmaic = srcSize - fixed2;
-        }
-    }
-    const auto cv0 = value.bitstream();
-    auto iter = cv0.cbegin();
-    const auto cv = unpack(*this, iter, bit, dynmaic);
-    ASSERT(!dynmaic && bit == ((*iter)->isInteger() ? (*iter)->integer().getBitWidth()
-                                                    : (*iter)->str().length() * 8));
-    ASSERT(iter != cv0.cend() && ++iter == cv0.cend());
+    bitwidth_t dynamicSize = bitstreamCastRemainingSize(*this, srcSize);
+    if (dynamicSize > srcSize)
+        return nullptr; // Sizes do not fit
+    bitwidth_t bit = 0;
+    PackVector packed;
+    pack(value, packed);
+    auto iter = packed.cbegin();
+    const auto cv = unpack(*this, iter, bit, dynamicSize);
+    ASSERT(!dynamicSize && bit == ((*iter)->isInteger() ? (*iter)->integer().getBitWidth()
+                                                        : (*iter)->str().length() * 8));
+    ASSERT(iter != packed.cend() && ++iter == packed.cend());
     return cv;
 }
 

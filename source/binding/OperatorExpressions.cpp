@@ -1293,7 +1293,8 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
                     const Type& from = *op->type->getArrayElementType();
                     for (auto& elem : cv) {
                         result.emplace_back(ConversionExpression::convert(
-                            context, from, elemType, op->sourceRange, std::move(elem)));
+                            context, from, elemType, op->sourceRange, std::move(elem),
+                            ConversionKind::Implicit));
                     }
                 }
             }

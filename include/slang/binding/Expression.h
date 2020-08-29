@@ -262,7 +262,7 @@ protected:
                               bitmask<BindFlags> extraFlags = BindFlags::None,
                               const Type* assignmentTarget = nullptr);
     static Expression& implicitConversion(const BindContext& context, const Type& type,
-                                          Expression& expr, bool isPropagated = false);
+                                          Expression& expr);
 
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax,
                                 const InvocationExpressionSyntax* invocation,

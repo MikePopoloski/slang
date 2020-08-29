@@ -1,4 +1,3 @@
-
 //------------------------------------------------------------------------------
 // TypeHelpers.h
 // Contains internal helper functions for Type implementations
@@ -14,62 +13,121 @@
 
 namespace slang {
 
-/// Model dynamic size of a type with aR+b where a and b are compile-time constants and R is runtime
-/// determined.
-static std::pair<bitwidth_t, bitwidth_t> linearCoefficients(const Type& type,
-                                                            unsigned int destination = 0) {
-    /* IEEE standard says for dynamic-sized types:
-     // runtime check
-     struct {bit a[$]; shortint b;} a = {{1,2,3,4}, 67};
-     int b = int'(a);
-     // compile time error
-     typedef struct {byte a[$]; bit b;} dest_t;
-     int a;
-     dest_t b = dest_t'(a);
-     */
-    auto width = type.getBitWidth();
-    if (width > 0)
-        return { 0, width };
+/// Return {a, b} to model the size of a dynamic size with "aR+b" where "a" and "b" are compile-time
+/// constants and "R" is runtime determined.
+
+// destination=0: source type where "a" is the greatest common divisor of element sizes of
+// all dynamically sized items and "b" is the sum of all fixed sizes.
+
+// destination=1: destination type with all dynamically sized items empty. "a" is zero and "b" is
+// the sum of all fixed sizes.
+
+// destination=2: destination type with the first dynamically sized item filled and "a" is the
+// element size of this first item. The remaining dynamically sized items are empty except ancestors
+// of the first item needs to have size one. "b" is the sum of all fixed sizes plus sizes of
+// siblings of the first item when their common parent is dynamically sized.
+
+static std::pair<bitwidth_t, bitwidth_t> dynamicBitstreamSize(const Type& type,
+                                                              unsigned int destination = 0) {
+    auto fixedSize = type.getBitWidth();
+    if (fixedSize > 0)
+        return { 0, fixedSize };
     if (type.isString())
         return { destination == 1 ? 0 : CHAR_BIT, 0 };
-    bitwidth_t gcd = 0;
+    bitwidth_t multiplier = 0;
     // TODO: check for overflow
     if (type.isUnpackedArray()) {
-        auto [gcd1, width1] = linearCoefficients(*type.getArrayElementType(), destination);
+        auto [multiplierElem, fixedSizeElem] =
+            dynamicBitstreamSize(*type.getArrayElementType(), destination);
         const auto& ct = type.getCanonicalType();
-        if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType) {
+        if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType) { // fixed size packed array
             auto rw = ct.as<FixedSizeUnpackedArrayType>().range.width();
-            gcd = gcd1 * rw;
-            width = width1 * rw;
+            multiplier = multiplierElem * rw; // multiply element values by packed array width
+            fixedSize = fixedSizeElem * rw;
         }
-        else if (destination) {
-            if (destination > 1) {
-                if (!gcd1)
-                    gcd = width1;
+        else if (destination) {    // dynamically sized destination type
+            if (destination > 1) { // Fill first dynamically sized item otherwise keep empty
+                if (!multiplierElem)
+                    multiplier = fixedSizeElem; // element is fixed size
                 else {
-                    gcd = gcd1;
-                    width = width1;
+                    multiplier = multiplierElem; // element is dynamically sized
+                    fixedSize = fixedSizeElem;
                 }
             }
         }
         else
-            gcd = std::gcd(gcd1, width1);
+            multiplier = std::gcd(multiplierElem, fixedSizeElem); // dynamically sized source type
     }
     else if (type.isUnpackedStruct()) {
         auto& us = type.getCanonicalType().as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
-            auto [gcd1, width1] = linearCoefficients(field.getType(), destination);
-            if (destination > 1 && gcd1 > 0)
-                destination--;
-            gcd = std::gcd(gcd, gcd1);
-            width += width1;
+            auto [multiplierElem, fixedSizeElem] =
+                dynamicBitstreamSize(field.getType(), destination);
+            if (destination > 1 && multiplierElem > 0)
+                destination = 1; // dynamically sized field filled and rest should be empty
+            multiplier = std::gcd(multiplier, multiplierElem);
+            fixedSize += fixedSizeElem;
         }
     }
     // TODO: classes
-    return { gcd, width };
+    return { multiplier, fixedSize };
 }
 
-static ConstantValue constContainer(const Type& type, span<const ConstantValue> elems) {
+/// Compile-time check on dynamically sized bit-stream casting
+static bool dynamicSizeMatch(const Type& destination, const Type& source) {
+    auto [sourceMultiplier, sourceFixedSize] = dynamicBitstreamSize(source);
+    auto [destEmptyMultiplier, destEmptyFixedSize] = dynamicBitstreamSize(destination, 1);
+    ASSERT(!destEmptyMultiplier && !sourceMultiplier == source.isFixedSize());
+    if (destEmptyFixedSize >= sourceFixedSize &&
+        !((destEmptyFixedSize - sourceFixedSize) % sourceMultiplier))
+        return true;
+    auto [destFillMultiplier, destFillFixedSize] = dynamicBitstreamSize(destination, 2);
+    ASSERT(!destFillMultiplier == destination.isFixedSize());
+    /* Follow IEEE standard to check dynamic-sized types at compile-time.
+
+     // runtime error
+     struct {bit a[$]; shortint b;} a = {{1,2,3,4}, 67};
+     int b = int'(a);
+     // sourceMultiplier=1 sourceFixedSize=16 destEmptyMultiplier=0 destEmptyFixedSize=32
+     // destFillMultiplier=0 destFillFixedSize=32
+
+     // compile time error
+     typedef struct {byte a[$]; bit b;} dest_t;
+     int a;
+     dest_t b = dest_t'(a);
+     // sourceMultiplier=0 sourceFixedSize=32 destEmptyMultiplier=0 destEmptyFixedSize=1
+     // destFillMultiplier=8 destFillFixedSize=1
+     */
+    return (destFillMultiplier >= sourceFixedSize || destFillMultiplier > 0) &&
+           !((sourceFixedSize > destFillFixedSize ? sourceFixedSize - destFillFixedSize
+                                                  : destFillFixedSize - sourceFixedSize) %
+             std::gcd(sourceMultiplier, destFillMultiplier));
+}
+
+/// Validates sizes and returns remaining size for the first dynamic item in constant evaluation
+static bitwidth_t bitstreamCastRemainingSize(const Type& destination, bitwidth_t srcSize) {
+    bitwidth_t remain = 0;
+    if (destination.isFixedSize()) {
+        auto destSize = destination.bitstreamWidth();
+        if (destSize != srcSize)
+            return srcSize + 1; // cannot fit
+    }
+    else {
+        auto [destEmptyMultiplier, destEmptyFixedSize] = dynamicBitstreamSize(destination, 1);
+        if (destEmptyFixedSize > srcSize)
+            return srcSize + 1;             // source size too small to fill destination fixed size
+        if (destEmptyFixedSize < srcSize) { // Calculate remaining size to dynamically fill
+            auto [destFillMultiplier, destFillFixedSize] = dynamicBitstreamSize(destination, 2);
+            if (srcSize < destFillFixedSize ||
+                (srcSize - destFillFixedSize) % destFillMultiplier != 0)
+                return srcSize + 1;               // cannot fit
+            remain = srcSize - destFillFixedSize; // Size to fill the first dynamically size item
+        }
+    }
+    return remain;
+}
+
+static ConstantValue constContainer(const Type& type, span<ConstantValue> elems) {
     switch (type.kind) {
         case SymbolKind::FixedSizeUnpackedArrayType:
         case SymbolKind::DynamicArrayType:
@@ -78,11 +136,39 @@ static ConstantValue constContainer(const Type& type, span<const ConstantValue> 
         case SymbolKind::QueueType:
             return SVQueue(elems.cbegin(), elems.cend());
         default:
-            return nullptr;
+            THROW_UNREACHABLE;
     }
 }
 
-using PackVector = decltype(std::declval<ConstantValue>().bitstream());
+using PackVector = std::vector<const ConstantValue*>;
+
+/// Performs pack operation to create a bit stream
+static void pack(const ConstantValue& value, PackVector& packed) {
+    if (value.isInteger())
+        packed.push_back(&value);
+    else if (value.isString()) {
+        if (!value.str().empty())
+            packed.push_back(&value);
+    }
+    else if (value.isUnpacked()) {
+        for (const auto& cv : value.elements())
+            pack(cv, packed);
+    }
+    else if (value.isMap()) {
+        for (const auto& kv : *value.map()) {
+            pack(kv.second, packed);
+        }
+    }
+    else if (value.isQueue()) {
+        for (const auto& cv : *value.queue())
+            pack(cv, packed);
+    }
+    else {
+        // TODO: classes
+        THROW_UNREACHABLE;
+    }
+}
+
 static SVInt slicePacked(PackVector::const_iterator& iter, bitwidth_t& bit, bitwidth_t width) {
     const ConstantValue* cp;
     for (;;) {
@@ -109,17 +195,17 @@ static SVInt slicePacked(PackVector::const_iterator& iter, bitwidth_t& bit, bitw
     }
     else {
         std::string_view str = cp->str();
-        auto byte0 = bit / CHAR_BIT;
-        auto byte1 = (bit + width - 1) / CHAR_BIT;
+        auto firstByte = bit / CHAR_BIT;
+        auto lastByte = (bit + width - 1) / CHAR_BIT;
         bitwidth_t len;
-        if (byte1 < str.length())
-            len = byte1 - byte0 + 1;
+        if (lastByte < str.length())
+            len = lastByte - firstByte + 1;
         else {
-            len = static_cast<bitwidth_t>(str.length() - byte0);
+            len = static_cast<bitwidth_t>(str.length() - firstByte);
             width = len * CHAR_BIT - bit % CHAR_BIT;
         }
         SmallVectorSized<byte, 8> buffer;
-        const auto substr = str.substr(byte0, len);
+        const auto substr = str.substr(firstByte, len);
         for (auto it = substr.rbegin(); it != substr.rend(); it++)
             buffer.append(static_cast<byte>(*it));
         len *= CHAR_BIT;
@@ -137,70 +223,73 @@ static SVInt slicePacked(PackVector::const_iterator& iter, bitwidth_t& bit, bitw
 
 /// Performs unpack operation on a bit stream
 static ConstantValue unpack(const Type& type, PackVector::const_iterator& iter, bitwidth_t& bit,
-                            bitwidth_t& dynamic) {
-    if (type.isIntegral()) {
-        auto width = type.getBitWidth();
+                            bitwidth_t& dynamicSize) {
+
+    auto concatPacked = [&](bitwidth_t width, bool isFourState) {
         SmallVectorSized<SVInt, 8> buffer;
         while (width > 0) {
             auto ci = slicePacked(iter, bit, width);
             ASSERT(ci.getBitWidth() <= width);
             width -= ci.getBitWidth();
-            if (!type.isFourState())
+            if (!isFourState)
                 ci.flattenUnknowns();
             buffer.emplace(ci);
         }
-        auto cc = SVInt::concat(span<SVInt const>(buffer.begin(), buffer.end()));
+        return SVInt::concat(span<SVInt const>(buffer.begin(), buffer.end()));
+    };
+
+    if (type.isIntegral()) {
+        auto cc = concatPacked(type.getBitWidth(), type.isFourState());
         cc.setSigned(type.isSigned());
         return cc;
     }
+
     if (type.isString()) {
-        if (!dynamic)
+        if (!dynamicSize)
             return std::string();
-        auto width = dynamic;
+        auto width = dynamicSize;
         ASSERT(width % CHAR_BIT == 0);
-        dynamic = 0;
-        SmallVectorSized<SVInt, 8> buffer;
-        while (width > 0) {
-            auto ci = slicePacked(iter, bit, width);
-            ASSERT(ci.getBitWidth() <= width);
-            width -= ci.getBitWidth();
-            ci.flattenUnknowns();
-            buffer.emplace(ci);
-        }
-        return ConstantValue(SVInt::concat(span<SVInt const>(buffer.begin(), buffer.end())))
-            .convertToStr();
+        dynamicSize = 0;
+        return ConstantValue(concatPacked(width, false)).convertToStr();
     }
+
     if (type.isUnpackedArray()) {
         const auto& ct = type.getCanonicalType();
         SmallVectorSized<ConstantValue, 16> buffer;
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType) {
-            if (dynamic > 0) {
+            // dynamicSize is the remaining size: For unbounded dynamically sized types, the
+            // conversion process is greedy: adjust the size of the first dynamically sized item in
+            // the destination to the remaining size; any remaining dynamically sized items are left
+            // empty.
+            if (dynamicSize > 0) {
                 auto elemWidth = type.getArrayElementType()->bitstreamWidth();
                 if (!elemWidth)
-                    elemWidth = dynamic;
-                ASSERT(dynamic % elemWidth == 0);
-                for (auto i = dynamic / elemWidth; i > 0; i--)
-                    buffer.emplace(unpack(*type.getArrayElementType(), iter, bit, dynamic));
-                ASSERT(!dynamic || type.getArrayElementType()->isFixedSize());
-                dynamic = 0;
+                    elemWidth = dynamicSize;
+                ASSERT(dynamicSize % elemWidth == 0);
+                for (auto i = dynamicSize / elemWidth; i > 0; i--)
+                    buffer.emplace(unpack(*type.getArrayElementType(), iter, bit, dynamicSize));
+                ASSERT(!dynamicSize || type.getArrayElementType()->isFixedSize());
+                dynamicSize = 0;
             }
         }
         else {
             const auto& ct1 = ct.as<FixedSizeUnpackedArrayType>();
             const auto& elem = ct1.elementType;
             for (auto width = ct1.range.width(); width > 0; width--)
-                buffer.emplace(unpack(elem, iter, bit, dynamic));
+                buffer.emplace(unpack(elem, iter, bit, dynamicSize));
         }
-        return constContainer(ct, span<const ConstantValue>(buffer));
+        return constContainer(ct, buffer);
     }
+
     if (type.isUnpackedStruct()) {
         SmallVectorSized<ConstantValue, 16> buffer;
         const auto& ct = type.getCanonicalType();
         auto& us = ct.as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>())
-            buffer.emplace(unpack(field.getType(), iter, bit, dynamic));
-        return constContainer(ct, span<const ConstantValue>(buffer));
+            buffer.emplace(unpack(field.getType(), iter, bit, dynamicSize));
+        return constContainer(ct, buffer);
     }
+
     // TODO: classes
     return nullptr;
 }

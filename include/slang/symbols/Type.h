@@ -198,7 +198,10 @@ public:
     /// Determines whether the given type is "cast compatible" to this one. This
     /// means that the type is either implicitly or explicitly convertible to
     /// this one. Note that the reverse operation is not necessarily true.
-    bool isCastCompatible(const Type& rhs, bool useBitstreamCast = true) const;
+    bool isCastCompatible(const Type& rhs) const;
+
+    /// Determines whether the types can be bit-stream casting this'(rhs)
+    bool isBitstreamCastable(const Type& rhs) const;
 
     ///  Bit-stream cast constant evaluation
     ConstantValue bitstreamCast(const ConstantValue&) const;

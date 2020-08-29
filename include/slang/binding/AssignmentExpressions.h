@@ -65,16 +65,18 @@ private:
 struct CastExpressionSyntax;
 struct SignedCastExpressionSyntax;
 
+enum class ConversionKind : uint8_t { Implicit, Propagated, Explicit, BitstreamCast };
+
 /// Represents a type conversion expression (implicit or explicit).
 class ConversionExpression : public Expression {
 public:
-    bool isImplicit;
-    bool isPropagated;
+    const ConversionKind castKind;
+    bool isImplicit() const { return castKind < ConversionKind::Explicit; }
 
-    ConversionExpression(const Type& type, bool isImplicit, Expression& operand,
-                         SourceRange sourceRange, bool isPropagated = false) :
+    ConversionExpression(const Type& type, ConversionKind castKind, Expression& operand,
+                         SourceRange sourceRange) :
         Expression(ExpressionKind::Conversion, type, sourceRange),
-        isImplicit(isImplicit), isPropagated(isPropagated), operand_(&operand) {}
+        castKind(castKind), operand_(&operand) {}
 
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }
@@ -91,7 +93,7 @@ public:
                                   const BindContext& context);
 
     static ConstantValue convert(EvalContext& context, const Type& from, const Type& to,
-                                 SourceRange sourceRange, ConstantValue&& value);
+                                 SourceRange sourceRange, ConstantValue&& value, ConversionKind);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 
