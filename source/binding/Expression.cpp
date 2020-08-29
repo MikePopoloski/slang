@@ -616,7 +616,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         // There won't be any selectors here; this gets checked in the lookup call.
         ASSERT(result.selectors.empty());
         CallExpression::SystemCallInfo callInfo{ result.systemSubroutine, &context.scope };
-        return CallExpression::fromLookup(compilation, callInfo, invocation, callRange, context);
+        return CallExpression::fromLookup(compilation, callInfo, nullptr, invocation, callRange,
+                                          context);
     }
 
     const Symbol* symbol = result.found;
@@ -633,8 +634,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
     Expression* expr;
     if (symbol->kind == SymbolKind::Subroutine) {
-        expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), invocation,
-                                           callRange, context);
+        expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), nullptr,
+                                           invocation, callRange, context);
         invocation = nullptr;
     }
     else {

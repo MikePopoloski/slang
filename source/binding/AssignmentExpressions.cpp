@@ -727,8 +727,8 @@ ConstantValue NewClassExpression::evalImpl(EvalContext&) const {
     return nullptr;
 }
 
-bool NewClassExpression::verifyConstantImpl(EvalContext&) const {
-    // TODO:
+bool NewClassExpression::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalClassType, sourceRange);
     return false;
 }
 

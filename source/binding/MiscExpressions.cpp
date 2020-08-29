@@ -87,6 +87,14 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
         return false;
     }
 
+    // Class types are disallowed in constant expressions. Note that I don't see anything
+    // in the spec that would explicitly disallow them, but literally every tool issues
+    // an error so for now we will follow suit.
+    if (type->isClass()) {
+        context.addDiag(diag::ConstEvalClassType, sourceRange);
+        return false;
+    }
+
     const EvalContext::Frame& frame = context.topFrame();
     const SubroutineSymbol* subroutine = frame.subroutine;
     if (!subroutine)
@@ -177,6 +185,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
 }
 
 Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutine& subroutine,
+                                       const Expression* thisClass,
                                        const InvocationExpressionSyntax* syntax, SourceRange range,
                                        const BindContext& context) {
     if (subroutine.index() == 1) {
@@ -315,7 +324,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         }
     }
 
-    auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(),
+    auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(), thisClass,
                                                       boundArgs.copy(compilation),
                                                       context.lookupLocation, range);
     if (syntax)
@@ -391,8 +400,8 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
 
     SystemCallInfo callInfo{ &subroutine, &context.scope };
     const Type& type = subroutine.checkArguments(context, buffer, range);
-    auto expr = compilation.emplace<CallExpression>(callInfo, type, buffer.copy(compilation),
-                                                    context.lookupLocation, range);
+    auto expr = compilation.emplace<CallExpression>(
+        callInfo, type, nullptr, buffer.copy(compilation), context.lookupLocation, range);
 
     if (type.isError())
         return badExpr(compilation, expr);
@@ -417,6 +426,11 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     if (!checkConstant(context, symbol, sourceRange))
+        return nullptr;
+
+    // If thisClass() is set, we will already have issued an error when
+    // verifying constant-ness. Just fail silently here.
+    if (thisClass())
         return nullptr;
 
     // Evaluate all argument in the current stack frame.
@@ -458,6 +472,9 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 }
 
 bool CallExpression::verifyConstantImpl(EvalContext& context) const {
+    if (thisClass() && !thisClass()->verifyConstant(context))
+        return false;
+
     for (auto arg : arguments()) {
         if (!arg->verifyConstant(context))
             return false;
@@ -541,6 +558,9 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
         const SubroutineSymbol& symbol = *std::get<0>(subroutine);
         serializer.writeLink("subroutine", symbol);
     }
+
+    if (thisClass())
+        serializer.write("thisClass", *thisClass());
 
     if (!arguments().empty()) {
         serializer.startArray("arguments");

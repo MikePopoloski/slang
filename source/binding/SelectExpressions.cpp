@@ -754,7 +754,7 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
                                                                 prop.index, range);
         }
         case SymbolKind::Subroutine:
-            return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(),
+            return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(), &expr,
                                               invocation, range, context);
         case SymbolKind::EnumValue: {
             // Index doesn't matter here, so we pass 0.
@@ -798,13 +798,6 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = value().eval(context);
     if (!cv)
         return nullptr;
-
-    // If we're picking a parameter or enum value from a class, we don't need to
-    // actually go through the class handle.
-    if (member.kind == SymbolKind::Parameter)
-        return member.as<ParameterSymbol>().getValue();
-    else if (member.kind == SymbolKind::EnumValue)
-        return member.as<EnumValueSymbol>().getValue();
 
     // TODO: handle unpacked unions
     if (value().type->isUnpackedStruct())

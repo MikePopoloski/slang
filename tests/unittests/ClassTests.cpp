@@ -119,48 +119,6 @@ endclass
     CHECK(diags[14].code == diag::NotAllowedInClass);
 }
 
-TEST_CASE("Class parameters in constants") {
-    auto tree = SyntaxTree::fromText(R"(
-class C;
-    parameter int p = 4;
-    enum { ASDF = 5 } asdf;
-endclass
-
-module m;
-    C c;
-    localparam int i = c.p;
-    localparam int j = c.ASDF;
-
-    function int f;
-        C c2;
-        return c2.p;
-    endfunction
-
-    function int f2;
-        C c2;
-        return c2.ASDF;
-    endfunction
-
-    localparam int k = f();
-    localparam int l = f2();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& k = compilation.getRoot().lookupName<ParameterSymbol>("m.k");
-    CHECK(k.getValue().integer() == 4);
-
-    auto& l = compilation.getRoot().lookupName<ParameterSymbol>("m.l");
-    CHECK(l.getValue().integer() == 5);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
-    CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
-}
-
 TEST_CASE("Class typedefs") {
     auto tree = SyntaxTree::fromText(R"(
 typedef class C;
@@ -215,4 +173,35 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Classes disallowed in constant contexts") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int foo = 4;
+    function int frob(int i);
+        return i + foo;
+    endfunction
+
+    parameter int p = 4;
+    enum { ASDF = 5 } asdf;
+endclass
+
+module m;
+    localparam C c1 = new;
+    localparam int i = c1.foo;
+    localparam int j = c1.frob(3);
+    localparam int k = c1.p;
+    localparam int l = c1.ASDF;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    for (int i = 0; i < 5; i++) {
+        CHECK(diags[i].code == diag::ConstEvalClassType);
+    }
 }

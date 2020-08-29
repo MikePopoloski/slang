@@ -46,10 +46,15 @@ public:
     Subroutine subroutine;
 
     CallExpression(const Subroutine& subroutine, const Type& returnType,
-                   span<const Expression*> arguments, LookupLocation lookupLocation,
-                   SourceRange sourceRange) :
+                   const Expression* thisClass, span<const Expression*> arguments,
+                   LookupLocation lookupLocation, SourceRange sourceRange) :
         Expression(ExpressionKind::Call, returnType, sourceRange),
-        subroutine(subroutine), arguments_(arguments), lookupLocation(lookupLocation) {}
+        subroutine(subroutine), thisClass_(thisClass), arguments_(arguments),
+        lookupLocation(lookupLocation) {}
+
+    /// If this call is for a class method, returns the expression representing the
+    /// class handle on which the method is being invoked. Otherwise returns nullptr.
+    const Expression* thisClass() const { return thisClass_; }
 
     span<const Expression* const> arguments() const { return arguments_; }
     span<const Expression*> arguments() { return arguments_; }
@@ -69,6 +74,7 @@ public:
                                   const BindContext& context);
 
     static Expression& fromLookup(Compilation& compilation, const Subroutine& subroutine,
+                                  const Expression* thisClass,
                                   const InvocationExpressionSyntax* syntax, SourceRange range,
                                   const BindContext& context);
 
@@ -95,6 +101,7 @@ private:
     static bool checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                               SourceRange range);
 
+    const Expression* thisClass_;
     span<const Expression*> arguments_;
     LookupLocation lookupLocation;
 };
