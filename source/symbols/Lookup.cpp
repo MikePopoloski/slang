@@ -220,30 +220,22 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
         if (symbol->kind == SymbolKind::Instance)
             symbol = &symbol->as<InstanceSymbol>().body;
 
-        SymbolKind previousKind = symbol->kind;
-        string_view packageName = symbol->kind == SymbolKind::Package ? symbol->name : "";
-        const Scope& current = symbol->as<Scope>();
 
         std::tie(nameToken, selectors) = decomposeName(*it->name);
         if (nameToken.valueText().empty())
             return false;
 
-        symbol = current.find(nameToken.valueText());
+        SymbolKind previousKind = symbol->kind;
+        symbol = symbol->as<Scope>().find(nameToken.valueText());
         if (!symbol) {
-            // Give a slightly nicer error if this is the first component in a package lookup.
+            // Give a slightly nicer error if this is a compilation unit lookup.
             DiagCode code = diag::CouldNotResolveHierarchicalPath;
-            if (!packageName.empty())
-                code = diag::UnknownPackageMember;
-            else if (previousKind == SymbolKind::CompilationUnit)
+            if (previousKind == SymbolKind::CompilationUnit)
                 code = diag::UnknownUnitMember;
 
             auto& diag = result.addDiag(context.scope, code, it->dotLocation);
             diag << nameToken.valueText();
             diag << nameToken.range();
-
-            if (!packageName.empty())
-                diag << packageName;
-
             return true;
         }
     }
@@ -355,6 +347,52 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
         else
             scope = &compilation.getRoot();
     }
+}
+
+bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
+                       Token& nameToken, const SyntaxList<ElementSelectSyntax>*& selectors,
+                       LookupResult& result, const Scope& scope) {
+    while (colonParts--) {
+        if (selectors) {
+            result.addDiag(scope, diag::InvalidScopeIndexExpression, selectors->sourceRange());
+            result.found = nullptr;
+            return false;
+        }
+
+        auto& part = nameParts.back();
+        auto symbol = result.found;
+        if (symbol->kind != SymbolKind::Package &&
+            (!symbol->isType() || !symbol->as<Type>().isClass())) {
+            auto& diag = result.addDiag(scope, diag::NotAClass, part.dotLocation);
+            diag << symbol->name;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+            result.found = nullptr;
+            return false;
+        }
+
+        std::tie(nameToken, selectors) = decomposeName(*part.name);
+        if (nameToken.valueText().empty()) {
+            result.found = nullptr;
+            return false;
+        }
+
+        result.found = symbol->as<Scope>().find(nameToken.valueText());
+        if (!result.found) {
+            DiagCode code = diag::UnknownClassMember;
+            if (symbol->kind == SymbolKind::Package)
+                code = diag::UnknownPackageMember;
+
+            auto& diag = result.addDiag(scope, code, part.dotLocation);
+            diag << nameToken.valueText();
+            diag << nameToken.range();
+            diag << symbol->name;
+            return false;
+        }
+
+        nameParts.pop();
+    }
+
+    return true;
 }
 
 const Symbol* getCompilationUnit(const Symbol& symbol) {
@@ -679,10 +717,10 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
         else
             colonParts++;
 
-        if (scoped->left->kind == SyntaxKind::ScopedName)
-            scoped = &scoped->left->as<ScopedNameSyntax>();
-        else
+        if (scoped->left->kind != SyntaxKind::ScopedName)
             break;
+
+        scoped = &scoped->left->as<ScopedNameSyntax>();
     }
 
     auto [nameToken, selectors] = decomposeName(*scoped->left);
@@ -690,7 +728,7 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     if (name.empty())
         return;
 
-    auto downward = [&, nameToken = nameToken, selectors = selectors]() {
+    auto downward = [&] {
         return lookupDownward(nameParts, nameToken, selectors, BindContext(scope, location), result,
                               flags);
     };
@@ -741,13 +779,17 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     if (colonParts) {
         // If the prefix name resolved normally to a class object, use that. Otherwise we need
         // to look for a package with the corresponding name.
-        // TODO: handle the class scope check here
-
-        result.found = compilation.getPackage(name);
-        if (!result.found) {
-            result.addDiag(scope, diag::UnknownClassOrPackage, nameToken.range()) << name;
-            return;
+        if (!result.found || !result.found->isType() || !result.found->as<Type>().isClass()) {
+            result.found = compilation.getPackage(name);
+            if (!result.found) {
+                result.addDiag(scope, diag::UnknownClassOrPackage, nameToken.range()) << name;
+                return;
+            }
         }
+
+        // Drain all colon-qualified lookups here, which should always resolve to a nested type.
+        if (!resolveColonNames(nameParts, colonParts, nameToken, selectors, result, scope))
+            return;
 
         // We can't do upwards name resolution if colon access is involved, so always return
         // after one downward lookup.
