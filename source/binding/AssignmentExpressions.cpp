@@ -14,6 +14,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -713,18 +714,39 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
                                            const NewClassExpressionSyntax& syntax,
                                            const BindContext& context,
                                            const Type* assignmentTarget) {
-    if (!assignmentTarget || assignmentTarget->getCanonicalType().kind != SymbolKind::ClassType) {
-        context.addDiag(diag::NewClassTarget, syntax.sourceRange());
-        return badExpr(compilation, nullptr);
+    // If the new expression is typed, look up that type as the target.
+    // Otherwise, the target must come from the expression context.
+    const ClassType* classType = nullptr;
+    if (syntax.scopedNew->kind == SyntaxKind::ConstructorName) {
+        if (!assignmentTarget ||
+            assignmentTarget->getCanonicalType().kind != SymbolKind::ClassType) {
+            context.addDiag(diag::NewClassTarget, syntax.sourceRange());
+            return badExpr(compilation, nullptr);
+        }
+
+        classType = &assignmentTarget->getCanonicalType().as<ClassType>();
+    }
+    else {
+        auto& className = *syntax.scopedNew->as<ScopedNameSyntax>().left;
+
+        LookupResult result;
+        Lookup::name(context.scope, className, context.lookupLocation, LookupFlags::Type, result);
+
+        result.reportErrors(context);
+        if (!result.found)
+            return badExpr(compilation, nullptr);
+
+        if (!result.found->isType() || !result.found->as<Type>().isClass()) {
+            context.addDiag(diag::NotAClass, className.sourceRange()) << result.found->name;
+            return badExpr(compilation, nullptr);
+        }
+
+        auto& type = result.found->as<Type>();
+        classType = &type.getCanonicalType().as<ClassType>();
     }
 
-    // TODO: typed constructor call
-
-    auto& classType = assignmentTarget->getCanonicalType().as<ClassType>();
-    auto constructor = classType.find("new");
-
     Expression* constructorCall = nullptr;
-    if (constructor) {
+    if (auto constructor = classType->find("new")) {
         constructorCall =
             &CallExpression::fromArgs(compilation, &constructor->as<SubroutineSymbol>(), nullptr,
                                       syntax.argList, syntax.sourceRange(), context);

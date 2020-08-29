@@ -223,8 +223,19 @@ endclass
 
 module m;
     C c1 = new (3, 4.2);
-    C c2 = new;             // error
-    D d = new (1);          // error
+    C c2 = new;
+    D d1 = new (1);
+
+    D d2 = D::new;
+    C c3 = C::new(3, 0.42);
+
+    typedef int I;
+
+    D d3 = E::new();
+    C c4 = c1::new();
+    C c5 = I::new();
+
+    int i = new;
 endmodule
 )");
 
@@ -232,7 +243,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::TooFewArguments);
     CHECK(diags[1].code == diag::TooManyArguments);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+    CHECK(diags[3].code == diag::NotAClass);
+    CHECK(diags[4].code == diag::NotAClass);
+    CHECK(diags[5].code == diag::NewClassTarget);
 }
