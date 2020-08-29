@@ -34,6 +34,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 };
 
+struct ArgumentListSyntax;
+
 /// Represents a subroutine call.
 class CallExpression : public Expression {
 public:
@@ -46,10 +48,15 @@ public:
     Subroutine subroutine;
 
     CallExpression(const Subroutine& subroutine, const Type& returnType,
-                   span<const Expression*> arguments, LookupLocation lookupLocation,
-                   SourceRange sourceRange) :
+                   const Expression* thisClass, span<const Expression*> arguments,
+                   LookupLocation lookupLocation, SourceRange sourceRange) :
         Expression(ExpressionKind::Call, returnType, sourceRange),
-        subroutine(subroutine), arguments_(arguments), lookupLocation(lookupLocation) {}
+        subroutine(subroutine), thisClass_(thisClass), arguments_(arguments),
+        lookupLocation(lookupLocation) {}
+
+    /// If this call is for a class method, returns the expression representing the
+    /// class handle on which the method is being invoked. Otherwise returns nullptr.
+    const Expression* thisClass() const { return thisClass_; }
 
     span<const Expression* const> arguments() const { return arguments_; }
     span<const Expression*> arguments() { return arguments_; }
@@ -69,8 +76,13 @@ public:
                                   const BindContext& context);
 
     static Expression& fromLookup(Compilation& compilation, const Subroutine& subroutine,
+                                  const Expression* thisClass,
                                   const InvocationExpressionSyntax* syntax, SourceRange range,
                                   const BindContext& context);
+
+    static Expression& fromArgs(Compilation& compilation, const Subroutine& subroutine,
+                                const Expression* thisClass, const ArgumentListSyntax* argSyntax,
+                                SourceRange range, const BindContext& context);
 
     static Expression& fromSystemMethod(Compilation& compilation, const Expression& expr,
                                         const LookupResult::MemberSelector& selector,
@@ -81,6 +93,9 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
+        if (thisClass())
+            thisClass()->visit(visitor);
+
         for (auto arg : arguments())
             arg->visit(visitor);
     }
@@ -95,6 +110,7 @@ private:
     static bool checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                               SourceRange range);
 
+    const Expression* thisClass_;
     span<const Expression*> arguments_;
     LookupLocation lookupLocation;
 };
@@ -203,6 +219,35 @@ private:
     Expression* min_;
     Expression* typ_;
     Expression* max_;
+};
+
+struct CopyClassExpressionSyntax;
+
+/// Represents a `new` expression that copies a class instance.
+class CopyClassExpression : public Expression {
+public:
+    CopyClassExpression(const Type& type, const Expression& sourceExpr, SourceRange sourceRange) :
+        Expression(ExpressionKind::CopyClass, type, sourceRange), sourceExpr_(sourceExpr) {}
+
+    const Expression& sourceExpr() const { return sourceExpr_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const CopyClassExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::CopyClass; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        sourceExpr().visit(visitor);
+    }
+
+private:
+    const Expression& sourceExpr_;
 };
 
 } // namespace slang

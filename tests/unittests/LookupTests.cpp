@@ -1302,3 +1302,52 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AutoVariableHierarchical);
 }
+
+TEST_CASE("Class member access") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    parameter int i = 4;
+    enum { ASDF = 2 } asdf;
+
+    int foo;
+    function void bar(); endfunction
+
+    static int foo2;
+    static function void bar2(); endfunction
+endclass
+
+package P;
+    class D;
+        typedef int bar;
+    endclass
+endpackage
+
+module m #(parameter type t = P::D);
+    localparam int i = C::i;
+    localparam int j = C::ASDF;
+    localparam P::D::bar k = 9;
+    localparam t::bar l = 9;
+
+    initial begin
+        C::foo = 4;
+        C::bar();
+
+        C::foo2 = 4;
+        C::bar2();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
+    CHECK(m.find<ParameterSymbol>("i").getValue().integer() == 4);
+    CHECK(m.find<ParameterSymbol>("j").getValue().integer() == 2);
+    CHECK(m.find<ParameterSymbol>("k").getValue().integer() == 9);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NonStaticClassProperty);
+    CHECK(diags[1].code == diag::NonStaticClassMethod);
+}

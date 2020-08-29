@@ -39,9 +39,19 @@ public:
 
     static const Type& fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax);
 
+    void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
+    const ForwardingTypedefSymbol* getFirstForwardDecl() const { return firstForward; }
+
+    /// Checks all forward declarations for validity when considering the target type
+    /// of this alias. Any inconsistencies will issue diagnostics.
+    void checkForwardDecls() const;
+
     ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassType; }
+
+private:
+    mutable const ForwardingTypedefSymbol* firstForward = nullptr;
 };
 
 } // namespace slang

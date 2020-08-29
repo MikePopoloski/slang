@@ -427,6 +427,13 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
         return;
     }
 
+    if (existing->kind == SymbolKind::ClassType && member.kind == SymbolKind::ForwardingTypedef) {
+        // Class is already defined so nothing to do. When we elaborate the scope we will
+        // check that the typedef had the correct 'class' specifier.
+        existing->as<ClassType>().addForwardDecl(member.as<ForwardingTypedefSymbol>());
+        return;
+    }
+
     if (existing->kind == SymbolKind::ForwardingTypedef &&
         member.kind == SymbolKind::ForwardingTypedef) {
         // Found another forwarding typedef; link it to the previous one.
@@ -439,6 +446,13 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
         // We found the actual type for a previous forwarding declaration. Replace it in
         // the name map.
         member.as<TypeAliasType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
+        existing = &member;
+        return;
+    }
+
+    if (existing->kind == SymbolKind::ForwardingTypedef && member.kind == SymbolKind::ClassType) {
+        // Prefer having the class type in the name map.
+        member.as<ClassType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
         existing = &member;
         return;
     }
@@ -698,6 +712,8 @@ void Scope::elaborate() const {
 
         if (it->second->kind == SymbolKind::TypeAlias)
             it->second->as<TypeAliasType>().checkForwardDecls();
+        else if (it->second->kind == SymbolKind::ClassType)
+            it->second->as<ClassType>().checkForwardDecls();
         else
             addDiag(diag::UnresolvedForwardTypedef, symbol->location) << symbol->name;
     }

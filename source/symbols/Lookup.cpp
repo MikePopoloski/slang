@@ -13,6 +13,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
@@ -219,30 +220,21 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, Token nameToken,
         if (symbol->kind == SymbolKind::Instance)
             symbol = &symbol->as<InstanceSymbol>().body;
 
-        SymbolKind previousKind = symbol->kind;
-        string_view packageName = symbol->kind == SymbolKind::Package ? symbol->name : "";
-        const Scope& current = symbol->as<Scope>();
-
         std::tie(nameToken, selectors) = decomposeName(*it->name);
         if (nameToken.valueText().empty())
             return false;
 
-        symbol = current.find(nameToken.valueText());
+        SymbolKind previousKind = symbol->kind;
+        symbol = symbol->as<Scope>().find(nameToken.valueText());
         if (!symbol) {
-            // Give a slightly nicer error if this is the first component in a package lookup.
+            // Give a slightly nicer error if this is a compilation unit lookup.
             DiagCode code = diag::CouldNotResolveHierarchicalPath;
-            if (!packageName.empty())
-                code = diag::UnknownPackageMember;
-            else if (previousKind == SymbolKind::CompilationUnit)
+            if (previousKind == SymbolKind::CompilationUnit)
                 code = diag::UnknownUnitMember;
 
             auto& diag = result.addDiag(context.scope, code, it->dotLocation);
             diag << nameToken.valueText();
             diag << nameToken.range();
-
-            if (!packageName.empty())
-                diag << packageName;
-
             return true;
         }
     }
@@ -354,6 +346,90 @@ bool lookupUpward(Compilation& compilation, string_view name, span<const NamePlu
         else
             scope = &compilation.getRoot();
     }
+}
+
+bool isClassType(const Symbol& symbol) {
+    if (symbol.isType())
+        return symbol.as<Type>().isClass();
+
+    if (symbol.kind == SymbolKind::TypeParameter) {
+        auto& target = symbol.as<TypeParameterSymbol>().targetType.getType();
+        return target.isClass();
+    }
+
+    return false;
+}
+
+bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
+                       Token& nameToken, const SyntaxList<ElementSelectSyntax>*& selectors,
+                       LookupResult& result, const Scope& scope, SourceRange fullRange) {
+    bool isClass = false;
+    while (colonParts--) {
+        if (selectors) {
+            result.addDiag(scope, diag::InvalidScopeIndexExpression, selectors->sourceRange());
+            result.found = nullptr;
+            return false;
+        }
+
+        auto& part = nameParts.back();
+        auto symbol = result.found;
+        isClass = isClassType(*symbol);
+
+        if (symbol->kind != SymbolKind::Package && !isClass) {
+            auto& diag = result.addDiag(scope, diag::NotAClass, part.dotLocation);
+            diag << symbol->name;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+            result.found = nullptr;
+            return false;
+        }
+
+        std::tie(nameToken, selectors) = decomposeName(*part.name);
+        if (nameToken.valueText().empty()) {
+            result.found = nullptr;
+            return false;
+        }
+
+        if (symbol->kind == SymbolKind::TypeParameter)
+            symbol = &symbol->as<TypeParameterSymbol>().targetType.getType();
+
+        result.found = symbol->as<Scope>().find(nameToken.valueText());
+        if (!result.found) {
+            DiagCode code = diag::UnknownClassMember;
+            if (symbol->kind == SymbolKind::Package)
+                code = diag::UnknownPackageMember;
+
+            auto& diag = result.addDiag(scope, code, part.dotLocation);
+            diag << nameToken.valueText();
+            diag << nameToken.range();
+            diag << symbol->name;
+            return false;
+        }
+
+        nameParts.pop();
+    }
+
+    // If this was a class lookup, check that we are allowed to access the
+    // member via the scope resolution operator.
+    if (isClass && result.found) {
+        if (result.found->kind == SymbolKind::ClassProperty) {
+            auto& var = result.found->as<ClassPropertySymbol>();
+            if (var.lifetime == VariableLifetime::Automatic) {
+                result.addDiag(scope, diag::NonStaticClassProperty, fullRange) << var.name;
+                result.found = nullptr;
+                return false;
+            }
+        }
+        else if (result.found->kind == SymbolKind::Subroutine) {
+            auto& sub = result.found->as<SubroutineSymbol>();
+            if ((sub.flags & MethodFlags::Static) == 0) {
+                result.addDiag(scope, diag::NonStaticClassMethod, fullRange);
+                result.found = nullptr;
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 const Symbol* getCompilationUnit(const Symbol& symbol) {
@@ -557,12 +633,16 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
         bool locationGood = true;
         if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {
             locationGood = LookupLocation::before(*symbol) < location;
-            if (!locationGood && symbol->kind == SymbolKind::TypeAlias) {
+            if (!locationGood) {
                 // A type alias can have forward definitions, so check those locations as well.
                 // The forward decls form a linked list that are always ordered by location,
                 // so we only need to check the first one.
-                const ForwardingTypedefSymbol* forward =
-                    symbol->as<TypeAliasType>().getFirstForwardDecl();
+                const ForwardingTypedefSymbol* forward = nullptr;
+                if (symbol->kind == SymbolKind::TypeAlias)
+                    forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
+                else if (symbol->kind == SymbolKind::ClassType)
+                    forward = symbol->as<ClassType>().getFirstForwardDecl();
+
                 if (forward)
                     locationGood = LookupLocation::before(*forward) < location;
             }
@@ -674,18 +754,21 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
         else
             colonParts++;
 
-        if (scoped->left->kind == SyntaxKind::ScopedName)
-            scoped = &scoped->left->as<ScopedNameSyntax>();
-        else
+        if (scoped->left->kind != SyntaxKind::ScopedName)
             break;
+
+        scoped = &scoped->left->as<ScopedNameSyntax>();
     }
 
-    auto [nameToken, selectors] = decomposeName(*scoped->left);
+    Token nameToken;
+    const SyntaxList<ElementSelectSyntax>* selectors;
+    std::tie(nameToken, selectors) = decomposeName(*scoped->left);
+
     auto name = nameToken.valueText();
     if (name.empty())
         return;
 
-    auto downward = [&, nameToken = nameToken, selectors = selectors]() {
+    auto downward = [&] {
         return lookupDownward(nameParts, nameToken, selectors, BindContext(scope, location), result,
                               flags);
     };
@@ -736,11 +819,17 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     if (colonParts) {
         // If the prefix name resolved normally to a class object, use that. Otherwise we need
         // to look for a package with the corresponding name.
-        // TODO: handle the class scope check here
+        if (!result.found || !isClassType(*result.found)) {
+            result.found = compilation.getPackage(name);
+            if (!result.found) {
+                result.addDiag(scope, diag::UnknownClassOrPackage, nameToken.range()) << name;
+                return;
+            }
+        }
 
-        result.found = compilation.getPackage(name);
-        if (!result.found) {
-            result.addDiag(scope, diag::UnknownClassOrPackage, nameToken.range()) << name;
+        // Drain all colon-qualified lookups here, which should always resolve to a nested type.
+        if (!resolveColonNames(nameParts, colonParts, nameToken, selectors, result, scope,
+                               syntax.sourceRange())) {
             return;
         }
 

@@ -97,11 +97,15 @@ class C;
 
     // This should be fine
     pure virtual protected function func1;
+
+    // Invalid qualifiers for constructors
+    static function new(); endfunction
+    virtual function new(); endfunction
 endclass
 )");
 
     auto& diags = tree->diagnostics();
-    REQUIRE(diags.size() == 15);
+    REQUIRE(diags.size() == 17);
     CHECK(diags[0].code == diag::DuplicateQualifier);
     CHECK(diags[1].code == diag::QualifierConflict);
     CHECK(diags[2].code == diag::QualifierConflict);
@@ -117,4 +121,153 @@ endclass
     CHECK(diags[12].code == diag::MethodStaticLifetime);
     CHECK(diags[13].code == diag::InvalidQualifierForMember);
     CHECK(diags[14].code == diag::NotAllowedInClass);
+    CHECK(diags[15].code == diag::InvalidQualifierForConstructor);
+    CHECK(diags[16].code == diag::InvalidQualifierForConstructor);
+}
+
+TEST_CASE("Class typedefs") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef class C;
+module m;
+    C c;
+    initial c.baz = 1;
+endmodule
+
+class C;
+    int baz;
+
+    local typedef foo;
+    protected typedef bar;
+
+    typedef int foo;        // error, visibility must match
+    protected typedef int bar;
+endclass
+
+class D;
+endclass
+
+typedef class D;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ForwardTypedefVisibility);
+}
+
+TEST_CASE("Class instances") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int foo = 4;
+    function void frob(int i);
+        foo += i;
+    endfunction
+endclass
+
+module m;
+    initial begin
+        automatic C c = new;
+        c.foo = 5;
+        c.frob(3);
+        c = new;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Classes disallowed in constant contexts") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int foo = 4;
+    function int frob(int i);
+        return i + foo;
+    endfunction
+
+    parameter int p = 4;
+    enum { ASDF = 5 } asdf;
+endclass
+
+module m;
+    localparam C c1 = new;
+    localparam int i = c1.foo;
+    localparam int j = c1.frob(3);
+    localparam int k = c1.p;
+    localparam int l = c1.ASDF;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    for (int i = 0; i < 5; i++) {
+        CHECK(diags[i].code == diag::ConstEvalClassType);
+    }
+}
+
+TEST_CASE("Class constructor calls") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    function new(int i, real j); endfunction
+endclass
+
+class D;
+endclass
+
+module m;
+    C c1 = new (3, 4.2);
+    C c2 = new;
+    D d1 = new (1);
+
+    D d2 = D::new;
+    C c3 = C::new(3, 0.42);
+
+    typedef int I;
+
+    D d3 = E::new();
+    C c4 = c1::new();
+    C c5 = I::new();
+
+    int i = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::TooFewArguments);
+    CHECK(diags[1].code == diag::TooManyArguments);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+    CHECK(diags[3].code == diag::NotAClass);
+    CHECK(diags[4].code == diag::NotAClass);
+    CHECK(diags[5].code == diag::NewClassTarget);
+}
+
+TEST_CASE("Copy class expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+endclass
+
+module m;
+    C c1 = new;
+    C c2 = new c1;
+    C c3 = new 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CopyClassTarget);
 }

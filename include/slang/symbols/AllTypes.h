@@ -328,7 +328,7 @@ public:
 #undef CATEGORY
 
     Category category;
-    Visibility visibility = Visibility::Public;
+    optional<Visibility> visibility;
 
     ForwardingTypedefSymbol(string_view name, SourceLocation loc, Category category) :
         Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}
@@ -344,6 +344,9 @@ public:
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getNextForwardDecl() const { return next; }
+
+    void checkType(Category checkCategory, Visibility checkVisibility,
+                   SourceLocation declLoc) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

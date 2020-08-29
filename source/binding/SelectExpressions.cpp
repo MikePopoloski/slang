@@ -754,7 +754,7 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
                                                                 prop.index, range);
         }
         case SymbolKind::Subroutine:
-            return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(),
+            return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(), &expr,
                                               invocation, range, context);
         case SymbolKind::EnumValue: {
             // Index doesn't matter here, so we pass 0.
@@ -769,7 +769,6 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
                                                                 range);
         }
         default:
-            // TODO: support class params
             auto& diag = context.addDiag(diag::InvalidClassAccess, selector.dotLocation);
             diag << selector.nameRange;
             diag << expr.sourceRange;

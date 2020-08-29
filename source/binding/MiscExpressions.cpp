@@ -87,6 +87,14 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
         return false;
     }
 
+    // Class types are disallowed in constant expressions. Note that I don't see anything
+    // in the spec that would explicitly disallow them, but literally every tool issues
+    // an error so for now we will follow suit.
+    if (type->isClass()) {
+        context.addDiag(diag::ConstEvalClassType, sourceRange);
+        return false;
+    }
+
     const EvalContext::Frame& frame = context.topFrame();
     const SubroutineSymbol* subroutine = frame.subroutine;
     if (!subroutine)
@@ -177,6 +185,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation,
 }
 
 Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutine& subroutine,
+                                       const Expression* thisClass,
                                        const InvocationExpressionSyntax* syntax, SourceRange range,
                                        const BindContext& context) {
     if (subroutine.index() == 1) {
@@ -184,14 +193,26 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         return createSystemCall(compilation, *info.subroutine, nullptr, syntax, range, context);
     }
 
+    auto& result = fromArgs(compilation, subroutine, thisClass,
+                            syntax ? syntax->arguments : nullptr, range, context);
+    if (syntax)
+        context.setAttributes(result, syntax->attributes);
+
+    return result;
+}
+
+Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
+                                     const Expression* thisClass,
+                                     const ArgumentListSyntax* argSyntax, SourceRange range,
+                                     const BindContext& context) {
     // Collect all arguments into a list of ordered expressions (which can
     // optionally be nullptr to indicate an empty argument) and a map of
     // named argument assignments.
     SmallVectorSized<const SyntaxNode*, 8> orderedArgs;
     SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedArgs;
 
-    if (syntax && syntax->arguments) {
-        for (auto arg : syntax->arguments->parameters) {
+    if (argSyntax) {
+        for (auto arg : argSyntax->parameters) {
             if (arg->kind == SyntaxKind::NamedArgument) {
                 const NamedArgumentSyntax& nas = arg->as<NamedArgumentSyntax>();
                 auto name = nas.name.valueText();
@@ -315,12 +336,9 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         }
     }
 
-    auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(),
+    auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(), thisClass,
                                                       boundArgs.copy(compilation),
                                                       context.lookupLocation, range);
-    if (syntax)
-        context.setAttributes(*result, syntax->attributes);
-
     if (bad)
         return badExpr(compilation, result);
 
@@ -391,8 +409,8 @@ Expression& CallExpression::createSystemCall(Compilation& compilation,
 
     SystemCallInfo callInfo{ &subroutine, &context.scope };
     const Type& type = subroutine.checkArguments(context, buffer, range);
-    auto expr = compilation.emplace<CallExpression>(callInfo, type, buffer.copy(compilation),
-                                                    context.lookupLocation, range);
+    auto expr = compilation.emplace<CallExpression>(
+        callInfo, type, nullptr, buffer.copy(compilation), context.lookupLocation, range);
 
     if (type.isError())
         return badExpr(compilation, expr);
@@ -417,6 +435,11 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
     if (!checkConstant(context, symbol, sourceRange))
+        return nullptr;
+
+    // If thisClass() is set, we will already have issued an error when
+    // verifying constant-ness. Just fail silently here.
+    if (thisClass())
         return nullptr;
 
     // Evaluate all argument in the current stack frame.
@@ -458,6 +481,9 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 }
 
 bool CallExpression::verifyConstantImpl(EvalContext& context) const {
+    if (thisClass() && !thisClass()->verifyConstant(context))
+        return false;
+
     for (auto arg : arguments()) {
         if (!arg->verifyConstant(context))
             return false;
@@ -541,6 +567,9 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
         const SubroutineSymbol& symbol = *std::get<0>(subroutine);
         serializer.writeLink("subroutine", symbol);
     }
+
+    if (thisClass())
+        serializer.write("thisClass", *thisClass());
 
     if (!arguments().empty()) {
         serializer.startArray("arguments");
@@ -646,6 +675,36 @@ bool MinTypMaxExpression::verifyConstantImpl(EvalContext& context) const {
 
 void MinTypMaxExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("selected", selected());
+}
+
+Expression& CopyClassExpression::fromSyntax(Compilation& compilation,
+                                            const CopyClassExpressionSyntax& syntax,
+                                            const BindContext& context) {
+    auto& source = selfDetermined(compilation, *syntax.expr, context);
+    auto result =
+        compilation.emplace<CopyClassExpression>(*source.type, source, syntax.sourceRange());
+    if (source.bad())
+        return badExpr(compilation, result);
+
+    if (!source.type->isClass()) {
+        context.addDiag(diag::CopyClassTarget, source.sourceRange) << *source.type;
+        return badExpr(compilation, result);
+    }
+
+    return *result;
+}
+
+ConstantValue CopyClassExpression::evalImpl(EvalContext&) const {
+    return nullptr;
+}
+
+bool CopyClassExpression::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalClassType, sourceRange);
+    return false;
+}
+
+void CopyClassExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("sourceExpr", sourceExpr());
 }
 
 } // namespace slang

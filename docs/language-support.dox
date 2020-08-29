@@ -96,15 +96,15 @@ LRM | Feature | Supported
 LRM | Feature | Supported
 --- | ------- | ---------
 {{m-success}} 8.3 | Syntax | v0.2
-{{m-danger}}  8.4 | Objects | no
-{{m-danger}}  8.5 | Object properties | no
-{{m-danger}}  8.6 | Object methods | no
-{{m-danger}}  8.7 | Constructors | no
-{{m-danger}}  8.8 | Typed constructor calls | no
-{{m-danger}}  8.9 | Static class properties | no
+{{m-success}} 8.4 | Objects | v0.5
+{{m-success}} 8.5 | Object properties | v0.5
+{{m-success}} 8.6 | Object methods | v0.5
+{{m-success}} 8.7 | Constructors | v0.5
+{{m-success}} 8.8 | Typed constructor calls | v0.5
+{{m-success}} 8.9 | Static class properties | v0.5
 {{m-danger}}  8.10 | Static methods | no
 {{m-danger}}  8.11 | This | no
-{{m-danger}}  8.12 | Assignment, renaming, and copying | no
+{{m-success}} 8.12 | Assignment, renaming, and copying | v0.5
 {{m-danger}}  8.13 | Inheritance and subclasses | no
 {{m-danger}}  8.14 | Overriden members | no
 {{m-danger}}  8.15 | Super | no
@@ -118,7 +118,9 @@ LRM | Feature | Supported
 {{m-danger}}  8.24 | Out-of-block declarations | no
 {{m-danger}}  8.25 | Parameterized classes | no
 {{m-danger}}  8.26 | Interface classes | no
-{{m-danger}}  8.27 | Typedef class | no
+{{m-success}} 8.27 | Typedef class | v0.5
+{{m-dim}}     8.28 | Classes and structures | N/A
+{{m-dim}}     8.29 | Memory management | N/A
 
 ## 9. Processes
 
@@ -264,7 +266,7 @@ LRM | Feature | Supported
 {{m-success}} 20.8 | Math functions | v0.2
 {{m-success}} 20.9 | Bit vector system functions | v0.2
 {{m-success}} 20.10 | Severity tasks | v0.2
-{{m-danger}}  20.11 | Elaboration tasks | no
+{{m-success}} 20.11 | Elaboration tasks | v0.5
 {{m-danger}}  20.12 | Assertion control tasks | no
 {{m-danger}}  20.13 | Sampled value system functions | no
 {{m-danger}}  20.14 | Coverage control functions | no

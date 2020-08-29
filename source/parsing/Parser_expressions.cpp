@@ -621,6 +621,9 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
                                                                                << "."sv;
                 }
                 break;
+            case SyntaxKind::ConstructorName:
+                addDiag(diag::NewKeywordQualified, separator.location());
+                break;
             default:
                 break;
         }

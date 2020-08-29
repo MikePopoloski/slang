@@ -527,6 +527,14 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &NewArrayExpression::fromSyntax(
                 compilation, syntax.as<NewArrayExpressionSyntax>(), context, assignmentTarget);
             break;
+        case SyntaxKind::NewClassExpression:
+            result = &NewClassExpression::fromSyntax(
+                compilation, syntax.as<NewClassExpressionSyntax>(), context, assignmentTarget);
+            break;
+        case SyntaxKind::CopyClassExpression:
+            result = &CopyClassExpression::fromSyntax(
+                compilation, syntax.as<CopyClassExpressionSyntax>(), context);
+            break;
         case SyntaxKind::DefaultPatternKeyExpression:
             // This should not be reachable from any valid expression binding.
             context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
@@ -546,8 +554,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::IffPropertyExpression:
         case SyntaxKind::ImpliesPropertyExpression:
         case SyntaxKind::IntersectSequenceExpression:
-        case SyntaxKind::NewClassExpression:
-        case SyntaxKind::CopyClassExpression:
         case SyntaxKind::NextTimePropertyExpression:
         case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
         case SyntaxKind::NonOverlappedImplicationPropertyExpression:
@@ -613,7 +619,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         // There won't be any selectors here; this gets checked in the lookup call.
         ASSERT(result.selectors.empty());
         CallExpression::SystemCallInfo callInfo{ result.systemSubroutine, &context.scope };
-        return CallExpression::fromLookup(compilation, callInfo, invocation, callRange, context);
+        return CallExpression::fromLookup(compilation, callInfo, nullptr, invocation, callRange,
+                                          context);
     }
 
     const Symbol* symbol = result.found;
@@ -630,8 +637,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
     Expression* expr;
     if (symbol->kind == SymbolKind::Subroutine) {
-        expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), invocation,
-                                           callRange, context);
+        expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), nullptr,
+                                           invocation, callRange, context);
         invocation = nullptr;
     }
     else {

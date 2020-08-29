@@ -490,9 +490,19 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
             returnType = &factory.implicitType(Token(), nullptr);
     }
 
-    // TODO: error if task declares a return type
-
     auto& name = parseName();
+    bool isConstructor = getLastConsumed().kind == TokenKind::NewKeyword;
+
+    if (keyword.kind == TokenKind::TaskKeyword) {
+        if (returnType->kind != SyntaxKind::ImplicitType)
+            addDiag(diag::TaskReturnType, keyword.location()) << returnType->sourceRange();
+        else if (isConstructor)
+            addDiag(diag::TaskConstructor, keyword.location()) << name.sourceRange();
+    }
+    else if (isConstructor && returnType->kind != SyntaxKind::ImplicitType) {
+        addDiag(diag::ConstructorReturnType, name.getFirstToken().location())
+            << returnType->sourceRange();
+    }
 
     FunctionPortListSyntax* portList = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
@@ -969,6 +979,19 @@ MemberSyntax* Parser::parseClassMember() {
                                                           : TokenKind::EndFunctionKeyword;
             auto& funcDecl = parseFunctionDeclaration({}, declKind, endKind);
             checkLifetime(*funcDecl.prototype);
+
+            // Additional checking for constructors.
+            auto lastNamePart = funcDecl.prototype->name->getLastToken();
+            if (lastNamePart.kind == TokenKind::NewKeyword) {
+                for (auto qual : qualifiers) {
+                    if (qual.kind == TokenKind::VirtualKeyword ||
+                        qual.kind == TokenKind::StaticKeyword) {
+                        addDiag(diag::InvalidQualifierForConstructor, qual.location())
+                            << qual.range();
+                        break;
+                    }
+                }
+            }
 
             return &factory.classMethodDeclaration(attributes, qualifiers, funcDecl);
         }
