@@ -97,11 +97,15 @@ class C;
 
     // This should be fine
     pure virtual protected function func1;
+
+    // Invalid qualifiers for constructors
+    static function new(); endfunction
+    virtual function new(); endfunction
 endclass
 )");
 
     auto& diags = tree->diagnostics();
-    REQUIRE(diags.size() == 15);
+    REQUIRE(diags.size() == 17);
     CHECK(diags[0].code == diag::DuplicateQualifier);
     CHECK(diags[1].code == diag::QualifierConflict);
     CHECK(diags[2].code == diag::QualifierConflict);
@@ -117,6 +121,8 @@ endclass
     CHECK(diags[12].code == diag::MethodStaticLifetime);
     CHECK(diags[13].code == diag::InvalidQualifierForMember);
     CHECK(diags[14].code == diag::NotAllowedInClass);
+    CHECK(diags[15].code == diag::InvalidQualifierForConstructor);
+    CHECK(diags[16].code == diag::InvalidQualifierForConstructor);
 }
 
 TEST_CASE("Class typedefs") {

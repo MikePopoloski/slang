@@ -403,3 +403,29 @@ endpackage
     CHECK(diagnostics[5].code == diag::NotAllowedInClocking);
     CHECK(diagnostics[6].code == diag::NotAllowedInPackage);
 }
+
+TEST_CASE("Task / constructor parse errors") {
+    auto& text = R"(
+task int t;
+endtask
+
+class C;
+    task new();
+    endtask
+
+    function int new();
+    endfunction
+
+    function new::bar();
+    endfunction
+endclass
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::TaskReturnType);
+    CHECK(diagnostics[1].code == diag::TaskConstructor);
+    CHECK(diagnostics[2].code == diag::ConstructorReturnType);
+    CHECK(diagnostics[3].code == diag::NewKeywordQualified);
+}

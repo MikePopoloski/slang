@@ -87,6 +87,9 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
+        if (thisClass())
+            thisClass()->visit(visitor);
+
         for (auto arg : arguments())
             arg->visit(visitor);
     }
