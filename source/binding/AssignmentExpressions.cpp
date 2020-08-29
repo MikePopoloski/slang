@@ -48,7 +48,7 @@ bool recurseCheckEnum(const Expression& expr) {
         }
         case ExpressionKind::Conversion: {
             auto& conv = expr.as<ConversionExpression>();
-            return conv.isImplicit && recurseCheckEnum(conv.operand());
+            return conv.isImplicit() && recurseCheckEnum(conv.operand());
         }
         case ExpressionKind::MinTypMax: {
             auto& mtm = expr.as<MinTypMaxExpression>();
@@ -113,8 +113,8 @@ Expression& Expression::implicitConversion(const BindContext& context, const Typ
 
     Expression* result = &expr;
     selfDetermined(context, result);
-    return *context.scope.getCompilation().emplace<ConversionExpression>(targetType, true, *result,
-                                                                         result->sourceRange);
+    return *context.scope.getCompilation().emplace<ConversionExpression>(
+        targetType, ConversionKind::Implicit, *result, result->sourceRange);
 }
 
 Expression* Expression::tryConnectPortArray(const BindContext& context, const Type& portType,
@@ -303,8 +303,9 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             return *result;
         }
 
-        DiagCode code =
-            type.isCastCompatible(*rt) ? diag::NoImplicitConversion : diag::BadAssignment;
+        DiagCode code = type.isCastCompatible(*rt) || type.isBitstreamCastable(*rt)
+                            ? diag::NoImplicitConversion
+                            : diag::BadAssignment;
         auto& diag = context.addDiag(code, location);
         diag << *rt << type;
         if (lhsRange)
@@ -329,8 +330,8 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             return *result;
         }
 
-        result =
-            compilation.emplace<ConversionExpression>(type, true, *result, result->sourceRange);
+        result = compilation.emplace<ConversionExpression>(type, ConversionKind::Implicit, *result,
+                                                           result->sourceRange);
     }
     else {
         result = &implicitConversion(context, type, *result);
@@ -476,55 +477,61 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     auto& targetExpr = bind(*syntax.left, context, BindFlags::AllowDataType | BindFlags::Constant);
     auto& operand = selfDetermined(compilation, *syntax.right, context);
 
-    auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(), false,
-                                                            operand, syntax.sourceRange());
+    const auto* type = &compilation.getErrorType();
+    auto result = [&](ConversionKind cast = ConversionKind::Explicit) {
+        return compilation.emplace<ConversionExpression>(*type, cast, operand,
+                                                         syntax.sourceRange());
+    };
+
     if (targetExpr.bad() || operand.bad())
-        return badExpr(compilation, result);
+        return badExpr(compilation, result());
 
     if (targetExpr.kind == ExpressionKind::DataType) {
-        result->type = targetExpr.type;
-        if (!result->type->isSimpleType() && !result->type->isError() &&
-            !result->type->isString()) {
-            context.addDiag(diag::BadCastType, targetExpr.sourceRange) << *result->type;
-            return badExpr(compilation, result);
+        type = targetExpr.type;
+        if (!type->isSimpleType() && !type->isError() && !type->isString()) {
+            context.addDiag(diag::BadCastType, targetExpr.sourceRange) << *type;
+            return badExpr(compilation, result());
         }
     }
     else {
         auto val = context.evalInteger(targetExpr);
         if (!val || !context.requireGtZero(val, targetExpr.sourceRange))
-            return badExpr(compilation, result);
+            return badExpr(compilation, result());
 
         bitwidth_t width = bitwidth_t(*val);
         if (!context.requireValidBitWidth(width, targetExpr.sourceRange))
-            return badExpr(compilation, result);
+            return badExpr(compilation, result());
 
         if (!operand.type->isIntegral()) {
             auto& diag = context.addDiag(diag::BadIntegerCast, syntax.apostrophe.location());
             diag << *operand.type;
             diag << targetExpr.sourceRange << operand.sourceRange;
-            return badExpr(compilation, result);
+            return badExpr(compilation, result());
         }
 
-        result->type = &compilation.getType(width, operand.type->getIntegralFlags());
+        type = &compilation.getType(width, operand.type->getIntegralFlags());
     }
 
-    const Type& type = *result->type;
-    if (!type.isCastCompatible(*operand.type)) {
-        auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
-        diag << *operand.type << type;
-        diag << targetExpr.sourceRange << operand.sourceRange;
-        return badExpr(compilation, result);
+    if (!type->isCastCompatible(*operand.type)) {
+        if (!type->isBitstreamCastable(*operand.type)) {
+            auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
+            diag << *operand.type << *type;
+            diag << targetExpr.sourceRange << operand.sourceRange;
+            return badExpr(compilation, result());
+        }
+        else
+            return *result(ConversionKind::BitstreamCast);
     }
 
-    return *result;
+    return *result();
 }
 
 Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const SignedCastExpressionSyntax& syntax,
                                              const BindContext& context) {
     auto& operand = selfDetermined(compilation, *syntax.inner, context);
-    auto result = compilation.emplace<ConversionExpression>(compilation.getErrorType(), false,
-                                                            operand, syntax.sourceRange());
+    auto result = compilation.emplace<ConversionExpression>(
+        compilation.getErrorType(), ConversionKind::Explicit, operand, syntax.sourceRange());
     if (operand.bad())
         return badExpr(compilation, result);
 
@@ -551,16 +558,26 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
-    return convert(context, *operand().type, *type, sourceRange, operand().eval(context));
+    return convert(context, *operand().type, *type, sourceRange, operand().eval(context), castKind);
 }
 
 ConstantValue ConversionExpression::convert(EvalContext& context, const Type& from, const Type& to,
-                                            SourceRange sourceRange, ConstantValue&& value) {
+                                            SourceRange sourceRange, ConstantValue&& value,
+                                            ConversionKind castKind) {
     if (!value)
         return nullptr;
 
     if (from.isMatching(to))
         return std::move(value);
+
+    if (castKind == ConversionKind::BitstreamCast) {
+        auto cv = to.bitstreamCast(value);
+        if (cv == nullptr) {
+            auto& diag = context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange);
+            diag << value.bitstreamWidth() << to;
+        }
+        return cv;
+    }
 
     if (to.isIntegral())
         return value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());

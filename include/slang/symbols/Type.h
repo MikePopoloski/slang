@@ -107,7 +107,7 @@ public:
     bool isStruct() const;
 
     /// Indicates whether this type can be packed into a stream of bits.
-    bool isBitstreamType() const;
+    bool isBitstreamType(bool destination = false) const;
 
     /// Check whether this type has a fixed bitstream size, as opposed to a dynamically
     /// sized type like a dynamic array or string.
@@ -147,9 +147,7 @@ public:
     }
 
     /// Indicates whether this is a queue type.
-    bool isQueue() const {
-        return getCanonicalType().kind == SymbolKind::QueueType;
-    }
+    bool isQueue() const { return getCanonicalType().kind == SymbolKind::QueueType; }
 
     /// Indicates whether this is an enum type.
     bool isEnum() const { return getCanonicalType().kind == SymbolKind::EnumType; }
@@ -201,6 +199,12 @@ public:
     /// means that the type is either implicitly or explicitly convertible to
     /// this one. Note that the reverse operation is not necessarily true.
     bool isCastCompatible(const Type& rhs) const;
+
+    /// Determines whether the types can be bit-stream casting this'(rhs)
+    bool isBitstreamCastable(const Type& rhs) const;
+
+    ///  Bit-stream cast constant evaluation
+    ConstantValue bitstreamCast(const ConstantValue&) const;
 
     /// Gets a combination of flags for integral types; for non-integral types,
     /// this returns all zeros.

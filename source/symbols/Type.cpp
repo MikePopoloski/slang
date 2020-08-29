@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/Type.h"
 
+#include "TypeHelpers.h"
+
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
@@ -228,17 +230,20 @@ bool Type::isStruct() const {
     }
 }
 
-bool Type::isBitstreamType() const {
+bool Type::isBitstreamType(bool destination) const {
     if (isIntegral() || isString())
         return true;
 
-    if (isUnpackedArray())
-        return getArrayElementType()->isBitstreamType();
+    if (isUnpackedArray()) {
+        if (destination && getCanonicalType().kind == SymbolKind::AssociativeArrayType)
+            return false;
+        return getArrayElementType()->isBitstreamType(destination);
+    }
 
     if (isUnpackedStruct()) {
         auto& us = getCanonicalType().as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
-            if (!field.getType().isBitstreamType())
+            if (!field.getType().isBitstreamType(destination))
                 return false;
         }
         return true;
@@ -497,8 +502,37 @@ bool Type::isCastCompatible(const Type& rhs) const {
     if (r->isString())
         return l->isIntegral();
 
-    // TODO: bitstream casting
     return false;
+}
+
+bool Type::isBitstreamCastable(const Type& rhs) const {
+    const Type* l = &getCanonicalType();
+    const Type* r = &rhs.getCanonicalType();
+    if (l->isBitstreamType(true) && r->isBitstreamType()) {
+        // bit-stream casting
+        ASSERT(l->isAggregate() || r->isAggregate());
+        if (l->isFixedSize() && r->isFixedSize())
+            return l->bitstreamWidth() == r->bitstreamWidth();
+        else
+            return dynamicSizeMatch(*l, *r);
+    }
+    return false;
+}
+
+ConstantValue Type::bitstreamCast(const ConstantValue& value) const {
+    auto srcSize = value.bitstreamWidth();
+    bitwidth_t dynamicSize = bitstreamCastRemainingSize(*this, srcSize);
+    if (dynamicSize > srcSize)
+        return nullptr; // Sizes do not fit
+    bitwidth_t bit = 0;
+    PackVector packed;
+    pack(value, packed);
+    auto iter = packed.cbegin();
+    const auto cv = unpack(*this, iter, bit, dynamicSize);
+    ASSERT(!dynamicSize && bit == ((*iter)->isInteger() ? (*iter)->integer().getBitWidth()
+                                                        : (*iter)->str().length() * 8));
+    ASSERT(iter != packed.cend() && ++iter == packed.cend());
+    return cv;
 }
 
 bitmask<IntegralFlags> Type::getIntegralFlags() const {
