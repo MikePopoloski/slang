@@ -707,4 +707,33 @@ void NewArrayExpression::serializeTo(ASTSerializer& serializer) const {
         serializer.write("initExpr", initExpr());
 }
 
+Expression& NewClassExpression::fromSyntax(Compilation& compilation,
+                                           const NewClassExpressionSyntax& syntax,
+                                           const BindContext& context,
+                                           const Type* assignmentTarget) {
+    if (!assignmentTarget || assignmentTarget->getCanonicalType().kind != SymbolKind::ClassType) {
+        context.addDiag(diag::NewClassTarget, syntax.sourceRange());
+        return badExpr(compilation, nullptr);
+    }
+
+    // TODO: typed constructor call
+    // TODO: constructor arguments
+
+    auto result = compilation.emplace<NewClassExpression>(*assignmentTarget, syntax.sourceRange());
+    return *result;
+}
+
+ConstantValue NewClassExpression::evalImpl(EvalContext&) const {
+    return nullptr;
+}
+
+bool NewClassExpression::verifyConstantImpl(EvalContext&) const {
+    // TODO:
+    return false;
+}
+
+void NewClassExpression::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
 } // namespace slang

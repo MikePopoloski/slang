@@ -192,3 +192,27 @@ typedef class D;
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ForwardTypedefVisibility);
 }
+
+TEST_CASE("Class instances") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int foo = 4;
+    function void frob(int i);
+        foo += i;
+    endfunction
+endclass
+
+module m;
+    initial begin
+        automatic C c = new;
+        c.foo = 5;
+        c.frob(3);
+        c = new;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

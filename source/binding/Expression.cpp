@@ -527,6 +527,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &NewArrayExpression::fromSyntax(
                 compilation, syntax.as<NewArrayExpressionSyntax>(), context, assignmentTarget);
             break;
+        case SyntaxKind::NewClassExpression:
+            result = &NewClassExpression::fromSyntax(
+                compilation, syntax.as<NewClassExpressionSyntax>(), context, assignmentTarget);
+            break;
         case SyntaxKind::DefaultPatternKeyExpression:
             // This should not be reachable from any valid expression binding.
             context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
@@ -546,7 +550,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::IffPropertyExpression:
         case SyntaxKind::ImpliesPropertyExpression:
         case SyntaxKind::IntersectSequenceExpression:
-        case SyntaxKind::NewClassExpression:
         case SyntaxKind::CopyClassExpression:
         case SyntaxKind::NextTimePropertyExpression:
         case SyntaxKind::NonOverlappedFollowedByPropertyExpression:

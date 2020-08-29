@@ -138,4 +138,23 @@ private:
     const Expression* initializer_;
 };
 
+struct NewClassExpressionSyntax;
+
+/// Represents a `new` expression that creates a class instance.
+class NewClassExpression : public Expression {
+public:
+    NewClassExpression(const Type& type, SourceRange sourceRange) :
+        Expression(ExpressionKind::NewClass, type, sourceRange) {}
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const NewClassExpressionSyntax& syntax,
+                                  const BindContext& context, const Type* assignmentTarget);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NewClass; }
+};
+
 } // namespace slang

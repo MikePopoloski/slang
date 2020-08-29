@@ -51,6 +51,7 @@ struct InvocationExpressionSyntax;
     x(EmptyArgument) \
     x(OpenRange) \
     x(NewArray) \
+    x(NewClass) \
     x(MinTypMax)
 ENUM(ExpressionKind, EXPRESSION);
 #undef EXPRESSION
