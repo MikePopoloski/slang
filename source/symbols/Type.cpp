@@ -486,36 +486,39 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
     return false;
 }
 
-bool Type::isCastCompatible(const Type& rhs, bool useBitstreamCast) const {
+// Return 2 for bit-stream casting, 1 for valid explicit cast, 0 for invalid type cast
+int Type::isCastCompatible(const Type& rhs) const {
     // See [6.22.4] for Cast Compatible
     const Type* l = &getCanonicalType();
     const Type* r = &rhs.getCanonicalType();
+    int yes = 1, no = 0;
     if (l->isAssignmentCompatible(*r))
-        return true;
+        return yes;
 
     if (l->isEnum()) {
         if (r->isIntegral() || r->isFloating())
-            return true;
+            return yes;
     }
     else if (l->isString()) {
         if (r->isIntegral())
-            return true;
+            return yes;
     }
     else if (r->isString()) {
         if (l->isIntegral())
-            return true;
+            return yes;
     }
 
-    if (useBitstreamCast && l->isBitstreamType(true) && r->isBitstreamType()) {
+    if (l->isBitstreamType(true) && r->isBitstreamType()) {
         // bit-stream casting
         ASSERT(l->isAggregate() || r->isAggregate());
+        yes = 2;
         if (l->isFixedSize() && r->isFixedSize())
-            return l->bitstreamWidth() == r->bitstreamWidth();
+            return l->bitstreamWidth() == r->bitstreamWidth() ? yes : no;
         else
-            return dynamicSizeMatch(*l, *r);
+            return dynamicSizeMatch(*l, *r) ? yes : no;
     }
 
-    return false;
+    return no;
 }
 
 ConstantValue Type::bitstreamCast(const ConstantValue& value) const {

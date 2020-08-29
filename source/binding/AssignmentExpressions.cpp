@@ -45,7 +45,7 @@ bool recurseCheckEnum(const Expression& expr) {
         }
         case ExpressionKind::Conversion: {
             auto& conv = expr.as<ConversionExpression>();
-            return conv.isImplicit && recurseCheckEnum(conv.operand());
+            return conv.isImplicit() && recurseCheckEnum(conv.operand());
         }
         case ExpressionKind::MinTypMax: {
             auto& mtm = expr.as<MinTypMaxExpression>();
@@ -506,12 +506,15 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     }
 
     const Type& type = *result->type;
-    if (!type.isCastCompatible(*operand.type)) {
+    auto castKind = type.isCastCompatible(*operand.type);
+    if (!castKind) {
         auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
         diag << *operand.type << type;
         diag << targetExpr.sourceRange << operand.sourceRange;
         return badExpr(compilation, result);
     }
+    if (castKind > 1)
+        result->setCast(ConvertCast::BitstreamCast);
 
     return *result;
 }
@@ -547,29 +550,34 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
+void ConversionExpression::setCast(ConvertCast cast) {
+    ASSERT((cast_ == ConvertCast::Implicit || cast_ == ConvertCast::Explicit) &&
+           (cast_ == ConvertCast::Implicit ? cast != ConvertCast::BitstreamCast
+                                           : cast != ConvertCast::Propagate));
+    cast_ = cast;
+}
+
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
-    if (!isImplicit && !type->isCastCompatible(*operand().type, false)) {
-        // bit-stream casting
-        auto value = operand().eval(context);
-        if (value == nullptr)
-            return value;
-        auto v1 = type->bitstreamCast(value);
-        if (v1 == nullptr) {
-            auto& diag = context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange);
-            diag << value.bitstreamWidth() << *type;
-        }
-        return v1;
-    }
-    return convert(context, *operand().type, *type, sourceRange, operand().eval(context));
+    return convert(context, *operand().type, *type, sourceRange, operand().eval(context), cast());
 }
 
 ConstantValue ConversionExpression::convert(EvalContext& context, const Type& from, const Type& to,
-                                            SourceRange sourceRange, ConstantValue&& value) {
+                                            SourceRange sourceRange, ConstantValue&& value,
+                                            ConvertCast cast) {
     if (!value)
         return nullptr;
 
     if (from.isMatching(to))
         return std::move(value);
+
+    if (cast == ConvertCast::BitstreamCast) {
+        auto cv = to.bitstreamCast(value);
+        if (cv == nullptr) {
+            auto& diag = context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange);
+            diag << value.bitstreamWidth() << to;
+        }
+        return cv;
+    }
 
     if (to.isIntegral())
         return value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
