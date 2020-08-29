@@ -760,7 +760,10 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
         scoped = &scoped->left->as<ScopedNameSyntax>();
     }
 
-    auto [nameToken, selectors] = decomposeName(*scoped->left);
+    Token nameToken;
+    const SyntaxList<ElementSelectSyntax>* selectors;
+    std::tie(nameToken, selectors) = decomposeName(*scoped->left);
+
     auto name = nameToken.valueText();
     if (name.empty())
         return;

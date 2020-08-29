@@ -88,7 +88,7 @@ string_view getName(FloatingType::Kind kind) {
 // clang-format on
 
 const Type& createPackedDims(const BindContext& context, const Type* type,
-                             SyntaxList<VariableDimensionSyntax> dimensions) {
+                             const SyntaxList<VariableDimensionSyntax>& dimensions) {
     size_t count = dimensions.size();
     for (size_t i = 0; i < count; i++) {
         auto& dimSyntax = *dimensions[count - i - 1];
