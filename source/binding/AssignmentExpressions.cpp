@@ -579,6 +579,9 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         return cv;
     }
 
+    if (castKind == ConversionKind::Propagated && value.isInteger() && to.isIntegral())
+        value.integer().setSigned(to.isSigned());
+
     if (to.isIntegral())
         return value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
 
