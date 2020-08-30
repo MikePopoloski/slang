@@ -434,7 +434,7 @@ public:
 
     SVInt operator-() const;
     SVInt operator~() const;
-    logic_t operator!() const { return *this == 0; }
+    logic_t operator!() const { return !reductionOr(); }
 
     SVInt operator+(const SVInt& rhs) const;
     SVInt operator-(const SVInt& rhs) const;
@@ -459,13 +459,13 @@ public:
     logic_t operator<=(const SVInt& rhs) const { return (*this < rhs) || (*this == rhs); }
     logic_t operator>(const SVInt& rhs) const { return !(*this <= rhs); }
     logic_t operator>=(const SVInt& rhs) const { return !(*this < rhs); }
-    logic_t operator&&(const SVInt& rhs) const { return *this != 0 && rhs != 0; }
-    logic_t operator||(const SVInt& rhs) const { return *this != 0 || rhs != 0; }
+    logic_t operator&&(const SVInt& rhs) const { return reductionOr() && rhs.reductionOr(); }
+    logic_t operator||(const SVInt& rhs) const { return reductionOr() || rhs.reductionOr(); }
 
     logic_t operator[](const SVInt& index) const;
     logic_t operator[](int32_t index) const;
 
-    explicit operator logic_t() const { return *this != 0; }
+    explicit operator logic_t() const { return reductionOr(); }
 
     /// Constructs from a string (in SystemVerilog syntax). This is mostly for convenience;
     /// any errors will assert instead of being handled gracefully.
@@ -554,6 +554,7 @@ private:
     // Check if we still need to have the unknownFlag set after doing an
     // operation that might have removed the unknown bits in the number.
     void checkUnknown();
+    void makeUnknown();
 
     static constexpr uint32_t whichWord(bitwidth_t bitIndex) { return bitIndex / BITS_PER_WORD; }
     static constexpr uint32_t whichBit(bitwidth_t bitIndex) { return bitIndex % BITS_PER_WORD; }

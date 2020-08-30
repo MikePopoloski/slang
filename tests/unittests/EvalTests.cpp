@@ -1684,3 +1684,40 @@ typedef struct { logic[-2:5] a[][]; string b; bit c[$]; } f;
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Mixed unknowns or signedness") {
+    ScriptSession session;
+
+    // Bitwise operator with exactly one operand unknown
+    CHECK_THAT(session.eval("3'b000 ^ 3'b0x1").integer(), exactlyEquals("3'b0x1"_si));
+    CHECK_THAT(session.eval("3'b0x1 ^ 3'b000").integer(), exactlyEquals("3'b0x1"_si));
+    CHECK_THAT(session.eval("3'b000 | 3'b0x1").integer(), exactlyEquals("3'b0x1"_si));
+    CHECK_THAT(session.eval("3'b0x1 | 3'b000").integer(), exactlyEquals("3'b0x1"_si));
+    CHECK_THAT(session.eval("3'b111 & 3'b0x1").integer(), exactlyEquals("3'b0x1"_si));
+    CHECK_THAT(session.eval("3'b0x1 & 3'b111").integer(), exactlyEquals("3'b0x1"_si));
+    CHECK_THAT(session.eval("3'b000 ~^ 3'b0x1").integer(), exactlyEquals("3'b1x0"_si));
+    CHECK_THAT(session.eval("3'b0x1 ^~ 3'b000").integer(), exactlyEquals("3'b1x0"_si));
+    CHECK_THAT(session.eval("599'b000 ^ 3'b0x1").integer(), exactlyEquals("599'b0x1"_si));
+    CHECK_THAT(session.eval("3'b0x1 ^ 600'b0").integer(), exactlyEquals("600'b0x1"_si));
+    CHECK_THAT(session.eval("3'b0x1 | 601'b0").integer(), exactlyEquals("601'b0x1"_si));
+    CHECK_THAT(session.eval("3'b0x1 & {602{1'b1}}").integer(), exactlyEquals("602'b0x1"_si));
+    CHECK_THAT(session.eval("3'b0x1 ^~ {{600{1'b1}}, 3'b0}").integer(),
+               exactlyEquals("603'b1x0"_si));
+
+    // logical and reduction operators on mixed unknowns
+    CHECK(session.eval("! 3'b0x1").integer() == 0);
+    CHECK(session.eval("| 3'b0x1").integer() == 1);
+    CHECK(session.eval("& 3'b0x1").integer() == 0);
+    CHECK_THAT(session.eval("& 3'bx1").integer(), exactlyEquals(SVInt(logic_t::x)));
+    CHECK(session.eval("3'b0x1 || 1'b0").integer() == 1);
+    CHECK(session.eval("3'b0x1 && 1'b1").integer() == 1);
+
+    // Equality operators with unknowns
+    CHECK(session.eval("3'b0x1 == 0").integer() == 0);
+    CHECK(session.eval("2'b1x ?16'h1234:16'h7890").integer() == 4660);
+
+    // propagated signed extension
+    CHECK(session.eval("1'b0 ? 7'd100: 3'sb101").integer() == 5);
+
+    NO_SESSION_ERRORS;
+}
