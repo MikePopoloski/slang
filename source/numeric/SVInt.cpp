@@ -860,12 +860,20 @@ SVInt SVInt::pow(const SVInt& rhs) const {
 }
 
 logic_t SVInt::reductionAnd() const {
-    if (unknownFlag)
-        return countZeros() > 0 ? logic_t(false) : logic_t::x;
-
     uint64_t mask;
     bitwidth_t bitsInMsw;
     getTopWordMask(bitsInMsw, mask);
+
+    if (unknownFlag) {
+        uint32_t words = getNumWords(bitWidth, false);
+        for (uint32_t i = 0; i < words - 1; i++) {
+            if ((pVal[i] | pVal[i + words]) != UINT64_MAX)
+                return logic_t(false);
+        }
+        if ((pVal[words - 1] | pVal[words * 2 - 1]) != mask)
+            return logic_t(false);
+        return logic_t::x;
+    }
 
     if (isSingleWord())
         return logic_t(val == mask);
@@ -879,8 +887,14 @@ logic_t SVInt::reductionAnd() const {
 }
 
 logic_t SVInt::reductionOr() const {
-    if (unknownFlag)
-        return countOnes() > 0 ? logic_t(true) : logic_t::x;
+    if (unknownFlag) {
+        uint32_t words = getNumWords(bitWidth, false);
+        for (uint32_t i = 0; i < words; i++) {
+            if (pVal[i] & ~pVal[i + words])
+                return logic_t(true);
+        }
+        return logic_t::x;
+    }
 
     if (isSingleWord())
         return logic_t(val != 0);
