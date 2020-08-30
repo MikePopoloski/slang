@@ -579,6 +579,9 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         return cv;
     }
 
+    // [11.8.2] last bullet says: the operand shall be sign-extended only if the propagated type is
+    // signed. It is different from [11.8.3] ConstantValue::convertToInt uses.
+    // ConversionKind::Propagated marked in Expression::PropagationVisitor
     if (castKind == ConversionKind::Propagated && value.isInteger() && to.isIntegral())
         value.integer().setSigned(to.isSigned());
 

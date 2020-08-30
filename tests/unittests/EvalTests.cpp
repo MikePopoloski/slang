@@ -1697,6 +1697,7 @@ TEST_CASE("Mixed unknowns or signedness") {
     CHECK_THAT(session.eval("3'b0x1 & 3'b111").integer(), exactlyEquals("3'b0x1"_si));
     CHECK_THAT(session.eval("3'b000 ~^ 3'b0x1").integer(), exactlyEquals("3'b1x0"_si));
     CHECK_THAT(session.eval("3'b0x1 ^~ 3'b000").integer(), exactlyEquals("3'b1x0"_si));
+    CHECK_THAT(session.eval("599'b000 ^ 3'b0x1").integer(), exactlyEquals("599'b0x1"_si));
     CHECK_THAT(session.eval("3'b0x1 ^ 600'b0").integer(), exactlyEquals("600'b0x1"_si));
     CHECK_THAT(session.eval("3'b0x1 | 601'b0").integer(), exactlyEquals("601'b0x1"_si));
     CHECK_THAT(session.eval("3'b0x1 & {602{1'b1}}").integer(), exactlyEquals("602'b0x1"_si));
@@ -1711,7 +1712,7 @@ TEST_CASE("Mixed unknowns or signedness") {
     CHECK(session.eval("3'b0x1 || 1'b0").integer() == 1);
     CHECK(session.eval("3'b0x1 && 1'b1").integer() == 1);
 
-    // Equaulity operators with uknowns
+    // Equality operators with unknowns
     CHECK(session.eval("3'b0x1 == 0").integer() == 0);
     CHECK(session.eval("2'b1x ?16'h1234:16'h7890").integer() == 4660);
 
