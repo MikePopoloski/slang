@@ -1688,7 +1688,7 @@ typedef struct { logic[-2:5] a[][]; string b; bit c[$]; } f;
 TEST_CASE("Mixed unknowns or signedness") {
     ScriptSession session;
 
-    // Bitwise operator with exactly one operand unknown
+    // bitwise operator with exactly one operand unknown
     CHECK_THAT(session.eval("3'b000 ^ 3'b0x1").integer(), exactlyEquals("3'b0x1"_si));
     CHECK_THAT(session.eval("3'b0x1 ^ 3'b000").integer(), exactlyEquals("3'b0x1"_si));
     CHECK_THAT(session.eval("3'b000 | 3'b0x1").integer(), exactlyEquals("3'b0x1"_si));
@@ -1712,12 +1712,22 @@ TEST_CASE("Mixed unknowns or signedness") {
     CHECK(session.eval("3'b0x1 || 1'b0").integer() == 1);
     CHECK(session.eval("3'b0x1 && 1'b1").integer() == 1);
 
-    // Equality operators with unknowns
+    // equality operators with unknowns
     CHECK(session.eval("3'b0x1 == 0").integer() == 0);
     CHECK(session.eval("2'b1x ?16'h1234:16'h7890").integer() == 4660);
+    CHECK_THAT(session.eval("3'sb1x0 == 4'sb11x0").integer(), exactlyEquals(SVInt(logic_t::x)));
+    CHECK(session.eval("{1'b1, 99'b0x0} == 0").integer() == 0);
 
-    // propagated signed extension
+    // mixed signed
     CHECK(session.eval("1'b0 ? 7'd100: 3'sb101").integer() == 5);
+    CHECK(session.eval("3'sd2**2'b10 > -2").integer() == 1);
+    CHECK(session.eval("-1**2'b11").integer() == -1);
+    CHECK(session.eval("500'habcdef**-2").integer() == 0);
+    CHECK(session.eval("-500'sd1**7'd37").integer() == -1);
+    CHECK(session.eval("-500'sd1**-3").integer() == -1);
+    CHECK(session.eval("4'd3**500'sd3").integer() == 11);
+    CHECK(session.eval("10**3'b100").integer() == 10000);
+    CHECK(session.eval("3'b111**2'sb10").integer() == 0);
 
     NO_SESSION_ERRORS;
 }
