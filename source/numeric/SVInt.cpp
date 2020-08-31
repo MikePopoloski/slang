@@ -833,7 +833,7 @@ SVInt SVInt::pow(const SVInt& rhs) const {
         return SVInt(bitWidth, 1, signFlag);
 
     if (signFlag && isNegative()) {
-        if (reductionAnd()) {
+        if (reductionAnd()) { // x == -1
             // if rhs is odd, result is -1
             // otherwise, result is 1
             if (rhs.isOdd())
