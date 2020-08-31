@@ -811,52 +811,52 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBas
 
 SVInt SVInt::pow(const SVInt& rhs) const {
     // ignore unknowns
-    bool bothSigned = signFlag && rhs.signFlag;
     if (unknownFlag || rhs.unknownFlag)
-        return createFillX(bitWidth, bothSigned);
+        return createFillX(bitWidth, signFlag);
 
     // Handle special cases first (note that the result always has
     // the bit width of *this)
     bitwidth_t lhsBits = getActiveBits();
     bitwidth_t rhsBits = rhs.getActiveBits();
+    // The second operand of the power operator shall be treated as self-determined
     if (lhsBits == 0) {
         if (rhsBits == 0) // 0**0 == 1
-            return SVInt(bitWidth, 1, bothSigned);
+            return SVInt(bitWidth, 1, signFlag);
         if (rhs.signFlag && rhs.isNegative()) // 0**-y == x
-            return createFillX(bitWidth, bothSigned);
+            return createFillX(bitWidth, signFlag);
         // 0**y == 0
-        return SVInt(bitWidth, 0, bothSigned);
+        return SVInt(bitWidth, 0, signFlag);
     }
 
     // x**0 == 1 || 1**y == 1
     if (rhsBits == 0 || lhsBits == 1)
-        return SVInt(bitWidth, 1, bothSigned);
+        return SVInt(bitWidth, 1, signFlag);
 
-    if (bothSigned && isNegative()) {
-        if (*this == SVInt(bitWidth, UINT64_MAX, bothSigned)) {
+    if (signFlag && isNegative()) {
+        if (reductionAnd()) {
             // if rhs is odd, result is -1
             // otherwise, result is 1
             if (rhs.isOdd())
-                return SVInt(bitWidth, UINT64_MAX, bothSigned);
+                return SVInt(bitWidth, UINT64_MAX, signFlag);
             else
-                return SVInt(bitWidth, 1, bothSigned);
+                return SVInt(bitWidth, 1, signFlag);
         }
     }
 
-    if (bothSigned && rhs.isNegative()) // x**-y == 0
-        return SVInt(bitWidth, 0, bothSigned);
+    if (rhs.signFlag && rhs.isNegative()) // x**-y == 0
+        return SVInt(bitWidth, 0, signFlag);
 
     // we have one of two cases left (rhs is always positive here):
     // 1. lhs > 1 (just do the operation)
     // 2. lhs < -1 (invert, do the op, figure out the sign at the end)
-    if (bothSigned && isNegative()) {
+    if (signFlag && isNegative()) {
         // result is negative if rhs is odd, otherwise positive
         if (rhs.isOdd())
-            return -modPow(-(*this), rhs, bothSigned);
+            return -modPow(-(*this), rhs, signFlag);
         else
-            return modPow(-(*this), rhs, bothSigned);
+            return modPow(-(*this), rhs, signFlag);
     }
-    return modPow(*this, rhs, bothSigned);
+    return modPow(*this, rhs, signFlag);
 }
 
 logic_t SVInt::reductionAnd() const {
