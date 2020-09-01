@@ -1331,7 +1331,11 @@ TEST_CASE("$bits on non-fixed-size array") {
     for (const auto& type : types) {
         CHECK(testBitstream(type + intBits) == 0);
         CHECK(testBitstream(type + paramBits) > 0);
-        CHECK(testBitstream(typeDef + type + paramBits, diag::QueryOnDynamicType) == 1);
+
+        std::string combined = typeDef;
+        combined.append(type);
+        combined.append(paramBits);
+        CHECK(testBitstream(combined, diag::QueryOnDynamicType) == 1);
     }
 }
 

@@ -1621,6 +1621,7 @@ localparam bit dynamic[] = '{1, 0};
 localparam shortint queue[$] = '{8, 1, 3};
 localparam byte asso[string] = '{ "Jon": 20, "Paul":22, "Al":23, default:-1 };
 )");
+
     CHECK(session.eval("$bits(str)").integer() == 40);
     CHECK(session.eval("$bits(fixed)").integer() == 15);
     CHECK(session.eval("$bits(record)").integer() == 66);
@@ -1645,12 +1646,15 @@ typedef struct { bit[0:4] a; bit[8:3] b; bit[38:0] c; bit[10:15] d; } d;
 localparam bit[7:1] e [0:7] = {29, 40, 0, 0, 0, 3, 99, 125};
 typedef struct { logic[-2:5] a[][]; string b; bit c[$]; } f;
 )");
+
     CHECK(session.eval("int'(a)").integer() == -1610337718);
+
     auto cv0 = session.eval("b'(tab)");
     CHECK(cv0.elements()[0].integer() == 23);
     CHECK(cv0.elements()[1].integer() == 22);
     CHECK(cv0.elements()[2].integer() == 20);
     CHECK(cv0.elements().size() == 3);
+
     auto cv1 = session.eval("c'(str)");
     CHECK(cv1.elements()[0].elements()[0].integer() == 26725);
     CHECK(cv1.elements()[0].elements()[1].integer() == 27756);
@@ -1662,12 +1666,14 @@ typedef struct { logic[-2:5] a[][]; string b; bit c[$]; } f;
     CHECK(cv1.elements().size() == 2);
     CHECK(session.eval("string'(c'(str))").str() == "hello!!");
     CHECK(session.eval("string'(d'(str))").str() == "hello!!");
+
     auto cv2 = session.eval("d'(e)");
     CHECK(cv2.elements()[0].integer() == 7);
     CHECK(cv2.elements()[1].integer() == 21);
     CHECK(cv2.elements()[2].integer() == 967);
     CHECK(cv2.elements()[3].integer() == 61);
     CHECK(cv2.elements().size() == 4);
+
     auto cv3 = session.eval("f'(e)");
     CHECK(cv3.elements()[0].elements().size() == 1);
     CHECK(cv3.elements()[0].elements()[0].elements().size() == 7);
@@ -1714,12 +1720,12 @@ TEST_CASE("Mixed unknowns or signedness") {
 
     // equality operators with unknowns
     CHECK(session.eval("3'b0x1 == 0").integer() == 0);
-    CHECK(session.eval("2'b1x ?16'h1234:16'h7890").integer() == 4660);
+    CHECK(session.eval("2'b1x ? 16'h1234 : 16'h7890").integer() == 4660);
     CHECK_THAT(session.eval("3'sb1x0 == 4'sb11x0").integer(), exactlyEquals(SVInt(logic_t::x)));
     CHECK(session.eval("{1'b1, 99'b0x0} == 0").integer() == 0);
 
     // mixed signed
-    CHECK(session.eval("1'b0 ? 7'd100: 3'sb101").integer() == 5);
+    CHECK(session.eval("1'b0 ? 7'd100 : 3'sb101").integer() == 5);
     CHECK(session.eval("3'sd2**2'b10 > -2").integer() == 1);
     CHECK(session.eval("-1**2'b11").integer() == -1);
     CHECK(session.eval("500'habcdef**-2").integer() == 0);

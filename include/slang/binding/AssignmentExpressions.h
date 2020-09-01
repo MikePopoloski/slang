@@ -70,13 +70,13 @@ enum class ConversionKind : uint8_t { Implicit, Propagated, Explicit, BitstreamC
 /// Represents a type conversion expression (implicit or explicit).
 class ConversionExpression : public Expression {
 public:
-    const ConversionKind castKind;
-    bool isImplicit() const { return castKind < ConversionKind::Explicit; }
+    const ConversionKind conversionKind;
+    bool isImplicit() const { return conversionKind < ConversionKind::Explicit; }
 
-    ConversionExpression(const Type& type, ConversionKind castKind, Expression& operand,
+    ConversionExpression(const Type& type, ConversionKind conversionKind, Expression& operand,
                          SourceRange sourceRange) :
         Expression(ExpressionKind::Conversion, type, sourceRange),
-        castKind(castKind), operand_(&operand) {}
+        conversionKind(conversionKind), operand_(&operand) {}
 
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }
@@ -93,7 +93,8 @@ public:
                                   const BindContext& context);
 
     static ConstantValue convert(EvalContext& context, const Type& from, const Type& to,
-                                 SourceRange sourceRange, ConstantValue&& value, ConversionKind);
+                                 SourceRange sourceRange, ConstantValue&& value,
+                                 ConversionKind conversionKind);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 

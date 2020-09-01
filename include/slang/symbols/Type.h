@@ -107,6 +107,8 @@ public:
     bool isStruct() const;
 
     /// Indicates whether this type can be packed into a stream of bits.
+    /// If @a destination is true, this is being checked in the context of the
+    /// destination side of a bitstream cast, which disallows associative arrays.
     bool isBitstreamType(bool destination = false) const;
 
     /// Check whether this type has a fixed bitstream size, as opposed to a dynamically
@@ -200,11 +202,12 @@ public:
     /// this one. Note that the reverse operation is not necessarily true.
     bool isCastCompatible(const Type& rhs) const;
 
-    /// Determines whether the types can be bit-stream casting this'(rhs)
+    /// Determines whether the given type can be bit-stream cast to this one.
     bool isBitstreamCastable(const Type& rhs) const;
 
-    ///  Bit-stream cast constant evaluation
-    ConstantValue bitstreamCast(const ConstantValue&) const;
+    /// Performs a bit-stream cast of @a value to this type. If the conversion
+    /// is not valid, returns nullptr (invalid value).
+    ConstantValue bitstreamCast(const ConstantValue& value) const;
 
     /// Gets a combination of flags for integral types; for non-integral types,
     /// this returns all zeros.

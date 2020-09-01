@@ -519,8 +519,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
             diag << targetExpr.sourceRange << operand.sourceRange;
             return badExpr(compilation, result());
         }
-        else
-            return *result(ConversionKind::BitstreamCast);
+
+        return *result(ConversionKind::BitstreamCast);
     }
 
     return *result();
@@ -558,21 +558,22 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
-    return convert(context, *operand().type, *type, sourceRange, operand().eval(context), castKind);
+    return convert(context, *operand().type, *type, sourceRange, operand().eval(context),
+                   conversionKind);
 }
 
 ConstantValue ConversionExpression::convert(EvalContext& context, const Type& from, const Type& to,
                                             SourceRange sourceRange, ConstantValue&& value,
-                                            ConversionKind castKind) {
+                                            ConversionKind conversionKind) {
     if (!value)
         return nullptr;
 
     if (from.isMatching(to))
         return std::move(value);
 
-    if (castKind == ConversionKind::BitstreamCast) {
+    if (conversionKind == ConversionKind::BitstreamCast) {
         auto cv = to.bitstreamCast(value);
-        if (cv == nullptr) {
+        if (!cv) {
             auto& diag = context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange);
             diag << value.bitstreamWidth() << to;
         }
@@ -583,7 +584,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         // [11.8.2] last bullet says: the operand shall be sign-extended only if the propagated type
         // is signed. It is different from [11.8.3] ConstantValue::convertToInt uses.
         // ConversionKind::Propagated marked in Expression::PropagationVisitor
-        if (castKind == ConversionKind::Propagated && value.isInteger())
+        if (conversionKind == ConversionKind::Propagated && value.isInteger())
             value.integer().setSigned(to.isSigned());
         return value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
     }

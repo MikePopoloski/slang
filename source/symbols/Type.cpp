@@ -111,12 +111,14 @@ bitwidth_t Type::bitstreamWidth() const {
         const auto& fsa = ct.as<FixedSizeUnpackedArrayType>();
         return fsa.elementType.bitstreamWidth() * fsa.range.width();
     }
-    else if (isUnpackedStruct()) {
+
+    if (isUnpackedStruct()) {
         auto& us = getCanonicalType().as<UnpackedStructType>();
         for (auto& field : us.membersOfType<FieldSymbol>()) {
             bitwidth_t fieldWidth = field.getType().bitstreamWidth();
             if (!fieldWidth)
                 return 0;
+
             width += fieldWidth;
         }
     }
@@ -509,28 +511,29 @@ bool Type::isBitstreamCastable(const Type& rhs) const {
     const Type* l = &getCanonicalType();
     const Type* r = &rhs.getCanonicalType();
     if (l->isBitstreamType(true) && r->isBitstreamType()) {
-        // bit-stream casting
         ASSERT(l->isAggregate() || r->isAggregate());
         if (l->isFixedSize() && r->isFixedSize())
             return l->bitstreamWidth() == r->bitstreamWidth();
         else
-            return dynamicSizeMatch(*l, *r);
+            return dynamicSizesMatch(*l, *r);
     }
     return false;
 }
 
 ConstantValue Type::bitstreamCast(const ConstantValue& value) const {
-    auto srcSize = value.bitstreamWidth();
+    bitwidth_t srcSize = value.bitstreamWidth();
     bitwidth_t dynamicSize = bitstreamCastRemainingSize(*this, srcSize);
     if (dynamicSize > srcSize)
         return nullptr; // Sizes do not fit
-    bitwidth_t bit = 0;
-    PackVector packed;
-    pack(value, packed);
+
+    SmallVectorSized<const ConstantValue*, 8> packed;
+    packBitstream(value, packed);
+
+    bitwidth_t bitOffset = 0;
     auto iter = packed.cbegin();
-    const auto cv = unpack(*this, iter, bit, dynamicSize);
-    ASSERT(!dynamicSize && bit == ((*iter)->isInteger() ? (*iter)->integer().getBitWidth()
-                                                        : (*iter)->str().length() * 8));
+    auto cv = unpackBitstream(*this, iter, bitOffset, dynamicSize);
+    ASSERT(!dynamicSize && bitOffset == ((*iter)->isInteger() ? (*iter)->integer().getBitWidth()
+                                                              : (*iter)->str().length() * 8));
     ASSERT(iter != packed.cend() && ++iter == packed.cend());
     return cv;
 }

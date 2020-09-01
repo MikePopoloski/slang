@@ -894,7 +894,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
-    for (auto name : { "s"s, "u"s, "e"s }) {
+    for (auto& name : { "s"s, "u"s, "e"s }) {
         auto& type = m.find<VariableSymbol>(name).getType();
         REQUIRE(type.isPackedArray());
         CHECK(type.as<PackedArrayType>().range.upper() == 4);

@@ -261,15 +261,18 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
 void NumberParser::addDigit(logic_t digit, int maxValue) {
     // Leading zeros obviously don't count towards our bit limit, so
     // only count them if we've seen other non-zero digits
-    if (digit.isUnknown())
-        hasUnknown = true; // Keep one leading zero, if any, for msb extension
+    if (digit.isUnknown()) {
+        // Keep one leading zero, if any, for msb extension
+        hasUnknown = true;
+    }
     else {
         ASSERT(digit.value < maxValue);
         if (digits.size() == 1 && digits.front().value == 0) {
             if (digit.value == 0)
                 return; // at most one leading zero
-            else
-                digits.pop(); // If first nonzero not unknown, no leading zeros
+
+            // If first nonzero not unknown, no leading zeros
+            digits.pop();
         }
     }
     digits.append(digit);

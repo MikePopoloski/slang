@@ -1075,6 +1075,7 @@ SVInt& SVInt::operator&=(const SVInt& rhs) {
 
     if (!hasUnknown() && rhs.hasUnknown())
         makeUnknown();
+
     if (isSingleWord())
         val &= rhs.val;
     else {
@@ -1122,6 +1123,7 @@ SVInt& SVInt::operator|=(const SVInt& rhs) {
 
     if (!hasUnknown() && rhs.hasUnknown())
         makeUnknown();
+
     if (isSingleWord())
         val |= rhs.val;
     else {
@@ -1168,6 +1170,7 @@ SVInt& SVInt::operator^=(const SVInt& rhs) {
 
     if (!hasUnknown() && rhs.hasUnknown())
         makeUnknown();
+
     if (isSingleWord())
         val ^= rhs.val;
     else {
@@ -1206,6 +1209,7 @@ SVInt SVInt::xnor(const SVInt& rhs) const {
     SVInt result(*this);
     if (!hasUnknown() && rhs.hasUnknown())
         result.makeUnknown();
+
     if (result.isSingleWord())
         result.val = ~(result.val ^ rhs.val);
     else {
@@ -1952,6 +1956,7 @@ void SVInt::checkUnknown() {
 void SVInt::makeUnknown() {
     if (unknownFlag)
         return;
+
     uint32_t words = getNumWords();
     unknownFlag = true;
     if (words == 1) {
