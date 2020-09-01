@@ -336,7 +336,7 @@ bool Type::isMatching(const Type& rhs) const {
         auto ls = l->as<ScalarType>().scalarKind;
         auto rs = r->as<ScalarType>().scalarKind;
         return (ls == ScalarType::Logic || ls == ScalarType::Reg) &&
-               (rs == ScalarType::Logic || rs == ScalarType::Reg);
+               (rs == ScalarType::Logic || rs == ScalarType::Reg) && l->isSigned() == r->isSigned();
     }
 
     // Special casing for type synonyms: real/realtime
