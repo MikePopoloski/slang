@@ -1717,6 +1717,8 @@ TEST_CASE("Mixed unknowns or signedness") {
     CHECK_THAT(session.eval("& 3'bx1").integer(), exactlyEquals(SVInt(logic_t::x)));
     CHECK(session.eval("3'b0x1 || 1'b0").integer() == 1);
     CHECK(session.eval("3'b0x1 && 1'b1").integer() == 1);
+    CHECK(session.eval("&65'bx10").integer() == 0);
+    CHECK_THAT(session.eval("&65'bx1").integer(), exactlyEquals(SVInt(logic_t::x)));
 
     // equality operators with unknowns
     CHECK(session.eval("3'b0x1 == 0").integer() == 0);
@@ -1734,6 +1736,9 @@ TEST_CASE("Mixed unknowns or signedness") {
     CHECK(session.eval("4'd3**500'sd3").integer() == 11);
     CHECK(session.eval("10**3'b100").integer() == 10000);
     CHECK(session.eval("3'b111**2'sb10").integer() == 0);
+    CHECK(session.eval("3'b111**2'sb10").integer() == 0);
+    CHECK(session.eval("(-5'sd10 / 5'sd3) + 2'b01").integer() == 8);
+    CHECK(session.eval("(5'sd3 - 5'sd10) + 2'b01").integer() == 26);
 
     NO_SESSION_ERRORS;
 }
