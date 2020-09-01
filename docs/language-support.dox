@@ -73,7 +73,7 @@ LRM | Feature | Supported
 {{m-warning}} 6.23 | Type operator | partial
 {{m-success}} 6.24.1 | Static casting | v0.2
 {{m-danger}}  6.24.2 | Dynamic casting | no
-{{m-danger}}  6.24.3 | Bit-stream casting | no
+{{m-success}} 6.24.3 | Bit-stream casting | v0.5
 
 ## 7. Aggregate data types
 
