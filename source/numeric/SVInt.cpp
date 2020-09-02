@@ -490,7 +490,7 @@ bitwidth_t SVInt::unsignedAmount() const {
     bitwidth_t bits = getActiveBits();
     if (bits > sizeof(bitwidth_t) * CHAR_BIT)
         return std::numeric_limits<bitwidth_t>::max();
-    return static_cast<bitwidth_t>(isSingleWord() ? val : pVal[0]);
+    return static_cast<bitwidth_t>(*getRawPtr());
 }
 
 SVInt SVInt::shl(const SVInt& rhs) const {
@@ -599,7 +599,10 @@ SVInt SVInt::ashr(bitwidth_t amount) const {
         return *this;
     if (amount >= bitWidth)
         return SVInt(bitWidth, *this >= 0 ? 0 : UINT64_MAX, signFlag);
-    if (!signFlag || !(*this)[int32_t(bitWidth) - 1]) // unsigned or positive
+
+    // !(*this)[int32_t(bitWidth) - 1]) checks msb==0
+    // Not precisely !isNegative() which is msb!=1 or msb==[0xz]
+    if (!signFlag || !(*this)[int32_t(bitWidth) - 1]) // unsigned or nonnegative
         return lshr(amount);
 
     bitwidth_t contractedWidth = bitWidth - amount;
