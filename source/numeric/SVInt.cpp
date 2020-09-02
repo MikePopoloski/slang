@@ -485,15 +485,24 @@ void SVInt::shrinkToFit() {
         *this = resize(minBits);
 }
 
+bitwidth_t SVInt::unsignedAmount() const {
+    // [11.4.10] The right operand of shift operators is always treated as an unsigned number
+    bitwidth_t bits = getActiveBits();
+    if (bits > sizeof(bitwidth_t) * CHAR_BIT)
+        return std::numeric_limits<bitwidth_t>::max();
+    return static_cast<bitwidth_t>(*getRawPtr());
+}
+
 SVInt SVInt::shl(const SVInt& rhs) const {
     // if the shift amount is unknown, result is all X's
     if (rhs.hasUnknown())
         return createFillX(bitWidth, signFlag);
 
+    auto amount = rhs.unsignedAmount();
     // if the shift amount is too large, we end up with zero anyway
-    if (rhs >= bitWidth)
+    if (amount >= bitWidth)
         return SVInt(bitWidth, 0, signFlag);
-    return shl(rhs.as<bitwidth_t>().value());
+    return shl(amount);
 }
 
 SVInt SVInt::shl(bitwidth_t amount) const {
@@ -536,10 +545,11 @@ SVInt SVInt::lshr(const SVInt& rhs) const {
     if (rhs.hasUnknown())
         return createFillX(bitWidth, signFlag);
 
+    auto amount = rhs.unsignedAmount();
     // if the shift amount is too large, we end up with zero anyway
-    if (rhs >= bitWidth)
+    if (amount >= bitWidth)
         return SVInt(bitWidth, 0, signFlag);
-    return lshr(rhs.as<bitwidth_t>().value());
+    return lshr(amount);
 }
 
 SVInt SVInt::lshr(bitwidth_t amount) const {
@@ -576,39 +586,29 @@ SVInt SVInt::ashr(const SVInt& rhs) const {
         return lshr(rhs);
     if (rhs.hasUnknown())
         return createFillX(bitWidth, signFlag);
-    if (rhs >= bitWidth)
+
+    auto amount = rhs.unsignedAmount();
+    if (amount >= bitWidth)
         return SVInt(bitWidth, *this >= 0 ? 0 : UINT64_MAX, signFlag);
 
-    return ashr(rhs.as<bitwidth_t>().value());
+    return ashr(amount);
 }
 
 SVInt SVInt::ashr(bitwidth_t amount) const {
-    if (!signFlag)
-        return lshr(amount);
     if (amount == 0)
         return *this;
     if (amount >= bitWidth)
         return SVInt(bitWidth, *this >= 0 ? 0 : UINT64_MAX, signFlag);
 
-    bitwidth_t contractedWidth = bitWidth - amount;
-    SVInt tmp = lshr(amount);
+    // !(*this)[int32_t(bitWidth) - 1]) checks msb==0
+    // Not precisely !isNegative() which is msb!=1 or msb==[0xz]
+    if (!signFlag || !(*this)[int32_t(bitWidth) - 1]) // unsigned or nonnegative
+        return lshr(amount);
 
-    if (contractedWidth <= 64 && getNumWords() > 1) {
-        // signExtend won't be safe as it will assume it is operating on a single-word
-        // input when it isn't, so let's manually take care of that case here.
-        SVInt result = SVInt::allocUninitialized(bitWidth, signFlag, unknownFlag);
-        uint64_t newVal = tmp.pVal[0] << (SVInt::BITS_PER_WORD - contractedWidth);
-        result.pVal[0] = uint64_t((int64_t)newVal >> (SVInt::BITS_PER_WORD - contractedWidth));
-        for (size_t i = 1; i < getNumWords(); ++i) {
-            // sign extend the rest based on original sign
-            result.pVal[i] = (val & (1ULL << 63)) ? 0 : ~0ULL;
-        }
-        result.clearUnusedBits();
-        return result;
-    }
+    bitwidth_t contractedWidth = bitWidth - amount;
+
     // Pretend our width is just the width we shifted to, then signExtend
-    tmp.bitWidth = contractedWidth;
-    return tmp.sext(bitWidth);
+    return lshr(amount).trunc(contractedWidth).sext(bitWidth);
 }
 
 SVInt SVInt::replicate(const SVInt& times) const {
@@ -1540,7 +1540,7 @@ SVInt SVInt::trunc(bitwidth_t bits) const {
 
     if (isSingleWord()) {
         uint64_t mask = bits == 64 ? UINT64_MAX : (1ull << bits) - 1;
-        return SVInt(bits, val & mask, false);
+        return SVInt(bits, val & mask, signFlag);
     }
 
     SVInt result;
