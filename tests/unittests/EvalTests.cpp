@@ -1745,6 +1745,8 @@ TEST_CASE("Mixed unknowns or signedness") {
                exactlyEquals("30'b00000000000010xz01101110000000"_si));
     CHECK_THAT(session.eval("5'sbz001x>>>2").integer(), exactlyEquals("5'bzzz00"_si));
     CHECK_THAT(session.eval("129'sb0xzxz>>>1").integer(), exactlyEquals("129'sb0xzx"_si));
+    CHECK_THAT(session.eval("65'sbx >>> 66").integer(), exactlyEquals("65'sbx"_si));
+    CHECK_THAT(session.eval("35'sbz >>> 66").integer(), exactlyEquals("35'sbz"_si));
 
     NO_SESSION_ERRORS;
 }
