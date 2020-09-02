@@ -33,7 +33,9 @@ public:
         if (!v)
             return nullptr;
 
-        return SVInt(32, clog2(v.integer()), true);
+        auto ci = v.integer();
+        ci.flattenUnknowns();
+        return SVInt(32, clog2(ci), true);
     }
 };
 
