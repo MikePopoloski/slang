@@ -157,6 +157,7 @@ add_library(slangcompiler
     symbols/InstanceSymbols.cpp
     symbols/Lookup.cpp
     symbols/MemberSymbols.cpp
+    symbols/ParameterBuilder.cpp
     symbols/ParameterSymbols.cpp
     symbols/PortSymbols.cpp
     symbols/Scope.cpp

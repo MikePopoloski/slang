@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/compilation/Definition.h"
 
+#include "../symbols/ParameterBuilder.h"
+
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/AttributeSymbol.h"
@@ -74,34 +76,10 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
         SemanticFacts::getVariableLifetime(header.lifetime).value_or(VariableLifetime::Static);
     attributes = AttributeSymbol::fromSyntax(syntax.attributes, scope, lookupLocation);
 
-    auto createParams = [&](auto syntax, bool isLocal, bool isPort) {
-        if (syntax->kind == SyntaxKind::ParameterDeclaration) {
-            auto& paramSyntax = syntax->template as<ParameterDeclarationSyntax>();
-            for (auto decl : paramSyntax.declarators)
-                parameters.emplace(scope, paramSyntax, *decl, isLocal, isPort);
-        }
-        else {
-            auto& paramSyntax = syntax->template as<TypeParameterDeclarationSyntax>();
-            for (auto decl : paramSyntax.declarators)
-                parameters.emplace(scope, paramSyntax, *decl, isLocal, isPort);
-        }
-    };
-
     // Find all port parameters.
     bool hasPortParams = header.parameters != nullptr;
-    if (hasPortParams) {
-        bool lastLocal = false;
-        for (auto declaration : header.parameters->declarations) {
-            // It's legal to leave off the parameter keyword in the parameter port list.
-            // If you do so, we "inherit" the parameter or localparam keyword from the
-            // previous entry. This isn't allowed in a definition body, but the parser
-            // will take care of the error for us.
-            if (declaration->keyword)
-                lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
-
-            createParams(declaration, lastLocal, /* isPort */ true);
-        }
-    }
+    if (hasPortParams)
+        ParameterBuilder::createDecls(scope, *header.parameters, parameters);
 
     bool first = true;
     optional<SourceRange> unitsRange;
@@ -124,7 +102,9 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
             auto declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
             bool isLocal =
                 hasPortParams || declaration->keyword.kind == TokenKind::LocalParamKeyword;
-            createParams(declaration, isLocal, /* isPort */ false);
+
+            ParameterBuilder::createDecls(scope, *declaration, isLocal, /* isPort */ false,
+                                          parameters);
         }
     }
 

@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/InstanceSymbols.h"
 
+#include "ParameterBuilder.h"
+
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
@@ -110,12 +112,9 @@ private:
     }
 };
 
-void createParams(Compilation& compilation, const Definition& definition, const Scope& scope,
-                  LookupLocation ll, SourceLocation instanceLoc,
-                  SmallMap<string_view, const ExpressionSyntax*, 8>& paramOverrides,
-                  SmallVector<const ParameterSymbolBase*>& parameters,
-                  SmallVector<const ConstantValue*>& paramValues,
-                  SmallVector<const Type*>& typeParams, bool forceInvalidParams) {
+void createParams(Compilation& compilation, const Definition& definition,
+                  ParameterBuilder& paramBuilder, LookupLocation ll, SourceLocation instanceLoc,
+                  bool forceInvalidParams) {
     // Construct a temporary scope that has the right parent to house instance parameters
     // as we're evaluating them. We hold on to the initializer expressions and give them
     // to the instances later when we create them.
@@ -132,68 +131,7 @@ void createParams(Compilation& compilation, const Definition& definition, const 
     for (auto import : definition.syntax.header->imports)
         tempDef.addMembers(*import);
 
-    BindContext context(scope, ll, BindFlags::Constant);
-    for (auto& param : definition.parameters) {
-        if (!param.isTypeParam) {
-            // This is a value parameter.
-            const ExpressionSyntax* newInitializer = nullptr;
-            if (auto it = paramOverrides.find(param.name); it != paramOverrides.end())
-                newInitializer = it->second;
-
-            auto& newParam = ParameterSymbol::fromDecl(param, tempDef, context, newInitializer);
-            parameters.append(&newParam);
-            if (newParam.isLocalParam())
-                continue;
-
-            if (forceInvalidParams) {
-                paramValues.append(&ConstantValue::Invalid);
-                continue;
-            }
-
-            // For all port params, if we were provided a parameter override save
-            // that value now for use with the cache key. Otherwise use a nullptr
-            // to represent that the default will be used. We can't evaluate the
-            // default now because it might depend on other members that haven't
-            // been created yet.
-            if (newInitializer)
-                paramValues.append(&newParam.getValue());
-            else
-                paramValues.append(nullptr);
-
-            if (newParam.isPortParam() && !newParam.getDeclaredType()->getInitializerSyntax()) {
-                auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
-                diag << definition.name;
-                diag << newParam.name;
-            }
-        }
-        else {
-            // Otherwise this is a type parameter.
-            const ExpressionSyntax* newInitializer = nullptr;
-            if (auto it = paramOverrides.find(param.name); it != paramOverrides.end())
-                newInitializer = it->second;
-
-            auto& newParam = TypeParameterSymbol::fromDecl(param, tempDef, context, newInitializer);
-            parameters.append(&newParam);
-            if (newParam.isLocalParam())
-                continue;
-
-            if (forceInvalidParams) {
-                typeParams.append(&compilation.getErrorType());
-                continue;
-            }
-
-            if (newInitializer)
-                typeParams.append(&newParam.targetType.getType());
-            else
-                typeParams.append(nullptr);
-
-            if (!newInitializer && newParam.isPortParam() && !newParam.targetType.getTypeSyntax()) {
-                auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
-                diag << definition.name;
-                diag << newParam.name;
-            }
-        }
-    }
+    paramBuilder.createParams(tempDef, ll, instanceLoc, forceInvalidParams);
 }
 
 void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindContext& context,
@@ -277,124 +215,23 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         return;
     }
 
-    SmallMap<string_view, const ExpressionSyntax*, 8> paramOverrides;
-    if (syntax.parameters) {
-        // Build up data structures to easily index the parameter assignments. We need to handle
-        // both ordered assignment as well as named assignment, though a specific instance can only
-        // use one method or the other.
-        bool hasParamAssignments = false;
-        bool orderedAssignments = true;
-        SmallVectorSized<const OrderedArgumentSyntax*, 8> orderedParams;
-        SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
-
-        for (auto paramBase : syntax.parameters->assignments->parameters) {
-            bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
-            if (!hasParamAssignments) {
-                hasParamAssignments = true;
-                orderedAssignments = isOrdered;
-            }
-            else if (isOrdered != orderedAssignments) {
-                scope.addDiag(diag::MixingOrderedAndNamedParams,
-                              paramBase->getFirstToken().location());
-                break;
-            }
-
-            if (isOrdered)
-                orderedParams.append(&paramBase->as<OrderedArgumentSyntax>());
-            else {
-                const NamedArgumentSyntax& nas = paramBase->as<NamedArgumentSyntax>();
-                auto name = nas.name.valueText();
-                if (!name.empty()) {
-                    auto pair = namedParams.emplace(name, std::make_pair(&nas, false));
-                    if (!pair.second) {
-                        auto& diag =
-                            scope.addDiag(diag::DuplicateParamAssignment, nas.name.location());
-                        diag << name;
-                        diag.addNote(diag::NotePreviousUsage,
-                                     pair.first->second.first->name.location());
-                    }
-                }
-            }
-        }
-
-        // For each parameter assignment we have, match it up to a real parameter
-        if (orderedAssignments) {
-            uint32_t orderedIndex = 0;
-            for (auto& param : definition->parameters) {
-                if (orderedIndex >= orderedParams.size())
-                    break;
-
-                if (param.isLocalParam)
-                    continue;
-
-                paramOverrides.emplace(param.name, orderedParams[orderedIndex++]->expr);
-            }
-
-            // Make sure there aren't extra param assignments for non-existent params.
-            if (orderedIndex < orderedParams.size()) {
-                auto loc = orderedParams[orderedIndex]->getFirstToken().location();
-                auto& diag = scope.addDiag(diag::TooManyParamAssignments, loc);
-                diag << definition->name;
-                diag << orderedParams.size();
-                diag << orderedIndex;
-            }
-        }
-        else {
-            // Otherwise handle named assignments.
-            for (auto& param : definition->parameters) {
-                auto it = namedParams.find(param.name);
-                if (it == namedParams.end())
-                    continue;
-
-                const NamedArgumentSyntax* arg = it->second.first;
-                it->second.second = true;
-                if (param.isLocalParam) {
-                    // Can't assign to localparams, so this is an error.
-                    DiagCode code = param.isPortParam ? diag::AssignedToLocalPortParam
-                                                      : diag::AssignedToLocalBodyParam;
-
-                    auto& diag = scope.addDiag(code, arg->name.location());
-                    diag.addNote(diag::NoteDeclarationHere, param.location);
-                    continue;
-                }
-
-                // It's allowed to have no initializer in the assignment; it means to just use the
-                // default.
-                if (!arg->expr)
-                    continue;
-
-                paramOverrides.emplace(param.name, arg->expr);
-            }
-
-            for (const auto& pair : namedParams) {
-                // We marked all the args that we used, so anything left over is a param assignment
-                // for a non-existent parameter.
-                if (!pair.second.second) {
-                    auto& diag = scope.addDiag(diag::ParameterDoesNotExist,
-                                               pair.second.first->name.location());
-                    diag << pair.second.first->name.valueText();
-                    diag << definition->name;
-                }
-            }
-        }
-    }
+    ParameterBuilder paramBuilder(scope, definition->name, definition->parameters);
+    if (syntax.parameters)
+        paramBuilder.setAssignments(*syntax.parameters);
 
     // Determine values for all parameters now so that they can be
     // shared between instances, and so that we can use them to create
     // a cache key to lookup any instance bodies that may already be
     // suitable for the new instances we're about to create.
-    SmallVectorSized<const ParameterSymbolBase*, 8> parameters;
-    SmallVectorSized<const ConstantValue*, 8> paramValues;
-    SmallVectorSized<const Type*, 8> typeParams;
-    createParams(compilation, *definition, scope, location, syntax.getFirstToken().location(),
-                 paramOverrides, parameters, paramValues, typeParams,
+    createParams(compilation, *definition, paramBuilder, location,
+                 syntax.getFirstToken().location(),
                  /* forceInvalidParams */ false);
 
     BindContext context(scope, location);
-    InstanceCacheKey cacheKey(*definition, paramValues.copy(compilation),
-                              typeParams.copy(compilation));
+    InstanceCacheKey cacheKey(*definition, paramBuilder.paramValues.copy(compilation),
+                              paramBuilder.typeParams.copy(compilation));
 
-    InstanceBuilder builder(context, cacheKey, parameters, syntax.attributes);
+    InstanceBuilder builder(context, cacheKey, paramBuilder.paramSymbols, syntax.attributes);
 
     // We have to check each port connection expression for any names that can't be resolved,
     // which represent implicit nets that need to be created now.
@@ -512,16 +349,12 @@ const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compil
                                                              const Definition& definition,
                                                              bool forceInvalidParams) {
     // Create parameters with all default values set.
-    SmallMap<string_view, const ExpressionSyntax*, 8> unused;
-    SmallVectorSized<const ParameterSymbolBase*, 2> parameters;
-    SmallVectorSized<const ConstantValue*, 2> paramValues;
-    SmallVectorSized<const Type*, 2> typeParams;
-
-    createParams(compilation, definition, definition.scope, LookupLocation::max,
-                 definition.location, unused, parameters, paramValues, typeParams,
+    ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
+    createParams(compilation, definition, paramBuilder, LookupLocation::max, definition.location,
                  forceInvalidParams);
 
-    return fromDefinition(compilation, InstanceCacheKey(definition, {}, {}), parameters);
+    return fromDefinition(compilation, InstanceCacheKey(definition, {}, {}),
+                          paramBuilder.paramSymbols);
 }
 
 const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
