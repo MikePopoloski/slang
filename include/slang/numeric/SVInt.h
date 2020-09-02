@@ -556,6 +556,9 @@ private:
     void checkUnknown();
     void makeUnknown();
 
+    // $unsigned(*this) value truncated at bitwidth_t::max()
+    bitwidth_t unsignedAmount() const;
+
     static constexpr uint32_t whichWord(bitwidth_t bitIndex) { return bitIndex / BITS_PER_WORD; }
     static constexpr uint32_t whichBit(bitwidth_t bitIndex) { return bitIndex % BITS_PER_WORD; }
     static constexpr uint64_t maskBit(bitwidth_t bitIndex) { return 1ULL << whichBit(bitIndex); }

@@ -1740,5 +1740,11 @@ TEST_CASE("Mixed unknowns or signedness") {
     CHECK(session.eval("(-5'sd10 / 5'sd3) + 2'b01").integer() == 8);
     CHECK(session.eval("(5'sd3 - 5'sd10) + 2'b01").integer() == 26);
 
+    // shift operators negative right operand or with unknonws
+    CHECK_THAT(session.eval("30'b10xz0110111<<-3'sb1").integer(),
+               exactlyEquals("30'b00000000000010xz01101110000000"_si));
+    CHECK_THAT(session.eval("5'sbz001x>>>2").integer(), exactlyEquals("5'bzzz00"_si));
+    CHECK_THAT(session.eval("129'sb0xzxz>>>1").integer(), exactlyEquals("129'sb0xzx"_si));
+
     NO_SESSION_ERRORS;
 }
