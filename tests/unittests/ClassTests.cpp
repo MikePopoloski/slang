@@ -271,3 +271,31 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CopyClassTarget);
 }
+
+TEST_CASE("Generic class names") {
+    auto tree = SyntaxTree::fromText(R"(
+class C #(int p = 1);
+endclass
+
+class D #(int q = 2, int r);
+endclass
+
+module m;
+    C c1 = new;  // default specialization
+    C #(4) c2 = new;
+
+    D d1 = new; // error, no default
+
+    typedef int Int;
+    Int #(4) i1; // error, not a class
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NoDefaultSpecialization);
+    CHECK(diags[1].code == diag::NotAGenericClass);
+}

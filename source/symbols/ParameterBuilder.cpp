@@ -114,8 +114,19 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
     }
 }
 
-void ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocation,
-                                    SourceLocation instanceLoc, bool forceInvalidValues) {
+bool ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocation,
+                                    SourceLocation instanceLoc, bool forceInvalidValues,
+                                    bool suppressErrors) {
+    bool anyErrors = false;
+    auto reportError = [&](auto& param) {
+        anyErrors = true;
+        if (!suppressErrors) {
+            auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
+            diag << definitionName;
+            diag << param.name;
+        }
+    };
+
     auto& compilation = scope.getCompilation();
     BindContext context(scope, lookupLocation, BindFlags::Constant);
 
@@ -146,11 +157,8 @@ void ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocati
             else
                 paramValues.append(nullptr);
 
-            if (newParam.isPortParam() && !newParam.getDeclaredType()->getInitializerSyntax()) {
-                auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
-                diag << definitionName;
-                diag << newParam.name;
-            }
+            if (newParam.isPortParam() && !newParam.getDeclaredType()->getInitializerSyntax())
+                reportError(newParam);
         }
         else {
             // Otherwise this is a type parameter.
@@ -174,13 +182,12 @@ void ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocati
             else
                 typeParams.append(nullptr);
 
-            if (!newInitializer && newParam.isPortParam() && !newParam.targetType.getTypeSyntax()) {
-                auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
-                diag << definitionName;
-                diag << newParam.name;
-            }
+            if (!newInitializer && newParam.isPortParam() && !newParam.targetType.getTypeSyntax())
+                reportError(newParam);
         }
     }
+
+    return !anyErrors;
 }
 
 void ParameterBuilder::createDecls(const Scope& scope, const ParameterDeclarationBaseSyntax& syntax,

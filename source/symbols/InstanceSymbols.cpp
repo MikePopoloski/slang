@@ -131,7 +131,8 @@ void createParams(Compilation& compilation, const Definition& definition,
     for (auto import : definition.syntax.header->imports)
         tempDef.addMembers(*import);
 
-    paramBuilder.createParams(tempDef, ll, instanceLoc, forceInvalidParams);
+    paramBuilder.createParams(tempDef, ll, instanceLoc, forceInvalidParams,
+                              /* suppressErrors */ false);
 }
 
 void createImplicitNets(const HierarchicalInstanceSyntax& instance, const BindContext& context,

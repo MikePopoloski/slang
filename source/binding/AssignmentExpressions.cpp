@@ -742,9 +742,9 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
     // Otherwise, the target must come from the expression context.
     const ClassType* classType = nullptr;
     if (syntax.scopedNew->kind == SyntaxKind::ConstructorName) {
-        if (!assignmentTarget ||
-            assignmentTarget->getCanonicalType().kind != SymbolKind::ClassType) {
-            context.addDiag(diag::NewClassTarget, syntax.sourceRange());
+        if (!assignmentTarget || !assignmentTarget->isClass()) {
+            if (!assignmentTarget || !assignmentTarget->isError())
+                context.addDiag(diag::NewClassTarget, syntax.sourceRange());
             return badExpr(compilation, nullptr);
         }
 

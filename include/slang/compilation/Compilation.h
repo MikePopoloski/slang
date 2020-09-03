@@ -23,6 +23,7 @@ class AttributeSymbol;
 class CompilationUnitSymbol;
 class Definition;
 class Expression;
+class GenericClassDefSymbol;
 class InstanceBodySymbol;
 class InstanceCache;
 class InstanceSymbol;
@@ -282,6 +283,12 @@ public:
     /// Allocates a pointer map.
     PointerMap* allocPointerMap() { return pointerMapAllocator.emplace(); }
 
+    /// Allocates a generic class symbol.
+    template<typename... Args>
+    GenericClassDefSymbol* allocGenericClass(Args&&... args) {
+        return genericClassAllocator.emplace(std::forward<Args>(args)...);
+    }
+
     int getNextEnumSystemId() { return nextEnumSystemId++; }
     int getNextStructSystemId() { return nextStructSystemId++; }
     int getNextUnionSystemId() { return nextUnionSystemId++; }
@@ -310,6 +317,7 @@ private:
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;
     TypedBumpAllocator<PointerMap> pointerMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
+    TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
 
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate,
     // reg. Two of the entries are not valid and will be nullptr (!fourstate & reg).

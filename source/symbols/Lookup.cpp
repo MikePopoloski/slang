@@ -445,10 +445,36 @@ const Symbol* getCompilationUnit(const Symbol& symbol) {
     }
 }
 
-void unwrapResult(LookupResult& result) {
+template<typename TRange>
+void unwrapResult(const Scope& scope, const TRange& syntax, LookupResult& result) {
+    if (!result.found)
+        return;
+
     // Unwrap type parameters into their target type alias.
-    if (result.found && result.found->kind == SymbolKind::TypeParameter)
+    if (result.found->kind == SymbolKind::TypeParameter)
         result.found = &result.found->as<TypeParameterSymbol>().getTypeAlias();
+
+    // If the found symbol is a generic class, unwrap into
+    // the default specialization (if possible).
+    if (result.found->kind == SymbolKind::GenericClassDef) {
+        auto& genericClass = result.found->as<GenericClassDefSymbol>();
+        result.found = genericClass.getDefaultSpecialization(scope.getCompilation());
+
+        if (!result.found) {
+            // This little dance is to allow this function to take either a syntax
+            // node or an explicit source range in order to report this error.
+            // This is an optimization to avoid computing the range for the syntax
+            // node in the very common case where we don't need to report an error.
+            optional<SourceRange> range;
+            if constexpr (std::is_base_of_v<SyntaxNode, TRange>)
+                range = syntax.sourceRange();
+            else
+                range = syntax;
+
+            if (range)
+                result.addDiag(scope, diag::NoDefaultSpecialization, *range) << genericClass.name;
+        }
+    }
 }
 
 } // namespace
@@ -457,23 +483,30 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
                   bitmask<LookupFlags> flags, LookupResult& result) {
     Token nameToken;
     const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
+    const ParameterValueAssignmentSyntax* classParams = nullptr;
+
     switch (syntax.kind) {
         case SyntaxKind::IdentifierName:
             nameToken = syntax.as<IdentifierNameSyntax>().identifier;
             break;
         case SyntaxKind::IdentifierSelectName: {
-            const auto& selectSyntax = syntax.as<IdentifierSelectNameSyntax>();
+            auto& selectSyntax = syntax.as<IdentifierSelectNameSyntax>();
             nameToken = selectSyntax.identifier;
             selectors = &selectSyntax.selectors;
             break;
         }
+        case SyntaxKind::ClassName: {
+            auto& className = syntax.as<ClassNameSyntax>();
+            nameToken = className.identifier;
+            classParams = className.parameters;
+            break;
+        }
         case SyntaxKind::ScopedName:
-            // Handle qualified names completely separately.
+            // Handle qualified names separately.
             qualified(scope, syntax.as<ScopedNameSyntax>(), location, flags, result);
-            unwrapResult(result);
+            unwrapResult(scope, syntax, result);
             return;
         case SyntaxKind::ThisHandle:
-        case SyntaxKind::ClassName:
             result.addDiag(scope, diag::NotYetSupported, syntax.sourceRange());
             result.found = nullptr;
             return;
@@ -504,7 +537,22 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
     if (!result.found && !result.hasError())
         reportUndeclared(scope, name, nameToken.range(), flags, false, result);
 
-    unwrapResult(result);
+    if (result.found && classParams) {
+        if (result.found->kind != SymbolKind::GenericClassDef) {
+            auto& diag = result.addDiag(scope, diag::NotAGenericClass, syntax.sourceRange());
+            diag << result.found->name;
+            diag.addNote(diag::NoteDeclarationHere, result.found->location);
+
+            result.found = nullptr;
+        }
+        else {
+            auto& classDef = result.found->as<GenericClassDefSymbol>();
+            result.found =
+                &classDef.getSpecialization(scope.getCompilation(), location, *classParams);
+        }
+    }
+
+    unwrapResult(scope, syntax, result);
 
     if (selectors) {
         // If this is a scope, the selectors should be an index into it.
@@ -524,9 +572,9 @@ const Symbol* Lookup::unqualified(const Scope& scope, string_view name,
         return nullptr;
 
     LookupResult result;
-    unqualifiedImpl(scope, name, LookupLocation::max, SourceRange(), flags, result);
+    unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, result);
     ASSERT(result.selectors.empty());
-    unwrapResult(result);
+    unwrapResult(scope, std::nullopt, result);
 
     return result.found;
 }
@@ -539,7 +587,7 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, string_view name, Lookup
     LookupResult result;
     unqualifiedImpl(scope, name, location, sourceRange, flags, result);
     ASSERT(result.selectors.empty());
-    unwrapResult(result);
+    unwrapResult(scope, sourceRange, result);
 
     if (!result.found && !result.hasError())
         reportUndeclared(scope, name, sourceRange, flags, false, result);
@@ -620,7 +668,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
 }
 
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
-                             SourceRange sourceRange, bitmask<LookupFlags> flags,
+                             optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              LookupResult& result) {
     // Try a simple name lookup to see if we find anything.
     auto& nameMap = scope.getNameMap();
@@ -675,9 +723,11 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
             if (result.found) {
                 const DeclaredType* declaredType = result.found->getDeclaredType();
                 if (declaredType && declaredType->isEvaluating()) {
-                    auto& diag = result.addDiag(scope, diag::RecursiveDefinition, sourceRange)
-                                 << name;
-                    diag.addNote(diag::NoteDeclarationHere, result.found->location);
+                    if (sourceRange) {
+                        auto& diag = result.addDiag(scope, diag::RecursiveDefinition, *sourceRange);
+                        diag << name;
+                        diag.addNote(diag::NoteDeclarationHere, result.found->location);
+                    }
                     result.found = nullptr;
                 }
             }
@@ -711,16 +761,19 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
 
     if (!imports.empty()) {
         if (imports.size() > 1) {
-            auto& diag = result.addDiag(scope, diag::AmbiguousWildcardImport, sourceRange) << name;
-            for (const auto& pair : imports) {
-                diag.addNote(diag::NoteImportedFrom, pair.import->location);
-                diag.addNote(diag::NoteDeclarationHere, pair.imported->location);
+            if (sourceRange) {
+                auto& diag = result.addDiag(scope, diag::AmbiguousWildcardImport, *sourceRange);
+                diag << name;
+                for (const auto& pair : imports) {
+                    diag.addNote(diag::NoteImportedFrom, pair.import->location);
+                    diag.addNote(diag::NoteDeclarationHere, pair.imported->location);
+                }
             }
             return;
         }
 
-        if (symbol) {
-            auto& diag = result.addDiag(scope, diag::ImportNameCollision, sourceRange) << name;
+        if (symbol && sourceRange) {
+            auto& diag = result.addDiag(scope, diag::ImportNameCollision, *sourceRange) << name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
             diag.addNote(diag::NoteImportedFrom, imports[0].import->location);
             diag.addNote(diag::NoteDeclarationHere, imports[0].imported->location);
@@ -920,8 +973,10 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
         // This lambda returns true if the given symbol is a viable candidate
         // for the kind of lookup that was being performed.
         auto isViable = [flags](const Symbol& sym) {
-            if (flags & LookupFlags::Type)
-                return sym.isType() || sym.kind == SymbolKind::TypeParameter;
+            if (flags & LookupFlags::Type) {
+                return sym.isType() || sym.kind == SymbolKind::TypeParameter ||
+                       sym.kind == SymbolKind::GenericClassDef;
+            }
 
             return sym.isValue() || sym.kind == SymbolKind::InstanceArray ||
                    (sym.kind == SymbolKind::Instance && sym.as<InstanceSymbol>().isInterface());

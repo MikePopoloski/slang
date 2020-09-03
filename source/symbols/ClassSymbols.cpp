@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/ClassSymbols.h"
 
+#include "ParameterBuilder.h"
+
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
@@ -114,7 +116,18 @@ ConstantValue ClassType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
 }
 
-const Type& ClassType::fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax) {
+const Symbol& ClassType::fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax) {
+    // If this class declaration has parameter ports it's actually a generic class definition.
+    // Create that now and wait until someone specializes it in order to get an actual type.
+    if (syntax.parameters && !syntax.parameters->declarations.empty())
+        return GenericClassDefSymbol::fromSyntax(scope, syntax);
+
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<ClassType>(comp, syntax.name.valueText(), syntax.name.location());
+    return result->populate(scope, syntax);
+}
+
+const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
     if (syntax.virtualOrInterface) {
         // TODO: support this
@@ -122,17 +135,153 @@ const Type& ClassType::fromSyntax(const Scope& scope, const ClassDeclarationSynt
         return comp.getErrorType();
     }
 
-    auto result = comp.emplace<ClassType>(comp, syntax.name.valueText(), syntax.name.location());
-    result->setSyntax(syntax);
+    setSyntax(syntax);
     for (auto member : syntax.items)
-        result->addMembers(*member);
+        addMembers(*member);
 
-    // TODO: parameters
     // TODO: extends
     // TODO: implements
     // TODO: lifetime
 
+    return *this;
+}
+
+void ClassType::serializeTo(ASTSerializer& serializer) const {
+    if (firstForward)
+        serializer.write("forward", *firstForward);
+}
+
+const Symbol& GenericClassDefSymbol::fromSyntax(const Scope& scope,
+                                                const ClassDeclarationSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.allocGenericClass(syntax.name.valueText(), syntax.name.location());
+    result->setSyntax(syntax);
+
+    // Extract information about parameters and save it for later use
+    // when building specializations.
+    ASSERT(syntax.parameters);
+    ParameterBuilder::createDecls(scope, *syntax.parameters, result->paramDecls);
+
     return *result;
+}
+
+const Type* GenericClassDefSymbol::getDefaultSpecialization(Compilation& compilation) const {
+    if (defaultSpecialization)
+        return *defaultSpecialization;
+
+    auto result = getSpecializationImpl(compilation, LookupLocation::max, location, nullptr);
+    defaultSpecialization = result;
+    return result;
+}
+
+const Type& GenericClassDefSymbol::getSpecialization(
+    Compilation& compilation, LookupLocation lookupLocation,
+    const ParameterValueAssignmentSyntax& syntax) const {
+
+    auto result = getSpecializationImpl(compilation, lookupLocation,
+                                        syntax.getFirstToken().location(), &syntax);
+    if (!result)
+        return compilation.getErrorType();
+
+    return *result;
+}
+
+const Type* GenericClassDefSymbol::getSpecializationImpl(
+    Compilation& compilation, LookupLocation lookupLocation, SourceLocation instanceLoc,
+    const ParameterValueAssignmentSyntax* syntax) const {
+
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    // Create a class type instance to hold the parameters. If it turns out we already
+    // have this specialization cached we'll throw it away, but that's not a big deal.
+    auto classType = compilation.emplace<ClassType>(compilation, name, location);
+
+    ParameterBuilder paramBuilder(*scope, name, paramDecls);
+    if (syntax)
+        paramBuilder.setAssignments(*syntax);
+
+    // If this is for the default specialization, `syntax` will be null.
+    // We want to suppress errors about params not having values and just
+    // return null so that the caller can figure out if this is actually a problem.
+    bool isForDefault = syntax == nullptr;
+    if (!paramBuilder.createParams(*classType, lookupLocation, instanceLoc,
+                                   /* forceInvalidValues */ false, isForDefault)) {
+        if (isForDefault)
+            return nullptr;
+
+        // Otherwise use an error type instead.
+        return &compilation.getErrorType();
+    }
+
+    SpecializationKey key(*this, paramBuilder.paramValues.copy(compilation),
+                          paramBuilder.typeParams.copy(compilation));
+    if (auto it = specializations.find(key); it != specializations.end())
+        return it->second;
+
+    // Not found, so this is a new entry. Fill in its members and store the
+    // specialization for later lookup.
+    const Type& result = classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
+    specializations.emplace(key, &result);
+    return &result;
+}
+
+void GenericClassDefSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
+GenericClassDefSymbol::SpecializationKey::SpecializationKey(
+    const GenericClassDefSymbol& def, span<const ConstantValue* const> paramValues,
+    span<const Type* const> typeParams) :
+    definition(&def),
+    paramValues(paramValues), typeParams(typeParams) {
+
+    // Precompute the hash.
+    size_t h = 0;
+    hash_combine(h, definition);
+    for (auto val : paramValues)
+        hash_combine(h, val ? val->hash() : 0);
+    for (auto type : typeParams)
+        hash_combine(h, type ? type->hash() : 0);
+    savedHash = h;
+}
+
+bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKey& other) const {
+    if (savedHash != other.savedHash || definition != other.definition ||
+        paramValues.size() != other.paramValues.size() ||
+        typeParams.size() != other.typeParams.size()) {
+        return false;
+    }
+
+    for (auto lit = paramValues.begin(), rit = other.paramValues.begin(); lit != paramValues.end();
+         lit++, rit++) {
+        const ConstantValue* l = *lit;
+        const ConstantValue* r = *rit;
+        if (l && r) {
+            if (!(*l == *r))
+                return false;
+        }
+        else {
+            if (l != r)
+                return false;
+        }
+    }
+
+    for (auto lit = typeParams.begin(), rit = other.typeParams.begin(); lit != typeParams.end();
+         lit++, rit++) {
+        const Type* l = *lit;
+        const Type* r = *rit;
+        if (l && r) {
+            if (!l->isMatching(*r))
+                return false;
+        }
+        else {
+            if (l != r)
+                return false;
+        }
+    }
+
+    return true;
 }
 
 } // namespace slang

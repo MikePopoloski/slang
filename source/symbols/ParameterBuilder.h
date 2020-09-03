@@ -37,8 +37,8 @@ public:
         definitionName(definitionName), parameterDecls(parameterDecls) {}
 
     void setAssignments(const ParameterValueAssignmentSyntax& syntax);
-    void createParams(Scope& newScope, LookupLocation lookupLocation, SourceLocation instanceLoc,
-                      bool forceInvalidValues);
+    bool createParams(Scope& newScope, LookupLocation lookupLocation, SourceLocation instanceLoc,
+                      bool forceInvalidValues, bool suppressErrors);
 
     static void createDecls(const Scope& scope, const ParameterDeclarationBaseSyntax& syntax,
                             bool isLocal, bool isPort, SmallVector<Decl>& results);
