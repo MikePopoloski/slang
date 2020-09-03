@@ -1745,6 +1745,15 @@ TEST_CASE("Mixed unknowns or signedness") {
                exactlyEquals("30'b00000000000010xz01101110000000"_si));
     CHECK_THAT(session.eval("5'sbz001x>>>2").integer(), exactlyEquals("5'bzzz00"_si));
     CHECK_THAT(session.eval("129'sb0xzxz>>>1").integer(), exactlyEquals("129'sb0xzx"_si));
+    CHECK_THAT(session.eval("65'sbx >>> 66").integer(), exactlyEquals("65'sbx"_si));
+    CHECK_THAT(session.eval("35'sbz >>> 66").integer(), exactlyEquals("35'sbz"_si));
+
+    // system functions with unknown arguments
+    CHECK(session.eval("$itor(3'bz1x)").real() == 2.0);
+    CHECK(session.eval("$clog2(3'bz1x)").integer() == 1);
+    CHECK(session.eval("$clog2(-3'sb1)").integer() == 3);
+    CHECK(session.eval("$itor(37'sh198765432d)").real() == -27793210579.0);
+    CHECK(session.eval("$itor(66'h1 << 65)").real() == std::pow(2, 65));
 
     NO_SESSION_ERRORS;
 }

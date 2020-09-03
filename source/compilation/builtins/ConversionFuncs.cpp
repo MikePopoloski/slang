@@ -62,19 +62,30 @@ public:
     }
 };
 
-class ItoRFunction : public SimpleSystemSubroutine {
+class ItoRFunction : public SystemSubroutine {
 public:
-    explicit ItoRFunction(Compilation& comp) :
-        SimpleSystemSubroutine("$itor", SubroutineKind::Function, 1, { &comp.getIntegerType() },
-                               comp.getRealType(), false) {}
+    explicit ItoRFunction(Compilation&) : SystemSubroutine("$itor", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 1))
+            return comp.getErrorType();
+
+        if (!args[0]->type->isIntegral())
+            return badArg(context, *args[0]);
+
+        return comp.getRealType();
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
     ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
 
-        int32_t i = val.integer().as<int32_t>().value_or(0);
-        return real_t(double(i));
+        return val.convertToReal();
     }
 };
 

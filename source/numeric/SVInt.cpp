@@ -498,18 +498,14 @@ SVInt SVInt::shl(const SVInt& rhs) const {
     if (rhs.hasUnknown())
         return createFillX(bitWidth, signFlag);
 
-    auto amount = rhs.unsignedAmount();
-    // if the shift amount is too large, we end up with zero anyway
-    if (amount >= bitWidth)
-        return SVInt(bitWidth, 0, signFlag);
-    return shl(amount);
+    return shl(rhs.unsignedAmount());
 }
 
 SVInt SVInt::shl(bitwidth_t amount) const {
     // handle trivial cases
     if (amount == 0)
         return *this;
-    if (amount >= bitWidth)
+    if (amount >= bitWidth) // if the shift amount is too large, we end up with zero anyway
         return SVInt(bitWidth, 0, signFlag);
     if (isSingleWord())
         return SVInt(bitWidth, val << amount, signFlag);
@@ -545,18 +541,14 @@ SVInt SVInt::lshr(const SVInt& rhs) const {
     if (rhs.hasUnknown())
         return createFillX(bitWidth, signFlag);
 
-    auto amount = rhs.unsignedAmount();
-    // if the shift amount is too large, we end up with zero anyway
-    if (amount >= bitWidth)
-        return SVInt(bitWidth, 0, signFlag);
-    return lshr(amount);
+    return lshr(rhs.unsignedAmount());
 }
 
 SVInt SVInt::lshr(bitwidth_t amount) const {
     // handle trivial cases
     if (amount == 0)
         return *this;
-    if (amount >= bitWidth)
+    if (amount >= bitWidth) // if the shift amount is too large, we end up with zero anyway
         return SVInt(bitWidth, 0, signFlag);
     if (isSingleWord())
         return SVInt(bitWidth, val >> amount, signFlag);
@@ -587,23 +579,25 @@ SVInt SVInt::ashr(const SVInt& rhs) const {
     if (rhs.hasUnknown())
         return createFillX(bitWidth, signFlag);
 
-    auto amount = rhs.unsignedAmount();
-    if (amount >= bitWidth)
-        return SVInt(bitWidth, *this >= 0 ? 0 : UINT64_MAX, signFlag);
-
-    return ashr(amount);
+    return ashr(rhs.unsignedAmount());
 }
 
 SVInt SVInt::ashr(bitwidth_t amount) const {
     if (amount == 0)
         return *this;
-    if (amount >= bitWidth)
-        return SVInt(bitWidth, *this >= 0 ? 0 : UINT64_MAX, signFlag);
 
-    // !(*this)[int32_t(bitWidth) - 1]) checks msb==0
-    // Not precisely !isNegative() which is msb!=1 or msb==[0xz]
-    if (!signFlag || !(*this)[int32_t(bitWidth) - 1]) // unsigned or nonnegative
+    logic_t msb = (*this)[int32_t(bitWidth) - 1];
+    if (!signFlag || exactlyEqual(msb, logic_t(false))) // unsigned or nonnegative
         return lshr(amount);
+
+    if (amount >= bitWidth) {
+        if (exactlyEqual(msb, logic_t::x))
+            return createFillX(bitWidth, signFlag);
+        if (exactlyEqual(msb, logic_t::z))
+            return createFillZ(bitWidth, signFlag);
+        // msb==1 here. If msb==0, call lshr already.
+        return SVInt(bitWidth, UINT64_MAX, signFlag);
+    }
 
     bitwidth_t contractedWidth = bitWidth - amount;
 
