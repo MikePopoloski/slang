@@ -288,14 +288,23 @@ module m;
 
     typedef int Int;
     Int #(4) i1; // error, not a class
+
+    localparam int p1 = C::p; // error
+    localparam int p2 = C#()::p;
+    localparam int p3 = D#(.r(5))::r;
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
+    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m").body;
+    CHECK(m.find<ParameterSymbol>("p2").getValue().integer() == 1);
+    CHECK(m.find<ParameterSymbol>("p3").getValue().integer() == 5);
+
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::NoDefaultSpecialization);
     CHECK(diags[1].code == diag::NotAGenericClass);
+    CHECK(diags[2].code == diag::GenericClassScopeResolution);
 }

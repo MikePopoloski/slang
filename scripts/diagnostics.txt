@@ -365,7 +365,7 @@ error NotAnInterface "'{}' is not an interface instance or array of instances"
 error NotAGenvar "'{}' is not a genvar"
 error NotAClass "'{}' is not a class type"
 error NotAGenericClass "'{}' is not a generic class type"
-error DotOnType "cannot use dot operator on a type"
+error DotOnType "cannot use dot operator on a type name"
 error HierarchicalNotAllowedInConstant "hierarchical names are not allowed in constant expressions"
 error UnknownMember "no member named '{}' in {}"
 error UnknownPackageMember "no member named '{}' in package '{}'"
@@ -384,6 +384,7 @@ error AutoVariableHierarchical "cannot refer to automatic variable via hierarchi
 error NonStaticClassProperty "invalid use of non-static class property '{}'"
 error NonStaticClassMethod "call to non-static member function without object handle"
 error NoDefaultSpecialization "generic class '{}' does not have a default specialization because some parameters have no default value"
+error GenericClassScopeResolution "cannot refer to generic class with '::' without providing parameter assignments"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 
 subsystem SysFuncs
