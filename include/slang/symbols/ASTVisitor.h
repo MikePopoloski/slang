@@ -249,6 +249,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(Assignment, AssignmentExpression);
         CASE(Concatenation, ConcatenationExpression);
         CASE(Replication, ReplicationExpression);
+        CASE(Streaming, StreamingConcatenationExpression);
         CASE(ElementSelect, ElementSelectExpression);
         CASE(RangeSelect, RangeSelectExpression);
         CASE(MemberAccess, MemberAccessExpression);

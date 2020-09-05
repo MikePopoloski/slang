@@ -388,7 +388,8 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     // "assignment-like context", except if the left hand side does not
     // have a self-determined type. That can only be true if the lhs is
     // an assignment pattern without an explicit type.
-    if (syntax.left->kind == SyntaxKind::AssignmentPatternExpression) {
+    if (syntax.left->kind == SyntaxKind::AssignmentPatternExpression &&
+        rightExpr->kind != SyntaxKind::StreamingConcatenationExpression) {
         auto& pattern = syntax.left->as<AssignmentPatternExpressionSyntax>();
         if (!pattern.type) {
             // In this case we have to bind the rhs first to determine the
@@ -407,8 +408,15 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         }
     }
 
-    Expression& lhs = selfDetermined(compilation, *syntax.left, context);
-    Expression& rhs = create(compilation, *rightExpr, context, BindFlags::None, lhs.type);
+    Expression& lhs =
+        selfDetermined(compilation, *syntax.left, context, BindFlags::StreamingAllowed);
+
+    // Streaming operator has no defined type
+    Expression& rhs =
+        lhs.kind == ExpressionKind::Streaming &&
+                rightExpr->kind != SyntaxKind::StreamingConcatenationExpression
+            ? selfDetermined(compilation, *rightExpr, context, BindFlags::StreamingAllowed)
+            : create(compilation, *rightExpr, context, BindFlags::StreamingAllowed, lhs.type);
 
     return fromComponents(compilation, op, isNonBlocking, lhs, rhs, syntax.operatorToken.location(),
                           timingControl, syntax.sourceRange(), context);
@@ -475,7 +483,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
                                              const CastExpressionSyntax& syntax,
                                              const BindContext& context) {
     auto& targetExpr = bind(*syntax.left, context, BindFlags::AllowDataType | BindFlags::Constant);
-    auto& operand = selfDetermined(compilation, *syntax.right, context);
+    auto& operand =
+        selfDetermined(compilation, *syntax.right, context, BindFlags::StreamingAllowed);
 
     const auto* type = &compilation.getErrorType();
     auto result = [&](ConversionKind cast = ConversionKind::Explicit) {

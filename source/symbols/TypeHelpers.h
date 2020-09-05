@@ -30,9 +30,9 @@ enum class BitstreamSizeMode { Source, DestEmpty, DestFill };
 ///   "a" is the element size of this first item.
 ///   "b" is the sum of all fixed sizes plus sizes of siblings of the first
 ///       item when their common parent is dynamically sized.
-static std::pair<bitwidth_t, bitwidth_t> dynamicBitstreamSize(const Type& type,
-                                                              BitstreamSizeMode mode) {
-    bitwidth_t fixedSize = type.getBitWidth();
+static std::pair<std::size_t, std::size_t> dynamicBitstreamSize(const Type& type,
+                                                                BitstreamSizeMode mode) {
+    std::size_t fixedSize = type.getBitWidth();
     if (fixedSize > 0)
         return { 0, fixedSize };
 
@@ -40,7 +40,7 @@ static std::pair<bitwidth_t, bitwidth_t> dynamicBitstreamSize(const Type& type,
         return { mode == BitstreamSizeMode::DestEmpty ? 0 : CHAR_BIT, 0 };
 
     // TODO: check for overflow
-    bitwidth_t multiplier = 0;
+    std::size_t multiplier = 0;
     if (type.isUnpackedArray()) {
         auto [multiplierElem, fixedSizeElem] =
             dynamicBitstreamSize(*type.getArrayElementType(), mode);
@@ -90,7 +90,7 @@ static bool dynamicSizesMatch(const Type& destination, const Type& source) {
     ASSERT(!destEmptyMultiplier && !sourceMultiplier == source.isFixedSize());
 
     if (destEmptyFixedSize >= sourceFixedSize) {
-        bitwidth_t diff = destEmptyFixedSize - sourceFixedSize;
+        auto diff = destEmptyFixedSize - sourceFixedSize;
         if (diff % sourceMultiplier == 0)
             return true;
     }
@@ -117,7 +117,7 @@ static bool dynamicSizesMatch(const Type& destination, const Type& source) {
     if (destFillMultiplier == 0 && sourceFixedSize == 0)
         return false;
 
-    bitwidth_t remaining;
+    std::size_t remaining;
     if (sourceFixedSize > destFillFixedSize)
         remaining = sourceFixedSize - destFillFixedSize;
     else
@@ -127,7 +127,7 @@ static bool dynamicSizesMatch(const Type& destination, const Type& source) {
 }
 
 /// Validates sizes and returns remaining size for the first dynamic item in constant evaluation
-static bitwidth_t bitstreamCastRemainingSize(const Type& destination, bitwidth_t srcSize) {
+static std::size_t bitstreamCastRemainingSize(const Type& destination, std::size_t srcSize) {
     if (destination.isFixedSize()) {
         auto destSize = destination.bitstreamWidth();
         if (destSize != srcSize)
@@ -257,7 +257,7 @@ static SVInt slicePacked(PackIterator& iter, bitwidth_t& bit, bitwidth_t width) 
 
 /// Performs unpack operation on a bit-stream.
 static ConstantValue unpackBitstream(const Type& type, PackIterator& iter, bitwidth_t& bit,
-                                     bitwidth_t& dynamicSize) {
+                                     std::size_t& dynamicSize) {
 
     auto concatPacked = [&](bitwidth_t width, bool isFourState) {
         SmallVectorSized<SVInt, 8> buffer;
@@ -282,7 +282,8 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter, bitwi
         if (!dynamicSize)
             return std::string();
 
-        auto width = dynamicSize;
+        auto width = static_cast<bitwidth_t>(dynamicSize);
+        // TODO: dynamicSize larger than bitwidth_t
         ASSERT(width % CHAR_BIT == 0);
         dynamicSize = 0;
         return ConstantValue(concatPacked(width, false)).convertToStr();

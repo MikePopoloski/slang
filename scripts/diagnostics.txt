@@ -303,6 +303,10 @@ error UnpackedConcatSize "array concatenation for {} requires {} elements but {}
 error UnpackedConcatAssociative "array concatenations cannot be used for associative arrays"
 error InvalidClassAccess "cannot access '{}' in {} with '.'"
 error CopyClassTarget "expected {} to be a class type for shallow copy expression"
+error BasStreamSlice "streaming operator slice size cannot be a dynamically sized type identifier"
+error BadStreamType "stream {} type {} is not a bit-stream type"
+error BadStreamContext "streaming operator can only be used in assignment-like context or bit-stream cast argument"
+warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -469,7 +473,7 @@ group default = { real-underflow real-overflow literal-overflow ignored-macro-pa
                   not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg
                   pragma-diag-level explicit-static static-skipped format-real elem-not-found
                   dynarray-index dynarray-range queue-range empty-queue unknown-escape-code
-                  no-top warning-task }
+                  no-top warning-task ignored-slice }
 
 group extra = { empty-member empty-stmt dup-import unused-def }
 

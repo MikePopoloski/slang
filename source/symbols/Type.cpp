@@ -97,30 +97,25 @@ bitwidth_t Type::getBitWidth() const {
     return 0;
 }
 
-bitwidth_t Type::bitstreamWidth() const {
-    bitwidth_t width = getBitWidth();
+std::size_t Type::bitstreamWidth() const {
+    std::size_t width = getBitWidth();
     if (width > 0)
         return width;
 
     // TODO: check for overflow
     if (isUnpackedArray()) {
-        const auto& ct = getCanonicalType();
+        auto& ct = getCanonicalType();
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType)
             return 0;
 
-        const auto& fsa = ct.as<FixedSizeUnpackedArrayType>();
+        auto& fsa = ct.as<FixedSizeUnpackedArrayType>();
         return fsa.elementType.bitstreamWidth() * fsa.range.width();
     }
 
     if (isUnpackedStruct()) {
         auto& us = getCanonicalType().as<UnpackedStructType>();
-        for (auto& field : us.membersOfType<FieldSymbol>()) {
-            bitwidth_t fieldWidth = field.getType().bitstreamWidth();
-            if (!fieldWidth)
-                return 0;
-
-            width += fieldWidth;
-        }
+        for (const auto& field : us.membersOfType<FieldSymbol>())
+            width += field.getType().bitstreamWidth();
     }
 
     // TODO: classes
@@ -521,8 +516,8 @@ bool Type::isBitstreamCastable(const Type& rhs) const {
 }
 
 ConstantValue Type::bitstreamCast(const ConstantValue& value) const {
-    bitwidth_t srcSize = value.bitstreamWidth();
-    bitwidth_t dynamicSize = bitstreamCastRemainingSize(*this, srcSize);
+    auto srcSize = value.bitstreamWidth();
+    auto dynamicSize = bitstreamCastRemainingSize(*this, srcSize);
     if (dynamicSize > srcSize)
         return nullptr; // Sizes do not fit
 

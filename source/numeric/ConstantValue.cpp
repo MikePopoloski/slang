@@ -401,15 +401,15 @@ ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
     return queue;
 }
 
-bitwidth_t ConstantValue::bitstreamWidth() const {
+std::size_t ConstantValue::bitstreamWidth() const {
     if (isInteger())
         return integer().getBitWidth();
 
     // TODO: check for overflow
     if (isString())
-        return static_cast<bitwidth_t>(str().length() * CHAR_BIT);
+        return str().length() * CHAR_BIT;
 
-    bitwidth_t width = 0;
+    std::size_t width = 0;
     if (isUnpacked()) {
         for (const auto& cv : elements())
             width += cv.bitstreamWidth();

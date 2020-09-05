@@ -41,7 +41,7 @@ public:
     }
 
     ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
-        auto width = args[0]->type->bitstreamWidth();
+        std::size_t width = args[0]->type->isFixedSize() ? args[0]->type->bitstreamWidth() : 0;
         if (!width) {
             if (args[0]->kind == ExpressionKind::DataType) {
                 auto& diag = context.addDiag(diag::ConstEvalBitsNotFixedSize, args[0]->sourceRange);

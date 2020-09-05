@@ -128,6 +128,7 @@ public:
     MIRValue visit(const AssignmentExpression&) { return {}; }
     MIRValue visit(const ConcatenationExpression&) { return {}; }
     MIRValue visit(const ReplicationExpression&) { return {}; }
+    MIRValue visit(const StreamingConcatenationExpression&) { return {}; }
     MIRValue visit(const ElementSelectExpression&) { return {}; }
     MIRValue visit(const RangeSelectExpression&) { return {}; }
     MIRValue visit(const MemberAccessExpression&) { return {}; }

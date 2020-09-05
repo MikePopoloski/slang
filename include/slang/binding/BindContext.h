@@ -66,7 +66,11 @@ enum class BindFlags {
 
     /// Expression is for a static variable's initializer. References to automatic
     /// variables will be disallowed.
-    StaticInitializer = 1 << 9
+    StaticInitializer = 1 << 9,
+
+    /// Streaming operator is allowed in this context. This flag is cleared
+    /// for nested subexpressions, unless they are directly parenthesized.
+    StreamingAllowed = 1 << 10,
 };
 BITMASK(BindFlags, StaticInitializer);
 
