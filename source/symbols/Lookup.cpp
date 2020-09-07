@@ -171,9 +171,11 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 
     // Helper function to check whether class parameter assignments have been
     // incorrectly supplied for a non-class symbol.
-    auto checkClassParams = [&] {
-        if (symbol && symbol->kind != SymbolKind::GenericClassDef && name.paramAssignments) {
-            auto& diag = result.addDiag(context.scope, diag::NotAGenericClass, name.range());
+    auto checkClassParams = [&](NameComponents& nc) {
+        if (symbol && symbol->kind != SymbolKind::GenericClassDef && nc.paramAssignments) {
+            auto& diag = result.addDiag(context.scope, diag::NotAGenericClass,
+                                        nc.paramAssignments->getFirstToken().location());
+            diag << nc.range();
             diag << symbol->name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
             return false;
@@ -183,7 +185,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 
     // Loop through each dotted name component and try to find it in the preceeding scope.
     for (auto it = nameParts.rbegin(); it != nameParts.rend(); it++) {
-        if (!checkClassParams())
+        if (!checkClassParams(name))
             return false;
 
         // If we found a value, the remaining dots are member access expressions.
@@ -198,6 +200,9 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 
                 if (memberName.selectors)
                     result.selectors.appendRange(*memberName.selectors);
+
+                if (!checkClassParams(memberName))
+                    return false;
             }
 
             // Break out to return the symbol.
@@ -276,7 +281,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         }
     }
 
-    if (!checkClassParams())
+    if (!checkClassParams(name))
         return false;
 
     // If we found an automatic variable check that we didn't try to reference it hierarchically.
@@ -407,6 +412,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
 
         if (symbol->kind != SymbolKind::Package && !isClass) {
             auto& diag = result.addDiag(context.scope, diag::NotAClass, part.dotLocation);
+            diag << name.range();
             diag << symbol->name;
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
             return false;
@@ -980,7 +986,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
     // If we observed a wildcard import we couldn't resolve, we shouldn't report an
     // error for undeclared identifier because maybe it's supposed to come from that package.
     // In particular it's important that we do this because when we first look at a
-    // definition it's possible we haven't seen the file containing the package yet.
+    // definition because it's possible we haven't seen the file containing the package yet.
     if (result.sawBadImport)
         return;
 

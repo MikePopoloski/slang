@@ -1351,3 +1351,107 @@ endmodule
     CHECK(diags[0].code == diag::NonStaticClassProperty);
     CHECK(diags[1].code == diag::NonStaticClassMethod);
 }
+
+TEST_CASE("Lookup: various corner cases and error detection") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module m;
+    struct { int asdf; } asdf;
+
+    if (1) begin : block
+        int foobar;
+    end
+
+    int foo = 4;
+    int j = foo #(5).bar;
+    int k = block.foobar #(5);
+    int l = asdf.asdf #(5);
+
+    genvar g;
+    int m = g.foo;
+
+    class C;
+        int asdf;
+    endclass
+
+    int n = C[3]::foo::bar;
+    int o = C::asdf::bar;
+    int p = C #(5)::bar;
+    int q = C::$bar;
+
+    class G #(int i);
+    endclass
+
+    int r = G#()::foo;
+    int s = $foo;
+
+    import p::*;
+    int t = unknown;
+
+    localparam int u = $root.block;
+
+    I iface();
+    localparam int v = iface.bar;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 13);
+    CHECK(diags[0].code == diag::NotAGenericClass);
+    CHECK(diags[1].code == diag::NotAGenericClass);
+    CHECK(diags[2].code == diag::NotAGenericClass);
+    CHECK(diags[3].code == diag::NotAHierarchicalScope);
+    CHECK(diags[4].code == diag::InvalidScopeIndexExpression);
+    CHECK(diags[5].code == diag::NotAClass);
+    CHECK(diags[6].code == diag::NotAGenericClass);
+    CHECK(diags[7].code == diag::ExpectedIdentifier);
+    CHECK(diags[8].code == diag::ParamHasNoValue);
+    CHECK(diags[9].code == diag::UnknownSystemName);
+    CHECK(diags[10].code == diag::UnknownPackage);
+    CHECK(diags[11].code == diag::HierarchicalNotAllowedInConstant);
+    CHECK(diags[12].code == diag::CouldNotResolveHierarchicalPath);
+}
+
+TEST_CASE("Unqualified lookup for empty names") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Lookups of an empty name string should always return nullptr (not found).
+    CHECK(Lookup::unqualified(compilation.getRoot(), "") == nullptr);
+    CHECK(Lookup::unqualifiedAt(compilation.getRoot(), "", LookupLocation::max, {}) == nullptr);
+}
+
+TEST_CASE("Invalid array name lookups") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module m;
+    I ia[1 / 0] ();
+    int a = ia[3];
+
+    for (genvar i = 0; i < 10; i /= 0) begin : arr
+    end
+    int b = arr[3];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ValueMustNotBeUnknown);
+    CHECK(diags[1].code == diag::GenvarUnknownBits);
+}
