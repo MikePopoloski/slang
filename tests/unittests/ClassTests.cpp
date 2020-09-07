@@ -147,6 +147,7 @@ class D;
 endclass
 
 typedef class D;
+typedef class D;
 )");
 
     Compilation compilation;
@@ -307,4 +308,33 @@ endmodule
     CHECK(diags[0].code == diag::NoDefaultSpecialization);
     CHECK(diags[1].code == diag::NotAGenericClass);
     CHECK(diags[2].code == diag::GenericClassScopeResolution);
+}
+
+TEST_CASE("Generic class typedefs") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef class C;
+module m;
+    typedef C TC;
+    localparam type TD = C;
+
+    TC c1 = new;
+    TD d1 = new;
+
+    localparam int p1 = TC::p;
+    localparam int p2 = TD::p;
+endmodule
+
+class C #(int p = 1);
+endclass
+
+class D #(int p = 1);
+endclass
+
+typedef class D;
+typedef class D;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

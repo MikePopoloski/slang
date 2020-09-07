@@ -226,6 +226,18 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     return &result;
 }
 
+void GenericClassDefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
+    if (!firstForward)
+        firstForward = &decl;
+    else
+        firstForward->addForwardDecl(decl);
+}
+
+void GenericClassDefSymbol::checkForwardDecls() const {
+    if (firstForward)
+        firstForward->checkType(ForwardingTypedefSymbol::Class, Visibility::Public, location);
+}
+
 void GenericClassDefSymbol::serializeTo(ASTSerializer&) const {
     // TODO:
 }

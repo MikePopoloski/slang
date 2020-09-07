@@ -434,27 +434,42 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
         return;
     }
 
-    if (existing->kind == SymbolKind::ForwardingTypedef &&
+    if (existing->kind == SymbolKind::GenericClassDef &&
         member.kind == SymbolKind::ForwardingTypedef) {
-        // Found another forwarding typedef; link it to the previous one.
-        existing->as<ForwardingTypedefSymbol>().addForwardDecl(
-            member.as<ForwardingTypedefSymbol>());
+        // Class is already defined so nothing to do. When we elaborate the scope we will
+        // check that the typedef had the correct 'class' specifier.
+        existing->as<GenericClassDefSymbol>().addForwardDecl(member.as<ForwardingTypedefSymbol>());
         return;
     }
 
-    if (existing->kind == SymbolKind::ForwardingTypedef && member.kind == SymbolKind::TypeAlias) {
-        // We found the actual type for a previous forwarding declaration. Replace it in
-        // the name map.
-        member.as<TypeAliasType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
-        existing = &member;
-        return;
-    }
+    if (existing->kind == SymbolKind::ForwardingTypedef) {
+        if (member.kind == SymbolKind::ForwardingTypedef) {
+            // Found another forwarding typedef; link it to the previous one.
+            existing->as<ForwardingTypedefSymbol>().addForwardDecl(
+                member.as<ForwardingTypedefSymbol>());
+            return;
+        }
 
-    if (existing->kind == SymbolKind::ForwardingTypedef && member.kind == SymbolKind::ClassType) {
-        // Prefer having the class type in the name map.
-        member.as<ClassType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
-        existing = &member;
-        return;
+        if (member.kind == SymbolKind::TypeAlias) {
+            // We found the actual type for a previous forwarding declaration. Replace it in
+            // the name map.
+            member.as<TypeAliasType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
+            existing = &member;
+            return;
+        }
+
+        if (member.kind == SymbolKind::ClassType) {
+            member.as<ClassType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
+            existing = &member;
+            return;
+        }
+
+        if (member.kind == SymbolKind::GenericClassDef) {
+            member.as<GenericClassDefSymbol>().addForwardDecl(
+                existing->as<ForwardingTypedefSymbol>());
+            existing = &member;
+            return;
+        }
     }
 
     if (existing->kind == SymbolKind::ExplicitImport && member.kind == SymbolKind::ExplicitImport &&
@@ -714,6 +729,8 @@ void Scope::elaborate() const {
             it->second->as<TypeAliasType>().checkForwardDecls();
         else if (it->second->kind == SymbolKind::ClassType)
             it->second->as<ClassType>().checkForwardDecls();
+        else if (it->second->kind == SymbolKind::GenericClassDef)
+            it->second->as<GenericClassDefSymbol>().checkForwardDecls();
         else
             addDiag(diag::UnresolvedForwardTypedef, symbol->location) << symbol->name;
     }

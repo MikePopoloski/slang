@@ -82,6 +82,13 @@ public:
     const Type& getSpecialization(Compilation& compilation, LookupLocation lookupLocation,
                                   const ParameterValueAssignmentSyntax& syntax) const;
 
+    void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
+    const ForwardingTypedefSymbol* getFirstForwardDecl() const { return firstForward; }
+
+    /// Checks all forward declarations for validity when considering the target type
+    /// of this alias. Any inconsistencies will issue diagnostics.
+    void checkForwardDecls() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static const Symbol& fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax);
@@ -118,6 +125,7 @@ private:
     SmallVectorSized<Definition::ParameterDecl, 8> paramDecls;
     mutable flat_hash_map<SpecializationKey, const Type*, Hasher> specializations;
     mutable optional<const Type*> defaultSpecialization;
+    mutable const ForwardingTypedefSymbol* firstForward = nullptr;
 };
 
 } // namespace slang

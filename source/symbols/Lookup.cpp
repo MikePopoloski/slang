@@ -418,9 +418,6 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
             return false;
         }
 
-        if (symbol->kind == SymbolKind::TypeParameter)
-            symbol = &symbol->as<TypeParameterSymbol>().targetType.getType();
-
         // Handle generic classes and parameter assignments. If this is a generic class,
         // we must have param assignments here (even if the generic class has a default
         // specialization, the spec says you can't use that with colon-scoped lookup).
@@ -448,6 +445,14 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         name = *part.name;
         if (name.text().empty())
             return false;
+
+        // Unwrap typedefs and type params to their target types in order
+        // to look up members within them.
+        if (symbol->kind == SymbolKind::TypeParameter)
+            symbol = &symbol->as<TypeParameterSymbol>().targetType.getType();
+
+        if (symbol->isType())
+            symbol = &symbol->as<Type>().getCanonicalType();
 
         const Symbol* savedSymbol = symbol;
         symbol = symbol->as<Scope>().find(name.text());
@@ -733,6 +738,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                     forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
                 else if (symbol->kind == SymbolKind::ClassType)
                     forward = symbol->as<ClassType>().getFirstForwardDecl();
+                else if (symbol->kind == SymbolKind::GenericClassDef)
+                    forward = symbol->as<GenericClassDefSymbol>().getFirstForwardDecl();
 
                 if (forward)
                     locationGood = LookupLocation::before(*forward) < location;
