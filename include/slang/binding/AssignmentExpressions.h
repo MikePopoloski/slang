@@ -65,7 +65,7 @@ private:
 struct CastExpressionSyntax;
 struct SignedCastExpressionSyntax;
 
-enum class ConversionKind : uint8_t { Implicit, Propagated, Explicit, BitstreamCast };
+enum class ConversionKind : uint8_t { Implicit, Propagated, Streaming, Explicit, BitstreamCast };
 
 /// Represents a type conversion expression (implicit or explicit).
 class ConversionExpression : public Expression {

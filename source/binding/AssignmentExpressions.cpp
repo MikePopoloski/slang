@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/AssignmentExpressions.h"
 
+#include "slang/binding/Bitstream.h"
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/OperatorExpressions.h"
@@ -303,6 +304,18 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             return *result;
         }
 
+        if (expr.kind == ExpressionKind::Streaming) {
+            if (Bitstream::streamingSourceCheck(type, expr.as<StreamingConcatenationExpression>(),
+                                                context)) {
+                result = compilation.emplace<ConversionExpression>(type, ConversionKind::Streaming,
+                                                                   *result, result->sourceRange);
+                selfDetermined(context, result);
+                return *result;
+            }
+            else
+                return badExpr(compilation, &expr);
+        }
+
         DiagCode code = type.isCastCompatible(*rt) || type.isBitstreamCastable(*rt)
                             ? diag::NoImplicitConversion
                             : diag::BadAssignment;
@@ -364,11 +377,14 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, nullptr);
     }
 
+    bitmask<BindFlags> extraFlags = BindFlags::None;
     optional<BinaryOperator> op;
     if (syntax.kind != SyntaxKind::AssignmentExpression &&
         syntax.kind != SyntaxKind::NonblockingAssignmentExpression) {
         op = getBinaryOperator(syntax.kind);
     }
+    else
+        extraFlags |= BindFlags::StreamingAllowed;
 
     const ExpressionSyntax* rightExpr = syntax.right;
     bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
@@ -408,15 +424,12 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         }
     }
 
-    Expression& lhs =
-        selfDetermined(compilation, *syntax.left, context, BindFlags::StreamingAllowed);
+    Expression& lhs = selfDetermined(compilation, *syntax.left, context, extraFlags);
 
-    // Streaming operator has no defined type
-    Expression& rhs =
-        lhs.kind == ExpressionKind::Streaming &&
-                rightExpr->kind != SyntaxKind::StreamingConcatenationExpression
-            ? selfDetermined(compilation, *rightExpr, context, BindFlags::StreamingAllowed)
-            : create(compilation, *rightExpr, context, BindFlags::StreamingAllowed, lhs.type);
+    Expression& rhs = lhs.kind == ExpressionKind::Streaming &&
+                              rightExpr->kind != SyntaxKind::StreamingConcatenationExpression
+                          ? selfDetermined(compilation, *rightExpr, context, extraFlags)
+                          : create(compilation, *rightExpr, context, extraFlags, lhs.type);
 
     return fromComponents(compilation, op, isNonBlocking, lhs, rhs, syntax.operatorToken.location(),
                           timingControl, syntax.sourceRange(), context);
@@ -436,10 +449,17 @@ Expression& AssignmentExpression::fromComponents(
     if (!lhs.verifyAssignable(context, nonBlocking, assignLoc))
         return badExpr(compilation, result);
 
-    result->right_ =
-        &convertAssignment(context, *lhs.type, *result->right_, assignLoc, lhs.sourceRange);
-    if (result->right_->bad())
-        return badExpr(compilation, result);
+    if (lhs.kind == ExpressionKind::Streaming) {
+        if (!Bitstream::streamingTargetCheck(lhs.as<StreamingConcatenationExpression>(), rhs,
+                                             context))
+            return badExpr(compilation, result);
+    }
+    else {
+        result->right_ =
+            &convertAssignment(context, *lhs.type, *result->right_, assignLoc, lhs.sourceRange);
+        if (result->right_->bad())
+            return badExpr(compilation, result);
+    }
 
     return *result;
 }
@@ -522,7 +542,16 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     }
 
     if (!type->isCastCompatible(*operand.type)) {
-        if (!type->isBitstreamCastable(*operand.type)) {
+        if (operand.kind == ExpressionKind::Streaming) {
+            if (!Bitstream::streamingCastCheck(*type,
+                                               operand.as<StreamingConcatenationExpression>())) {
+                auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
+                diag << std::string("streaming concatenation") << *type;
+                diag << targetExpr.sourceRange << operand.sourceRange;
+                return badExpr(compilation, result());
+            }
+        }
+        else if (!type->isBitstreamCastable(*operand.type)) {
             auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
             diag << *operand.type << *type;
             diag << targetExpr.sourceRange << operand.sourceRange;
@@ -580,14 +609,8 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     if (from.isMatching(to))
         return std::move(value);
 
-    if (conversionKind == ConversionKind::BitstreamCast) {
-        auto cv = to.bitstreamCast(value);
-        if (!cv) {
-            auto& diag = context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange);
-            diag << value.bitstreamWidth() << to;
-        }
-        return cv;
-    }
+    if (conversionKind == ConversionKind::BitstreamCast)
+        return Bitstream::castEval(to, value, sourceRange, context);
 
     if (to.isIntegral()) {
         // [11.8.2] last bullet says: the operand shall be sign-extended only if the propagated type

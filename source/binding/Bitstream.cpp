@@ -1,13 +1,16 @@
 //------------------------------------------------------------------------------
-// TypeHelpers.h
-// Contains internal helper functions for Type implementations
+// Bitstream.cpp
+// Helpers for implementing bit-stream casting and streaming operators
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#pragma once
+#include "slang/binding/Bitstream.h"
 
 #include <numeric>
 
+#include "slang/binding/OperatorExpressions.h"
+#include "slang/diagnostics/ConstEvalDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/VariableSymbols.h"
 
@@ -81,8 +84,33 @@ static std::pair<std::size_t, std::size_t> dynamicBitstreamSize(const Type& type
     return { multiplier, fixedSize };
 }
 
-/// Compile-time check that the source and destination types have the same dynamic bit-stream sizes.
-static bool dynamicSizesMatch(const Type& destination, const Type& source) {
+static std::pair<std::size_t, std::size_t> dynamicBitstreamSize(
+    const StreamingConcatenationExpression& concat, BitstreamSizeMode mode) {
+    if (concat.isFixedSize())
+        return { 0, concat.bistreamWidth() };
+
+    std::size_t multiplier = 0, fixedSize = 0;
+    for (auto stream : concat.streams()) {
+        auto [multiplierElem, fixedSizeElem] =
+            stream->kind == ExpressionKind::Streaming
+                ? dynamicBitstreamSize(stream->as<StreamingConcatenationExpression>(), mode)
+                : dynamicBitstreamSize(*stream->type, mode);
+        if (mode == BitstreamSizeMode::DestFill && multiplierElem > 0)
+            mode = BitstreamSizeMode::DestEmpty;
+        multiplier = std::gcd(multiplier, multiplierElem);
+        fixedSize += fixedSizeElem;
+    }
+
+    return { multiplier, fixedSize };
+}
+
+template bool Bitstream::dynamicSizesMatch(const Type&, const Type&);
+template bool Bitstream::dynamicSizesMatch(const StreamingConcatenationExpression&,
+                                           const StreamingConcatenationExpression&);
+template bool Bitstream::dynamicSizesMatch(const Type&, const StreamingConcatenationExpression&);
+
+template<typename T1, typename T2>
+bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
     auto [sourceMultiplier, sourceFixedSize] =
         dynamicBitstreamSize(source, BitstreamSizeMode::Source);
     auto [destEmptyMultiplier, destEmptyFixedSize] =
@@ -333,6 +361,88 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter, bitwi
 
     // TODO: classes
     return nullptr;
+}
+
+ConstantValue Bitstream::castEval(const Type& type, const ConstantValue& value,
+                                  SourceRange sourceRange, EvalContext& context) {
+    auto srcSize = value.bitstreamWidth();
+    auto dynamicSize = bitstreamCastRemainingSize(type, srcSize);
+    if (dynamicSize > srcSize) {
+        auto& diag = context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange);
+        diag << value.bitstreamWidth() << type;
+        return nullptr;
+    }
+
+    SmallVectorSized<const ConstantValue*, 8> packed;
+    packBitstream(value, packed);
+
+    bitwidth_t bitOffset = 0;
+    auto iter = packed.cbegin();
+    auto cv = unpackBitstream(type, iter, bitOffset, dynamicSize);
+    ASSERT(!dynamicSize && bitOffset == ((*iter)->isInteger() ? (*iter)->integer().getBitWidth()
+                                                              : (*iter)->str().length() * 8));
+    ASSERT(iter != packed.cend() && ++iter == packed.cend());
+    return cv;
+}
+
+bool Bitstream::streamingTargetCheck(const StreamingConcatenationExpression& lhs,
+                                     const Expression& rhs, const BindContext& context) {
+    if (rhs.kind != ExpressionKind::Streaming && !rhs.type->isBitstreamType()) {
+        context.addDiag(diag::BadStreamType, rhs.sourceRange) << std::string("source") << *rhs.type;
+        return false;
+    }
+
+    auto targetWidth = lhs.as<StreamingConcatenationExpression>().bistreamWidth();
+    decltype(targetWidth) sourceWidth;
+    bool good = true;
+
+    if (rhs.kind != ExpressionKind::Streaming) {
+        if (!rhs.type->isFixedSize())
+            return true; // Sizes checked at constant evaluation or runtime
+        sourceWidth = rhs.type->bitstreamWidth();
+        good = targetWidth <= sourceWidth;
+    }
+    else {
+        auto source = rhs.as<StreamingConcatenationExpression>();
+        sourceWidth = source.bistreamWidth();
+        if (lhs.isFixedSize() && source.isFixedSize())
+            good = targetWidth == sourceWidth;
+        else
+            good = dynamicSizesMatch(lhs, source);
+    }
+
+    if (!good)
+        context.addDiag(diag::BadStreamSize, lhs.sourceRange) << targetWidth << sourceWidth;
+    return good;
+}
+
+bool Bitstream::streamingSourceCheck(const Type& target,
+                                     const StreamingConcatenationExpression& rhs,
+                                     const BindContext& context) {
+    if (!target.isBitstreamType(true)) {
+        context.addDiag(diag::BadStreamType, rhs.sourceRange) << std::string("target") << target;
+        return false;
+    }
+
+    if (!target.isFixedSize())
+        return true; // Sizes checked at constant evaluation or runtime
+    auto targetWidth = target.bitstreamWidth();
+    auto sourceWidth = rhs.bistreamWidth();
+    if (targetWidth < sourceWidth) {
+        context.addDiag(diag::BadStreamSize, rhs.sourceRange) << targetWidth << sourceWidth;
+        return false;
+    }
+
+    return true;
+}
+
+bool Bitstream::streamingCastCheck(const Type& type, const StreamingConcatenationExpression& arg) {
+    if (!type.isBitstreamType(true))
+        return false;
+    if (type.isFixedSize() && arg.isFixedSize())
+        return type.bitstreamWidth() == arg.bistreamWidth();
+    else
+        return dynamicSizesMatch(type, arg);
 }
 
 } // namespace slang

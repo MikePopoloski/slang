@@ -1514,11 +1514,6 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         context.addDiag(diag::BadStreamContext, syntax.operatorToken.location());
         return badExpr(compilation, badResult());
     }
-    if (assignmentTarget && !assignmentTarget->isBitstreamType(true)) {
-        context.addDiag(diag::BadStreamType, syntax.sourceRange())
-            << std::string("target") << *assignmentTarget;
-        return badExpr(compilation, badResult());
-    }
 
     if (syntax.sliceSize) {
         if (isRightToLeft) {
@@ -1528,7 +1523,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 return badExpr(compilation, badResult());
             if (sliceExpr.kind == ExpressionKind::DataType) {
                 if (!sliceExpr.type->isFixedSize()) {
-                    auto& diag = context.addDiag(diag::BasStreamSlice, sliceExpr.sourceRange);
+                    auto& diag = context.addDiag(diag::BadStreamSlice, sliceExpr.sourceRange);
                     if (sliceExpr.type->location)
                         diag.addNote(diag::NoteDeclarationHere, sliceExpr.type->location);
                     return badExpr(compilation, badResult());
@@ -1562,8 +1557,11 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         else
             arg = &selfDetermined(compilation, *argSyntax->expression, context,
                                   BindFlags::StreamingAllowed);
-        if (argSyntax->withRange)
-            arg = &bindSelector(compilation, *arg, *argSyntax->withRange->range, context);
+        if (argSyntax->withRange) {
+            // TODO: with array_range_expression
+            context.addDiag(diag::NotYetSupported, argSyntax->withRange->sourceRange());
+            return badExpr(compilation, badResult());
+        }
 
         if (arg->bad())
             return badExpr(compilation, badResult());
@@ -1581,8 +1579,9 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         buffer.append(arg);
     }
 
+    // Streaming operator has no meaningful type. Use void as a placeholder.
     return *compilation.emplace<StreamingConcatenationExpression>(
-        compilation.getIntegerType(), sliceSize, buffer.ccopy(compilation), syntax.sourceRange());
+        compilation.getVoidType(), sliceSize, buffer.ccopy(compilation), syntax.sourceRange());
 }
 
 ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& /* context */) const {
@@ -1605,6 +1604,30 @@ void StreamingConcatenationExpression::serializeTo(ASTSerializer& serializer) co
             serializer.serialize(*op);
         serializer.endArray();
     }
+}
+
+bool StreamingConcatenationExpression::isFixedSize() const {
+    for (auto stream : streams()) {
+        bool isFixed;
+        if (stream->kind == ExpressionKind::Streaming)
+            isFixed = stream->as<StreamingConcatenationExpression>().isFixedSize();
+        else
+            isFixed = stream->type->isFixedSize();
+        if (!isFixed)
+            return false;
+    }
+    return true;
+}
+
+std::size_t StreamingConcatenationExpression::bistreamWidth() const {
+    std::size_t width = 0;
+    for (auto stream : streams()) {
+        if (stream->kind == ExpressionKind::Streaming)
+            width += stream->as<StreamingConcatenationExpression>().bistreamWidth();
+        else
+            width += stream->type->bitstreamWidth();
+    }
+    return width;
 }
 
 Expression& OpenRangeExpression::fromSyntax(Compilation& comp,

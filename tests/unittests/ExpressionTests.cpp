@@ -1340,9 +1340,6 @@ TEST_CASE("$bits on non-fixed-size array") {
 }
 
 TEST_CASE("bit-stream cast") {
-    std::string intBits = "int b = $bits(a);";
-    std::string paramBits = "localparam b = $bits(a);";
-
     std::string illegal[] = {
         R"(
 // Illegal conversion from 24-bit struct to 32 bit int - compile time error
@@ -1416,4 +1413,47 @@ localparam c d = c'(str);
 
     CHECK(testBitstream("byte a[2]; localparam b = shortint'(a);",
                         diag::ConstEvalNonConstVariable) == 1);
+}
+
+TEST_CASE("Streaming operators") {
+    struct {
+        std::string sv;
+        DiagCode msg;
+    } illegal[] = {
+        { "int a; int b = {>>{a}} + 2;", diag::BadStreamContext },
+        { "shortint a,b; int c = {{>>{a}}, b};", diag::BadStreamContext },
+        { "int a; int b = {<< string {a}};", diag::BadStreamSlice },
+        { "int a, c; int b = {<< c {a}};", diag::ConstEvalNonConstVariable },
+        { "int a; int b = {<< 0 {a}};", diag::ValueMustBePositive },
+        { "real a; int b = {<< 5 {a}};", diag::BadStreamType },
+        { "int a; real b = {<< 2 {a}};", diag::BadStreamType },
+        { "int a[2]; real b = $itor(a);", diag::BadSystemSubroutineArg },
+        { "int a; int b = {>> 4 {a}};", diag::IgnoredSlice },
+        { "int a; real b; assign {<< 2 {a}} = b;", diag::BadStreamType },
+        { "int a; shortint b; assign {<< 2 {a}} = b;", diag::BadStreamSize },
+        { "int a; shortint b; assign b = {<< 4 {a}};", diag::BadStreamSize },
+        { "int a; shortint b; assign {>>{b}} = {<< 4 {a}};", diag::BadStreamSize },
+        { "int a; real b = real'({<< 4 {a}});", diag::BadConversion },
+        { "int a; shortint b = shortint'({<< 4 {a}});", diag::BadConversion },
+        { "typedef struct {byte a[$]; bit b;} dest_t; int a; dest_t b = dest_t'({<<{a}});",
+          diag::BadConversion },
+        { "typedef struct {byte a[$]; bit b;} dest_t;int a;dest_t b;assign {>>{b}}={<<{a}};",
+          diag::BadStreamSize },
+    };
+
+    for (const auto& test : illegal)
+        CHECK(testBitstream(test.sv, test.msg) == 1);
+
+    std::string legal[] = {
+        "int a; byte b[4] = {<<3{a}};",
+        "int a; byte b[4]; assign {<<3{b}} = a;",
+        "int a; byte b[4]; assign {<<3{b}} = {<<5{a}};",
+        "byte b[4]; int a = int'({<<3{b}}) + 5;",
+        "shortint a; byte b[2]; int c = {<<3{a, {<<5{b}}}};",
+        "shortint a; byte b[2]; int c; assign {<<3{{<<5{b}}, a}}=c;",
+    };
+
+    for (const auto& test : legal) {
+        CHECK(testBitstream(test) == 0);
+    }
 }

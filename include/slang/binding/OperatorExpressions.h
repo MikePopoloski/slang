@@ -277,6 +277,9 @@ public:
             op->visit(visitor);
     }
 
+    bool isFixedSize() const;
+    std::size_t bistreamWidth() const;
+
 private:
     span<const Expression* const> streams_;
 };

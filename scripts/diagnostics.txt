@@ -303,9 +303,10 @@ error UnpackedConcatSize "array concatenation for {} requires {} elements but {}
 error UnpackedConcatAssociative "array concatenations cannot be used for associative arrays"
 error InvalidClassAccess "cannot access '{}' in {} with '.'"
 error CopyClassTarget "expected {} to be a class type for shallow copy expression"
-error BasStreamSlice "streaming operator slice size cannot be a dynamically sized type identifier"
-error BadStreamType "stream {} type {} is not a bit-stream type"
-error BadStreamContext "streaming operator can only be used in assignment-like context or bit-stream cast argument"
+error BadStreamSlice "streaming operator slice size cannot be a dynamically sized type identifier"
+error BadStreamType "streaming {} type {} is not a bit-stream type"
+error BadStreamContext "streaming operator can only be used in an assignment or bit-stream cast argument"
+error BadStreamSize "streaming operator target size {} does not fit source size {}"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 
 subsystem Statements

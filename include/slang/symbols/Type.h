@@ -205,10 +205,6 @@ public:
     /// Determines whether the given type can be bit-stream cast to this one.
     bool isBitstreamCastable(const Type& rhs) const;
 
-    /// Performs a bit-stream cast of @a value to this type. If the conversion
-    /// is not valid, returns nullptr (invalid value).
-    ConstantValue bitstreamCast(const ConstantValue& value) const;
-
     /// Gets a combination of flags for integral types; for non-integral types,
     /// this returns all zeros.
     bitmask<IntegralFlags> getIntegralFlags() const;
