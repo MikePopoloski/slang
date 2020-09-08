@@ -33,11 +33,16 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassProperty; }
 };
 
+class GenericClassDefSymbol;
 struct ClassDeclarationSyntax;
 
 /// Represents a class definition type.
 class ClassType : public Type, public Scope {
 public:
+    /// If the class type was specialized from a generic class, this is
+    /// a pointer to that generic class definition.
+    const GenericClassDefSymbol* genericClass = nullptr;
+
     ClassType(Compilation& compilation, string_view name, SourceLocation loc);
 
     static const Symbol& fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax);

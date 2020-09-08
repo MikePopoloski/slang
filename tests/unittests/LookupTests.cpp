@@ -1310,7 +1310,9 @@ class C;
     enum { ASDF = 2 } asdf;
 
     int foo;
-    function void bar(); endfunction
+    function void bar();
+        C::foo = 1;
+    endfunction
 
     static int foo2;
     static function void bar2(); endfunction

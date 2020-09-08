@@ -149,6 +149,8 @@ const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax
 void ClassType::serializeTo(ASTSerializer& serializer) const {
     if (firstForward)
         serializer.write("forward", *firstForward);
+    if (genericClass)
+        serializer.writeLink("genericClass", *genericClass);
 }
 
 const Symbol& GenericClassDefSymbol::fromSyntax(const Scope& scope,
@@ -196,6 +198,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     // Create a class type instance to hold the parameters. If it turns out we already
     // have this specialization cached we'll throw it away, but that's not a big deal.
     auto classType = compilation.emplace<ClassType>(compilation, name, location);
+    classType->genericClass = this;
 
     ParameterBuilder paramBuilder(*scope, name, paramDecls);
     if (syntax)
@@ -238,8 +241,9 @@ void GenericClassDefSymbol::checkForwardDecls() const {
         firstForward->checkType(ForwardingTypedefSymbol::Class, Visibility::Public, location);
 }
 
-void GenericClassDefSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {
+    if (firstForward)
+        serializer.write("forward", *firstForward);
 }
 
 GenericClassDefSymbol::SpecializationKey::SpecializationKey(

@@ -393,6 +393,20 @@ bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
     }
 }
 
+const Symbol* getParentClass(const Scope& scope) {
+    const Symbol* parent = &scope.asSymbol();
+    while (parent->kind == SymbolKind::StatementBlock || parent->kind == SymbolKind::Subroutine) {
+        auto parentScope = parent->getParentScope();
+        ASSERT(parentScope);
+        parent = &parentScope->asSymbol();
+    }
+
+    if (parent->kind == SymbolKind::ClassType)
+        return parent;
+
+    return nullptr;
+}
+
 bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
                        NameComponents& name, LookupResult& result, const BindContext& context) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
@@ -430,8 +444,14 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
                 symbol = &type;
             }
             else {
-                result.addDiag(context.scope, diag::GenericClassScopeResolution, name.range());
-                return false;
+                // The unadorned generic class name here is an error if we're outside the context
+                // of the class itself. If we're within the class, it refers to the "current"
+                // specialization, not the default specialization.
+                auto parent = getParentClass(context.scope);
+                if (!parent || parent->as<ClassType>().genericClass != symbol) {
+                    result.addDiag(context.scope, diag::GenericClassScopeResolution, name.range());
+                    return false;
+                }
             }
         }
         else if (name.paramAssignments) {
@@ -815,7 +835,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
     }
 
     // Continue up the scope chain via our parent.
-    location = LookupLocation::before(scope.asSymbol());
+    location = LookupLocation::after(scope.asSymbol());
     if (!location.getScope())
         return;
 

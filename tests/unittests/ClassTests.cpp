@@ -276,9 +276,16 @@ endmodule
 TEST_CASE("Generic class names") {
     auto tree = SyntaxTree::fromText(R"(
 class C #(int p = 1);
+    function void foo();
+        int k = C::p;
+    endfunction
 endclass
 
 class D #(int q = 2, int r);
+    int asdf;
+    function void bar();
+        D::asdf = r;
+    endfunction
 endclass
 
 module m;

@@ -136,6 +136,10 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                 lifetime = sym.as<InstanceBodySymbol>().getDefinition().defaultLifetime;
                 break;
             }
+            else if (sym.kind == SymbolKind::ClassType) {
+                lifetime = VariableLifetime::Automatic;
+                break;
+            }
             scope = sym.getParentScope();
         } while (scope);
     }
