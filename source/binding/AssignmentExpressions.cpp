@@ -305,10 +305,11 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
 
         if (expr.kind == ExpressionKind::Streaming) {
-            if (Bitstream::streamingSourceCheck(type, expr.as<StreamingConcatenationExpression>(),
-                                                context)) {
-                result = compilation.emplace<ConversionExpression>(type, ConversionKind::Streaming,
-                                                                   *result, result->sourceRange);
+            if (Bitstream::canBeSource(type, expr.as<StreamingConcatenationExpression>(),
+                                       context)) {
+                // Create implicit streaming concatenation conversion
+                result = compilation.emplace<ConversionExpression>(
+                    type, ConversionKind::StreamingConcat, *result, result->sourceRange);
                 selfDetermined(context, result);
                 return *result;
             }
@@ -450,8 +451,7 @@ Expression& AssignmentExpression::fromComponents(
         return badExpr(compilation, result);
 
     if (lhs.kind == ExpressionKind::Streaming) {
-        if (!Bitstream::streamingTargetCheck(lhs.as<StreamingConcatenationExpression>(), rhs,
-                                             context))
+        if (!Bitstream::canBeTarget(lhs.as<StreamingConcatenationExpression>(), rhs, context))
             return badExpr(compilation, result);
     }
     else {
@@ -543,8 +543,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 
     if (!type->isCastCompatible(*operand.type)) {
         if (operand.kind == ExpressionKind::Streaming) {
-            if (!Bitstream::streamingCastCheck(*type,
-                                               operand.as<StreamingConcatenationExpression>())) {
+            if (!Bitstream::isBitstreamCast(*type,
+                                            operand.as<StreamingConcatenationExpression>())) {
                 auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
                 diag << std::string("streaming concatenation") << *type;
                 diag << targetExpr.sourceRange << operand.sourceRange;
@@ -609,8 +609,10 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     if (from.isMatching(to))
         return std::move(value);
 
-    if (conversionKind == ConversionKind::BitstreamCast)
-        return Bitstream::castEval(to, value, sourceRange, context);
+    if (conversionKind == ConversionKind::BitstreamCast ||
+        conversionKind == ConversionKind::StreamingConcat)
+        return Bitstream::castEvaluation(to, value, sourceRange, context,
+                                         conversionKind == ConversionKind::StreamingConcat);
 
     if (to.isIntegral()) {
         // [11.8.2] last bullet says: the operand shall be sign-extended only if the propagated type

@@ -7,6 +7,7 @@
 #include "slang/binding/OperatorExpressions.h"
 
 #include "slang/binding/AssignmentExpressions.h"
+#include "slang/binding/Bitstream.h"
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -1359,6 +1360,7 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
 
 LValue ConcatenationExpression::evalLValueImpl(EvalContext& context) const {
     std::vector<LValue> lvals;
+    lvals.reserve(operands().size());
     for (auto operand : operands()) {
         LValue lval = operand->evalLValue(context);
         if (!lval)
@@ -1565,15 +1567,14 @@ Expression& StreamingConcatenationExpression::fromSyntax(
 
         if (arg->bad())
             return badExpr(compilation, badResult());
-        if (argSyntax->expression->kind == SyntaxKind::StreamingConcatenationExpression)
-            continue; // type has been checked
-
-        const Type& type = *arg->type;
-        // TODO: first-declared member of untagged union
-        if (!type.isBitstreamType(!assignmentTarget)) {
-            context.addDiag(diag::BadStreamType, arg->sourceRange)
-                << std::string("expression") << type;
-            return badExpr(compilation, badResult());
+        if (argSyntax->expression->kind != SyntaxKind::StreamingConcatenationExpression) {
+            const Type& type = *arg->type;
+            // TODO: first-declared member of untagged union
+            if (!type.isBitstreamType(!assignmentTarget)) {
+                context.addDiag(diag::BadStreamType, arg->sourceRange)
+                    << std::string("expression") << type;
+                return badExpr(compilation, badResult());
+            }
         }
 
         buffer.append(arg);
@@ -1584,8 +1585,18 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         compilation.getVoidType(), sliceSize, buffer.ccopy(compilation), syntax.sourceRange());
 }
 
-ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& /* context */) const {
-    return nullptr;
+ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) const {
+    std::vector<ConstantValue> values;
+    values.reserve(streams().size());
+    for (auto stream : streams()) {
+        ConstantValue v = stream->eval(context);
+        if (!v)
+            return nullptr;
+        values.emplace_back(std::move(v));
+    }
+    if (sliceSize > 0)
+        return Bitstream::reOrder(values, sliceSize);
+    return values;
 }
 
 bool StreamingConcatenationExpression::verifyConstantImpl(EvalContext& context) const {

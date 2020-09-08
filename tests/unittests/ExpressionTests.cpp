@@ -1439,6 +1439,12 @@ TEST_CASE("Streaming operators") {
           diag::BadConversion },
         { "typedef struct {byte a[$]; bit b;} dest_t;int a;dest_t b;assign {>>{b}}={<<{a}};",
           diag::BadStreamSize },
+
+        { "localparam string s=\"AB\"; localparam byte j= {<<2{s}};", diag::BadStreamSize },
+        { "localparam string s=\"AB\"; localparam int j= byte'({<<{s}}) - 5;",
+          diag::ConstEvalBitstreamCastSize },
+        { "localparam string s=\"AB\"; localparam int j= int'({<<{s}}) - 5;",
+          diag::ConstEvalBitstreamCastSize },
     };
 
     for (const auto& test : illegal)
@@ -1453,7 +1459,6 @@ TEST_CASE("Streaming operators") {
         "shortint a; byte b[2]; int c; assign {<<3{{<<5{b}}, a}}=c;",
     };
 
-    for (const auto& test : legal) {
+    for (const auto& test : legal)
         CHECK(testBitstream(test) == 0);
-    }
 }

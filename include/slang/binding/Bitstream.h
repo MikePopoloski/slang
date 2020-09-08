@@ -6,12 +6,15 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <cstddef>
+
 namespace slang {
 
 class Type;
 class ConstantValue;
 class StreamingConcatenationExpression;
 class Expression;
+class ConstantValue;
 class BindContext;
 class EvalContext;
 class SourceRange;
@@ -25,22 +28,24 @@ public:
 
     /// Performs a bit-stream cast of @a value  to @a type. If the conversion is not valid,
     /// returns nullptr (invalid value).
-    static ConstantValue castEval(const Type& type, const ConstantValue&, SourceRange,
-                                  EvalContext&);
+    static ConstantValue castEvaluation(const Type& type, const ConstantValue&, SourceRange,
+                                        EvalContext&, bool isImplicit = false);
 
     /// Compile-time check that streaming concatenation target has a bit-stream type source with
     /// enought bits
-    static bool streamingTargetCheck(const StreamingConcatenationExpression& lhs,
-                                     const Expression& rhs, const BindContext&);
+    static bool canBeTarget(const StreamingConcatenationExpression& lhs, const Expression& rhs,
+                            const BindContext&);
 
     /// Compile-time check that streaming concatenation source has a bit-stream target type  with
     /// enought bits
-    static bool streamingSourceCheck(const Type& target,
-                                     const StreamingConcatenationExpression& rhs,
-                                     const BindContext&);
+    static bool canBeSource(const Type& target, const StreamingConcatenationExpression& rhs,
+                            const BindContext&);
 
     /// Compile-time check that bit-streaming cast on a streaming operator is valid
-    static bool streamingCastCheck(const Type& target, const StreamingConcatenationExpression& arg);
+    static bool isBitstreamCast(const Type& target, const StreamingConcatenationExpression& arg);
+
+    /// Re-ordering of the generic stream
+    static ConstantValue reOrder(ConstantValue&&, std::size_t sliceSize);
 
 private:
     Bitstream() = default;

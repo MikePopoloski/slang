@@ -1757,3 +1757,46 @@ TEST_CASE("Mixed unknowns or signedness") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("streaming operator const evaluation") {
+    ScriptSession session;
+    session.eval(R"(
+localparam int j = { "A", "B", "C", "D" };
+localparam int s0 = { >> {j}};
+localparam int s1 = { << byte {j}};
+localparam int s2 = { << 16 {j}};
+localparam shortint s3 = { << { 8'b0011_0101 }};
+localparam shortint s4 = { << 4 { 6'b11_0101 }};
+localparam shortint unsigned s5 = { >> 4 { 6'b11_0101 }};
+localparam shortint unsigned s6 = { << 2 { { << { 4'b1101 }} }};
+
+localparam string str = "ABCD";
+localparam string str0 = { >> {str}};
+localparam string str1 = { << byte {str}};
+localparam string str2 = { << 16 {str}};
+localparam string j0 = { >> {j}};
+localparam string j1 = { << byte {j}};
+localparam string j2 = { << 16 {j}};
+localparam int i0 = { >> {str}};
+localparam int i1 = { << byte {str}};
+localparam int i2 = { << 16 {str}};
+)");
+
+    CHECK(session.eval("s0").integer() == session.eval("{\"A\", \"B\", \"C\", \"D\"}").integer());
+    CHECK(session.eval("s1").integer() == session.eval("{\"D\", \"C\", \"B\", \"A\"}").integer());
+    CHECK(session.eval("s2").integer() == session.eval("{\"C\", \"D\", \"A\", \"B\"}").integer());
+    CHECK(session.eval("s3").integer() == session.eval("$signed({8'b1010_1100, 8'b0})").integer());
+    CHECK(session.eval("s4").integer() == session.eval("{6'b0101_11, 10'b0}").integer());
+    CHECK(session.eval("s5").integer() == session.eval("{6'b1101_01, 10'b0}").integer());
+    CHECK(session.eval("s6").integer() == session.eval("{4'b1110, 12'b0}").integer());
+
+    CHECK(session.eval("str0").str() == "ABCD");
+    CHECK(session.eval("str1").str() == "DCBA");
+    CHECK(session.eval("str2").str() == "CDAB");
+    CHECK(session.eval("j0").str() == "ABCD");
+    CHECK(session.eval("j1").str() == "DCBA");
+    CHECK(session.eval("j2").str() == "CDAB");
+    CHECK(session.eval("i0").integer() == session.eval("{\"A\", \"B\", \"C\", \"D\"}").integer());
+    CHECK(session.eval("i1").integer() == session.eval("{\"D\", \"C\", \"B\", \"A\"}").integer());
+    CHECK(session.eval("i2").integer() == session.eval("{\"C\", \"D\", \"A\", \"B\"}").integer());
+}
