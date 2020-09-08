@@ -394,8 +394,7 @@ bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
 }
 
 bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
-                       NameComponents& name, LookupResult& result, const BindContext& context,
-                       SourceRange fullRange) {
+                       NameComponents& name, LookupResult& result, const BindContext& context) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
     ASSERT(symbol);
 
@@ -469,25 +468,6 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         }
 
         nameParts.pop();
-    }
-
-    // If this was a class lookup, check that we are allowed to access the
-    // member via the scope resolution operator.
-    if (isClass && symbol) {
-        if (symbol->kind == SymbolKind::ClassProperty) {
-            auto& var = symbol->as<ClassPropertySymbol>();
-            if (var.lifetime == VariableLifetime::Automatic) {
-                result.addDiag(context.scope, diag::NonStaticClassProperty, fullRange) << var.name;
-                return false;
-            }
-        }
-        else if (symbol->kind == SymbolKind::Subroutine) {
-            auto& sub = symbol->as<SubroutineSymbol>();
-            if ((sub.flags & MethodFlags::Static) == 0) {
-                result.addDiag(context.scope, diag::NonStaticClassMethod, fullRange);
-                return false;
-            }
-        }
     }
 
     result.found = symbol;
@@ -923,7 +903,7 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
         }
 
         // Drain all colon-qualified lookups here, which should always resolve to a nested type.
-        if (!resolveColonNames(nameParts, colonParts, first, result, context, syntax.sourceRange()))
+        if (!resolveColonNames(nameParts, colonParts, first, result, context))
             return;
 
         // We can't do upwards name resolution if colon access is involved, so always return

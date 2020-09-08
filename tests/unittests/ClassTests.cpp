@@ -338,3 +338,70 @@ typedef class D;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Nested classes") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    static int asdf;
+    static function void bar;
+    endfunction
+
+    class N;
+        localparam int foo = 4;
+        static int baz = asdf + 1;
+
+        function void func;
+            if (1) begin : block
+                bar();
+            end
+        endfunction
+    endclass
+endclass
+
+localparam int j = C::N::foo;
+
+module m;
+    C::N n = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Static class lookups") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int asdf;
+    function void bar;
+    endfunction
+
+    static int foo = asdf;
+    static function void baz;
+        if (1) begin : block
+            bar();
+        end
+    endfunction
+
+    class N;
+        static int baz = asdf + 1;
+        function void func;
+            if (1) begin : block
+                bar();
+            end
+        endfunction
+    endclass
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::NonStaticClassProperty);
+    CHECK(diags[1].code == diag::NonStaticClassMethod);
+    CHECK(diags[2].code == diag::NestedNonStaticClassProperty);
+    CHECK(diags[3].code == diag::NestedNonStaticClassMethod);
+}
