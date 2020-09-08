@@ -102,7 +102,7 @@ LRM | Feature | Supported
 {{m-success}} 8.7 | Constructors | v0.5
 {{m-success}} 8.8 | Typed constructor calls | v0.5
 {{m-success}} 8.9 | Static class properties | v0.5
-{{m-danger}}  8.10 | Static methods | no
+{{m-success}} 8.10 | Static methods | v0.5
 {{m-danger}}  8.11 | This | no
 {{m-success}} 8.12 | Assignment, renaming, and copying | v0.5
 {{m-danger}}  8.13 | Inheritance and subclasses | no
@@ -114,9 +114,9 @@ LRM | Feature | Supported
 {{m-danger}}  8.19 | Constant class properties | no
 {{m-danger}}  8.20 | Virtual methods | no
 {{m-danger}}  8.21 | Abstract classes and pure virtual methods | no
-{{m-danger}}  8.23 | Class scope resolution operator | no
+{{m-success}} 8.23 | Class scope resolution operator | v0.5
 {{m-danger}}  8.24 | Out-of-block declarations | no
-{{m-danger}}  8.25 | Parameterized classes | no
+{{m-success}} 8.25 | Parameterized classes | v0.5
 {{m-danger}}  8.26 | Interface classes | no
 {{m-success}} 8.27 | Typedef class | v0.5
 {{m-dim}}     8.28 | Classes and structures | N/A
