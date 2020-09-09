@@ -1424,6 +1424,7 @@ TEST_CASE("Streaming operators") {
         { "shortint a,b; int c = {{>>{a}}, b};", diag::BadStreamContext },
         { "int a,b; always_comb {>>{a}} += b;", diag::BadStreamContext },
         { "int a; int b = {<< string {a}};", diag::BadStreamSlice },
+        { "typedef bit t[]; int a; int b = {<<t{a}};", diag::BadStreamSlice },
         { "int a, c; int b = {<< c {a}};", diag::ConstEvalNonConstVariable },
         { "int a; int b = {<< 0 {a}};", diag::ValueMustBePositive },
         { "real a; int b = {<< 5 {a}};", diag::BadStreamType },
@@ -1449,6 +1450,7 @@ TEST_CASE("Streaming operators") {
 
         { "int a,b,c; assign {>>{a,b,c}}=23'b1;", diag::BadStreamSize },
         { "int a,b,c; int j={>>{a,b,c}};", diag::BadStreamSize },
+        { "int a,b,c; assign {>>{a+b}}=c;", diag::ExpressionNotAssignable },
 
         { R"(
 function int foo(byte bar[]);
@@ -1481,6 +1483,8 @@ localparam t=foo("ABCDE");
         "byte b[4]; int a = int'({<<3{b}}) + 5;",
         "shortint a; byte b[2]; int c = {<<3{a, {<<5{b}}}};",
         "shortint a; byte b[2]; int c; assign {<<3{{<<5{b}}, a}}=c;",
+        "struct{bit a[];int b;}a;struct {byte a[];bit b;}b;assign{<<{a}}={>>{b}};",
+        "struct{bit a[];int b;}a;int b;assign {>>{a}} = {<<{b}};"
     };
 
     for (const auto& test : legal)

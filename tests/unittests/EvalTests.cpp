@@ -1839,13 +1839,18 @@ function ft1 foo1(bit[1:26] bar);
     return a;
 endfunction
 
-                 typedef struct { byte a[]; bit b;} ft2;
-                 function ft2 foo2(ft bar);
-                   ft2 a;
-                 {<<6{a}} = bar;
-                 return a;
-                 endfunction
+typedef struct { byte a[]; bit b;} ft2;
+    function ft2 foo2(ft bar);
+    ft2 a;
+    {<<6{a}} = bar;
+    return a;
+endfunction
 
+function ft2 foo3(ft bar);
+    ft2 a;
+    {<<11{a}} = {<<7{bar}};
+    return a;
+endfunction
 )");
 
     CHECK(session.eval("foo(ft'(96'b1+(96'b1<<65)))").integer() ==
@@ -1864,6 +1869,11 @@ endfunction
     CHECK(cv2.elements()[0].elements().size() == 1);
     CHECK(cv2.elements()[0].elements()[0].integer() == "8'sh5c"_si);
     CHECK(cv2.elements()[1].integer() == 1);
+
+    auto cv3 = session.eval("foo3({1'b1})");
+    CHECK(cv3.elements().size() == 2);
+    CHECK(cv3.elements()[0].elements().empty());
+    CHECK(cv3.elements()[1].integer() == 1);
 
     NO_SESSION_ERRORS;
 }

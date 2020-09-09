@@ -119,6 +119,8 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
 
     if (destEmptyFixedSize >= sourceFixedSize) {
         auto diff = destEmptyFixedSize - sourceFixedSize;
+        if (!sourceMultiplier)
+            return diff == 0;
         if (diff % sourceMultiplier == 0)
             return true;
     }
@@ -502,21 +504,21 @@ ConstantValue Bitstream::reOrder(ConstantValue&& values, std::size_t sliceSize,
                 trimWidth -= rightWidth;
                 rightWidth = getWidth(*packed[rightIndex]);
             }
-            rightWidth -= trimWidth;
+            rightWidth -= static_cast<bitwidth_t>(trimWidth);
         }
         // For unpack, extraBits is for the first block
         // For pack, extraBits is for the last block
         extraBits = unpackWidth % sliceSize;
     }
 
-    SmallVectorSized<ConstantValue, 8> result;
+    std::vector<ConstantValue> result;
     result.reserve(std::max(packed.size(), numBlocks));
     auto sliceOrAppend = [&](PackIterator iter) {
         if (rightWidth == getWidth(**iter))
-            result.append(**iter);
+            result.emplace_back(std::move(**iter));
         else {
             bitwidth_t bit = 0;
-            result.append(slicePacked(iter, packed.cend(), bit, rightWidth));
+            result.emplace_back(slicePacked(iter, packed.cend(), bit, rightWidth));
         }
     };
 
@@ -539,13 +541,14 @@ ConstantValue Bitstream::reOrder(ConstantValue&& values, std::size_t sliceSize,
         auto iter = packed.cbegin() + index;
         if (slice) {
             bitwidth_t bit = static_cast<bitwidth_t>(width - slice);
-            result.append(slicePacked(iter, packed.cend(), bit, static_cast<bitwidth_t>(slice)));
-            width -= slice;
+            result.emplace_back(
+                slicePacked(iter, packed.cend(), bit, static_cast<bitwidth_t>(slice)));
+            width -= static_cast<bitwidth_t>(slice);
         }
         iter++;
         auto nextIndex = index;
         while (++index < rightIndex)
-            result.append(**iter++);
+            result.emplace_back(std::move(**iter++));
         if (index == rightIndex)
             sliceOrAppend(iter);
         rightIndex = nextIndex;
@@ -556,10 +559,10 @@ ConstantValue Bitstream::reOrder(ConstantValue&& values, std::size_t sliceSize,
     // For pack, the last block may be smaller than slice size
     auto iter = packed.cbegin();
     for (std::size_t i = 0; i < rightIndex; i++)
-        result.append(**iter++);
+        result.emplace_back(std::move(**iter++));
     sliceOrAppend(iter);
 
-    return std::vector(result.begin(), result.end());
+    return result;
 }
 
 /// Performs unpack operation of streaming concatenation target on a bit-stream.
