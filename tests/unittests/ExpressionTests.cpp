@@ -1422,6 +1422,7 @@ TEST_CASE("Streaming operators") {
     } illegal[] = {
         { "int a; int b = {>>{a}} + 2;", diag::BadStreamContext },
         { "shortint a,b; int c = {{>>{a}}, b};", diag::BadStreamContext },
+        { "int a,b; always_comb {>>{a}} += b;", diag::BadStreamContext },
         { "int a; int b = {<< string {a}};", diag::BadStreamSlice },
         { "int a, c; int b = {<< c {a}};", diag::ConstEvalNonConstVariable },
         { "int a; int b = {<< 0 {a}};", diag::ValueMustBePositive },
@@ -1445,6 +1446,29 @@ TEST_CASE("Streaming operators") {
           diag::ConstEvalBitstreamCastSize },
         { "localparam string s=\"AB\"; localparam int j= int'({<<{s}}) - 5;",
           diag::ConstEvalBitstreamCastSize },
+
+        { "int a,b,c; assign {>>{a,b,c}}=23'b1;", diag::BadStreamSize },
+        { "int a,b,c; int j={>>{a,b,c}};", diag::BadStreamSize },
+
+        { R"(
+function int foo(byte bar[]);
+    int a;
+    {>>{a}} = bar;
+    return a;
+endfunction
+localparam t=foo("AB");
+)",
+          diag::BadStreamSize },
+        { R"(
+function int foo(byte bar[]);
+    int a;
+    {>>{a}} = {<<{bar}};
+return a;
+endfunction
+localparam t=foo("ABCDE");
+)",
+          diag::BadStreamSize },
+
     };
 
     for (const auto& test : illegal)

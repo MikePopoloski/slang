@@ -1630,11 +1630,11 @@ bool StreamingConcatenationExpression::isFixedSize() const {
     return true;
 }
 
-std::size_t StreamingConcatenationExpression::bistreamWidth() const {
+std::size_t StreamingConcatenationExpression::bitstreamWidth() const {
     std::size_t width = 0;
     for (auto stream : streams()) {
         if (stream->kind == ExpressionKind::Streaming)
-            width += stream->as<StreamingConcatenationExpression>().bistreamWidth();
+            width += stream->as<StreamingConcatenationExpression>().bitstreamWidth();
         else
             width += stream->type->bitstreamWidth();
     }

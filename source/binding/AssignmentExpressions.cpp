@@ -468,6 +468,10 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     if (!context.isScriptEval() && timingControl)
         return nullptr;
 
+    if (left().kind == ExpressionKind::Streaming)
+        return Bitstream::evaluateTarget(left().as<StreamingConcatenationExpression>(), right(),
+                                         context);
+
     LValue lvalue = left().evalLValue(context);
     ConstantValue rvalue = right().eval(context);
     if (!lvalue || !rvalue)
@@ -611,8 +615,8 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
 
     if (conversionKind == ConversionKind::BitstreamCast ||
         conversionKind == ConversionKind::StreamingConcat)
-        return Bitstream::castEvaluation(to, value, sourceRange, context,
-                                         conversionKind == ConversionKind::StreamingConcat);
+        return Bitstream::evaluateCast(to, value, sourceRange, context,
+                                       conversionKind == ConversionKind::StreamingConcat);
 
     if (to.isIntegral()) {
         // [11.8.2] last bullet says: the operand shall be sign-extended only if the propagated type

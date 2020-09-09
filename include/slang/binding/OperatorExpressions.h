@@ -278,7 +278,7 @@ public:
     }
 
     bool isFixedSize() const;
-    std::size_t bistreamWidth() const;
+    std::size_t bitstreamWidth() const;
 
 private:
     span<const Expression* const> streams_;

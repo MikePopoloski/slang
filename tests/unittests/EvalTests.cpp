@@ -1758,7 +1758,7 @@ TEST_CASE("Mixed unknowns or signedness") {
     NO_SESSION_ERRORS;
 }
 
-TEST_CASE("streaming operator const evaluation") {
+TEST_CASE("Streaming operator const evaluation") {
     ScriptSession session;
     session.eval(R"(
 localparam int j = { "A", "B", "C", "D" };
@@ -1780,6 +1780,17 @@ localparam string j2 = { << 16 {j}};
 localparam int i0 = { >> {str}};
 localparam int i1 = { << byte {str}};
 localparam int i2 = { << 16 {str}};
+
+localparam bit [7:0] array0[4] = '{ 8'h8C, 8'h00, 8'hA4, 8'hFF };
+localparam int value0 = {<<16{array0}};
+localparam bit [7:0] array1[2] = '{ 8'h8C, 8'hA4 };
+localparam shortint value1 = {<<{array1}};
+localparam bit [1:0] array2[] = '{ 2'b10, 2'b01, 2'b11, 2'b00 };
+typedef struct {
+    bit [3:0] addr;
+    bit [3:0] data;
+} packet_t;
+localparam packet_t value2  = {<<4{ {<<2{array2}} }};
 )");
 
     CHECK(session.eval("s0").integer() == session.eval("{\"A\", \"B\", \"C\", \"D\"}").integer());
@@ -1799,4 +1810,60 @@ localparam int i2 = { << 16 {str}};
     CHECK(session.eval("i0").integer() == session.eval("{\"A\", \"B\", \"C\", \"D\"}").integer());
     CHECK(session.eval("i1").integer() == session.eval("{\"D\", \"C\", \"B\", \"A\"}").integer());
     CHECK(session.eval("i2").integer() == session.eval("{\"C\", \"D\", \"A\", \"B\"}").integer());
+
+    CHECK(session.eval("value0").integer() == "32'shA4FF_8C00"_si);
+    CHECK(session.eval("value1").integer() == "16'h2531"_si);
+    auto value2 = session.eval("value2");
+    CHECK(value2.elements()[0].integer() == "4'b0110"_si);
+    CHECK(value2.elements()[1].integer() == "4'b0011"_si);
+
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IgnoredSlice);
+}
+
+TEST_CASE("streaming operator target evaluation") {
+    ScriptSession session;
+    session.eval(R"(
+typedef bit ft[];
+function bit [0:95] foo(ft bar);
+    int a, b, c;
+    {>>{a,{<<{b}},c}} = bar;
+    return {a,b,c};
+endfunction
+
+typedef byte ft1[3];
+function ft1 foo1(bit[1:26] bar);
+    ft1 a;
+    {<<16{{<<4{a[0]}},a[1],{<<3{a[2]}}}} = bar;
+    return a;
+endfunction
+
+                 typedef struct { byte a[]; bit b;} ft2;
+                 function ft2 foo2(ft bar);
+                   ft2 a;
+                 {<<6{a}} = bar;
+                 return a;
+                 endfunction
+
+)");
+
+    CHECK(session.eval("foo(ft'(96'b1+(96'b1<<65)))").integer() ==
+          session.eval("{2, 0, 1}").integer());
+    CHECK(session.eval("foo(ft'(100'b11111+(96'b1<<65)))").integer() ==
+          session.eval("{0, 4, 1}").integer());
+
+    auto cv1 = session.eval("foo1({24'h123456, 2'b11})");
+    CHECK(cv1.elements().size() == 3);
+    CHECK(cv1.elements()[0].integer() == "8'sh65"_si);
+    CHECK(cv1.elements()[1].integer() == "8'sh12"_si);
+    CHECK(cv1.elements()[2].integer() == "8'sh29"_si);
+
+    auto cv2 = session.eval("foo2(ft'({<<5{12'habc}}))");
+    CHECK(cv2.elements().size() == 2);
+    CHECK(cv2.elements()[0].elements().size() == 1);
+    CHECK(cv2.elements()[0].elements()[0].integer() == "8'sh5c"_si);
+    CHECK(cv2.elements()[1].integer() == 1);
+
+    NO_SESSION_ERRORS;
 }
