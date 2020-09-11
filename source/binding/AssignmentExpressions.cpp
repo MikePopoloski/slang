@@ -615,7 +615,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
 
     if (conversionKind == ConversionKind::BitstreamCast ||
         conversionKind == ConversionKind::StreamingConcat)
-        return Bitstream::evaluateCast(to, value, sourceRange, context,
+        return Bitstream::evaluateCast(to, std::move(value), sourceRange, context,
                                        conversionKind == ConversionKind::StreamingConcat);
 
     if (to.isIntegral()) {

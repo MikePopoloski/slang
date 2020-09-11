@@ -14,7 +14,6 @@ class Type;
 class ConstantValue;
 class StreamingConcatenationExpression;
 class Expression;
-class ConstantValue;
 class BindContext;
 class EvalContext;
 class SourceRange;
@@ -28,8 +27,8 @@ public:
 
     /// Performs a bit-stream cast of @a value  to @a type. If the conversion is not valid,
     /// returns nullptr (invalid value).
-    static ConstantValue evaluateCast(const Type& type, const ConstantValue&, SourceRange,
-                                      EvalContext&, bool isImplicit = false);
+    static ConstantValue evaluateCast(const Type& type, ConstantValue&&, SourceRange, EvalContext&,
+                                      bool isImplicit = false);
 
     /// Compile-time check that streaming concatenation target has a bit-stream type source with
     /// enought bits
@@ -42,7 +41,7 @@ public:
                             const BindContext&);
 
     /// Compile-time check that bit-streaming cast on a streaming operator is valid
-    static bool isBitstreamCast(const Type& target, const StreamingConcatenationExpression& arg);
+    static bool isBitstreamCast(const Type&, const StreamingConcatenationExpression& arg);
 
     /// Re-ordering of the generic stream. For source/packed concatenation, unpackWidth = 0. For
     /// target/unpacked concatenation, unpackWidth is the total width of target.

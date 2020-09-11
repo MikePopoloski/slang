@@ -1595,7 +1595,7 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
         values.emplace_back(std::move(v));
     }
     if (sliceSize > 0)
-        return Bitstream::reOrder(values, sliceSize);
+        return Bitstream::reOrder(std::move(values), sliceSize);
     return values;
 }
 

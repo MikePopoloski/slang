@@ -200,7 +200,7 @@ static ConstantValue constContainer(const Type& type, span<ConstantValue> elems)
 }
 
 /// Performs pack operation to create a bit-stream.
-static void packBitstream(const ConstantValue& value, SmallVector<const ConstantValue*>& packed) {
+static void packBitstream(ConstantValue& value, SmallVector<ConstantValue*>& packed) {
     if (value.isInteger()) {
         packed.append(&value);
     }
@@ -209,16 +209,16 @@ static void packBitstream(const ConstantValue& value, SmallVector<const Constant
             packed.append(&value);
     }
     else if (value.isUnpacked()) {
-        for (const auto& cv : value.elements())
+        for (auto& cv : value.elements())
             packBitstream(cv, packed);
     }
     else if (value.isMap()) {
-        for (const auto& kv : *value.map()) {
+        for (auto& kv : *value.map()) {
             packBitstream(kv.second, packed);
         }
     }
     else if (value.isQueue()) {
-        for (const auto& cv : *value.queue())
+        for (auto& cv : *value.queue())
             packBitstream(cv, packed);
     }
     else {
@@ -227,39 +227,34 @@ static void packBitstream(const ConstantValue& value, SmallVector<const Constant
     }
 }
 
-using PackIterator = const ConstantValue* const*;
+using PackIterator = ConstantValue* const*;
 
 static SVInt slicePacked(PackIterator& iter, const PackIterator iterEnd, bitwidth_t& bit,
                          bitwidth_t width) {
-    const ConstantValue* cp;
-    while (true) {
-        if (iter == iterEnd)
-            return SVInt(width, 0, false); // Only for implicit streaming concatenation conversion
-        cp = *iter;
-        if (cp->isInteger()) {
-            if (bit < cp->integer().getBitWidth())
-                break;
-        }
-        else {
-            if (bit < cp->str().length() * CHAR_BIT)
-                break;
-        }
-        bit = 0;
-        iter++;
-    }
+    if (iter == iterEnd)
+        return SVInt(width, 0, false); // Only for implicit streaming concatenation conversion
+    ConstantValue* cp = *iter;
 
     if (cp->isInteger()) {
-        const auto& ci = cp->integer();
+        auto& ci = cp->integer();
+        ASSERT(bit < ci.getBitWidth());
         bitwidth_t msb = ci.getBitWidth() - bit - 1;
         bitwidth_t lsb = std::min(bit + width, ci.getBitWidth());
         lsb = ci.getBitWidth() - lsb;
         bit += msb - lsb + 1;
 
         ASSERT(bit <= ci.getBitWidth());
+        if (bit == ci.getBitWidth()) {
+            iter++;
+            bit = 0;
+        }
+        if (lsb == 0 && msb == ci.getBitWidth() - 1)
+            return std::move(ci);
         return ci.slice(static_cast<int32_t>(msb), static_cast<int32_t>(lsb));
     }
 
     string_view str = cp->str();
+    ASSERT(bit < str.length() * CHAR_BIT);
     bitwidth_t firstByte = bit / CHAR_BIT;
     bitwidth_t lastByte = (bit + width - 1) / CHAR_BIT;
 
@@ -272,7 +267,7 @@ static SVInt slicePacked(PackIterator& iter, const PackIterator iterEnd, bitwidt
     }
 
     SmallVectorSized<byte, 8> buffer;
-    const auto substr = str.substr(firstByte, len);
+    auto substr = str.substr(firstByte, len);
     for (auto it = substr.rbegin(); it != substr.rend(); it++)
         buffer.append(static_cast<byte>(*it));
 
@@ -283,6 +278,10 @@ static SVInt slicePacked(PackIterator& iter, const PackIterator iterEnd, bitwidt
 
     bit += width;
     ASSERT(bit <= str.length() * CHAR_BIT);
+    if (bit == str.length() * CHAR_BIT) {
+        iter++;
+        bit = 0;
+    }
     if (lsb > 0 || msb < len - 1)
         return ci.slice(static_cast<int32_t>(msb), static_cast<int32_t>(lsb));
 
@@ -302,8 +301,11 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
             width -= ci.getBitWidth();
             if (!isFourState)
                 ci.flattenUnknowns();
-            buffer.emplace(ci);
+            buffer.emplace(std::move(ci));
         }
+        ASSERT(!buffer.empty());
+        if (buffer.size() == 1)
+            return buffer.front();
         return SVInt::concat(buffer);
     };
 
@@ -320,13 +322,15 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
         // For bit-stream casting, (dynamicSize % CHAR_BIT) == 0 and width = dynamicSize
         // For implicit streaming concatenation conversion, width is the smallest multiple of
         // CHAR_BIT greater than or equal to dynamicSize
-        auto width = static_cast<bitwidth_t>((dynamicSize + CHAR_BIT - 1) / CHAR_BIT * CHAR_BIT);
+        auto width = static_cast<bitwidth_t>((dynamicSize + CHAR_BIT - 1) / CHAR_BIT);
         dynamicSize = 0;
-        return ConstantValue(concatPacked(width, false)).convertToStr();
+        if (!bit && iter != iterEnd && (*iter)->isString() && (*iter)->str().length() == width)
+            return std::move(**iter);
+        return ConstantValue(concatPacked(width * CHAR_BIT, false)).convertToStr();
     }
 
     if (type.isUnpackedArray()) {
-        const auto& ct = type.getCanonicalType();
+        auto& ct = type.getCanonicalType();
         SmallVectorSized<ConstantValue, 16> buffer;
         if (ct.kind != SymbolKind::FixedSizeUnpackedArrayType) {
             // dynamicSize is the remaining size: For unbounded dynamically sized types, the
@@ -353,8 +357,8 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
             }
         }
         else {
-            const auto& fsua = ct.as<FixedSizeUnpackedArrayType>();
-            const auto& elem = fsua.elementType;
+            auto& fsua = ct.as<FixedSizeUnpackedArrayType>();
+            auto& elem = fsua.elementType;
             for (auto width = fsua.range.width(); width > 0; width--)
                 buffer.emplace(unpackBitstream(elem, iter, iterEnd, bit, dynamicSize));
         }
@@ -364,7 +368,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
 
     if (type.isUnpackedStruct()) {
         SmallVectorSized<ConstantValue, 16> buffer;
-        const auto& ct = type.getCanonicalType();
+        auto& ct = type.getCanonicalType();
         for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>())
             buffer.emplace(unpackBitstream(field.getType(), iter, iterEnd, bit, dynamicSize));
 
@@ -375,7 +379,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
     return nullptr;
 }
 
-ConstantValue Bitstream::evaluateCast(const Type& type, const ConstantValue& value,
+ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
                                       SourceRange sourceRange, EvalContext& context,
                                       bool isImplicit) {
     auto srcSize = value.bitstreamWidth();
@@ -399,20 +403,14 @@ ConstantValue Bitstream::evaluateCast(const Type& type, const ConstantValue& val
         }
     }
 
-    SmallVectorSized<const ConstantValue*, 8> packed;
+    SmallVectorSized<ConstantValue*, 8> packed;
     packBitstream(value, packed);
 
     bitwidth_t bitOffset = 0;
     auto iter = packed.cbegin();
     auto cv = unpackBitstream(type, iter, packed.cend(), bitOffset, dynamicSize);
     ASSERT(!dynamicSize);
-    if (isImplicit && iter == packed.cend())
-        ASSERT(bitOffset == 0);
-    else {
-        ASSERT(bitOffset == ((*iter)->isInteger() ? (*iter)->integer().getBitWidth()
-                                                  : (*iter)->str().length() * CHAR_BIT));
-        ASSERT(iter != packed.cend() && ++iter == packed.cend());
-    }
+    ASSERT(isImplicit || (iter == packed.cend() && !bitOffset));
     return cv;
 }
 
@@ -471,8 +469,7 @@ bool Bitstream::isBitstreamCast(const Type& type, const StreamingConcatenationEx
         return false;
     if (type.isFixedSize() && arg.isFixedSize())
         return type.bitstreamWidth() == arg.bitstreamWidth();
-    else
-        return dynamicSizesMatch(type, arg);
+    return dynamicSizesMatch(type, arg);
 }
 
 ConstantValue Bitstream::reOrder(ConstantValue&& values, std::size_t sliceSize,
@@ -486,11 +483,10 @@ ConstantValue Bitstream::reOrder(ConstantValue&& values, std::size_t sliceSize,
     auto getWidth = [](const ConstantValue& v) {
         if (v.isInteger())
             return v.integer().getBitWidth();
-        else
-            return static_cast<bitwidth_t>(v.str().length() * CHAR_BIT);
+        return static_cast<bitwidth_t>(v.str().length() * CHAR_BIT);
     };
 
-    SmallVectorSized<const ConstantValue*, 8> packed;
+    SmallVectorSized<ConstantValue*, 8> packed;
     packBitstream(values, packed);
 
     auto rightIndex = packed.size() - 1; // Right-to-left
@@ -540,7 +536,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& values, std::size_t sliceSize,
         // "rightWidth" bits of packed[rightIndex]
         auto iter = packed.cbegin() + index;
         if (slice) {
-            bitwidth_t bit = static_cast<bitwidth_t>(width - slice);
+            auto bit = static_cast<bitwidth_t>(width - slice);
             result.emplace_back(
                 slicePacked(iter, packed.cend(), bit, static_cast<bitwidth_t>(slice)));
             width -= static_cast<bitwidth_t>(slice);
@@ -589,7 +585,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             // Re-order to a new rvalue with the slice size
             ConstantValue cv = std::vector(toBeOrdered.begin(), toBeOrdered.end());
             auto rvalue = Bitstream::reOrder(std::move(cv), concat.sliceSize, cv.bitstreamWidth());
-            SmallVectorSized<const ConstantValue*, 8> packed;
+            SmallVectorSized<ConstantValue*, 8> packed;
             packBitstream(rvalue, packed);
 
             // A real pass stores lvalue from new rvalue
@@ -599,13 +595,12 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                                      context))
                 return false;
             ASSERT(dynamicSizeSave == dynamicSize);
-            ASSERT(bit == (*iterConcat)->integer().getBitWidth());
-            ASSERT(iterConcat != packed.cend() && ++iterConcat == packed.cend());
+            ASSERT(iterConcat == packed.cend() && !bit);
         }
         else {
             auto rvalue = unpackBitstream(*stream->type, iter, iterEnd, bitOffset, dynamicSize);
             if (dryRun)
-                dryRun->append(rvalue);
+                dryRun->emplace(std::move(rvalue));
             else {
                 LValue lvalue = stream->evalLValue(context);
                 if (!lvalue)
@@ -619,7 +614,6 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
 
 ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& lhs,
                                         const Expression& rhs, EvalContext& context) {
-
     ConstantValue rvalue = rhs.eval(context);
     if (!rvalue)
         return nullptr;
@@ -640,9 +634,9 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
             context.addDiag(diag::BadStreamSize, lhs.sourceRange) << targetWidth << srcSize;
             return nullptr;
         }
-        else if (!lhs.isFixedSize()) {
+        if (!lhs.isFixedSize()) {
             dynamicSize = srcSize - targetWidth;
-            auto [firstDynamicElemSize, doNotUse] =
+            auto [firstDynamicElemSize, notUsed] =
                 dynamicBitstreamSize(lhs, BitstreamSizeMode::DestFill);
             dynamicSize -= dynamicSize % firstDynamicElemSize; // do not exceed srcSize
         }
@@ -651,7 +645,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     if (lhs.sliceSize > 0)
         rvalue = reOrder(std::move(rvalue), lhs.sliceSize, targetWidth + dynamicSize);
 
-    SmallVectorSized<const ConstantValue*, 8> packed;
+    SmallVectorSized<ConstantValue*, 8> packed;
     packBitstream(rvalue, packed);
 
     bitwidth_t bitOffset = 0;
