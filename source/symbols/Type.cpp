@@ -96,8 +96,8 @@ bitwidth_t Type::getBitWidth() const {
     return 0;
 }
 
-std::size_t Type::bitstreamWidth() const {
-    std::size_t width = getBitWidth();
+size_t Type::bitstreamWidth() const {
+    size_t width = getBitWidth();
     if (width > 0)
         return width;
 

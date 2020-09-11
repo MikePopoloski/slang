@@ -401,7 +401,7 @@ ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
     return queue;
 }
 
-std::size_t ConstantValue::bitstreamWidth() const {
+size_t ConstantValue::bitstreamWidth() const {
     if (isInteger())
         return integer().getBitWidth();
 
@@ -409,7 +409,7 @@ std::size_t ConstantValue::bitstreamWidth() const {
     if (isString())
         return str().length() * CHAR_BIT;
 
-    std::size_t width = 0;
+    size_t width = 0;
     if (isUnpacked()) {
         for (const auto& cv : elements())
             width += cv.bitstreamWidth();

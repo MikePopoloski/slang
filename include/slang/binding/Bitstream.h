@@ -22,6 +22,7 @@ class Bitstream {
 public:
     /// Compile-time check that the source and destination types have the same dynamic bit-stream
     /// sizes.
+    // Only Type and StreamingConcatenationExpression are allowed for T1/T2
     template<typename T1, typename T2>
     static bool dynamicSizesMatch(const T1& destination, const T2& source);
 
@@ -45,8 +46,7 @@ public:
 
     /// Re-ordering of the generic stream. For source/packed concatenation, unpackWidth = 0. For
     /// target/unpacked concatenation, unpackWidth is the total width of target.
-    static ConstantValue reOrder(ConstantValue&&, std::size_t sliceSize,
-                                 std::size_t unpackWidth = 0);
+    static ConstantValue reOrder(ConstantValue&&, size_t sliceSize, size_t unpackWidth = 0);
 
     /// Performs constant evaluation of an assignment with a streaming concatenation as the target
     static ConstantValue evaluateTarget(const StreamingConcatenationExpression& lhs,

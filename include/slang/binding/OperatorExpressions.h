@@ -251,13 +251,13 @@ struct StreamingConcatenationExpressionSyntax;
 /// Represents a streaming concatenation
 class StreamingConcatenationExpression : public Expression {
 public:
-    StreamingConcatenationExpression(const Type& type, std::size_t sliceSize,
+    StreamingConcatenationExpression(const Type& type, size_t sliceSize,
                                      span<const Expression* const> streams,
                                      SourceRange sourceRange) :
         Expression(ExpressionKind::Streaming, type, sourceRange),
         sliceSize(sliceSize), streams_(streams) {}
 
-    const std::size_t sliceSize; // 0: >> left-to-right, > 0otherwise <<
+    const size_t sliceSize; // 0: >> left-to-right, > 0otherwise <<
     span<const Expression* const> streams() const { return streams_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -278,7 +278,7 @@ public:
     }
 
     bool isFixedSize() const;
-    std::size_t bitstreamWidth() const;
+    size_t bitstreamWidth() const;
 
 private:
     span<const Expression* const> streams_;

@@ -41,7 +41,7 @@ public:
     }
 
     ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
-        std::size_t width;
+        size_t width;
         if (args[0]->type->isFixedSize())
             width = args[0]->type->bitstreamWidth();
         else {

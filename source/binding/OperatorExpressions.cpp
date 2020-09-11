@@ -1505,7 +1505,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     Compilation& compilation, const StreamingConcatenationExpressionSyntax& syntax,
     const BindContext& context, const Type* assignmentTarget) {
     const bool isRightToLeft = syntax.operatorToken.kind == TokenKind::LeftShift;
-    std::size_t sliceSize = 0;
+    size_t sliceSize = 0;
 
     auto badResult = [&]() {
         return compilation.emplace<StreamingConcatenationExpression>(
@@ -1571,8 +1571,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             const Type& type = *arg->type;
             // TODO: first-declared member of untagged union
             if (!type.isBitstreamType(!assignmentTarget)) {
-                context.addDiag(diag::BadStreamType, arg->sourceRange)
-                    << std::string("expression") << type;
+                context.addDiag(diag::BadStreamExprType, arg->sourceRange) << type;
                 return badExpr(compilation, badResult());
             }
         }
@@ -1630,8 +1629,8 @@ bool StreamingConcatenationExpression::isFixedSize() const {
     return true;
 }
 
-std::size_t StreamingConcatenationExpression::bitstreamWidth() const {
-    std::size_t width = 0;
+size_t StreamingConcatenationExpression::bitstreamWidth() const {
+    size_t width = 0;
     for (auto stream : streams()) {
         if (stream->kind == ExpressionKind::Streaming)
             width += stream->as<StreamingConcatenationExpression>().bitstreamWidth();

@@ -33,9 +33,8 @@ enum class BitstreamSizeMode { Source, DestEmpty, DestFill };
 ///   "a" is the element size of this first item.
 ///   "b" is the sum of all fixed sizes plus sizes of siblings of the first
 ///       item when their common parent is dynamically sized.
-static std::pair<std::size_t, std::size_t> dynamicBitstreamSize(const Type& type,
-                                                                BitstreamSizeMode mode) {
-    std::size_t fixedSize = type.getBitWidth();
+static std::pair<size_t, size_t> dynamicBitstreamSize(const Type& type, BitstreamSizeMode mode) {
+    size_t fixedSize = type.getBitWidth();
     if (fixedSize > 0)
         return { 0, fixedSize };
 
@@ -43,7 +42,7 @@ static std::pair<std::size_t, std::size_t> dynamicBitstreamSize(const Type& type
         return { mode == BitstreamSizeMode::DestEmpty ? 0 : CHAR_BIT, 0 };
 
     // TODO: check for overflow
-    std::size_t multiplier = 0;
+    size_t multiplier = 0;
     if (type.isUnpackedArray()) {
         auto [multiplierElem, fixedSizeElem] =
             dynamicBitstreamSize(*type.getArrayElementType(), mode);
@@ -84,12 +83,12 @@ static std::pair<std::size_t, std::size_t> dynamicBitstreamSize(const Type& type
     return { multiplier, fixedSize };
 }
 
-static std::pair<std::size_t, std::size_t> dynamicBitstreamSize(
+static std::pair<size_t, size_t> dynamicBitstreamSize(
     const StreamingConcatenationExpression& concat, BitstreamSizeMode mode) {
     if (concat.isFixedSize())
         return { 0, concat.bitstreamWidth() };
 
-    std::size_t multiplier = 0, fixedSize = 0;
+    size_t multiplier = 0, fixedSize = 0;
     for (auto stream : concat.streams()) {
         auto [multiplierElem, fixedSizeElem] =
             stream->kind == ExpressionKind::Streaming
@@ -147,7 +146,7 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
     if (destFillMultiplier == 0 && sourceFixedSize == 0)
         return false;
 
-    std::size_t remaining;
+    size_t remaining;
     if (sourceFixedSize > destFillFixedSize)
         remaining = sourceFixedSize - destFillFixedSize;
     else
@@ -158,7 +157,7 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
 
 /// Validates sizes and returns remaining size for the first dynamic item in constant evaluation
 template<typename T>
-static std::size_t bitstreamCastRemainingSize(const T& destination, std::size_t srcSize) {
+static size_t bitstreamCastRemainingSize(const T& destination, size_t srcSize) {
     if (destination.isFixedSize()) {
         auto destSize = destination.bitstreamWidth();
         if (destSize != srcSize)
@@ -291,7 +290,7 @@ static SVInt slicePacked(PackIterator& iter, const PackIterator iterEnd, bitwidt
 /// Performs unpack operation on a bit-stream.
 static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
                                      const PackIterator iterEnd, bitwidth_t& bit,
-                                     std::size_t& dynamicSize) {
+                                     size_t& dynamicSize) {
 
     auto concatPacked = [&](bitwidth_t width, bool isFourState) {
         SmallVectorSized<SVInt, 8> buffer;
@@ -383,7 +382,7 @@ ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
                                       SourceRange sourceRange, EvalContext& context,
                                       bool isImplicit) {
     auto srcSize = value.bitstreamWidth();
-    std::size_t dynamicSize = 0;
+    size_t dynamicSize = 0;
     if (!isImplicit) { // Explicit bit-stream casting
         dynamicSize = bitstreamCastRemainingSize(type, srcSize);
         if (dynamicSize > srcSize) {
@@ -417,7 +416,7 @@ ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
 bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const Expression& rhs,
                             const BindContext& context) {
     if (rhs.kind != ExpressionKind::Streaming && !rhs.type->isBitstreamType()) {
-        context.addDiag(diag::BadStreamType, rhs.sourceRange) << std::string("source") << *rhs.type;
+        context.addDiag(diag::BadStreamSourceType, rhs.sourceRange) << *rhs.type;
         return false;
     }
 
@@ -448,7 +447,7 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
 bool Bitstream::canBeSource(const Type& target, const StreamingConcatenationExpression& rhs,
                             const BindContext& context) {
     if (!target.isBitstreamType(true)) {
-        context.addDiag(diag::BadStreamType, rhs.sourceRange) << std::string("target") << target;
+        context.addDiag(diag::BadStreamTargetType, rhs.sourceRange) << target;
         return false;
     }
 
@@ -472,9 +471,8 @@ bool Bitstream::isBitstreamCast(const Type& type, const StreamingConcatenationEx
     return dynamicSizesMatch(type, arg);
 }
 
-ConstantValue Bitstream::reOrder(ConstantValue&& values, std::size_t sliceSize,
-                                 std::size_t unpackWidth) {
-    std::size_t totalWidth = values.bitstreamWidth();
+ConstantValue Bitstream::reOrder(ConstantValue&& values, size_t sliceSize, size_t unpackWidth) {
+    size_t totalWidth = values.bitstreamWidth();
     ASSERT(unpackWidth <= totalWidth);
     auto numBlocks = ((unpackWidth ? unpackWidth : totalWidth) + sliceSize - 1) / sliceSize;
     if (numBlocks <= 1)
@@ -491,7 +489,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& values, std::size_t sliceSize,
 
     auto rightIndex = packed.size() - 1; // Right-to-left
     bitwidth_t rightWidth = getWidth(*packed.back());
-    std::size_t extraBits = 0;
+    size_t extraBits = 0;
     if (unpackWidth) {
         if (unpackWidth < totalWidth) { // left-aligned so trim rightmost
             auto trimWidth = totalWidth - unpackWidth;
@@ -554,7 +552,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& values, std::size_t sliceSize,
 
     // For pack, the last block may be smaller than slice size
     auto iter = packed.cbegin();
-    for (std::size_t i = 0; i < rightIndex; i++)
+    for (size_t i = 0; i < rightIndex; i++)
         result.emplace_back(std::move(**iter++));
     sliceOrAppend(iter);
 
@@ -564,7 +562,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& values, std::size_t sliceSize,
 /// Performs unpack operation of streaming concatenation target on a bit-stream.
 static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, PackIterator& iter,
                                 const PackIterator iterEnd, bitwidth_t& bitOffset,
-                                std::size_t& dynamicSize, EvalContext& context,
+                                size_t& dynamicSize, EvalContext& context,
                                 SmallVector<ConstantValue>* dryRun = nullptr) {
     for (auto stream : lhs.streams()) {
         if (stream->kind == ExpressionKind::Streaming) {
@@ -620,7 +618,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
 
     auto srcSize = rvalue.bitstreamWidth();
     auto targetWidth = lhs.bitstreamWidth();
-    std::size_t dynamicSize = 0;
+    size_t dynamicSize = 0;
     if (rhs.kind == ExpressionKind::Streaming) { // srcSize == targetWidth + dynamicSize
         dynamicSize = bitstreamCastRemainingSize(lhs, srcSize);
         if (dynamicSize > srcSize) {

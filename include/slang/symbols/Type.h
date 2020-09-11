@@ -56,7 +56,7 @@ public:
     bitwidth_t getBitWidth() const;
 
     /// Gets $bits of the type. Returns zero if the type does not have a statically known size.
-    std::size_t bitstreamWidth() const;
+    size_t bitstreamWidth() const;
 
     /// Indicates whether the type can represent negative numeric values. For non-numeric types,
     /// this always returns false.
