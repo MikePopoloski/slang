@@ -94,11 +94,19 @@ private:
     mutable optional<const PackageSymbol*> package;
 };
 
-enum class MethodFlags : uint8_t { None = 0, Virtual = 1, Pure = 2, Static = 4, Constructor = 8 };
-BITMASK(MethodFlags, Constructor);
+enum class MethodFlags : uint8_t {
+    None = 0,
+    Virtual = 1,
+    Pure = 2,
+    Static = 4,
+    Constructor = 8,
+    OutOfBand = 16
+};
+BITMASK(MethodFlags, OutOfBand);
 
 struct ClassMethodDeclarationSyntax;
 struct FunctionDeclarationSyntax;
+struct FunctionPortListSyntax;
 
 /// Represents a subroutine (task or function).
 class SubroutineSymbol : public Symbol, public Scope {
@@ -131,6 +139,10 @@ public:
     static SubroutineSymbol& fromSyntax(Compilation& compilation,
                                         const ClassMethodDeclarationSyntax& syntax,
                                         const Scope& parent);
+
+    static void buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
+                               VariableLifetime defaultLifetime,
+                               SmallVector<const FormalArgumentSymbol*>& arguments);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
 

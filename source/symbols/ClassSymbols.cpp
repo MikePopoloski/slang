@@ -16,10 +16,9 @@
 namespace slang {
 
 ClassPropertySymbol::ClassPropertySymbol(string_view name, SourceLocation loc,
-                                         VariableLifetime lifetime, Visibility visibility,
-                                         uint32_t index) :
+                                         VariableLifetime lifetime, Visibility visibility) :
     VariableSymbol(SymbolKind::ClassProperty, name, loc, lifetime),
-    visibility(visibility), index(index) {
+    visibility(visibility) {
 }
 
 void ClassPropertySymbol::fromSyntax(const Scope& scope,
@@ -77,18 +76,103 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
         }
     }
 
-    // TODO: set correct index of property among all other properties
-    uint32_t index = 0;
-
     for (auto declarator : dataSyntax.declarators) {
         auto var = comp.emplace<ClassPropertySymbol>(
-            declarator->name.valueText(), declarator->name.location(), lifetime, visibility, index);
+            declarator->name.valueText(), declarator->name.location(), lifetime, visibility);
         var->isConstant = isConst;
         var->setDeclaredType(*dataSyntax.type);
         var->setFromDeclarator(*declarator);
         var->setAttributes(scope, syntax.attributes);
         results.append(var);
     }
+}
+
+void ClassPropertySymbol::serializeTo(ASTSerializer& serializer) const {
+    VariableSymbol::serializeTo(serializer);
+    serializer.write("visibility", toString(visibility));
+}
+
+ClassMethodPrototypeSymbol::ClassMethodPrototypeSymbol(Compilation& compilation, string_view name,
+                                                       SourceLocation loc,
+                                                       SubroutineKind subroutineKind,
+                                                       Visibility visibility,
+                                                       bitmask<MethodFlags> flags) :
+    Symbol(SymbolKind::ClassMethodPrototype, name, loc),
+    Scope(compilation, this), declaredReturnType(*this), subroutineKind(subroutineKind),
+    visibility(visibility), flags(flags) {
+}
+
+ClassMethodPrototypeSymbol& ClassMethodPrototypeSymbol::fromSyntax(
+    const Scope& scope, const ClassMethodPrototypeSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto& proto = *syntax.prototype;
+
+    Visibility visibility = Visibility::Public;
+    bitmask<MethodFlags> flags;
+    Token nameToken = proto.name->getLastToken();
+    auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
+                                                                       : SubroutineKind::Function;
+
+    for (Token qual : syntax.qualifiers) {
+        switch (qual.kind) {
+            case TokenKind::LocalKeyword:
+                visibility = Visibility::Local;
+                break;
+            case TokenKind::ProtectedKeyword:
+                visibility = Visibility::Protected;
+                break;
+            case TokenKind::StaticKeyword:
+                flags |= MethodFlags::Static;
+                break;
+            case TokenKind::PureKeyword:
+                flags |= MethodFlags::Pure;
+                break;
+            case TokenKind::VirtualKeyword:
+                flags |= MethodFlags::Virtual;
+                break;
+            case TokenKind::ConstKeyword:
+            case TokenKind::ExternKeyword:
+            case TokenKind::RandKeyword:
+                // Parser already issued errors for these, so just ignore them here.
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    if (nameToken.valueText() == "new")
+        flags |= MethodFlags::Constructor;
+
+    auto result = comp.emplace<ClassMethodPrototypeSymbol>(
+        comp, nameToken.valueText(), nameToken.location(), subroutineKind, visibility, flags);
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+
+    if (subroutineKind == SubroutineKind::Function)
+        result->declaredReturnType.setTypeSyntax(*proto.returnType);
+    else
+        result->declaredReturnType.setType(comp.getVoidType());
+
+    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
+    if (proto.portList) {
+        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
+                                         arguments);
+    }
+
+    result->arguments = arguments.copy(comp);
+    return *result;
+}
+
+void ClassMethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("returnType", getReturnType());
+    serializer.write("subroutineKind", toString(subroutineKind));
+    serializer.write("visibility", toString(visibility));
+
+    serializer.startArray("arguments");
+    for (auto const arg : arguments) {
+        arg->serializeTo(serializer);
+    }
+    serializer.endArray();
 }
 
 void ClassType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
@@ -101,11 +185,6 @@ void ClassType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
 void ClassType::checkForwardDecls() const {
     if (firstForward)
         firstForward->checkType(ForwardingTypedefSymbol::Class, Visibility::Public, location);
-}
-
-void ClassPropertySymbol::serializeTo(ASTSerializer& serializer) const {
-    VariableSymbol::serializeTo(serializer);
-    serializer.write("visibility", toString(visibility));
 }
 
 ClassType::ClassType(Compilation& compilation, string_view name, SourceLocation loc) :

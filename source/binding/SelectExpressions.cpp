@@ -749,9 +749,10 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
                                                                 field.offset, range);
         }
         case SymbolKind::ClassProperty: {
+            // Index doesn't matter here, so we pass 0.
             auto& prop = member->as<ClassPropertySymbol>();
-            return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop,
-                                                                prop.index, range);
+            return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop, 0u,
+                                                                range);
         }
         case SymbolKind::Subroutine:
             return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(), &expr,

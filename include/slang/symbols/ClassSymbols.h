@@ -9,6 +9,7 @@
 #include <flat_hash_map.hpp>
 
 #include "slang/compilation/Definition.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -20,10 +21,9 @@ struct ClassPropertyDeclarationSyntax;
 class ClassPropertySymbol : public VariableSymbol {
 public:
     Visibility visibility;
-    uint32_t index;
 
     ClassPropertySymbol(string_view name, SourceLocation loc, VariableLifetime lifetime,
-                        Visibility visibility, uint32_t index);
+                        Visibility visibility);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -31,6 +31,30 @@ public:
                            SmallVector<const ClassPropertySymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassProperty; }
+};
+
+struct ClassMethodPrototypeSyntax;
+
+class ClassMethodPrototypeSymbol : public Symbol, public Scope {
+public:
+    DeclaredType declaredReturnType;
+    span<const FormalArgumentSymbol* const> arguments;
+    SubroutineKind subroutineKind;
+    Visibility visibility;
+    bitmask<MethodFlags> flags;
+
+    ClassMethodPrototypeSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                               SubroutineKind subroutineKind, Visibility visibility,
+                               bitmask<MethodFlags> flags);
+
+    const Type& getReturnType() const { return declaredReturnType.getType(); }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static ClassMethodPrototypeSymbol& fromSyntax(const Scope& scope,
+                                                  const ClassMethodPrototypeSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassMethodPrototype; }
 };
 
 class GenericClassDefSymbol;

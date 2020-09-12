@@ -100,6 +100,8 @@ VariableLifetime Scope::getDefaultLifetime() const {
             return sym->as<StatementBlockSymbol>().defaultLifetime;
         case SymbolKind::Subroutine:
             return sym->as<SubroutineSymbol>().defaultLifetime;
+        case SymbolKind::ClassMethodPrototype:
+            return VariableLifetime::Automatic;
         default:
             return VariableLifetime::Static;
     }
@@ -336,6 +338,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(SubroutineSymbol::fromSyntax(
                 compilation, syntax.as<ClassMethodDeclarationSyntax>(), *this));
             break;
+        case SyntaxKind::ClassMethodPrototype:
+            addMember(ClassMethodPrototypeSymbol::fromSyntax(
+                *this, syntax.as<ClassMethodPrototypeSyntax>()));
+            break;
         case SyntaxKind::ElabSystemTask:
             addMember(
                 ElabSystemTaskSymbol::fromSyntax(compilation, syntax.as<ElabSystemTaskSyntax>()));
@@ -406,10 +412,19 @@ void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborat
     if (!member->nextInScope)
         lastMember = member;
 
-    // Add to the name map if the symbol has a name, unless it's a port.
-    // Per the spec, ports exist in their own namespaces.
-    if (!member->name.empty() && member->kind != SymbolKind::Port &&
-        member->kind != SymbolKind::Package) {
+    // Add to the name map if the symbol has a name. Exceptions are:
+    // 1. Ports and packages are in their own namespaces
+    // 2. Out-of-block methods can't be looked up in their containing scope,
+    //    but instead get looked up via their class.
+    bool addToMap = !member->name.empty() && member->kind != SymbolKind::Port &&
+                    member->kind != SymbolKind::Package;
+
+    if (member->kind == SymbolKind::Subroutine &&
+        (member->as<SubroutineSymbol>().flags & MethodFlags::OutOfBand) != 0) {
+        addToMap = false;
+    }
+
+    if (addToMap) {
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second)
             handleNameConflict(*member, pair.first->second, isElaborating);

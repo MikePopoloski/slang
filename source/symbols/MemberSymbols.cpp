@@ -121,9 +121,8 @@ const Statement& SubroutineSymbol::getBody(EvalContext* evalContext) const {
 SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                                                const FunctionDeclarationSyntax& syntax,
                                                const Scope& parent) {
-    // TODO: non simple names?
     auto proto = syntax.prototype;
-    Token nameToken = proto->name->getFirstToken();
+    Token nameToken = proto->name->getLastToken();
     auto lifetime = SemanticFacts::getVariableLifetime(proto->lifetime);
     if (!lifetime.has_value()) {
         // Walk up to the nearest instance and use its default lifetime.
@@ -152,65 +151,15 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     result->setSyntax(syntax);
     result->setAttributes(parent, syntax.attributes);
 
+    // If this subroutine has a scoped name, it should be an out of block declaration.
+    // This will be validated later, but set the flag now (the flag also prevents it
+    // from showing up in the name map for its containing scope).
+    if (proto->name->kind == SyntaxKind::ScopedName)
+        result->flags |= MethodFlags::OutOfBand;
+
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
-    if (proto->portList) {
-        const DataTypeSyntax* lastType = nullptr;
-        auto lastDirection = ArgumentDirection::In;
-
-        for (const FunctionPortSyntax* portSyntax : proto->portList->ports) {
-            ArgumentDirection direction;
-            bool directionSpecified = true;
-            switch (portSyntax->direction.kind) {
-                case TokenKind::InputKeyword:
-                    direction = ArgumentDirection::In;
-                    break;
-                case TokenKind::OutputKeyword:
-                    direction = ArgumentDirection::Out;
-                    break;
-                case TokenKind::InOutKeyword:
-                    direction = ArgumentDirection::InOut;
-                    break;
-                case TokenKind::RefKeyword:
-                    if (portSyntax->constKeyword)
-                        direction = ArgumentDirection::ConstRef;
-                    else
-                        direction = ArgumentDirection::Ref;
-                    break;
-                case TokenKind::Unknown:
-                    // Otherwise, we "inherit" the previous argument
-                    direction = lastDirection;
-                    directionSpecified = false;
-                    break;
-                default:
-                    THROW_UNREACHABLE;
-            }
-
-            auto declarator = portSyntax->declarator;
-            auto arg = compilation.emplace<FormalArgumentSymbol>(
-                declarator->name.valueText(), declarator->name.location(), direction, *lifetime);
-
-            // If we're given a type, use that. Otherwise, if we were given a
-            // direction, default to logic. Otherwise, use the last type.
-            if (portSyntax->dataType) {
-                arg->setDeclaredType(*portSyntax->dataType);
-                lastType = portSyntax->dataType;
-            }
-            else if (directionSpecified || !lastType) {
-                arg->setType(compilation.getLogicType());
-                lastType = nullptr;
-            }
-            else {
-                arg->setDeclaredType(*lastType);
-            }
-
-            arg->setFromDeclarator(*declarator);
-            arg->setAttributes(*result, portSyntax->attributes);
-
-            result->addMember(*arg);
-            arguments.append(arg);
-            lastDirection = direction;
-        }
-    }
+    if (proto->portList)
+        buildArguments(*result, *proto->portList, *lifetime, arguments);
 
     // Subroutines can also declare arguments inside their bodies as port declarations.
     // Let's go looking for them. They're required to be declared before any other statements.
@@ -311,7 +260,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
             case TokenKind::ConstKeyword:
             case TokenKind::ExternKeyword:
             case TokenKind::RandKeyword:
-                // so just ignore them here.
+                // Parser already issued errors for these, so just ignore them here.
                 break;
             default:
                 THROW_UNREACHABLE;
@@ -324,11 +273,74 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     return result;
 }
 
+void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
+                                      VariableLifetime defaultLifetime,
+                                      SmallVector<const FormalArgumentSymbol*>& arguments) {
+    auto& comp = scope.getCompilation();
+    const DataTypeSyntax* lastType = nullptr;
+    auto lastDirection = ArgumentDirection::In;
+
+    for (const FunctionPortSyntax* portSyntax : syntax.ports) {
+        ArgumentDirection direction;
+        bool directionSpecified = true;
+        switch (portSyntax->direction.kind) {
+            case TokenKind::InputKeyword:
+                direction = ArgumentDirection::In;
+                break;
+            case TokenKind::OutputKeyword:
+                direction = ArgumentDirection::Out;
+                break;
+            case TokenKind::InOutKeyword:
+                direction = ArgumentDirection::InOut;
+                break;
+            case TokenKind::RefKeyword:
+                if (portSyntax->constKeyword)
+                    direction = ArgumentDirection::ConstRef;
+                else
+                    direction = ArgumentDirection::Ref;
+                break;
+            case TokenKind::Unknown:
+                // Otherwise, we "inherit" the previous argument
+                direction = lastDirection;
+                directionSpecified = false;
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+
+        auto declarator = portSyntax->declarator;
+        auto arg = comp.emplace<FormalArgumentSymbol>(
+            declarator->name.valueText(), declarator->name.location(), direction, defaultLifetime);
+
+        // If we're given a type, use that. Otherwise, if we were given a
+        // direction, default to logic. Otherwise, use the last type.
+        if (portSyntax->dataType) {
+            arg->setDeclaredType(*portSyntax->dataType);
+            lastType = portSyntax->dataType;
+        }
+        else if (directionSpecified || !lastType) {
+            arg->setType(comp.getLogicType());
+            lastType = nullptr;
+        }
+        else {
+            arg->setDeclaredType(*lastType);
+        }
+
+        arg->setFromDeclarator(*declarator);
+        arg->setAttributes(scope, portSyntax->attributes);
+
+        scope.addMember(*arg);
+        arguments.append(arg);
+        lastDirection = direction;
+    }
+}
+
 void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("returnType", getReturnType());
     serializer.write("defaultLifetime", toString(defaultLifetime));
     serializer.write("subroutineKind", toString(subroutineKind));
     serializer.write("body", getBody());
+    serializer.write("visibility", toString(visibility));
 
     serializer.startArray("arguments");
     for (auto const arg : arguments) {

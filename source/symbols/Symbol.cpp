@@ -51,6 +51,8 @@ const DeclaredType* Symbol::getDeclaredType() const {
             return &as<TypeAliasType>().targetType;
         case SymbolKind::Subroutine:
             return &as<SubroutineSymbol>().declaredReturnType;
+        case SymbolKind::ClassMethodPrototype:
+            return &as<ClassMethodPrototypeSymbol>().declaredReturnType;
         case SymbolKind::NetType:
             return &as<NetType>().declaredType;
         case SymbolKind::TypeParameter:
