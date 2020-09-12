@@ -1504,6 +1504,7 @@ void ReplicationExpression::serializeTo(ASTSerializer& serializer) const {
 Expression& StreamingConcatenationExpression::fromSyntax(
     Compilation& compilation, const StreamingConcatenationExpressionSyntax& syntax,
     const BindContext& context, const Type* assignmentTarget) {
+
     const bool isRightToLeft = syntax.operatorToken.kind == TokenKind::LeftShift;
     size_t sliceSize = 0;
 
@@ -1523,6 +1524,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 bind(*syntax.sliceSize, context, BindFlags::AllowDataType | BindFlags::Constant);
             if (sliceExpr.bad())
                 return badExpr(compilation, badResult());
+
             if (sliceExpr.kind == ExpressionKind::DataType) {
                 if (!sliceExpr.type->isFixedSize()) {
                     auto& diag = context.addDiag(diag::BadStreamSlice, sliceExpr.sourceRange);
@@ -1534,16 +1536,18 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
             else {
                 optional<int32_t> count = context.evalInteger(sliceExpr);
-                if (!count || !context.requireGtZero(count, sliceExpr.sourceRange))
+                if (!context.requireGtZero(count, sliceExpr.sourceRange))
                     return badExpr(compilation, badResult());
                 sliceSize = static_cast<bitwidth_t>(*count);
             }
         }
-        else
+        else {
             context.addDiag(diag::IgnoredSlice, syntax.sliceSize->sourceRange());
+        }
     }
-    else if (isRightToLeft)
+    else if (isRightToLeft) {
         sliceSize = 1;
+    }
 
     // The sole purpose of assignmentTarget here is for Type::isBitstreamType to know whether to
     // exclude associative arrays and classes for target/destination. Streaming concatenation is
@@ -1552,12 +1556,15 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     for (const auto argSyntax : syntax.expressions) {
         Expression* arg;
         if (assignmentTarget &&
-            argSyntax->expression->kind == SyntaxKind::StreamingConcatenationExpression)
+            argSyntax->expression->kind == SyntaxKind::StreamingConcatenationExpression) {
             arg = &create(compilation, *argSyntax->expression, context, BindFlags::StreamingAllowed,
                           assignmentTarget);
-        else
+        }
+        else {
             arg = &selfDetermined(compilation, *argSyntax->expression, context,
                                   BindFlags::StreamingAllowed);
+        }
+
         if (argSyntax->withRange) {
             // TODO: with array_range_expression
             context.addDiag(diag::NotYetSupported, argSyntax->withRange->sourceRange());
@@ -1566,6 +1573,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
 
         if (arg->bad())
             return badExpr(compilation, badResult());
+
         if (argSyntax->expression->kind != SyntaxKind::StreamingConcatenationExpression) {
             const Type& type = *arg->type;
             // TODO: first-declared member of untagged union
@@ -1579,7 +1587,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     }
 
     // Streaming concatenation has no explicit type. Use void to prevent unintentional problems when
-    // its type is accidentally passed to context-determine expressions.
+    // its type is accidentally passed to context-determined expressions.
     return *compilation.emplace<StreamingConcatenationExpression>(
         compilation.getVoidType(), sliceSize, buffer.ccopy(compilation), syntax.sourceRange());
 }
@@ -1593,8 +1601,10 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
             return nullptr;
         values.emplace_back(std::move(v));
     }
+
     if (sliceSize > 0)
         return Bitstream::reOrder(std::move(values), sliceSize);
+
     return values;
 }
 
@@ -1623,6 +1633,7 @@ bool StreamingConcatenationExpression::isFixedSize() const {
             isFixed = stream->as<StreamingConcatenationExpression>().isFixedSize();
         else
             isFixed = stream->type->isFixedSize();
+
         if (!isFixed)
             return false;
     }

@@ -73,7 +73,7 @@ enum class BindFlags {
     /// nested subexpressions, unless they are directly parenthesized.
     StreamingAllowed = 1 << 10,
 };
-BITMASK(BindFlags, StaticInitializer);
+BITMASK(BindFlags, StreamingAllowed);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

@@ -251,13 +251,16 @@ struct StreamingConcatenationExpressionSyntax;
 /// Represents a streaming concatenation
 class StreamingConcatenationExpression : public Expression {
 public:
+    /// The size of the blocks to slice and reorder: if 0, this is a left-to-right
+    /// concatenation. Otherwise, it's a right-to-left concatenation.
+    const size_t sliceSize;
+
     StreamingConcatenationExpression(const Type& type, size_t sliceSize,
                                      span<const Expression* const> streams,
                                      SourceRange sourceRange) :
         Expression(ExpressionKind::Streaming, type, sourceRange),
         sliceSize(sliceSize), streams_(streams) {}
 
-    const size_t sliceSize; // 0: >> left-to-right, > 0otherwise <<
     span<const Expression* const> streams() const { return streams_; }
 
     ConstantValue evalImpl(EvalContext& context) const;

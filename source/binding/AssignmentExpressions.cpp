@@ -315,8 +315,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
                 selfDetermined(context, result);
                 return *result;
             }
-            else
-                return badExpr(compilation, &expr);
+            return badExpr(compilation, &expr);
         }
 
         DiagCode code = type.isCastCompatible(*rt) || type.isBitstreamCastable(*rt)
@@ -386,8 +385,9 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         syntax.kind != SyntaxKind::NonblockingAssignmentExpression) {
         op = getBinaryOperator(syntax.kind);
     }
-    else
+    else {
         extraFlags |= BindFlags::StreamingAllowed;
+    }
 
     const ExpressionSyntax* rightExpr = syntax.right;
     bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingAssignmentExpression;
@@ -460,8 +460,9 @@ Expression& AssignmentExpression::fromComponents(
 
     if (lhs.kind == ExpressionKind::Streaming) {
         if (!Bitstream::canBeTarget(lhs.as<StreamingConcatenationExpression>(), rhs, assignLoc,
-                                    context))
+                                    context)) {
             return badExpr(compilation, result);
+        }
     }
     else {
         result->right_ =
@@ -477,9 +478,10 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     if (!context.isScriptEval() && timingControl)
         return nullptr;
 
-    if (left().kind == ExpressionKind::Streaming)
+    if (left().kind == ExpressionKind::Streaming) {
         return Bitstream::evaluateTarget(left().as<StreamingConcatenationExpression>(), right(),
                                          context);
+    }
 
     LValue lvalue = left().evalLValue(context);
     ConstantValue rvalue = right().eval(context);
@@ -623,9 +625,10 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         return std::move(value);
 
     if (conversionKind == ConversionKind::BitstreamCast ||
-        conversionKind == ConversionKind::StreamingConcat)
+        conversionKind == ConversionKind::StreamingConcat) {
         return Bitstream::evaluateCast(to, std::move(value), sourceRange, context,
                                        conversionKind == ConversionKind::StreamingConcat);
+    }
 
     if (to.isIntegral()) {
         // [11.8.2] last bullet says: the operand shall be sign-extended only if the propagated type
