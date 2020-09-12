@@ -1534,9 +1534,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
             else {
                 optional<int32_t> count = context.evalInteger(sliceExpr);
-                if (!count)
-                    return badExpr(compilation, badResult());
-                if (!context.requireGtZero(count, sliceExpr.sourceRange))
+                if (!count || !context.requireGtZero(count, sliceExpr.sourceRange))
                     return badExpr(compilation, badResult());
                 sliceSize = static_cast<bitwidth_t>(*count);
             }

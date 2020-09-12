@@ -305,7 +305,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
 
         if (expr.kind == ExpressionKind::Streaming) {
-            if (Bitstream::canBeSource(type, expr.as<StreamingConcatenationExpression>(),
+            if (Bitstream::canBeSource(type, expr.as<StreamingConcatenationExpression>(), location,
                                        context)) {
                 // Add an implicit bit-stream casting otherwise types are not assignment compatible.
                 // The size rule is not identical to explicit bit-stream casting so a different
@@ -459,7 +459,8 @@ Expression& AssignmentExpression::fromComponents(
         return badExpr(compilation, result);
 
     if (lhs.kind == ExpressionKind::Streaming) {
-        if (!Bitstream::canBeTarget(lhs.as<StreamingConcatenationExpression>(), rhs, context))
+        if (!Bitstream::canBeTarget(lhs.as<StreamingConcatenationExpression>(), rhs, assignLoc,
+                                    context))
             return badExpr(compilation, result);
     }
     else {

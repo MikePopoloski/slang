@@ -414,9 +414,9 @@ ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
 }
 
 bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const Expression& rhs,
-                            const BindContext& context) {
+                            SourceLocation assignLoc, const BindContext& context) {
     if (rhs.kind != ExpressionKind::Streaming && !rhs.type->isBitstreamType()) {
-        context.addDiag(diag::BadStreamSourceType, rhs.sourceRange) << *rhs.type;
+        context.addDiag(diag::BadStreamSourceType, assignLoc) << *rhs.type << lhs.sourceRange;
         return false;
     }
 
@@ -431,7 +431,7 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
         good = targetWidth <= sourceWidth;
     }
     else {
-        auto source = rhs.as<StreamingConcatenationExpression>();
+        auto& source = rhs.as<StreamingConcatenationExpression>();
         sourceWidth = source.bitstreamWidth();
         if (lhs.isFixedSize() && source.isFixedSize())
             good = targetWidth == sourceWidth;
@@ -439,15 +439,19 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
             good = dynamicSizesMatch(lhs, source);
     }
 
-    if (!good)
-        context.addDiag(diag::BadStreamSize, lhs.sourceRange) << targetWidth << sourceWidth;
+    if (!good) {
+        auto& diag = context.addDiag(diag::BadStreamSize, assignLoc) << targetWidth << sourceWidth;
+        diag << lhs.sourceRange;
+        if (rhs.kind == ExpressionKind::Streaming)
+            diag << rhs.sourceRange;
+    }
     return good;
 }
 
 bool Bitstream::canBeSource(const Type& target, const StreamingConcatenationExpression& rhs,
-                            const BindContext& context) {
+                            SourceLocation assignLoc, const BindContext& context) {
     if (!target.isBitstreamType(true)) {
-        context.addDiag(diag::BadStreamTargetType, rhs.sourceRange) << target;
+        context.addDiag(diag::BadStreamTargetType, assignLoc) << target << rhs.sourceRange;
         return false;
     }
 
@@ -456,7 +460,8 @@ bool Bitstream::canBeSource(const Type& target, const StreamingConcatenationExpr
     auto targetWidth = target.bitstreamWidth();
     auto sourceWidth = rhs.bitstreamWidth();
     if (targetWidth < sourceWidth) {
-        context.addDiag(diag::BadStreamSize, rhs.sourceRange) << targetWidth << sourceWidth;
+        auto& diag = context.addDiag(diag::BadStreamSize, assignLoc) << targetWidth << sourceWidth;
+        diag << rhs.sourceRange;
         return false;
     }
 
@@ -566,7 +571,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                                 SmallVector<ConstantValue>* dryRun = nullptr) {
     for (auto stream : lhs.streams()) {
         if (stream->kind == ExpressionKind::Streaming) {
-            auto concat = stream->as<StreamingConcatenationExpression>();
+            auto& concat = stream->as<StreamingConcatenationExpression>();
             if (dryRun || !concat.sliceSize) {
                 if (!unpackConcatenation(stream->as<StreamingConcatenationExpression>(), iter,
                                          iterEnd, bitOffset, dynamicSize, context, dryRun))

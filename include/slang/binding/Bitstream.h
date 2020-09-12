@@ -17,6 +17,7 @@ class Expression;
 class BindContext;
 class EvalContext;
 class SourceRange;
+class SourceLocation;
 
 class Bitstream {
 public:
@@ -35,12 +36,12 @@ public:
     /// Compile-time check that streaming concatenation target has a bit-stream type source with
     /// enought bits
     static bool canBeTarget(const StreamingConcatenationExpression& lhs, const Expression& rhs,
-                            const BindContext& context);
+                            SourceLocation assignLoc, const BindContext& context);
 
     /// Compile-time check that streaming concatenation source has a bit-stream target type  with
     /// enought bits
     static bool canBeSource(const Type& target, const StreamingConcatenationExpression& rhs,
-                            const BindContext& context);
+                            SourceLocation assignLoc, const BindContext& context);
 
     /// Compile-time check that bit-streaming cast on a streaming operator is valid
     static bool isBitstreamCast(const Type& type, const StreamingConcatenationExpression& arg);
