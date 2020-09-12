@@ -7,6 +7,8 @@
 #include "slang/binding/OperatorExpressions.h"
 
 #include "slang/binding/AssignmentExpressions.h"
+#include "slang/binding/Bitstream.h"
+#include "slang/binding/LiteralExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -1358,6 +1360,7 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
 
 LValue ConcatenationExpression::evalLValueImpl(EvalContext& context) const {
     std::vector<LValue> lvals;
+    lvals.reserve(operands().size());
     for (auto operand : operands()) {
         LValue lval = operand->evalLValue(context);
         if (!lval)
@@ -1496,6 +1499,145 @@ bool ReplicationExpression::verifyConstantImpl(EvalContext& context) const {
 void ReplicationExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("count", count());
     serializer.write("concat", concat());
+}
+
+Expression& StreamingConcatenationExpression::fromSyntax(
+    Compilation& compilation, const StreamingConcatenationExpressionSyntax& syntax,
+    const BindContext& context, const Type* assignmentTarget) {
+    const bool isRightToLeft = syntax.operatorToken.kind == TokenKind::LeftShift;
+    size_t sliceSize = 0;
+
+    auto badResult = [&]() {
+        return compilation.emplace<StreamingConcatenationExpression>(
+            compilation.getErrorType(), sliceSize, span<const Expression*>(), syntax.sourceRange());
+    };
+
+    if (!(context.flags & BindFlags::StreamingAllowed)) {
+        context.addDiag(diag::BadStreamContext, syntax.operatorToken.location());
+        return badExpr(compilation, badResult());
+    }
+
+    if (syntax.sliceSize) {
+        if (isRightToLeft) {
+            const auto& sliceExpr =
+                bind(*syntax.sliceSize, context, BindFlags::AllowDataType | BindFlags::Constant);
+            if (sliceExpr.bad())
+                return badExpr(compilation, badResult());
+            if (sliceExpr.kind == ExpressionKind::DataType) {
+                if (!sliceExpr.type->isFixedSize()) {
+                    auto& diag = context.addDiag(diag::BadStreamSlice, sliceExpr.sourceRange);
+                    if (sliceExpr.type->location)
+                        diag.addNote(diag::NoteDeclarationHere, sliceExpr.type->location);
+                    return badExpr(compilation, badResult());
+                }
+                sliceSize = sliceExpr.type->bitstreamWidth();
+            }
+            else {
+                optional<int32_t> count = context.evalInteger(sliceExpr);
+                if (!count || !context.requireGtZero(count, sliceExpr.sourceRange))
+                    return badExpr(compilation, badResult());
+                sliceSize = static_cast<bitwidth_t>(*count);
+            }
+        }
+        else
+            context.addDiag(diag::IgnoredSlice, syntax.sliceSize->sourceRange());
+    }
+    else if (isRightToLeft)
+        sliceSize = 1;
+
+    // The sole purpose of assignmentTarget here is for Type::isBitstreamType to know whether to
+    // exclude associative arrays and classes for target/destination. Streaming concatenation is
+    // self-determined and its size/type should not be affected by assignmentTarget.
+    SmallVectorSized<Expression*, 8> buffer;
+    for (const auto argSyntax : syntax.expressions) {
+        Expression* arg;
+        if (assignmentTarget &&
+            argSyntax->expression->kind == SyntaxKind::StreamingConcatenationExpression)
+            arg = &create(compilation, *argSyntax->expression, context, BindFlags::StreamingAllowed,
+                          assignmentTarget);
+        else
+            arg = &selfDetermined(compilation, *argSyntax->expression, context,
+                                  BindFlags::StreamingAllowed);
+        if (argSyntax->withRange) {
+            // TODO: with array_range_expression
+            context.addDiag(diag::NotYetSupported, argSyntax->withRange->sourceRange());
+            return badExpr(compilation, badResult());
+        }
+
+        if (arg->bad())
+            return badExpr(compilation, badResult());
+        if (argSyntax->expression->kind != SyntaxKind::StreamingConcatenationExpression) {
+            const Type& type = *arg->type;
+            // TODO: first-declared member of untagged union
+            if (!type.isBitstreamType(!assignmentTarget)) {
+                context.addDiag(diag::BadStreamExprType, arg->sourceRange) << type;
+                return badExpr(compilation, badResult());
+            }
+        }
+
+        buffer.append(arg);
+    }
+
+    // Streaming concatenation has no explicit type. Use void to prevent unintentional problems when
+    // its type is accidentally passed to context-determine expressions.
+    return *compilation.emplace<StreamingConcatenationExpression>(
+        compilation.getVoidType(), sliceSize, buffer.ccopy(compilation), syntax.sourceRange());
+}
+
+ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) const {
+    std::vector<ConstantValue> values;
+    values.reserve(streams().size());
+    for (auto stream : streams()) {
+        ConstantValue v = stream->eval(context);
+        if (!v)
+            return nullptr;
+        values.emplace_back(std::move(v));
+    }
+    if (sliceSize > 0)
+        return Bitstream::reOrder(std::move(values), sliceSize);
+    return values;
+}
+
+bool StreamingConcatenationExpression::verifyConstantImpl(EvalContext& context) const {
+    for (auto stream : streams()) {
+        if (!stream->verifyConstant(context))
+            return false;
+    }
+    return true;
+}
+
+void StreamingConcatenationExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("sliceSize", sliceSize);
+    if (!streams().empty()) {
+        serializer.startArray("streams");
+        for (auto op : streams())
+            serializer.serialize(*op);
+        serializer.endArray();
+    }
+}
+
+bool StreamingConcatenationExpression::isFixedSize() const {
+    for (auto stream : streams()) {
+        bool isFixed;
+        if (stream->kind == ExpressionKind::Streaming)
+            isFixed = stream->as<StreamingConcatenationExpression>().isFixedSize();
+        else
+            isFixed = stream->type->isFixedSize();
+        if (!isFixed)
+            return false;
+    }
+    return true;
+}
+
+size_t StreamingConcatenationExpression::bitstreamWidth() const {
+    size_t width = 0;
+    for (auto stream : streams()) {
+        if (stream->kind == ExpressionKind::Streaming)
+            width += stream->as<StreamingConcatenationExpression>().bitstreamWidth();
+        else
+            width += stream->type->bitstreamWidth();
+    }
+    return width;
 }
 
 Expression& OpenRangeExpression::fromSyntax(Compilation& comp,

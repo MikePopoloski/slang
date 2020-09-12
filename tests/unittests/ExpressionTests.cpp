@@ -1340,9 +1340,6 @@ TEST_CASE("$bits on non-fixed-size array") {
 }
 
 TEST_CASE("bit-stream cast") {
-    std::string intBits = "int b = $bits(a);";
-    std::string paramBits = "localparam b = $bits(a);";
-
     std::string illegal[] = {
         R"(
 // Illegal conversion from 24-bit struct to 32 bit int - compile time error
@@ -1416,4 +1413,80 @@ localparam c d = c'(str);
 
     CHECK(testBitstream("byte a[2]; localparam b = shortint'(a);",
                         diag::ConstEvalNonConstVariable) == 1);
+}
+
+TEST_CASE("Streaming operators") {
+    struct {
+        std::string sv;
+        DiagCode msg;
+    } illegal[] = {
+        { "int a; int b = {>>{a}} + 2;", diag::BadStreamContext },
+        { "shortint a,b; int c = {{>>{a}}, b};", diag::BadStreamContext },
+        { "int a,b; always_comb {>>{a}} += b;", diag::BadStreamContext },
+        { "int a; int b = {<< string {a}};", diag::BadStreamSlice },
+        { "typedef bit t[]; int a; int b = {<<t{a}};", diag::BadStreamSlice },
+        { "int a, c; int b = {<< c {a}};", diag::ConstEvalNonConstVariable },
+        { "int a; int b = {<< 0 {a}};", diag::ValueMustBePositive },
+        { "real a; int b = {<< 5 {a}};", diag::BadStreamExprType },
+        { "int a; real b = {<< 2 {a}};", diag::BadStreamTargetType },
+        { "int a[2]; real b = $itor(a);", diag::BadSystemSubroutineArg },
+        { "int a; int b = {>> 4 {a}};", diag::IgnoredSlice },
+        { "int a; real b; assign {<< 2 {a}} = b;", diag::BadStreamSourceType },
+        { "int a; shortint b; assign {<< 2 {a}} = b;", diag::BadStreamSize },
+        { "int a; shortint b; assign b = {<< 4 {a}};", diag::BadStreamSize },
+        { "int a; shortint b; assign {>>{b}} = {<< 4 {a}};", diag::BadStreamSize },
+        { "int a; real b = real'({<< 4 {a}});", diag::BadStreamCast },
+        { "int a; shortint b = shortint'({<< 4 {a}});", diag::BadStreamCast },
+        { "typedef struct {byte a[$]; bit b;} dest_t; int a; dest_t b = dest_t'({<<{a}});",
+          diag::BadStreamCast },
+        { "typedef struct {byte a[$]; bit b;} dest_t;int a;dest_t b;assign {>>{b}}={<<{a}};",
+          diag::BadStreamSize },
+
+        { "localparam string s=\"AB\"; localparam byte j= {<<2{s}};", diag::BadStreamSize },
+        { "localparam string s=\"AB\"; localparam int j= byte'({<<{s}}) - 5;",
+          diag::ConstEvalBitstreamCastSize },
+        { "localparam string s=\"AB\"; localparam int j= int'({<<{s}}) - 5;",
+          diag::ConstEvalBitstreamCastSize },
+
+        { "int a,b,c; assign {>>{a,b,c}}=23'b1;", diag::BadStreamSize },
+        { "int a,b,c; int j={>>{a,b,c}};", diag::BadStreamSize },
+        { "int a,b,c; assign {>>{a+b}}=c;", diag::ExpressionNotAssignable },
+
+        { R"(
+function int foo(byte bar[]);
+    int a;
+    {>>{a}} = bar;
+    return a;
+endfunction
+localparam t=foo("AB");
+)",
+          diag::BadStreamSize },
+        { R"(
+function int foo(byte bar[]);
+    int a;
+    {>>{a}} = {<<{bar}};
+return a;
+endfunction
+localparam t=foo("ABCDE");
+)",
+          diag::BadStreamSize },
+
+    };
+
+    for (const auto& test : illegal)
+        CHECK(testBitstream(test.sv, test.msg) == 1);
+
+    std::string legal[] = {
+        "int a; byte b[4] = {<<3{a}};",
+        "int a; byte b[4]; assign {<<3{b}} = a;",
+        "int a; byte b[4]; assign {<<3{b}} = {<<5{a}};",
+        "byte b[4]; int a = int'({<<3{b}}) + 5;",
+        "shortint a; byte b[2]; int c = {<<3{a, {<<5{b}}}};",
+        "shortint a; byte b[2]; int c; assign {<<3{{<<5{b}}, a}}=c;",
+        "struct{bit a[];int b;}a;struct {byte a[];bit b;}b;assign{<<{a}}={>>{b}};",
+        "struct{bit a[];int b;}a;int b;assign {>>{a}} = {<<{b}};"
+    };
+
+    for (const auto& test : legal)
+        CHECK(testBitstream(test) == 0);
 }

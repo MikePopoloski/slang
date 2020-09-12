@@ -38,6 +38,7 @@ struct InvocationExpressionSyntax;
     x(Assignment) \
     x(Concatenation) \
     x(Replication) \
+    x(Streaming) \
     x(ElementSelect) \
     x(RangeSelect) \
     x(MemberAccess) \

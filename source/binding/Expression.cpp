@@ -153,6 +153,7 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     if (rhsExpr->bad())
         return badExpr(comp, nullptr);
 
+    // TODO: streaming operator for port connection
     Expression* lhsExpr = &create(comp, lhs, context, BindFlags::None, rhsExpr->type);
     selfDetermined(context, lhsExpr);
 
@@ -165,7 +166,12 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                          SourceLocation location, const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
-    Expression& expr = create(comp, rhs, context, BindFlags::None, &lhs);
+
+    // TODO: streaming operator for port connection and enum initializer
+    bitmask<BindFlags> extraFlags = context.instance || (context.flags & BindFlags::EnumInitializer)
+                                        ? BindFlags::None
+                                        : BindFlags::StreamingAllowed;
+    Expression& expr = create(comp, rhs, context, extraFlags, &lhs);
 
     const Expression& result = convertAssignment(context, lhs, expr, location);
     return checkBindFlags(result, context);
@@ -288,6 +294,14 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
             for (auto op : concat.operands()) {
+                if (!op->verifyAssignable(context, isNonBlocking, location))
+                    return false;
+            }
+            return true;
+        }
+        case ExpressionKind::Streaming: {
+            auto& stream = as<StreamingConcatenationExpression>();
+            for (auto op : stream.streams()) {
                 if (!op->verifyAssignable(context, isNonBlocking, location))
                     return false;
             }
@@ -499,6 +513,11 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &ReplicationExpression::fromSyntax(
                 compilation, syntax.as<MultipleConcatenationExpressionSyntax>(), context);
             break;
+        case SyntaxKind::StreamingConcatenationExpression:
+            result = &StreamingConcatenationExpression::fromSyntax(
+                compilation, syntax.as<StreamingConcatenationExpressionSyntax>(), context,
+                assignmentTarget);
+            break;
         case SyntaxKind::ElementSelectExpression:
             result = &bindSelectExpression(compilation, syntax.as<ElementSelectExpressionSyntax>(),
                                            context);
@@ -570,7 +589,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::SNextTimePropertyExpression:
         case SyntaxKind::SUntilPropertyExpression:
         case SyntaxKind::SUntilWithPropertyExpression:
-        case SyntaxKind::StreamingConcatenationExpression:
         case SyntaxKind::SyncAcceptOnPropertyExpression:
         case SyntaxKind::SyncRejectOnPropertyExpression:
         case SyntaxKind::TaggedUnionExpression:

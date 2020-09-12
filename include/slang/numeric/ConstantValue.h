@@ -148,7 +148,7 @@ public:
     ConstantValue convertToByteQueue(bool isSigned) const;
 
     /// Gets the size of this value when converted to a bitstream.
-    bitwidth_t bitstreamWidth() const;
+    size_t bitstreamWidth() const;
 
     static const ConstantValue Invalid;
 

@@ -56,7 +56,7 @@ public:
     bitwidth_t getBitWidth() const;
 
     /// Gets $bits of the type. Returns zero if the type does not have a statically known size.
-    bitwidth_t bitstreamWidth() const;
+    size_t bitstreamWidth() const;
 
     /// Indicates whether the type can represent negative numeric values. For non-numeric types,
     /// this always returns false.
@@ -204,10 +204,6 @@ public:
 
     /// Determines whether the given type can be bit-stream cast to this one.
     bool isBitstreamCastable(const Type& rhs) const;
-
-    /// Performs a bit-stream cast of @a value to this type. If the conversion
-    /// is not valid, returns nullptr (invalid value).
-    ConstantValue bitstreamCast(const ConstantValue& value) const;
 
     /// Gets a combination of flags for integral types; for non-integral types,
     /// this returns all zeros.

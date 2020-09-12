@@ -326,8 +326,8 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked
 BindContext BindContext::resetFlags(bitmask<BindFlags> addedFlags) const {
     // Remove non-sticky flags, add in any extras specified by addedFlags
     BindContext result(*this);
-    result.flags &=
-        ~(BindFlags::InsideConcatenation | BindFlags::AllowDataType | BindFlags::AssignmentAllowed);
+    result.flags &= ~(BindFlags::InsideConcatenation | BindFlags::AllowDataType |
+                      BindFlags::AssignmentAllowed | BindFlags::StreamingAllowed);
     result.flags |= addedFlags;
     return result;
 }
