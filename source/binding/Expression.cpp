@@ -153,6 +153,7 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     if (rhsExpr->bad())
         return badExpr(comp, nullptr);
 
+    // TODO: streaming operator for port connection
     Expression* lhsExpr = &create(comp, lhs, context, BindFlags::None, rhsExpr->type);
     selfDetermined(context, lhsExpr);
 
@@ -165,6 +166,8 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                          SourceLocation location, const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
+
+    // TODO: streaming operator for port connection and enum initializer
     bitmask<BindFlags> extraFlags = context.instance || (context.flags & BindFlags::EnumInitializer)
                                         ? BindFlags::None
                                         : BindFlags::StreamingAllowed;

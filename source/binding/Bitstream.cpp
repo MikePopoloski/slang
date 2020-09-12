@@ -471,12 +471,12 @@ bool Bitstream::isBitstreamCast(const Type& type, const StreamingConcatenationEx
     return dynamicSizesMatch(type, arg);
 }
 
-ConstantValue Bitstream::reOrder(ConstantValue&& values, size_t sliceSize, size_t unpackWidth) {
-    size_t totalWidth = values.bitstreamWidth();
+ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t unpackWidth) {
+    size_t totalWidth = value.bitstreamWidth();
     ASSERT(unpackWidth <= totalWidth);
     auto numBlocks = ((unpackWidth ? unpackWidth : totalWidth) + sliceSize - 1) / sliceSize;
     if (numBlocks <= 1)
-        return std::move(values);
+        return std::move(value);
 
     auto getWidth = [](const ConstantValue& v) {
         if (v.isInteger())
@@ -485,7 +485,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& values, size_t sliceSize, size_
     };
 
     SmallVectorSized<ConstantValue*, 8> packed;
-    packBitstream(values, packed);
+    packBitstream(value, packed);
 
     auto rightIndex = packed.size() - 1; // Right-to-left
     bitwidth_t rightWidth = getWidth(*packed.back());
@@ -619,7 +619,8 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     auto srcSize = rvalue.bitstreamWidth();
     auto targetWidth = lhs.bitstreamWidth();
     size_t dynamicSize = 0;
-    if (rhs.kind == ExpressionKind::Streaming) { // srcSize == targetWidth + dynamicSize
+    if (rhs.kind == ExpressionKind::Streaming) {
+        // Check srcSize == targetWidth + dynamicSize, then issue an error if not
         dynamicSize = bitstreamCastRemainingSize(lhs, srcSize);
         if (dynamicSize > srcSize) {
             context.addDiag(diag::BadStreamSize, lhs.sourceRange)
@@ -627,7 +628,8 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
             return nullptr;
         }
     }
-    else { // srcSize >= targetWidth + dynamicSize
+    else {
+        // Check srcSize >= targetWidth + dynamicSize, then issue an error if not
         if (targetWidth > srcSize) {
             context.addDiag(diag::BadStreamSize, lhs.sourceRange) << targetWidth << srcSize;
             return nullptr;

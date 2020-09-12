@@ -307,7 +307,9 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         if (expr.kind == ExpressionKind::Streaming) {
             if (Bitstream::canBeSource(type, expr.as<StreamingConcatenationExpression>(),
                                        context)) {
-                // Create implicit streaming concatenation conversion
+                // Add an implicit bit-stream casting otherwise types are not assignment compatible.
+                // The size rule is not identical to explicit bit-stream casting so a different
+                // ConversionKind is used.
                 result = compilation.emplace<ConversionExpression>(
                     type, ConversionKind::StreamingConcat, *result, result->sourceRange);
                 selfDetermined(context, result);
@@ -405,6 +407,8 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     // "assignment-like context", except if the left hand side does not
     // have a self-determined type. That can only be true if the lhs is
     // an assignment pattern without an explicit type.
+    // However, streaming concatenation has no explicit type either so it is excluded and such right
+    // hand side will lead to diag::AssignmentPatternNoContext error later.
     if (syntax.left->kind == SyntaxKind::AssignmentPatternExpression &&
         rightExpr->kind != SyntaxKind::StreamingConcatenationExpression) {
         auto& pattern = syntax.left->as<AssignmentPatternExpressionSyntax>();
@@ -427,6 +431,10 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
 
     Expression& lhs = selfDetermined(compilation, *syntax.left, context, extraFlags);
 
+    // When LHS is a streaming concatenation which has no explicit type, RHS should be
+    // self-determined and we cannot pass lsh.type to it. When both LHS and RHS are streaming
+    // concatenations, pass lhs.type to notify RHS to exclude associative arrays for isBitstreamType
+    // check, while RHS can still be self-determined by ignoring lhs type information.
     Expression& rhs = lhs.kind == ExpressionKind::Streaming &&
                               rightExpr->kind != SyntaxKind::StreamingConcatenationExpression
                           ? selfDetermined(compilation, *rightExpr, context, extraFlags)
@@ -549,8 +557,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
         if (operand.kind == ExpressionKind::Streaming) {
             if (!Bitstream::isBitstreamCast(*type,
                                             operand.as<StreamingConcatenationExpression>())) {
-                auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
-                diag << std::string("streaming concatenation") << *type;
+                auto& diag = context.addDiag(diag::BadStreamCast, syntax.apostrophe.location());
+                diag << *type;
                 diag << targetExpr.sourceRange << operand.sourceRange;
                 return badExpr(compilation, result());
             }

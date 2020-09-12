@@ -1536,10 +1536,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 optional<int32_t> count = context.evalInteger(sliceExpr);
                 if (!count)
                     return badExpr(compilation, badResult());
-                if (*count <= 0) {
-                    context.requireGtZero(count, sliceExpr.sourceRange);
+                if (!context.requireGtZero(count, sliceExpr.sourceRange))
                     return badExpr(compilation, badResult());
-                }
                 sliceSize = static_cast<bitwidth_t>(*count);
             }
         }
@@ -1549,6 +1547,9 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     else if (isRightToLeft)
         sliceSize = 1;
 
+    // The sole purpose of assignmentTarget here is for Type::isBitstreamType to know whether to
+    // exclude associative arrays and classes for target/destination. Streaming concatenation is
+    // self-determined and its size/type should not be affected by assignmentTarget.
     SmallVectorSized<Expression*, 8> buffer;
     for (const auto argSyntax : syntax.expressions) {
         Expression* arg;
@@ -1579,7 +1580,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         buffer.append(arg);
     }
 
-    // Streaming operator has no meaningful type. Use void as a placeholder.
+    // Streaming concatenation has no explicit type. Use void to prevent unintentional problems when
+    // its type is accidentally passed to context-determine expressions.
     return *compilation.emplace<StreamingConcatenationExpression>(
         compilation.getVoidType(), sliceSize, buffer.ccopy(compilation), syntax.sourceRange());
 }

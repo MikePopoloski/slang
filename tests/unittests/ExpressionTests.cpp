@@ -1435,10 +1435,10 @@ TEST_CASE("Streaming operators") {
         { "int a; shortint b; assign {<< 2 {a}} = b;", diag::BadStreamSize },
         { "int a; shortint b; assign b = {<< 4 {a}};", diag::BadStreamSize },
         { "int a; shortint b; assign {>>{b}} = {<< 4 {a}};", diag::BadStreamSize },
-        { "int a; real b = real'({<< 4 {a}});", diag::BadConversion },
-        { "int a; shortint b = shortint'({<< 4 {a}});", diag::BadConversion },
+        { "int a; real b = real'({<< 4 {a}});", diag::BadStreamCast },
+        { "int a; shortint b = shortint'({<< 4 {a}});", diag::BadStreamCast },
         { "typedef struct {byte a[$]; bit b;} dest_t; int a; dest_t b = dest_t'({<<{a}});",
-          diag::BadConversion },
+          diag::BadStreamCast },
         { "typedef struct {byte a[$]; bit b;} dest_t;int a;dest_t b;assign {>>{b}}={<<{a}};",
           diag::BadStreamSize },
 
