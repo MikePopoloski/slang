@@ -95,7 +95,8 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
     if (isVariableDeclaration())
         return &parseVariableDeclaration(attributes);
 
-    switch (peek().kind) {
+    Token token = peek();
+    switch (token.kind) {
         case TokenKind::GenerateKeyword: {
             errorIfAttributes(attributes);
             auto keyword = consume();
@@ -115,7 +116,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             // (without an if or for loop) but some simulators seems to accept it
             // and I've found code in the wild that depends on it. We'll parse it
             // here and then issue a diagnostic about how it's not kosher.
-            addDiag(diag::NonStandardGenBlock, peek().location());
+            addDiag(diag::NonStandardGenBlock, token.location());
             return &parseGenerateBlock();
         case TokenKind::TimeUnitKeyword:
         case TokenKind::TimePrecisionKeyword:
@@ -216,16 +217,18 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             return &parseGenvarDeclaration(attributes);
         case TokenKind::TaskKeyword:
             return &parseFunctionDeclaration(attributes, SyntaxKind::TaskDeclaration,
-                                             TokenKind::EndTaskKeyword);
+                                             TokenKind::EndTaskKeyword, parentKind);
         case TokenKind::FunctionKeyword:
             return &parseFunctionDeclaration(attributes, SyntaxKind::FunctionDeclaration,
-                                             TokenKind::EndFunctionKeyword);
+                                             TokenKind::EndFunctionKeyword, parentKind);
         case TokenKind::CoverGroupKeyword:
             return &parseCovergroupDeclaration(attributes);
         case TokenKind::ClassKeyword:
             return &parseClassDeclaration(attributes, Token());
         case TokenKind::VirtualKeyword:
-            return &parseClassDeclaration(attributes, consume());
+            if (peek(1).kind == TokenKind::ClassKeyword)
+                return &parseClassDeclaration(attributes, consume());
+            break;
         case TokenKind::DefParamKeyword:
             return &parseDefParam(attributes);
         case TokenKind::ImportKeyword:
@@ -259,14 +262,35 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             break;
     }
 
-    if (isGateType(peek().kind))
+    if (isGateType(token.kind))
         return &parseGateInstantiation(attributes);
+
+    // If this is a class qualifier, maybe they accidentally put them
+    // on an out-of-block method definition.
+    if (isMethodQualifier(token.kind)) {
+        Token t;
+        int index = 0;
+        do {
+            t = peek(++index);
+        } while (isMethodQualifier(t.kind));
+
+        if (t.kind == TokenKind::FunctionKeyword || t.kind == TokenKind::TaskKeyword) {
+            // Skip all the qualifiers.
+            addDiag(diag::QualifiersOnOutOfBlock, token.location()) << token.range();
+            for (int i = 0; i < index; i++)
+                skipToken(std::nullopt);
+
+            auto kind = t.kind == TokenKind::FunctionKeyword ? SyntaxKind::FunctionDeclaration
+                                                             : SyntaxKind::TaskDeclaration;
+            return &parseFunctionDeclaration(attributes, kind, getSkipToKind(t.kind), parentKind);
+        }
+    }
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
     if (!attributes.empty()) {
         return &factory.emptyMember(
             attributes, nullptr,
-            Token::createMissing(alloc, TokenKind::Semicolon, peek().location()));
+            Token::createMissing(alloc, TokenKind::Semicolon, token.location()));
     }
 
     // Otherwise, we got nothing and should just return null so that our
@@ -337,7 +361,7 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     while (true) {
         if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
-            auto& proto = parseFunctionPrototype();
+            auto& proto = parseFunctionPrototype(SyntaxKind::Unknown);
             buffer.append(&factory.modportSubroutinePort(proto));
         }
         else {
@@ -480,7 +504,7 @@ static bool checkSubroutineName(const NameSyntax& name) {
     return name.kind == SyntaxKind::IdentifierName || name.kind == SyntaxKind::ConstructorName;
 }
 
-FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
+FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind, bool allowTasks) {
     Token keyword;
     if (allowTasks && peek(TokenKind::TaskKeyword))
         keyword = consume();
@@ -518,6 +542,10 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
         addDiag(diag::ConstructorReturnType, name.getFirstToken().location())
             << returnType->sourceRange();
     }
+    else if (isConstructor && name.kind != SyntaxKind::ScopedName &&
+             parentKind != SyntaxKind::ClassDeclaration) {
+        addDiag(diag::ConstructorOutsideClass, keyword.location()) << name.sourceRange();
+    }
 
     FunctionPortListSyntax* portList = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
@@ -536,9 +564,10 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
 
 FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
                                                             SyntaxKind functionKind,
-                                                            TokenKind endKind) {
+                                                            TokenKind endKind,
+                                                            SyntaxKind parentKind) {
     Token end;
-    auto& prototype = parseFunctionPrototype();
+    auto& prototype = parseFunctionPrototype(parentKind);
     auto semi = expect(TokenKind::Semicolon);
     auto items = parseBlockItems(endKind, end);
     auto endBlockName = parseNamedBlockClause();
@@ -981,8 +1010,11 @@ MemberSyntax* Parser::parseClassMember() {
 
         // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
-            auto& proto = parseFunctionPrototype();
+            auto& proto = parseFunctionPrototype(SyntaxKind::ClassDeclaration);
             checkLifetime(proto);
+
+            if (proto.name->kind == SyntaxKind::ScopedName)
+                addDiag(diag::MethodPrototypeScoped, proto.name->getFirstToken().location());
 
             return &factory.classMethodPrototype(attributes, qualifiers, proto,
                                                  expect(TokenKind::Semicolon));
@@ -992,7 +1024,8 @@ MemberSyntax* Parser::parseClassMember() {
                                                            : SyntaxKind::FunctionDeclaration;
             auto endKind = kind == TokenKind::TaskKeyword ? TokenKind::EndTaskKeyword
                                                           : TokenKind::EndFunctionKeyword;
-            auto& funcDecl = parseFunctionDeclaration({}, declKind, endKind);
+            auto& funcDecl =
+                parseFunctionDeclaration({}, declKind, endKind, SyntaxKind::ClassDeclaration);
             checkLifetime(*funcDecl.prototype);
 
             // Additional checking for constructors.
@@ -1006,6 +1039,13 @@ MemberSyntax* Parser::parseClassMember() {
                         break;
                     }
                 }
+            }
+
+            // If this is a scoped name, it should be an out-of-block definition for
+            // a method declared in a nested class. Qualifiers are not allowed here.
+            if (funcDecl.prototype->name->kind == SyntaxKind::ScopedName && !qualifiers.empty()) {
+                addDiag(diag::QualifiersOnOutOfBlock, qualifiers[0].location())
+                    << qualifiers[0].range();
             }
 
             return &factory.classMethodDeclaration(attributes, qualifiers, funcDecl);
@@ -1597,7 +1637,8 @@ DPIImportExportSyntax& Parser::parseDPIImportExport(AttrList attributes) {
         equals = expect(TokenKind::Equals);
     }
 
-    auto& method = parseFunctionPrototype(property.kind != TokenKind::PureKeyword);
+    auto& method =
+        parseFunctionPrototype(SyntaxKind::Unknown, property.kind != TokenKind::PureKeyword);
     auto semi = expect(TokenKind::Semicolon);
     return factory.dPIImportExport(attributes, keyword, stringLiteral, property, name, equals,
                                    method, semi);

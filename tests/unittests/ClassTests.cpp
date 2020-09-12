@@ -101,11 +101,20 @@ class C;
     // Invalid qualifiers for constructors
     static function new(); endfunction
     virtual function new(); endfunction
+
+    // Qualifiers on out-of-block decl
+    static function foo::bar(); endfunction
+
+    // Scoped name for prototype.
+    extern function foo::baz();
 endclass
+
+static function C::bar();
+endfunction
 )");
 
     auto& diags = tree->diagnostics();
-    REQUIRE(diags.size() == 17);
+    REQUIRE(diags.size() == 20);
     CHECK(diags[0].code == diag::DuplicateQualifier);
     CHECK(diags[1].code == diag::QualifierConflict);
     CHECK(diags[2].code == diag::QualifierConflict);
@@ -123,6 +132,9 @@ endclass
     CHECK(diags[14].code == diag::NotAllowedInClass);
     CHECK(diags[15].code == diag::InvalidQualifierForConstructor);
     CHECK(diags[16].code == diag::InvalidQualifierForConstructor);
+    CHECK(diags[17].code == diag::QualifiersOnOutOfBlock);
+    CHECK(diags[18].code == diag::MethodPrototypeScoped);
+    CHECK(diags[19].code == diag::QualifiersOnOutOfBlock);
 }
 
 TEST_CASE("Class typedefs") {

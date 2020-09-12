@@ -242,8 +242,8 @@ private:
     GateInstanceSyntax& parseGateInstance();
     PortConnectionSyntax& parsePortConnection();
     FunctionPortSyntax& parseFunctionPort();
-    FunctionPrototypeSyntax& parseFunctionPrototype(bool allowTasks = true);
-    FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, SyntaxKind functionKind, TokenKind endKind);
+    FunctionPrototypeSyntax& parseFunctionPrototype(SyntaxKind parentKind, bool allowTasks = true);
+    FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, SyntaxKind functionKind, TokenKind endKind, SyntaxKind parentKind);
     Token parseLifetime();
     span<SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end);
     GenvarDeclarationSyntax& parseGenvarDeclaration(AttrList attributes);

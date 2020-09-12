@@ -925,7 +925,6 @@ bool Parser::isVariableDeclaration() {
         // some tokens unambiguously start a declaration
         case TokenKind::VarKeyword:
         case TokenKind::AutomaticKeyword:
-        case TokenKind::StaticKeyword:
         case TokenKind::CHandleKeyword:
         case TokenKind::EventKeyword:
         case TokenKind::StructKeyword:
@@ -937,6 +936,13 @@ bool Parser::isVariableDeclaration() {
         case TokenKind::ParameterKeyword:
         case TokenKind::LetKeyword:
             return true;
+
+        // Static keyword *should* always be a variable, but it could accidentally
+        // be an attempt at an out-of-block function declaration.
+        case TokenKind::StaticKeyword: {
+            auto next = peek(index + 1);
+            return next.kind != TokenKind::FunctionKeyword && next.kind != TokenKind::TaskKeyword;
+        }
 
         // either an import of a package or a DPI import
         case TokenKind::ImportKeyword:
