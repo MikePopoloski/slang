@@ -409,6 +409,9 @@ TEST_CASE("Task / constructor parse errors") {
 task int t;
 endtask
 
+function int this.bar;
+endfunction
+
 class C;
     task new();
     endtask
@@ -423,9 +426,10 @@ endclass
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 4);
+    REQUIRE(diagnostics.size() == 5);
     CHECK(diagnostics[0].code == diag::TaskReturnType);
-    CHECK(diagnostics[1].code == diag::TaskConstructor);
-    CHECK(diagnostics[2].code == diag::ConstructorReturnType);
-    CHECK(diagnostics[3].code == diag::NewKeywordQualified);
+    CHECK(diagnostics[1].code == diag::ExpectedSubroutineName);
+    CHECK(diagnostics[2].code == diag::TaskConstructor);
+    CHECK(diagnostics[3].code == diag::ConstructorReturnType);
+    CHECK(diagnostics[4].code == diag::NewKeywordQualified);
 }
