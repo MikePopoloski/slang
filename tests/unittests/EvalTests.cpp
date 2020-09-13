@@ -1877,3 +1877,19 @@ endfunction
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Recursive function call") {
+    ScriptSession session;
+    session.eval(R"(
+function automatic integer factorial (input [31:0] operand);
+    if (operand >= 2)
+        factorial = factorial (operand - 1) * operand;
+    else
+        factorial = 1;
+endfunction: factorial
+)");
+
+    CHECK(session.eval("factorial(6)").integer() == 720);
+
+    NO_SESSION_ERRORS;
+}

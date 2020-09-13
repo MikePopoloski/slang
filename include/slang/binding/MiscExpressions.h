@@ -113,6 +113,8 @@ private:
     const Expression* thisClass_;
     span<const Expression*> arguments_;
     LookupLocation lookupLocation;
+
+    mutable bool inRecursion = false;
 };
 
 /// Adapts a data type for use in an expression tree. This is for cases where both an expression

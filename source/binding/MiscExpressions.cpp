@@ -561,6 +561,13 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
     if (!checkConstant(context, symbol, sourceRange))
         return false;
 
+    // Recursive function calls check body only once
+    // otherwise never finish until exceeding depth limit
+    if (inRecursion)
+        return true;
+    inRecursion = true;
+    auto guard = ScopeGuard([this] { inRecursion = false; });
+
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return false;
 

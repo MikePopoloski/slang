@@ -656,6 +656,17 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         return *compilation.emplace<DataTypeExpression>(resultType, syntax.sourceRange());
     }
 
+    // Recursive function call
+    if (invocation && symbol->kind == SymbolKind::Variable && result.selectors.empty()) {
+        auto scope = symbol->getParentScope();
+        if (scope && scope->asSymbol().kind == SymbolKind::Subroutine &&
+            scope->asSymbol().as<SubroutineSymbol>().returnValVar == symbol) {
+            ASSERT(scope->asSymbol().as<SubroutineSymbol>().subroutineKind ==
+                   SubroutineKind::Function);
+            symbol = &scope->asSymbol();
+        }
+    }
+
     Expression* expr;
     if (symbol->kind == SymbolKind::Subroutine) {
         expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), nullptr,
