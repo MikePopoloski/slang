@@ -32,7 +32,7 @@ public:
     /// (moving in the new item in the process).
     template<typename T>
     void set(T&& item) {
-        items[std::type_index(typeid(T))] = std::move(item);
+        items[std::type_index(typeid(T))] = std::forward<T>(item);
     }
 
     /// Gets an element of type T from the bag, if it exists.

@@ -99,6 +99,7 @@ public:
     SVInt& integer() & { return std::get<SVInt>(value); }
     const SVInt& integer() const& { return std::get<SVInt>(value); }
     SVInt integer() && { return std::get<SVInt>(std::move(value)); }
+    SVInt integer() const&& { return std::get<SVInt>(std::move(value)); }
 
     real_t real() const { return std::get<real_t>(value); }
     shortreal_t shortReal() const { return std::get<shortreal_t>(value); }
@@ -109,14 +110,17 @@ public:
     std::string& str() & { return std::get<std::string>(value); }
     const std::string& str() const& { return std::get<std::string>(value); }
     std::string str() && { return std::get<std::string>(std::move(value)); }
+    std::string str() const&& { return std::get<std::string>(std::move(value)); }
 
     Map& map() & { return std::get<Map>(value); }
     const Map& map() const& { return std::get<Map>(value); }
     Map map() && { return std::get<Map>(std::move(value)); }
+    Map map() const&& { return std::get<Map>(std::move(value)); }
 
     Queue& queue() & { return std::get<Queue>(value); }
     const Queue& queue() const& { return std::get<Queue>(value); }
     Queue queue() && { return std::get<Queue>(std::move(value)); }
+    Queue queue() const&& { return std::get<Queue>(std::move(value)); }
 
     ConstantValue getSlice(int32_t upper, int32_t lower, const ConstantValue& defaultValue) const;
 
