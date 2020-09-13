@@ -29,7 +29,7 @@ public:
     template<typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
     constexpr not_null(const not_null<U>& other) : not_null(other.get()) {}
 
-    not_null(not_null&& other) = default;
+    not_null(not_null&& other) noexcept = default;
     not_null(const not_null& other) = default;
     not_null& operator=(const not_null& other) = default;
 

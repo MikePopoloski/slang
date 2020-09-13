@@ -66,7 +66,7 @@ public:
         return *this;
     }
 
-    CopyPtr& operator=(CopyPtr&& other) {
+    CopyPtr& operator=(CopyPtr&& other) noexcept {
         if (this != &other) {
             delete ptr;
             ptr = std::exchange(other.ptr, nullptr);
