@@ -118,10 +118,25 @@ const Statement& SubroutineSymbol::getBody(EvalContext* evalContext) const {
     return binder.getStatement(context);
 }
 
-SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
+SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
                                                const FunctionDeclarationSyntax& syntax,
-                                               const Scope& parent) {
+                                               const Scope& parent, bool outOfBlock) {
+    // If this subroutine has a scoped name, it should be an out of block declaration.
+    // We shouldn't create a symbol now, since we need the class prototype to hook
+    // us in to the correct scope. Register this syntax with the compilation so that
+    // it can later be found by the prototype.
     auto proto = syntax.prototype;
+    if (!outOfBlock && proto->name->kind == SyntaxKind::ScopedName) {
+        // Remember the location in the parent scope where we *would* have inserted this
+        // subroutine, for later use during lookup.
+        uint32_t index = 1;
+        if (auto last = parent.getLastMember())
+            index = (uint32_t)parent.getLastMember()->getIndex() + 1;
+
+        compilation.addOutOfBlockMethod(parent, syntax, SymbolIndex(index));
+        return nullptr;
+    }
+
     Token nameToken = proto->name->getLastToken();
     auto lifetime = SemanticFacts::getVariableLifetime(proto->lifetime);
     if (!lifetime.has_value()) {
@@ -150,12 +165,6 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     result->setSyntax(syntax);
     result->setAttributes(parent, syntax.attributes);
-
-    // If this subroutine has a scoped name, it should be an out of block declaration.
-    // This will be validated later, but set the flag now (the flag also prevents it
-    // from showing up in the name map for its containing scope).
-    if (proto->name->kind == SyntaxKind::ScopedName)
-        result->flags |= MethodFlags::OutOfBand;
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
     if (proto->portList)
@@ -231,31 +240,34 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     result->arguments = arguments.copy(compilation);
     result->binder.setItems(*result, syntax.items, syntax.sourceRange());
-    return *result;
+    return result;
 }
 
-SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
+SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
                                                const ClassMethodDeclarationSyntax& syntax,
                                                const Scope& parent) {
-    auto& result = fromSyntax(compilation, *syntax.declaration, parent);
-    result.setAttributes(parent, syntax.attributes);
+    auto result = fromSyntax(compilation, *syntax.declaration, parent, /* outOfBlock */ false);
+    if (!result)
+        return nullptr;
+
+    result->setAttributes(parent, syntax.attributes);
 
     for (Token qual : syntax.qualifiers) {
         switch (qual.kind) {
             case TokenKind::LocalKeyword:
-                result.visibility = Visibility::Local;
+                result->visibility = Visibility::Local;
                 break;
             case TokenKind::ProtectedKeyword:
-                result.visibility = Visibility::Protected;
+                result->visibility = Visibility::Protected;
                 break;
             case TokenKind::StaticKeyword:
-                result.flags |= MethodFlags::Static;
+                result->flags |= MethodFlags::Static;
                 break;
             case TokenKind::PureKeyword:
-                result.flags |= MethodFlags::Pure;
+                result->flags |= MethodFlags::Pure;
                 break;
             case TokenKind::VirtualKeyword:
-                result.flags |= MethodFlags::Virtual;
+                result->flags |= MethodFlags::Virtual;
                 break;
             case TokenKind::ConstKeyword:
             case TokenKind::ExternKeyword:
@@ -267,10 +279,28 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
-    if (result.name == "new")
-        result.flags |= MethodFlags::Constructor;
+    if (result->name == "new")
+        result->flags |= MethodFlags::Constructor;
 
     return result;
+}
+
+SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
+                                                     const FunctionDeclarationSyntax& syntax,
+                                                     const ClassMethodPrototypeSymbol&,
+                                                     const Scope& parent, SymbolIndex outOfBlockIndex) {
+    auto result = fromSyntax(compilation, syntax, parent, /* outOfBlock */ true);
+    ASSERT(result);
+
+    // Set the parent pointer of the new subroutine so that lookups work correctly.
+    // We won't actually exist in the scope's name map or be iterable through its members,
+    // but nothing should be trying to look for these that way anyway.
+    result->setParent(parent, SymbolIndex(INT32_MAX));
+    result->outOfBlockIndex = outOfBlockIndex;
+
+    // TODO: check / merge prototype
+
+    return *result;
 }
 
 void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
@@ -486,7 +516,8 @@ Symbol* recurseGateArray(Compilation& compilation, GateType gateType,
     // make up an empty array so that we don't get further errors when
     // things try to reference this symbol.
     auto nameToken = instance.decl->name;
-    auto dim = context.evalDimension(**it, /* requireRange */ true, /* isPacked */ false);
+    auto dim = context.evalDimension(**it, /* requireRange */
+                                     true, /* isPacked */ false);
     if (!dim.isRange()) {
         return compilation.emplace<GateArraySymbol>(compilation, nameToken.valueText(),
                                                     nameToken.location(),

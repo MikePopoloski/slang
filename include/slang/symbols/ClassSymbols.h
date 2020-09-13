@@ -48,6 +48,7 @@ public:
                                bitmask<MethodFlags> flags);
 
     const Type& getReturnType() const { return declaredReturnType.getType(); }
+    const SubroutineSymbol* getSubroutine() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -55,6 +56,9 @@ public:
                                                   const ClassMethodPrototypeSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassMethodPrototype; }
+
+private:
+    mutable optional<const SubroutineSymbol*> subroutine;
 };
 
 class GenericClassDefSymbol;

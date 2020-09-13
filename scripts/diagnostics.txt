@@ -225,6 +225,7 @@ error MixingSubroutinePortKinds "port declarations not allowed when subroutine d
 error UnpackedArrayParamType "unpacked array parameter requires explicit data type"
 error AutomaticNotAllowed "automatic variables can only be declared in procedural contexts"
 error ForeachWildcardIndex "foreach loops cannot be used with associative arrays that have a wildcard index"
+error NoMethodImplFound "no implementation found in parent scope for '{}'"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 warning warning-task WarningTask "$warning encountered{}"

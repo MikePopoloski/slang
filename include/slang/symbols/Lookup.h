@@ -143,7 +143,7 @@ private:
 
     static void unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
                                 optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
-                                LookupResult& result);
+                                SymbolIndex outOfBlockIndex, LookupResult& result);
 
     static void qualified(const Scope& scope, const ScopedNameSyntax& syntax,
                           LookupLocation location, bitmask<LookupFlags> flags,

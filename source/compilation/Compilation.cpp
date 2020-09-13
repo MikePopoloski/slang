@@ -87,6 +87,14 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.issueDiagnostic();
     }
 
+    void handle(const ClassMethodPrototypeSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        if (auto sub = symbol.getSubroutine())
+            handle(*sub);
+    }
+
     void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit)
             return;
@@ -611,6 +619,27 @@ span<const InstanceSymbol* const> Compilation::getParentInstances(
 
 void Compilation::noteInterfacePort(const Definition& definition) {
     usedIfacePorts.emplace(&definition);
+}
+
+void Compilation::addOutOfBlockMethod(const Scope& scope, const FunctionDeclarationSyntax& syntax,
+                                      SymbolIndex index) {
+    auto& scoped = syntax.prototype->name->as<ScopedNameSyntax>();
+    string_view className = scoped.left->getLastToken().valueText();
+    string_view methodName = scoped.right->getLastToken().valueText();
+
+    string_view name = syntax.prototype->name->getLastToken().valueText();
+    outOfBlockMethods.emplace(std::make_tuple(className, methodName, &scope),
+                              std::make_tuple(&syntax, index));
+}
+
+std::tuple<const FunctionDeclarationSyntax*, SymbolIndex> Compilation::findOutOfBlockMethod(
+    const Scope& scope, string_view className, string_view methodName) const {
+
+    auto it = outOfBlockMethods.find({ className, methodName, &scope });
+    if (it != outOfBlockMethods.end())
+        return it->second;
+
+    return { nullptr, SymbolIndex() };
 }
 
 const NameSyntax& Compilation::parseName(string_view name) {

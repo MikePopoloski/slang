@@ -94,16 +94,10 @@ private:
     mutable optional<const PackageSymbol*> package;
 };
 
-enum class MethodFlags : uint8_t {
-    None = 0,
-    Virtual = 1,
-    Pure = 2,
-    Static = 4,
-    Constructor = 8,
-    OutOfBand = 16
-};
-BITMASK(MethodFlags, OutOfBand);
+enum class MethodFlags : uint8_t { None = 0, Virtual = 1, Pure = 2, Static = 4, Constructor = 8 };
+BITMASK(MethodFlags, Constructor);
 
+class ClassMethodPrototypeSymbol;
 struct ClassMethodDeclarationSyntax;
 struct FunctionDeclarationSyntax;
 struct FunctionPortListSyntax;
@@ -120,6 +114,7 @@ public:
     SubroutineKind subroutineKind;
     Visibility visibility = Visibility::Public;
     bitmask<MethodFlags> flags = MethodFlags::None;
+    SymbolIndex outOfBlockIndex{ 0 };
 
     SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                      VariableLifetime defaultLifetime, SubroutineKind subroutineKind) :
@@ -132,13 +127,18 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static SubroutineSymbol& fromSyntax(Compilation& compilation,
+    static SubroutineSymbol* fromSyntax(Compilation& compilation,
                                         const FunctionDeclarationSyntax& syntax,
-                                        const Scope& parent);
+                                        const Scope& parent, bool outOfBlock);
 
-    static SubroutineSymbol& fromSyntax(Compilation& compilation,
+    static SubroutineSymbol* fromSyntax(Compilation& compilation,
                                         const ClassMethodDeclarationSyntax& syntax,
                                         const Scope& parent);
+
+    static SubroutineSymbol& createOutOfBlock(Compilation& compilation,
+                                              const FunctionDeclarationSyntax& syntax,
+                                              const ClassMethodPrototypeSymbol& prototype,
+                                              const Scope& newParent, SymbolIndex outOfBlockIndex);
 
     static void buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
                                VariableLifetime defaultLifetime,

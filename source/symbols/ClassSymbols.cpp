@@ -9,6 +9,7 @@
 #include "ParameterBuilder.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/syntax/AllSyntax.h"
@@ -163,6 +164,28 @@ ClassMethodPrototypeSymbol& ClassMethodPrototypeSymbol::fromSyntax(
     return *result;
 }
 
+const SubroutineSymbol* ClassMethodPrototypeSymbol::getSubroutine() const {
+    if (subroutine)
+        return *subroutine;
+
+    // The out-of-block definition must be in our class's parent scope.
+    ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
+    auto& classType = getParentScope()->asSymbol();
+    auto& scope = *classType.getParentScope();
+
+    auto& comp = scope.getCompilation();
+    auto [syntax, index] = comp.findOutOfBlockMethod(scope, classType.name, name);
+    if (!syntax) {
+        scope.addDiag(diag::NoMethodImplFound, location) << name;
+        subroutine = nullptr;
+        return nullptr;
+    }
+
+    subroutine =
+        &SubroutineSymbol::createOutOfBlock(comp, *syntax, *this, *getParentScope(), index);
+    return *subroutine;
+}
+
 void ClassMethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("returnType", getReturnType());
     serializer.write("subroutineKind", toString(subroutineKind));
@@ -278,6 +301,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     // have this specialization cached we'll throw it away, but that's not a big deal.
     auto classType = compilation.emplace<ClassType>(compilation, name, location);
     classType->genericClass = this;
+    classType->setParent(*scope, getIndex());
 
     ParameterBuilder paramBuilder(*scope, name, paramDecls);
     if (syntax)

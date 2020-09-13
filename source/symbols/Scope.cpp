@@ -208,10 +208,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::FunctionDeclaration:
-        case SyntaxKind::TaskDeclaration:
-            addMember(SubroutineSymbol::fromSyntax(compilation,
-                                                   syntax.as<FunctionDeclarationSyntax>(), *this));
+        case SyntaxKind::TaskDeclaration: {
+            auto subroutine = SubroutineSymbol::fromSyntax(
+                compilation, syntax.as<FunctionDeclarationSyntax>(), *this, /* outOfBlock */ false);
+            if (subroutine)
+                addMember(*subroutine);
             break;
+        }
         case SyntaxKind::DataDeclaration: {
             // If this declaration has a named type, we need to defer the creation of the variables
             // because that type name may actually resolve to a net type or interface instance.
@@ -334,10 +337,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             }
             break;
         }
-        case SyntaxKind::ClassMethodDeclaration:
-            addMember(SubroutineSymbol::fromSyntax(
-                compilation, syntax.as<ClassMethodDeclarationSyntax>(), *this));
+        case SyntaxKind::ClassMethodDeclaration: {
+            auto subroutine = SubroutineSymbol::fromSyntax(
+                compilation, syntax.as<ClassMethodDeclarationSyntax>(), *this);
+            if (subroutine)
+                addMember(*subroutine);
             break;
+        }
         case SyntaxKind::ClassMethodPrototype:
             addMember(ClassMethodPrototypeSymbol::fromSyntax(
                 *this, syntax.as<ClassMethodPrototypeSyntax>()));
@@ -374,6 +380,8 @@ const Symbol* Scope::find(string_view name) const {
             return nullptr;
         case SymbolKind::TransparentMember:
             return &symbol->as<TransparentMemberSymbol>().wrapped;
+        case SymbolKind::ClassMethodPrototype:
+            return symbol->as<ClassMethodPrototypeSymbol>().getSubroutine();
         default:
             return symbol;
     }
@@ -412,19 +420,10 @@ void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborat
     if (!member->nextInScope)
         lastMember = member;
 
-    // Add to the name map if the symbol has a name. Exceptions are:
-    // 1. Ports and packages are in their own namespaces
-    // 2. Out-of-block methods can't be looked up in their containing scope,
-    //    but instead get looked up via their class.
-    bool addToMap = !member->name.empty() && member->kind != SymbolKind::Port &&
-                    member->kind != SymbolKind::Package;
-
-    if (member->kind == SymbolKind::Subroutine &&
-        (member->as<SubroutineSymbol>().flags & MethodFlags::OutOfBand) != 0) {
-        addToMap = false;
-    }
-
-    if (addToMap) {
+    // Add to the name map if the symbol has a name, unless it's a port.
+    // Per the spec, ports exist in their own namespaces.
+    if (!member->name.empty() && member->kind != SymbolKind::Port &&
+        member->kind != SymbolKind::Package) {
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second)
             handleNameConflict(*member, pair.first->second, isElaborating);

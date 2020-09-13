@@ -34,6 +34,7 @@ class SyntaxTree;
 class SystemSubroutine;
 
 struct CompilationUnitSyntax;
+struct FunctionDeclarationSyntax;
 struct ModuleDeclarationSyntax;
 
 enum class IntegralFlags : uint8_t;
@@ -195,6 +196,18 @@ public:
     /// Notes the fact that the given definition has been used in an interface port.
     /// This prevents warning about that interface definition being unused in the design.
     void noteInterfacePort(const Definition& definition);
+
+    /// Tracks the existence of an out-of-block metohd definition in the given scope.
+    /// This can later be retrieved by calling findOutOfBlockMethod().
+    void addOutOfBlockMethod(const Scope& scope, const FunctionDeclarationSyntax& syntax,
+                             SymbolIndex index);
+
+    /// Searches for an out-of-block method definition in the given @a scope with @a name
+    /// for a @a className class.
+    /// Returns a tuple of syntax pointer and symbol index in the defining scope.
+    /// If not found, the syntax pointer will be null.
+    std::tuple<const FunctionDeclarationSyntax*, SymbolIndex> findOutOfBlockMethod(
+        const Scope& scope, string_view className, string_view methodName) const;
 
     /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
     /// This is mostly for testing and API purposes; normal compilation never does this.
@@ -405,6 +418,13 @@ private:
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
     using DiagMap = flat_hash_map<std::tuple<DiagCode, SourceLocation>, std::vector<Diagnostic>>;
     DiagMap diagMap;
+
+    // A map from class name + method name + scope to out-of-block method definitions.
+    // These get registered when we find the function and later get used when we see the
+    // class method prototype.
+    flat_hash_map<std::tuple<string_view, string_view, const Scope*>,
+                  std::tuple<const FunctionDeclarationSyntax*, SymbolIndex>>
+        outOfBlockMethods;
 
     std::unique_ptr<RootSymbol> root;
     std::unique_ptr<InstanceCache> instanceCache;

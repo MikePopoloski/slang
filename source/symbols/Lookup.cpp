@@ -581,7 +581,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
         return;
 
     // Perform the lookup.
-    unqualifiedImpl(scope, name.text(), location, name.range(), flags, result);
+    unqualifiedImpl(scope, name.text(), location, name.range(), flags, {}, result);
     if (!result.found && !result.hasError())
         reportUndeclared(scope, name.text(), name.range(), flags, false, result);
 
@@ -620,7 +620,7 @@ const Symbol* Lookup::unqualified(const Scope& scope, string_view name,
         return nullptr;
 
     LookupResult result;
-    unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, result);
+    unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, {}, result);
     ASSERT(result.selectors.empty());
     unwrapResult(scope, std::nullopt, result);
 
@@ -633,7 +633,7 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, string_view name, Lookup
         return nullptr;
 
     LookupResult result;
-    unqualifiedImpl(scope, name, location, sourceRange, flags, result);
+    unqualifiedImpl(scope, name, location, sourceRange, flags, {}, result);
     ASSERT(result.selectors.empty());
     unwrapResult(scope, sourceRange, result);
 
@@ -717,7 +717,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
 
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
                              optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
-                             LookupResult& result) {
+                             SymbolIndex outOfBlockIndex, LookupResult& result) {
     // Try a simple name lookup to see if we find anything.
     auto& nameMap = scope.getNameMap();
     const Symbol* symbol = nullptr;
@@ -759,6 +759,10 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                 case SymbolKind::ForwardingTypedef:
                     // If we find a forwarding typedef, the actual typedef was never defined.
                     // Just ignore it, we'll issue a better error later.
+                    break;
+                case SymbolKind::ClassMethodPrototype:
+                    // Looking up a prototype should always forward on to the actual method.
+                    result.found = symbol->as<ClassMethodPrototypeSymbol>().getSubroutine();
                     break;
                 default:
                     result.found = symbol;
@@ -839,7 +843,26 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
     if (!location.getScope())
         return;
 
-    return unqualifiedImpl(*location.getScope(), name, location, sourceRange, flags, result);
+    // If this scope was an out-of-block subroutine, tell the next recursive call about it.
+    // Otherwise, if our previous call was for such a situation and we didn't find the symbol
+    // in this class scope, we need to use the subroutine's out-of-block lookup location
+    // instead in order to properly handle cases like:
+    //   class C;
+    //     extern function int foo;
+    //   endclass
+    //   localparam int k = ...;
+    //   function int C::foo;
+    //     return k;
+    //   endfunction
+    if (scope.asSymbol().kind == SymbolKind::Subroutine)
+        outOfBlockIndex = scope.asSymbol().as<SubroutineSymbol>().outOfBlockIndex;
+    else if (uint32_t(outOfBlockIndex) != 0) {
+        location = LookupLocation(location.getScope(), uint32_t(outOfBlockIndex));
+        outOfBlockIndex = SymbolIndex(0);
+    }
+
+    return unqualifiedImpl(*location.getScope(), name, location, sourceRange, flags,
+                           outOfBlockIndex, result);
 }
 
 void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, LookupLocation location,
@@ -905,7 +928,7 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     }
 
     // Start by trying to find the first name segment using normal unqualified lookup
-    unqualifiedImpl(scope, name, location, first.range(), flags, result);
+    unqualifiedImpl(scope, name, location, first.range(), flags, {}, result);
     if (result.hasError())
         return;
 

@@ -424,3 +424,46 @@ endclass
     CHECK(diags[2].code == diag::NestedNonStaticClassProperty);
     CHECK(diags[3].code == diag::NestedNonStaticClassMethod);
 }
+
+TEST_CASE("Out-of-block declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int i;
+    static int j;
+    extern function int foo(int bar, int baz = 1);
+endclass
+
+class D;
+    extern static function real foo;
+endclass
+
+localparam int k = 5;
+
+function int C::foo(int bar, int baz = 1);
+    i = j + k + bar + baz;
+endfunction
+
+function real D::foo;
+endfunction
+
+class G #(type T);
+    extern function T foo;
+endclass
+
+// TODO: return type should be required to be scoped
+function T G::foo;
+    return 0;
+endfunction
+
+module m;
+    G #(real) g1;
+    G #(int) g2;
+
+    int i = g2.foo();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

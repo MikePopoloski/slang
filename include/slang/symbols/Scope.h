@@ -193,6 +193,10 @@ public:
         return { firstMember, nullptr };
     }
 
+    /// Gets a pointer to the last member in the scope. Note that this does not
+    /// force elaboration of the scope.
+    const Symbol* getLastMember() const { return lastMember; }
+
     const SymbolMap& getNameMap() const {
         ensureElaborated();
         return *nameMap;
@@ -209,8 +213,6 @@ protected:
         if (deferredMemberIndex != DeferredMemberIndex::Invalid)
             elaborate();
     }
-
-    const Symbol* getLastMember() const { return lastMember; }
 
 private:
     friend class Compilation;
