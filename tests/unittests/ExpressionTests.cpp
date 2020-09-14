@@ -1471,6 +1471,36 @@ localparam t=foo("ABCDE");
 )",
           diag::BadStreamSize },
 
+        { R"(
+    bit [0:2] c [2:0];
+    sub u({>>{c}});
+endmodule
+module sub(output byte b);
+)",
+          diag::BadStreamSize },
+
+        { R"(
+    sub u({>>{2}});
+endmodule
+module sub(input bit[3:0] a[0:3]);
+)",
+          diag::BadStreamSize },
+
+        { R"(
+    bit [0:1] c [1:0];
+    sub u({>>{c}});
+endmodule
+module sub(inout byte b);
+            )",
+          diag::BadStreamContext },
+
+        { R"(
+    byte c [3:0];
+    sub u[3:0] ({>>{c}});
+endmodule
+module sub(input byte b);
+)",
+          diag::BadStreamContext },
     };
 
     for (const auto& test : illegal)
@@ -1484,7 +1514,15 @@ localparam t=foo("ABCDE");
         "shortint a; byte b[2]; int c = {<<3{a, {<<5{b}}}};",
         "shortint a; byte b[2]; int c; assign {<<3{{<<5{b}}, a}}=c;",
         "struct{bit a[];int b;}a;struct {byte a[];bit b;}b;assign{<<{a}}={>>{b}};",
-        "struct{bit a[];int b;}a;int b;assign {>>{a}} = {<<{b}};"
+        "struct{bit a[];int b;}a;int b;assign {>>{a}} = {<<{b}};",
+        "localparam int p = {<<{6}}; enum {a={>>{2}},b={<<{p}}, c} t;",
+
+        R"(
+    bit [0:1] c [2:0];
+    sub u({<<3{shortint'(100)}}, {>>{c}});
+endmodule
+module sub(input bit[3:0] a[0:3], output byte b);
+)"
     };
 
     for (const auto& test : legal)

@@ -311,7 +311,62 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         previous = ev.getValue();
         previousRange = ev.getInitializer()->sourceRange;
 
-        checkValue(previous, previousRange.start());
+        if (!previous)
+            return;
+        auto loc = previousRange.start();
+        auto& value = previous.integer();
+
+        // An enumerated name with x or z assignments assigned to an enum with no explicit data type
+        // or an explicit 2-state declaration shall be a syntax error.
+        if (!base->isFourState() && value.hasUnknown()) {
+            scope.addDiag(diag::EnumValueUnknownBits, loc) << value << *base;
+            return;
+        }
+
+        // Any enumeration encoding value that is outside the representable range of the enum base
+        // type shall be an error. For an unsigned base type, this occurs if the cast truncates the
+        // value and any of the discarded bits are nonzero. For a signed base type, this occurs if
+        // the cast truncates the value and any of the discarded bits are not equal to the sign bit
+        // of the result.
+        if (value.getBitWidth() > bitWidth) {
+            logic_t msb = value[int32_t(bitWidth) - 1];
+            auto diff = value.getBitWidth() - bitWidth;
+            bool good = true;
+            if (!value.hasUnknown()) {
+                if (base->isSigned() && exactlyEqual(msb, logic_t(true)))
+                    good = value.countLeadingOnes() >= diff;
+                else
+                    good = value.countLeadingZeros() >= diff;
+            }
+            else {
+                if (!base->isSigned())
+                    msb = logic_t(false);
+                for (auto i = value.getBitWidth() - 1; i >= bitWidth; i--) {
+                    if (!exactlyEqual(value[int32_t(i)], msb)) {
+                        good = false;
+                        break;
+                    }
+                }
+            }
+            if (!good) {
+                scope.addDiag(diag::EnumValueOutOfRange, loc) << value << *base;
+                return;
+            }
+        }
+
+        // Implicit casting to base type
+        if (value.getBitWidth() != bitWidth) {
+            auto cv = previous.convertToInt(bitWidth, base->isSigned(), base->isFourState());
+            ev.setValue(cv);
+            previous = std::move(cv);
+        }
+        else {
+            if (!base->isFourState())
+                value.flattenUnknowns();
+            value.setSigned(base->isSigned());
+        }
+
+        checkValue(previous, loc);
     };
 
     // For enumerands that have no initializer, infer the value via this function.

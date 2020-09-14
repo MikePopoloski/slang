@@ -345,25 +345,16 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             return *result;
         }
 
-        result = compilation.emplace<ConversionExpression>(type, ConversionKind::Implicit, *result,
-                                                           result->sourceRange);
+        // Do not convert (truncate) enum initializer so out of range value can be checked
+        if (!(context.flags & BindFlags::EnumInitializer))
+            result = compilation.emplace<ConversionExpression>(type, ConversionKind::Implicit,
+                                                               *result, result->sourceRange);
     }
     else {
         result = &implicitConversion(context, type, *result);
     }
 
     selfDetermined(context, result);
-
-    // If this is an enum initializer and we just discarded unknown bits by
-    // implicitly converting to a 2-state result, the standard says we
-    // should declare this an error.
-    if ((context.flags & BindFlags::EnumInitializer) != 0 && !type.isFourState()) {
-        ConstantValue cv = context.tryEval(expr);
-        if (cv.isInteger() && cv.integer().hasUnknown()) {
-            context.addDiag(diag::EnumValueUnknownBits, expr.sourceRange) << cv << type;
-            return badExpr(compilation, result);
-        }
-    }
 
     return *result;
 }

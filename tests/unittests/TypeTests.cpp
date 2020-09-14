@@ -1003,3 +1003,21 @@ TEST_CASE("Unpacked array/struct bit-streaming types") {
     CHECK(diags[1].code == diag::BadSystemSubroutineArg);
     CHECK(diags[2].code == diag::BadSystemSubroutineArg);
 }
+
+TEST_CASE("Enum value out of range") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum logic[1:0] { a=4, b=1/0} foo;
+    enum bit signed[0:1] { c=2, d=-3} bar;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    const int numOfErrors = 4;
+    REQUIRE(diags.size() == numOfErrors);
+    for (int i = 0; i < numOfErrors; i++)
+        CHECK(diags[i].code == diag::EnumValueOutOfRange);
+}
