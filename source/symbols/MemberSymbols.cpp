@@ -131,7 +131,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         // subroutine, for later use during lookup.
         uint32_t index = 1;
         if (auto last = parent.getLastMember())
-            index = (uint32_t)parent.getLastMember()->getIndex() + 1;
+            index = (uint32_t)last->getIndex() + 1;
 
         compilation.addOutOfBlockMethod(parent, syntax, SymbolIndex(index));
         return nullptr;
