@@ -627,7 +627,6 @@ void Compilation::addOutOfBlockMethod(const Scope& scope, const FunctionDeclarat
     string_view className = scoped.left->getLastToken().valueText();
     string_view methodName = scoped.right->getLastToken().valueText();
 
-    string_view name = syntax.prototype->name->getLastToken().valueText();
     outOfBlockMethods.emplace(std::make_tuple(className, methodName, &scope),
                               std::make_tuple(&syntax, index));
 }

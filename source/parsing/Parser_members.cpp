@@ -269,7 +269,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
     // on an out-of-block method definition.
     if (isMethodQualifier(token.kind)) {
         Token t;
-        int index = 0;
+        uint32_t index = 0;
         do {
             t = peek(++index);
         } while (isMethodQualifier(t.kind));
@@ -277,7 +277,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
         if (t.kind == TokenKind::FunctionKeyword || t.kind == TokenKind::TaskKeyword) {
             // Skip all the qualifiers.
             addDiag(diag::QualifiersOnOutOfBlock, token.location()) << token.range();
-            for (int i = 0; i < index; i++)
+            for (uint32_t i = 0; i < index; i++)
                 skipToken(std::nullopt);
 
             auto kind = t.kind == TokenKind::FunctionKeyword ? SyntaxKind::FunctionDeclaration
