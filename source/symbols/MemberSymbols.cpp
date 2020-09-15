@@ -16,6 +16,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/Type.h"
@@ -285,10 +286,36 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     return result;
 }
 
+static bool isSameExpr(const SyntaxNode& l, const SyntaxNode& r) {
+    size_t childCount = l.getChildCount();
+    if (l.kind != r.kind || childCount != r.getChildCount())
+        return false;
+
+    for (size_t i = 0; i < childCount; i++) {
+        auto ln = l.childNode(i);
+        auto rn = r.childNode(i);
+        if (bool(ln) != bool(rn))
+            return false;
+
+        if (ln) {
+            if (!isSameExpr(*ln, *rn))
+                return false;
+        }
+        else {
+            Token lt = l.childToken(i);
+            Token rt = r.childToken(i);
+            if (lt.kind != rt.kind || lt.valueText() != rt.valueText())
+                return false;
+        }
+    }
+    return true;
+}
+
 SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
                                                      const FunctionDeclarationSyntax& syntax,
-                                                     const ClassMethodPrototypeSymbol&,
-                                                     const Scope& parent, SymbolIndex outOfBlockIndex) {
+                                                     const ClassMethodPrototypeSymbol& prototype,
+                                                     const Scope& parent,
+                                                     SymbolIndex outOfBlockIndex) {
     auto result = fromSyntax(compilation, syntax, parent, /* outOfBlock */ true);
     ASSERT(result);
 
@@ -298,7 +325,100 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
     result->setParent(parent, SymbolIndex(INT32_MAX));
     result->outOfBlockIndex = outOfBlockIndex;
 
-    // TODO: check / merge prototype
+    // All of our flags are taken from the prototype.
+    result->visibility = prototype.visibility;
+    result->flags = prototype.flags;
+
+    // Check that return type and arguments match what was declared in the prototype.
+    auto& defRetType = result->getReturnType();
+    auto& protoRetType = prototype.getReturnType();
+    if (!defRetType.isMatching(protoRetType) && !defRetType.isError() && !protoRetType.isError()) {
+        auto& diag =
+            parent.addDiag(diag::MethodReturnMismatch, syntax.prototype->returnType->sourceRange());
+        diag << defRetType;
+        diag << result->name;
+        diag << protoRetType;
+        diag.addNote(diag::NoteDeclarationHere, prototype.location);
+        return *result;
+    }
+
+    auto defArgs = result->arguments;
+    auto protoArgs = prototype.arguments;
+    if (defArgs.size() != protoArgs.size()) {
+        auto& diag = parent.addDiag(diag::MethodArgCountMismatch, result->location);
+        diag << result->name;
+        diag.addNote(diag::NoteDeclarationHere, prototype.location);
+        return *result;
+    }
+
+    for (auto di = defArgs.begin(), pi = protoArgs.begin(); di != defArgs.end(); di++, pi++) {
+        // Names must be identical.
+        const FormalArgumentSymbol* da = *di;
+        const FormalArgumentSymbol* pa = *pi;
+        if (da->name != pa->name) {
+            auto& diag = parent.addDiag(diag::MethodArgNameMismatch, da->location);
+            diag << da->name << pa->name;
+            diag.addNote(diag::NoteDeclarationHere, pa->location);
+            return *result;
+        }
+
+        // Types must match.
+        const Type& dt = da->getType();
+        const Type& pt = pa->getType();
+        if (!dt.isMatching(pt) && !dt.isError() && !pt.isError()) {
+            auto& diag = parent.addDiag(diag::MethodArgTypeMismatch, da->location);
+            diag << da->name << dt << pt;
+            diag.addNote(diag::NoteDeclarationHere, pa->location);
+            return *result;
+        }
+
+        // If the definition provides a default value for an argument, the prototype
+        // must also have that default, and they must be identical expressions.
+        // If the definition does't provide a default but the prototype does, copy
+        // that default into the definition.
+        const Expression* de = da->getInitializer();
+        const Expression* pe = pa->getInitializer();
+        if (de) {
+            if (!pe) {
+                auto& diag = parent.addDiag(diag::MethodArgNoDefault, de->sourceRange);
+                diag << da->name;
+                diag.addNote(diag::NoteDeclarationHere, pa->location);
+                return *result;
+            }
+            else if (de->syntax && pe->syntax) {
+                // Check for "syntactically identical" expressions.
+                if (!isSameExpr(*de->syntax, *pe->syntax)) {
+                    auto& diag = parent.addDiag(diag::MethodArgDefaultMismatch, de->sourceRange);
+                    diag << da->name;
+                    diag.addNote(diag::NoteDeclarationHere, pa->location) << pe->sourceRange;
+                    return *result;
+                }
+            }
+        }
+        else if (pe) {
+            // Copy the prototype default into the definition. The const_cast here is gross
+            // but ok since we literally just created these symbols when we called fromSyntax().
+            // NOTE: there is an ambiguity here -- we could copy the bound expression, or we
+            // could copy the expression syntax nodes and re-bind them in the context of the
+            // definition. This has subtle effects for cases like:
+            //
+            //   localparam int k = 1;
+            //
+            //   class C;
+            //     extern function int foo(int i = k);
+            //     localparam int k = 2;
+            //   endclass
+            //
+            //   function int C::foo(int i);
+            //     return i;
+            //   endfunction
+            //
+            // Does foo have a default of 1 or 2? Other simulators disagree with each other
+            // and can say either result. I think it makes most sense for the default to
+            // come from the prototype's context, so that's what I do here.
+            const_cast<FormalArgumentSymbol*>(da)->setInitializer(*pe);
+        }
+    }
 
     return *result;
 }

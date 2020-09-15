@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include "slang/symbols/ClassSymbols.h"
+
 static constexpr const char* PacketClass = R"(
 class Packet;
     bit [3:0] command;
@@ -460,10 +462,94 @@ module m;
     G #(int) g2;
 
     int i = g2.foo();
+    real r = D::foo();
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Out-of-block error cases") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    extern function int f1(int bar, int baz);
+    extern function int f2(int bar, int baz);
+    extern function int f3(int bar, int baz);
+    extern function int f4(int bar, int baz);
+    extern function int f5(int bar);
+    extern function int f6(int bar = 1 + 1);
+    extern function int f7(int bar = 1 + 1 + 2);
+endclass
+
+function real C::f1;
+endfunction
+
+function int C::f2;
+endfunction
+
+function int C::f3(int bar, int boz);
+endfunction
+
+function int C::f4(int bar, real baz);
+endfunction
+
+function int C::f5(int bar = 1);
+endfunction
+
+function int C::f6(int bar = 2);
+endfunction
+
+function int C::f7(int bar = 1 + 1 + 3);
+endfunction
+
+typedef int T;
+class D;
+    extern function void f(T x);
+    typedef real T;
+endclass
+function void D::f(T x);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::MethodReturnMismatch);
+    CHECK(diags[1].code == diag::MethodArgCountMismatch);
+    CHECK(diags[2].code == diag::MethodArgNameMismatch);
+    CHECK(diags[3].code == diag::MethodArgTypeMismatch);
+    CHECK(diags[4].code == diag::MethodArgNoDefault);
+    CHECK(diags[5].code == diag::MethodArgDefaultMismatch);
+    CHECK(diags[6].code == diag::MethodArgDefaultMismatch);
+    CHECK(diags[7].code == diag::MethodArgTypeMismatch);
+}
+
+TEST_CASE("Out-of-block default value") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam int k = 1;
+class C;
+    extern function int f1(int bar = k);
+    localparam int k = 2;
+endclass
+
+function int C::f1(int bar);
+    return bar;
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& C = compilation.getRoot().compilationUnits[0]->lookupName<ClassType>("C");
+    auto& f1 = C.find<SubroutineSymbol>("f1");
+    auto init = f1.arguments[0]->getInitializer();
+    REQUIRE(init);
+
+    EvalContext ctx(compilation);
+    CHECK(init->eval(ctx).integer() == 1);
 }
