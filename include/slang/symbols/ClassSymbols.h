@@ -115,6 +115,13 @@ public:
     const Type& getSpecialization(Compilation& compilation, LookupLocation lookupLocation,
                                   const ParameterValueAssignmentSyntax& syntax) const;
 
+    /// Forces a specialization with all parameters set to invalid values. This allows
+    /// determining members that aren't dependent on parameters.
+    const Type& getInvalidSpecialization(Compilation& compilation) const;
+
+    /// Gets the number of specializations that have been made for this generic class.
+    size_t numSpecializations() const { return specMap.size(); }
+
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getFirstForwardDecl() const { return firstForward; }
 
@@ -152,13 +159,52 @@ private:
     };
 
     const Type* getSpecializationImpl(Compilation& compilation, LookupLocation lookupLocation,
-                                      SourceLocation instanceLoc,
+                                      SourceLocation instanceLoc, bool forceInvalidParams,
                                       const ParameterValueAssignmentSyntax* syntax) const;
 
     SmallVectorSized<Definition::ParameterDecl, 8> paramDecls;
-    mutable flat_hash_map<SpecializationKey, const Type*, Hasher> specializations;
+
+    using SpecMap = flat_hash_map<SpecializationKey, const Type*, Hasher>;
+    mutable SpecMap specMap;
     mutable optional<const Type*> defaultSpecialization;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
+
+public:
+    /// An iterator for specializations of the generic class.
+    class iterator : public iterator_facade<iterator, std::forward_iterator_tag, const Type> {
+    public:
+        iterator(SpecMap::const_iterator it) : it(it) {}
+        iterator(const iterator& other) : it(other.it) {}
+
+        iterator& operator=(const iterator& other) {
+            it = other.it;
+            return *this;
+        }
+
+        bool operator==(const iterator& other) const { return it == other.it; }
+
+        const Type& operator*() const { return *it->second; }
+        const Type& operator*() { return *it->second; }
+
+        iterator& operator++() {
+            ++it;
+            return *this;
+        }
+
+        iterator operator++(int) {
+            iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+    private:
+        SpecMap::const_iterator it;
+    };
+
+    /// Gets an iterator to the specializations created for the generic class.
+    iterator_range<iterator> specializations() const {
+        return { iterator(specMap.begin()), iterator(specMap.end()) };
+    }
 };
 
 } // namespace slang

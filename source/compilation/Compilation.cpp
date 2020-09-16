@@ -95,6 +95,22 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             handle(*sub);
     }
 
+    void handle(const GenericClassDefSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        // If there have been no specializations, force an empty one now
+        // to make sure we collect all diagnostics that don't depend on
+        // parameter values.
+        if (symbol.numSpecializations() == 0)
+            symbol.getInvalidSpecialization(compilation).visit(*this);
+        else {
+            // Make sure we fully visit each specialization.
+            for (auto& spec : symbol.specializations())
+                spec.visit(*this);
+        }
+    }
+
     void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit)
             return;

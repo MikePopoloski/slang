@@ -302,6 +302,14 @@ class D #(int q = 2, int r);
     endfunction
 endclass
 
+class E #(int s);
+    int asdf = foo;
+endclass
+
+class F #(int t);
+    int asdf = foo;
+endclass
+
 module m;
     C c1 = new;  // default specialization
     C #(4) c2 = new;
@@ -314,6 +322,9 @@ module m;
     localparam int p1 = C::p; // error
     localparam int p2 = C#()::p;
     localparam int p3 = D#(.r(5))::r;
+
+    E #(5) e1;
+    E #(6) e2;
 endmodule
 )");
 
@@ -325,10 +336,12 @@ endmodule
     CHECK(m.find<ParameterSymbol>("p3").getValue().integer() == 5);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == diag::NoDefaultSpecialization);
-    CHECK(diags[1].code == diag::NotAGenericClass);
-    CHECK(diags[2].code == diag::GenericClassScopeResolution);
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::NoDefaultSpecialization);
+    CHECK(diags[3].code == diag::NotAGenericClass);
+    CHECK(diags[4].code == diag::GenericClassScopeResolution);
 }
 
 TEST_CASE("Generic class typedefs") {
@@ -454,6 +467,13 @@ endclass
 
 function G::T G::foo;
     return 0;
+endfunction
+
+class H #(int p);
+    extern function int foo;
+endclass
+
+function int H::foo;
 endfunction
 
 module m;

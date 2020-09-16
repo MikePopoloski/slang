@@ -281,7 +281,8 @@ const Type* GenericClassDefSymbol::getDefaultSpecialization(Compilation& compila
     if (defaultSpecialization)
         return *defaultSpecialization;
 
-    auto result = getSpecializationImpl(compilation, LookupLocation::max, location, nullptr);
+    auto result = getSpecializationImpl(compilation, LookupLocation::max, location,
+                                        /* forceInvalidParams */ false, nullptr);
     defaultSpecialization = result;
     return result;
 }
@@ -290,8 +291,18 @@ const Type& GenericClassDefSymbol::getSpecialization(
     Compilation& compilation, LookupLocation lookupLocation,
     const ParameterValueAssignmentSyntax& syntax) const {
 
-    auto result = getSpecializationImpl(compilation, lookupLocation,
-                                        syntax.getFirstToken().location(), &syntax);
+    auto result =
+        getSpecializationImpl(compilation, lookupLocation, syntax.getFirstToken().location(),
+                              /* forceInvalidParams */ false, &syntax);
+    if (!result)
+        return compilation.getErrorType();
+
+    return *result;
+}
+
+const Type& GenericClassDefSymbol::getInvalidSpecialization(Compilation& compilation) const {
+    auto result = getSpecializationImpl(compilation, LookupLocation::max, location,
+                                        /* forceInvalidParams */ true, nullptr);
     if (!result)
         return compilation.getErrorType();
 
@@ -300,7 +311,7 @@ const Type& GenericClassDefSymbol::getSpecialization(
 
 const Type* GenericClassDefSymbol::getSpecializationImpl(
     Compilation& compilation, LookupLocation lookupLocation, SourceLocation instanceLoc,
-    const ParameterValueAssignmentSyntax* syntax) const {
+    bool forceInvalidParams, const ParameterValueAssignmentSyntax* syntax) const {
 
     auto scope = getParentScope();
     ASSERT(scope);
@@ -319,8 +330,8 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     // We want to suppress errors about params not having values and just
     // return null so that the caller can figure out if this is actually a problem.
     bool isForDefault = syntax == nullptr;
-    if (!paramBuilder.createParams(*classType, lookupLocation, instanceLoc,
-                                   /* forceInvalidValues */ false, isForDefault)) {
+    if (!paramBuilder.createParams(*classType, lookupLocation, instanceLoc, forceInvalidParams,
+                                   isForDefault)) {
         if (isForDefault)
             return nullptr;
 
@@ -330,13 +341,13 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
 
     SpecializationKey key(*this, paramBuilder.paramValues.copy(compilation),
                           paramBuilder.typeParams.copy(compilation));
-    if (auto it = specializations.find(key); it != specializations.end())
+    if (auto it = specMap.find(key); it != specMap.end())
         return it->second;
 
     // Not found, so this is a new entry. Fill in its members and store the
     // specialization for later lookup.
     const Type& result = classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
-    specializations.emplace(key, &result);
+    specMap.emplace(key, &result);
     return &result;
 }
 
