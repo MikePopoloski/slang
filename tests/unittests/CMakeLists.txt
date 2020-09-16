@@ -37,8 +37,13 @@ add_custom_command(
 )
 
 add_test(NAME unittests COMMAND unittests)
+
+# Set timeout property based on CI_BUILD and SLANG_COVERAGE
+set(timeout 5)
 if(CI_BUILD)
-    set_tests_properties(unittests PROPERTIES TIMEOUT 60)
-else()
-    set_tests_properties(unittests PROPERTIES TIMEOUT 30)
+    math(EXPR timeout "${timeout} * 4")
 endif()
+if(SLANG_COVERAGE)
+    math(EXPR timeout "${timeout} * 16")
+endif()
+set_tests_properties(unittests PROPERTIES TIMEOUT ${timeout})
