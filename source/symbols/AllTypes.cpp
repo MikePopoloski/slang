@@ -311,7 +311,54 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         previous = ev.getValue();
         previousRange = ev.getInitializer()->sourceRange;
 
-        checkValue(previous, previousRange.start());
+        if (!previous)
+            return;
+        auto loc = previousRange.start();
+        auto& value = previous.integer(); // checkEnumInitializer ensures previous is integral
+
+        // An enumerated name with x or z assignments assigned to an enum with no explicit data type
+        // or an explicit 2-state declaration shall be a syntax error.
+        if (!base->isFourState() && value.hasUnknown()) {
+            scope.addDiag(diag::EnumValueUnknownBits, loc) << value << *base;
+            ev.setValue(nullptr);
+            previous = nullptr;
+            return;
+        }
+
+        // Any enumeration encoding value that is outside the representable range of the enum base
+        // type shall be an error. For an unsigned base type, this occurs if the cast truncates the
+        // value and any of the discarded bits are nonzero. For a signed base type, this occurs if
+        // the cast truncates the value and any of the discarded bits are not equal to the sign bit
+        // of the result.
+        if (value.getBitWidth() > bitWidth) {
+            bool good = true;
+            if (!base->isSigned()) {
+                good = exactlyEqual(value[int32_t(bitWidth)], logic_t(false)) &&
+                       value.isSignExtendedFrom(bitWidth);
+            }
+            else
+                good = value.isSignExtendedFrom(bitWidth - 1);
+            if (!good) {
+                scope.addDiag(diag::EnumValueOutOfRange, loc) << value << *base;
+                ev.setValue(nullptr);
+                previous = nullptr;
+                return;
+            }
+        }
+
+        // Implicit casting to base type
+        if (value.getBitWidth() != bitWidth) {
+            auto cv = previous.convertToInt(bitWidth, base->isSigned(), base->isFourState());
+            ev.setValue(cv);
+            previous = std::move(cv);
+        }
+        else {
+            if (!base->isFourState())
+                value.flattenUnknowns();
+            value.setSigned(base->isSigned());
+        }
+
+        checkValue(previous, loc);
     };
 
     // For enumerands that have no initializer, infer the value via this function.

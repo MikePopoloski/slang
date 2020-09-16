@@ -142,7 +142,8 @@ const Expression& Expression::bind(const ExpressionSyntax& syntax, const BindCon
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
-                                         SourceLocation location, const BindContext& context) {
+                                         SourceLocation location, const BindContext& context,
+                                         bool isInout) {
     Compilation& comp = context.scope.getCompilation();
 
     // Create a placeholder expression that will carry the type of the rhs.
@@ -153,8 +154,10 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     if (rhsExpr->bad())
         return badExpr(comp, nullptr);
 
-    // TODO: streaming operator for port connection
-    Expression* lhsExpr = &create(comp, lhs, context, BindFlags::None, rhsExpr->type);
+    Expression* lhsExpr = (lhs.kind == SyntaxKind::StreamingConcatenationExpression && !isInout &&
+                           !(context.instance && !context.instance->arrayPath.empty()))
+                              ? &selfDetermined(comp, lhs, context, BindFlags::StreamingAllowed)
+                              : &create(comp, lhs, context, BindFlags::None, rhsExpr->type);
     selfDetermined(context, lhsExpr);
 
     SourceRange lhsRange = lhs.sourceRange();
@@ -167,8 +170,7 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
                                          SourceLocation location, const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
 
-    // TODO: streaming operator for port connection and enum initializer
-    bitmask<BindFlags> extraFlags = context.instance || (context.flags & BindFlags::EnumInitializer)
+    bitmask<BindFlags> extraFlags = context.instance && !context.instance->arrayPath.empty()
                                         ? BindFlags::None
                                         : BindFlags::StreamingAllowed;
     Expression& expr = create(comp, rhs, context, extraFlags, &lhs);
@@ -187,7 +189,7 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
         case ArgumentDirection::Out:
         case ArgumentDirection::InOut:
             // TODO: additional restrictions on inout
-            return bindLValue(syntax, argType, loc, context);
+            return bindLValue(syntax, argType, loc, context, direction == ArgumentDirection::InOut);
         case ArgumentDirection::Ref:
         case ArgumentDirection::ConstRef:
             // TODO: implement this
