@@ -22,6 +22,7 @@
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxFacts.h"
 #include "slang/util/StackContainer.h"
 
 namespace slang {
@@ -315,6 +316,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
                                                      const FunctionDeclarationSyntax& syntax,
                                                      const ClassMethodPrototypeSymbol& prototype,
                                                      const Scope& parent,
+                                                     const Scope& definitionScope,
                                                      SymbolIndex outOfBlockIndex) {
     auto result = fromSyntax(compilation, syntax, parent, /* outOfBlock */ true);
     ASSERT(result);
@@ -329,8 +331,27 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
     result->visibility = prototype.visibility;
     result->flags = prototype.flags;
 
-    // Check that return type and arguments match what was declared in the prototype.
+    // The return type is not allowed to use a simple name to access class members.
     auto& defRetType = result->getReturnType();
+    if (defRetType.getParentScope() == &parent) {
+        auto retName = SyntaxFacts::getSimpleTypeName(*syntax.prototype->returnType);
+        if (!retName.empty()) {
+            // Repeat the lookup for the type but in the definition scope instead of the
+            // class scope. If we find a type symbol that matches what we already looked up,
+            // there's no problem. Otherwise, this is an error.
+            auto found = Lookup::unqualified(definitionScope, retName);
+            if (!found || found->getIndex() > outOfBlockIndex || !found->isType() ||
+                !found->as<Type>().isMatching(defRetType)) {
+                auto& diag = parent.addDiag(diag::MethodReturnTypeScoped,
+                                            syntax.prototype->returnType->sourceRange());
+                diag << result->name;
+                diag << parent.asSymbol().name;
+                return *result;
+            }
+        }
+    }
+
+    // Check that return type and arguments match what was declared in the prototype.
     auto& protoRetType = prototype.getReturnType();
     if (!defRetType.isMatching(protoRetType) && !defRetType.isError() && !protoRetType.isError()) {
         auto& diag =

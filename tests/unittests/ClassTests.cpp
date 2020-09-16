@@ -452,8 +452,7 @@ class G #(type T);
     extern function T foo;
 endclass
 
-// TODO: return type should be required to be scoped
-function T G::foo;
+function G::T G::foo;
     return 0;
 endfunction
 
@@ -511,13 +510,28 @@ class D;
 endclass
 function void D::f(T x);
 endfunction
+
+function int E::f;
+endfunction
+
+class E;
+    extern function int f;
+endclass
+
+class F;
+    localparam type T = real;
+    extern function T f;
+endclass
+
+function T F::f;
+endfunction
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::MethodReturnMismatch);
     CHECK(diags[1].code == diag::MethodArgCountMismatch);
     CHECK(diags[2].code == diag::MethodArgNameMismatch);
@@ -526,6 +540,8 @@ endfunction
     CHECK(diags[5].code == diag::MethodArgDefaultMismatch);
     CHECK(diags[6].code == diag::MethodArgDefaultMismatch);
     CHECK(diags[7].code == diag::MethodArgTypeMismatch);
+    CHECK(diags[8].code == diag::MethodDefinitionBeforeClass);
+    CHECK(diags[9].code == diag::MethodReturnTypeScoped);
 }
 
 TEST_CASE("Out-of-block default value") {

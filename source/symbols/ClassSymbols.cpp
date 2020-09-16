@@ -181,8 +181,16 @@ const SubroutineSymbol* ClassMethodPrototypeSymbol::getSubroutine() const {
         return nullptr;
     }
 
+    // The method definition must be located after the class definition.
+    if (index <= classType.getIndex()) {
+        auto& diag = scope.addDiag(diag::MethodDefinitionBeforeClass,
+                                   syntax->prototype->name->getLastToken().location());
+        diag << name << classType.name;
+        diag.addNote(diag::NoteDeclarationHere, classType.location);
+    }
+
     subroutine =
-        &SubroutineSymbol::createOutOfBlock(comp, *syntax, *this, *getParentScope(), index);
+        &SubroutineSymbol::createOutOfBlock(comp, *syntax, *this, *getParentScope(), scope, index);
     return *subroutine;
 }
 

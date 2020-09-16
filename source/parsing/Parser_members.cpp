@@ -493,15 +493,19 @@ FunctionPortSyntax& Parser::parseFunctionPort() {
 }
 
 static bool checkSubroutineName(const NameSyntax& name) {
+    auto checkKind = [](auto& node) {
+        return node.kind == SyntaxKind::IdentifierName || node.kind == SyntaxKind::ConstructorName;
+    };
+
     if (name.kind == SyntaxKind::ScopedName) {
         auto& scoped = name.as<ScopedNameSyntax>();
         if (scoped.separator.kind == TokenKind::Dot)
             return false;
 
-        return checkSubroutineName(*scoped.left) && checkSubroutineName(*scoped.right);
+        return checkKind(*scoped.left) && checkKind(*scoped.right);
     }
 
-    return name.kind == SyntaxKind::IdentifierName || name.kind == SyntaxKind::ConstructorName;
+    return checkKind(name);
 }
 
 FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind, bool allowTasks) {

@@ -452,6 +452,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
                     result.addDiag(context.scope, diag::GenericClassScopeResolution, name.range());
                     return false;
                 }
+                symbol = parent;
             }
         }
         else if (name.paramAssignments) {

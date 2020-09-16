@@ -138,7 +138,8 @@ public:
     static SubroutineSymbol& createOutOfBlock(Compilation& compilation,
                                               const FunctionDeclarationSyntax& syntax,
                                               const ClassMethodPrototypeSymbol& prototype,
-                                              const Scope& newParent, SymbolIndex outOfBlockIndex);
+                                              const Scope& newParent, const Scope& definitionScope,
+                                              SymbolIndex outOfBlockIndex);
 
     static void buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
                                VariableLifetime defaultLifetime,

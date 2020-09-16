@@ -232,6 +232,8 @@ error MethodArgNameMismatch "method argument name '{}' doesn't match '{}' given 
 error MethodArgTypeMismatch "method argument '{}' is of type {} which differs from {} given in its prototype"
 error MethodArgNoDefault "method argument '{}' provides a default value but its prototype does not"
 error MethodArgDefaultMismatch "default value for method argument '{}' must exactly match the expression given in its prototype"
+error MethodDefinitionBeforeClass "definition of method '{}' must come after its containing class '{}'"
+error MethodReturnTypeScoped "return type for out-of-block method '{}' must use class scope '{}::' to access nested type"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 warning warning-task WarningTask "$warning encountered{}"
