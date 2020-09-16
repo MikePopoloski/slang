@@ -313,6 +313,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
         if (!previous)
             return;
+
         auto loc = previousRange.start();
         auto& value = previous.integer(); // checkEnumInitializer ensures previous is integral
 
@@ -336,8 +337,10 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 good = exactlyEqual(value[int32_t(bitWidth)], logic_t(false)) &&
                        value.isSignExtendedFrom(bitWidth);
             }
-            else
+            else {
                 good = value.isSignExtendedFrom(bitWidth - 1);
+            }
+
             if (!good) {
                 scope.addDiag(diag::EnumValueOutOfRange, loc) << value << *base;
                 ev.setValue(nullptr);
@@ -346,7 +349,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             }
         }
 
-        // Implicit casting to base type
+        // Implicit casting to base type to ensure value matches the underlying type.
         if (value.getBitWidth() != bitWidth) {
             auto cv = previous.convertToInt(bitWidth, base->isSigned(), base->isFourState());
             ev.setValue(cv);

@@ -1524,8 +1524,10 @@ bool SVInt::isSignExtendedFrom(bitwidth_t msb) const {
 
     if (!isSignExtended(pVal, numWords, word, bit, maskMsw))
         return false;
+
     if (!unknownFlag)
         return true;
+
     return isSignExtended(pVal + numWords, numWords, word, bit, maskMsw);
 }
 

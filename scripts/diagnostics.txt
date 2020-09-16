@@ -349,7 +349,7 @@ error EnumValueOverflow "incrementing previous value {} would overflow enum base
 error EnumIncrementUnknown "cannot increment previous value {} because it has unknown bits"
 error EnumValueDuplicate "redefinition of enum value {}"
 error EnumValueUnknownBits "value of {} is invalid for enum with base type {}"
-error EnumValueOutOfRange "enum value {} is out of base type {} range"
+error EnumValueOutOfRange "enum value {} is out of range for base type {}"
 error EnumRangeMultiDimensional "enum range cannot be multidimensional"
 error ForwardTypedefDoesNotMatch "forward typedef basic type '{}' does not match declaration"
 error ForwardTypedefVisibility "declared visibility of forward typedef does not match the visibility of the actual type declaration"

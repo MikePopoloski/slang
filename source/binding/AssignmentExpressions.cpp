@@ -345,10 +345,11 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             return *result;
         }
 
-        // Do not convert (truncate) enum initializer so out of range value can be checked
-        if (!(context.flags & BindFlags::EnumInitializer))
+        // Do not convert (truncate) enum initializer so out of range value can be checked.
+        if (!(context.flags & BindFlags::EnumInitializer)) {
             result = compilation.emplace<ConversionExpression>(type, ConversionKind::Implicit,
                                                                *result, result->sourceRange);
+        }
     }
     else {
         result = &implicitConversion(context, type, *result);
