@@ -314,7 +314,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         if (!previous)
             return;
         auto loc = previousRange.start();
-        auto& value = previous.integer();
+        auto& value = previous.integer(); // checkEnumInitializer ensures previous is integral
 
         // An enumerated name with x or z assignments assigned to an enum with no explicit data type
         // or an explicit 2-state declaration shall be a syntax error.

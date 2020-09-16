@@ -1509,17 +1509,18 @@ bool SVInt::isSignExtendedFrom(bitwidth_t msb) const {
     if (msb >= bitWidth - 1)
         return true;
 
+    uint64_t maskMsw;
+    bitwidth_t bitsInMsw;
+    getTopWordMask(bitsInMsw, maskMsw);
+
     if (isSingleWord()) {
         auto signBits = val >> msb;
-        return !signBits || signBits == (1ULL << (bitWidth - msb)) - 1;
+        return !signBits || signBits == maskMsw >> msb;
     }
 
     auto bit = whichBit(msb);
     auto word = whichWord(msb);
     auto numWords = getNumWords(bitWidth, false);
-    uint64_t maskMsw = UINT64_MAX;
-    bitwidth_t bitsInMsw;
-    getTopWordMask(bitsInMsw, maskMsw);
 
     if (!isSignExtended(pVal, numWords, word, bit, maskMsw))
         return false;
@@ -1531,16 +1532,13 @@ bool SVInt::isSignExtendedFrom(bitwidth_t msb) const {
 void SVInt::signExtendFrom(bitwidth_t msb) {
     ASSERT(msb < bitWidth - 1);
 
-    uint64_t maskMsw = UINT64_MAX;
+    uint64_t maskMsw;
     bitwidth_t bitsInMsw;
     getTopWordMask(bitsInMsw, maskMsw);
 
     if (isSingleWord()) {
-        uint64_t mask = UINT64_MAX << msb;
         if (val & (1ULL << msb))
-            val |= mask & maskMsw;
-        else
-            val &= ~mask;
+            val |= (UINT64_MAX << msb) & maskMsw;
         return;
     }
 
