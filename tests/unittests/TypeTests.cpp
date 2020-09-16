@@ -1007,8 +1007,16 @@ TEST_CASE("Unpacked array/struct bit-streaming types") {
 TEST_CASE("Enum value out of range") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    enum logic[1:0] { a=4, b=1/0} foo;
-    enum bit signed[0:1] { c=2, d=-3} bar;
+    enum logic[1:0] { a=4, b=1/0} foo1;
+    enum bit signed[0:1] { c=2, d=-3} foo2;
+    localparam logic [99:0] p1 = 66'b10 << 64;
+    localparam logic [99:0] p2 = 66'h3;
+    localparam logic [99:0] p3 = 66'hx;
+    localparam logic [65:0] p4 = 66'hx;
+    localparam logic [9:0] p5 = 10'bz;
+    enum logic signed[3:0] { e=p1, f=p2, g=p3, h=p4, i=p5} foo3;
+    localparam logic [69:0] p6 = 70'h1;
+    enum bit[64:0] {j=p6} foo4;
 endmodule
 )");
 
@@ -1016,7 +1024,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    const int numOfErrors = 4;
+    const int numOfErrors = 6; // a, b, c, d, e, g
     REQUIRE(diags.size() == numOfErrors);
     for (int i = 0; i < numOfErrors; i++)
         CHECK(diags[i].code == diag::EnumValueOutOfRange);

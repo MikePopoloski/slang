@@ -1747,6 +1747,7 @@ TEST_CASE("Mixed unknowns or signedness") {
     CHECK_THAT(session.eval("129'sb0xzxz>>>1").integer(), exactlyEquals("129'sb0xzx"_si));
     CHECK_THAT(session.eval("65'sbx >>> 66").integer(), exactlyEquals("65'sbx"_si));
     CHECK_THAT(session.eval("35'sbz >>> 66").integer(), exactlyEquals("35'sbz"_si));
+    CHECK_THAT(session.eval("200'sbxz >>> 130").integer(), exactlyEquals("200'sbx"_si));
 
     // system functions with unknown arguments
     CHECK(session.eval("$itor(3'bz1x)").real() == 2.0);

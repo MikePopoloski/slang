@@ -601,8 +601,9 @@ SVInt SVInt::ashr(bitwidth_t amount) const {
 
     bitwidth_t contractedWidth = bitWidth - amount;
 
-    // Pretend our width is just the width we shifted to, then signExtend
-    return lshr(amount).trunc(contractedWidth).sext(bitWidth);
+    auto tmp = lshr(amount);
+    tmp.signExtendFrom(contractedWidth - 1);
+    return tmp;
 }
 
 SVInt SVInt::replicate(const SVInt& times) const {
@@ -1502,6 +1503,51 @@ SVInt SVInt::sext(bitwidth_t bits) const {
 
     result.clearUnusedBits();
     return result;
+}
+
+bool SVInt::isSignExtendedFrom(bitwidth_t msb) const {
+    if (msb >= bitWidth - 1)
+        return true;
+
+    if (isSingleWord()) {
+        auto signBits = val >> msb;
+        return !signBits || signBits == (1ULL << (bitWidth - msb)) - 1;
+    }
+
+    auto bit = whichBit(msb);
+    auto word = whichWord(msb);
+    auto numWords = getNumWords(bitWidth, false);
+    uint64_t maskMsw = UINT64_MAX;
+    bitwidth_t bitsInMsw;
+    getTopWordMask(bitsInMsw, maskMsw);
+
+    if (!isSignExtended(pVal, numWords, word, bit, maskMsw))
+        return false;
+    if (!unknownFlag)
+        return true;
+    return isSignExtended(pVal + numWords, numWords, word, bit, maskMsw);
+}
+
+void SVInt::signExtendFrom(bitwidth_t msb) {
+    ASSERT(msb < bitWidth - 1);
+
+    uint64_t maskMsw = UINT64_MAX;
+    bitwidth_t bitsInMsw;
+    getTopWordMask(bitsInMsw, maskMsw);
+
+    if (isSingleWord()) {
+        if (val & (1ULL << msb))
+            val |= (UINT64_MAX << msb) & maskMsw;
+        return;
+    }
+
+    auto bit = whichBit(msb);
+    auto word = whichWord(msb);
+    auto numWords = getNumWords(bitWidth, false);
+
+    signExtend(pVal, numWords, word, bit, maskMsw);
+    if (unknownFlag)
+        signExtend(pVal + numWords, numWords, word, bit, maskMsw);
 }
 
 SVInt SVInt::zext(bitwidth_t bits) const {

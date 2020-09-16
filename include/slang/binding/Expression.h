@@ -141,7 +141,7 @@ public:
     /// Binds the left hand side of an assignment-like expression from the given syntax nodes.
     static const Expression& bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
                                         SourceLocation location, const BindContext& context,
-                                        bool isInout = false);
+                                        bool isInout);
 
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
     static const Expression& bindRValue(const Type& lhs, const ExpressionSyntax& rhs,

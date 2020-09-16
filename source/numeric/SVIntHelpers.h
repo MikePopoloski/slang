@@ -108,6 +108,51 @@ static void signExtendCopy(uint64_t* output, const uint64_t* input, bitwidth_t o
     memset(output + oldWords, isNegative ? -1 : 0, (newWords - oldWords) * sizeof(uint64_t));
 }
 
+// Check whether all the bits above word.bit is identical to word.bit.
+static bool isSignExtended(const uint64_t* input, uint32_t numWords, uint32_t word, uint32_t bit,
+                           uint64_t topWordMask) {
+    bool sign = (input[word] & (1ULL << bit)) != 0;
+    if (sign && numWords - 1 > word) {
+        if (input[numWords - 1] != topWordMask)
+            return false;
+        numWords--;
+        topWordMask = UINT64_MAX;
+    }
+
+    uint64_t mask = sign ? UINT64_MAX : 0;
+    for (auto i = numWords - 1; i > word; i--) {
+        if (input[i] != mask)
+            return false;
+    }
+
+    if (numWords - 1 == word)
+        mask &= topWordMask;
+    mask >>= bit;
+    return (input[word] >> bit) == mask;
+}
+
+// If word.bit is one, make all bits above word.bit become one.
+static void signExtend(uint64_t* input, uint32_t numWords, uint32_t word, uint32_t bit,
+                       uint64_t topWordMask) {
+    if ((input[word] & (1ULL << bit)) == 0)
+        return;
+
+    if (topWordMask != UINT64_MAX && numWords - 1 > word) {
+        input[numWords - 1] = topWordMask;
+        numWords--;
+        topWordMask = UINT64_MAX;
+    }
+
+    uint64_t mask = UINT64_MAX;
+    for (auto i = numWords - 1; i > word; i--)
+        input[i] = mask;
+
+    mask <<= bit;
+    if (numWords - 1 == word)
+        mask &= topWordMask;
+    input[word] |= mask;
+}
+
 // Specialized adder for values <= 64.
 static bool addOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
     uint8_t carry = 0;

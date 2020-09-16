@@ -320,6 +320,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         // or an explicit 2-state declaration shall be a syntax error.
         if (!base->isFourState() && value.hasUnknown()) {
             scope.addDiag(diag::EnumValueUnknownBits, loc) << value << *base;
+            ev.setValue(nullptr);
+            previous = nullptr;
             return;
         }
 
@@ -329,27 +331,17 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         // the cast truncates the value and any of the discarded bits are not equal to the sign bit
         // of the result.
         if (value.getBitWidth() > bitWidth) {
-            logic_t msb = value[int32_t(bitWidth) - 1];
-            auto diff = value.getBitWidth() - bitWidth;
             bool good = true;
-            if (!value.hasUnknown()) {
-                if (base->isSigned() && exactlyEqual(msb, logic_t(true)))
-                    good = value.countLeadingOnes() >= diff;
-                else
-                    good = value.countLeadingZeros() >= diff;
+            if (!base->isSigned()) {
+                good = exactlyEqual(value[int32_t(bitWidth)], logic_t(false)) &&
+                       value.isSignExtendedFrom(bitWidth);
             }
-            else {
-                if (!base->isSigned())
-                    msb = logic_t(false);
-                for (auto i = value.getBitWidth() - 1; i >= bitWidth; i--) {
-                    if (!exactlyEqual(value[int32_t(i)], msb)) {
-                        good = false;
-                        break;
-                    }
-                }
-            }
+            else
+                good = value.isSignExtendedFrom(bitWidth - 1);
             if (!good) {
                 scope.addDiag(diag::EnumValueOutOfRange, loc) << value << *base;
+                ev.setValue(nullptr);
+                previous = nullptr;
                 return;
             }
         }

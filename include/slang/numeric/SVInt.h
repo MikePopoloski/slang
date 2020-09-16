@@ -359,6 +359,12 @@ public:
     /// Perform sign extension to the given number of bits.
     [[nodiscard]] SVInt sext(bitwidth_t bits) const;
 
+    /// Returns true if all bits in [bitWidth-1:msb] are exactly equal.
+    bool isSignExtendedFrom(bitwidth_t msb) const;
+
+    /// If bit msb is nonzero, duplicate it to all bits in [bitWidth-1:msb] .
+    void signExtendFrom(bitwidth_t msb);
+
     /// Perform zero extension to the given number of bits.
     [[nodiscard]] SVInt zext(bitwidth_t bits) const;
 
