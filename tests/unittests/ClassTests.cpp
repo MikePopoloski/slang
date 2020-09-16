@@ -24,7 +24,8 @@ class Packet;
         command = 0; address = 0; master_id = 5'bx;
     endtask
 
-    task issue_request( int delay );
+    task issue_request( integer status );
+        this.status = status;
     endtask
 
     function integer current_status();
@@ -308,6 +309,10 @@ endclass
 
 class F #(int t);
     int asdf = foo;
+
+    function void baz();
+        this.asdf = 1;
+    endfunction
 endclass
 
 module m;
@@ -600,4 +605,32 @@ endfunction
 
     EvalContext ctx(compilation);
     CHECK(init->eval(ctx).integer() == 1);
+}
+
+TEST_CASE("This handle errors") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    int asdf;
+    static function f;
+        this.asdf = 1;
+    endfunction
+
+    function int g;
+        this = new;
+    endfunction
+endclass
+
+module m;
+    initial this.foo = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InvalidThisHandle);
+    CHECK(diags[1].code == diag::AssignmentToConst);
+    CHECK(diags[2].code == diag::InvalidThisHandle);
 }

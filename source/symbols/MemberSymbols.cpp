@@ -284,6 +284,9 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     if (result->name == "new")
         result->flags |= MethodFlags::Constructor;
 
+    if ((result->flags & MethodFlags::Static) == 0)
+        result->addThisVar(parent.asSymbol().as<ClassType>());
+
     return result;
 }
 
@@ -330,6 +333,9 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
     // All of our flags are taken from the prototype.
     result->visibility = prototype.visibility;
     result->flags = prototype.flags;
+
+    if ((result->flags & MethodFlags::Static) == 0)
+        result->addThisVar(parent.asSymbol().as<ClassType>());
 
     // The return type is not allowed to use a simple name to access class members.
     auto& defRetType = result->getReturnType();
@@ -518,6 +524,16 @@ void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
         arg->serializeTo(serializer);
     }
     serializer.endArray();
+}
+
+void SubroutineSymbol::addThisVar(const Type& type) {
+    auto tv = getCompilation().emplace<VariableSymbol>("this", type.location,
+                                                       VariableLifetime::Automatic);
+    tv->setType(type);
+    tv->isConstant = true;
+    tv->isCompilerGenerated = true;
+    thisVar = tv;
+    addMember(*thisVar);
 }
 
 ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc) :

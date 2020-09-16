@@ -540,6 +540,25 @@ void unwrapResult(const Scope& scope, const TRange& syntax, LookupResult& result
     }
 }
 
+const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult& result) {
+    // Find the parent method, if we can.
+    const Symbol* parent = &scope.asSymbol();
+    while (parent->kind == SymbolKind::StatementBlock) {
+        auto parentScope = parent->getParentScope();
+        ASSERT(parentScope);
+        parent = &parentScope->asSymbol();
+    }
+
+    if (parent->kind == SymbolKind::Subroutine) {
+        auto& sub = parent->as<SubroutineSymbol>();
+        if (sub.thisVar)
+            return sub.thisVar;
+    }
+
+    result.addDiag(scope, diag::InvalidThisHandle, range);
+    return nullptr;
+}
+
 } // namespace
 
 void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
@@ -557,8 +576,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
             unwrapResult(scope, syntax, result);
             return;
         case SyntaxKind::ThisHandle:
-            result.addDiag(scope, diag::NotYetSupported, syntax.sourceRange());
-            result.found = nullptr;
+            result.found = findThisHandle(scope, syntax.sourceRange(), result);
             return;
         case SyntaxKind::SystemName: {
             // If this is a system name, look up directly in the compilation.
@@ -902,6 +920,8 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
         case SyntaxKind::ClassName:
+            // Start by trying to find the first name segment using normal unqualified lookup
+            unqualifiedImpl(scope, name, location, first.range(), flags, {}, result);
             break;
         case SyntaxKind::UnitScope:
             result.found = getCompilationUnit(scope.asSymbol());
@@ -919,8 +939,10 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
             result.found = &compilation.getRoot();
             lookupDownward(nameParts, first, context, result, flags);
             return;
-        case SyntaxKind::LocalScope:
         case SyntaxKind::ThisHandle:
+            result.found = findThisHandle(scope, first.range(), result);
+            break;
+        case SyntaxKind::LocalScope:
         case SyntaxKind::SuperHandle:
             result.addDiag(scope, diag::NotYetSupported, syntax.sourceRange());
             return;
@@ -928,8 +950,6 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
             THROW_UNREACHABLE;
     }
 
-    // Start by trying to find the first name segment using normal unqualified lookup
-    unqualifiedImpl(scope, name, location, first.range(), flags, {}, result);
     if (result.hasError())
         return;
 

@@ -108,13 +108,15 @@ public:
     using ArgList = span<const FormalArgumentSymbol* const>;
 
     DeclaredType declaredReturnType;
-    const VariableSymbol* returnValVar = nullptr;
     ArgList arguments;
     VariableLifetime defaultLifetime;
     SubroutineKind subroutineKind;
     Visibility visibility = Visibility::Public;
     bitmask<MethodFlags> flags = MethodFlags::None;
     SymbolIndex outOfBlockIndex{ 0 };
+
+    const VariableSymbol* returnValVar = nullptr;
+    const VariableSymbol* thisVar = nullptr;
 
     SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                      VariableLifetime defaultLifetime, SubroutineKind subroutineKind) :
@@ -148,6 +150,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
 
 private:
+    void addThisVar(const Type& type);
+
     StatementBinder binder;
 };
 

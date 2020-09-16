@@ -409,6 +409,7 @@ error NestedNonStaticClassProperty "invalid use of non-static class property '{}
 error NestedNonStaticClassMethod "call to non-static member function without object handle from nested class '{}'"
 error NoDefaultSpecialization "generic class '{}' does not have a default specialization because some parameters have no default value"
 error GenericClassScopeResolution "cannot refer to generic class with '::' without providing parameter assignments"
+error InvalidThisHandle "invalid use of 'this' outside of a non-static method"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 
 subsystem SysFuncs
