@@ -473,6 +473,7 @@ warning empty-queue ConstEvalEmptyQueue "pop from empty queue"
 subsystem Compilation
 error MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
 error InvalidTopModule "'{}' is not a valid top-level module"
+error NoMethodInClass "out-of-block definition of '{}' does not match any declaration in '{}'"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning no-top NoTopModules "no top-level modules found in design"
 

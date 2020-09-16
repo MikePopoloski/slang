@@ -525,13 +525,22 @@ endclass
 
 function T F::f;
 endfunction
+
+function int asdf::foo;
+endfunction
+
+function int T::foo;
+endfunction
+
+function int F::baz;
+endfunction
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 10);
+    REQUIRE(diags.size() == 13);
     CHECK(diags[0].code == diag::MethodReturnMismatch);
     CHECK(diags[1].code == diag::MethodArgCountMismatch);
     CHECK(diags[2].code == diag::MethodArgNameMismatch);
@@ -542,6 +551,9 @@ endfunction
     CHECK(diags[7].code == diag::MethodArgTypeMismatch);
     CHECK(diags[8].code == diag::MethodDefinitionBeforeClass);
     CHECK(diags[9].code == diag::MethodReturnTypeScoped);
+    CHECK(diags[10].code == diag::UndeclaredIdentifier);
+    CHECK(diags[11].code == diag::NotAClass);
+    CHECK(diags[12].code == diag::NoMethodInClass);
 }
 
 TEST_CASE("Out-of-block default value") {

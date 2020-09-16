@@ -628,15 +628,18 @@ void Compilation::addOutOfBlockMethod(const Scope& scope, const FunctionDeclarat
     string_view methodName = scoped.right->getLastToken().valueText();
 
     outOfBlockMethods.emplace(std::make_tuple(className, methodName, &scope),
-                              std::make_tuple(&syntax, index));
+                              std::make_tuple(&syntax, index, false));
 }
 
 std::tuple<const FunctionDeclarationSyntax*, SymbolIndex> Compilation::findOutOfBlockMethod(
     const Scope& scope, string_view className, string_view methodName) const {
 
     auto it = outOfBlockMethods.find({ className, methodName, &scope });
-    if (it != outOfBlockMethods.end())
-        return it->second;
+    if (it != outOfBlockMethods.end()) {
+        auto& [syntax, index, used] = it->second;
+        used = true;
+        return { syntax, index };
+    }
 
     return { nullptr, SymbolIndex() };
 }
@@ -686,6 +689,30 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     DiagnosticVisitor visitor(*this, numErrors,
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
+
+    // Report on unused out-of-block definitions. These are always a real error.
+    for (auto& [key, val] : outOfBlockMethods) {
+        auto& [syntax, index, used] = val;
+        if (!used) {
+            auto& [className, methodName, scope] = key;
+            auto nameSyntax = syntax->prototype->name;
+            auto classRange = nameSyntax->as<ScopedNameSyntax>().left->sourceRange();
+
+            auto sym = Lookup::unqualifiedAt(*scope, className,
+                                             LookupLocation(scope, uint32_t(index)), classRange);
+            if (sym) {
+                if (sym->kind == SymbolKind::ClassType ||
+                    sym->kind == SymbolKind::GenericClassDef) {
+                    auto& diag = scope->addDiag(diag::NoMethodInClass, nameSyntax->sourceRange());
+                    diag << methodName << className;
+                }
+                else {
+                    auto& diag = scope->addDiag(diag::NotAClass, classRange);
+                    diag << className;
+                }
+            }
+        }
+    }
 
     // Report on unused definitions.
     if (!options.suppressUnused) {

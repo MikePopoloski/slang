@@ -421,9 +421,10 @@ private:
 
     // A map from class name + method name + scope to out-of-block method definitions.
     // These get registered when we find the function and later get used when we see the
-    // class method prototype.
-    flat_hash_map<std::tuple<string_view, string_view, const Scope*>,
-                  std::tuple<const FunctionDeclarationSyntax*, SymbolIndex>>
+    // class method prototype. The value also includes a boolean indicating whether anything
+    // has used this method definition -- an error is issued if it's never used.
+    mutable flat_hash_map<std::tuple<string_view, string_view, const Scope*>,
+                          std::tuple<const FunctionDeclarationSyntax*, SymbolIndex, bool>>
         outOfBlockMethods;
 
     std::unique_ptr<RootSymbol> root;
