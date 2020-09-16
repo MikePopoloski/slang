@@ -1536,8 +1536,11 @@ void SVInt::signExtendFrom(bitwidth_t msb) {
     getTopWordMask(bitsInMsw, maskMsw);
 
     if (isSingleWord()) {
+        uint64_t mask = UINT64_MAX << msb;
         if (val & (1ULL << msb))
-            val |= (UINT64_MAX << msb) & maskMsw;
+            val |= mask & maskMsw;
+        else
+            val &= ~mask;
         return;
     }
 

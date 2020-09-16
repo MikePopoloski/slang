@@ -134,23 +134,25 @@ static bool isSignExtended(const uint64_t* input, uint32_t numWords, uint32_t wo
 // If word.bit is one, make all bits above word.bit become one.
 static void signExtend(uint64_t* input, uint32_t numWords, uint32_t word, uint32_t bit,
                        uint64_t topWordMask) {
-    if ((input[word] & (1ULL << bit)) == 0)
-        return;
-
-    if (topWordMask != UINT64_MAX && numWords - 1 > word) {
+    bool sign = (input[word] & (1ULL << bit)) != 0;
+    if (sign && numWords - 1 > word) {
         input[numWords - 1] = topWordMask;
         numWords--;
         topWordMask = UINT64_MAX;
     }
 
-    uint64_t mask = UINT64_MAX;
+    uint64_t mask = sign ? UINT64_MAX : 0;
     for (auto i = numWords - 1; i > word; i--)
         input[i] = mask;
 
     mask <<= bit;
-    if (numWords - 1 == word)
-        mask &= topWordMask;
-    input[word] |= mask;
+    if (sign) {
+        if (numWords - 1 == word)
+            mask &= topWordMask;
+        input[word] |= mask;
+    }
+    else
+        input[word] &= ~mask;
 }
 
 // Specialized adder for values <= 64.
