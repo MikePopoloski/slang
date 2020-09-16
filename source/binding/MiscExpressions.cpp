@@ -184,20 +184,8 @@ bool NamedValueExpression::verifyAssignableImpl(const BindContext& context, bool
     }
 
     if (VariableSymbol::isKind(symbol.kind)) {
-        auto& var = symbol.as<VariableSymbol>();
-        if (var.isConstant) {
-            auto& diag = context.addDiag(diag::AssignmentToConst, location);
-            diag.addNote(diag::NoteDeclarationHere, symbol.location);
-            diag << symbol.name << sourceRange;
-            return false;
-        }
-
-        if (isNonBlocking && var.lifetime == VariableLifetime::Automatic) {
-            auto& diag = context.addDiag(diag::NonblockingAssignmentToAuto, location);
-            diag.addNote(diag::NoteDeclarationHere, symbol.location);
-            diag << symbol.name << sourceRange;
-            return false;
-        }
+        return context.requireAssignable(symbol.as<VariableSymbol>(), isNonBlocking, location,
+                                         sourceRange);
     }
 
     return true;

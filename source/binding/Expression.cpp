@@ -291,7 +291,7 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
         }
         case ExpressionKind::MemberAccess: {
             auto& access = as<MemberAccessExpression>();
-            return access.value().verifyAssignable(context, isNonBlocking, location);
+            return access.verifyAssignableImpl(context, isNonBlocking, location);
         }
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();

@@ -103,6 +103,25 @@ bool BindContext::requireBooleanConvertible(const Expression& expr) const {
     return true;
 }
 
+bool BindContext::requireAssignable(const VariableSymbol& var, bool isNonBlocking,
+                                    SourceLocation assignLoc, SourceRange varRange) const {
+    if (var.isConstant) {
+        auto& diag = addDiag(diag::AssignmentToConst, assignLoc);
+        diag.addNote(diag::NoteDeclarationHere, var.location);
+        diag << var.name << varRange;
+        return false;
+    }
+
+    if (isNonBlocking && var.lifetime == VariableLifetime::Automatic) {
+        auto& diag = addDiag(diag::NonblockingAssignmentToAuto, assignLoc);
+        diag.addNote(diag::NoteDeclarationHere, var.location);
+        diag << var.name << varRange;
+        return false;
+    }
+
+    return true;
+}
+
 bool BindContext::requireValidBitWidth(bitwidth_t width, SourceRange range) const {
     if (width > SVInt::MAX_BITS) {
         addDiag(diag::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;

@@ -19,6 +19,7 @@ class InstanceSymbol;
 class Scope;
 class Statement;
 class Type;
+class VariableSymbol;
 struct AttributeInstanceSyntax;
 struct ExpressionSyntax;
 struct SelectorSyntax;
@@ -125,6 +126,8 @@ public:
     bool requirePositive(const SVInt& value, SourceRange range) const;
     bool requireGtZero(optional<int32_t> value, SourceRange range) const;
     bool requireBooleanConvertible(const Expression& expr) const;
+    bool requireAssignable(const VariableSymbol& var, bool isNonBlocking, SourceLocation assignLoc,
+                           SourceRange varRange) const;
     bool requireValidBitWidth(bitwidth_t width, SourceRange range) const;
     optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
 

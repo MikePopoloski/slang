@@ -831,6 +831,24 @@ bool MemberAccessExpression::verifyConstantImpl(EvalContext& context) const {
     return value().verifyConstant(context);
 }
 
+bool MemberAccessExpression::verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
+                                                  SourceLocation location) const {
+    // If this is a selection of a class member, assignability depends only on the selected
+    // member and not on the class handle itself. Otherwise, the opposite is true.
+    if (!value().type->isClass())
+        return value().verifyAssignable(context, isNonBlocking, location);
+
+    if (VariableSymbol::isKind(member.kind)) {
+        return context.requireAssignable(member.as<VariableSymbol>(), isNonBlocking, location,
+                                         sourceRange);
+    }
+
+    auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
+    diag.addNote(diag::NoteDeclarationHere, member.location);
+    diag << sourceRange;
+    return false;
+}
+
 void MemberAccessExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("member", member);
     serializer.write("value", value());
