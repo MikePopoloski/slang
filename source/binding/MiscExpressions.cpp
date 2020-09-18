@@ -47,6 +47,20 @@ static std::pair<const Symbol*, bool> getParentClass(const Scope& scope) {
     }
 }
 
+// Returns true if the target symbol is accessible from the class scope given by `parentClass`.
+static bool isAccessibleFrom(const Symbol& target, const Symbol& sourceScope) {
+    auto& parentScope = target.getParentScope()->asSymbol();
+    if (&sourceScope == &parentScope)
+        return true;
+
+    if (parentScope.kind != SymbolKind::ClassType)
+        return false;
+
+    auto& sourceType = sourceScope.as<Type>();
+    auto& targetType = parentScope.as<Type>();
+    return targetType.isAssignmentCompatible(sourceType);
+}
+
 Expression& NamedValueExpression::fromSymbol(const BindContext& context, const Symbol& symbol,
                                              bool isHierarchical, SourceRange sourceRange) {
     Compilation& compilation = context.getCompilation();
@@ -63,7 +77,7 @@ Expression& NamedValueExpression::fromSymbol(const BindContext& context, const S
         // initializers, or nested classes are accessing it.
         if (symbol.kind == SymbolKind::ClassProperty) {
             auto [parent, inStatic] = getParentClass(context.scope);
-            if (parent && parent != &symbol.getParentScope()->asSymbol()) {
+            if (parent && !isAccessibleFrom(symbol, *parent)) {
                 auto& diag = context.addDiag(diag::NestedNonStaticClassProperty, sourceRange);
                 diag << symbol.name << parent->name;
                 return badExpr(compilation, nullptr);
@@ -233,7 +247,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         subroutineParent.kind == SymbolKind::ClassType) {
 
         auto [parent, inStatic] = getParentClass(context.scope);
-        if (parent && parent != &subroutineParent) {
+        if (parent && !isAccessibleFrom(*sub, *parent)) {
             auto& diag = context.addDiag(diag::NestedNonStaticClassMethod, range);
             diag << parent->name;
             return badExpr(compilation, nullptr);

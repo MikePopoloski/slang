@@ -249,11 +249,60 @@ const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax
     for (auto member : syntax.items)
         addMembers(*member);
 
-    // TODO: extends
-    // TODO: implements
-    // TODO: lifetime
+    if (syntax.extendsClause || syntax.implementsClause)
+        setNeedElaboration();
 
     return *this;
+}
+
+void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const {
+    auto syntax = getSyntax();
+    ASSERT(syntax);
+
+    auto& classSyntax = syntax->as<ClassDeclarationSyntax>();
+    if (!classSyntax.extendsClause)
+        return;
+
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    // Find the class type named as the base class.
+    BindContext context(*scope, LookupLocation::before(*this));
+    auto baseType = Lookup::findClass(*classSyntax.extendsClause->baseName, context);
+    if (!baseType)
+        return;
+
+    // Inherit all base class members that don't conflict with our declared symbols.
+    auto& comp = scope->getCompilation();
+    auto& scopeNameMap = getNameMap();
+    for (auto& member : baseType->members()) {
+        if (member.name.empty())
+            continue;
+
+        // Don't inherit if the member is already overriden.
+        if (auto it = scopeNameMap.find(member.name); it != scopeNameMap.end())
+            continue;
+
+        // Don't inherit constructors.
+        if (member.kind == SymbolKind::Subroutine &&
+            (member.as<SubroutineSymbol>().flags & MethodFlags::Constructor) != 0) {
+            continue;
+        }
+
+        // If the symbol itself was already inherited, create a new wrapper around
+        // it for our own scope.
+        const Symbol* toWrap = &member;
+        if (member.kind == SymbolKind::TransparentMember)
+            toWrap = &member.as<TransparentMemberSymbol>().wrapped;
+
+        // All symbols get inserted into the beginning of the scope using the
+        // provided insertion callback. We insert them as TransparentMemberSymbols
+        // so that we can trace a path back to the actual location they are declared.
+        auto wrapper = comp.emplace<TransparentMemberSymbol>(*toWrap);
+        insertCB(*wrapper);
+    }
+
+    baseClass = baseType;
 }
 
 void ClassType::serializeTo(ASTSerializer& serializer) const {

@@ -214,6 +214,9 @@ protected:
             elaborate();
     }
 
+    /// Flag the need for this scope to be elaborated before members are accessed.
+    void setNeedElaboration() { getOrAddDeferredData(); }
+
 private:
     friend class Compilation;
 

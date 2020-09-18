@@ -634,3 +634,46 @@ endmodule
     CHECK(diags[1].code == diag::AssignmentToConst);
     CHECK(diags[2].code == diag::InvalidThisHandle);
 }
+
+TEST_CASE("Inheritance") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    integer i = 1;
+    integer j = 2;
+    function integer f();
+        f = i;
+    endfunction
+endclass
+
+class B extends A;
+    integer i = 2;
+    function void f();
+        i = j;
+    endfunction
+endclass
+
+class C extends B;
+    function void g();
+        f();
+        i = j + C::j + A::f();
+    endfunction
+endclass
+
+module m;
+    A a = new;
+    A b1 = B::new;
+    B b2 = new;
+    C c = new;
+    integer i = b1.f();
+    initial begin
+        b2.f();
+        a = b2;
+        c.i = c.j;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -734,6 +734,23 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
     return symbol;
 }
 
+const ClassType* Lookup::findClass(const NameSyntax& className, const BindContext& context) {
+    LookupResult result;
+    Lookup::name(context.scope, className, context.lookupLocation, LookupFlags::Type, result);
+
+    result.reportErrors(context);
+    if (!result.found)
+        return nullptr;
+
+    if (!result.found->isType() || !result.found->as<Type>().isClass()) {
+        context.addDiag(diag::NotAClass, className.sourceRange()) << result.found->name;
+        return nullptr;
+    }
+
+    auto& type = result.found->as<Type>();
+    return &type.getCanonicalType().as<ClassType>();
+}
+
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
                              optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              SymbolIndex outOfBlockIndex, LookupResult& result) {

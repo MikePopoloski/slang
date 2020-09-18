@@ -33,9 +33,9 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EmptyMember; }
 };
 
-/// A class that wraps a hoisted transparent type member (such as an enum value)
-/// into a parent scope. Whenever lookup finds one of these symbols, it will be
-/// unwrapped into the underlying symbol instead.
+/// A class that wraps a hoisted transparent type member, such as an enum value
+/// or a symbol inherited from a base class, into a scope. Whenever lookup finds
+/// one of these symbols, it will be unwrapped into the underlying symbol instead.
 class TransparentMemberSymbol : public Symbol {
 public:
     const Symbol& wrapped;
@@ -44,7 +44,7 @@ public:
         Symbol(SymbolKind::TransparentMember, wrapped_.name, wrapped_.location), wrapped(wrapped_) {
     }
 
-    // enum members will be exposed in their containing enum
+    // Wrapped symbols will be exposed in their containing scope.
     void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TransparentMember; }

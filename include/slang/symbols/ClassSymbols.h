@@ -13,6 +13,7 @@
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/util/Function.h"
 
 namespace slang {
 
@@ -73,6 +74,12 @@ public:
 
     ClassType(Compilation& compilation, string_view name, SourceLocation loc);
 
+    /// If this class derives from a base class, returns that type. Otherwise returns null.
+    const Type* getBaseClass() const {
+        ensureElaborated();
+        return baseClass;
+    }
+
     static const Symbol& fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax);
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
@@ -89,10 +96,13 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassType; }
 
 private:
+    friend class Scope;
     friend class GenericClassDefSymbol;
 
     const Type& populate(const Scope& scope, const ClassDeclarationSyntax& syntax);
+    void inheritMembers(function_ref<void(const Symbol&)> insertCB) const;
 
+    mutable const Type* baseClass = nullptr;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
 };
 

@@ -794,21 +794,9 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
     }
     else {
         auto& className = *syntax.scopedNew->as<ScopedNameSyntax>().left;
-
-        LookupResult result;
-        Lookup::name(context.scope, className, context.lookupLocation, LookupFlags::Type, result);
-
-        result.reportErrors(context);
-        if (!result.found)
+        classType = Lookup::findClass(className, context);
+        if (!classType)
             return badExpr(compilation, nullptr);
-
-        if (!result.found->isType() || !result.found->as<Type>().isClass()) {
-            context.addDiag(diag::NotAClass, className.sourceRange()) << result.found->name;
-            return badExpr(compilation, nullptr);
-        }
-
-        auto& type = result.found->as<Type>();
-        classType = &type.getCanonicalType().as<ClassType>();
     }
 
     Expression* constructorCall = nullptr;

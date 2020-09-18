@@ -13,6 +13,7 @@
 namespace slang {
 
 class BindContext;
+class ClassType;
 class Scope;
 class Symbol;
 class SystemSubroutine;
@@ -137,6 +138,8 @@ public:
     static const Symbol* selectChild(const Symbol& symbol,
                                      span<const ElementSelectSyntax* const> selectors,
                                      const BindContext& context, LookupResult& result);
+
+    static const ClassType* findClass(const NameSyntax& name, const BindContext& context);
 
 private:
     Lookup() = default;

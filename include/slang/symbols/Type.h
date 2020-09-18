@@ -205,6 +205,10 @@ public:
     /// Determines whether the given type can be bit-stream cast to this one.
     bool isBitstreamCastable(const Type& rhs) const;
 
+    /// Returns true if this is a class type that derives from the given base
+    /// class type, and false otherwise.
+    bool isDerivedFrom(const Type& base) const;
+
     /// Gets a combination of flags for integral types; for non-integral types,
     /// this returns all zeros.
     bitmask<IntegralFlags> getIntegralFlags() const;

@@ -475,9 +475,15 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
         return l->getArrayElementType()->isEquivalent(*r->getArrayElementType());
     }
 
-    // Null is assignment compatible to all class types.
-    if (l->isClass() && r->isNull())
-        return true;
+    if (l->isClass()) {
+        // Null is assignment compatible to all class types.
+        if (r->isNull())
+            return true;
+
+        // Derived classes can be assigned to parent classes.
+        if (r->isDerivedFrom(*l))
+            return true;
+    }
 
     return false;
 }
@@ -511,6 +517,21 @@ bool Type::isBitstreamCastable(const Type& rhs) const {
         else
             return Bitstream::dynamicSizesMatch(*l, *r);
     }
+    return false;
+}
+
+bool Type::isDerivedFrom(const Type& base) const {
+    const Type* d = &getCanonicalType();
+    const Type* b = &base.getCanonicalType();
+    if (!b->isClass())
+        return false;
+
+    while (d && d->isClass()) {
+        d = d->as<ClassType>().getBaseClass();
+        if (d == b)
+            return true;
+    }
+
     return false;
 }
 
