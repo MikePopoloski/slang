@@ -6,18 +6,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cstddef>
+#include "slang/binding/OperatorExpressions.h"
 
 namespace slang {
-
-class BindContext;
-class ConstantValue;
-class EvalContext;
-class Expression;
-class SourceLocation;
-class SourceRange;
-class StreamingConcatenationExpression;
-class Type;
 
 class Bitstream {
 public:
@@ -53,6 +44,16 @@ public:
     /// Performs constant evaluation of an assignment with a streaming concatenation as the target
     static ConstantValue evaluateTarget(const StreamingConcatenationExpression& lhs,
                                         const Expression& rhs, EvalContext& context);
+
+    /// Validates stream expression "with" expression range
+    static bool validStreamWithRange(const Type& arrayType, WithRangeKind kind,
+                                     optional<int32_t> left, optional<int32_t> right,
+                                     const BindContext& context, SourceRange leftRange,
+                                     SourceRange rightRange, bool isTarget = false);
+
+    /// Derives constant width from "with" expression range
+    static optional<int32_t> withRangeWidth(WithRangeKind kind, optional<int32_t> left,
+                                            optional<int32_t> right);
 
 private:
     Bitstream() = default;

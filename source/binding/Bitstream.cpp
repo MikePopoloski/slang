@@ -8,7 +8,6 @@
 
 #include <numeric>
 
-#include "slang/binding/OperatorExpressions.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/symbols/AllTypes.h"
@@ -90,14 +89,29 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(
 
     size_t multiplier = 0, fixedSize = 0;
     for (auto stream : concat.streams()) {
-        auto [multiplierElem, fixedSizeElem] =
-            stream->kind == ExpressionKind::Streaming
-                ? dynamicBitstreamSize(stream->as<StreamingConcatenationExpression>(), mode)
-                : dynamicBitstreamSize(*stream->type, mode);
-        if (mode == BitstreamSizeMode::DestFill && multiplierElem > 0)
+        auto& operand = *stream->operand;
+        size_t multiplierStream, fixedSizeStream;
+
+        if (stream->with && stream->with->width) {
+            auto [multiplierElem, fixedSizeElem] =
+                dynamicBitstreamSize(*operand.type->getArrayElementType(), mode);
+            auto rw = static_cast<size_t>(*stream->with->width);
+            multiplierStream = multiplierElem * rw;
+            fixedSizeStream = fixedSizeElem * rw;
+        }
+        else {
+            auto [multiplierElem, fixedSizeElem] =
+                operand.kind == ExpressionKind::Streaming
+                    ? dynamicBitstreamSize(operand.as<StreamingConcatenationExpression>(), mode)
+                    : dynamicBitstreamSize(*operand.type, mode);
+            multiplierStream = multiplierElem;
+            fixedSizeStream = fixedSizeElem;
+        }
+
+        if (mode == BitstreamSizeMode::DestFill && multiplierStream > 0)
             mode = BitstreamSizeMode::DestEmpty;
-        multiplier = std::gcd(multiplier, multiplierElem);
-        fixedSize += fixedSizeElem;
+        multiplier = std::gcd(multiplier, multiplierStream);
+        fixedSize += fixedSizeStream;
     }
 
     return { multiplier, fixedSize };
@@ -424,6 +438,8 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
         context.addDiag(diag::BadStreamSourceType, assignLoc) << *rhs.type << lhs.sourceRange;
         return false;
     }
+    if (context.inUnevaluatedBranch())
+        return true; // No size check in an unevaluated conditional branch
 
     size_t targetWidth = lhs.as<StreamingConcatenationExpression>().bitstreamWidth();
     size_t sourceWidth;
@@ -462,6 +478,8 @@ bool Bitstream::canBeSource(const Type& target, const StreamingConcatenationExpr
         return false;
     }
 
+    if (context.inUnevaluatedBranch())
+        return true; // No size check in an unevaluated conditional branch
     if (!target.isFixedSize())
         return true; // Sizes checked at constant evaluation or runtime
 
@@ -586,10 +604,11 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                                 size_t& dynamicSize, EvalContext& context,
                                 SmallVector<ConstantValue>* dryRun = nullptr) {
     for (auto stream : lhs.streams()) {
-        if (stream->kind == ExpressionKind::Streaming) {
-            auto& concat = stream->as<StreamingConcatenationExpression>();
+        auto& operand = *stream->operand;
+        if (operand.kind == ExpressionKind::Streaming) {
+            auto& concat = operand.as<StreamingConcatenationExpression>();
             if (dryRun || !concat.sliceSize) {
-                if (!unpackConcatenation(stream->as<StreamingConcatenationExpression>(), iter,
+                if (!unpackConcatenation(operand.as<StreamingConcatenationExpression>(), iter,
                                          iterEnd, bitOffset, dynamicSize, context, dryRun)) {
                     return false;
                 }
@@ -598,7 +617,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             // A dry run collects rvalue without storing lvalue
             size_t dynamicSizeSave = dynamicSize;
             SmallVectorSized<ConstantValue, 8> toBeOrdered;
-            if (!unpackConcatenation(stream->as<StreamingConcatenationExpression>(), iter, iterEnd,
+            if (!unpackConcatenation(operand.as<StreamingConcatenationExpression>(), iter, iterEnd,
                                      bitOffset, dynamicSize, context, &toBeOrdered)) {
                 return false;
             }
@@ -622,11 +641,11 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             ASSERT(iterConcat == packed.cend() && !bit);
         }
         else {
-            auto rvalue = unpackBitstream(*stream->type, iter, iterEnd, bitOffset, dynamicSize);
+            auto rvalue = unpackBitstream(*operand.type, iter, iterEnd, bitOffset, dynamicSize);
             if (dryRun)
                 dryRun->emplace(std::move(rvalue));
             else {
-                LValue lvalue = stream->evalLValue(context);
+                LValue lvalue = operand.evalLValue(context);
                 if (!lvalue)
                     return false;
                 lvalue.store(rvalue);
@@ -682,6 +701,115 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     if (!unpackConcatenation(lhs, iter, packed.cend(), bitOffset, dynamicSize, context))
         return nullptr;
     return rvalue;
+}
+
+bool Bitstream::validStreamWithRange(const Type& arrayType, WithRangeKind kind,
+                                     optional<int32_t> left, optional<int32_t> right,
+                                     const BindContext& context, SourceRange leftRange,
+                                     SourceRange rightRange, bool isTarget) {
+
+    auto validateIndex = [&](int32_t value, SourceRange errorRange) {
+        if (arrayType.hasFixedRange()) {
+            // evaluate to values that lie within the bounds of a fixed-size array
+            if (!arrayType.getFixedRange().containsPoint(value)) {
+                context.addDiag(diag::IndexValueInvalid, errorRange) << value << arrayType;
+                return false;
+            }
+        }
+        else if (value != 0) {
+            // or to positive values for dynamic arrays or queues
+            if (!context.requireGtZero(value, errorRange))
+                return false;
+        }
+
+        return true;
+    };
+
+    if (left) {
+        if (!validateIndex(*left, leftRange))
+            return false;
+    }
+
+    if (right) {
+        SourceRange errorRange{ leftRange.start(), rightRange.end() };
+
+        if (kind == WithRangeKind::IndexedUp || kind == WithRangeKind::IndexedDown) {
+            // Reference RangeSelectExpression::fromSyntax for similar constraints of indexed
+            // part-select
+            if (!context.requireGtZero(right, rightRange))
+                return false;
+
+            auto width = *right;
+            if (arrayType.hasFixedRange() &&
+                (bitwidth_t)width > arrayType.getFixedRange().width()) {
+                context.addDiag(diag::RangeWidthTooLarge, rightRange) << width << arrayType;
+                return false;
+            }
+
+            if (left && arrayType.hasFixedRange()) {
+                optional<int32_t> index;
+                auto value = *left;
+                if (kind == WithRangeKind::IndexedUp) {
+                    index = checkedAddS32(value, width - 1);
+                    if (!index)
+                        index = INT32_MAX;
+                }
+                else {
+                    index = checkedSubS32(value, width - 1);
+                    if (!index)
+                        index = INT32_MIN;
+                }
+                if (!arrayType.getFixedRange().containsPoint(*index)) {
+                    auto& diag = context.addDiag(diag::BadRangeExpression, errorRange);
+                    ConstantRange selectionRange = { value, *index };
+                    if (selectionRange.isLittleEndian() !=
+                        arrayType.getFixedRange().isLittleEndian())
+                        selectionRange = selectionRange.reverse();
+                    diag << selectionRange.left << selectionRange.right;
+                    diag << arrayType;
+                    return false;
+                }
+                if (!arrayType.getFixedRange().isLittleEndian())
+                    std::swap(left, right);
+            }
+        }
+        else {
+            if (!validateIndex(*right, rightRange))
+                return false;
+
+            // Reference RangeSelectExpression::fromSyntax for similar constraints of non-indexed
+            // part-select
+            if (left && (isTarget || arrayType.hasFixedRange())) {
+                ConstantRange selectionRange = { *left, *right };
+                if (selectionRange.width() > 1 &&
+                    selectionRange.isLittleEndian() !=
+                        (arrayType.hasFixedRange() ? arrayType.getFixedRange().isLittleEndian()
+                                                   : false)) {
+                    auto& diag =
+                        context.addDiag(arrayType.hasFixedRange() ? diag::SelectEndianMismatch
+                                                                  : diag::SelectEndianDynamic,
+                                        errorRange);
+                    diag << arrayType;
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+optional<int32_t> Bitstream::withRangeWidth(WithRangeKind kind, optional<int32_t> left,
+                                            optional<int32_t> right) {
+    if (kind == WithRangeKind::Bit)
+        return 1;
+    else if (kind == WithRangeKind::IndexedUp || kind == WithRangeKind::IndexedDown)
+        return right;
+    else if (left && right) {
+        ConstantRange range = { *left, *right };
+        return range.width();
+    }
+    return std::nullopt;
 }
 
 } // namespace slang

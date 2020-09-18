@@ -1510,7 +1510,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
 
     auto badResult = [&]() {
         return compilation.emplace<StreamingConcatenationExpression>(
-            compilation.getErrorType(), sliceSize, span<const Expression*>(), syntax.sourceRange());
+            compilation.getErrorType(), sliceSize, span<const StreamExpression*>(),
+            syntax.sourceRange());
     };
 
     if (!(context.flags & BindFlags::StreamingAllowed)) {
@@ -1518,6 +1519,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         return badExpr(compilation, badResult());
     }
 
+    // slice_size
     if (syntax.sliceSize) {
         if (isRightToLeft) {
             const auto& sliceExpr =
@@ -1552,8 +1554,11 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     // The sole purpose of assignmentTarget here is for Type::isBitstreamType to know whether to
     // exclude associative arrays and classes for target/destination. Streaming concatenation is
     // self-determined and its size/type should not be affected by assignmentTarget.
-    SmallVectorSized<Expression*, 8> buffer;
+    bool isTarget = !assignmentTarget;
+
+    SmallVectorSized<StreamExpression*, 8> buffer;
     for (const auto argSyntax : syntax.expressions) {
+        // stream_expression
         Expression* arg;
         if (assignmentTarget &&
             argSyntax->expression->kind == SyntaxKind::StreamingConcatenationExpression) {
@@ -1565,10 +1570,89 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                                   BindFlags::StreamingAllowed);
         }
 
-        if (argSyntax->withRange) {
-            // TODO: with array_range_expression
-            context.addDiag(diag::NotYetSupported, argSyntax->withRange->sourceRange());
-            return badExpr(compilation, badResult());
+        // with [ array_range_expression ]
+        WithExpression* with = nullptr;
+        if (argSyntax->withRange && !arg->bad()) {
+            auto& arrayType = *arg->type;
+            // The expression before the with can be any one-dimensional unpacked array (including a
+            // queue). Interpreted as fixed-sized unpacked arrays, dynamic arrays, or queues of
+            // fixed-size elements.
+            if (!arrayType.isUnpackedArray() || arrayType.isAssociativeArray() ||
+                !arrayType.getArrayElementType()->isFixedSize()) {
+                context.addDiag(diag::BadStreamWithType, arg->sourceRange);
+                return badExpr(compilation, badResult());
+            }
+            auto& range = *argSyntax->withRange->range;
+            const SelectorSyntax* selector = range.selector;
+            if (!selector) {
+                context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
+                return badExpr(compilation, badResult());
+            }
+
+            WithRangeKind kind;
+            Expression *left = nullptr, *right = nullptr;
+            switch (selector->kind) {
+                case SyntaxKind::BitSelect:
+                    kind = WithRangeKind::Bit;
+                    left = &selfDetermined(compilation, *selector->as<BitSelectSyntax>().expr,
+                                           context);
+                    break;
+                case SyntaxKind::SimpleRangeSelect:
+                    kind = WithRangeKind::Simple;
+                    left = &selfDetermined(compilation, *selector->as<RangeSelectSyntax>().left,
+                                           context);
+                    break;
+                case SyntaxKind::AscendingRangeSelect:
+                    kind = WithRangeKind::IndexedUp;
+                    break;
+                case SyntaxKind::DescendingRangeSelect:
+                    kind = WithRangeKind::IndexedDown;
+                    break;
+                default:
+                    THROW_UNREACHABLE;
+            }
+            if (!left) {
+                left =
+                    &selfDetermined(compilation, *selector->as<RangeSelectSyntax>().left, context);
+                right =
+                    &selfDetermined(compilation, *selector->as<RangeSelectSyntax>().right, context);
+            }
+
+            // Pre-evaluating possible constants helps compile-time size checks
+            Expression* exprs[] = { left, right };
+            optional<int32_t> values[] = { std::nullopt, std::nullopt };
+            for (auto expr : exprs) {
+                if (!expr)
+                    break;
+                if (expr->bad())
+                    return badExpr(compilation, badResult());
+                if (!expr->type->isIntegral()) {
+                    context.addDiag(diag::ExprMustBeIntegral, expr->sourceRange);
+                    return badExpr(compilation, badResult());
+                }
+                if (!context.inUnevaluatedBranch()) {
+                    ConstantValue val;
+                    if ((val = context.tryEval(*expr))) {
+                        optional<int32_t> index = val.integer().as<int32_t>();
+                        if (!index) {
+                            context.addDiag(diag::IndexValueInvalid, expr->sourceRange)
+                                << val << arrayType;
+                            return badExpr(compilation, badResult());
+                        }
+                        values[expr == left ? 0 : 1] = index;
+                    }
+                }
+            }
+            optional<int32_t> width;
+            if (values[0] || values[1]) {
+                // compile-time size checks
+                if (!Bitstream::validStreamWithRange(arrayType, kind, values[0], values[1], context,
+                                                     left->sourceRange, right->sourceRange))
+                    return badExpr(compilation, badResult());
+                width = Bitstream::withRangeWidth(kind, values[0], values[1]);
+            }
+
+            with = compilation.emplace<WithExpression>(WithExpression{ kind, left, right, width });
         }
 
         if (arg->bad())
@@ -1577,13 +1661,13 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         if (argSyntax->expression->kind != SyntaxKind::StreamingConcatenationExpression) {
             const Type& type = *arg->type;
             // TODO: first-declared member of untagged union
-            if (!type.isBitstreamType(!assignmentTarget)) {
+            if (!type.isBitstreamType(isTarget)) {
                 context.addDiag(diag::BadStreamExprType, arg->sourceRange) << type;
                 return badExpr(compilation, badResult());
             }
         }
 
-        buffer.append(arg);
+        buffer.append(compilation.emplace<StreamExpression>(StreamExpression{ arg, with }));
     }
 
     // Streaming concatenation has no explicit type. Use void to prevent unintentional problems when
@@ -1596,7 +1680,7 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
     std::vector<ConstantValue> values;
     values.reserve(streams().size());
     for (auto stream : streams()) {
-        ConstantValue v = stream->eval(context);
+        ConstantValue v = stream->operand->eval(context);
         if (!v)
             return nullptr;
         values.emplace_back(std::move(v));
@@ -1610,8 +1694,14 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
 
 bool StreamingConcatenationExpression::verifyConstantImpl(EvalContext& context) const {
     for (auto stream : streams()) {
-        if (!stream->verifyConstant(context))
+        if (!stream->operand->verifyConstant(context))
             return false;
+        if (stream->with) {
+            if (!stream->with->left->verifyConstant(context))
+                return false;
+            if (stream->with->right && !stream->with->right->verifyConstant(context))
+                return false;
+        }
     }
     return true;
 }
@@ -1620,8 +1710,17 @@ void StreamingConcatenationExpression::serializeTo(ASTSerializer& serializer) co
     serializer.write("sliceSize", sliceSize);
     if (!streams().empty()) {
         serializer.startArray("streams");
-        for (auto op : streams())
-            serializer.serialize(*op);
+        for (auto op : streams()) {
+            serializer.startObject();
+            serializer.write("operand", op->operand);
+            if (op->with) {
+                serializer.write("withKind", toString(op->with->kind));
+                serializer.write("left", op->with->left);
+                if (op->with->right)
+                    serializer.write("right", op->with->right);
+            }
+            serializer.endObject();
+        }
         serializer.endArray();
     }
 }
@@ -1629,10 +1728,11 @@ void StreamingConcatenationExpression::serializeTo(ASTSerializer& serializer) co
 bool StreamingConcatenationExpression::isFixedSize() const {
     for (auto stream : streams()) {
         bool isFixed;
-        if (stream->kind == ExpressionKind::Streaming)
-            isFixed = stream->as<StreamingConcatenationExpression>().isFixedSize();
+        auto& operand = *stream->operand;
+        if (operand.kind == ExpressionKind::Streaming)
+            isFixed = operand.as<StreamingConcatenationExpression>().isFixedSize();
         else
-            isFixed = stream->type->isFixedSize();
+            isFixed = operand.type->isFixedSize() || (stream->with && stream->with->width);
 
         if (!isFixed)
             return false;
@@ -1643,10 +1743,13 @@ bool StreamingConcatenationExpression::isFixedSize() const {
 size_t StreamingConcatenationExpression::bitstreamWidth() const {
     size_t width = 0;
     for (auto stream : streams()) {
-        if (stream->kind == ExpressionKind::Streaming)
-            width += stream->as<StreamingConcatenationExpression>().bitstreamWidth();
+        auto& operand = *stream->operand;
+        if (operand.kind == ExpressionKind::Streaming)
+            width += operand.as<StreamingConcatenationExpression>().bitstreamWidth();
+        else if (stream->with && stream->with->width)
+            width += static_cast<size_t>(*stream->with->width);
         else
-            width += stream->type->bitstreamWidth();
+            width += operand.type->bitstreamWidth();
     }
     return width;
 }
