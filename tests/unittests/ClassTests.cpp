@@ -110,6 +110,8 @@ class C;
 
     // Scoped name for prototype.
     extern function foo::baz();
+
+    protected parameter int z = 4;
 endclass
 
 static function C::bar();
@@ -117,7 +119,7 @@ endfunction
 )");
 
     auto& diags = tree->diagnostics();
-    REQUIRE(diags.size() == 20);
+    REQUIRE(diags.size() == 21);
     CHECK(diags[0].code == diag::DuplicateQualifier);
     CHECK(diags[1].code == diag::QualifierConflict);
     CHECK(diags[2].code == diag::QualifierConflict);
@@ -137,7 +139,8 @@ endfunction
     CHECK(diags[16].code == diag::InvalidQualifierForConstructor);
     CHECK(diags[17].code == diag::QualifiersOnOutOfBlock);
     CHECK(diags[18].code == diag::MethodPrototypeScoped);
-    CHECK(diags[19].code == diag::QualifiersOnOutOfBlock);
+    CHECK(diags[19].code == diag::InvalidQualifierForMember);
+    CHECK(diags[20].code == diag::QualifiersOnOutOfBlock);
 }
 
 TEST_CASE("Class typedefs") {

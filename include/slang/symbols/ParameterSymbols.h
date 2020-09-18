@@ -17,7 +17,6 @@ struct ParameterDeclarationStatementSyntax;
 class ParameterSymbolBase {
 public:
     const Symbol& symbol;
-    Visibility visibility = Visibility::Public;
 
     bool isLocalParam() const { return isLocal; }
     bool isPortParam() const { return isPort; }
@@ -26,9 +25,6 @@ public:
 
     static void fromLocalSyntax(const Scope& scope,
                                 const ParameterDeclarationStatementSyntax& syntax,
-                                SmallVector<Symbol*>& results);
-
-    static void fromLocalSyntax(const Scope& scope, const ClassPropertyDeclarationSyntax& syntax,
                                 SmallVector<Symbol*>& results);
 
 protected:

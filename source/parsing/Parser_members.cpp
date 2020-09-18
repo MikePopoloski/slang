@@ -985,6 +985,12 @@ MemberSyntax* Parser::parseClassMember() {
                     case TokenKind::StaticKeyword:
                         addDiag(diag::InvalidQualifierForMember, qual.location()) << qual.range();
                         break;
+                    case TokenKind::LocalKeyword:
+                    case TokenKind::ProtectedKeyword:
+                        if (decl.kind == SyntaxKind::ParameterDeclarationStatement)
+                            addDiag(diag::InvalidQualifierForMember, qual.location())
+                                << qual.range();
+                        break;
                     default:
                         break;
                 }

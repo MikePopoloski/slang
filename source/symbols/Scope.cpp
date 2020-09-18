@@ -325,7 +325,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 }
                 case SyntaxKind::ParameterDeclarationStatement: {
                     SmallVectorSized<Symbol*, 8> params;
-                    ParameterSymbolBase::fromLocalSyntax(*this, cpd, params);
+                    ParameterSymbolBase::fromLocalSyntax(
+                        *this, cpd.declaration->as<ParameterDeclarationStatementSyntax>(), params);
                     for (auto param : params)
                         addMember(*param);
                     break;

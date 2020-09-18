@@ -39,35 +39,6 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
     }
 }
 
-void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
-                                          const ClassPropertyDeclarationSyntax& syntax,
-                                          SmallVector<Symbol*>& results) {
-    fromLocalSyntax(scope, syntax.declaration->as<ParameterDeclarationStatementSyntax>(), results);
-
-    Visibility visibility = Visibility::Public;
-    for (Token qual : syntax.qualifiers) {
-        switch (qual.kind) {
-            case TokenKind::LocalKeyword:
-                visibility = Visibility::Local;
-                break;
-            case TokenKind::ProtectedKeyword:
-                visibility = Visibility::Protected;
-                break;
-            default:
-                // Everything else is not allowed on parameters; the parser will issue
-                // a diagnostic so just ignore them here.
-                break;
-        }
-    }
-
-    for (auto param : results) {
-        if (param->kind == SymbolKind::TypeParameter)
-            param->as<TypeParameterSymbol>().visibility = visibility;
-        else
-            param->as<ParameterSymbol>().visibility = visibility;
-    }
-}
-
 bool ParameterSymbolBase::hasDefault() const {
     if (symbol.kind == SymbolKind::Parameter)
         return symbol.as<ParameterSymbol>().getDeclaredType()->getInitializerSyntax();
