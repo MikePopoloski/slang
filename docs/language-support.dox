@@ -105,12 +105,12 @@ LRM | Feature | Supported
 {{m-success}} 8.10 | Static methods | v0.5
 {{m-success}} 8.11 | This | v0.5
 {{m-success}} 8.12 | Assignment, renaming, and copying | v0.5
-{{m-danger}}  8.13 | Inheritance and subclasses | no
-{{m-danger}}  8.14 | Overriden members | no
-{{m-danger}}  8.15 | Super | no
+{{m-success}} 8.13 | Inheritance and subclasses | v0.5
+{{m-success}} 8.14 | Overriden members | v0.5
+{{m-success}} 8.15 | Super | v0.5
 {{m-danger}}  8.16 | Casting | no
 {{m-danger}}  8.17 | Chaining constructors | no
-{{m-danger}}  8.18 | Data hiding and encapsulation | no
+{{m-success}} 8.18 | Data hiding and encapsulation | v0.5
 {{m-danger}}  8.19 | Constant class properties | no
 {{m-danger}}  8.20 | Virtual methods | no
 {{m-danger}}  8.21 | Abstract classes and pure virtual methods | no
