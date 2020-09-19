@@ -1648,6 +1648,7 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
             ok = true;
             break;
         case ExpressionKind::Assignment:
+        case ExpressionKind::NewClass:
             ok = true;
             break;
         case ExpressionKind::UnaryOp: {

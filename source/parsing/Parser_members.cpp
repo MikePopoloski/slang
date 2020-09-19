@@ -508,7 +508,8 @@ static bool checkSubroutineName(const NameSyntax& name) {
     return checkKind(name);
 }
 
-FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind, bool allowTasks) {
+FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind, bool allowTasks,
+                                                        bool* isConstructor) {
     Token keyword;
     if (allowTasks && peek(TokenKind::TaskKeyword))
         keyword = consume();
@@ -534,19 +535,21 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind, b
     if (!checkSubroutineName(name))
         addDiag(diag::ExpectedSubroutineName, keyword.location()) << name.sourceRange();
 
-    bool isConstructor = getLastConsumed().kind == TokenKind::NewKeyword;
+    bool constructor = getLastConsumed().kind == TokenKind::NewKeyword;
+    if (isConstructor)
+        *isConstructor = constructor;
 
     if (keyword.kind == TokenKind::TaskKeyword) {
         if (returnType->kind != SyntaxKind::ImplicitType)
             addDiag(diag::TaskReturnType, keyword.location()) << returnType->sourceRange();
-        else if (isConstructor)
+        else if (constructor)
             addDiag(diag::TaskConstructor, keyword.location()) << name.sourceRange();
     }
-    else if (isConstructor && returnType->kind != SyntaxKind::ImplicitType) {
+    else if (constructor && returnType->kind != SyntaxKind::ImplicitType) {
         addDiag(diag::ConstructorReturnType, name.getFirstToken().location())
             << returnType->sourceRange();
     }
-    else if (isConstructor && name.kind != SyntaxKind::ScopedName &&
+    else if (constructor && name.kind != SyntaxKind::ScopedName &&
              parentKind != SyntaxKind::ClassDeclaration) {
         addDiag(diag::ConstructorOutsideClass, keyword.location()) << name.sourceRange();
     }
@@ -571,9 +574,10 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
                                                             TokenKind endKind,
                                                             SyntaxKind parentKind) {
     Token end;
-    auto& prototype = parseFunctionPrototype(parentKind);
+    bool isConstructor;
+    auto& prototype = parseFunctionPrototype(parentKind, /* allowTasks */ true, &isConstructor);
     auto semi = expect(TokenKind::Semicolon);
-    auto items = parseBlockItems(endKind, end);
+    auto items = parseBlockItems(endKind, end, isConstructor);
     auto endBlockName = parseNamedBlockClause();
 
     Token nameToken = prototype.name->getLastToken();

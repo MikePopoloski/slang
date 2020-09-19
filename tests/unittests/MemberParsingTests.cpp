@@ -441,3 +441,29 @@ endfunction
     CHECK(diagnostics[5].code == diag::ConstructorOutsideClass);
     CHECK(diagnostics[6].code == diag::ExpectedSubroutineName);
 }
+
+TEST_CASE("super.new parsing") {
+    auto& text = R"(
+class A;
+    function new;
+        super.new();
+    endfunction
+
+    int i = super.new();
+endclass
+
+class B extends A;
+    function new;
+        int i = 4;
+        this.super.new();
+        super.new();
+    endfunction
+endclass
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::InvalidSuperNew);
+    CHECK(diagnostics[1].code == diag::InvalidSuperNew);
+}

@@ -146,6 +146,10 @@ public:
     /// found, or if the found symbol is not a class type, appropriate diagnostics are issued.
     static const ClassType* findClass(const NameSyntax& name, const BindContext& context);
 
+    /// Gets the containing class for the given scope, or nullptr if the
+    /// scope is not within a class.
+    static const ClassType* getContainingClass(const Scope& scope);
+
     /// If the given symbol is a member of a class, returns its access visibility.
     /// Otherwise, returns Visibility::Public.
     static Visibility getVisibility(const Symbol& symbol);

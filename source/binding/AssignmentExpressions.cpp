@@ -793,10 +793,35 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
         classType = &assignmentTarget->getCanonicalType().as<ClassType>();
     }
     else {
-        auto& className = *syntax.scopedNew->as<ScopedNameSyntax>().left;
-        classType = Lookup::findClass(className, context);
-        if (!classType)
-            return badExpr(compilation, nullptr);
+        auto& scoped = syntax.scopedNew->as<ScopedNameSyntax>();
+        if (scoped.left->getLastToken().kind == TokenKind::SuperKeyword) {
+            // This is a super.new invocation, so find the base class's
+            // constructor. This is relative to our current context, not
+            // any particular assignment target.
+            classType = Lookup::getContainingClass(context.scope);
+            if (!classType) {
+                // Parser already emitted an error for this case.
+                return badExpr(compilation, nullptr);
+            }
+
+            auto base = classType->getBaseClass();
+            if (!base) {
+                context.addDiag(diag::SuperNoBase, syntax.scopedNew->sourceRange())
+                    << classType->name;
+                return badExpr(compilation, nullptr);
+            }
+
+            classType = &base->as<Type>().getCanonicalType().as<ClassType>();
+            assignmentTarget = &compilation.getVoidType();
+        }
+        else {
+            auto& className = *syntax.scopedNew->as<ScopedNameSyntax>().left;
+            classType = Lookup::findClass(className, context);
+            if (!classType)
+                return badExpr(compilation, nullptr);
+
+            assignmentTarget = classType;
+        }
     }
 
     Expression* constructorCall = nullptr;

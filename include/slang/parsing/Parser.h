@@ -37,7 +37,11 @@ enum class ExpressionOptions {
     EventExpressionContext = 4,
 
     /// In a constraint block context, the -> operator has special meaning.
-    ConstraintContext = 8
+    ConstraintContext = 8,
+
+    /// This expression is in a context where "super.new" calls are allowed.
+    /// They are restricted to the first statement in a class constructor.
+    AllowSuperNewCall = 16
 };
 BITMASK(ExpressionOptions, ConstraintContext);
 
@@ -94,7 +98,7 @@ public:
     /// These are mostly for testing; only use if you know that the
     /// source stream is currently looking at one of these.
     ExpressionSyntax& parseExpression();
-    StatementSyntax& parseStatement(bool allowEmpty = true);
+    StatementSyntax& parseStatement(bool allowEmpty = true, bool allowSuperNew = false);
     ModuleDeclarationSyntax& parseModule();
     ClassDeclarationSyntax& parseClass();
     MemberSyntax* parseSingleMember(SyntaxKind parentKind);
@@ -145,7 +149,7 @@ private:
     ExpressionSyntax& parseIntegerExpression(bool disallowVector);
     ExpressionSyntax& parseInsideExpression(ExpressionSyntax& expr);
     ExpressionSyntax& parsePostfixExpression(ExpressionSyntax& expr);
-    ExpressionSyntax& parseNewExpression(NameSyntax& expr);
+    ExpressionSyntax& parseNewExpression(NameSyntax& expr, bitmask<ExpressionOptions> options);
     ConcatenationExpressionSyntax& parseConcatenation(Token openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax& parseStreamConcatenation(Token openBrace);
     StreamExpressionSyntax& parseStreamExpression();
@@ -242,10 +246,10 @@ private:
     GateInstanceSyntax& parseGateInstance();
     PortConnectionSyntax& parsePortConnection();
     FunctionPortSyntax& parseFunctionPort();
-    FunctionPrototypeSyntax& parseFunctionPrototype(SyntaxKind parentKind, bool allowTasks = true);
+    FunctionPrototypeSyntax& parseFunctionPrototype(SyntaxKind parentKind, bool allowTasks = true, bool* isConstructor = nullptr);
     FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, SyntaxKind functionKind, TokenKind endKind, SyntaxKind parentKind);
     Token parseLifetime();
-    span<SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end);
+    span<SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end, bool inConstructor);
     GenvarDeclarationSyntax& parseGenvarDeclaration(AttrList attributes);
     LoopGenerateSyntax& parseLoopGenerateConstruct(AttrList attributes);
     IfGenerateSyntax& parseIfGenerateConstruct(AttrList attributes);

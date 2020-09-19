@@ -10,7 +10,7 @@
 
 namespace slang {
 
-StatementSyntax& Parser::parseStatement(bool allowEmpty) {
+StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
     auto dg = setDepthGuard();
 
     NamedLabelSyntax* label = nullptr;
@@ -124,7 +124,11 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
 
     // everything else should be some kind of expression
     if (isPossibleExpression(peek().kind)) {
-        auto& expr = parseSubExpression(ExpressionOptions::ProceduralAssignmentContext, 0);
+        bitmask<ExpressionOptions> options = ExpressionOptions::ProceduralAssignmentContext;
+        if (allowSuperNew)
+            options |= ExpressionOptions::AllowSuperNewCall;
+
+        auto& expr = parseSubExpression(options, 0);
         return factory.expressionStatement(label, attributes, expr, expect(TokenKind::Semicolon));
     }
 
@@ -572,7 +576,7 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
     return nullptr;
 }
 
-span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
+span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bool inConstructor) {
     SmallVectorSized<SyntaxNode*, 16> buffer;
     auto kind = peek().kind;
     bool errored = false;
@@ -591,7 +595,8 @@ span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
             newNode = &parseVariableDeclaration(parseAttributes());
         }
         else if (isPossibleStatement(kind)) {
-            newNode = &parseStatement();
+            newNode = &parseStatement(/* allowEmpty */ true,
+                                      /* allowSuperNew */ inConstructor && !sawStatement);
             if (newNode->kind == SyntaxKind::EmptyStatement &&
                 newNode->as<EmptyStatementSyntax>().semicolon.isMissing() &&
                 loc == peek().location()) {
@@ -643,7 +648,7 @@ BlockStatementSyntax& Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind
     auto name = parseNamedBlockClause();
 
     Token end;
-    auto items = parseBlockItems(endKind, end);
+    auto items = parseBlockItems(endKind, end, /* inConstructor */ false);
     auto endName = parseNamedBlockClause();
 
     checkBlockNames(name, endName, label);

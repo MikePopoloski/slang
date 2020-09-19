@@ -393,20 +393,6 @@ bool lookupUpward(Compilation& compilation, span<const NamePlusLoc> nameParts,
     }
 }
 
-const Symbol* getParentClass(const Scope& scope) {
-    const Symbol* parent = &scope.asSymbol();
-    while (parent->kind == SymbolKind::StatementBlock || parent->kind == SymbolKind::Subroutine) {
-        auto parentScope = parent->getParentScope();
-        ASSERT(parentScope);
-        parent = &parentScope->asSymbol();
-    }
-
-    if (parent->kind == SymbolKind::ClassType)
-        return parent;
-
-    return nullptr;
-}
-
 bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRange> sourceRange,
                      LookupResult& result) {
     // All public members and all non-class symbols are visible by default.
@@ -415,7 +401,7 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRa
         return true;
 
     // All non-public members can only be accessed from scopes that are within a class.
-    const Symbol* lookupParent = getParentClass(scope);
+    const Symbol* lookupParent = Lookup::getContainingClass(scope);
     const Symbol& targetParent = symbol.getParentScope()->asSymbol();
 
     if (lookupParent && targetParent.kind == SymbolKind::ClassType) {
@@ -494,8 +480,8 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
                 // The unadorned generic class name here is an error if we're outside the context
                 // of the class itself. If we're within the class, it refers to the "current"
                 // specialization, not the default specialization.
-                auto parent = getParentClass(context.scope);
-                if (!parent || parent->as<ClassType>().genericClass != symbol) {
+                auto parent = Lookup::getContainingClass(context.scope);
+                if (!parent || parent->genericClass != symbol) {
                     result.addDiag(context.scope, diag::GenericClassScopeResolution, name.range());
                     return false;
                 }
@@ -599,13 +585,13 @@ const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult
 }
 
 const Symbol* findSuperHandle(const Scope& scope, SourceRange range, LookupResult& result) {
-    auto parent = getParentClass(scope);
+    auto parent = Lookup::getContainingClass(scope);
     if (!parent) {
         result.addDiag(scope, diag::SuperOutsideClass, range);
         return nullptr;
     }
 
-    auto base = parent->as<ClassType>().getBaseClass();
+    auto base = parent->getBaseClass();
     if (!base) {
         result.addDiag(scope, diag::SuperNoBase, range) << parent->name;
         return nullptr;
@@ -804,6 +790,20 @@ const ClassType* Lookup::findClass(const NameSyntax& className, const BindContex
 
     auto& type = result.found->as<Type>();
     return &type.getCanonicalType().as<ClassType>();
+}
+
+const ClassType* Lookup::getContainingClass(const Scope& scope) {
+    const Symbol* parent = &scope.asSymbol();
+    while (parent->kind == SymbolKind::StatementBlock || parent->kind == SymbolKind::Subroutine) {
+        auto parentScope = parent->getParentScope();
+        ASSERT(parentScope);
+        parent = &parentScope->asSymbol();
+    }
+
+    if (parent->kind == SymbolKind::ClassType)
+        return &parent->as<ClassType>();
+
+    return nullptr;
 }
 
 Visibility Lookup::getVisibility(const Symbol& symbol) {

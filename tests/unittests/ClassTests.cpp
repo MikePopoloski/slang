@@ -641,6 +641,7 @@ endmodule
 TEST_CASE("Super handle errors") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
+    function new(int i); endfunction
 endclass
 
 class B extends A;
@@ -648,11 +649,16 @@ class B extends A;
         super = new;
         return super.foo;
     endfunction
+
+    function new;
+        super.new(4);
+    endfunction
 endclass
 
 class C;
     function void g;
         super.bar = 1;
+        this.super.new();
     endfunction
 endclass
 
@@ -665,11 +671,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ExpectedToken);
     CHECK(diags[1].code == diag::UnknownClassMember);
     CHECK(diags[2].code == diag::SuperNoBase);
-    CHECK(diags[3].code == diag::SuperOutsideClass);
+    CHECK(diags[3].code == diag::SuperNoBase);
+    CHECK(diags[4].code == diag::InvalidSuperNew);
+    CHECK(diags[5].code == diag::SuperOutsideClass);
 }
 
 TEST_CASE("Inheritance") {

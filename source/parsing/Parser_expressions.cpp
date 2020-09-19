@@ -68,10 +68,12 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         // If the primary is a new or scoped new operator we should handle
         // that separately (it doesn't participate in postfix expression parsing).
         if (isNewExpr(leftOperand))
-            return parseNewExpression(leftOperand->as<NameSyntax>());
+            return parseNewExpression(leftOperand->as<NameSyntax>(), options);
 
         leftOperand = &parsePostfixExpression(*leftOperand);
     }
+
+    options &= ~ExpressionOptions::AllowSuperNewCall;
 
     while (true) {
         // either a binary operator, or we're done
@@ -866,7 +868,8 @@ EventExpressionSyntax& Parser::parseEventExpression() {
     return *left;
 }
 
-ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword) {
+ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword,
+                                             bitmask<ExpressionOptions> options) {
     // If we see an open bracket, this is a dynamic array new expression.
     auto kind = peek().kind;
     if (kind == TokenKind::OpenBracket) {
@@ -883,6 +886,18 @@ ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword) {
         }
         return factory.newArrayExpression(newKeyword, openBracket, sizeExpr, closeBracket,
                                           initializer);
+    }
+
+    // Enforce rules for super.new placement.
+    if (newKeyword.kind == SyntaxKind::ScopedName) {
+        auto& scoped = newKeyword.as<ScopedNameSyntax>();
+        if (scoped.right->kind == SyntaxKind::ConstructorName &&
+            scoped.left->getLastToken().kind == TokenKind::SuperKeyword) {
+            if ((options & ExpressionOptions::AllowSuperNewCall) == 0) {
+                addDiag(diag::InvalidSuperNew, scoped.right->getFirstToken().location())
+                    << newKeyword.sourceRange();
+            }
+        }
     }
 
     // Otherwise this is a new-class or copy-class expression.
