@@ -638,6 +638,40 @@ endmodule
     CHECK(diags[2].code == diag::InvalidThisHandle);
 }
 
+TEST_CASE("Super handle errors") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+endclass
+
+class B extends A;
+    function int g;
+        super = new;
+        return super.foo;
+    endfunction
+endclass
+
+class C;
+    function void g;
+        super.bar = 1;
+    endfunction
+endclass
+
+module m;
+    initial super.foo = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ExpectedToken);
+    CHECK(diags[1].code == diag::UnknownClassMember);
+    CHECK(diags[2].code == diag::SuperNoBase);
+    CHECK(diags[3].code == diag::SuperOutsideClass);
+}
+
 TEST_CASE("Inheritance") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
@@ -652,6 +686,9 @@ class B extends A;
     integer i = 2;
     function void f();
         i = j;
+        super.i = super.j;
+        j = super.f();
+        j = this.super.f();
     endfunction
 endclass
 

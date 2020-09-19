@@ -412,6 +412,8 @@ error GenericClassScopeResolution "cannot refer to generic class with '::' witho
 error InvalidThisHandle "invalid use of 'this' outside of a non-static method"
 error LocalMemberAccess "'{}' is a local member of '{}'"
 error ProtectedMemberAccess "'{}' is a protected member of '{}'"
+error SuperOutsideClass "cannot use 'super' handle outside of class scope"
+error SuperNoBase "class '{}' does not have a super class"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 
 subsystem SysFuncs

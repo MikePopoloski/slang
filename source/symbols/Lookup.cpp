@@ -598,6 +598,22 @@ const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult
     return nullptr;
 }
 
+const Symbol* findSuperHandle(const Scope& scope, SourceRange range, LookupResult& result) {
+    auto parent = getParentClass(scope);
+    if (!parent) {
+        result.addDiag(scope, diag::SuperOutsideClass, range);
+        return nullptr;
+    }
+
+    auto base = parent->as<ClassType>().getBaseClass();
+    if (!base) {
+        result.addDiag(scope, diag::SuperNoBase, range) << parent->name;
+        return nullptr;
+    }
+
+    return base;
+}
+
 } // namespace
 
 void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
@@ -1027,9 +1043,20 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
             return;
         case SyntaxKind::ThisHandle:
             result.found = findThisHandle(scope, first.range(), result);
+            if (result.found && nameParts.back().name->kind == SyntaxKind::SuperHandle) {
+                // Handle "this.super.whatever" the same as if the user had just
+                // written "super.whatever".
+                first = *nameParts.back().name;
+                nameParts.pop();
+                result.found = findSuperHandle(scope, first.range(), result);
+                colonParts = 1;
+            }
+            break;
+        case SyntaxKind::SuperHandle:
+            result.found = findSuperHandle(scope, first.range(), result);
+            colonParts = 1; // pretend we used colon access to resolve class scoped name
             break;
         case SyntaxKind::LocalScope:
-        case SyntaxKind::SuperHandle:
             result.addDiag(scope, diag::NotYetSupported, syntax.sourceRange());
             return;
         default:
