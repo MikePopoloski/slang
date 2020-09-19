@@ -410,6 +410,8 @@ error NestedNonStaticClassMethod "call to non-static member function without obj
 error NoDefaultSpecialization "generic class '{}' does not have a default specialization because some parameters have no default value"
 error GenericClassScopeResolution "cannot refer to generic class with '::' without providing parameter assignments"
 error InvalidThisHandle "invalid use of 'this' outside of a non-static method"
+error LocalMemberAccess "'{}' is a local member of '{}'"
+error ProtectedMemberAccess "'{}' is a protected member of '{}'"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 
 subsystem SysFuncs

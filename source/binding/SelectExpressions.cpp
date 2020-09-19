@@ -750,11 +750,13 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
         }
         case SymbolKind::ClassProperty: {
             // Index doesn't matter here, so we pass 0.
+            Lookup::ensureVisible(*member, context, selector.nameRange);
             auto& prop = member->as<ClassPropertySymbol>();
             return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop, 0u,
                                                                 range);
         }
         case SymbolKind::Subroutine:
+            Lookup::ensureVisible(*member, context, selector.nameRange);
             return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(), &expr,
                                               invocation, range, context);
         case SymbolKind::EnumValue: {

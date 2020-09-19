@@ -58,7 +58,7 @@ static bool isAccessibleFrom(const Symbol& target, const Symbol& sourceScope) {
 
     auto& sourceType = sourceScope.as<Type>();
     auto& targetType = parentScope.as<Type>();
-    return targetType.isAssignmentCompatible(sourceType);
+    return sourceType.isDerivedFrom(targetType);
 }
 
 Expression& NamedValueExpression::fromSymbol(const BindContext& context, const Symbol& symbol,

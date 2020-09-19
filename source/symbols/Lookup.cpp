@@ -407,6 +407,53 @@ const Symbol* getParentClass(const Scope& scope) {
     return nullptr;
 }
 
+bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRange> sourceRange,
+                     LookupResult& result) {
+    // All public members and all non-class symbols are visible by default.
+    Visibility visibility = Lookup::getVisibility(symbol);
+    if (visibility == Visibility::Public)
+        return true;
+
+    // All non-public members can only be accessed from scopes that are within a class.
+    const Symbol* lookupParent = getParentClass(scope);
+    const Symbol& targetParent = symbol.getParentScope()->asSymbol();
+
+    if (lookupParent && targetParent.kind == SymbolKind::ClassType) {
+        if (visibility == Visibility::Local) {
+            // Local members can only be accessed from the declaring class,
+            // or from any nested classes within that class.
+            do {
+                if (lookupParent == &targetParent)
+                    return true;
+
+                lookupParent = &lookupParent->getParentScope()->asSymbol();
+            } while (lookupParent->kind == SymbolKind::ClassType);
+        }
+        else {
+            // Protected members can be accessed from derived classes as well,
+            // in addition to nested classes within those derived classes.
+            auto& targetType = targetParent.as<Type>();
+            do {
+                auto& sourceType = lookupParent->as<Type>();
+                if (sourceType.isDerivedFrom(targetType))
+                    return true;
+
+                lookupParent = &lookupParent->getParentScope()->asSymbol();
+            } while (lookupParent->kind == SymbolKind::ClassType);
+        }
+    }
+
+    if (sourceRange) {
+        auto code =
+            visibility == Visibility::Local ? diag::LocalMemberAccess : diag::ProtectedMemberAccess;
+        auto& diag = result.addDiag(scope, code, *sourceRange);
+        diag << symbol.name << targetParent.name;
+        diag.addNote(diag::NoteDeclarationHere, symbol.location);
+    }
+
+    return false;
+}
+
 bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
                        NameComponents& name, LookupResult& result, const BindContext& context) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
@@ -462,6 +509,9 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
             return false;
         }
 
+        // If this is a type alias, check its visibility.
+        checkVisibility(*symbol, context.scope, name.range(), result);
+
         name = *part.name;
         if (name.text().empty())
             return false;
@@ -508,10 +558,11 @@ const Symbol* getCompilationUnit(const Symbol& symbol) {
     }
 }
 
-template<typename TRange>
-void unwrapResult(const Scope& scope, const TRange& syntax, LookupResult& result) {
+void unwrapResult(const Scope& scope, optional<SourceRange> range, LookupResult& result) {
     if (!result.found)
         return;
+
+    checkVisibility(*result.found, scope, range, result);
 
     // Unwrap type parameters into their target type alias.
     if (result.found->kind == SymbolKind::TypeParameter)
@@ -523,20 +574,8 @@ void unwrapResult(const Scope& scope, const TRange& syntax, LookupResult& result
         auto& genericClass = result.found->as<GenericClassDefSymbol>();
         result.found = genericClass.getDefaultSpecialization(scope.getCompilation());
 
-        if (!result.found) {
-            // This little dance is to allow this function to take either a syntax
-            // node or an explicit source range in order to report this error.
-            // This is an optimization to avoid computing the range for the syntax
-            // node in the very common case where we don't need to report an error.
-            optional<SourceRange> range;
-            if constexpr (std::is_base_of_v<SyntaxNode, TRange>)
-                range = syntax.sourceRange();
-            else
-                range = syntax;
-
-            if (range)
-                result.addDiag(scope, diag::NoDefaultSpecialization, *range) << genericClass.name;
-        }
+        if (!result.found && range)
+            result.addDiag(scope, diag::NoDefaultSpecialization, *range) << genericClass.name;
     }
 }
 
@@ -573,7 +612,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
         case SyntaxKind::ScopedName:
             // Handle qualified names separately.
             qualified(scope, syntax.as<ScopedNameSyntax>(), location, flags, result);
-            unwrapResult(scope, syntax, result);
+            unwrapResult(scope, syntax.sourceRange(), result);
             return;
         case SyntaxKind::ThisHandle:
             result.found = findThisHandle(scope, syntax.sourceRange(), result);
@@ -619,7 +658,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
         }
     }
 
-    unwrapResult(scope, syntax, result);
+    unwrapResult(scope, syntax.sourceRange(), result);
 
     if (name.selectors) {
         // If this is a scope, the selectors should be an index into it.
@@ -749,6 +788,36 @@ const ClassType* Lookup::findClass(const NameSyntax& className, const BindContex
 
     auto& type = result.found->as<Type>();
     return &type.getCanonicalType().as<ClassType>();
+}
+
+Visibility Lookup::getVisibility(const Symbol& symbol) {
+    switch (symbol.kind) {
+        case SymbolKind::ClassMethodPrototype:
+            return symbol.as<ClassMethodPrototypeSymbol>().visibility;
+        case SymbolKind::ClassProperty:
+            return symbol.as<ClassPropertySymbol>().visibility;
+        case SymbolKind::Subroutine:
+            return symbol.as<SubroutineSymbol>().visibility;
+        case SymbolKind::TypeAlias:
+            return symbol.as<TypeAliasType>().visibility;
+        default:
+            return Visibility::Public;
+    }
+}
+
+bool Lookup::isVisibleFrom(const Symbol& symbol, const Scope& scope) {
+    LookupResult result;
+    return checkVisibility(symbol, scope, std::nullopt, result);
+}
+
+bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
+                           optional<SourceRange> sourceRange) {
+    LookupResult result;
+    if (checkVisibility(symbol, context.scope, sourceRange, result))
+        return true;
+
+    result.reportErrors(context);
+    return false;
 }
 
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
@@ -1072,14 +1141,38 @@ void Lookup::reportUndeclared(const Scope& initialScope, string_view name, Sourc
     do {
         // This lambda returns true if the given symbol is a viable candidate
         // for the kind of lookup that was being performed.
-        auto isViable = [flags](const Symbol& sym) {
+        auto isViable = [flags, &initialScope](const Symbol& sym) {
+            const Symbol* s = &sym;
+            if (s->kind == SymbolKind::TransparentMember)
+                s = &s->as<TransparentMemberSymbol>().wrapped;
+
             if (flags & LookupFlags::Type) {
-                return sym.isType() || sym.kind == SymbolKind::TypeParameter ||
-                       sym.kind == SymbolKind::GenericClassDef;
+                if (!s->isType() && s->kind != SymbolKind::TypeParameter &&
+                    s->kind != SymbolKind::GenericClassDef) {
+                    return false;
+                }
+            }
+            else {
+                if (!s->isValue() && s->kind != SymbolKind::Subroutine &&
+                    s->kind != SymbolKind::InstanceArray &&
+                    (s->kind != SymbolKind::Instance || !s->as<InstanceSymbol>().isInterface())) {
+                    return false;
+                }
             }
 
-            return sym.isValue() || sym.kind == SymbolKind::InstanceArray ||
-                   (sym.kind == SymbolKind::Instance && sym.as<InstanceSymbol>().isInterface());
+            // Ignore special members.
+            if (s->kind == SymbolKind::Subroutine &&
+                (s->as<SubroutineSymbol>().flags & MethodFlags::Constructor) != 0) {
+                return false;
+            }
+
+            if (VariableSymbol::isKind(s->kind) && s->as<VariableSymbol>().isCompilerGenerated)
+                return false;
+
+            if (!isVisibleFrom(*s, initialScope))
+                return false;
+
+            return true;
         };
 
         if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {

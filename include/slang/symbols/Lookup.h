@@ -22,6 +22,7 @@ struct NameSyntax;
 struct ScopedNameSyntax;
 
 enum class SymbolIndex : uint32_t;
+enum class Visibility;
 
 /// Additional modifiers for a lookup operation.
 enum class LookupFlags {
@@ -135,11 +136,30 @@ public:
                                        LookupLocation location, SourceRange sourceRange,
                                        bitmask<LookupFlags> flags = LookupFlags::None);
 
+    /// Applies the given @a selectors to the @a symbol and returns the selected child.
+    /// If any errors occur, diagnostics are issued to @a result and nullptr is returned.
     static const Symbol* selectChild(const Symbol& symbol,
                                      span<const ElementSelectSyntax* const> selectors,
                                      const BindContext& context, LookupResult& result);
 
+    /// Searches for a class with the given @a name within @a context -- if no symbol is
+    /// found, or if the found symbol is not a class type, appropriate diagnostics are issued.
     static const ClassType* findClass(const NameSyntax& name, const BindContext& context);
+
+    /// If the given symbol is a member of a class, returns its access visibility.
+    /// Otherwise, returns Visibility::Public.
+    static Visibility getVisibility(const Symbol& symbol);
+
+    /// Returns whether the given @a symbol is visible from the provided scope,
+    /// taking into account class accessibility modifiers.
+    static bool isVisibleFrom(const Symbol& symbol, const Scope& scope);
+
+    /// If the given symbol is not a class member, returns true without doing any other work.
+    /// Otherwise, if the member is visible from the provided context, returns true.
+    /// If it's not visible, and @a sourceRange is provided, an appropriate diganostic will
+    /// be issued and false returned.
+    static bool ensureVisible(const Symbol& symbol, const BindContext& context,
+                              optional<SourceRange> sourceRange);
 
 private:
     Lookup() = default;

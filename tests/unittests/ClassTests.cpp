@@ -680,3 +680,60 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Access visibility") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    local int i;
+    protected int j;
+    local function void bar; endfunction
+
+    class P;
+        static int pub;
+    endclass
+    protected typedef P PT;
+endclass
+
+class B extends A;
+    static local function void frob; endfunction
+    extern function foo;
+
+    class N;
+        function baz(B b);
+            b.i = 1;
+            b.j = 2;
+            frob();
+            bor(); // should not typo correct to an inaccessible function
+        endfunction
+    endclass
+endclass
+
+function B::foo;
+    i = 1;
+    j = 2;
+    bar();
+endfunction
+
+module m;
+    B b;
+    initial b.bar();
+    initial b.j = 2;
+
+    int x = A::P::pub; // ok
+    int y = A::PT::pub; // local typedef
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::LocalMemberAccess);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::LocalMemberAccess);
+    CHECK(diags[3].code == diag::LocalMemberAccess);
+    CHECK(diags[4].code == diag::LocalMemberAccess);
+    CHECK(diags[5].code == diag::ProtectedMemberAccess);
+    CHECK(diags[6].code == diag::ProtectedMemberAccess);
+}
