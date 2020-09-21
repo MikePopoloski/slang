@@ -826,11 +826,13 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
         }
     }
 
+    SourceRange range = syntax.sourceRange();
     Expression* constructorCall = nullptr;
     if (auto constructor = classType->find("new")) {
+        Lookup::ensureVisible(*constructor, context, range);
         constructorCall =
             &CallExpression::fromArgs(compilation, &constructor->as<SubroutineSymbol>(), nullptr,
-                                      syntax.argList, syntax.sourceRange(), context);
+                                      syntax.argList, range, context);
     }
     else if (syntax.argList && !syntax.argList->parameters.empty()) {
         auto& diag = context.addDiag(diag::TooManyArguments, syntax.argList->sourceRange());
@@ -839,7 +841,7 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
     }
 
     auto result = compilation.emplace<NewClassExpression>(*assignmentTarget, constructorCall,
-                                                          isSuperClass, syntax.sourceRange());
+                                                          isSuperClass, range);
     return *result;
 }
 

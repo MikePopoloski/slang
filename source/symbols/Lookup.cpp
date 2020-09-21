@@ -23,6 +23,7 @@
 #include "slang/symbols/Symbol.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/util/String.h"
 
 namespace slang {
@@ -430,11 +431,23 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRa
     }
 
     if (sourceRange) {
-        auto code =
-            visibility == Visibility::Local ? diag::LocalMemberAccess : diag::ProtectedMemberAccess;
-        auto& diag = result.addDiag(scope, code, *sourceRange);
-        diag << symbol.name << targetParent.name;
-        diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        if (symbol.name == "new") {
+            auto& diag = result.addDiag(scope, diag::InvalidConstructorAccess, *sourceRange);
+            diag << targetParent.name;
+            if (visibility == Visibility::Local)
+                diag << LexerFacts::getTokenKindText(TokenKind::LocalKeyword);
+            else
+                diag << LexerFacts::getTokenKindText(TokenKind::ProtectedKeyword);
+
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        }
+        else {
+            auto code = visibility == Visibility::Local ? diag::LocalMemberAccess
+                                                        : diag::ProtectedMemberAccess;
+            auto& diag = result.addDiag(scope, code, *sourceRange);
+            diag << symbol.name << targetParent.name;
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        }
     }
 
     return false;

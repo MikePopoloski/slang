@@ -346,9 +346,12 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
 
         // If we have a base class constructor, create the call to it.
         if (baseConstructor) {
-            baseConstructorCall = &CallExpression::fromArgs(
-                comp, &baseConstructor->as<SubroutineSymbol>(), nullptr, extendsArgs,
-                classSyntax.extendsClause->sourceRange(), context);
+            SourceRange range = classSyntax.extendsClause->sourceRange();
+            Lookup::ensureVisible(*baseConstructor, context, range);
+
+            baseConstructorCall =
+                &CallExpression::fromArgs(comp, &baseConstructor->as<SubroutineSymbol>(), nullptr,
+                                          extendsArgs, range, context);
         }
         else if (!extendsArgs->parameters.empty()) {
             auto& diag = context.addDiag(diag::TooManyArguments, extendsArgs->sourceRange());
@@ -366,9 +369,11 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
                                             classSyntax.extendsClause->sourceRange());
                 diag << name << baseClass->name;
                 diag.addNote(diag::NoteDeclarationHere, baseConstructor->location);
-                break;
+                return;
             }
         }
+
+        Lookup::ensureVisible(*baseConstructor, context, classSyntax.extendsClause->sourceRange());
     }
 }
 

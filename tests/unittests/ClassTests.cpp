@@ -833,3 +833,56 @@ endmodule
     CHECK(diags[5].code == diag::ProtectedMemberAccess);
     CHECK(diags[6].code == diag::ProtectedMemberAccess);
 }
+
+TEST_CASE("Constructor access visibility") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    local function new;
+    endfunction
+
+    class P;
+        function bar;
+            A a = new;
+        endfunction
+    endclass
+endclass
+
+class B extends A;
+    function new;
+    endfunction
+endclass
+
+class C extends A;
+endclass
+
+class D extends A;
+    function new;
+        super.new();
+    endfunction
+endclass
+
+class E extends A();
+endclass
+
+class F;
+    protected function new;
+    endfunction
+endclass
+
+module m;
+    A a = A::new;
+    F f = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::InvalidConstructorAccess);
+    CHECK(diags[1].code == diag::InvalidConstructorAccess);
+    CHECK(diags[2].code == diag::InvalidConstructorAccess);
+    CHECK(diags[3].code == diag::InvalidConstructorAccess);
+    CHECK(diags[4].code == diag::InvalidConstructorAccess);
+}
