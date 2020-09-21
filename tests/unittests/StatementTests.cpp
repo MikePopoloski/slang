@@ -851,3 +851,18 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() > 0);
 }
+
+TEST_CASE("System functions that can also be tasks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        automatic int i = $system("sdf");
+        $system("blah");
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

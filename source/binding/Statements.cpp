@@ -1640,13 +1640,15 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
     // Only a subset of expressions are allowed as statements.
     bool ok;
     switch (expr.kind) {
-        case ExpressionKind::Call:
-            if (!expr.type->isVoid()) {
+        case ExpressionKind::Call: {
+            auto subKind = expr.as<CallExpression>().getSubroutineKind();
+            if (!expr.type->isVoid() && subKind == SubroutineKind::Function) {
                 context.addDiag(diag::UnusedResult, expr.sourceRange)
                     << expr.as<CallExpression>().getSubroutineName();
             }
             ok = true;
             break;
+        }
         case ExpressionKind::Assignment:
         case ExpressionKind::NewClass:
             ok = true;
