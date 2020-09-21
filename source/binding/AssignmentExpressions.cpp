@@ -782,6 +782,7 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
                                            const Type* assignmentTarget) {
     // If the new expression is typed, look up that type as the target.
     // Otherwise, the target must come from the expression context.
+    bool isSuperClass = false;
     const ClassType* classType = nullptr;
     if (syntax.scopedNew->kind == SyntaxKind::ConstructorName) {
         if (!assignmentTarget || !assignmentTarget->isClass()) {
@@ -813,6 +814,7 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
 
             classType = &base->as<Type>().getCanonicalType().as<ClassType>();
             assignmentTarget = &compilation.getVoidType();
+            isSuperClass = true;
         }
         else {
             auto& className = *syntax.scopedNew->as<ScopedNameSyntax>().left;
@@ -837,7 +839,7 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
     }
 
     auto result = compilation.emplace<NewClassExpression>(*assignmentTarget, constructorCall,
-                                                          syntax.sourceRange());
+                                                          isSuperClass, syntax.sourceRange());
     return *result;
 }
 

@@ -680,6 +680,57 @@ endmodule
     CHECK(diags[5].code == diag::SuperOutsideClass);
 }
 
+TEST_CASE("super.new error checking") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    function new(int i); endfunction
+endclass
+
+class B extends A;
+endclass
+
+class C extends A(5); // ok
+endclass
+
+class D extends A(5);
+    function new;
+        super.new(5);
+    endfunction
+endclass
+
+class E extends C(5);
+endclass
+
+class F extends A;
+    function new;
+        int i = 4;
+        super.new(i);
+        i++;
+    endfunction
+endclass
+
+class G extends C();
+    function new(int i = 4);
+    endfunction
+endclass
+
+class H extends G;
+endclass
+
+module m;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::BaseConstructorNotCalled);
+    CHECK(diags[1].code == diag::BaseConstructorDuplicate);
+    CHECK(diags[2].code == diag::TooManyArguments);
+}
+
 TEST_CASE("Inheritance") {
     auto tree = SyntaxTree::fromText(R"(
 class A;

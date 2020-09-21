@@ -153,10 +153,13 @@ struct NewClassExpressionSyntax;
 /// Represents a `new` expression that creates a class instance.
 class NewClassExpression : public Expression {
 public:
-    NewClassExpression(const Type& type, const Expression* constructorCall,
+    /// Set to true if this is invoking a super class's constructor.
+    bool isSuperClass = false;
+
+    NewClassExpression(const Type& type, const Expression* constructorCall, bool isSuperClass,
                        SourceRange sourceRange) :
         Expression(ExpressionKind::NewClass, type, sourceRange),
-        constructorCall_(constructorCall) {}
+        isSuperClass(isSuperClass), constructorCall_(constructorCall) {}
 
     const Expression* constructorCall() const { return constructorCall_; }
 

@@ -62,6 +62,7 @@ private:
     mutable optional<const SubroutineSymbol*> subroutine;
 };
 
+class Expression;
 class GenericClassDefSymbol;
 struct ClassDeclarationSyntax;
 
@@ -103,6 +104,7 @@ private:
     void inheritMembers(function_ref<void(const Symbol&)> insertCB) const;
 
     mutable const Type* baseClass = nullptr;
+    mutable const Expression* baseConstructorCall = nullptr;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
 };
 

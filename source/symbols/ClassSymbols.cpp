@@ -8,8 +8,11 @@
 
 #include "ParameterBuilder.h"
 
+#include "slang/binding/AssignmentExpressions.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/syntax/AllSyntax.h"
@@ -273,6 +276,7 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
         return;
 
     // Inherit all base class members that don't conflict with our declared symbols.
+    const Symbol* baseConstructor = nullptr;
     auto& comp = scope->getCompilation();
     auto& scopeNameMap = getNameMap();
     for (auto& member : baseType->members()) {
@@ -286,6 +290,7 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
         // Don't inherit constructors.
         if (member.kind == SymbolKind::Subroutine &&
             (member.as<SubroutineSymbol>().flags & MethodFlags::Constructor) != 0) {
+            baseConstructor = &member;
             continue;
         }
 
@@ -302,7 +307,69 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
         insertCB(*wrapper);
     }
 
+    // Assign this before resolving the constructor call below.
     baseClass = baseType;
+
+    // If we have a constructor, find whether it invokes super.new in its body.
+    if (auto ourConstructor = find("new")) {
+        auto checkForSuperNew = [&](auto& stmt) {
+            if (stmt.kind == StatementKind::ExpressionStatement) {
+                auto& expr = stmt.as<ExpressionStatement>().expr;
+                if (expr.kind == ExpressionKind::NewClass &&
+                    expr.as<NewClassExpression>().isSuperClass) {
+                    baseConstructorCall = &expr;
+                }
+            }
+        };
+
+        auto& body = ourConstructor->as<SubroutineSymbol>().getBody();
+        if (body.kind != StatementKind::List)
+            checkForSuperNew(body);
+        else {
+            for (auto stmt : body.as<StatementList>().list) {
+                if (stmt->kind != StatementKind::VariableDeclaration) {
+                    checkForSuperNew(*stmt);
+                    break;
+                }
+            }
+        }
+    }
+
+    if (auto extendsArgs = classSyntax.extendsClause->arguments) {
+        // Can't have both a super.new and extends arguments.
+        if (baseConstructorCall) {
+            auto& diag =
+                scope->addDiag(diag::BaseConstructorDuplicate, baseConstructorCall->sourceRange);
+            diag.addNote(diag::NotePreviousUsage, extendsArgs->getFirstToken().location());
+            return;
+        }
+
+        // If we have a base class constructor, create the call to it.
+        if (baseConstructor) {
+            baseConstructorCall = &CallExpression::fromArgs(
+                comp, &baseConstructor->as<SubroutineSymbol>(), nullptr, extendsArgs,
+                classSyntax.extendsClause->sourceRange(), context);
+        }
+        else if (!extendsArgs->parameters.empty()) {
+            auto& diag = context.addDiag(diag::TooManyArguments, extendsArgs->sourceRange());
+            diag << 0;
+            diag << extendsArgs->parameters.size();
+        }
+    }
+
+    // If we have a base class constructor and nothing called it, make sure
+    // it has no arguments or all of the arguments have default values.
+    if (baseConstructor && !baseConstructorCall) {
+        for (auto arg : baseConstructor->as<SubroutineSymbol>().arguments) {
+            if (!arg->getInitializer()) {
+                auto& diag = scope->addDiag(diag::BaseConstructorNotCalled,
+                                            classSyntax.extendsClause->sourceRange());
+                diag << name << baseClass->name;
+                diag.addNote(diag::NoteDeclarationHere, baseConstructor->location);
+                break;
+            }
+        }
+    }
 }
 
 void ClassType::serializeTo(ASTSerializer& serializer) const {
