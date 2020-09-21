@@ -9,6 +9,7 @@
 #include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/Bitstream.h"
 #include "slang/binding/LiteralExpressions.h"
+#include "slang/binding/SelectExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -1554,8 +1555,6 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     // The sole purpose of assignmentTarget here is for Type::isBitstreamType to know whether to
     // exclude associative arrays and classes for target/destination. Streaming concatenation is
     // self-determined and its size/type should not be affected by assignmentTarget.
-    bool isTarget = !assignmentTarget;
-
     SmallVectorSized<StreamExpression*, 8> buffer;
     for (const auto argSyntax : syntax.expressions) {
         // stream_expression
@@ -1582,10 +1581,10 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 context.addDiag(diag::BadStreamWithType, arg->sourceRange);
                 return badExpr(compilation, badResult());
             }
-            auto& range = *argSyntax->withRange->range;
-            const SelectorSyntax* selector = range.selector;
+            const SelectorSyntax* selector = argSyntax->withRange->range->selector;
             if (!selector) {
-                context.addDiag(diag::ExpectedExpression, syntax.sourceRange());
+                context.addDiag(diag::ExpectedExpression,
+                                argSyntax->withRange->range->sourceRange());
                 return badExpr(compilation, badResult());
             }
 
@@ -1599,8 +1598,6 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                     break;
                 case SyntaxKind::SimpleRangeSelect:
                     kind = WithRangeKind::Simple;
-                    left = &selfDetermined(compilation, *selector->as<RangeSelectSyntax>().left,
-                                           context);
                     break;
                 case SyntaxKind::AscendingRangeSelect:
                     kind = WithRangeKind::IndexedUp;
@@ -1619,9 +1616,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
 
             // Pre-evaluating possible constants helps compile-time size checks
-            Expression* exprs[] = { left, right };
             optional<int32_t> values[] = { std::nullopt, std::nullopt };
-            for (auto expr : exprs) {
+            for (auto expr : { left, right }) {
                 if (!expr)
                     break;
                 if (expr->bad())
@@ -1631,8 +1627,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                     return badExpr(compilation, badResult());
                 }
                 if (!context.inUnevaluatedBranch()) {
-                    ConstantValue val;
-                    if ((val = context.tryEval(*expr))) {
+                    if (ConstantValue val = context.tryEval(*expr)) {
                         optional<int32_t> index = val.integer().as<int32_t>();
                         if (!index) {
                             context.addDiag(diag::IndexValueInvalid, expr->sourceRange)
@@ -1646,8 +1641,9 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             optional<int32_t> width;
             if (values[0] || values[1]) {
                 // compile-time size checks
-                if (!Bitstream::validStreamWithRange(arrayType, kind, values[0], values[1], context,
-                                                     left->sourceRange, right->sourceRange))
+                if (!Bitstream::validStreamWithRange(
+                        arrayType, kind, values[0], values[1], &context, left->sourceRange,
+                        right ? right->sourceRange : left->sourceRange))
                     return badExpr(compilation, badResult());
                 width = Bitstream::withRangeWidth(kind, values[0], values[1]);
             }
@@ -1661,7 +1657,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         if (argSyntax->expression->kind != SyntaxKind::StreamingConcatenationExpression) {
             const Type& type = *arg->type;
             // TODO: first-declared member of untagged union
-            if (!type.isBitstreamType(isTarget)) {
+            if (!type.isBitstreamType(!assignmentTarget)) {
                 context.addDiag(diag::BadStreamExprType, arg->sourceRange) << type;
                 return badExpr(compilation, badResult());
             }
@@ -1680,10 +1676,50 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
     std::vector<ConstantValue> values;
     values.reserve(streams().size());
     for (auto stream : streams()) {
-        ConstantValue v = stream->operand->eval(context);
-        if (!v)
+        auto cv = stream->operand->eval(context);
+        if (!cv)
             return nullptr;
-        values.emplace_back(std::move(v));
+        if (stream->with) {
+            auto& arrayType = *stream->operand->type;
+            auto range = Bitstream::evaluateWith(arrayType, *stream->with, context);
+            if (!range)
+                return nullptr;
+            // If the range expression evaluates to a range greater than the extent of the array
+            // size, the entire array is streamed, and the remaining items are generated using the
+            // nonexistent array entry value
+            auto emptyValue = arrayType.getArrayElementType()->getDefaultValue();
+            if (range->left == range->right) {
+                if (size_t(range->left) >= cv.size())
+                    cv = emptyValue;
+                else
+                    cv = std::move(cv).at(size_t(range->left));
+            }
+            else {
+                auto upper = static_cast<uint32_t>(range->upper());
+                auto lower = static_cast<uint32_t>(range->lower());
+                auto size = static_cast<uint32_t>(cv.size());
+                auto more = upper >= size ? upper - size + 1 : 0;
+                upper = std::min(upper + 1, size);
+                if (cv.isUnpacked()) {
+                    auto old = cv.elements();
+                    ConstantValue::Elements sliceValue;
+                    sliceValue.reserve(range->width());
+                    sliceValue.insert(sliceValue.end(), old.begin() + lower, old.begin() + upper);
+                    sliceValue.insert(sliceValue.end(), more, emptyValue);
+                    ASSERT(sliceValue.size() == range->width());
+                    cv = sliceValue;
+                }
+                else {
+                    ASSERT(cv.isQueue());
+                    auto old = *cv.queue();
+                    SVQueue sliceValue(old.begin() + lower, old.begin() + upper);
+                    sliceValue.insert(sliceValue.end(), more, emptyValue);
+                    ASSERT(sliceValue.size() == range->width());
+                    cv = sliceValue;
+                }
+            }
+        }
+        values.emplace_back(std::move(cv));
     }
 
     if (sliceSize > 0)
@@ -1732,7 +1768,7 @@ bool StreamingConcatenationExpression::isFixedSize() const {
         if (operand.kind == ExpressionKind::Streaming)
             isFixed = operand.as<StreamingConcatenationExpression>().isFixedSize();
         else
-            isFixed = operand.type->isFixedSize() || (stream->with && stream->with->width);
+            isFixed = stream->with ? stream->with->width.has_value() : operand.type->isFixedSize();
 
         if (!isFixed)
             return false;
@@ -1746,8 +1782,10 @@ size_t StreamingConcatenationExpression::bitstreamWidth() const {
         auto& operand = *stream->operand;
         if (operand.kind == ExpressionKind::Streaming)
             width += operand.as<StreamingConcatenationExpression>().bitstreamWidth();
-        else if (stream->with && stream->with->width)
-            width += static_cast<size_t>(*stream->with->width);
+        else if (stream->with) {
+            size_t count = stream->with->width ? static_cast<size_t>(*stream->with->width) : 1;
+            width += count * operand.type->getArrayElementType()->bitstreamWidth();
+        }
         else
             width += operand.type->bitstreamWidth();
     }

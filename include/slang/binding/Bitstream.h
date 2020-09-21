@@ -48,12 +48,17 @@ public:
     /// Validates stream expression "with" expression range
     static bool validStreamWithRange(const Type& arrayType, WithRangeKind kind,
                                      optional<int32_t> left, optional<int32_t> right,
-                                     const BindContext& context, SourceRange leftRange,
-                                     SourceRange rightRange, bool isTarget = false);
+                                     std::variant<const BindContext*, EvalContext*> context,
+                                     SourceRange leftRange, SourceRange rightRange);
 
     /// Derives constant width from "with" expression range
     static optional<int32_t> withRangeWidth(WithRangeKind kind, optional<int32_t> left,
                                             optional<int32_t> right);
+
+    /// Evaluates stream with expression to a constant range
+    static optional<ConstantRange> evaluateWith(
+        const Type& arrayType, const StreamingConcatenationExpression::WithExpression& with,
+        EvalContext& context);
 
 private:
     Bitstream() = default;

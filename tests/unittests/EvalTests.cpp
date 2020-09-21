@@ -1894,3 +1894,91 @@ endfunction: factorial
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Stream with const evaluation") {
+    ScriptSession session;
+    session.eval(R"(
+    localparam byte a[] = {"A", "B", "C", "D"};
+    localparam int b = {>>{a with [3]}};
+    localparam int c = {>>{a with [1+:2]}};
+    localparam int d = {<<8{a with [2-:2]}};
+    localparam int e = {<<16{a with [2:3]}};
+    localparam byte q[$] = {3};
+    localparam byte d1[] = {<<8{q with [2-:3]}};
+    )");
+
+    CHECK(session.eval("b").integer() == session.eval("{\"D\", 24'd0}").integer());
+    CHECK(session.eval("c").integer() == session.eval("{\"B\", \"C\", 16'd0}").integer());
+    CHECK(session.eval("d").integer() == session.eval("{\"C\", \"B\", 16'd0}").integer());
+    CHECK(session.eval("e").integer() == session.eval("{\"C\", \"D\", 16'd0}").integer());
+    CHECK(session.eval("byte'({>>{q with [2]}})").integer() == 0);
+    auto cvD = session.eval("d1");
+    CHECK(cvD.elements().size() == 3);
+    CHECK(cvD.elements()[0].integer() == 0);
+    CHECK(cvD.elements()[1].integer() == 0);
+    CHECK(cvD.elements()[2].integer() == 3);
+
+    session.eval(R"(
+typedef byte ft1[6];
+typedef byte ft2[];
+function ft1 foo1(bit[1:26] bar, ft2 bar1);
+    ft1 a;
+    {<<16{{<<4{a with [0]}}, {>>{a with [1:1]}}, {<<3{a with [2+:1]}}}} = bar;
+    {<<8{a with [5-:3]}} = {<<16{bar1 with [1+:3]}};
+    return a;
+endfunction
+function ft2 foo2(bit[1:26] bar, ft2 bar1);
+    ft2 a;
+    {<<16{{<<4{a with [0]}}, {>>{a with [1:1]}}, {<<3{a with [2+:1]}}}} = bar;
+    {<<8{a with [5-:3]}} = {<<16{bar1 with [1+:3]}};
+    return a;
+endfunction
+typedef byte ft3[$];
+function ft3 foo3(bit[1:24] bar);
+    ft3 a;
+    {<<8{a with [2:4]}} = {>>{bar}};
+    return a;
+endfunction
+function ft3 foo4(bit[1:24] bar);
+    ft3 a;
+    {>>{a with [2]}} = bar;
+    return a;
+endfunction
+)");
+
+    auto cv1 = session.eval("foo1({24'h123456, 2'b11}, \"ABCDEF\")");
+    CHECK(cv1.elements().size() == 6);
+    CHECK(cv1.elements()[0].integer() == "8'sh65"_si);
+    CHECK(cv1.elements()[1].integer() == "8'sh12"_si);
+    CHECK(cv1.elements()[2].integer() == "8'sh29"_si);
+    CHECK(cv1.elements()[3].integer() == 'B');
+    CHECK(cv1.elements()[4].integer() == 'D');
+    CHECK(cv1.elements()[5].integer() == 'C');
+
+    auto cv2 = session.eval("foo2({24'h123456, 2'b11}, \"ABCDEF\")");
+    CHECK(cv2.elements().size() == 6);
+    CHECK(cv2.elements()[0].integer() == "8'sh65"_si);
+    CHECK(cv2.elements()[1].integer() == "8'sh12"_si);
+    CHECK(cv2.elements()[2].integer() == "8'sh29"_si);
+    CHECK(cv2.elements()[3].integer() == 'B');
+    CHECK(cv2.elements()[4].integer() == 'D');
+    CHECK(cv2.elements()[5].integer() == 'C');
+
+    auto cv3 = session.eval("foo3(24'h123456)");
+    auto queue3 = *cv3.queue();
+    CHECK(queue3.size() == 5);
+    CHECK(queue3[0].integer() == 0);
+    CHECK(queue3[1].integer() == 0);
+    CHECK(queue3[2].integer() == "8'sh56"_si);
+    CHECK(queue3[3].integer() == "8'sh34"_si);
+    CHECK(queue3[4].integer() == "8'sh12"_si);
+
+    auto cv4 = session.eval("foo4(24'h123456)");
+    auto queue4 = *cv4.queue();
+    CHECK(queue4.size() == 3);
+    CHECK(queue4[0].integer() == 0);
+    CHECK(queue4[1].integer() == 0);
+    CHECK(queue4[2].integer() == "8'sh12"_si);
+
+    NO_SESSION_ERRORS;
+}

@@ -1528,3 +1528,74 @@ module sub(input bit[3:0] a[0:3], output byte b);
     for (const auto& test : legal)
         CHECK(testBitstream(test) == 0);
 }
+
+TEST_CASE("Stream expression with") {
+    struct {
+        std::string sv;
+        DiagCode msg;
+    } illegal[] = {
+        { "byte b[4]; int a = {<<3{b with[]}};", diag::ExpectedExpression },
+        { "int a; byte b[4] = {<<3{a with [2]}};", diag::BadStreamWithType },
+        { "byte b[4]; int a = {<<3{b with[0.5]}};", diag::ExprMustBeIntegral },
+        { "byte b[4]; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexValueInvalid },
+        { "byte b[4]; int a = {<<3{b with[4]}};", diag::IndexValueInvalid },
+        { "byte b[]; int a = {<<3{b with[-1]}};", diag::ValueMustBePositive },
+        { "byte b[4]; int a = {<<3{b with[2-:-1]}};", diag::ValueMustBePositive },
+        { "byte b[4]; int a = {<<3{b with[2+:5]}};", diag::RangeWidthTooLarge },
+        { "byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::BadRangeExpression },
+        { "byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::IndexValueInvalid },
+        { "byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianMismatch },
+        { "byte b[], c[4]; assign {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;",
+          diag::BadStreamWithOrder },
+    };
+
+    for (const auto& test : illegal)
+        CHECK(testBitstream(test.sv, test.msg) == 1);
+
+    std::string legal[] = {
+        R"(
+int i_header, i_len,  i_crc, o_header, o_len, o_crc;
+byte i_data[], o_data[];
+initial begin
+    byte pkt[$];
+    i_header = 12;
+    i_len = 5;
+    i_data = new[5];
+    i_crc = 42;
+    pkt = {<< 8 {i_header, i_len, i_data, i_crc}};
+    {<< 8 {o_header, o_len, o_data with [0 +: o_len], o_crc}} = pkt;
+end
+)"
+    };
+
+    for (const auto& test : legal)
+        CHECK(testBitstream(test) == 0);
+
+    std::string foo = R"(
+typedef byte ft[];
+function ft foo(bit[1:24] bar, int len);
+    ft a;
+    {<<{a with [0+:len]}} = {>> {bar}};
+    return a;
+endfunction
+localparam ft b = foo(24'h123456,
+)";
+
+    CHECK(testBitstream(foo + "2);", diag::BadStreamSize) == 1);
+    CHECK(testBitstream(foo + "3);") == 0);
+    CHECK(testBitstream(foo + "4);", diag::BadStreamSize) == 1);
+
+    std::string foo1 = R"(
+typedef byte ft[];
+function ft foo(bit[1:24] bar, int len);
+    ft a;
+    {<<{a with [0+:len]}} = bar;
+    return a;
+endfunction
+localparam ft b = foo(24'h123456,
+)";
+
+    CHECK(testBitstream(foo1 + "2);") == 0);
+    CHECK(testBitstream(foo1 + "3);") == 0);
+    CHECK(testBitstream(foo1 + "4);", diag::BadStreamSize) == 1);
+}
