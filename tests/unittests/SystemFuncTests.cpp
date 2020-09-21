@@ -480,3 +480,25 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     CHECK(diags.size() == 18);
 }
+
+TEST_CASE("warning for skipped system tasks in constant functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int i = foo();
+    function int foo();
+        $exit;
+        $system("sdf");
+        return $system("sdf"); // error
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstSysTaskIgnored);
+    CHECK(diags[1].code == diag::ConstSysTaskIgnored);
+    CHECK(diags[2].code == diag::SysFuncNotConst);
+}

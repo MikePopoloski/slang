@@ -479,6 +479,7 @@ warning dynarray-index ConstEvalDynamicArrayIndex "invalid index {} for {} of le
 warning dynarray-range ConstEvalDynamicArrayRange "invalid range [{}:{}] for {} of length {}"
 warning queue-range ConstEvalQueueRange "reversed selection range [{}:{}] for queue will always yield an empty result"
 warning empty-queue ConstEvalEmptyQueue "pop from empty queue"
+warning task-ignored ConstSysTaskIgnored "system task '{}' is ignored in constant expression"
 
 subsystem Compilation
 error MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
@@ -503,6 +504,6 @@ group default = { real-underflow real-overflow literal-overflow case-gen-dup
                   no-top warning-task }
 
 group extra = { empty-member empty-stmt dup-import unused-def ignored-macro-paste pointless-void-cast
-                unused-result format-real ignored-slice }
+                unused-result format-real ignored-slice task-ignored }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code }

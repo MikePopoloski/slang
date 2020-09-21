@@ -1697,10 +1697,24 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
 }
 
 ER ExpressionStatement::evalImpl(EvalContext& context) const {
+    // Skip system task invocations.
+    if (expr.kind == ExpressionKind::Call &&
+        expr.as<CallExpression>().getSubroutineKind() == SubroutineKind::Task) {
+        return ER::Success;
+    }
+
     return expr.eval(context) ? ER::Success : ER::Fail;
 }
 
 bool ExpressionStatement::verifyConstantImpl(EvalContext& context) const {
+    // Skip system task invocations, but provide a warning.
+    if (expr.kind == ExpressionKind::Call &&
+        expr.as<CallExpression>().getSubroutineKind() == SubroutineKind::Task) {
+        context.addDiag(diag::ConstSysTaskIgnored, expr.sourceRange)
+            << expr.as<CallExpression>().getSubroutineName();
+        return true;
+    }
+
     return expr.verifyConstant(context);
 }
 
