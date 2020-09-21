@@ -495,14 +495,14 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 // Following are groups of diagnostics, to make it easy to control them from the command line.
 // The default group is the set of warnings that are enabled by default.
 
-group default = { real-underflow real-overflow literal-overflow ignored-macro-paste case-gen-dup
+group default = { real-underflow real-overflow literal-overflow case-gen-dup
                   case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
-                  redef-macro nonstandard-generate pointless-void-cast unused-result
-                  not-supported unknown-pragma extra-pragma-args expected-diag-arg unknown-diag-arg
-                  pragma-diag-level explicit-static static-skipped format-real elem-not-found
-                  dynarray-index dynarray-range queue-range empty-queue unknown-escape-code
-                  no-top warning-task ignored-slice }
+                  redef-macro nonstandard-generate not-supported unknown-pragma extra-pragma-args
+                  expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static static-skipped
+                  elem-not-found dynarray-index dynarray-range queue-range empty-queue unknown-escape-code
+                  no-top warning-task }
 
-group extra = { empty-member empty-stmt dup-import unused-def }
+group extra = { empty-member empty-stmt dup-import unused-def ignored-macro-paste pointless-void-cast
+                unused-result format-real ignored-slice }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code }
