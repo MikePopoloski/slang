@@ -502,3 +502,34 @@ endmodule
     CHECK(diags[1].code == diag::ConstSysTaskIgnored);
     CHECK(diags[2].code == diag::SysFuncNotConst);
 }
+
+TEST_CASE("cast task") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+endclass
+
+class B extends A;
+endclass
+
+module m;
+    int i;
+    real r;
+    int da[];
+    A a;
+    B b;
+
+    initial begin
+        $cast(a, b);
+        if ($cast(i, r)) begin end
+        $cast(i, da); // error
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CastArgSingular);
+}

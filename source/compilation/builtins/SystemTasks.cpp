@@ -20,7 +20,9 @@ public:
     explicit SystemTaskBase(const std::string& name) :
         SystemSubroutine(name, SubroutineKind::Task) {}
     ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
-    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
 };
 
 class SimpleSystemTask : public SimpleSystemSubroutine {
@@ -369,6 +371,30 @@ public:
     }
 };
 
+class CastTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 2, 2))
+            return comp.getErrorType();
+
+        if (!args[0]->type->isSingular()) {
+            context.addDiag(diag::CastArgSingular, args[0]->sourceRange) << *args[0]->type;
+            return comp.getErrorType();
+        }
+
+        if (!args[1]->type->isSingular()) {
+            context.addDiag(diag::CastArgSingular, args[1]->sourceRange) << *args[1]->type;
+            return comp.getErrorType();
+        }
+
+        return comp.getIntType();
+    }
+};
+
 void registerSystemTasks(Compilation& c) {
 #define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
     REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
@@ -427,6 +453,8 @@ void registerSystemTasks(Compilation& c) {
 
     REGISTER(DumpVarsTask, "$dumpvars");
     REGISTER(DumpPortsTask, "$dumpports");
+
+    REGISTER(CastTask, "$cast");
 
 #undef REGISTER
 

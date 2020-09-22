@@ -443,6 +443,7 @@ error QueryOnAssociativeNonIntegral "'{}' cannot be called with an associative a
 error QueryOnAssociativeWildcard "'{}' cannot be called with an associative array with non-integral (or wildcard) index type"
 error ExpectedModuleName "expected module name"
 error ExpectedModOrVarName "expected module or variable name"
+error CastArgSingular "argument to $cast cannot be of aggregate type (type is {})"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 
 subsystem ConstEval
