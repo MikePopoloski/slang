@@ -105,8 +105,7 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(
                 fixedSizeStream = fixedSizeElem * rw;
             }
             else {
-                if (mode != BitstreamSizeMode::DestEmpty)
-                    multiplierStream = fixedSizeElem;
+                multiplierStream = fixedSizeElem;
                 fixedSizeStream = fixedSizeElem;
             }
         }
@@ -137,13 +136,19 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
         dynamicBitstreamSize(source, BitstreamSizeMode::Source);
     auto [destEmptyMultiplier, destEmptyFixedSize] =
         dynamicBitstreamSize(destination, BitstreamSizeMode::DestEmpty);
-    ASSERT(!destEmptyMultiplier);
 
     if (destEmptyFixedSize >= sourceFixedSize) {
         auto diff = destEmptyFixedSize - sourceFixedSize;
         if (!sourceMultiplier)
             return diff == 0;
         if (diff % sourceMultiplier == 0)
+            return true;
+    }
+
+    if (destEmptyMultiplier > 0) { // only for "with" range
+        auto diff = destEmptyFixedSize > sourceFixedSize ? destEmptyFixedSize - sourceFixedSize
+                                                         : sourceFixedSize - destEmptyFixedSize;
+        if (diff % std::gcd(sourceMultiplier, destEmptyMultiplier) == 0)
             return true;
     }
 
@@ -164,9 +169,6 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
      // sourceMultiplier=0 sourceFixedSize=32 destEmptyMultiplier=0 destEmptyFixedSize=1
      // destFillMultiplier=8 destFillFixedSize=1
      */
-
-    if (destFillMultiplier == 0 && sourceFixedSize == 0)
-        return false;
 
     size_t remaining;
     if (sourceFixedSize > destFillFixedSize)
@@ -200,8 +202,11 @@ static size_t bitstreamCastRemainingSize(const T& destination, size_t srcSize) {
     // Calculate remaining size to dynamically fill.
     auto [destFillMultiplier, destFillFixedSize] =
         dynamicBitstreamSize(destination, BitstreamSizeMode::DestFill);
-    if (srcSize < destFillFixedSize || (srcSize - destFillFixedSize) % destFillMultiplier != 0)
+    if (srcSize < destFillFixedSize || (srcSize - destFillFixedSize) % destFillMultiplier != 0) {
+        if (destEmptyMultiplier > 0 && (srcSize - destEmptyFixedSize) % destEmptyMultiplier == 0)
+            return 0; // only for "with" range
         return srcSize + 1;
+    }
 
     // Size to fill the first dynamically sized item.
     return srcSize - destFillFixedSize;

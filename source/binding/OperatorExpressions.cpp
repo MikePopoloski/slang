@@ -1696,7 +1696,7 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
                 else
                     cv = std::move(cv).at(size_t(range->left));
             }
-            else if (range->lower() > 0 || range->width() > cv.size()) {
+            else if (range->lower() > 0 || range->width() != cv.size()) {
                 auto upper = static_cast<uint32_t>(range->upper());
                 auto lower = static_cast<uint32_t>(range->lower());
                 auto size = static_cast<uint32_t>(cv.size());
