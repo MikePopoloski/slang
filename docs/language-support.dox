@@ -72,7 +72,7 @@ LRM | Feature | Supported
 {{m-danger}}  6.22.6 | Matching nettypes | no
 {{m-warning}} 6.23 | Type operator | partial
 {{m-success}} 6.24.1 | Static casting | v0.2
-{{m-danger}}  6.24.2 | Dynamic casting | no
+{{m-success}} 6.24.2 | Dynamic casting | v0.5
 {{m-success}} 6.24.3 | Bit-stream casting | v0.5
 
 ## 7. Aggregate data types
@@ -108,8 +108,8 @@ LRM | Feature | Supported
 {{m-success}} 8.13 | Inheritance and subclasses | v0.5
 {{m-success}} 8.14 | Overriden members | v0.5
 {{m-success}} 8.15 | Super | v0.5
-{{m-danger}}  8.16 | Casting | no
-{{m-danger}}  8.17 | Chaining constructors | no
+{{m-success}} 8.16 | Casting | v0.5
+{{m-success}} 8.17 | Chaining constructors | v0.5
 {{m-success}} 8.18 | Data hiding and encapsulation | v0.5
 {{m-danger}}  8.19 | Constant class properties | no
 {{m-danger}}  8.20 | Virtual methods | no
