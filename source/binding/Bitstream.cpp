@@ -105,7 +105,7 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(
                 fixedSizeStream = fixedSizeElem * rw;
             }
             else {
-                if (mode != BitstreamSizeMode::DestFill)
+                if (mode != BitstreamSizeMode::DestEmpty)
                     multiplierStream = fixedSizeElem;
                 fixedSizeStream = fixedSizeElem;
             }
@@ -137,7 +137,7 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
         dynamicBitstreamSize(source, BitstreamSizeMode::Source);
     auto [destEmptyMultiplier, destEmptyFixedSize] =
         dynamicBitstreamSize(destination, BitstreamSizeMode::DestEmpty);
-    ASSERT(!destEmptyMultiplier && !sourceMultiplier == source.isFixedSize());
+    ASSERT(!destEmptyMultiplier);
 
     if (destEmptyFixedSize >= sourceFixedSize) {
         auto diff = destEmptyFixedSize - sourceFixedSize;
@@ -149,7 +149,6 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
 
     auto [destFillMultiplier, destFillFixedSize] =
         dynamicBitstreamSize(destination, BitstreamSizeMode::DestFill);
-    ASSERT(!destFillMultiplier == destination.isFixedSize());
 
     /* Follow IEEE standard to check dynamic-sized types at compile-time.
      // runtime error
@@ -201,8 +200,7 @@ static size_t bitstreamCastRemainingSize(const T& destination, size_t srcSize) {
     // Calculate remaining size to dynamically fill.
     auto [destFillMultiplier, destFillFixedSize] =
         dynamicBitstreamSize(destination, BitstreamSizeMode::DestFill);
-    if (srcSize < destFillFixedSize ||
-        (destFillMultiplier && (srcSize - destFillFixedSize) % destFillMultiplier != 0))
+    if (srcSize < destFillFixedSize || (srcSize - destFillFixedSize) % destFillMultiplier != 0)
         return srcSize + 1;
 
     // Size to fill the first dynamically sized item.
@@ -514,7 +512,7 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
         sourceWidth = source.bitstreamWidth();
         if (lhs.isFixedSize() && source.isFixedSize())
             good = targetWidth == sourceWidth;
-        else if (!with)
+        else
             good = dynamicSizesMatch(lhs, source);
     }
 
@@ -566,12 +564,6 @@ bool Bitstream::isBitstreamCast(const Type& type, const StreamingConcatenationEx
     return dynamicSizesMatch(type, arg);
 }
 
-bitwidth_t getBitWidth(const ConstantValue& v) {
-    if (v.isInteger())
-        return v.integer().getBitWidth();
-    return static_cast<bitwidth_t>(v.str().length() * CHAR_BIT);
-};
-
 ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t unpackWidth) {
     size_t totalWidth = value.bitstreamWidth();
     ASSERT(unpackWidth <= totalWidth);
@@ -584,7 +576,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
     packBitstream(value, packed);
 
     size_t rightIndex = packed.size() - 1; // Right-to-left
-    bitwidth_t rightWidth = getBitWidth(*packed.back());
+    bitwidth_t rightWidth = static_cast<bitwidth_t>(packed.back()->bitstreamWidth());
     size_t extraBits = 0;
 
     if (unpackWidth) {
@@ -593,7 +585,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
             while (trimWidth >= rightWidth) {
                 rightIndex--;
                 trimWidth -= rightWidth;
-                rightWidth = getBitWidth(*packed[rightIndex]);
+                rightWidth = static_cast<bitwidth_t>(packed[rightIndex]->bitstreamWidth());
             }
             rightWidth -= static_cast<bitwidth_t>(trimWidth);
         }
@@ -606,7 +598,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
     std::vector<ConstantValue> result;
     result.reserve(std::max(packed.size(), numBlocks));
     auto sliceOrAppend = [&](PackIterator iter) {
-        if (rightWidth == getBitWidth(**iter))
+        if (rightWidth == (*iter)->bitstreamWidth())
             result.emplace_back(std::move(**iter));
         else {
             bitwidth_t bit = 0;
@@ -625,7 +617,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
         while (slice >= width) {
             index--;
             slice -= width;
-            width = getBitWidth(*packed[index]);
+            width = static_cast<bitwidth_t>(packed[index]->bitstreamWidth());
         }
 
         // A block composed of bits from the last "slice" bits of packed[index] to the first
@@ -743,27 +735,27 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                         ASSERT(with.left <= with.right);
                         // When the array is a variable-size array, it shall be resized to
                         // accommodate the range expression.
-                        auto oldValue = lvalue.load();
+                        const auto oldValue = lvalue.load();
                         auto minSize = static_cast<uint32_t>(with.right + 1);
                         if (oldValue.size() < minSize) {
-                            auto emptyValue = elemType->getDefaultValue();
+                            const auto emptyValue = elemType->getDefaultValue();
                             auto more = minSize - oldValue.size();
                             if (oldValue.isUnpacked()) {
-                                auto old = oldValue.elements();
+                                const auto old = oldValue.elements();
                                 ConstantValue::Elements newValue;
                                 newValue.reserve(minSize);
-                                newValue.insert(newValue.end(), old.begin(), old.end());
+                                newValue.insert(newValue.end(), old.cbegin(), old.cend());
                                 newValue.insert(newValue.end(), more, emptyValue);
                                 ASSERT(newValue.size() == minSize);
-                                lvalue.store(newValue);
+                                lvalue.store(std::move(newValue));
                             }
                             else {
                                 ASSERT(oldValue.isQueue());
-                                auto old = *oldValue.queue();
-                                SVQueue newValue(old.begin(), old.end());
+                                const auto& old = oldValue.queue();
+                                SVQueue newValue(old->cbegin(), old->cend());
                                 newValue.insert(newValue.end(), more, emptyValue);
                                 ASSERT(newValue.size() == minSize);
-                                lvalue.store(newValue);
+                                lvalue.store(std::move(newValue));
                             }
                         }
                     }
@@ -796,10 +788,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
         dynamicSize = bitstreamCastRemainingSize(lhs, srcSize);
         if (dynamicSize > srcSize) {
             auto& diag = context.addDiag(diag::BadStreamSize, lhs.sourceRange);
-            if (targetWidth < srcSize)
-                diag << targetWidth;
-            else
-                diag << formatWidth(lhs, true);
+            diag << formatWidth(lhs, true);
             diag << srcSize;
             return nullptr;
         }
@@ -841,29 +830,13 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     }
     else if (rhs.kind == ExpressionKind::Streaming) {
         // Target shorter than source
-        auto tSize = srcSize - getBitWidth(**iter++) + bitOffset;
+        auto tSize = srcSize - (*iter++)->bitstreamWidth() + bitOffset;
         while (iter != iterEnd)
-            tSize -= getBitWidth(**iter++);
+            tSize -= (*iter++)->bitstreamWidth();
         context.addDiag(diag::BadStreamSize, lhs.sourceRange) << tSize << srcSize;
     }
 
     return rvalue;
-}
-
-/// Converts constant indexed part-select to simple range
-static ConstantRange indexedPartSelectRange(int32_t base, int32_t width, bool up) {
-    optional<int32_t> index;
-    if (up) {
-        index = checkedAddS32(base, width - 1);
-        if (!index)
-            index = INT32_MAX;
-    }
-    else {
-        index = checkedSubS32(base, width - 1);
-        if (!index)
-            index = INT32_MIN;
-    }
-    return { base, *index };
 }
 
 bool Bitstream::validStreamWithRange(const Type& arrayType, WithRangeKind kind,
@@ -919,12 +892,12 @@ bool Bitstream::validStreamWithRange(const Type& arrayType, WithRangeKind kind,
             }
 
             if (left && arrayType.hasFixedRange()) {
-                auto selection =
-                    indexedPartSelectRange(*left, width, kind == WithRangeKind::IndexedUp);
-                if (!arrayType.getFixedRange().containsPoint(selection.right)) {
+                auto selection = RangeSelectExpression::getIndexedRange(
+                    kind == WithRangeKind::IndexedUp, *left, width,
+                    arrayType.getFixedRange().isLittleEndian());
+                auto bound = selection.right == *left ? selection.left : selection.right;
+                if (!arrayType.getFixedRange().containsPoint(bound)) {
                     auto& diag = addDiag(diag::BadRangeExpression, errorRange);
-                    if (selection.isLittleEndian() != arrayType.getFixedRange().isLittleEndian())
-                        selection = selection.reverse();
                     diag << selection.left << selection.right;
                     diag << arrayType;
                     return false;
@@ -1002,12 +975,9 @@ optional<ConstantRange> Bitstream::evaluateWith(
 
     ConstantRange result = { *cl, *cr };
     if (with.kind == WithRangeKind::IndexedUp || with.kind == WithRangeKind::IndexedDown) {
-        result = indexedPartSelectRange(result.left, result.right,
-                                        with.kind == WithRangeKind::IndexedUp);
-        if (result.width() > 1 &&
-            result.isLittleEndian() !=
-                (arrayType.hasFixedRange() ? arrayType.getFixedRange().isLittleEndian() : false))
-            result = result.reverse();
+        result = RangeSelectExpression::getIndexedRange(
+            with.kind == WithRangeKind::IndexedUp, result.left, result.right,
+            arrayType.hasFixedRange() ? arrayType.getFixedRange().isLittleEndian() : false);
     }
 
     if (arrayType.hasFixedRange()) {

@@ -414,8 +414,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                     return badExpr(compilation, result);
                 }
 
-                selectionRange =
-                    getIndexedRange(selectionKind, *index, *rv, valueRange.isLittleEndian());
+                selectionRange = getIndexedRange(selectionKind == RangeSelectionKind::IndexedUp,
+                                                 *index, *rv, valueRange.isLittleEndian());
 
                 if (!validateRange(selectionRange))
                     return badExpr(compilation, result);
@@ -424,8 +424,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                 // Otherwise, the resulting range will start with the fixed lower bound of the type.
                 int32_t l = selectionKind == RangeSelectionKind::IndexedUp ? valueRange.lower()
                                                                            : valueRange.upper();
-                selectionRange =
-                    getIndexedRange(selectionKind, l, *rv, valueRange.isLittleEndian());
+                selectionRange = getIndexedRange(selectionKind == RangeSelectionKind::IndexedUp, l,
+                                                 *rv, valueRange.isLittleEndian());
             }
         }
 
@@ -587,7 +587,8 @@ optional<ConstantRange> RangeSelectExpression::getFixedRange(EvalContext& contex
 
         optional<int32_t> r = cr.integer().as<int32_t>();
         ASSERT(r);
-        result = getIndexedRange(selectionKind, *l, *r, valueRange.isLittleEndian());
+        result = getIndexedRange(selectionKind == RangeSelectionKind::IndexedUp, *l, *r,
+                                 valueRange.isLittleEndian());
     }
 
     if (!valueRange.containsPoint(result.left) || !valueRange.containsPoint(result.right)) {
@@ -639,15 +640,7 @@ optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& cont
         result = { l, r };
     }
     else {
-        int32_t count = r - 1;
-        if (selectionKind == RangeSelectionKind::IndexedUp) {
-            result.left = l;
-            result.right = l + count;
-        }
-        else {
-            result.left = l - count;
-            result.right = l;
-        }
+        result = getIndexedRange(selectionKind == RangeSelectionKind::IndexedUp, l, r, false);
     }
 
     // Out of bounds ranges are allowed, we just issue a warning.
@@ -662,11 +655,11 @@ optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& cont
     return result;
 }
 
-ConstantRange RangeSelectExpression::getIndexedRange(RangeSelectionKind kind, int32_t l, int32_t r,
+ConstantRange RangeSelectExpression::getIndexedRange(bool up, int32_t l, int32_t r,
                                                      bool littleEndian) {
     ConstantRange result;
     int32_t count = r - 1;
-    if (kind == RangeSelectionKind::IndexedUp) {
+    if (up) {
         auto upper = checkedAddS32(l, count);
         if (!upper)
             upper = INT32_MAX;

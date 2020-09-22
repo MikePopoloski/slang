@@ -1547,6 +1547,7 @@ TEST_CASE("Stream expression with") {
         { "byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianMismatch },
         { "byte b[], c[4]; assign {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;",
           diag::BadStreamWithOrder },
+        { "int a[],b[],c[];bit d;assign {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize },
     };
 
     for (const auto& test : illegal)

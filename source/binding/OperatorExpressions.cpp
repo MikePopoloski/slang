@@ -1684,38 +1684,40 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
             auto range = Bitstream::evaluateWith(arrayType, *stream->with, context);
             if (!range)
                 return nullptr;
+            ASSERT(range->lower() >= 0);
+
             // If the range expression evaluates to a range greater than the extent of the array
             // size, the entire array is streamed, and the remaining items are generated using the
             // nonexistent array entry value
-            auto emptyValue = arrayType.getArrayElementType()->getDefaultValue();
+            const auto emptyValue = arrayType.getArrayElementType()->getDefaultValue();
             if (range->left == range->right) {
                 if (size_t(range->left) >= cv.size())
                     cv = emptyValue;
                 else
                     cv = std::move(cv).at(size_t(range->left));
             }
-            else {
+            else if (range->lower() > 0 || range->width() > cv.size()) {
                 auto upper = static_cast<uint32_t>(range->upper());
                 auto lower = static_cast<uint32_t>(range->lower());
                 auto size = static_cast<uint32_t>(cv.size());
                 auto more = upper >= size ? upper - size + 1 : 0;
                 upper = std::min(upper + 1, size);
                 if (cv.isUnpacked()) {
-                    auto old = cv.elements();
+                    const auto old = cv.elements();
                     ConstantValue::Elements sliceValue;
                     sliceValue.reserve(range->width());
-                    sliceValue.insert(sliceValue.end(), old.begin() + lower, old.begin() + upper);
+                    sliceValue.insert(sliceValue.end(), old.cbegin() + lower, old.cbegin() + upper);
                     sliceValue.insert(sliceValue.end(), more, emptyValue);
                     ASSERT(sliceValue.size() == range->width());
-                    cv = sliceValue;
+                    cv = std::move(sliceValue);
                 }
                 else {
                     ASSERT(cv.isQueue());
-                    auto old = *cv.queue();
-                    SVQueue sliceValue(old.begin() + lower, old.begin() + upper);
+                    const auto& old = cv.queue();
+                    SVQueue sliceValue(old->cbegin() + lower, old->cbegin() + upper);
                     sliceValue.insert(sliceValue.end(), more, emptyValue);
                     ASSERT(sliceValue.size() == range->width());
-                    cv = sliceValue;
+                    cv = std::move(sliceValue);
                 }
             }
         }
