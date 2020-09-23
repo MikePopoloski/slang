@@ -359,7 +359,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
     if (type.isIntegral()) {
         auto cc = concatPacked(type.getBitWidth(), type.isFourState());
         cc.setSigned(type.isSigned());
-        return std::move(cc);
+        return cc;
     }
 
     if (type.isString()) {
@@ -654,7 +654,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
         result.emplace_back(std::move(**iter++));
     sliceOrAppend(iter);
 
-    return std::move(result);
+    return result;
 }
 
 /// Performs unpack operation of streaming concatenation target on a bit-stream.
@@ -1009,7 +1009,7 @@ ConstantValue Bitstream::resizeToRange(ConstantValue&& value, ConstantRange rang
             sliceValue.insert(sliceValue.end(), old.cbegin() + lower, old.cbegin() + upper);
             sliceValue.insert(sliceValue.end(), more, defaultValue);
             ASSERT(sliceValue.size() == range.width());
-            return std::move(sliceValue);
+            return sliceValue;
         }
         else {
             ASSERT(value.isQueue());
@@ -1017,7 +1017,7 @@ ConstantValue Bitstream::resizeToRange(ConstantValue&& value, ConstantRange rang
             SVQueue sliceValue(old->cbegin() + lower, old->cbegin() + upper);
             sliceValue.insert(sliceValue.end(), more, defaultValue);
             ASSERT(sliceValue.size() == range.width());
-            return std::move(sliceValue);
+            return sliceValue;
         }
     }
     return std::move(value);
