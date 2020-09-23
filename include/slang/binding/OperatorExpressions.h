@@ -261,13 +261,13 @@ public:
 
     struct WithExpression {
         WithRangeKind kind;
-        Expression* left;
-        Expression* right;
-        optional<int32_t> width; // constant width
+        not_null<const Expression*> left;
+        const Expression* right;
+        optional<int32_t> width; // elaboration-time constant width
     };
     struct StreamExpression {
-        Expression* operand;
-        WithExpression* with;
+        not_null<const Expression*> operand;
+        const WithExpression* with;
     };
 
     StreamingConcatenationExpression(const Type& type, size_t sliceSize,

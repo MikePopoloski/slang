@@ -214,16 +214,15 @@ static size_t bitstreamCastRemainingSize(const T& destination, size_t srcSize) {
 
 /// Formats the width of a dynamically-sized bitstream to a formula like 8×n+3 in an error message
 template<typename T>
-static std::string formatWidth(const T& bitstream, bool destination = false) {
+static std::string formatWidth(const T& bitstream, BitstreamSizeMode mode) {
     FormatBuffer buffer;
-    auto mode = destination ? BitstreamSizeMode::DestFill : BitstreamSizeMode::Source;
     auto [multiplier, fixedSize] = dynamicBitstreamSize(bitstream, mode);
     if (!multiplier)
         buffer.format("{}", fixedSize);
     else if (!fixedSize)
-        buffer.format("{}×n", multiplier);
+        buffer.format("{}*n", multiplier);
     else
-        buffer.format("{}×n+{}", multiplier, fixedSize);
+        buffer.format("{}*n+{}", multiplier, fixedSize);
     return buffer.str();
 }
 
@@ -360,7 +359,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
     if (type.isIntegral()) {
         auto cc = concatPacked(type.getBitWidth(), type.isFourState());
         cc.setSigned(type.isSigned());
-        return cc;
+        return std::move(cc);
     }
 
     if (type.isString()) {
@@ -501,7 +500,7 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
     if (context.inUnevaluatedBranch())
         return true; // No size check in an unevaluated conditional branch
 
-    size_t targetWidth = lhs.as<StreamingConcatenationExpression>().bitstreamWidth();
+    size_t targetWidth = lhs.bitstreamWidth();
     size_t sourceWidth;
     bool good = true;
 
@@ -526,8 +525,9 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
         if (rhs.kind != ExpressionKind::Streaming)
             diag << targetWidth << sourceWidth;
         else
-            diag << formatWidth(lhs, true)
-                 << formatWidth(rhs.as<StreamingConcatenationExpression>());
+            diag << formatWidth(lhs, BitstreamSizeMode::DestFill)
+                 << formatWidth(rhs.as<StreamingConcatenationExpression>(),
+                                BitstreamSizeMode::Source);
         diag << lhs.sourceRange;
         if (rhs.kind == ExpressionKind::Streaming)
             diag << rhs.sourceRange;
@@ -654,7 +654,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
         result.emplace_back(std::move(**iter++));
     sliceOrAppend(iter);
 
-    return result;
+    return std::move(result);
 }
 
 /// Performs unpack operation of streaming concatenation target on a bit-stream.
@@ -667,8 +667,8 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
         if (operand.kind == ExpressionKind::Streaming) {
             auto& concat = operand.as<StreamingConcatenationExpression>();
             if (dryRun || !concat.sliceSize) {
-                if (!unpackConcatenation(operand.as<StreamingConcatenationExpression>(), iter,
-                                         iterEnd, bitOffset, dynamicSize, context, dryRun))
+                if (!unpackConcatenation(concat, iter, iterEnd, bitOffset, dynamicSize, context,
+                                         dryRun))
                     return false;
                 continue;
             }
@@ -676,8 +676,8 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             // A dry run collects rvalue without storing lvalue
             size_t dynamicSizeSave = dynamicSize;
             SmallVectorSized<ConstantValue, 8> toBeOrdered;
-            if (!unpackConcatenation(operand.as<StreamingConcatenationExpression>(), iter, iterEnd,
-                                     bitOffset, dynamicSize, context, &toBeOrdered)) {
+            if (!unpackConcatenation(concat, iter, iterEnd, bitOffset, dynamicSize, context,
+                                     &toBeOrdered)) {
                 return false;
             }
 
@@ -703,6 +703,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             auto& arrayType = *operand.type;
             const Type* elemType = nullptr;
             ConstantRange with;
+            ConstantValue rvalue;
             if (stream->with) {
                 auto range = Bitstream::evaluateWith(arrayType, *stream->with, context);
                 if (!range)
@@ -717,14 +718,16 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                     else
                         dynamicSize -= withSize;
                 }
+                if (with.left == with.right)
+                    rvalue = unpackBitstream(*elemType, iter, iterEnd, bitOffset, dynamicSize);
+                else {
+                    rvalue = unpackBitstream(FixedSizeUnpackedArrayType(*elemType, with), iter,
+                                             iterEnd, bitOffset, dynamicSize);
+                }
             }
-            auto rvalue = unpackBitstream(
-                !stream->with
-                    ? arrayType
-                    : with.left == with.right
-                          ? *elemType
-                          : static_cast<const Type&>(FixedSizeUnpackedArrayType(*elemType, with)),
-                iter, iterEnd, bitOffset, dynamicSize);
+            else
+                rvalue = unpackBitstream(arrayType, iter, iterEnd, bitOffset, dynamicSize);
+
             if (dryRun)
                 dryRun->emplace(std::move(rvalue));
             else {
@@ -740,28 +743,12 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                         ASSERT(with.left <= with.right);
                         // When the array is a variable-size array, it shall be resized to
                         // accommodate the range expression.
-                        const auto oldValue = lvalue.load();
-                        auto minSize = static_cast<uint32_t>(with.right + 1);
-                        if (oldValue.size() < minSize) {
-                            const auto emptyValue = elemType->getDefaultValue();
-                            auto more = minSize - oldValue.size();
-                            if (oldValue.isUnpacked()) {
-                                const auto old = oldValue.elements();
-                                ConstantValue::Elements newValue;
-                                newValue.reserve(minSize);
-                                newValue.insert(newValue.end(), old.cbegin(), old.cend());
-                                newValue.insert(newValue.end(), more, emptyValue);
-                                ASSERT(newValue.size() == minSize);
-                                lvalue.store(std::move(newValue));
-                            }
-                            else {
-                                ASSERT(oldValue.isQueue());
-                                const auto& old = oldValue.queue();
-                                SVQueue newValue(old->cbegin(), old->cend());
-                                newValue.insert(newValue.end(), more, emptyValue);
-                                ASSERT(newValue.size() == minSize);
-                                lvalue.store(std::move(newValue));
-                            }
+                        auto oldValue = lvalue.load();
+                        if (oldValue.size() <= static_cast<uint32_t>(with.right)) {
+                            auto newValue =
+                                Bitstream::resizeToRange(std::move(oldValue), { 0, with.right },
+                                                         elemType->getDefaultValue(), true);
+                            lvalue.store(newValue);
                         }
                     }
                     if (with.left == with.right)
@@ -793,7 +780,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
         dynamicSize = bitstreamCastRemainingSize(lhs, srcSize);
         if (dynamicSize > srcSize) {
             auto& diag = context.addDiag(diag::BadStreamSize, lhs.sourceRange);
-            diag << formatWidth(lhs, true);
+            diag << formatWidth(lhs, BitstreamSizeMode::DestFill);
             diag << srcSize;
             return nullptr;
         }
@@ -826,6 +813,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     if (!unpackConcatenation(lhs, iter, iterEnd, bitOffset, dynamicSize, context))
         return nullptr;
 
+    // (iter==iterEnd && !bitOffset) implies target and source have exactly the same size.
     if (iter == iterEnd) {
         ASSERT(dynamicSize == 0);
         if (bitOffset > 0) {
@@ -834,7 +822,8 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
         }
     }
     else if (rhs.kind == ExpressionKind::Streaming) {
-        // Target shorter than source
+        // Target shorter than source; this is legal unless rhs is a streaming concatenation.
+        ASSERT(srcSize >= (*iter)->bitstreamWidth());
         auto tSize = srcSize - (*iter++)->bitstreamWidth() + bitOffset;
         while (iter != iterEnd)
             tSize -= (*iter++)->bitstreamWidth();
@@ -898,8 +887,9 @@ bool Bitstream::validStreamWithRange(const Type& arrayType, WithRangeKind kind,
 
             if (left && arrayType.hasFixedRange()) {
                 auto selection = RangeSelectExpression::getIndexedRange(
-                    kind == WithRangeKind::IndexedUp, *left, width,
-                    arrayType.getFixedRange().isLittleEndian());
+                    kind == WithRangeKind::IndexedUp ? RangeSelectionKind::IndexedUp
+                                                     : RangeSelectionKind::IndexedDown,
+                    *left, width, arrayType.getFixedRange().isLittleEndian());
                 auto bound = selection.right == *left ? selection.left : selection.right;
                 if (!arrayType.getFixedRange().containsPoint(bound)) {
                     auto& diag = addDiag(diag::BadRangeExpression, errorRange);
@@ -963,7 +953,7 @@ optional<ConstantRange> Bitstream::evaluateWith(
     auto cl = evalInt(*with.left);
     if (!cl)
         return std::nullopt;
-    decltype(cl) cr = std::nullopt;
+    optional<int32_t> cr = std::nullopt;
     auto rightRange = with.left->sourceRange;
     if (with.right) {
         cr = evalInt(*with.right);
@@ -981,7 +971,9 @@ optional<ConstantRange> Bitstream::evaluateWith(
     ConstantRange result = { *cl, *cr };
     if (with.kind == WithRangeKind::IndexedUp || with.kind == WithRangeKind::IndexedDown) {
         result = RangeSelectExpression::getIndexedRange(
-            with.kind == WithRangeKind::IndexedUp, result.left, result.right,
+            with.kind == WithRangeKind::IndexedUp ? RangeSelectionKind::IndexedUp
+                                                  : RangeSelectionKind::IndexedDown,
+            result.left, result.right,
             arrayType.hasFixedRange() ? arrayType.getFixedRange().isLittleEndian() : false);
     }
 
@@ -994,6 +986,41 @@ optional<ConstantRange> Bitstream::evaluateWith(
     ASSERT(with.kind != WithRangeKind::Bit || result.left == result.right);
     ASSERT(result.left >= 0 && result.right >= 0);
     return result;
+}
+
+ConstantValue Bitstream::resizeToRange(ConstantValue&& value, ConstantRange range,
+                                       ConstantValue defaultValue, bool keepArray) {
+    if (range.left == range.right && !keepArray) {
+        if (size_t(range.left) >= value.size())
+            return defaultValue;
+        else
+            return std::move(value).at(size_t(range.left));
+    }
+    else if (range.lower() > 0 || range.width() != value.size()) {
+        auto upper = static_cast<uint32_t>(range.upper());
+        auto lower = static_cast<uint32_t>(range.lower());
+        auto size = static_cast<uint32_t>(value.size());
+        auto more = upper >= size ? upper - size + 1 : 0;
+        upper = std::min(upper + 1, size);
+        if (value.isUnpacked()) {
+            const auto old = value.elements();
+            ConstantValue::Elements sliceValue;
+            sliceValue.reserve(range.width());
+            sliceValue.insert(sliceValue.end(), old.cbegin() + lower, old.cbegin() + upper);
+            sliceValue.insert(sliceValue.end(), more, defaultValue);
+            ASSERT(sliceValue.size() == range.width());
+            return std::move(sliceValue);
+        }
+        else {
+            ASSERT(value.isQueue());
+            const auto& old = value.queue();
+            SVQueue sliceValue(old->cbegin() + lower, old->cbegin() + upper);
+            sliceValue.insert(sliceValue.end(), more, defaultValue);
+            ASSERT(sliceValue.size() == range.width());
+            return std::move(sliceValue);
+        }
+    }
+    return std::move(value);
 }
 
 } // namespace slang

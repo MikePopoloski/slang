@@ -60,6 +60,10 @@ public:
         const Type& arrayType, const StreamingConcatenationExpression::WithExpression& with,
         EvalContext& context);
 
+    /// Resize a constant array value from [0:size-1] to [lower:upper]
+    static ConstantValue resizeToRange(ConstantValue&& value, ConstantRange range,
+                                       ConstantValue defaultValue, bool keepArray = false);
+
 private:
     Bitstream() = default;
 };

@@ -1520,8 +1520,9 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         return badExpr(compilation, badResult());
     }
 
-    // slice_size
     if (syntax.sliceSize) {
+        // The slice_size determines the size of each block. If specified, it may be a constant
+        // integral expression or a simple type.
         if (isRightToLeft) {
             const auto& sliceExpr =
                 bind(*syntax.sliceSize, context, BindFlags::AllowDataType | BindFlags::Constant);
@@ -1538,6 +1539,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 sliceSize = sliceExpr.type->bitstreamWidth();
             }
             else {
+                // It shall be an error for the value to be zero or negative.
                 optional<int32_t> count = context.evalInteger(sliceExpr);
                 if (!context.requireGtZero(count, sliceExpr.sourceRange))
                     return badExpr(compilation, badResult());
@@ -1545,10 +1547,13 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
         }
         else {
+            // Left-to-right streaming using >> shall cause the slice_size to be ignored and no
+            // re-ordering performed.
             context.addDiag(diag::IgnoredSlice, syntax.sliceSize->sourceRange());
         }
     }
     else if (isRightToLeft) {
+        // If a slice_size is not specified, the default is 1.
         sliceSize = 1;
     }
 
@@ -1684,42 +1689,12 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
             auto range = Bitstream::evaluateWith(arrayType, *stream->with, context);
             if (!range)
                 return nullptr;
-            ASSERT(range->lower() >= 0);
 
             // If the range expression evaluates to a range greater than the extent of the array
             // size, the entire array is streamed, and the remaining items are generated using the
             // nonexistent array entry value
-            const auto emptyValue = arrayType.getArrayElementType()->getDefaultValue();
-            if (range->left == range->right) {
-                if (size_t(range->left) >= cv.size())
-                    cv = emptyValue;
-                else
-                    cv = std::move(cv).at(size_t(range->left));
-            }
-            else if (range->lower() > 0 || range->width() != cv.size()) {
-                auto upper = static_cast<uint32_t>(range->upper());
-                auto lower = static_cast<uint32_t>(range->lower());
-                auto size = static_cast<uint32_t>(cv.size());
-                auto more = upper >= size ? upper - size + 1 : 0;
-                upper = std::min(upper + 1, size);
-                if (cv.isUnpacked()) {
-                    const auto old = cv.elements();
-                    ConstantValue::Elements sliceValue;
-                    sliceValue.reserve(range->width());
-                    sliceValue.insert(sliceValue.end(), old.cbegin() + lower, old.cbegin() + upper);
-                    sliceValue.insert(sliceValue.end(), more, emptyValue);
-                    ASSERT(sliceValue.size() == range->width());
-                    cv = std::move(sliceValue);
-                }
-                else {
-                    ASSERT(cv.isQueue());
-                    const auto& old = cv.queue();
-                    SVQueue sliceValue(old->cbegin() + lower, old->cbegin() + upper);
-                    sliceValue.insert(sliceValue.end(), more, emptyValue);
-                    ASSERT(sliceValue.size() == range->width());
-                    cv = std::move(sliceValue);
-                }
-            }
+            cv = Bitstream::resizeToRange(std::move(cv), *range,
+                                          arrayType.getArrayElementType()->getDefaultValue());
         }
         values.emplace_back(std::move(cv));
     }
@@ -1750,12 +1725,12 @@ void StreamingConcatenationExpression::serializeTo(ASTSerializer& serializer) co
         serializer.startArray("streams");
         for (auto op : streams()) {
             serializer.startObject();
-            serializer.write("operand", op->operand);
+            serializer.write("operand", *op->operand);
             if (op->with) {
                 serializer.write("withKind", toString(op->with->kind));
-                serializer.write("left", op->with->left);
+                serializer.write("left", *op->with->left);
                 if (op->with->right)
-                    serializer.write("right", op->with->right);
+                    serializer.write("right", *op->with->right);
             }
             serializer.endObject();
         }
