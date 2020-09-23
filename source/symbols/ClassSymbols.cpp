@@ -312,7 +312,7 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
 
     // If we have a constructor, find whether it invokes super.new in its body.
     if (auto ourConstructor = find("new")) {
-        auto checkForSuperNew = [&](auto& stmt) {
+        auto checkForSuperNew = [&](const Statement& stmt) {
             if (stmt.kind == StatementKind::ExpressionStatement) {
                 auto& expr = stmt.as<ExpressionStatement>().expr;
                 if (expr.kind == ExpressionKind::NewClass &&
