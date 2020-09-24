@@ -88,6 +88,9 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
         var->setFromDeclarator(*declarator);
         var->setAttributes(scope, syntax.attributes);
         results.append(var);
+
+        if (isConst && lifetime == VariableLifetime::Static && !declarator->initializer)
+            scope.addDiag(diag::StaticConstNoInitializer, declarator->name.range());
     }
 }
 

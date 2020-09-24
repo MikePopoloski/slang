@@ -886,3 +886,31 @@ endmodule
     CHECK(diags[3].code == diag::InvalidConstructorAccess);
     CHECK(diags[4].code == diag::InvalidConstructorAccess);
 }
+
+TEST_CASE("Constant class properties") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    static const int i; // initializer required
+    const int j = 1; // ok
+    const int k; // ok
+
+    function new;
+        j = 2; // bad
+        k = 2; // ok
+    endfunction
+
+    function void bar;
+        k = 3; //bad
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::StaticConstNoInitializer);
+    CHECK(diags[1].code == diag::AssignmentToConst);
+    CHECK(diags[2].code == diag::AssignmentToConst);
+}

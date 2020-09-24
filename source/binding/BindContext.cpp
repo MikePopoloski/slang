@@ -13,6 +13,7 @@
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/AttributeSymbol.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
@@ -106,10 +107,22 @@ bool BindContext::requireBooleanConvertible(const Expression& expr) const {
 bool BindContext::requireAssignable(const VariableSymbol& var, bool isNonBlocking,
                                     SourceLocation assignLoc, SourceRange varRange) const {
     if (var.isConstant) {
-        auto& diag = addDiag(diag::AssignmentToConst, assignLoc);
-        diag.addNote(diag::NoteDeclarationHere, var.location);
-        diag << var.name << varRange;
-        return false;
+        // If we are in a class constructor and this variable does not have an initializer,
+        // it's ok to assign to it.
+        const Symbol* parent = &scope.asSymbol();
+        while (parent->kind == SymbolKind::StatementBlock) {
+            auto parentScope = parent->getParentScope();
+            ASSERT(parentScope);
+            parent = &parentScope->asSymbol();
+        }
+
+        if (var.getInitializer() || parent->kind != SymbolKind::Subroutine ||
+            (parent->as<SubroutineSymbol>().flags & MethodFlags::Constructor) == 0) {
+            auto& diag = addDiag(diag::AssignmentToConst, assignLoc);
+            diag.addNote(diag::NoteDeclarationHere, var.location);
+            diag << var.name << varRange;
+            return false;
+        }
     }
 
     if (isNonBlocking && var.lifetime == VariableLifetime::Automatic) {
