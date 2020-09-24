@@ -932,3 +932,18 @@ source:7:9: note: $info encountered:           43.200000Hello world          14!
         ^
 )");
 }
+
+TEST_CASE("Const variable must provide initializer") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    const int i;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstVarNoInitializer);
+}

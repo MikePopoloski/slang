@@ -94,6 +94,10 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
             declarator->initializer && scope.isProceduralContext()) {
             scope.addDiag(diag::StaticInitializerMustBeExplicit, declarator->name.range());
         }
+
+        // Constants require an initializer.
+        if (isConst && !declarator->initializer)
+            scope.addDiag(diag::ConstVarNoInitializer, declarator->name.range());
     }
 }
 

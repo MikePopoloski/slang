@@ -918,7 +918,7 @@ TEST_CASE("Assignment error checking") {
 module m;
     enum { ASD = 2 } asdf;
     localparam int i[3] = '{1, 0, ASD};
-    const struct { int j = i[0] + 2; } foo;
+    const struct { int j = i[0] + 2; } foo = '{3};
 
     initial begin
         ASD = 3;
