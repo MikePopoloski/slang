@@ -478,8 +478,9 @@ static bool withAfterDynamic(const StreamingConcatenationExpression& lhs,
             if (dynamic)
                 return true;
         }
-        else if (!dynamic && !operand.type->isFixedSize())
+        else if (!dynamic && !operand.type->isFixedSize()) {
             dynamic = &operand.sourceRange;
+        }
     }
     return false;
 }
@@ -524,10 +525,12 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
         auto& diag = context.addDiag(diag::BadStreamSize, assignLoc);
         if (rhs.kind != ExpressionKind::Streaming)
             diag << targetWidth << sourceWidth;
-        else
+        else {
             diag << formatWidth(lhs, BitstreamSizeMode::DestFill)
                  << formatWidth(rhs.as<StreamingConcatenationExpression>(),
                                 BitstreamSizeMode::Source);
+        }
+
         diag << lhs.sourceRange;
         if (rhs.kind == ExpressionKind::Streaming)
             diag << rhs.sourceRange;
@@ -708,9 +711,11 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 auto range = Bitstream::evaluateWith(arrayType, *stream->with, context);
                 if (!range)
                     return false;
+
                 with = *range;
                 elemType = arrayType.getArrayElementType();
                 ASSERT(elemType != nullptr);
+
                 if (dynamicSize > 0 && !stream->with->width) {
                     auto withSize = elemType->bitstreamWidth() * with.width();
                     if (withSize >= dynamicSize)
@@ -718,6 +723,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                     else
                         dynamicSize -= withSize;
                 }
+
                 if (with.left == with.right)
                     rvalue = unpackBitstream(*elemType, iter, iterEnd, bitOffset, dynamicSize);
                 else {
@@ -725,8 +731,9 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                                              iterEnd, bitOffset, dynamicSize);
                 }
             }
-            else
+            else {
                 rvalue = unpackBitstream(arrayType, iter, iterEnd, bitOffset, dynamicSize);
+            }
 
             if (dryRun)
                 dryRun->emplace(std::move(rvalue));
@@ -740,9 +747,9 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                         rvalue = constContainer(arrayType, rvalue.elements());
 
                     if (!arrayType.hasFixedRange()) {
-                        ASSERT(with.left <= with.right);
                         // When the array is a variable-size array, it shall be resized to
                         // accommodate the range expression.
+                        ASSERT(with.left <= with.right);
                         auto oldValue = lvalue.load();
                         if (oldValue.size() <= static_cast<uint32_t>(with.right)) {
                             auto newValue =
@@ -751,6 +758,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                             lvalue.store(newValue);
                         }
                     }
+
                     if (with.left == with.right)
                         lvalue.addIndex(with.left, elemType->getDefaultValue());
                     else
@@ -890,6 +898,7 @@ bool Bitstream::validStreamWithRange(const Type& arrayType, WithRangeKind kind,
                     kind == WithRangeKind::IndexedUp ? RangeSelectionKind::IndexedUp
                                                      : RangeSelectionKind::IndexedDown,
                     *left, width, arrayType.getFixedRange().isLittleEndian());
+
                 auto bound = selection.right == *left ? selection.left : selection.right;
                 if (!arrayType.getFixedRange().containsPoint(bound)) {
                     auto& diag = addDiag(diag::BadRangeExpression, errorRange);
@@ -907,10 +916,11 @@ bool Bitstream::validStreamWithRange(const Type& arrayType, WithRangeKind kind,
 
             if (left) {
                 ConstantRange selection = { *left, *right };
-                if (selection.width() > 1 &&
-                    selection.isLittleEndian() != (arrayType.hasFixedRange()
-                                                       ? arrayType.getFixedRange().isLittleEndian()
-                                                       : false)) {
+                bool expectLittleEndian = false;
+                if (arrayType.hasFixedRange())
+                    expectLittleEndian = arrayType.getFixedRange().isLittleEndian();
+
+                if (selection.width() > 1 && selection.isLittleEndian() != expectLittleEndian) {
                     auto& diag = addDiag(diag::SelectEndianMismatch, errorRange);
                     diag << arrayType;
                     return false;
@@ -926,12 +936,15 @@ optional<int32_t> Bitstream::withRangeWidth(WithRangeKind kind, optional<int32_t
                                             optional<int32_t> right) {
     if (kind == WithRangeKind::Bit)
         return 1;
-    else if (kind == WithRangeKind::IndexedUp || kind == WithRangeKind::IndexedDown)
+
+    if (kind == WithRangeKind::IndexedUp || kind == WithRangeKind::IndexedDown)
         return right;
-    else if (left && right) {
+
+    if (left && right) {
         ConstantRange range = { *left, *right };
         return range.width();
     }
+
     return std::nullopt;
 }
 
@@ -943,28 +956,33 @@ optional<ConstantRange> Bitstream::evaluateWith(
         auto cs = expr.eval(context);
         if (!cs)
             return std::nullopt;
+
         auto index = cs.integer().as<int32_t>();
-        if (!index) {
+        if (!index)
             context.addDiag(diag::ConstEvalArrayIndexInvalid, expr.sourceRange) << cs << arrayType;
-        }
+
         return index;
     };
 
     auto cl = evalInt(*with.left);
     if (!cl)
         return std::nullopt;
+
     optional<int32_t> cr = std::nullopt;
     auto rightRange = with.left->sourceRange;
     if (with.right) {
         cr = evalInt(*with.right);
         if (!cr)
             return std::nullopt;
+
         rightRange = with.right->sourceRange;
     }
 
     if (!validStreamWithRange(arrayType, with.kind, cl, cr, &context, with.left->sourceRange,
-                              rightRange))
+                              rightRange)) {
         return std::nullopt;
+    }
+
     if (!cr)
         cr = *cl;
 
@@ -996,12 +1014,14 @@ ConstantValue Bitstream::resizeToRange(ConstantValue&& value, ConstantRange rang
         else
             return std::move(value).at(size_t(range.left));
     }
-    else if (range.lower() > 0 || range.width() != value.size()) {
+
+    if (range.lower() > 0 || range.width() != value.size()) {
         auto upper = static_cast<uint32_t>(range.upper());
         auto lower = static_cast<uint32_t>(range.lower());
         auto size = static_cast<uint32_t>(value.size());
         auto more = upper >= size ? upper - size + 1 : 0;
         upper = std::min(upper + 1, size);
+
         if (value.isUnpacked()) {
             const auto old = value.elements();
             ConstantValue::Elements sliceValue;
@@ -1020,6 +1040,7 @@ ConstantValue Bitstream::resizeToRange(ConstantValue&& value, ConstantRange rang
             return sliceValue;
         }
     }
+
     return std::move(value);
 }
 

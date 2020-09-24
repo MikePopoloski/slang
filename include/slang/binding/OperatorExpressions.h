@@ -252,7 +252,7 @@ struct StreamingConcatenationExpressionSyntax;
 ENUM(WithRangeKind, RANGE); // RangeSelectionKind + Bit
 #undef RANGE
 
-/// Represents a streaming concatenation
+/// Represents a streaming concatenation.
 class StreamingConcatenationExpression : public Expression {
 public:
     /// The size of the blocks to slice and reorder: if 0, this is a left-to-right
@@ -265,6 +265,7 @@ public:
         const Expression* right;
         optional<int32_t> width; // elaboration-time constant width
     };
+
     struct StreamExpression {
         not_null<const Expression*> operand;
         const WithExpression* with;

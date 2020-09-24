@@ -773,7 +773,7 @@ bool NewArrayExpression::verifyConstantImpl(EvalContext& context) const {
 void NewArrayExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("sizeExpr", sizeExpr());
     if (initExpr())
-        serializer.write("initExpr", initExpr());
+        serializer.write("initExpr", *initExpr());
 }
 
 Expression& NewClassExpression::fromSyntax(Compilation& compilation,

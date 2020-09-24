@@ -51,16 +51,21 @@ public:
 
     void writeLink(string_view name, const Symbol& value);
 
-    template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>>>
+    template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0>
     void write(string_view name, T value) {
         write(name, int64_t(value));
     }
 
-    template<typename T, typename = void,
-             typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>>
+    template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>, int> = 0>
     void write(string_view name, T value) {
         write(name, uint64_t(value));
     }
+
+    template<typename T, std::enable_if_t<std::is_pointer_v<T>, int> = 0>
+    void write(string_view name, T value) = delete;
+
+    template<typename T>
+    void write(string_view name, not_null<T> value) = delete;
 
 private:
     friend Symbol;
