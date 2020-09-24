@@ -639,15 +639,7 @@ optional<ConstantRange> RangeSelectExpression::getDynamicRange(EvalContext& cont
         result = { l, r };
     }
     else {
-        int32_t count = r - 1;
-        if (selectionKind == RangeSelectionKind::IndexedUp) {
-            result.left = l;
-            result.right = l + count;
-        }
-        else {
-            result.left = l - count;
-            result.right = l;
-        }
+        result = getIndexedRange(selectionKind, l, r, false);
     }
 
     // Out of bounds ranges are allowed, we just issue a warning.

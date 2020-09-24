@@ -325,6 +325,8 @@ error BadStreamSourceType "source type {} of streaming concatenation is not a bi
 error BadStreamContext "streaming operator can only be used in an assignment or bit-stream cast argument"
 error BadStreamSize "streaming operator target size {} does not fit source size {}"
 error BadStreamCast "streaming concatenation cannot be converted to type {}"
+error BadStreamWithType "stream expression type before 'with' must be a one-dimensional unpacked array"
+error BadStreamWithOrder "stream expression with 'with' cannot appear after unconstrained dynamically sized stream expression"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 
 subsystem Statements

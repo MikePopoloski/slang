@@ -304,7 +304,7 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
         case ExpressionKind::Streaming: {
             auto& stream = as<StreamingConcatenationExpression>();
             for (auto op : stream.streams()) {
-                if (!op->verifyAssignable(context, isNonBlocking, location))
+                if (!op->operand->verifyAssignable(context, isNonBlocking, location))
                     return false;
             }
             return true;

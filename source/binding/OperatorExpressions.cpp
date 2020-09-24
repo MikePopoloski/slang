@@ -9,6 +9,7 @@
 #include "slang/binding/AssignmentExpressions.h"
 #include "slang/binding/Bitstream.h"
 #include "slang/binding/LiteralExpressions.h"
+#include "slang/binding/SelectExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -1510,7 +1511,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
 
     auto badResult = [&]() {
         return compilation.emplace<StreamingConcatenationExpression>(
-            compilation.getErrorType(), sliceSize, span<const Expression*>(), syntax.sourceRange());
+            compilation.getErrorType(), sliceSize, span<const StreamExpression*>(),
+            syntax.sourceRange());
     };
 
     if (!(context.flags & BindFlags::StreamingAllowed)) {
@@ -1519,6 +1521,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     }
 
     if (syntax.sliceSize) {
+        // The slice_size determines the size of each block. If specified, it may be a constant
+        // integral expression or a simple type.
         if (isRightToLeft) {
             const auto& sliceExpr =
                 bind(*syntax.sliceSize, context, BindFlags::AllowDataType | BindFlags::Constant);
@@ -1535,6 +1539,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 sliceSize = sliceExpr.type->bitstreamWidth();
             }
             else {
+                // It shall be an error for the value to be zero or negative.
                 optional<int32_t> count = context.evalInteger(sliceExpr);
                 if (!context.requireGtZero(count, sliceExpr.sourceRange))
                     return badExpr(compilation, badResult());
@@ -1542,18 +1547,22 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
         }
         else {
+            // Left-to-right streaming using >> shall cause the slice_size to be ignored and no
+            // re-ordering performed.
             context.addDiag(diag::IgnoredSlice, syntax.sliceSize->sourceRange());
         }
     }
     else if (isRightToLeft) {
+        // If a slice_size is not specified, the default is 1.
         sliceSize = 1;
     }
 
     // The sole purpose of assignmentTarget here is for Type::isBitstreamType to know whether to
     // exclude associative arrays and classes for target/destination. Streaming concatenation is
     // self-determined and its size/type should not be affected by assignmentTarget.
-    SmallVectorSized<Expression*, 8> buffer;
+    SmallVectorSized<StreamExpression*, 8> buffer;
     for (const auto argSyntax : syntax.expressions) {
+        // stream_expression
         Expression* arg;
         if (assignmentTarget &&
             argSyntax->expression->kind == SyntaxKind::StreamingConcatenationExpression) {
@@ -1565,10 +1574,86 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                                   BindFlags::StreamingAllowed);
         }
 
-        if (argSyntax->withRange) {
-            // TODO: with array_range_expression
-            context.addDiag(diag::NotYetSupported, argSyntax->withRange->sourceRange());
-            return badExpr(compilation, badResult());
+        // with [ array_range_expression ]
+        WithExpression* with = nullptr;
+        if (argSyntax->withRange && !arg->bad()) {
+            auto& arrayType = *arg->type;
+            // The expression before the with can be any one-dimensional unpacked array (including a
+            // queue). Interpreted as fixed-sized unpacked arrays, dynamic arrays, or queues of
+            // fixed-size elements.
+            if (!arrayType.isUnpackedArray() || arrayType.isAssociativeArray() ||
+                !arrayType.getArrayElementType()->isFixedSize()) {
+                context.addDiag(diag::BadStreamWithType, arg->sourceRange);
+                return badExpr(compilation, badResult());
+            }
+            const SelectorSyntax* selector = argSyntax->withRange->range->selector;
+            if (!selector) {
+                context.addDiag(diag::ExpectedExpression,
+                                argSyntax->withRange->range->sourceRange());
+                return badExpr(compilation, badResult());
+            }
+
+            WithRangeKind kind;
+            Expression *left = nullptr, *right = nullptr;
+            switch (selector->kind) {
+                case SyntaxKind::BitSelect:
+                    kind = WithRangeKind::Bit;
+                    left = &selfDetermined(compilation, *selector->as<BitSelectSyntax>().expr,
+                                           context);
+                    break;
+                case SyntaxKind::SimpleRangeSelect:
+                    kind = WithRangeKind::Simple;
+                    break;
+                case SyntaxKind::AscendingRangeSelect:
+                    kind = WithRangeKind::IndexedUp;
+                    break;
+                case SyntaxKind::DescendingRangeSelect:
+                    kind = WithRangeKind::IndexedDown;
+                    break;
+                default:
+                    THROW_UNREACHABLE;
+            }
+            if (!left) {
+                left =
+                    &selfDetermined(compilation, *selector->as<RangeSelectSyntax>().left, context);
+                right =
+                    &selfDetermined(compilation, *selector->as<RangeSelectSyntax>().right, context);
+            }
+
+            // Pre-evaluating possible constants helps compile-time size checks
+            optional<int32_t> values[] = { std::nullopt, std::nullopt };
+            for (auto expr : { left, right }) {
+                if (!expr)
+                    break;
+                if (expr->bad())
+                    return badExpr(compilation, badResult());
+                if (!expr->type->isIntegral()) {
+                    context.addDiag(diag::ExprMustBeIntegral, expr->sourceRange);
+                    return badExpr(compilation, badResult());
+                }
+                if (!context.inUnevaluatedBranch()) {
+                    if (ConstantValue val = context.tryEval(*expr)) {
+                        optional<int32_t> index = val.integer().as<int32_t>();
+                        if (!index) {
+                            context.addDiag(diag::IndexValueInvalid, expr->sourceRange)
+                                << val << arrayType;
+                            return badExpr(compilation, badResult());
+                        }
+                        values[expr == left ? 0 : 1] = index;
+                    }
+                }
+            }
+            optional<int32_t> width;
+            if (values[0] || values[1]) {
+                // compile-time size checks
+                if (!Bitstream::validStreamWithRange(
+                        arrayType, kind, values[0], values[1], &context, left->sourceRange,
+                        right ? right->sourceRange : left->sourceRange))
+                    return badExpr(compilation, badResult());
+                width = Bitstream::withRangeWidth(kind, values[0], values[1]);
+            }
+
+            with = compilation.emplace<WithExpression>(WithExpression{ kind, left, right, width });
         }
 
         if (arg->bad())
@@ -1583,7 +1668,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
         }
 
-        buffer.append(arg);
+        buffer.append(compilation.emplace<StreamExpression>(StreamExpression{ arg, with }));
     }
 
     // Streaming concatenation has no explicit type. Use void to prevent unintentional problems when
@@ -1596,10 +1681,22 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
     std::vector<ConstantValue> values;
     values.reserve(streams().size());
     for (auto stream : streams()) {
-        ConstantValue v = stream->eval(context);
-        if (!v)
+        auto cv = stream->operand->eval(context);
+        if (!cv)
             return nullptr;
-        values.emplace_back(std::move(v));
+        if (stream->with) {
+            auto& arrayType = *stream->operand->type;
+            auto range = Bitstream::evaluateWith(arrayType, *stream->with, context);
+            if (!range)
+                return nullptr;
+
+            // If the range expression evaluates to a range greater than the extent of the array
+            // size, the entire array is streamed, and the remaining items are generated using the
+            // nonexistent array entry value
+            cv = Bitstream::resizeToRange(std::move(cv), *range,
+                                          arrayType.getArrayElementType()->getDefaultValue());
+        }
+        values.emplace_back(std::move(cv));
     }
 
     if (sliceSize > 0)
@@ -1610,8 +1707,14 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
 
 bool StreamingConcatenationExpression::verifyConstantImpl(EvalContext& context) const {
     for (auto stream : streams()) {
-        if (!stream->verifyConstant(context))
+        if (!stream->operand->verifyConstant(context))
             return false;
+        if (stream->with) {
+            if (!stream->with->left->verifyConstant(context))
+                return false;
+            if (stream->with->right && !stream->with->right->verifyConstant(context))
+                return false;
+        }
     }
     return true;
 }
@@ -1620,8 +1723,17 @@ void StreamingConcatenationExpression::serializeTo(ASTSerializer& serializer) co
     serializer.write("sliceSize", sliceSize);
     if (!streams().empty()) {
         serializer.startArray("streams");
-        for (auto op : streams())
-            serializer.serialize(*op);
+        for (auto op : streams()) {
+            serializer.startObject();
+            serializer.write("operand", *op->operand);
+            if (op->with) {
+                serializer.write("withKind", toString(op->with->kind));
+                serializer.write("left", *op->with->left);
+                if (op->with->right)
+                    serializer.write("right", *op->with->right);
+            }
+            serializer.endObject();
+        }
         serializer.endArray();
     }
 }
@@ -1629,10 +1741,11 @@ void StreamingConcatenationExpression::serializeTo(ASTSerializer& serializer) co
 bool StreamingConcatenationExpression::isFixedSize() const {
     for (auto stream : streams()) {
         bool isFixed;
-        if (stream->kind == ExpressionKind::Streaming)
-            isFixed = stream->as<StreamingConcatenationExpression>().isFixedSize();
+        auto& operand = *stream->operand;
+        if (operand.kind == ExpressionKind::Streaming)
+            isFixed = operand.as<StreamingConcatenationExpression>().isFixedSize();
         else
-            isFixed = stream->type->isFixedSize();
+            isFixed = stream->with ? stream->with->width.has_value() : operand.type->isFixedSize();
 
         if (!isFixed)
             return false;
@@ -1643,10 +1756,15 @@ bool StreamingConcatenationExpression::isFixedSize() const {
 size_t StreamingConcatenationExpression::bitstreamWidth() const {
     size_t width = 0;
     for (auto stream : streams()) {
-        if (stream->kind == ExpressionKind::Streaming)
-            width += stream->as<StreamingConcatenationExpression>().bitstreamWidth();
+        auto& operand = *stream->operand;
+        if (operand.kind == ExpressionKind::Streaming)
+            width += operand.as<StreamingConcatenationExpression>().bitstreamWidth();
+        else if (stream->with) {
+            size_t count = stream->with->width ? static_cast<size_t>(*stream->with->width) : 1;
+            width += count * operand.type->getArrayElementType()->bitstreamWidth();
+        }
         else
-            width += stream->type->bitstreamWidth();
+            width += operand.type->bitstreamWidth();
     }
     return width;
 }

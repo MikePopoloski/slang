@@ -248,6 +248,10 @@ private:
 
 struct StreamingConcatenationExpressionSyntax;
 
+#define RANGE(x) x(Simple) x(IndexedUp) x(IndexedDown) x(Bit)
+ENUM(WithRangeKind, RANGE); // RangeSelectionKind + Bit
+#undef RANGE
+
 /// Represents a streaming concatenation
 class StreamingConcatenationExpression : public Expression {
 public:
@@ -255,13 +259,24 @@ public:
     /// concatenation. Otherwise, it's a right-to-left concatenation.
     const size_t sliceSize;
 
+    struct WithExpression {
+        WithRangeKind kind;
+        not_null<const Expression*> left;
+        const Expression* right;
+        optional<int32_t> width; // elaboration-time constant width
+    };
+    struct StreamExpression {
+        not_null<const Expression*> operand;
+        const WithExpression* with;
+    };
+
     StreamingConcatenationExpression(const Type& type, size_t sliceSize,
-                                     span<const Expression* const> streams,
+                                     span<const StreamExpression* const> streams,
                                      SourceRange sourceRange) :
         Expression(ExpressionKind::Streaming, type, sourceRange),
         sliceSize(sliceSize), streams_(streams) {}
 
-    span<const Expression* const> streams() const { return streams_; }
+    span<const StreamExpression* const> streams() const { return streams_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
@@ -276,15 +291,21 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
-        for (auto op : streams())
-            op->visit(visitor);
+        for (auto stream : streams()) {
+            stream->operand->visit(visitor);
+            if (stream->with) {
+                stream->with->left->visit(visitor);
+                if (stream->with->right)
+                    stream->with->right->visit(visitor);
+            }
+        }
     }
 
     bool isFixedSize() const;
     size_t bitstreamWidth() const;
 
 private:
-    span<const Expression* const> streams_;
+    span<const StreamExpression* const> streams_;
 };
 
 struct OpenRangeExpressionSyntax;
