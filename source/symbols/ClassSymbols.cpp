@@ -278,6 +278,10 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
     if (!baseType)
         return;
 
+    // Assign this member before resolving anything below, because they
+    // make try to check the base class of this type.
+    baseClass = baseType;
+
     // Inherit all base class members that don't conflict with our declared symbols.
     const Symbol* baseConstructor = nullptr;
     auto& comp = scope->getCompilation();
@@ -286,16 +290,16 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
         if (member.name.empty())
             continue;
 
-        // Don't inherit if the member is already overriden.
-        if (auto it = scopeNameMap.find(member.name); it != scopeNameMap.end())
-            continue;
-
         // Don't inherit constructors.
         if (member.kind == SymbolKind::Subroutine &&
             (member.as<SubroutineSymbol>().flags & MethodFlags::Constructor) != 0) {
             baseConstructor = &member;
             continue;
         }
+
+        // Don't inherit if the member is already overriden.
+        if (auto it = scopeNameMap.find(member.name); it != scopeNameMap.end())
+            continue;
 
         // If the symbol itself was already inherited, create a new wrapper around
         // it for our own scope.
@@ -310,8 +314,37 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
         insertCB(*wrapper);
     }
 
-    // Assign this before resolving the constructor call below.
-    baseClass = baseType;
+    // Check all methods in our class for overriding virtual methods in parent classes.
+    for (auto& member : members()) {
+        if (member.kind != SymbolKind::Subroutine)
+            continue;
+
+        // Constructors and static methods can never be virtual.
+        auto& sub = member.as<SubroutineSymbol>();
+        if (sub.flags & (MethodFlags::Constructor | MethodFlags::Static))
+            continue;
+
+        // Look in the parent class for a method with the same name.
+        auto currentBase = baseType;
+        while (true) {
+            auto found = currentBase->find(member.name);
+            if (found) {
+                if (found->kind == SymbolKind::Subroutine) {
+                    auto& baseSub = found->as<SubroutineSymbol>();
+                    if ((baseSub.flags & MethodFlags::Virtual) != 0 || baseSub.getOverride())
+                        sub.setOverride(baseSub);
+                }
+                break;
+            }
+
+            // Otherwise it could be inherited from a higher-level base.
+            auto possibleBase = currentBase->getBaseClass();
+            if (!possibleBase)
+                break;
+
+            currentBase = &possibleBase->getCanonicalType().as<ClassType>();
+        }
+    }
 
     // If we have a constructor, find whether it invokes super.new in its body.
     if (auto ourConstructor = find("new")) {

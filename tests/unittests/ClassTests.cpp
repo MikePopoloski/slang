@@ -879,12 +879,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::InvalidConstructorAccess);
     CHECK(diags[1].code == diag::InvalidConstructorAccess);
     CHECK(diags[2].code == diag::InvalidConstructorAccess);
     CHECK(diags[3].code == diag::InvalidConstructorAccess);
     CHECK(diags[4].code == diag::InvalidConstructorAccess);
+    CHECK(diags[5].code == diag::InvalidConstructorAccess);
 }
 
 TEST_CASE("Constant class properties") {
@@ -913,4 +914,82 @@ endclass
     CHECK(diags[0].code == diag::StaticConstNoInitializer);
     CHECK(diags[1].code == diag::AssignmentToConst);
     CHECK(diags[2].code == diag::AssignmentToConst);
+}
+
+TEST_CASE("Virtual method checking") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    virtual function int foo(int a, int b = 1); endfunction
+    virtual function void bar(int a); endfunction
+endclass
+
+class B extends A;
+endclass
+
+class C extends B;
+    function real foo(int a, int b); endfunction
+endclass
+
+class D extends B;
+    function int foo(int b, int c); endfunction
+endclass
+
+class E extends B;
+    function int foo(int a, int b, int c); endfunction
+endclass
+
+class F extends B;
+    function int foo(int a, int b); endfunction
+endclass
+
+class G extends A;
+    function void bar(int a = 1); endfunction
+endclass
+
+class H extends A;
+    function void bar(real a); endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::VirtualReturnMismatch);
+    CHECK(diags[1].code == diag::VirtualArgNameMismatch);
+    CHECK(diags[2].code == diag::VirtualArgCountMismatch);
+    CHECK(diags[3].code == diag::VirtualArgNoDerivedDefault);
+    CHECK(diags[4].code == diag::VirtualArgNoParentDefault);
+    CHECK(diags[5].code == diag::VirtualArgTypeMismatch);
+}
+
+TEST_CASE("Virtual method with derived return type") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef int T;
+
+class C;
+    virtual function C some_method(int a); endfunction
+endclass
+
+class D extends C;
+    virtual function D some_method(T a); endfunction
+endclass
+
+class E #(type Y = logic) extends C;
+    virtual function D some_method(Y a); endfunction
+endclass
+
+module m;
+    E #() v1;
+    E #(int) v2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::VirtualArgTypeMismatch);
 }

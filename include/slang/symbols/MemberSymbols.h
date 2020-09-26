@@ -127,6 +127,9 @@ public:
     const Statement& getBody(EvalContext* evalContext = nullptr) const;
     const Type& getReturnType() const { return declaredReturnType.getType(); }
 
+    void setOverride(const SubroutineSymbol& parentMethod) const;
+    const SubroutineSymbol* getOverride() const { return overrides; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static SubroutineSymbol* fromSyntax(Compilation& compilation,
@@ -153,6 +156,7 @@ private:
     void addThisVar(const Type& type);
 
     StatementBinder binder;
+    mutable const SubroutineSymbol* overrides = nullptr;
 };
 
 struct ModportDeclarationSyntax;

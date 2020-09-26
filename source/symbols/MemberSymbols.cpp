@@ -450,6 +450,84 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
     return *result;
 }
 
+void SubroutineSymbol::setOverride(const SubroutineSymbol& parentMethod) const {
+    overrides = &parentMethod;
+
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    auto& retType = getReturnType();
+    auto& parentRetType = parentMethod.getReturnType();
+    if (retType.isError() || parentRetType.isError())
+        return;
+
+    // Check that return type and arguments match what was declared in the superclass method.
+    // If the return type is a class type, it can be one that derives from the return type
+    // declared in the superclass method.
+    if (!retType.isMatching(parentRetType) &&
+        (!retType.isClass() || !parentRetType.isAssignmentCompatible(retType))) {
+        Diagnostic* diag;
+        auto typeSyntax = declaredReturnType.getTypeSyntax();
+        if (typeSyntax)
+            diag = &scope->addDiag(diag::VirtualReturnMismatch, typeSyntax->sourceRange());
+        else
+            diag = &scope->addDiag(diag::VirtualReturnMismatch, location);
+
+        (*diag) << retType;
+        (*diag) << name;
+        (*diag) << parentRetType;
+        diag->addNote(diag::NoteDeclarationHere, parentMethod.location);
+        return;
+    }
+
+    auto parentArgs = parentMethod.arguments;
+    if (arguments.size() != parentArgs.size()) {
+        auto& diag = scope->addDiag(diag::VirtualArgCountMismatch, location);
+        diag << name;
+        diag.addNote(diag::NoteDeclarationHere, parentMethod.location);
+        return;
+    }
+
+    for (auto di = arguments.begin(), pi = parentArgs.begin(); di != arguments.end(); di++, pi++) {
+        // Names must be identical.
+        const FormalArgumentSymbol* da = *di;
+        const FormalArgumentSymbol* pa = *pi;
+        if (da->name != pa->name) {
+            auto& diag = scope->addDiag(diag::VirtualArgNameMismatch, da->location);
+            diag << da->name << pa->name;
+            diag.addNote(diag::NoteDeclarationHere, pa->location);
+            return;
+        }
+
+        // Types must match.
+        const Type& dt = da->getType();
+        const Type& pt = pa->getType();
+        if (!dt.isMatching(pt) && !dt.isError() && !pt.isError()) {
+            auto& diag = scope->addDiag(diag::VirtualArgTypeMismatch, da->location);
+            diag << da->name << dt << pt;
+            diag.addNote(diag::NoteDeclarationHere, pa->location);
+            return;
+        }
+
+        // The presence of a default value must be the same.
+        const Expression* de = da->getInitializer();
+        const Expression* pe = pa->getInitializer();
+        if (bool(de) != bool(pe)) {
+            if (de) {
+                auto& diag = scope->addDiag(diag::VirtualArgNoParentDefault, de->sourceRange);
+                diag << da->name;
+                diag.addNote(diag::NoteDeclarationHere, pa->location);
+            }
+            else {
+                auto& diag = scope->addDiag(diag::VirtualArgNoDerivedDefault, da->location);
+                diag << da->name;
+                diag.addNote(diag::NoteDeclarationHere, pa->location);
+            }
+            return;
+        }
+    }
+}
+
 void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
                                       VariableLifetime defaultLifetime,
                                       SmallVector<const FormalArgumentSymbol*>& arguments) {
