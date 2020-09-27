@@ -48,6 +48,8 @@ jobs:
     - name: Install dependencies
       run: |
         export PATH="$HOME/.local/bin:$PATH"
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-10 main"
         sudo apt-get update
         sudo apt-get install -y g++-10 clang++-10 clang-tidy-10
     - name: Build
