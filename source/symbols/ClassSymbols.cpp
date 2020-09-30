@@ -245,11 +245,14 @@ const Symbol& ClassType::fromSyntax(const Scope& scope, const ClassDeclarationSy
 
 const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
-    if (syntax.virtualOrInterface) {
+    if (syntax.virtualOrInterface.kind == TokenKind::InterfaceKeyword) {
         // TODO: support this
         scope.addDiag(diag::NotYetSupported, syntax.virtualOrInterface.range());
         return comp.getErrorType();
     }
+
+    if (syntax.virtualOrInterface.kind == TokenKind::VirtualKeyword)
+        isAbstract = true;
 
     setSyntax(syntax);
     for (auto member : syntax.items)

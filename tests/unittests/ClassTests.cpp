@@ -993,3 +993,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::VirtualArgTypeMismatch);
 }
+
+TEST_CASE("Virtual class errors") {
+    auto tree = SyntaxTree::fromText(R"(
+virtual class C;
+endclass
+
+module m;
+    C c1;
+    C c2 = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NewVirtualClass);
+}

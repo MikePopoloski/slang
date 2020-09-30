@@ -826,6 +826,11 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
         }
     }
 
+    if (!isSuperClass && classType->isAbstract) {
+        context.addDiag(diag::NewVirtualClass, syntax.sourceRange()) << classType->name;
+        return badExpr(compilation, nullptr);
+    }
+
     SourceRange range = syntax.sourceRange();
     Expression* constructorCall = nullptr;
     if (auto constructor = classType->find("new")) {

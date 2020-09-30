@@ -73,6 +73,10 @@ public:
     /// a pointer to that generic class definition.
     const GenericClassDefSymbol* genericClass = nullptr;
 
+    /// Set to true if the class is an abstract class (declared with the
+    /// "virtual" keyword).
+    bool isAbstract = false;
+
     ClassType(Compilation& compilation, string_view name, SourceLocation loc);
 
     /// If this class derives from a base class, returns that type. Otherwise returns null.
