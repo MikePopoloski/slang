@@ -1012,3 +1012,80 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::NewVirtualClass);
 }
+
+TEST_CASE("Pure virtual methods") {
+    auto tree = SyntaxTree::fromText(R"(
+virtual class C;
+    pure virtual function int foo(int a, real b = 1.1);
+endclass
+
+module m;
+    C c1;
+    initial begin
+        automatic int i = c1.foo(3);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Pure virtual method errors") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    pure virtual function int foo();
+endclass
+
+virtual class C;
+    pure virtual function int foo(int a, real b = 1.1);
+endclass
+
+function int C::foo(int a, real b = 1.1);
+endfunction
+
+module m;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::PureInAbstract);
+    CHECK(diags[1].code == diag::BodyForPure);
+}
+
+TEST_CASE("Polymorphism example") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    virtual function void foo(); endfunction
+endclass
+
+class B extends A;
+    function void foo(); endfunction
+endclass
+
+class C extends A;
+    function void foo(); endfunction
+endclass
+
+module m;
+    initial begin
+        automatic A a[10];
+        automatic B b = new;
+        automatic C c = new;
+        a[0] = b;
+        a[1] = c;
+        a[0].foo();
+        a[1].foo();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

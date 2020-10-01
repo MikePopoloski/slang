@@ -266,6 +266,8 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
                 result->flags |= MethodFlags::Static;
                 break;
             case TokenKind::PureKeyword:
+                // This is unreachable in valid code, because a pure method cannot
+                // have an implementation body. The parser checks this for us.
                 result->flags |= MethodFlags::Pure;
                 break;
             case TokenKind::VirtualKeyword:
@@ -447,6 +449,38 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
         }
     }
 
+    return *result;
+}
+
+SubroutineSymbol& SubroutineSymbol::createPureVirtual(Compilation& compilation,
+                                                      const ClassMethodPrototypeSymbol& prototype,
+                                                      const Scope& parent) {
+    // Create a stub subroutine symbol that exists only to allow the normal expression
+    // machinery to call it (checking argument types, return values, etc).
+    auto result = compilation.emplace<SubroutineSymbol>(
+        compilation, prototype.name, prototype.location, VariableLifetime::Automatic,
+        prototype.subroutineKind);
+
+    result->setParent(parent, SymbolIndex(INT32_MAX));
+    result->declaredReturnType.copyTypeFrom(prototype.declaredReturnType);
+    result->visibility = prototype.visibility;
+    result->flags = prototype.flags;
+
+    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments(prototype.arguments.size());
+    for (auto arg : prototype.arguments) {
+        auto copied = compilation.emplace<FormalArgumentSymbol>(arg->name, arg->location,
+                                                                arg->direction, arg->lifetime);
+        copied->isCompilerGenerated = arg->isCompilerGenerated;
+        copied->isConstant = arg->isConstant;
+        copied->getDeclaredType()->copyTypeFrom(*arg->getDeclaredType());
+        if (auto init = arg->getDeclaredType()->getInitializer())
+            copied->getDeclaredType()->setInitializer(*init);
+
+        result->addMember(*copied);
+        arguments.append(copied);
+    }
+
+    result->arguments = arguments.copy(compilation);
     return *result;
 }
 

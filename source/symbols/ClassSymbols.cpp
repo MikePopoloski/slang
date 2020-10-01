@@ -160,6 +160,13 @@ ClassMethodPrototypeSymbol& ClassMethodPrototypeSymbol::fromSyntax(
     else
         result->declaredReturnType.setType(comp.getVoidType());
 
+    // Pure virtual methods can only appear in virtual classes.
+    if (flags & MethodFlags::Pure) {
+        auto& classType = scope.asSymbol().as<ClassType>();
+        if (!classType.isAbstract)
+            scope.addDiag(diag::PureInAbstract, nameToken.range());
+    }
+
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
     if (proto.portList) {
         SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
@@ -181,6 +188,22 @@ const SubroutineSymbol* ClassMethodPrototypeSymbol::getSubroutine() const {
 
     auto& comp = scope.getCompilation();
     auto [syntax, index] = comp.findOutOfBlockMethod(scope, classType.name, name);
+
+    if (flags & MethodFlags::Pure) {
+        // A pure method should not have a body defined.
+        if (syntax) {
+            auto& diag = scope.addDiag(diag::BodyForPure, syntax->prototype->name->sourceRange());
+            diag.addNote(diag::NoteDeclarationHere, location);
+            subroutine = nullptr;
+        }
+        else {
+            // Create a stub subroutine that we can return for callers to reference.
+            subroutine = &SubroutineSymbol::createPureVirtual(comp, *this, scope);
+        }
+        return *subroutine;
+    }
+
+    // Otherwise, there must be a body for any declared prototype.
     if (!syntax) {
         scope.addDiag(diag::NoMethodImplFound, location) << name;
         subroutine = nullptr;

@@ -245,6 +245,8 @@ error BaseConstructorDuplicate "cannot provide both 'super.new' as well as class
 error BaseConstructorNotCalled "class '{}' must provide arguments for constructing base class '{}' via 'super.new' or the 'extends' clause"
 error ConstVarNoInitializer "constant variable must have an initializer"
 error StaticConstNoInitializer "static constant class properties must have initializers"
+error PureInAbstract "pure virtual methods can only be declared in virtual classes"
+error BodyForPure "pure virtual methods cannot have a function body defined"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 warning warning-task WarningTask "$warning encountered{}"

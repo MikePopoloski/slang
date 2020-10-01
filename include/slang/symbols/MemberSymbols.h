@@ -146,6 +146,10 @@ public:
                                               const Scope& newParent, const Scope& definitionScope,
                                               SymbolIndex outOfBlockIndex);
 
+    static SubroutineSymbol& createPureVirtual(Compilation& compilation,
+                                               const ClassMethodPrototypeSymbol& prototype,
+                                               const Scope& parent);
+
     static void buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
                                VariableLifetime defaultLifetime,
                                SmallVector<const FormalArgumentSymbol*>& arguments);
