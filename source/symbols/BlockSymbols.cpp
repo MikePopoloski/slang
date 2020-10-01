@@ -26,7 +26,8 @@ const Statement& StatementBlockSymbol::getBody() const {
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const BlockStatementSyntax& syntax) {
+                                                       const BlockStatementSyntax& syntax,
+                                                       bool inLoop) {
     string_view name;
     SourceLocation loc;
     if (syntax.blockName) {
@@ -49,7 +50,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto& comp = scope.getCompilation();
     auto result =
         comp.emplace<StatementBlockSymbol>(comp, name, loc, blockKind, scope.getDefaultLifetime());
-    result->binder.setItems(*result, syntax.items, syntax.sourceRange());
+    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), inLoop);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
@@ -57,7 +58,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const ForLoopStatementSyntax& syntax) {
+                                                       const ForLoopStatementSyntax& syntax,
+                                                       bool inLoop) {
     string_view name;
     SourceLocation loc;
     if (syntax.label) {
@@ -86,7 +88,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
         result->addMember(var);
     }
 
-    result->binder.setSyntax(*result, syntax);
+    result->binder.setSyntax(*result, syntax, inLoop);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
 
@@ -94,7 +96,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const ForeachLoopStatementSyntax& syntax) {
+                                                       const ForeachLoopStatementSyntax& syntax,
+                                                       bool inLoop) {
     string_view name;
     SourceLocation loc;
     if (syntax.label) {
@@ -142,7 +145,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
         result->addMember(VariableSymbol::fromForeachVar(comp, idName, index));
     }
 
-    result->binder.setSyntax(*result, syntax);
+    result->binder.setSyntax(*result, syntax, inLoop);
     for (auto block : result->binder.getBlocks())
         result->addMember(*block);
 
@@ -150,7 +153,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
-                                                            const StatementSyntax& syntax) {
+                                                            const StatementSyntax& syntax,
+                                                            bool inLoop) {
     auto token = syntax.label->name;
     string_view name = token.valueText();
     SourceLocation loc = token.location();
@@ -158,7 +162,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<StatementBlockSymbol>(
         comp, name, loc, StatementBlockKind::Sequential, scope.getDefaultLifetime());
-    result->binder.setSyntax(*result, syntax, /* labelHandled */ true);
+    result->binder.setSyntax(*result, syntax, /* labelHandled */ true, inLoop);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
@@ -178,7 +182,8 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
     auto result = comp.emplace<ProceduralBlockSymbol>(syntax.keyword.location(), kind);
 
-    result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false);
+    result->binder.setSyntax(scope, *syntax.statement, /* labelHandled */ false,
+                             /* inLoop */ false);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 

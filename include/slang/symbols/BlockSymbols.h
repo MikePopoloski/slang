@@ -27,12 +27,14 @@ public:
 
     void serializeTo(ASTSerializer&) const {}
 
-    static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope, const BlockStatementSyntax& syntax,
+                                            bool inLoop);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const ForLoopStatementSyntax& syntax);
+                                            const ForLoopStatementSyntax& syntax, bool inLoop);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const ForeachLoopStatementSyntax& syntax);
-    static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax);
+                                            const ForeachLoopStatementSyntax& syntax, bool inLoop);
+    static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax,
+                                                 bool inLoop);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 

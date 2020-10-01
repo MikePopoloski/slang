@@ -241,7 +241,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     }
 
     result->arguments = arguments.copy(compilation);
-    result->binder.setItems(*result, syntax.items, syntax.sourceRange());
+    result->binder.setItems(*result, syntax.items, syntax.sourceRange(), /* inLoop */ false);
     return result;
 }
 

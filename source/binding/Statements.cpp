@@ -236,14 +236,16 @@ Statement& Statement::badStmt(Compilation& compilation, const Statement* stmt) {
 }
 
 static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
-                       SmallVector<const StatementBlockSymbol*>& results,
-                       bool labelHandled = false) {
+                       SmallVector<const StatementBlockSymbol*>& results, bool labelHandled,
+                       bool inLoop) {
     if (!labelHandled && hasSimpleLabel(syntax)) {
-        results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
+        results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax, inLoop));
         return;
     }
 
-    auto recurse = [&](auto stmt) { findBlocks(scope, *stmt, results); };
+    auto recurse = [&](auto stmt, bool isNewLoop = false) {
+        findBlocks(scope, *stmt, results, /* lableHandled */ false, inLoop || isNewLoop);
+    };
 
     switch (syntax.kind) {
         case SyntaxKind::ReturnStatement:
@@ -270,14 +272,14 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             // - They are unnamed but have variable declarations within them
             auto& block = syntax.as<BlockStatementSyntax>();
             if (block.blockName || block.label) {
-                results.append(&StatementBlockSymbol::fromSyntax(scope, block));
+                results.append(&StatementBlockSymbol::fromSyntax(scope, block, inLoop));
                 return;
             }
 
             for (auto item : block.items) {
                 // If we find any decls at all, this block gets its own scope.
                 if (!StatementSyntax::isKind(item->kind)) {
-                    results.append(&StatementBlockSymbol::fromSyntax(scope, block));
+                    results.append(&StatementBlockSymbol::fromSyntax(scope, block, inLoop));
                     return;
                 }
             }
@@ -312,13 +314,13 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             return;
         }
         case SyntaxKind::ForeverStatement:
-            recurse(syntax.as<ForeverStatementSyntax>().statement);
+            recurse(syntax.as<ForeverStatementSyntax>().statement, true);
             return;
         case SyntaxKind::LoopStatement:
-            recurse(syntax.as<LoopStatementSyntax>().statement);
+            recurse(syntax.as<LoopStatementSyntax>().statement, true);
             return;
         case SyntaxKind::DoWhileStatement:
-            recurse(syntax.as<DoWhileStatementSyntax>().statement);
+            recurse(syntax.as<DoWhileStatementSyntax>().statement, true);
             return;
         case SyntaxKind::ForLoopStatement: {
             // For loops are special; if they declare variables, they get
@@ -327,21 +329,21 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             if (!forLoop.initializers.empty() &&
                 forLoop.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
 
-                results.append(&StatementBlockSymbol::fromSyntax(scope, forLoop));
+                results.append(&StatementBlockSymbol::fromSyntax(scope, forLoop, inLoop));
             }
             else if (syntax.label) {
-                results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
+                results.append(&StatementBlockSymbol::fromLabeledStmt(scope, syntax, inLoop));
                 return;
             }
             else {
-                recurse(forLoop.statement);
+                recurse(forLoop.statement, true);
             }
             return;
         }
         case SyntaxKind::ForeachLoopStatement:
             // A foreach loop always creates a block.
-            results.append(
-                &StatementBlockSymbol::fromSyntax(scope, syntax.as<ForeachLoopStatementSyntax>()));
+            results.append(&StatementBlockSymbol::fromSyntax(
+                scope, syntax.as<ForeachLoopStatementSyntax>(), inLoop));
             return;
         case SyntaxKind::TimingControlStatement:
             recurse(syntax.as<TimingControlStatementSyntax>().statement);
@@ -379,44 +381,48 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
 }
 
 void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& syntax_,
-                                bool labelHandled_) {
+                                bool labelHandled_, bool inLoop_) {
     stmt = nullptr;
     syntax = &syntax_;
     labelHandled = labelHandled_;
+    inLoop = inLoop_;
     sourceRange = syntax_.sourceRange();
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, syntax_, buffer, labelHandled);
+    findBlocks(scope, syntax_, buffer, labelHandled, inLoop);
     blocks = buffer.copy(scope.getCompilation());
 }
 
 template<typename TStatement>
-void StatementBinder::setSyntaxImpl(const StatementBlockSymbol& scope, const TStatement& syntax_) {
+void StatementBinder::setSyntaxImpl(const StatementBlockSymbol& scope, const TStatement& syntax_,
+                                    bool inLoop_) {
     stmt = nullptr;
     syntax = &syntax_;
     labelHandled = false;
+    inLoop = inLoop_;
     sourceRange = syntax_.sourceRange();
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
-    findBlocks(scope, *syntax_.statement, buffer);
+    findBlocks(scope, *syntax_.statement, buffer, labelHandled, /* inLoop */ true);
     blocks = buffer.copy(scope.getCompilation());
 }
 
 void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
-                                const ForLoopStatementSyntax& syntax_) {
-    setSyntaxImpl(scope, syntax_);
+                                const ForLoopStatementSyntax& syntax_, bool inLoop_) {
+    setSyntaxImpl(scope, syntax_, inLoop_);
 }
 
 void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
-                                const ForeachLoopStatementSyntax& syntax_) {
-    setSyntaxImpl(scope, syntax_);
+                                const ForeachLoopStatementSyntax& syntax_, bool inLoop_) {
+    setSyntaxImpl(scope, syntax_, inLoop_);
 }
 
-void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items,
-                               SourceRange range) {
+void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items, SourceRange range,
+                               bool inLoop_) {
     stmt = nullptr;
     syntax = &items;
     labelHandled = false;
+    inLoop = inLoop_;
     sourceRange = range;
 
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
@@ -440,7 +446,7 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
                 scope.addDiag(diag::NotYetSupported, item->sourceRange());
                 break;
             default:
-                findBlocks(scope, item->as<StatementSyntax>(), buffer);
+                findBlocks(scope, item->as<StatementSyntax>(), buffer, labelHandled, inLoop);
                 break;
         }
     }
@@ -495,6 +501,7 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
     bool anyBad = false;
     Statement::StatementContext stmtCtx;
     stmtCtx.blocks = blocks;
+    stmtCtx.inLoop = inLoop;
 
     if (auto stmtSyntax = std::get_if<const StatementSyntax*>(&syntax)) {
         if (auto ptr = *stmtSyntax) {

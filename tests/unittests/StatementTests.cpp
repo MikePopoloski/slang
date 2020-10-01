@@ -353,6 +353,30 @@ endmodule
     CHECK(diags[0].code == diag::ConstEvalAssertionFailed);
 }
 
+TEST_CASE("Break statement check -- regression") {
+    auto tree = SyntaxTree::fromText(R"(
+module foo;
+    always_comb
+        for(int p = 0; p < 4; p++) begin
+            automatic int bar;
+            break;
+        end
+
+    always_comb
+        for(int p = 0; p < 4; p++) begin
+            begin
+                automatic int bar;
+                break;
+            end
+        end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Loop statement errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

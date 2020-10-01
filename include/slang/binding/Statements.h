@@ -164,17 +164,21 @@ protected:
 /// defer statement binding until its actually needed.
 class StatementBinder {
 public:
-    void setSyntax(const Scope& scope, const StatementSyntax& syntax, bool labelHandled);
-    void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax);
-    void setSyntax(const StatementBlockSymbol& scope, const ForeachLoopStatementSyntax& syntax);
-    void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax, SourceRange sourceRange);
+    void setSyntax(const Scope& scope, const StatementSyntax& syntax, bool labelHandled,
+                   bool inLoop);
+    void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax,
+                   bool inLoop);
+    void setSyntax(const StatementBlockSymbol& scope, const ForeachLoopStatementSyntax& syntax,
+                   bool inLoop);
+    void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax, SourceRange sourceRange,
+                  bool inLoop);
 
     const Statement& getStatement(const BindContext& context) const;
     span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
 
 private:
     template<typename TStatement>
-    void setSyntaxImpl(const StatementBlockSymbol& scope, const TStatement& syntax);
+    void setSyntaxImpl(const StatementBlockSymbol& scope, const TStatement& syntax, bool inLoop);
 
     const Statement& bindStatement(const BindContext& context) const;
 
@@ -184,6 +188,7 @@ private:
     SourceRange sourceRange;
     mutable bool isBinding = false;
     bool labelHandled = false;
+    bool inLoop = false;
 };
 
 /// Represents an invalid statement, which is usually generated and inserted
