@@ -163,8 +163,10 @@ ClassMethodPrototypeSymbol& ClassMethodPrototypeSymbol::fromSyntax(
     // Pure virtual methods can only appear in virtual classes.
     if (flags & MethodFlags::Pure) {
         auto& classType = scope.asSymbol().as<ClassType>();
-        if (!classType.isAbstract)
+        if (!classType.isAbstract) {
             scope.addDiag(diag::PureInAbstract, nameToken.range());
+            flags &= ~MethodFlags::Pure;
+        }
     }
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
@@ -312,6 +314,8 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
     const Symbol* baseConstructor = nullptr;
     auto& comp = scope->getCompilation();
     auto& scopeNameMap = getNameMap();
+    bool pureVirtualError = false;
+
     for (auto& member : baseType->members()) {
         if (member.name.empty())
             continue;
@@ -332,6 +336,24 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
         const Symbol* toWrap = &member;
         if (member.kind == SymbolKind::TransparentMember)
             toWrap = &member.as<TransparentMemberSymbol>().wrapped;
+
+        // If this is a pure virtual method being inherited and we aren't ourselves
+        // an abstract class, issue an error.
+        if (!isAbstract && toWrap->kind == SymbolKind::ClassMethodPrototype) {
+            auto& sub = toWrap->as<ClassMethodPrototypeSymbol>();
+            if (sub.flags & MethodFlags::Pure) {
+                if (!pureVirtualError) {
+                    auto& diag = scope->addDiag(diag::InheritFromAbstract,
+                                                classSyntax.extendsClause->sourceRange());
+                    diag << name;
+                    diag << baseType->name;
+                    diag << sub.name;
+                    diag.addNote(diag::NoteDeclarationHere, sub.location);
+                    pureVirtualError = true;
+                }
+                continue;
+            }
+        }
 
         // All symbols get inserted into the beginning of the scope using the
         // provided insertion callback. We insert them as TransparentMemberSymbols

@@ -1045,6 +1045,16 @@ endclass
 function int C::foo(int a, real b = 1.1);
 endfunction
 
+virtual class D extends C;
+endclass
+
+class E extends D;
+    function int foo(int a, real b = 1.1); endfunction
+endclass
+
+class F extends D;
+endclass
+
 module m;
 endmodule
 )");
@@ -1053,9 +1063,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::PureInAbstract);
     CHECK(diags[1].code == diag::BodyForPure);
+    CHECK(diags[2].code == diag::InheritFromAbstract);
 }
 
 TEST_CASE("Polymorphism example") {
