@@ -143,6 +143,7 @@ bool ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocati
                 continue;
 
             if (forceInvalidValues) {
+                newParam.setValue(nullptr);
                 paramValues.append(&ConstantValue::Invalid);
                 continue;
             }
@@ -173,6 +174,7 @@ bool ParameterBuilder::createParams(Scope& newScope, LookupLocation lookupLocati
                 continue;
 
             if (forceInvalidValues) {
+                newParam.targetType.setType(compilation.getErrorType());
                 typeParams.append(&compilation.getErrorType());
                 continue;
             }

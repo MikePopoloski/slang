@@ -99,16 +99,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (!handleDefault(symbol))
             return;
 
-        // If there have been no specializations, force an empty one now
-        // to make sure we collect all diagnostics that don't depend on
-        // parameter values.
-        if (symbol.numSpecializations() == 0)
-            symbol.getInvalidSpecialization(compilation).visit(*this);
-        else {
-            // Make sure we fully visit each specialization.
-            for (auto& spec : symbol.specializations())
-                spec.visit(*this);
-        }
+        // Save this for later; we need to revist all generic classes
+        // once we've finished checking everything else.
+        genericClasses.append(&symbol);
     }
 
     void handle(const InstanceSymbol& symbol) {
@@ -147,12 +140,30 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         handleDefault(symbol);
     }
 
+    void finalize() {
+        // Once everything has been visited, go back over and check things that might
+        // have been influenced by visiting later symbols.
+        for (auto symbol : genericClasses) {
+            // If there have been no specializations, force an empty one now
+            // to make sure we collect all diagnostics that don't depend on
+            // parameter values.
+            if (symbol->numSpecializations() == 0)
+                symbol->getInvalidSpecialization(compilation).visit(*this);
+            else {
+                // Make sure we fully visit each specialization.
+                for (auto& spec : symbol->specializations())
+                    spec.visit(*this);
+            }
+        }
+    }
+
     Compilation& compilation;
     const size_t& numErrors;
     flat_hash_map<const Definition*, size_t> instanceCount;
     flat_hash_set<const InstanceBodySymbol*> visitedInstanceBodies;
     uint32_t errorLimit;
     uint32_t hierarchyDepth = 0;
+    SmallVectorSized<const GenericClassDefSymbol*, 8> genericClasses;
 };
 
 } // namespace
@@ -705,6 +716,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     DiagnosticVisitor visitor(*this, numErrors,
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     getRoot().visit(visitor);
+    visitor.finalize();
 
     // Report on unused out-of-block definitions. These are always a real error.
     for (auto& [key, val] : outOfBlockMethods) {

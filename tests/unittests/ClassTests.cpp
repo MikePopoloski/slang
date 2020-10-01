@@ -1100,3 +1100,19 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Uninstantiated generic class error") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+endclass
+
+class B #(type DT=int) extends A;
+  localparam Max_int = {$bits(DT) - 1{1'b1}};
+  localparam Min_int = {$bits(int) - $bits(DT){1'b1}};
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
