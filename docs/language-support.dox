@@ -112,8 +112,9 @@ LRM | Feature | Supported
 {{m-success}} 8.17 | Chaining constructors | v0.5
 {{m-success}} 8.18 | Data hiding and encapsulation | v0.5
 {{m-success}} 8.19 | Constant class properties | v0.5
-{{m-danger}}  8.20 | Virtual methods | no
-{{m-danger}}  8.21 | Abstract classes and pure virtual methods | no
+{{m-success}} 8.20 | Virtual methods | v0.5
+{{m-success}} 8.21 | Abstract classes and pure virtual methods | v0.5
+{{m-success}} 8.22 | Polymorphism: dynamic method lookup | v0.5
 {{m-success}} 8.23 | Class scope resolution operator | v0.5
 {{m-success}} 8.24 | Out-of-block declarations | v0.5
 {{m-success}} 8.25 | Parameterized classes | v0.5
