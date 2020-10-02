@@ -11,6 +11,7 @@
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/parsing/LexerFacts.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
@@ -23,7 +24,6 @@
 #include "slang/symbols/Symbol.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/parsing/LexerFacts.h"
 #include "slang/util/String.h"
 
 namespace slang {
@@ -422,7 +422,7 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRa
             auto& targetType = targetParent.as<Type>();
             do {
                 auto& sourceType = lookupParent->as<Type>();
-                if (sourceType.isDerivedFrom(targetType))
+                if (targetType.isAssignmentCompatible(sourceType))
                     return true;
 
                 lookupParent = &lookupParent->getParentScope()->asSymbol();

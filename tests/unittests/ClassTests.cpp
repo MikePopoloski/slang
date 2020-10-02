@@ -1116,3 +1116,35 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Protected member access") {
+    auto tree = SyntaxTree::fromText(R"(
+module top();
+    class A;
+        local int a_loc = 21;
+        protected int a_prot = 22;
+        int a = 23;
+    endclass
+
+    class B extends A;
+        local int b_loc = 31;
+        protected int b_prot = 32;
+        int b = 33;
+        function void fun();
+            $display(b_prot);
+        endfunction
+    endclass
+
+    B b;
+    initial begin
+        b = new;
+        $display(b.b);
+        b.fun();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
