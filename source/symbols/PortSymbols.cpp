@@ -342,6 +342,14 @@ public:
         }
     }
 
+    void finalize() {
+        // Error if any port declarations are unused.
+        for (auto& [name, info] : portInfos) {
+            if (!info.used)
+                scope.addDiag(diag::UnusedPortDecl, info.syntax->sourceRange()) << name;
+        }
+    }
+
 private:
     Compilation& compilation;
     const Scope& scope;
@@ -369,7 +377,6 @@ private:
             return nullptr;
         }
 
-        // TODO: error at the end if a port I/O is unused
         it->second.used = true;
         return &it->second;
     }
@@ -998,6 +1005,7 @@ void PortSymbol::fromSyntax(
                         THROW_UNREACHABLE;
                 }
             }
+            builder.finalize();
             break;
         }
         case SyntaxKind::WildcardPortList:

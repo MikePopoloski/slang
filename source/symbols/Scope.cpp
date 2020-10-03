@@ -9,6 +9,7 @@
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/compilation/Definition.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
@@ -594,6 +595,7 @@ void Scope::elaborate() const {
     // the initial pass because evaluating their conditions may depend on other members
     // that have yet to be elaborated. This implicitly implements the elaboration algorithm
     // described in [23.10.4.1].
+    bool usedPorts = false;
     auto deferred = deferredData.getMembers();
     for (auto symbol : deferred) {
         auto& member = symbol->as<DeferredMemberSymbol>();
@@ -635,6 +637,7 @@ void Scope::elaborate() const {
                 // inverts the dependency tree but it's better than giving all symbols a virtual
                 // method just for this.
                 asSymbol().as<InstanceBodySymbol>().setPorts(ports.copy(compilation));
+                usedPorts = true;
                 break;
             }
             case SyntaxKind::DataDeclaration: {
@@ -655,6 +658,22 @@ void Scope::elaborate() const {
             }
             default:
                 break;
+        }
+    }
+
+    // Issue an error if port I/Os were declared but the module doesn't have a port list.
+    if (!usedPorts) {
+        for (auto [syntax, symbol] : deferredData.getPortDeclarations()) {
+            for (auto decl : syntax->declarators) {
+                // We'll report an error for just the first decl in each syntax entry,
+                // because it should be clear to the user that there aren't any ports
+                // at all in the module header.
+                auto name = decl->name.valueText();
+                if (!name.empty()) {
+                    addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
+                    break;
+                }
+            }
         }
     }
 

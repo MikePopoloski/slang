@@ -399,15 +399,24 @@ TEST_CASE("Port decl in ANSI module") {
 module m(input logic a);
     input b;
 endmodule
+
+module n;
+    input c;
+endmodule
+
+module o(a, b);
+    input a, b, c;
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    auto it = diags.begin();
-    CHECK((it++)->code == diag::PortDeclInANSIModule);
-    CHECK(it == diags.end());
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::PortDeclInANSIModule);
+    CHECK(diags[1].code == diag::UnusedPortDecl);
+    CHECK(diags[2].code == diag::UnusedPortDecl);
 }
 
 TEST_CASE("Type parameters") {
