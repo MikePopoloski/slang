@@ -485,6 +485,10 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
             return true;
     }
 
+    // Null can be assigned to chandles.
+    if (l->isCHandle())
+        return r->isNull();
+
     return false;
 }
 

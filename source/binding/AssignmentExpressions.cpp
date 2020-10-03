@@ -689,7 +689,11 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         }
     }
 
-    // TODO: other types
+    // Null can be assigned to various destination types. It's ok to just
+    // keep propagating the null value.
+    if (from.isNull())
+        return std::move(value);
+
     THROW_UNREACHABLE;
 }
 

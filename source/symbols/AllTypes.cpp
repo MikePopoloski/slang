@@ -840,6 +840,9 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
             variable->setAttributes(scope, member->attributes);
 
             result->addMember(*variable);
+
+            if (variable->getType().isCHandle())
+                scope.addDiag(diag::InvalidUnionMember, decl->name.range()) << variable->getType();
         }
     }
 

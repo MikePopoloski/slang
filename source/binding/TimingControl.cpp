@@ -99,7 +99,7 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
         return badCtrl(compilation, result);
 
     if (edge == EdgeKind::None) {
-        if (expr.type->isAggregate()) {
+        if (expr.type->isAggregate() || expr.type->isCHandle()) {
             context.addDiag(diag::InvalidEventExpression, expr.sourceRange) << *expr.type;
             return badCtrl(compilation, result);
         }

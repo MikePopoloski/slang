@@ -954,7 +954,7 @@ private:
 } // end anonymous namespace
 
 PortSymbol::PortSymbol(string_view name, SourceLocation loc, bitmask<DeclaredTypeFlags> flags) :
-    ValueSymbol(SymbolKind::Port, name, loc, flags) {
+    ValueSymbol(SymbolKind::Port, name, loc, flags | DeclaredTypeFlags::Port) {
 }
 
 void PortSymbol::fromSyntax(

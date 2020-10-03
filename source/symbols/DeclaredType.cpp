@@ -83,6 +83,9 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
             initializer = &Expression::bindImplicitParam(*typeSyntax, *initializerSyntax,
                                                          initializerLocation, initializerContext);
             type = initializer->type;
+
+            if (flags & DeclaredTypeFlags::Port)
+                checkPortType(initializerContext);
         }
         return;
     }
@@ -92,6 +95,9 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
                          (flags & DeclaredTypeFlags::ForceSigned) != 0);
     if (dimensions)
         type = &comp.getType(*type, *dimensions, typeContext.lookupLocation, scope);
+
+    if (flags & DeclaredTypeFlags::Port)
+        checkPortType(typeContext);
 }
 
 const Type* DeclaredType::resolveForeachVar(const BindContext& context) const {
@@ -140,6 +146,11 @@ const Type* DeclaredType::resolveForeachVar(const BindContext& context) const {
     }
 
     return &comp.getIntType();
+}
+
+void DeclaredType::checkPortType(const BindContext& context) const {
+    if (type->isCHandle())
+        context.addDiag(diag::InvalidPortType, parent.location) << *type;
 }
 
 void DeclaredType::resolveAt(const BindContext& context) const {

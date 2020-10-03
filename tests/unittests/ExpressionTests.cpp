@@ -1600,3 +1600,68 @@ localparam ft b = foo(24'h123456,
     CHECK(testBitstream(foo1 + "3);") == 0);
     CHECK(testBitstream(foo1 + "4);", diag::BadStreamSize) == 1);
 }
+
+TEST_CASE("chandles") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    chandle c1 = null;
+    chandle c2 = c1;
+
+    initial begin
+        if (c1 == c2 || c1 == null || c1 !== null || c2 === c1) begin
+        end
+
+        if (c1) begin
+            c2 = c1 ? c1 : null;
+        end
+    end
+
+    int arr[chandle];
+    initial begin
+        arr[c1] = 1;
+        arr[c2] = 2;
+        arr[null] = 3;
+    end
+
+    localparam int foo = bar();
+    function automatic int bar;
+        chandle c = null;
+        chandle d, e;
+
+        int i = c == null;
+        if (c)
+            i++;
+
+        c = 'x ? d : e;
+        c = d ? null : e;
+        return i + (c ? 0 : 1);
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("chandle errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input chandle c1);
+    chandle c2;
+    always @(c2) begin end
+    assign c2 = c1;
+
+    union { chandle c3; } asdf;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::InvalidPortType);
+    CHECK(diags[1].code == diag::InvalidEventExpression);
+    CHECK(diags[2].code == diag::AssignToCHandle);
+    CHECK(diags[3].code == diag::InvalidUnionMember);
+}

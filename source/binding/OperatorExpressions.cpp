@@ -866,7 +866,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
         if (lt.isNull() && rt.isNull()) {
             result->type = &compilation.getNullType();
         }
-        else if (lt.isClass() || rt.isClass()) {
+        else if (lt.isClass() || rt.isClass() || lt.isCHandle() || rt.isCHandle()) {
             if (lt.isNull())
                 result->type = &rt;
             else if (rt.isNull())
@@ -2059,6 +2059,18 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
             OP(Inequality, SVInt(l != r));
             OP(CaseEquality, SVInt(l == r));
             OP(CaseInequality, SVInt(l != r));
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+    else if (cvl.isNullHandle()) {
+        // Null can only ever appear in contexts where it's being compared to
+        // something else that is null.
+        switch (op) {
+            OP(Equality, SVInt(true));
+            OP(Inequality, SVInt(false));
+            OP(CaseEquality, SVInt(true));
+            OP(CaseInequality, SVInt(false));
             default:
                 THROW_UNREACHABLE;
         }

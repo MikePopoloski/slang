@@ -197,6 +197,12 @@ bool NamedValueExpression::verifyAssignableImpl(const BindContext& context, bool
         return false;
     }
 
+    // chandles can only be assigned in procedural contexts.
+    if ((context.flags & BindFlags::ProceduralStatement) == 0 && symbol.getType().isCHandle()) {
+        context.addDiag(diag::AssignToCHandle, sourceRange);
+        return false;
+    }
+
     if (VariableSymbol::isKind(symbol.kind)) {
         return context.requireAssignable(symbol.as<VariableSymbol>(), isNonBlocking, location,
                                          sourceRange);

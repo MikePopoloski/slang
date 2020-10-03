@@ -248,6 +248,7 @@ error StaticConstNoInitializer "static constant class properties must have initi
 error PureInAbstract "pure virtual methods can only be declared in virtual classes"
 error BodyForPure "pure virtual methods cannot have a function body defined"
 error InheritFromAbstract "'{}' cannot inherit from virtual class '{}' without providing an implementation for pure virtual method '{}'"
+error InvalidPortType "{} is not a valid type for a port"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 warning warning-task WarningTask "$warning encountered{}"
@@ -339,6 +340,7 @@ error BadStreamCast "streaming concatenation cannot be converted to type {}"
 error BadStreamWithType "stream expression type before 'with' must be a one-dimensional unpacked array"
 error BadStreamWithOrder "'with' expression cannot appear after unconstrained dynamically sized stream expression"
 error NewVirtualClass "cannot create instance of virtual class '{}'"
+error AssignToCHandle "cannot assign to a chandle outside of a procedural context"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 
 subsystem Statements
@@ -382,6 +384,7 @@ error PackedArrayNotIntegral "packed array elements must be of integral type (no
 error PackedArrayTooLarge "packed array is too large; maximum width is {} bits"
 error ArrayDimTooLarge "array dimension is too large; maximum number of elements is {}"
 error UnpackedSigned "unpacked type cannot have signedness declared"
+error InvalidUnionMember "untagged unions cannot have members of type {}"
 
 subsystem Lookup
 error Redefinition "redefinition of '{}'"
