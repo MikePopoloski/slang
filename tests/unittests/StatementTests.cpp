@@ -906,3 +906,21 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("wait_order statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    event a, b, c;
+    initial begin
+        wait_order(a, b, c);
+        wait_order(a, b, c) else $display("foo!");
+        wait_order(a, b, c) $display("bar!");
+        wait_order(a, b, c) $display("bar!"); else $display("foo!");
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

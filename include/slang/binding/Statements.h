@@ -45,6 +45,7 @@ struct StatementSyntax;
     x(Assertion) \
     x(DisableFork) \
     x(WaitFork) \
+    x(WaitOrder) \
     x(EventTrigger)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
@@ -793,6 +794,30 @@ public:
     void serializeTo(const ASTSerializer&) const {}
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::WaitFork; }
+};
+
+struct WaitOrderStatementSyntax;
+
+class WaitOrderStatement : public Statement {
+public:
+    span<const Symbol* const> events;
+    const Statement* ifTrue;
+    const Statement* ifFalse;
+
+    WaitOrderStatement(span<const Symbol* const> events, const Statement* ifTrue,
+                       const Statement* ifFalse, SourceRange sourceRange) :
+        Statement(StatementKind::WaitOrder, sourceRange),
+        events(events), ifTrue(ifTrue), ifFalse(ifFalse) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const WaitOrderStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::WaitOrder; }
 };
 
 struct EventTriggerStatementSyntax;

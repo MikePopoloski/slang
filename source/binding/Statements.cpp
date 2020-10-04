@@ -203,6 +203,10 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::WaitForkStatement:
             result = &WaitForkStatement::fromSyntax(comp, syntax.as<WaitForkStatementSyntax>());
             break;
+        case SyntaxKind::WaitOrderStatement:
+            result = &WaitOrderStatement::fromSyntax(comp, syntax.as<WaitOrderStatementSyntax>(),
+                                                     context, stmtCtx);
+            break;
         case SyntaxKind::BlockingEventTriggerStatement:
         case SyntaxKind::NonblockingEventTriggerStatement:
             result = &EventTriggerStatement::fromSyntax(
@@ -220,7 +224,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::CoverPropertyStatement:
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
-        case SyntaxKind::WaitOrderStatement:
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badStmt(comp, nullptr);
             break;
@@ -367,6 +370,14 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                 recurse(&ias.action->elseClause->clause->as<StatementSyntax>());
             return;
         }
+        case SyntaxKind::WaitOrderStatement: {
+            auto& wos = syntax.as<WaitOrderStatementSyntax>();
+            if (wos.action->statement)
+                recurse(wos.action->statement);
+            if (wos.action->elseClause)
+                recurse(&wos.action->elseClause->clause->as<StatementSyntax>());
+            return;
+        }
 
         case SyntaxKind::AssertPropertyStatement:
         case SyntaxKind::AssumePropertyStatement:
@@ -374,7 +385,6 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         case SyntaxKind::CoverPropertyStatement:
         case SyntaxKind::RestrictPropertyStatement:
         case SyntaxKind::ExpectPropertyStatement:
-        case SyntaxKind::WaitOrderStatement:
             scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
             return;
         default:
@@ -1880,6 +1890,66 @@ ER WaitForkStatement::evalImpl(EvalContext&) const {
 bool WaitForkStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
     return false;
+}
+
+Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
+                                          const WaitOrderStatementSyntax& syntax,
+                                          const BindContext& context, StatementContext& stmtCtx) {
+    SmallVectorSized<const Symbol*, 4> events;
+    for (auto name : syntax.names) {
+        LookupResult result;
+        Lookup::name(context.scope, *name, context.lookupLocation, LookupFlags::AllowDeclaredAfter,
+                     result);
+        result.reportErrors(context);
+
+        const Symbol* symbol = result.found;
+        if (!symbol)
+            return badStmt(compilation, nullptr);
+
+        if (!symbol->isValue() || !symbol->as<ValueSymbol>().getType().isEvent()) {
+            context.addDiag(diag::NotAnEvent, name->sourceRange()) << symbol->name;
+            return badStmt(compilation, nullptr);
+        }
+
+        events.append(symbol);
+    }
+
+    const Statement* ifTrue = nullptr;
+    const Statement* ifFalse = nullptr;
+    if (syntax.action->statement)
+        ifTrue = &Statement::bind(*syntax.action->statement, context, stmtCtx);
+
+    if (syntax.action->elseClause) {
+        ifFalse = &Statement::bind(syntax.action->elseClause->clause->as<StatementSyntax>(),
+                                   context, stmtCtx);
+    }
+
+    return *compilation.emplace<WaitOrderStatement>(events.copy(compilation), ifTrue, ifFalse,
+                                                    syntax.sourceRange());
+}
+
+ER WaitOrderStatement::evalImpl(EvalContext&) const {
+    return ER::Fail;
+}
+
+bool WaitOrderStatement::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
+    return false;
+}
+
+void WaitOrderStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("events");
+    for (auto ev : events) {
+        serializer.startObject();
+        serializer.writeLink("target", *ev);
+        serializer.endObject();
+    }
+    serializer.endArray();
+
+    if (ifTrue)
+        serializer.write("ifTrue", *ifTrue);
+    if (ifFalse)
+        serializer.write("ifFalse", *ifFalse);
 }
 
 Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,

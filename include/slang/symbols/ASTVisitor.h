@@ -204,6 +204,7 @@ decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
         CASE(Assertion, AssertionStatement);
         CASE(DisableFork, DisableForkStatement);
         CASE(WaitFork, WaitForkStatement);
+        CASE(WaitOrder, WaitOrderStatement);
         CASE(EventTrigger, EventTriggerStatement);
     }
 #undef CASE
