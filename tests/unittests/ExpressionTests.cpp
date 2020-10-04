@@ -1710,3 +1710,22 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("string concat lvalue error") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam int i = foo();
+    function int foo();
+        string a, b;
+        {a, b} = "asdf asdf";
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExpressionNotAssignable);
+}

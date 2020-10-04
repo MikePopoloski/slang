@@ -295,6 +295,9 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
         }
         case ExpressionKind::Concatenation: {
             auto& concat = as<ConcatenationExpression>();
+            if (!concat.type->isIntegral())
+                break;
+
             for (auto op : concat.operands()) {
                 if (!op->verifyAssignable(context, isNonBlocking, location))
                     return false;
@@ -309,15 +312,16 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
             }
             return true;
         }
-        default: {
-            if (!location)
-                location = sourceRange.start();
-
-            auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
-            diag << sourceRange;
-            return false;
-        }
+        default:
+            break;
     }
+
+    if (!location)
+        location = sourceRange.start();
+
+    auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
+    diag << sourceRange;
+    return false;
 }
 
 bool Expression::bad() const {
