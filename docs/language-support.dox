@@ -55,10 +55,10 @@ LRM | Feature | Supported
 {{m-success}} 6.11 | Integer types | v0.2
 {{m-success}} 6.12 | Real types | v0.2
 {{m-success}} 6.13 | Void type | v0.2
-{{m-danger}}  6.14 | Chandle types | no
+{{m-success}} 6.14 | Chandle types | v0.5
 {{m-danger}}  6.15 | Classes | no
 {{m-success}} 6.16 | Strings | v0.2
-{{m-danger}}  6.17 | Events | no
+{{m-success}} 6.17 | Events | v0.5
 {{m-success}} 6.18 | User-defined types | v0.2
 {{m-success}} 6.19 | Enumerations | v0.2
 {{m-success}} 6.20.2 | Value parameters | v0.2
@@ -74,6 +74,7 @@ LRM | Feature | Supported
 {{m-success}} 6.24.1 | Static casting | v0.2
 {{m-success}} 6.24.2 | Dynamic casting | v0.5
 {{m-success}} 6.24.3 | Bit-stream casting | v0.5
+{{m-success}} 6.25 | Parameterized data types | v0.5
 
 ## 7. Aggregate data types
 
@@ -139,6 +140,9 @@ LRM | Feature | Supported
 {{m-success}} 9.4.2 | Event control | v0.2
 {{m-danger}}  9.4.2.3 | Conditional event controls | no
 {{m-danger}}  9.4.2.4 | Sequence events | no
+{{m-danger}}  9.4.3 | Level-sensitive event control | no
+{{m-danger}}  9.4.4 | Level-sensitive sequence controls | no
+{{m-warning}} 9.4.5 | Intra-assignment timing controls | partial
 {{m-dim}}     9.5 | Process execution threads | N/A
 {{m-success}} 9.6.1 | Wait fork statement | v0.4
 {{m-success}} 9.6.2 | Disable statement | v0.4
@@ -223,7 +227,7 @@ LRM | Feature | Supported
 --- | ------- | ---------
 {{m-danger}}  15.3 | Semaphores | no
 {{m-danger}}  15.4 | Mailboxes | no
-{{m-danger}}  15.5 | Named events | no
+{{m-success}} 15.5 | Named events | v0.5
 
 ## 16. Assertions
 
@@ -244,6 +248,7 @@ LRM | Feature | Supported
 {{m-danger}}  16.15 | Disable iff resolution | no
 {{m-danger}}  16.16 | Clock resolution | no
 {{m-danger}}  16.17 | Expect statement | no
+{{m-dim}}     16.18 | Clocking blocks and concurrent assertions | N/A
 
 ## Chapters 17-19
 
@@ -330,6 +335,7 @@ LRM | Feature | Supported
 LRM | Feature | Supported
 --- | ------- | ---------
 {{m-warning}} 24.3 | The program construct | partial
+{{m-dim}}     24.4 | Eliminating testbench races | N/A
 {{m-danger}}  24.5 | Blocking tasks in cycle/event mode | no
 {{m-danger}}  24.6 | Programwide space and anonymous programs | no
 {{m-danger}}  24.7 | Program control tasks | no
