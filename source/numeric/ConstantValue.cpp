@@ -336,7 +336,6 @@ ConstantValue ConstantValue::convertToStr() const {
 
     // Conversion is described in [6.16]: take each 8 bit chunk,
     // remove it if it's zero, otherwise add as character to the string.
-    // TODO: unknown bits?
 
     const SVInt& val = integer();
     int32_t msb = int32_t(val.getBitWidth() - 1);
@@ -364,6 +363,7 @@ ConstantValue ConstantValue::convertToStr() const {
 ConstantValue ConstantValue::convertToByteArray(bitwidth_t size, bool isSigned) const {
     if (isUnpacked())
         return *this;
+
     std::string result;
     if (isInteger())
         result = convertToStr().str();
@@ -371,15 +371,19 @@ ConstantValue ConstantValue::convertToByteArray(bitwidth_t size, bool isSigned) 
         result = str();
     else
         return nullptr;
-    Elements array;
+
     if (!size) // dynamic array use string size
         size = static_cast<bitwidth_t>(result.size());
+
+    Elements array;
     array.reserve(size);
+
     for (auto ch : result) {
         if (array.size() >= size)
             break;
         array.emplace_back(SVInt(8, static_cast<uint64_t>(ch), isSigned));
     }
+
     while (array.size() < size)
         array.emplace_back(SVInt(8, 0, isSigned));
     return array;
@@ -388,6 +392,7 @@ ConstantValue ConstantValue::convertToByteArray(bitwidth_t size, bool isSigned) 
 ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
     if (isQueue())
         return *this;
+
     std::string result;
     if (isInteger())
         result = convertToStr().str();
@@ -395,9 +400,11 @@ ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
         result = str();
     else
         return nullptr;
+
     SVQueue queue;
     for (auto ch : result)
         queue.emplace_back(SVInt(8, static_cast<uint64_t>(ch), isSigned));
+
     return queue;
 }
 

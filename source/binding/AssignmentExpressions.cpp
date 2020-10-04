@@ -674,19 +674,18 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     }
 
     if (to.isByteArray()) {
-        const auto& ct = to.getCanonicalType();
-        const auto isSigned = ct.getArrayElementType()->isSigned();
-        if (ct.isQueue()) {
+        auto& ct = to.getCanonicalType();
+        bool isSigned = ct.getArrayElementType()->isSigned();
+        if (ct.isQueue())
             return value.convertToByteQueue(isSigned);
-        }
-        else {
-            bitwidth_t size;
-            if (ct.hasFixedRange())
-                size = ct.as<FixedSizeUnpackedArrayType>().range.width();
-            else
-                size = 0; // dynamic array use string size
-            return value.convertToByteArray(size, isSigned);
-        }
+
+        bitwidth_t size;
+        if (ct.hasFixedRange())
+            size = ct.as<FixedSizeUnpackedArrayType>().range.width();
+        else
+            size = 0; // dynamic array use string size
+
+        return value.convertToByteArray(size, isSigned);
     }
 
     // Null can be assigned to various destination types. It's ok to just

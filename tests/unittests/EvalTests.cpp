@@ -774,6 +774,11 @@ TEST_CASE("String literal ops") {
     CHECK(session.eval("str2[0] == \"H\"").integer() == 1);
     CHECK(session.eval("str2[11] == 8'hA").integer() == 1);
 
+    // Unpacked array cast
+    session.eval("typedef byte asdf_t[];");
+    auto elems = session.eval("asdf_t'(\"asdf\")").elements();
+    REQUIRE(elems.size() == 4);
+
     NO_SESSION_ERRORS;
 }
 
@@ -828,6 +833,14 @@ TEST_CASE("Dynamic string ops") {
     CHECK(session.eval("{str1,str2}").str() == "aaaaaa");
     CHECK(session.eval("{\"Hi\",str2}").str() == "Hiaaaaa");
     CHECK(session.eval("str2 = {\"Hi\", \"Bye\"}").str() == "HiBye");
+
+    CHECK(session.eval("string'(str1)").str() == "a");
+
+    session.eval("byte ba[] = \"asdf\";");
+    CHECK(session.eval("string'(ba)").str() == "asdf");
+
+    session.eval("typedef byte asdf_t[];");
+    CHECK(session.eval("asdf_t'(str1)").elements().size() == 1);
 
     NO_SESSION_ERRORS;
 }
