@@ -343,6 +343,7 @@ error BadStreamWithOrder "'with' expression cannot appear after unconstrained dy
 error NewVirtualClass "cannot create instance of virtual class '{}'"
 error AssignToCHandle "cannot assign to a chandle outside of a procedural context"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
+warning unsized-concat UnsizedInConcat "unsized integer in concat -- using a width of {}"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -521,7 +522,7 @@ group default = { real-underflow real-overflow literal-overflow case-gen-dup
                   redef-macro nonstandard-generate not-supported unknown-pragma extra-pragma-args
                   expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static static-skipped
                   elem-not-found dynarray-index dynarray-range queue-range empty-queue unknown-escape-code
-                  no-top warning-task }
+                  no-top warning-task unsized-concat }
 
 group extra = { empty-member empty-stmt dup-import unused-def ignored-macro-paste pointless-void-cast
                 unused-result format-real ignored-slice task-ignored }

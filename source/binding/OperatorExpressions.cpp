@@ -1172,6 +1172,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     }
 
     bool errored = false;
+    bool unsizedWarned = false;
     bool anyStrings = false;
     bitmask<IntegralFlags> flags;
     bitwidth_t totalWidth = 0;
@@ -1206,6 +1207,11 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             errored = true;
             context.addDiag(diag::BadConcatExpression, arg->sourceRange) << type;
             break;
+        }
+
+        if (arg->isUnsizedInteger() && !unsizedWarned) {
+            context.addDiag(diag::UnsizedInConcat, arg->sourceRange) << type.getBitWidth();
+            unsizedWarned = true;
         }
 
         // Can't overflow because 2*maxWidth is still less than 2^32-1.

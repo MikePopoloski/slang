@@ -1868,9 +1868,9 @@ endfunction
 )");
 
     CHECK(session.eval("foo(ft'(96'b1+(96'b1<<65)))").integer() ==
-          session.eval("{2, 0, 1}").integer());
+          session.eval("{32'd2, 32'd0, 32'd1}").integer());
     CHECK(session.eval("foo(ft'(100'b11111+(96'b1<<65)))").integer() ==
-          session.eval("{0, 4, 1}").integer());
+          session.eval("{32'd0, 32'd4, 32'd1}").integer());
 
     auto cv1 = session.eval("foo1({24'h123456, 2'b11})");
     CHECK(cv1.elements().size() == 3);

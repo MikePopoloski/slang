@@ -444,7 +444,7 @@ module m1;
     logic [3:0] asdf;
     always_comb asdf = asdf[foo:0];
     always_comb asdf = asdf[0+:foo];
-    always_comb asdf = {foo {1}};
+    always_comb asdf = {foo {32'd1}};
     always_comb asdf = foo'(1);
 
 endmodule
@@ -1096,7 +1096,7 @@ module m;
         A9 = '{A3, 4, 5, 6, 7, 8, 9};   // illegal, A3 is wrong element type
         A9 = {A3, 4, 5, A3, 6};         // legal, gives A9='{1,2,3,4,5,1,2,3,6}
         A9 = '{9{1}};                   // legal, gives A9='{1,1,1,1,1,1,1,1,1}
-        A9 = {9{1}};                    // illegal, no replication in unpacked array concatenation
+        A9 = {9{32'd1}};                // illegal, no replication in unpacked array concatenation
         A9 = {A3, {4,5,6,7,8,9} };      // illegal, {...} is not self-determined here
         A9 = {A3, '{4,5,6,7,8,9} };     // illegal, '{...} is not self-determined
         A9 = {A3, 4, AI3'{5, 6, 7}, 8, 9}; // legal, A9='{1,2,3,4,5,6,7,8,9}
@@ -1115,14 +1115,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::BadAssignment);
     CHECK(diags[1].code == diag::BadAssignment);
     CHECK(diags[2].code == diag::NoImplicitConversion);
     CHECK(diags[3].code == diag::UnpackedConcatSize);
-    CHECK(diags[4].code == diag::AssignmentPatternNoContext);
-    CHECK(diags[5].code == diag::UnpackedConcatAssociative);
-    CHECK(diags[6].code == diag::BadConcatExpression);
+    CHECK(diags[4].code == diag::UnsizedInConcat);
+    CHECK(diags[5].code == diag::AssignmentPatternNoContext);
+    CHECK(diags[6].code == diag::UnpackedConcatAssociative);
+    CHECK(diags[7].code == diag::BadConcatExpression);
 }
 
 TEST_CASE("Empty array concatenations") {
