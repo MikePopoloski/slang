@@ -358,6 +358,7 @@ error ForeachDynamicDimAfterSkipped "foreach index '{}' can't iterate over a dyn
 error LoopVarShadowsArray "loop variable '{}' shadows foreach array target"
 error CaseInsideKeyword "set membership cannot be used with {} statements"
 error InvalidDisableTarget "disable statement must specify a task or block name"
+error NotAnEvent "'{}' is not a triggerable event"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "empty statement has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"

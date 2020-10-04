@@ -890,3 +890,19 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Event triggering statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    event e;
+    initial begin
+        -> e;
+        ->> #3 e;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

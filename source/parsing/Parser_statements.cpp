@@ -717,7 +717,9 @@ EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(NamedLabelSyntax
         timing = parseTimingControl(/* isSequenceExpr */ false);
     }
 
-    return factory.eventTriggerStatement(kind, label, attributes, trigger, timing, parseName());
+    auto& name = parseName();
+    return factory.eventTriggerStatement(kind, label, attributes, trigger, timing, name,
+                                         expect(TokenKind::Semicolon));
 }
 
 StatementSyntax& Parser::parseVoidCallStatement(NamedLabelSyntax* label, AttrList attributes) {

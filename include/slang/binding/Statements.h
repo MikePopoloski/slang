@@ -44,7 +44,8 @@ struct StatementSyntax;
     x(Timed) \
     x(Assertion) \
     x(DisableFork) \
-    x(WaitFork)
+    x(WaitFork) \
+    x(EventTrigger)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
 
@@ -769,8 +770,8 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const DisableForkStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const DisableForkStatementSyntax& syntax);
 
     void serializeTo(const ASTSerializer&) const {}
 
@@ -787,12 +788,36 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext& context) const;
 
-    static Statement& fromSyntax(Compilation& compilation, const WaitForkStatementSyntax& syntax,
-                                 const BindContext& context, StatementContext& stmtCtx);
+    static Statement& fromSyntax(Compilation& compilation, const WaitForkStatementSyntax& syntax);
 
     void serializeTo(const ASTSerializer&) const {}
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::WaitFork; }
+};
+
+struct EventTriggerStatementSyntax;
+
+class EventTriggerStatement : public Statement {
+public:
+    const Symbol& target;
+    const TimingControl* timing;
+    bool isNonBlocking;
+
+    EventTriggerStatement(const Symbol& target, const TimingControl* timing, bool isNonBlocking,
+                          SourceRange sourceRange) :
+        Statement(StatementKind::EventTrigger, sourceRange),
+        target(target), timing(timing), isNonBlocking(isNonBlocking) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const EventTriggerStatementSyntax& syntax,
+                                 const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::EventTrigger; }
 };
 
 } // namespace slang

@@ -500,10 +500,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
                 case '-':
                     if (peek(1) == '>') {
                         advance(2);
-                        if (consume('>'))
-                            return create(TokenKind::OrMinusDoubleArrow);
-                        else
-                            return create(TokenKind::OrMinusArrow);
+                        return create(TokenKind::OrMinusArrow);
                     }
                     return create(TokenKind::Or);
                 case '=':

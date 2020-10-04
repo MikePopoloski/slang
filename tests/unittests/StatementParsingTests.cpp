@@ -195,7 +195,7 @@ TEST_CASE("Sequential declarations") {
 }
 
 TEST_CASE("Blocking Event Trigger") {
-    auto& text = "-> $root.hierarchy.evt";
+    auto& text = "-> $root.hierarchy.evt;";
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::BlockingEventTriggerStatement);
@@ -204,7 +204,7 @@ TEST_CASE("Blocking Event Trigger") {
 }
 
 TEST_CASE("Nonblocking Event Trigger") {
-    auto& text = "->> # 3 hierarchy.evt";
+    auto& text = "->> # 3 hierarchy.evt;";
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::NonblockingEventTriggerStatement);

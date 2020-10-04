@@ -17,28 +17,32 @@ namespace slang {
 
 const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
                                          const BindContext& context) {
-    auto& comp = context.scope.getCompilation();
+    // Timing controls are not considered procedural statements.
+    BindContext timingCtx(context);
+    timingCtx.flags &= ~BindFlags::ProceduralStatement;
+
+    auto& comp = timingCtx.scope.getCompilation();
     TimingControl* result;
     switch (syntax.kind) {
         case SyntaxKind::DelayControl:
-            result = &DelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), context);
+            result = &DelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), timingCtx);
             break;
         case SyntaxKind::EventControl:
             result =
-                &SignalEventControl::fromSyntax(comp, syntax.as<EventControlSyntax>(), context);
+                &SignalEventControl::fromSyntax(comp, syntax.as<EventControlSyntax>(), timingCtx);
             break;
         case SyntaxKind::EventControlWithExpression: {
             result = &EventListControl::fromSyntax(
-                comp, *syntax.as<EventControlWithExpressionSyntax>().expr, context);
+                comp, *syntax.as<EventControlWithExpressionSyntax>().expr, timingCtx);
             break;
         }
         case SyntaxKind::ImplicitEventControl:
             result = &ImplicitEventControl::fromSyntax(
-                comp, syntax.as<ImplicitEventControlSyntax>(), context);
+                comp, syntax.as<ImplicitEventControlSyntax>(), timingCtx);
             break;
         case SyntaxKind::CycleDelay:
         case SyntaxKind::RepeatedEventControl:
-            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
+            timingCtx.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badCtrl(comp, nullptr);
             break;
         default:

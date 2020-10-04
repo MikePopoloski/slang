@@ -197,19 +197,21 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
                 comp, syntax.as<ImmediateAssertionStatementSyntax>(), context, stmtCtx);
             break;
         case SyntaxKind::DisableForkStatement:
-            result = &DisableForkStatement::fromSyntax(
-                comp, syntax.as<DisableForkStatementSyntax>(), context, stmtCtx);
+            result =
+                &DisableForkStatement::fromSyntax(comp, syntax.as<DisableForkStatementSyntax>());
             break;
         case SyntaxKind::WaitForkStatement:
-            result = &WaitForkStatement::fromSyntax(comp, syntax.as<WaitForkStatementSyntax>(),
-                                                    context, stmtCtx);
+            result = &WaitForkStatement::fromSyntax(comp, syntax.as<WaitForkStatementSyntax>());
+            break;
+        case SyntaxKind::BlockingEventTriggerStatement:
+        case SyntaxKind::NonblockingEventTriggerStatement:
+            result = &EventTriggerStatement::fromSyntax(
+                comp, syntax.as<EventTriggerStatementSyntax>(), context);
             break;
         case SyntaxKind::ProceduralAssignStatement:
         case SyntaxKind::ProceduralForceStatement:
         case SyntaxKind::ProceduralDeassignStatement:
         case SyntaxKind::ProceduralReleaseStatement:
-        case SyntaxKind::BlockingEventTriggerStatement:
-        case SyntaxKind::NonblockingEventTriggerStatement:
         case SyntaxKind::WaitStatement:
         case SyntaxKind::RandCaseStatement:
         case SyntaxKind::AssertPropertyStatement:
@@ -1732,11 +1734,7 @@ void ExpressionStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& TimedStatement::fromSyntax(Compilation& compilation,
                                       const TimingControlStatementSyntax& syntax,
                                       const BindContext& context, StatementContext& stmtCtx) {
-    // Timing controls are not considered procedural statements when binding expressions.
-    BindContext timingCtx(context);
-    timingCtx.flags &= ~BindFlags::ProceduralStatement;
-
-    auto& timing = TimingControl::bind(*syntax.timingControl, timingCtx);
+    auto& timing = TimingControl::bind(*syntax.timingControl, context);
     auto& stmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<TimedStatement>(timing, stmt, syntax.sourceRange());
 
@@ -1857,8 +1855,7 @@ void AssertionStatement::serializeTo(ASTSerializer& serializer) const {
 }
 
 Statement& DisableForkStatement::fromSyntax(Compilation& compilation,
-                                            const DisableForkStatementSyntax& syntax,
-                                            const BindContext&, StatementContext&) {
+                                            const DisableForkStatementSyntax& syntax) {
     return *compilation.emplace<DisableForkStatement>(syntax.sourceRange());
 }
 
@@ -1872,8 +1869,7 @@ bool DisableForkStatement::verifyConstantImpl(EvalContext& context) const {
 }
 
 Statement& WaitForkStatement::fromSyntax(Compilation& compilation,
-                                         const WaitForkStatementSyntax& syntax, const BindContext&,
-                                         StatementContext&) {
+                                         const WaitForkStatementSyntax& syntax) {
     return *compilation.emplace<WaitForkStatement>(syntax.sourceRange());
 }
 
@@ -1884,6 +1880,49 @@ ER WaitForkStatement::evalImpl(EvalContext&) const {
 bool WaitForkStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
     return false;
+}
+
+Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
+                                             const EventTriggerStatementSyntax& syntax,
+                                             const BindContext& context) {
+    LookupResult result;
+    Lookup::name(context.scope, *syntax.name, context.lookupLocation,
+                 LookupFlags::AllowDeclaredAfter, result);
+    result.reportErrors(context);
+
+    const Symbol* symbol = result.found;
+    if (!symbol)
+        return badStmt(compilation, nullptr);
+
+    if (!symbol->isValue() || !symbol->as<ValueSymbol>().getType().isEvent()) {
+        context.addDiag(diag::NotAnEvent, syntax.name->sourceRange()) << symbol->name;
+        return badStmt(compilation, nullptr);
+    }
+
+    const TimingControl* timing = nullptr;
+    if (syntax.timing)
+        timing = &TimingControl::bind(*syntax.timing, context);
+
+    bool isNonBlocking = syntax.kind == SyntaxKind::NonblockingEventTriggerStatement;
+
+    return *compilation.emplace<EventTriggerStatement>(*symbol, timing, isNonBlocking,
+                                                       syntax.sourceRange());
+}
+
+ER EventTriggerStatement::evalImpl(EvalContext&) const {
+    return ER::Fail;
+}
+
+bool EventTriggerStatement::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
+    return false;
+}
+
+void EventTriggerStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("target", target);
+    serializer.write("isNonBlocking", isNonBlocking);
+    if (timing)
+        serializer.write("timing", *timing);
 }
 
 } // namespace slang

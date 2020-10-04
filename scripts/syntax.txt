@@ -908,6 +908,7 @@ EventTriggerStatement base=Statement
 token trigger
 TimingControl? timing
 Name name
+token semi
 
 kindmap<EventTriggerStatement>
 BlockingEventTriggerStatement NonblockingEventTriggerStatement

@@ -426,7 +426,7 @@ bool SyntaxFacts::isPossibleStatement(TokenKind kind) {
         case TokenKind::TypeKeyword:
         case TokenKind::DisableKeyword:
         case TokenKind::MinusArrow:
-        case TokenKind::OrMinusDoubleArrow:
+        case TokenKind::MinusDoubleArrow:
         case TokenKind::ForeverKeyword:
         case TokenKind::RepeatKeyword:
         case TokenKind::WhileKeyword:

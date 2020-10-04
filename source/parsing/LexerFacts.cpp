@@ -756,7 +756,6 @@ string_view LexerFacts::getTokenKindText(TokenKind kind) {
         case TokenKind::Or: return "|";
         case TokenKind::DoubleOr: return "||";
         case TokenKind::OrMinusArrow: return "|->";
-        case TokenKind::OrMinusDoubleArrow: return "|->>";
         case TokenKind::OrEqualsArrow: return "|=>";
         case TokenKind::At: return "@";
         case TokenKind::DoubleAt: return "@@";

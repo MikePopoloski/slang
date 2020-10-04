@@ -58,6 +58,7 @@ public:
     void visit(const AssertionStatement&) {}
     void visit(const DisableForkStatement&) {}
     void visit(const WaitForkStatement&) {}
+    void visit(const EventTriggerStatement&) {}
 
     MIRValue visit(const IntegerLiteral& expr) { return emitConst(expr); }
     MIRValue visit(const RealLiteral& expr) { return emitConst(expr); }
