@@ -1665,3 +1665,46 @@ endmodule
     CHECK(diags[2].code == diag::AssignToCHandle);
     CHECK(diags[3].code == diag::InvalidUnionMember);
 }
+
+TEST_CASE("Event data type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    event c1 = null;
+    event c2 = c1;
+
+    initial begin
+        if (c1 == c2 || c1 == null || c1 !== null || c2 === c1) begin
+        end
+
+        if (c1) begin
+            c2 = c1 ? c1 : null;
+        end
+    end
+
+    int arr[event];
+    initial begin
+        arr[c1] = 1;
+        arr[c2] = 2;
+        arr[null] = 3;
+    end
+
+    localparam int foo = bar();
+    function automatic int bar;
+        event c = null;
+        event d, e;
+
+        int i = c == null;
+        if (c)
+            i++;
+
+        c = 'x ? d : e;
+        c = d ? null : e;
+        return i + (c ? 0 : 1);
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

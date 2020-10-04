@@ -485,8 +485,8 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
             return true;
     }
 
-    // Null can be assigned to chandles.
-    if (l->isCHandle())
+    // Null can be assigned to chandles and events.
+    if (l->isCHandle() || l->isEvent())
         return r->isNull();
 
     return false;

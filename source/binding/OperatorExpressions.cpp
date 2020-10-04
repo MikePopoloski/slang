@@ -184,6 +184,9 @@ bool Expression::bindMembershipExpressions(const BindContext& context, TokenKind
         else if ((bt.isCHandle() || bt.isNull()) && (type->isCHandle() || type->isNull())) {
             // ok
         }
+        else if ((bt.isEvent() || bt.isNull()) && (type->isEvent() || type->isNull())) {
+            // ok
+        }
         else if (canBeStrings) {
             // If canBeStrings is still true, it means either this specific type or
             // the common type (or both) are of type string. This is ok, but force
@@ -707,6 +710,10 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                     good = true;
                     result->type = &compilation.getBitType();
                 }
+                else if ((lt->isEvent() || lt->isNull()) && (rt->isEvent() || rt->isNull())) {
+                    good = true;
+                    result->type = &compilation.getBitType();
+                }
                 else {
                     good = false;
                 }
@@ -866,7 +873,8 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
         if (lt.isNull() && rt.isNull()) {
             result->type = &compilation.getNullType();
         }
-        else if (lt.isClass() || rt.isClass() || lt.isCHandle() || rt.isCHandle()) {
+        else if (lt.isClass() || rt.isClass() || lt.isCHandle() || rt.isCHandle() || lt.isEvent() ||
+                 rt.isEvent()) {
             if (lt.isNull())
                 result->type = &rt;
             else if (rt.isNull())
