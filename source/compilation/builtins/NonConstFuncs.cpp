@@ -13,9 +13,9 @@ namespace slang::Builtins {
 class NonConstantFunction : public SimpleSystemSubroutine {
 public:
     NonConstantFunction(const std::string& name, const Type& returnType, size_t requiredArgs = 0,
-                        const std::vector<const Type*>& argTypes = {}) :
+                        const std::vector<const Type*>& argTypes = {}, bool isMethod = false) :
         SimpleSystemSubroutine(name, SubroutineKind::Function, requiredArgs, argTypes, returnType,
-                               false) {}
+                               isMethod) {}
 
     ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
@@ -205,6 +205,11 @@ void registerNonConstFuncs(Compilation& c) {
     c.addSystemSubroutine(std::make_unique<ScanfFunc>(true));
     c.addSystemSubroutine(std::make_unique<ScanfFunc>(false));
     c.addSystemSubroutine(std::make_unique<FReadFunc>());
+
+    c.addSystemMethod(SymbolKind::EventType,
+                      std::make_unique<NonConstantFunction>("triggered", c.getBitType(), 0,
+                                                            std::vector<const Type*>{},
+                                                            /* isMethod */ true));
 }
 
 } // namespace slang::Builtins

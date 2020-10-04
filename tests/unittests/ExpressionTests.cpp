@@ -1679,6 +1679,8 @@ module m;
         if (c1) begin
             c2 = c1 ? c1 : null;
         end
+
+        if (c1.triggered || c2.triggered()) begin end
     end
 
     int arr[event];

@@ -711,6 +711,7 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
         case SymbolKind::DynamicArrayType:
         case SymbolKind::AssociativeArrayType:
         case SymbolKind::QueueType:
+        case SymbolKind::EventType:
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     context);
         default: {
