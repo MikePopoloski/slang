@@ -122,13 +122,17 @@ bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVector<Token>& d
                 // of the buffer or one that borders whitespace should be ignored.
                 // This isn't specified in the standard so I'm just guessing.
                 if (i == 0 || i == tokens.size() - 1 || !token.trivia().empty() ||
-                    !tokens[i + 1].trivia().empty()) {
+                    !tokens[i + 1].trivia().empty() || !emptyArgTrivia.empty()) {
 
                     addDiag(diag::IgnoredMacroPaste, token.location());
+
+                    // We're ignoring this token, but don't lose its trivia or our
+                    // spacing can get messed up.
+                    emptyArgTrivia.appendRange(token.trivia());
                 }
                 else if (stringify) {
-                    // if this is right after the opening quote or right before the closing quote,
-                    // we're trying to concatenate something with nothing, so assume an error
+                    // If this is right after the opening quote or right before the closing quote,
+                    // we're trying to concatenate something with nothing.
                     if (stringifyBuffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote)
                         addDiag(diag::IgnoredMacroPaste, token.location());
                     else {

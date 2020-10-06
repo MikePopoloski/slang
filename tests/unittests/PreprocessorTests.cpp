@@ -1585,3 +1585,16 @@ TEST_CASE("Non-macro replacement with backtick -- crash regress") {
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::MisplacedDirectiveChar);
 }
+
+TEST_CASE("Macro concat -- whitespace bug") {
+    // Testing a regression:
+    // This used to result in "xport_width" instead of "x port_width"
+    auto& text = R"(
+`define A(a) ``a``_width
+`define B(b) b `A(``port``)
+`B(x)
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == "\nx port_width\n");
+}
