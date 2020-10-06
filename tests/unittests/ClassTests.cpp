@@ -112,6 +112,8 @@ class C;
     extern function foo::baz();
 
     protected parameter int z = 4;
+
+    pure virtual function new();
 endclass
 
 static function C::bar();
@@ -119,7 +121,7 @@ endfunction
 )");
 
     auto& diags = tree->diagnostics();
-    REQUIRE(diags.size() == 21);
+    REQUIRE(diags.size() == 22);
     CHECK(diags[0].code == diag::DuplicateQualifier);
     CHECK(diags[1].code == diag::QualifierConflict);
     CHECK(diags[2].code == diag::QualifierConflict);
@@ -140,7 +142,8 @@ endfunction
     CHECK(diags[17].code == diag::QualifiersOnOutOfBlock);
     CHECK(diags[18].code == diag::MethodPrototypeScoped);
     CHECK(diags[19].code == diag::InvalidQualifierForMember);
-    CHECK(diags[20].code == diag::QualifiersOnOutOfBlock);
+    CHECK(diags[20].code == diag::InvalidQualifierForConstructor);
+    CHECK(diags[21].code == diag::QualifiersOnOutOfBlock);
 }
 
 TEST_CASE("Class typedefs") {
@@ -1147,4 +1150,28 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Interface class qualifier error checking") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class C;
+    const int i = 4;
+    class D; endclass
+    interface class E; endclass
+
+    local typedef int int_t;
+    pure virtual protected function foo;
+
+    function int bar(); endfunction
+endclass
+)");
+
+    auto& diags = tree->diagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::NotAllowedInIfaceClass);
+    CHECK(diags[1].code == diag::NotAllowedInIfaceClass);
+    CHECK(diags[2].code == diag::NestedIface);
+    CHECK(diags[3].code == diag::InvalidQualifierForIfaceMember);
+    CHECK(diags[4].code == diag::InvalidQualifierForIfaceMember);
+    CHECK(diags[5].code == diag::IfaceMethodPure);
 }

@@ -795,7 +795,8 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
     ImplementsClauseSyntax* implementsClause = nullptr;
 
     // interface classes treat "extends" as the implements list
-    if (virtualOrInterface && virtualOrInterface.kind == TokenKind::InterfaceKeyword)
+    bool isIfaceClass = virtualOrInterface.kind == TokenKind::InterfaceKeyword;
+    if (isIfaceClass)
         implementsClause = parseImplementsClause(TokenKind::ExtendsKeyword, semi);
     else {
         if (peek(TokenKind::ExtendsKeyword)) {
@@ -813,7 +814,7 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
     Token endClass;
     auto members = parseMemberList<MemberSyntax>(
         TokenKind::EndClassKeyword, endClass, SyntaxKind::ClassDeclaration,
-        [this](SyntaxKind, bool&) { return parseClassMember(); });
+        [this, isIfaceClass](SyntaxKind, bool&) { return parseClassMember(isIfaceClass); });
 
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
@@ -918,18 +919,31 @@ span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
     return qualifierBuffer.copy(alloc);
 }
 
-MemberSyntax* Parser::parseClassMember() {
+MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
+    auto errorIfIface = [&](const SyntaxNode& syntax) {
+        if (isIfaceClass) {
+            auto range = syntax.sourceRange();
+            addDiag(diag::NotAllowedInIfaceClass, range.start()) << range;
+        }
+    };
+
     auto attributes = parseAttributes();
 
     // virtual keyword can either be a class decl, virtual interface, or a method qualifier;
     // early out here if it's a class or interface
     if (peek(TokenKind::VirtualKeyword)) {
         switch (peek(1).kind) {
-            case TokenKind::ClassKeyword:
-                return &parseClassDeclaration(attributes, consume());
-            case TokenKind::InterfaceKeyword:
-                return &factory.classPropertyDeclaration(attributes, nullptr,
-                                                         parseVariableDeclaration({}));
+            case TokenKind::ClassKeyword: {
+                auto& result = parseClassDeclaration(attributes, consume());
+                errorIfIface(result);
+                return &result;
+            }
+            case TokenKind::InterfaceKeyword: {
+                auto& result = factory.classPropertyDeclaration(attributes, nullptr,
+                                                                parseVariableDeclaration({}));
+                errorIfIface(result);
+                return &result;
+            }
             default:
                 break;
         }
@@ -972,9 +986,12 @@ MemberSyntax* Parser::parseClassMember() {
                     break;
                 }
             }
+
+            errorIfIface(decl);
         }
         else if (decl.kind == SyntaxKind::PackageImportDeclaration ||
-                 decl.kind == SyntaxKind::NetTypeDeclaration) {
+                 decl.kind == SyntaxKind::NetTypeDeclaration ||
+                 decl.kind == SyntaxKind::LetDeclaration) {
             // Nettypes and package imports are disallowed in classes.
             SourceRange range = decl.sourceRange();
             addDiag(diag::NotAllowedInClass, range.start()) << range;
@@ -982,6 +999,11 @@ MemberSyntax* Parser::parseClassMember() {
         else {
             // Otherwise, check for invalid qualifiers.
             for (auto qual : qualifiers) {
+                if (isIfaceClass) {
+                    addDiag(diag::InvalidQualifierForIfaceMember, qual.location()) << qual.range();
+                    break;
+                }
+
                 switch (qual.kind) {
                     case TokenKind::RandKeyword:
                     case TokenKind::RandCKeyword:
@@ -1007,25 +1029,53 @@ MemberSyntax* Parser::parseClassMember() {
     auto kind = peek().kind;
     if (kind == TokenKind::TaskKeyword || kind == TokenKind::FunctionKeyword) {
         // Check that qualifiers are allowed specifically for methods.
+        bool isPure = false;
         for (auto qual : qualifiers) {
+            if (qual.kind == TokenKind::PureKeyword)
+                isPure = true;
+
             if (!isMethodQualifier(qual.kind)) {
                 auto& diag = addDiag(diag::InvalidMethodQualifier, qual.location());
                 diag << qual.range() << qual.rawText();
+                isPure = true;
+                break;
+            }
+
+            if (isIfaceClass && qual.kind != TokenKind::PureKeyword &&
+                qual.kind != TokenKind::VirtualKeyword) {
+                addDiag(diag::InvalidQualifierForIfaceMember, qual.location()) << qual.range();
+                isPure = true;
                 break;
             }
         }
 
-        auto checkLifetime = [this](auto& proto) {
+        if (isIfaceClass && !isPure)
+            addDiag(diag::IfaceMethodPure, peek().location());
+
+        auto checkProto = [this, &qualifiers](auto& proto) {
             if (proto.lifetime.kind == TokenKind::StaticKeyword) {
                 auto& diag = addDiag(diag::MethodStaticLifetime, proto.lifetime.location());
                 diag << proto.lifetime.range();
+            }
+
+            // Additional checking for constructors.
+            auto lastNamePart = proto.name->getLastToken();
+            if (lastNamePart.kind == TokenKind::NewKeyword) {
+                for (auto qual : qualifiers) {
+                    if (qual.kind == TokenKind::VirtualKeyword ||
+                        qual.kind == TokenKind::StaticKeyword) {
+                        addDiag(diag::InvalidQualifierForConstructor, qual.location())
+                            << qual.range();
+                        break;
+                    }
+                }
             }
         };
 
         // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
             auto& proto = parseFunctionPrototype(SyntaxKind::ClassDeclaration);
-            checkLifetime(proto);
+            checkProto(proto);
 
             if (proto.name->kind == SyntaxKind::ScopedName)
                 addDiag(diag::MethodPrototypeScoped, proto.name->getFirstToken().location());
@@ -1040,20 +1090,7 @@ MemberSyntax* Parser::parseClassMember() {
                                                           : TokenKind::EndFunctionKeyword;
             auto& funcDecl =
                 parseFunctionDeclaration({}, declKind, endKind, SyntaxKind::ClassDeclaration);
-            checkLifetime(*funcDecl.prototype);
-
-            // Additional checking for constructors.
-            auto lastNamePart = funcDecl.prototype->name->getLastToken();
-            if (lastNamePart.kind == TokenKind::NewKeyword) {
-                for (auto qual : qualifiers) {
-                    if (qual.kind == TokenKind::VirtualKeyword ||
-                        qual.kind == TokenKind::StaticKeyword) {
-                        addDiag(diag::InvalidQualifierForConstructor, qual.location())
-                            << qual.range();
-                        break;
-                    }
-                }
-            }
+            checkProto(*funcDecl.prototype);
 
             // If this is a scoped name, it should be an out-of-block definition for
             // a method declared in a nested class. Qualifiers are not allowed here.
@@ -1066,10 +1103,13 @@ MemberSyntax* Parser::parseClassMember() {
         }
     }
 
-    if (kind == TokenKind::ConstraintKeyword)
-        return &parseConstraint(attributes, qualifiers);
+    if (kind == TokenKind::ConstraintKeyword) {
+        auto& result = parseConstraint(attributes, qualifiers);
+        errorIfIface(result);
+        return &result;
+    }
 
-    // qualifiers aren't allowed past this point, so return an empty member to hold them
+    // Qualifiers aren't allowed past this point, so return an empty member to hold them.
     if (!qualifiers.empty()) {
         addDiag(diag::UnexpectedQualifiers, qualifiers[0].location());
         return &factory.emptyMember(
@@ -1078,25 +1118,37 @@ MemberSyntax* Parser::parseClassMember() {
     }
 
     switch (kind) {
-        case TokenKind::ClassKeyword:
-            return &parseClassDeclaration(attributes, Token());
-        case TokenKind::CoverGroupKeyword:
-            return &parseCovergroupDeclaration(attributes);
+        case TokenKind::ClassKeyword: {
+            auto& result = parseClassDeclaration(attributes, Token());
+            errorIfIface(result);
+            return &result;
+        }
+        case TokenKind::CoverGroupKeyword: {
+            auto& result = parseCovergroupDeclaration(attributes);
+            errorIfIface(result);
+            return &result;
+        }
         case TokenKind::Semicolon:
             errorIfAttributes(attributes);
             return &factory.emptyMember(attributes, qualifiers, consume());
+        case TokenKind::InterfaceKeyword:
+            if (peek(1).kind == TokenKind::ClassKeyword) {
+                addDiag(diag::NestedIface, peek().location());
+                return &parseClassDeclaration(attributes, consume());
+            }
+            break;
         default:
             break;
     }
 
-    // if we got attributes but don't know what comes next, we have some kind of nonsense
+    // If we got attributes but don't know what comes next, we have some kind of nonsense.
     if (!attributes.empty()) {
         return &factory.emptyMember(
             attributes, qualifiers,
             Token::createMissing(alloc, TokenKind::Semicolon, peek().location()));
     }
 
-    // otherwise, we got nothing and should just return null so that our caller will skip and try
+    // Otherwise, we got nothing and should just return null so that our caller will skip and try
     // again.
     return nullptr;
 }

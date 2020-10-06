@@ -257,7 +257,7 @@ private:
     MemberSyntax& parseGenerateBlock();
     ImplementsClauseSyntax* parseImplementsClause(TokenKind keywordKind, Token& semi);
     ClassDeclarationSyntax& parseClassDeclaration(AttrList attributes, Token virtualOrInterface);
-    MemberSyntax* parseClassMember();
+    MemberSyntax* parseClassMember(bool isIfaceClass);
     ContinuousAssignSyntax& parseContinuousAssign(AttrList attributes);
     DeclaratorSyntax& parseDeclarator(bool allowMinTypMax = false);
     MemberSyntax* parseCoverageMember();
