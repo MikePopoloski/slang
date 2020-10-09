@@ -483,6 +483,10 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
         // Derived classes can be assigned to parent classes.
         if (r->isDerivedFrom(*l))
             return true;
+
+        // Classes can also be assigned to interface classes that they implement.
+        if (r->implements(*l))
+            return true;
     }
 
     // Null can be assigned to chandles and events.
@@ -533,6 +537,19 @@ bool Type::isDerivedFrom(const Type& base) const {
     while (d && d->isClass()) {
         d = d->as<ClassType>().getBaseClass();
         if (d == b)
+            return true;
+    }
+
+    return false;
+}
+
+bool Type::implements(const Type& ifaceClass) const {
+    const Type* c = &getCanonicalType();
+    if (!c->isClass())
+        return false;
+
+    for (auto iface : c->as<ClassType>().getImplementedInterfaces()) {
+        if (iface->isMatching(ifaceClass))
             return true;
     }
 

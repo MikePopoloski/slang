@@ -17,6 +17,7 @@
 
 namespace slang {
 
+class BindContext;
 struct ClassPropertyDeclarationSyntax;
 
 class ClassPropertySymbol : public VariableSymbol {
@@ -65,6 +66,8 @@ private:
 class Expression;
 class GenericClassDefSymbol;
 struct ClassDeclarationSyntax;
+struct ExtendsClauseSyntax;
+struct ImplementsClauseSyntax;
 
 /// Represents a class definition type.
 class ClassType : public Type, public Scope {
@@ -77,12 +80,26 @@ public:
     /// "virtual" keyword).
     bool isAbstract = false;
 
+    /// Set to true if the class is an interface class.
+    bool isInterface = false;
+
     ClassType(Compilation& compilation, string_view name, SourceLocation loc);
 
     /// If this class derives from a base class, returns that type. Otherwise returns null.
     const Type* getBaseClass() const {
         ensureElaborated();
         return baseClass;
+    }
+
+    /// Gets the list of interface classes that this class implements.
+    /// If this class is itself an interface class, this is instead the list of
+    /// interface classes that it extends from, if any.
+    ///
+    /// Note that this list is flattened from the full set of all interfaces implemented
+    /// by any base classes or interface class parents, up the inheritance hierarchy.
+    span<const Type* const> getImplementedInterfaces() const {
+        ensureElaborated();
+        return implementsIfaces;
     }
 
     static const Symbol& fromSyntax(const Scope& scope, const ClassDeclarationSyntax& syntax);
@@ -104,12 +121,18 @@ private:
     friend class Scope;
     friend class GenericClassDefSymbol;
 
-    const Type& populate(const Scope& scope, const ClassDeclarationSyntax& syntax);
+    const Type& populate(const ClassDeclarationSyntax& syntax);
     void inheritMembers(function_ref<void(const Symbol&)> insertCB) const;
+    void handleExtends(const ExtendsClauseSyntax& extendsClause, const BindContext& context,
+                       function_ref<void(const Symbol&)> insertCB) const;
+    void handleImplements(const ImplementsClauseSyntax& implementsClause,
+                          const BindContext& context,
+                          function_ref<void(const Symbol&)> insertCB) const;
 
     mutable const Type* baseClass = nullptr;
     mutable const Expression* baseConstructorCall = nullptr;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
+    mutable span<const Type* const> implementsIfaces;
 };
 
 struct ParameterValueAssignmentSyntax;

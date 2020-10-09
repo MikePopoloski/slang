@@ -1175,3 +1175,59 @@ endclass
     CHECK(diags[4].code == diag::InvalidQualifierForIfaceMember);
     CHECK(diags[5].code == diag::IfaceMethodPure);
 }
+
+TEST_CASE("Interface class basics") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class I;
+    pure virtual function void foo;
+endclass
+
+class A implements I;
+    function void foo; endfunction
+endclass
+
+module m;
+    initial begin
+        automatic A a = new;
+        automatic I i = a;
+        i.foo();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Interface class errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class I;
+endclass
+
+class A extends I;
+endclass
+
+class B implements A;
+endclass
+
+interface class J extends A;
+endclass
+
+module m;
+    initial begin
+        automatic I i = new;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ExtendIfaceFromClass);
+    CHECK(diags[1].code == diag::ImplementNonIface);
+    CHECK(diags[2].code == diag::ExtendClassFromIface);
+    CHECK(diags[3].code == diag::NewInterfaceClass);
+}

@@ -160,10 +160,10 @@ ClassMethodPrototypeSymbol& ClassMethodPrototypeSymbol::fromSyntax(
     else
         result->declaredReturnType.setType(comp.getVoidType());
 
-    // Pure virtual methods can only appear in virtual classes.
+    // Pure virtual methods can only appear in virtual or interface classes.
     if (flags & MethodFlags::Pure) {
         auto& classType = scope.asSymbol().as<ClassType>();
-        if (!classType.isAbstract) {
+        if (!classType.isAbstract && !classType.isInterface) {
             scope.addDiag(diag::PureInAbstract, nameToken.range());
             flags &= ~MethodFlags::Pure;
         }
@@ -265,19 +265,14 @@ const Symbol& ClassType::fromSyntax(const Scope& scope, const ClassDeclarationSy
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ClassType>(comp, syntax.name.valueText(), syntax.name.location());
-    return result->populate(scope, syntax);
+    return result->populate(syntax);
 }
 
-const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& syntax) {
-    auto& comp = scope.getCompilation();
-    if (syntax.virtualOrInterface.kind == TokenKind::InterfaceKeyword) {
-        // TODO: support this
-        scope.addDiag(diag::NotYetSupported, syntax.virtualOrInterface.range());
-        return comp.getErrorType();
-    }
-
+const Type& ClassType::populate(const ClassDeclarationSyntax& syntax) {
     if (syntax.virtualOrInterface.kind == TokenKind::VirtualKeyword)
         isAbstract = true;
+    else if (syntax.virtualOrInterface.kind == TokenKind::InterfaceKeyword)
+        isInterface = true;
 
     setSyntax(syntax);
     for (auto member : syntax.items)
@@ -293,26 +288,39 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
     auto syntax = getSyntax();
     ASSERT(syntax);
 
-    auto& classSyntax = syntax->as<ClassDeclarationSyntax>();
-    if (!classSyntax.extendsClause)
-        return;
-
     auto scope = getParentScope();
     ASSERT(scope);
 
-    // Find the class type named as the base class.
     BindContext context(*scope, LookupLocation::before(*this));
-    auto baseType = Lookup::findClass(*classSyntax.extendsClause->baseName, context);
+
+    auto& classSyntax = syntax->as<ClassDeclarationSyntax>();
+    if (classSyntax.extendsClause)
+        handleExtends(*classSyntax.extendsClause, context, insertCB);
+
+    if (classSyntax.implementsClause)
+        handleImplements(*classSyntax.implementsClause, context, insertCB);
+}
+
+void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const BindContext& context,
+                              function_ref<void(const Symbol&)> insertCB) const {
+    auto baseType = Lookup::findClass(*extendsClause.baseName, context);
     if (!baseType)
         return;
 
+    // A normal class can't extend an interface class. This method won't be called
+    // for an interface class, so we don't need to check that again here.
+    if (baseType->isInterface) {
+        context.addDiag(diag::ExtendIfaceFromClass, extendsClause.sourceRange()) << baseType->name;
+        return;
+    }
+
     // Assign this member before resolving anything below, because they
-    // make try to check the base class of this type.
+    // may try to check the base class of this type.
     baseClass = baseType;
 
     // Inherit all base class members that don't conflict with our declared symbols.
     const Symbol* baseConstructor = nullptr;
-    auto& comp = scope->getCompilation();
+    auto& comp = context.getCompilation();
     auto& scopeNameMap = getNameMap();
     bool pureVirtualError = false;
 
@@ -343,8 +351,8 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
             auto& sub = toWrap->as<ClassMethodPrototypeSymbol>();
             if (sub.flags & MethodFlags::Pure) {
                 if (!pureVirtualError) {
-                    auto& diag = scope->addDiag(diag::InheritFromAbstract,
-                                                classSyntax.extendsClause->sourceRange());
+                    auto& diag =
+                        context.addDiag(diag::InheritFromAbstract, extendsClause.sourceRange());
                     diag << name;
                     diag << baseType->name;
                     diag << sub.name;
@@ -419,18 +427,18 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
         }
     }
 
-    if (auto extendsArgs = classSyntax.extendsClause->arguments) {
+    if (auto extendsArgs = extendsClause.arguments) {
         // Can't have both a super.new and extends arguments.
         if (baseConstructorCall) {
             auto& diag =
-                scope->addDiag(diag::BaseConstructorDuplicate, baseConstructorCall->sourceRange);
+                context.addDiag(diag::BaseConstructorDuplicate, baseConstructorCall->sourceRange);
             diag.addNote(diag::NotePreviousUsage, extendsArgs->getFirstToken().location());
             return;
         }
 
         // If we have a base class constructor, create the call to it.
         if (baseConstructor) {
-            SourceRange range = classSyntax.extendsClause->sourceRange();
+            SourceRange range = extendsClause.sourceRange();
             Lookup::ensureVisible(*baseConstructor, context, range);
 
             baseConstructorCall =
@@ -449,16 +457,99 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
     if (baseConstructor && !baseConstructorCall) {
         for (auto arg : baseConstructor->as<SubroutineSymbol>().arguments) {
             if (!arg->getInitializer()) {
-                auto& diag = scope->addDiag(diag::BaseConstructorNotCalled,
-                                            classSyntax.extendsClause->sourceRange());
+                auto& diag =
+                    context.addDiag(diag::BaseConstructorNotCalled, extendsClause.sourceRange());
                 diag << name << baseClass->name;
                 diag.addNote(diag::NoteDeclarationHere, baseConstructor->location);
                 return;
             }
         }
 
-        Lookup::ensureVisible(*baseConstructor, context, classSyntax.extendsClause->sourceRange());
+        Lookup::ensureVisible(*baseConstructor, context, extendsClause.sourceRange());
     }
+}
+
+// Recursively finds interface classes that are implemented and adds them
+// to the vector, if they haven't been added already.
+static void findIfaces(const ClassType& type, SmallVector<const Type*>& ifaces,
+                       SmallSet<const ClassType*, 4>& visited) {
+    if (type.isInterface) {
+        if (visited.emplace(&type).second)
+            ifaces.append(&type);
+    }
+
+    for (auto iface : type.getImplementedInterfaces()) {
+        if (visited.emplace(iface).second)
+            ifaces.append(iface);
+    }
+
+    if (auto base = type.getBaseClass())
+        findIfaces(base->getCanonicalType().as<ClassType>(), ifaces, visited);
+}
+
+void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
+                                 const BindContext& context,
+                                 function_ref<void(const Symbol&)> insertCB) const {
+    auto& comp = context.getCompilation();
+    SmallVectorSized<const Type*, 4> ifaces;
+    SmallSet<const ClassType*, 4> seenIfaces;
+
+    if (isInterface) {
+        // For an interface class, the implements clause actually uses the "extends"
+        // keyword and acts to inherit all of the members from the specified parent interfaces.
+        for (auto nameSyntax : implementsClause.interfaces) {
+            auto iface = Lookup::findClass(*nameSyntax, context);
+            if (!iface)
+                continue;
+
+            // This must be another interface class.
+            if (!iface->isInterface) {
+                context.addDiag(diag::ExtendClassFromIface, nameSyntax->sourceRange())
+                    << iface->name;
+                continue;
+            }
+
+            findIfaces(*iface, ifaces, seenIfaces);
+
+            // Inherit all members that don't conflict with our declared symbols.
+            auto& scopeNameMap = getNameMap();
+            for (auto& member : iface->members()) {
+                if (member.name.empty())
+                    continue;
+
+                // TODO: handle name conflicts and diamond relationships
+                if (auto it = scopeNameMap.find(member.name); it != scopeNameMap.end())
+                    continue;
+
+                // If the symbol itself was already inherited, create a new wrapper around
+                // it for our own scope.
+                const Symbol* toWrap = &member;
+                if (member.kind == SymbolKind::TransparentMember)
+                    toWrap = &member.as<TransparentMemberSymbol>().wrapped;
+
+                auto wrapper = comp.emplace<TransparentMemberSymbol>(*toWrap);
+                insertCB(*wrapper);
+            }
+        }
+    }
+    else {
+        // TODO: check that all interfaces have methods implemented
+
+        for (auto nameSyntax : implementsClause.interfaces) {
+            auto iface = Lookup::findClass(*nameSyntax, context);
+            if (!iface)
+                continue;
+
+            if (!iface->isInterface) {
+                context.addDiag(diag::ImplementNonIface, nameSyntax->sourceRange()) << iface->name;
+                continue;
+            }
+
+            findIfaces(*iface, ifaces, seenIfaces);
+        }
+    }
+
+    implementsIfaces = ifaces.copy(comp);
 }
 
 void ClassType::serializeTo(ASTSerializer& serializer) const {
@@ -551,7 +642,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
 
     // Not found, so this is a new entry. Fill in its members and store the
     // specialization for later lookup.
-    const Type& result = classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
+    const Type& result = classType->populate(getSyntax()->as<ClassDeclarationSyntax>());
     specMap.emplace(key, &result);
     return &result;
 }

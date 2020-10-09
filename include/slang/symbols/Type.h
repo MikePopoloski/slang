@@ -209,6 +209,11 @@ public:
     /// class type, and false otherwise.
     bool isDerivedFrom(const Type& base) const;
 
+    /// Returns true if this is a class type that implements the given
+    /// interface class type, or if this is an interface class type that
+    /// extends the given interface class type. Otherwise, returns false.
+    bool implements(const Type& ifaceClass) const;
+
     /// Gets a combination of flags for integral types; for non-integral types,
     /// this returns all zeros.
     bitmask<IntegralFlags> getIntegralFlags() const;

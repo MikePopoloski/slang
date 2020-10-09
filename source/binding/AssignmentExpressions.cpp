@@ -834,6 +834,11 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
         return badExpr(compilation, nullptr);
     }
 
+    if (!isSuperClass && classType->isInterface) {
+        context.addDiag(diag::NewInterfaceClass, syntax.sourceRange()) << classType->name;
+        return badExpr(compilation, nullptr);
+    }
+
     SourceRange range = syntax.sourceRange();
     Expression* constructorCall = nullptr;
     if (auto constructor = classType->find("new")) {
