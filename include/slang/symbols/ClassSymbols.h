@@ -133,6 +133,7 @@ private:
     mutable const Expression* baseConstructorCall = nullptr;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
     mutable span<const Type* const> implementsIfaces;
+    SymbolIndex headerIndex;
 };
 
 struct ParameterValueAssignmentSyntax;

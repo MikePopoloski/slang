@@ -269,6 +269,14 @@ const Symbol& ClassType::fromSyntax(const Scope& scope, const ClassDeclarationSy
 }
 
 const Type& ClassType::populate(const ClassDeclarationSyntax& syntax) {
+    // Save the current member index -- for generic classes, this is the location that
+    // can see all parameter members but nothing else. This is needed to correctly
+    // resolve type parameters used in extends and implements clauses.
+    if (auto last = getLastMember())
+        headerIndex = SymbolIndex(uint32_t(last->getIndex()) + 1);
+    else
+        headerIndex = SymbolIndex(1);
+
     if (syntax.virtualOrInterface.kind == TokenKind::VirtualKeyword)
         isAbstract = true;
     else if (syntax.virtualOrInterface.kind == TokenKind::InterfaceKeyword)
@@ -288,10 +296,7 @@ void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const
     auto syntax = getSyntax();
     ASSERT(syntax);
 
-    auto scope = getParentScope();
-    ASSERT(scope);
-
-    BindContext context(*scope, LookupLocation::before(*this));
+    BindContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
 
     auto& classSyntax = syntax->as<ClassDeclarationSyntax>();
     if (classSyntax.extendsClause)
@@ -618,7 +623,8 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     classType->genericClass = this;
     classType->setParent(*scope, getIndex());
 
-    ParameterBuilder paramBuilder(*scope, name, paramDecls);
+    auto paramScope = lookupLocation.getScope() ? lookupLocation.getScope() : scope;
+    ParameterBuilder paramBuilder(*paramScope, name, paramDecls);
     if (syntax)
         paramBuilder.setAssignments(*syntax);
 
