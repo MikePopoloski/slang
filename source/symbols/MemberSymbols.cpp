@@ -490,7 +490,14 @@ void SubroutineSymbol::setOverride(const SubroutineSymbol& parentMethod) const {
     auto scope = getParentScope();
     ASSERT(scope);
 
-    auto& retType = getReturnType();
+    checkVirtualMethodMatch(*scope, parentMethod, *this, /* allowDerivedReturn */ true);
+}
+
+void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
+                                               const SubroutineSymbol& parentMethod,
+                                               const SubroutineSymbol& derivedMethod,
+                                               bool allowDerivedReturn) {
+    auto& retType = derivedMethod.getReturnType();
     auto& parentRetType = parentMethod.getReturnType();
     if (retType.isError() || parentRetType.isError())
         return;
@@ -498,36 +505,37 @@ void SubroutineSymbol::setOverride(const SubroutineSymbol& parentMethod) const {
     // Check that return type and arguments match what was declared in the superclass method.
     // If the return type is a class type, it can be one that derives from the return type
     // declared in the superclass method.
-    if (!retType.isMatching(parentRetType) &&
-        (!retType.isClass() || !parentRetType.isAssignmentCompatible(retType))) {
+    if (!retType.isMatching(parentRetType) && (!allowDerivedReturn || !retType.isClass() ||
+                                               !parentRetType.isAssignmentCompatible(retType))) {
         Diagnostic* diag;
-        auto typeSyntax = declaredReturnType.getTypeSyntax();
+        auto typeSyntax = derivedMethod.declaredReturnType.getTypeSyntax();
         if (typeSyntax)
-            diag = &scope->addDiag(diag::VirtualReturnMismatch, typeSyntax->sourceRange());
+            diag = &scope.addDiag(diag::VirtualReturnMismatch, typeSyntax->sourceRange());
         else
-            diag = &scope->addDiag(diag::VirtualReturnMismatch, location);
+            diag = &scope.addDiag(diag::VirtualReturnMismatch, derivedMethod.location);
 
         (*diag) << retType;
-        (*diag) << name;
+        (*diag) << derivedMethod.name;
         (*diag) << parentRetType;
         diag->addNote(diag::NoteDeclarationHere, parentMethod.location);
         return;
     }
 
     auto parentArgs = parentMethod.arguments;
-    if (arguments.size() != parentArgs.size()) {
-        auto& diag = scope->addDiag(diag::VirtualArgCountMismatch, location);
-        diag << name;
+    if (derivedMethod.arguments.size() != parentArgs.size()) {
+        auto& diag = scope.addDiag(diag::VirtualArgCountMismatch, derivedMethod.location);
+        diag << derivedMethod.name;
         diag.addNote(diag::NoteDeclarationHere, parentMethod.location);
         return;
     }
 
-    for (auto di = arguments.begin(), pi = parentArgs.begin(); di != arguments.end(); di++, pi++) {
+    for (auto di = derivedMethod.arguments.begin(), pi = parentArgs.begin();
+         di != derivedMethod.arguments.end(); di++, pi++) {
         // Names must be identical.
         const FormalArgumentSymbol* da = *di;
         const FormalArgumentSymbol* pa = *pi;
         if (da->name != pa->name) {
-            auto& diag = scope->addDiag(diag::VirtualArgNameMismatch, da->location);
+            auto& diag = scope.addDiag(diag::VirtualArgNameMismatch, da->location);
             diag << da->name << pa->name;
             diag.addNote(diag::NoteDeclarationHere, pa->location);
             return;
@@ -537,7 +545,7 @@ void SubroutineSymbol::setOverride(const SubroutineSymbol& parentMethod) const {
         const Type& dt = da->getType();
         const Type& pt = pa->getType();
         if (!dt.isMatching(pt) && !dt.isError() && !pt.isError()) {
-            auto& diag = scope->addDiag(diag::VirtualArgTypeMismatch, da->location);
+            auto& diag = scope.addDiag(diag::VirtualArgTypeMismatch, da->location);
             diag << da->name << dt << pt;
             diag.addNote(diag::NoteDeclarationHere, pa->location);
             return;
@@ -548,12 +556,12 @@ void SubroutineSymbol::setOverride(const SubroutineSymbol& parentMethod) const {
         const Expression* pe = pa->getInitializer();
         if (bool(de) != bool(pe)) {
             if (de) {
-                auto& diag = scope->addDiag(diag::VirtualArgNoParentDefault, de->sourceRange);
+                auto& diag = scope.addDiag(diag::VirtualArgNoParentDefault, de->sourceRange);
                 diag << da->name;
                 diag.addNote(diag::NoteDeclarationHere, pa->location);
             }
             else {
-                auto& diag = scope->addDiag(diag::VirtualArgNoDerivedDefault, da->location);
+                auto& diag = scope.addDiag(diag::VirtualArgNoDerivedDefault, da->location);
                 diag << da->name;
                 diag.addNote(diag::NoteDeclarationHere, pa->location);
             }

@@ -1249,3 +1249,85 @@ endmodule
     CHECK(diags[2].code == diag::ExtendClassFromIface);
     CHECK(diags[3].code == diag::NewInterfaceClass);
 }
+
+TEST_CASE("Interface class name conflicts") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class ABase;
+    pure virtual function bit foo;
+endclass
+
+interface class A extends ABase;
+    parameter type T1 = int;
+    pure virtual function bit foo;
+endclass
+
+interface class B extends A;
+    parameter int P1 = 1;
+    pure virtual function bit foo;
+endclass
+
+interface class C;
+    parameter type T1 = logic;
+    parameter int P2 = 1;
+    pure virtual function bit foo;
+    pure virtual function logic bar;
+endclass
+
+interface class D extends A;
+    parameter int P1 = 2;
+    parameter int P2 = 1;
+    pure virtual function logic foo;
+endclass
+
+interface class E extends B;
+    pure virtual function logic bar;
+    pure virtual function logic baz;
+endclass
+
+interface class F extends B;
+    pure virtual function bit foo;
+endclass
+
+interface class G extends A, B, C, D, E, F;
+    parameter int P2 = 3;
+    pure virtual function logic bar;
+
+    parameter int baz = 1;
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::VirtualReturnMismatch);
+    CHECK(diags[1].code == diag::IfaceNameConflict);
+    CHECK(diags[2].code == diag::IfaceNameConflict);
+    CHECK(diags[3].code == diag::IfaceMethodHidden);
+}
+
+TEST_CASE("Interface class diamond with generics") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class IntfBase #(type T = int);
+    pure virtual function bit funcBase();
+endclass
+
+interface class IntfExt1 extends IntfBase#(bit);
+    pure virtual function bit funcExt1();
+endclass
+
+interface class IntfExt2 extends IntfBase#(logic);
+    pure virtual function bit funcExt2();
+endclass
+
+interface class IntfFinal extends IntfExt1, IntfExt2;
+    typedef bit T; // Override the conflicting identifier name
+    pure virtual function bit funcBase();
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

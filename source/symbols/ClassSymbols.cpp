@@ -477,7 +477,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
 // Recursively finds interface classes that are implemented and adds them
 // to the vector, if they haven't been added already.
 static void findIfaces(const ClassType& type, SmallVector<const Type*>& ifaces,
-                       SmallSet<const ClassType*, 4>& visited) {
+                       SmallSet<const Symbol*, 4>& visited) {
     if (type.isInterface) {
         if (visited.emplace(&type).second)
             ifaces.append(&type);
@@ -497,13 +497,13 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                                  function_ref<void(const Symbol&)> insertCB) const {
     auto& comp = context.getCompilation();
     SmallVectorSized<const Type*, 4> ifaces;
-    SmallSet<const ClassType*, 4> seenIfaces;
+    SmallSet<const Symbol*, 4> seenIfaces;
 
     if (isInterface) {
         // For an interface class, the implements clause actually uses the "extends"
         // keyword and acts to inherit all of the members from the specified parent interfaces.
         for (auto nameSyntax : implementsClause.interfaces) {
-            auto iface = Lookup::findClass(*nameSyntax, context);
+            const auto iface = Lookup::findClass(*nameSyntax, context);
             if (!iface)
                 continue;
 
@@ -514,27 +514,83 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                 continue;
             }
 
-            findIfaces(*iface, ifaces, seenIfaces);
-
             // Inherit all members that don't conflict with our declared symbols.
             auto& scopeNameMap = getNameMap();
             for (auto& member : iface->members()) {
                 if (member.name.empty())
                     continue;
 
-                // TODO: handle name conflicts and diamond relationships
-                if (auto it = scopeNameMap.find(member.name); it != scopeNameMap.end())
-                    continue;
-
-                // If the symbol itself was already inherited, create a new wrapper around
-                // it for our own scope.
                 const Symbol* toWrap = &member;
                 if (member.kind == SymbolKind::TransparentMember)
                     toWrap = &member.as<TransparentMemberSymbol>().wrapped;
 
+                if (auto it = scopeNameMap.find(member.name); it != scopeNameMap.end()) {
+                    if (it->second->kind == SymbolKind::TransparentMember) {
+                        // If the symbol we found was itself inherited we have a potential
+                        // name conflict. Check whether the symbol came from a parent we already
+                        // handled (a "diamond relationship"), and if not we error.
+                        auto& existing = it->second->as<TransparentMemberSymbol>().wrapped;
+                        const Symbol* origExisting = &existing;
+                        const Symbol* origNew = toWrap;
+                        if (origExisting->kind == SymbolKind::ClassMethodPrototype &&
+                            origNew->kind == SymbolKind::ClassMethodPrototype) {
+                            // This checks to see if the method prototype overrides (in the case of
+                            // interfaces, this means exactly redeclaring) a parent method. We
+                            // should check the original symbols in this case.
+                            if (auto overrides =
+                                    origExisting->as<ClassMethodPrototypeSymbol>().getOverrides()) {
+                                origExisting = overrides;
+                            }
+
+                            if (auto overrides =
+                                    origNew->as<ClassMethodPrototypeSymbol>().getOverrides()) {
+                                origNew = overrides;
+                            }
+                        }
+
+                        if (origExisting != origNew) {
+                            auto parent = existing.getParentScope();
+                            ASSERT(parent);
+
+                            auto& diag =
+                                context.addDiag(diag::IfaceNameConflict, nameSyntax->sourceRange());
+                            diag << member.name << iface->name << parent->asSymbol().name;
+                            diag.addNote(diag::NoteDeclarationHere, toWrap->location);
+                            diag.addNote(diag::NoteDeclarationHere, existing.location);
+                        }
+                    }
+                    else if (it->second->kind == SymbolKind::ClassMethodPrototype &&
+                             toWrap->kind == SymbolKind::ClassMethodPrototype) {
+                        // If this is a locally declared method check that it matches the method
+                        // declared in the parent interface.
+                        auto& parent = toWrap->as<ClassMethodPrototypeSymbol>();
+                        auto& derived = it->second->as<ClassMethodPrototypeSymbol>();
+
+                        auto parentSub = parent.getSubroutine();
+                        auto derivedSub = derived.getSubroutine();
+                        if (parentSub && derivedSub) {
+                            SubroutineSymbol::checkVirtualMethodMatch(
+                                *this, *parentSub, *derivedSub, /* allowDerivedReturn */ false);
+                        }
+
+                        if (auto overrides = parent.getOverrides())
+                            derived.setOverrides(*overrides);
+                        else
+                            derived.setOverrides(parent);
+                    }
+                    else if (toWrap->kind == SymbolKind::ClassMethodPrototype) {
+                        auto& diag = context.addDiag(diag::IfaceMethodHidden, it->second->location);
+                        diag << it->second->name << iface->name;
+                        diag.addNote(diag::NoteDeclarationHere, toWrap->location);
+                    }
+                    continue;
+                }
+
                 auto wrapper = comp.emplace<TransparentMemberSymbol>(*toWrap);
                 insertCB(*wrapper);
             }
+
+            findIfaces(*iface, ifaces, seenIfaces);
         }
     }
     else {

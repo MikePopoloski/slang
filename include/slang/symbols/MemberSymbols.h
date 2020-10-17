@@ -154,6 +154,10 @@ public:
                                VariableLifetime defaultLifetime,
                                SmallVector<const FormalArgumentSymbol*>& arguments);
 
+    static void checkVirtualMethodMatch(const Scope& scope, const SubroutineSymbol& parentMethod,
+                                        const SubroutineSymbol& derivedMethod,
+                                        bool allowDerivedReturn);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
 
 private:

@@ -52,6 +52,11 @@ public:
     const Type& getReturnType() const { return declaredReturnType.getType(); }
     const SubroutineSymbol* getSubroutine() const;
 
+    void setOverrides(const ClassMethodPrototypeSymbol& overrideTarget) const {
+        overrides = &overrideTarget;
+    }
+    const ClassMethodPrototypeSymbol* getOverrides() const { return overrides; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static ClassMethodPrototypeSymbol& fromSyntax(const Scope& scope,
@@ -61,6 +66,7 @@ public:
 
 private:
     mutable optional<const SubroutineSymbol*> subroutine;
+    mutable const ClassMethodPrototypeSymbol* overrides = nullptr;
 };
 
 class Expression;
