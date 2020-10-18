@@ -883,7 +883,8 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation,
                 result->type = &rt;
             else if (lt.isAssignmentCompatible(rt))
                 result->type = &lt;
-            // TODO: handle case for class types derived from common base
+            else if (auto common = Type::getCommonBase(lt, rt))
+                result->type = common;
             else if (lt.isEquivalent(rt))
                 result->type = &lt;
             else

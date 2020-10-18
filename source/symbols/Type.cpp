@@ -16,6 +16,7 @@
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/TypePrinter.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/StackContainer.h"
 
 namespace slang {
 
@@ -666,6 +667,37 @@ size_t Type::hash() const {
         h = std::hash<const Type*>()(&ct);
     }
     return h;
+}
+
+const Type* Type::getCommonBase(const Type& left, const Type& right) {
+    const Type* l = &left.getCanonicalType();
+    const Type* r = &right.getCanonicalType();
+    if (!l->isClass() || !r->isClass())
+        return nullptr;
+
+    SmallSet<const Type*, 8> parents;
+    while (true) {
+        if (l == r)
+            return r;
+
+        parents.emplace(l);
+        l = l->as<ClassType>().getBaseClass();
+        if (!l)
+            break;
+
+        l = &l->getCanonicalType();
+    }
+
+    while (true) {
+        if (auto it = parents.find(r); it != parents.end())
+            return r;
+
+        r = r->as<ClassType>().getBaseClass();
+        if (!r)
+            return nullptr;
+
+        r = &r->getCanonicalType();
+    }
 }
 
 const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node,

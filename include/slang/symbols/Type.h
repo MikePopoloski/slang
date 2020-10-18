@@ -240,6 +240,10 @@ public:
     std::string toString() const;
     size_t hash() const;
 
+    /// If the two given types are both class types and have a common base class somewhere
+    /// in their inheritance chain, return that common type. Otherwise, returns nullptr.
+    static const Type* getCommonBase(const Type& left, const Type& right);
+
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope, bool forceSigned,
                                   bool isTypedefTarget);

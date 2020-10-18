@@ -72,6 +72,27 @@ TEST_CASE("Class handle expression types") {
           "enum{ERR_OVERFLOW=32'sd10,ERR_UNDERFLOW=32'sd1123}Packet::e$1");
     CHECK(typeof("p.bar") == "int");
 
+    declare(R"(
+class A; endclass
+class B extends A; endclass
+class C extends B; endclass
+
+class P extends A; endclass
+class Q extends P; endclass
+class R extends B; endclass
+
+A ca;
+B cb;
+C cc;
+P cp;
+Q cq;
+R cr;
+)");
+    CHECK(typeof("1 ? ca : cb") == "A");
+    CHECK(typeof("1 ? cp : cb") == "A");
+    CHECK(typeof("1 ? cq : cb") == "A");
+    CHECK(typeof("1 ? cr : cb") == "B");
+
     NO_COMPILATION_ERRORS;
 }
 
