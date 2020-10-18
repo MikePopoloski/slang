@@ -195,6 +195,7 @@ bool Type::isBooleanConvertible() const {
         case SymbolKind::CHandleType:
         case SymbolKind::StringType:
         case SymbolKind::EventType:
+        case SymbolKind::ClassType:
             return true;
         default:
             return isNumeric();

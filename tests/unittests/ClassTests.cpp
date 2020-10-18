@@ -42,7 +42,7 @@ TEST_CASE("Basic class") {
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Class handle expressions") {
+TEST_CASE("Class handle expression types") {
     Compilation compilation;
 
     auto& scope = compilation.createScriptScope();

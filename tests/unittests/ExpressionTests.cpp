@@ -1602,6 +1602,49 @@ localparam ft b = foo(24'h123456,
     CHECK(testBitstream(foo1 + "4);", diag::BadStreamSize) == 1);
 }
 
+TEST_CASE("Class handle expressions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    class C; endclass
+    C c1 = null;
+    C c2 = c1;
+
+    initial begin
+        if (c1 == c2 || c1 == null || c1 !== null || c2 === c1) begin
+        end
+
+        if (c1) begin
+            c2 = c1 ? c1 : null;
+        end
+    end
+
+    int arr[C];
+    initial begin
+        arr[c1] = 1;
+        arr[c2] = 2;
+        arr[null] = 3;
+    end
+
+    function automatic int bar;
+        C c = null;
+        C d, e;
+
+        int i = c == null;
+        if (c)
+            i++;
+
+        c = 'x ? d : e;
+        c = d ? null : e;
+        return i + (c ? 0 : 1);
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("chandles") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
