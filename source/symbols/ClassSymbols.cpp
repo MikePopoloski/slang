@@ -594,8 +594,6 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
         }
     }
     else {
-        // TODO: check that all interfaces have methods implemented
-
         for (auto nameSyntax : implementsClause.interfaces) {
             auto iface = Lookup::findClass(*nameSyntax, context);
             if (!iface)
@@ -604,6 +602,47 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
             if (!iface->isInterface) {
                 context.addDiag(diag::ImplementNonIface, nameSyntax->sourceRange()) << iface->name;
                 continue;
+            }
+
+            for (auto& member : iface->members()) {
+                if (member.name.empty())
+                    continue;
+
+                const Symbol* unwrapped = &member;
+                if (member.kind == SymbolKind::TransparentMember)
+                    unwrapped = &member.as<TransparentMemberSymbol>().wrapped;
+
+                if (unwrapped->kind != SymbolKind::ClassMethodPrototype)
+                    continue;
+
+                // For each method declared in an interface, look for a corresponding
+                // implementation via a virtual method in the class.
+                auto& method = unwrapped->as<ClassMethodPrototypeSymbol>();
+                auto methodSub = method.getSubroutine();
+                if (!methodSub)
+                    continue;
+
+                auto impl = find(method.name);
+                if (!impl || impl->kind != SymbolKind::Subroutine) {
+                    auto& diag =
+                        context.addDiag(diag::IfaceMethodNoImpl, nameSyntax->sourceRange());
+                    diag << name << method.name << iface->name;
+                    continue;
+                }
+
+                // The method must be virtual in order to be a valid implementation.
+                auto& implSub = impl->as<SubroutineSymbol>();
+                if ((implSub.flags & MethodFlags::Virtual) == 0 && !implSub.getOverride()) {
+                    auto& diag =
+                        context.addDiag(diag::IfaceMethodNotVirtual, nameSyntax->sourceRange());
+                    diag << name << method.name << iface->name;
+                    diag.addNote(diag::NoteDeclarationHere, impl->location);
+                    continue;
+                }
+
+                // Finally, verify the method signatures match.
+                SubroutineSymbol::checkVirtualMethodMatch(*this, *methodSub, implSub,
+                                                          /* allowDerivedReturn */ false);
             }
 
             findIfaces(*iface, ifaces, seenIfaces);

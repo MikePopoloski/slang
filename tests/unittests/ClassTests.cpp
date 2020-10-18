@@ -1183,7 +1183,7 @@ interface class I;
 endclass
 
 class A implements I;
-    function void foo; endfunction
+    virtual function void foo; endfunction
 endclass
 
 module m;
@@ -1330,4 +1330,72 @@ endclass
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Interface class partial implementation") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class IntfClass;
+    pure virtual function bit funcA();
+    pure virtual function bit funcB();
+endclass
+
+virtual class ClassA implements IntfClass;
+    virtual function bit funcA();
+        return (1);
+    endfunction
+    pure virtual function bit funcB();
+endclass
+
+class ClassB extends ClassA;
+    virtual function bit funcB();
+        return (1);
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Interface class impl errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class A;
+    pure virtual function void foo;
+endclass
+
+interface class B extends A;
+endclass
+
+class C implements B;
+    function void foo; endfunction
+endclass
+
+class D implements B;
+    virtual function void foo(int i); endfunction
+endclass
+
+virtual class E implements B;
+    pure virtual function void foo;
+endclass
+
+class F;
+    virtual function void foo; endfunction
+endclass
+
+class G extends F implements B;
+endclass
+
+class H implements B;
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::IfaceMethodNotVirtual);
+    CHECK(diags[1].code == diag::VirtualArgCountMismatch);
+    CHECK(diags[2].code == diag::IfaceMethodNoImpl);
 }
