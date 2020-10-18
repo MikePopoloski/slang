@@ -63,6 +63,8 @@ void LookupResult::clear() {
     wasImported = false;
     isHierarchical = false;
     sawBadImport = false;
+    fromTypeParam = false;
+    fromForwardTypedef = false;
     selectors.clear();
     diagnostics.clear();
 }
@@ -73,6 +75,8 @@ void LookupResult::copyFrom(const LookupResult& other) {
     wasImported = other.wasImported;
     isHierarchical = other.isHierarchical;
     sawBadImport = other.sawBadImport;
+    fromTypeParam = other.fromTypeParam;
+    fromForwardTypedef = other.fromForwardTypedef;
 
     selectors.clear();
     selectors.appendRange(other.selectors);
@@ -564,8 +568,10 @@ void unwrapResult(const Scope& scope, optional<SourceRange> range, LookupResult&
     checkVisibility(*result.found, scope, range, result);
 
     // Unwrap type parameters into their target type alias.
-    if (result.found->kind == SymbolKind::TypeParameter)
+    if (result.found->kind == SymbolKind::TypeParameter) {
         result.found = &result.found->as<TypeParameterSymbol>().getTypeAlias();
+        result.fromTypeParam = true;
+    }
 
     // If the found symbol is a generic class, unwrap into
     // the default specialization (if possible).
@@ -788,7 +794,8 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
     return symbol;
 }
 
-const ClassType* Lookup::findClass(const NameSyntax& className, const BindContext& context) {
+const ClassType* Lookup::findClass(const NameSyntax& className, const BindContext& context,
+                                   optional<DiagCode> requireInterfaceClass) {
     LookupResult result;
     Lookup::name(context.scope, className, context.lookupLocation, LookupFlags::Type, result);
 
@@ -796,13 +803,32 @@ const ClassType* Lookup::findClass(const NameSyntax& className, const BindContex
     if (!result.found)
         return nullptr;
 
+    if (requireInterfaceClass) {
+        if (result.fromTypeParam) {
+            context.addDiag(diag::IfaceExtendTypeParam, className.sourceRange());
+            return nullptr;
+        }
+
+        if (result.fromForwardTypedef) {
+            context.addDiag(diag::IfaceExtendIncomplete, className.sourceRange());
+            return nullptr;
+        }
+    }
+
     if (!result.found->isType() || !result.found->as<Type>().isClass()) {
-        context.addDiag(diag::NotAClass, className.sourceRange()) << result.found->name;
+        if (!result.found->isType() || !result.found->as<Type>().isError())
+            context.addDiag(diag::NotAClass, className.sourceRange()) << result.found->name;
         return nullptr;
     }
 
-    auto& type = result.found->as<Type>();
-    return &type.getCanonicalType().as<ClassType>();
+    auto& classType = result.found->as<Type>().getCanonicalType().as<ClassType>();
+
+    if (requireInterfaceClass && !classType.isInterface) {
+        context.addDiag(*requireInterfaceClass, className.sourceRange()) << classType.name;
+        return nullptr;
+    }
+
+    return &classType;
 }
 
 const ClassType* Lookup::getContainingClass(const Scope& scope) {
@@ -875,8 +901,10 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                 else if (symbol->kind == SymbolKind::GenericClassDef)
                     forward = symbol->as<GenericClassDefSymbol>().getFirstForwardDecl();
 
-                if (forward)
+                if (forward) {
                     locationGood = LookupLocation::before(*forward) < location;
+                    result.fromForwardTypedef = true;
+                }
             }
         }
 

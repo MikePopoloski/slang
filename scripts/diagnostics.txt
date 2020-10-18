@@ -450,6 +450,8 @@ error ProtectedMemberAccess "'{}' is a protected member of '{}'"
 error InvalidConstructorAccess "cannot create instance of class '{}' because its constructor is declared '{}'"
 error SuperOutsideClass "cannot use 'super' handle outside of class scope"
 error SuperNoBase "class '{}' does not have a super class"
+error IfaceExtendTypeParam "cannot extend or implement a type parameter"
+error IfaceExtendIncomplete "cannot extend or implement an incomplete forward typedef"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 
 subsystem SysFuncs

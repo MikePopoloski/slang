@@ -245,8 +245,12 @@ void ClassType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
 }
 
 void ClassType::checkForwardDecls() const {
-    if (firstForward)
-        firstForward->checkType(ForwardingTypedefSymbol::Class, Visibility::Public, location);
+    if (firstForward) {
+        auto category = ForwardingTypedefSymbol::Class;
+        if (isInterface)
+            category = ForwardingTypedefSymbol::InterfaceClass;
+        firstForward->checkType(category, Visibility::Public, location);
+    }
 }
 
 ClassType::ClassType(Compilation& compilation, string_view name, SourceLocation loc) :
@@ -503,16 +507,9 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
         // For an interface class, the implements clause actually uses the "extends"
         // keyword and acts to inherit all of the members from the specified parent interfaces.
         for (auto nameSyntax : implementsClause.interfaces) {
-            const auto iface = Lookup::findClass(*nameSyntax, context);
+            const auto iface = Lookup::findClass(*nameSyntax, context, diag::ExtendClassFromIface);
             if (!iface)
                 continue;
-
-            // This must be another interface class.
-            if (!iface->isInterface) {
-                context.addDiag(diag::ExtendClassFromIface, nameSyntax->sourceRange())
-                    << iface->name;
-                continue;
-            }
 
             // Inherit all members that don't conflict with our declared symbols.
             auto& scopeNameMap = getNameMap();
@@ -595,14 +592,9 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
     }
     else {
         for (auto nameSyntax : implementsClause.interfaces) {
-            auto iface = Lookup::findClass(*nameSyntax, context);
+            const auto iface = Lookup::findClass(*nameSyntax, context, diag::ImplementNonIface);
             if (!iface)
                 continue;
-
-            if (!iface->isInterface) {
-                context.addDiag(diag::ImplementNonIface, nameSyntax->sourceRange()) << iface->name;
-                continue;
-            }
 
             for (auto& member : iface->members()) {
                 if (member.name.empty())
@@ -664,6 +656,9 @@ const Symbol& GenericClassDefSymbol::fromSyntax(const Scope& scope,
     auto& comp = scope.getCompilation();
     auto result = comp.allocGenericClass(syntax.name.valueText(), syntax.name.location());
     result->setSyntax(syntax);
+
+    if (syntax.virtualOrInterface.kind == TokenKind::InterfaceKeyword)
+        result->isInterface = true;
 
     // Extract information about parameters and save it for later use
     // when building specializations.
@@ -756,8 +751,12 @@ void GenericClassDefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl) 
 }
 
 void GenericClassDefSymbol::checkForwardDecls() const {
-    if (firstForward)
-        firstForward->checkType(ForwardingTypedefSymbol::Class, Visibility::Public, location);
+    if (firstForward) {
+        auto category = ForwardingTypedefSymbol::Class;
+        if (isInterface)
+            category = ForwardingTypedefSymbol::InterfaceClass;
+        firstForward->checkType(category, Visibility::Public, location);
+    }
 }
 
 void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {

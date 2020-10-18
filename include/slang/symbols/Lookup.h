@@ -58,7 +58,11 @@ public:
     LookupLocation() = default;
     LookupLocation(const Scope* scope_, uint32_t index) : scope(scope_), index(index) {}
 
+    /// Gets the scope of the lookup. Note that this can be null.
     const Scope* getScope() const { return scope; }
+
+    /// Gets the index within the scope for the lookup. This can be a sentinel value
+    /// for the special `max` and `min` lookup locations.
     SymbolIndex getIndex() const { return SymbolIndex(index); }
 
     /// Places a location just before the given symbol in its parent scope.
@@ -85,31 +89,84 @@ private:
     uint32_t index = 0;
 };
 
+/// A structure that contains the results of a name lookup operation.
 struct LookupResult {
+    /// The symbol that was found by the lookup, or nullptr if no symbol was found.
+    /// Note that there can still be errors even if a symbol is found.
     const Symbol* found = nullptr;
+
+    /// If the lookup found a system subroutine, a pointer to it is returned here
+    /// and the @a found field will be nullptr.
     const SystemSubroutine* systemSubroutine = nullptr;
+
+    /// Set to true if the found symbol was imported from a package.
     bool wasImported = false;
+
+    /// Set to true if the lookup was hierarchical.
     bool isHierarchical = false;
+
+    /// Set to true if we observed an invalid import statement somewhere during lookup.
+    /// This means the lack of a found symbol should be treated with caution, because
+    /// it could be the import failure causing it instead of some otherwise invalid name.
     bool sawBadImport = false;
 
+    /// Set to true if the lookup was resolved through a type parameter. Some language
+    /// rules restrict where this can be done.
+    bool fromTypeParam = false;
+
+    /// Set to true if the lookup was resolved through a forwarded typedef. Some language
+    /// rules restrict where this can be done.
+    bool fromForwardTypedef = false;
+
+    /// A structure that represents a selection of a single member from the resulting
+    /// symbol found during a lookup operation.
     struct MemberSelector {
+        /// The name of the member to select.
         string_view name;
+
+        /// The source location of the dot operator in the name path that
+        /// led to selecting this member.
         SourceLocation dotLocation;
+
+        /// The source range of the selection, for reporting diagnostics.
         SourceRange nameRange;
     };
 
+    /// A type that represents a kind of selector for picking a child member
+    /// from a found symbol. This can either be a dotted member select or
+    /// an indexed element select (from an array).
     using Selector = std::variant<const ElementSelectSyntax*, MemberSelector>;
+
+    /// A list of selectors that should be applied to the found symbol.
+    /// Only applicable if the found symbol is a value symbol.
     SmallVectorSized<Selector, 4> selectors;
 
+    /// Reports a diagnostic that occurred during lookup. The stored diagnostics
+    /// are not automatically emitted to the compilation, letting them be suppressed
+    /// if desired.
     Diagnostic& addDiag(const Scope& scope, DiagCode code, SourceLocation location);
+
+    /// Reports a diagnostic that occurred during lookup. The stored diagnostics
+    /// are not automatically emitted to the compilation, letting them be suppressed
+    /// if desired.
     Diagnostic& addDiag(const Scope& scope, DiagCode code, SourceRange sourceRange);
 
+    /// Gets the list of diagnostics that occurred during lookup. The stored diagnostics
+    /// are not automatically emitted to the compilation, letting them be suppressed
+    /// if desired.
     const Diagnostics& getDiagnostics() const { return diagnostics; }
 
+    /// Returns true if an error occurred during lookup.
     bool hasError() const;
+
+    /// Clears the structure of all results, as if it had been default initialized.
     void clear();
+
+    /// Copies result members from the given result object.
     void copyFrom(const LookupResult& other);
 
+    /// Reports any diagnostics that have occurred during lookup to the given bind
+    /// context, which will ensure they are visible to the compilation.
     void reportErrors(const BindContext& context);
 
 private:
@@ -144,7 +201,10 @@ public:
 
     /// Searches for a class with the given @a name within @a context -- if no symbol is
     /// found, or if the found symbol is not a class type, appropriate diagnostics are issued.
-    static const ClassType* findClass(const NameSyntax& name, const BindContext& context);
+    /// If @a requireInterfaceClass is given the resulting class will be required to be
+    /// an interface class; nullptr will be returned and a diagnostic issued if it's not.
+    static const ClassType* findClass(const NameSyntax& name, const BindContext& context,
+                                      optional<DiagCode> requireInterfaceClass = {});
 
     /// Gets the containing class for the given scope, or nullptr if the
     /// scope is not within a class.

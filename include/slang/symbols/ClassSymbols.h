@@ -149,6 +149,9 @@ struct ParameterValueAssignmentSyntax;
 /// must first be specialized in order to be a type usable in expressions and declarations.
 class GenericClassDefSymbol : public Symbol {
 public:
+    /// Set to true if the generic class is an interface class.
+    bool isInterface = false;
+
     GenericClassDefSymbol(string_view name, SourceLocation loc) :
         Symbol(SymbolKind::GenericClassDef, name, loc) {}
 

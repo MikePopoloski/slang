@@ -1399,3 +1399,67 @@ endclass
     CHECK(diags[1].code == diag::VirtualArgCountMismatch);
     CHECK(diags[2].code == diag::IfaceMethodNoImpl);
 }
+
+TEST_CASE("Interface class forward decl") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef A;
+typedef interface class A;
+typedef interface class B;
+typedef interface class C;
+
+module m;
+    A a;
+    B b;
+    C c;
+endmodule
+
+interface class A;
+endclass
+
+interface class B #(parameter int i = 4);
+endclass
+
+typedef B#(4) C;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Interface class type usage restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class PutImp;
+endclass
+
+class Fifo1 #(type T = PutImp) implements T;
+endclass
+
+virtual class Fifo2 #(type T = PutImp) implements T;
+endclass
+
+interface class Fifo3 #(type T = PutImp) extends T;
+endclass
+
+typedef interface class IntfD;
+class ClassB implements IntfD #(bit);
+    virtual function bit[1:0] funcD();
+    endfunction
+endclass : ClassB
+
+interface class IntfD #(type T1 = logic);
+    typedef T1[1:0] T2;
+    pure virtual function T2 funcD();
+endclass : IntfD
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::IfaceExtendTypeParam);
+    CHECK(diags[1].code == diag::IfaceExtendTypeParam);
+    CHECK(diags[2].code == diag::IfaceExtendTypeParam);
+    CHECK(diags[3].code == diag::IfaceExtendIncomplete);
+}

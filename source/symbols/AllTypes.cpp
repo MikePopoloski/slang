@@ -11,6 +11,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
@@ -1038,8 +1039,9 @@ void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
 }
 
 void TypeAliasType::checkForwardDecls() const {
+    auto& ct = targetType.getType().getCanonicalType();
     ForwardingTypedefSymbol::Category category;
-    switch (targetType.getType().getCanonicalType().kind) {
+    switch (ct.kind) {
         case SymbolKind::PackedStructType:
         case SymbolKind::UnpackedStructType:
             category = ForwardingTypedefSymbol::Struct;
@@ -1053,9 +1055,10 @@ void TypeAliasType::checkForwardDecls() const {
             break;
         case SymbolKind::ClassType:
             category = ForwardingTypedefSymbol::Class;
+            if (ct.as<ClassType>().isInterface)
+                category = ForwardingTypedefSymbol::InterfaceClass;
             break;
         default:
-            // TODO: interface classes
             category = ForwardingTypedefSymbol::None;
             break;
     }
