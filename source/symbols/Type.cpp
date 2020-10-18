@@ -668,7 +668,8 @@ size_t Type::hash() const {
 }
 
 const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node,
-                             LookupLocation location, const Scope& parent, bool forceSigned) {
+                             LookupLocation location, const Scope& parent, bool forceSigned,
+                             bool isTypedefTarget) {
     switch (node.kind) {
         case SyntaxKind::BitType:
         case SyntaxKind::LogicType:
@@ -721,7 +722,8 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                        : UnpackedUnionType::fromSyntax(parent, location, structUnion);
         }
         case SyntaxKind::NamedType:
-            return lookupNamedType(compilation, *node.as<NamedTypeSyntax>().name, location, parent);
+            return lookupNamedType(compilation, *node.as<NamedTypeSyntax>().name, location, parent,
+                                   isTypedefTarget);
         case SyntaxKind::ImplicitType: {
             auto& implicit = node.as<ImplicitTypeSyntax>();
             return IntegralType::fromSyntax(
@@ -823,9 +825,14 @@ void Type::resolveCanonical() const {
 }
 
 const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& syntax,
-                                  LookupLocation location, const Scope& parent) {
+                                  LookupLocation location, const Scope& parent,
+                                  bool isTypedefTarget) {
+    bitmask<LookupFlags> flags = LookupFlags::Type;
+    if (isTypedefTarget)
+        flags |= LookupFlags::TypedefTarget;
+
     LookupResult result;
-    Lookup::name(parent, syntax, location, LookupFlags::Type, result);
+    Lookup::name(parent, syntax, location, flags, result);
 
     if (result.hasError())
         compilation.addDiagnostics(result.getDiagnostics());

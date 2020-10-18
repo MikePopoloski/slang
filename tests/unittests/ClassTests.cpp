@@ -1463,3 +1463,24 @@ endclass : IntfD
     CHECK(diags[2].code == diag::IfaceExtendTypeParam);
     CHECK(diags[3].code == diag::IfaceExtendIncomplete);
 }
+
+TEST_CASE("Class resolution -- incomplete typedef") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef C;
+    C::T x; // illegal
+    typedef C::T c_t; // legal
+    c_t y;
+    class C;
+        typedef int T;
+    endclass
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ScopeIncompleteTypedef);
+}

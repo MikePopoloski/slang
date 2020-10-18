@@ -21,7 +21,7 @@ struct ExpressionSyntax;
 struct DeclaratorSyntax;
 struct VariableDimensionSyntax;
 
-enum class DeclaredTypeFlags : uint8_t {
+enum class DeclaredTypeFlags {
     None = 0,
     InferImplicit = 1,
     RequireConstant = 2,
@@ -30,9 +30,10 @@ enum class DeclaredTypeFlags : uint8_t {
     InProceduralContext = 16,
     AutomaticInitializer = 32,
     ForeachVar = 64,
-    Port = 128
+    Port = 128,
+    TypedefTarget = 256
 };
-BITMASK(DeclaredTypeFlags, Port);
+BITMASK(DeclaredTypeFlags, TypedefTarget);
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type.

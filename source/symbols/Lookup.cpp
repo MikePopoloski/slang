@@ -458,9 +458,15 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRa
 }
 
 bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
-                       NameComponents& name, LookupResult& result, const BindContext& context) {
+                       NameComponents& name, bitmask<LookupFlags> flags, LookupResult& result,
+                       const BindContext& context) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
     ASSERT(symbol);
+
+    // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
+    // unless this is within a typedef declaration.
+    if (result.fromForwardTypedef && (flags & LookupFlags::TypedefTarget) == 0)
+        result.addDiag(context.scope, diag::ScopeIncompleteTypedef, name.range());
 
     bool isClass = false;
     while (colonParts--) {
@@ -1121,7 +1127,7 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
         }
 
         // Drain all colon-qualified lookups here, which should always resolve to a nested type.
-        if (!resolveColonNames(nameParts, colonParts, first, result, context))
+        if (!resolveColonNames(nameParts, colonParts, first, flags, result, context))
             return;
 
         // We can't do upwards name resolution if colon access is involved, so always return

@@ -247,7 +247,7 @@ public:
 
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
-                        bool forceSigned = false);
+                        bool forceSigned = false, bool isTypedefTarget = false);
     const Type& getType(const Type& elementType,
                         const SyntaxList<VariableDimensionSyntax>& dimensions,
                         LookupLocation location, const Scope& parent);

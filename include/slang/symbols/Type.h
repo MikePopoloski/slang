@@ -241,7 +241,8 @@ public:
     size_t hash() const;
 
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope, bool forceSigned);
+                                  LookupLocation location, const Scope& scope, bool forceSigned,
+                                  bool isTypedefTarget);
 
     static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
                                   const SyntaxList<VariableDimensionSyntax>& dimensions,
@@ -268,7 +269,8 @@ private:
     void resolveCanonical() const;
 
     static const Type& lookupNamedType(Compilation& compilation, const NameSyntax& syntax,
-                                       LookupLocation location, const Scope& parent);
+                                       LookupLocation location, const Scope& parent,
+                                       bool isTypedefTarget);
 };
 
 Diagnostic& operator<<(Diagnostic& diag, const Type& arg);

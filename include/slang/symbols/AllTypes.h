@@ -364,10 +364,7 @@ public:
     DeclaredType targetType;
     Visibility visibility = Visibility::Public;
 
-    TypeAliasType(string_view name, SourceLocation loc) :
-        Type(SymbolKind::TypeAlias, name, loc), targetType(*this) {
-        canonical = nullptr;
-    }
+    TypeAliasType(string_view name, SourceLocation loc);
 
     static TypeAliasType& fromSyntax(const Scope& scope, const TypedefDeclarationSyntax& syntax);
     static TypeAliasType& fromSyntax(const Scope& scope,

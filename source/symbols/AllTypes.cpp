@@ -997,6 +997,11 @@ void ForwardingTypedefSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("next", *next);
 }
 
+TypeAliasType::TypeAliasType(string_view name, SourceLocation loc) :
+    Type(SymbolKind::TypeAlias, name, loc), targetType(*this, DeclaredTypeFlags::TypedefTarget) {
+    canonical = nullptr;
+}
+
 TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
                                          const TypedefDeclarationSyntax& syntax) {
     // TODO: interface based typedefs

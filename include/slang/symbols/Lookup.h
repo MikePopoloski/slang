@@ -46,9 +46,13 @@ enum class LookupFlags {
 
     /// Don't report an error if the lookup is for a simple identifier that
     /// cannot be found.
-    NoUndeclaredError = 16
+    NoUndeclaredError = 16,
+
+    /// The lookup is for a typedef target type, which has a special exemption
+    /// to allow scoped access to incomplete forward class types.
+    TypedefTarget = 32
 };
-BITMASK(LookupFlags, NoUndeclaredError);
+BITMASK(LookupFlags, TypedefTarget);
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.
