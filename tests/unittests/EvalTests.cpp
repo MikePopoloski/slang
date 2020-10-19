@@ -531,7 +531,7 @@ TEST_CASE("Dynamic array eval") {
 
     CHECK(session.eval("arr.xor").integer() == 0);
 
-    // TODO: session.eval("arr = {}");
+    session.eval("arr = {}");
     CHECK(session.eval("arr.size").integer() == 0);
 
     session.eval("arr = {1, 2, arr2}");

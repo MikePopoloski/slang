@@ -623,18 +623,17 @@ endmodule
 }
 
 TEST_CASE("Malformed name syntax") {
-    // TODO: uncomment cases below as they become supported
     auto tree = SyntaxTree::fromText(R"(
 module m;
 
     always_comb $unit;
     always_comb $root;
-    //always_comb local;
-    //always_comb this;
-    //always_comb super;
+    always_comb local;
+    always_comb this;
+    always_comb super;
     always_comb unique;
-    //always_comb and;
-    //always_comb or;
+    always_comb and;
+    always_comb or;
     always_comb xor;
     always_comb new;
 

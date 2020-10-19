@@ -1149,7 +1149,6 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             }
 
             // Otherwise this is an error.
-            // TODO: handle null values for classes
             bad = true;
             context.addDiag(diag::BadConcatExpression, arg->sourceRange) << argType;
             selfDetermined(context, arg);
