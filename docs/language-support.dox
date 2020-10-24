@@ -56,7 +56,7 @@ LRM | Feature | Supported
 {{m-success}} 6.12 | Real types | v0.2
 {{m-success}} 6.13 | Void type | v0.2
 {{m-success}} 6.14 | Chandle types | v0.5
-{{m-danger}}  6.15 | Classes | no
+{{m-success}} 6.15 | Classes | v0.5
 {{m-success}} 6.16 | Strings | v0.2
 {{m-success}} 6.17 | Events | v0.5
 {{m-success}} 6.18 | User-defined types | v0.2
@@ -119,7 +119,7 @@ LRM | Feature | Supported
 {{m-success}} 8.23 | Class scope resolution operator | v0.5
 {{m-success}} 8.24 | Out-of-block declarations | v0.5
 {{m-success}} 8.25 | Parameterized classes | v0.5
-{{m-danger}}  8.26 | Interface classes | no
+{{m-success}} 8.26 | Interface classes | v0.5
 {{m-success}} 8.27 | Typedef class | v0.5
 {{m-dim}}     8.28 | Classes and structures | N/A
 {{m-dim}}     8.29 | Memory management | N/A
@@ -175,7 +175,7 @@ LRM | Feature | Supported
 {{m-success}} 11.7 | Signed expressions | v0.2
 {{m-success}} 11.8 | Expression evaluation rules | v0.2
 {{m-danger}}  11.9 | Tagged union expressions | no
-{{m-warning}} 11.10 | String literal expressions | partial
+{{m-success}} 11.10 | String literal expressions | v0.5
 {{m-success}} 11.11 | Min/typ/max expressions | v0.4
 {{m-danger}}  11.12 | Let construct | no
 
