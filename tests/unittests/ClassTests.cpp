@@ -1505,3 +1505,57 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ScopeIncompleteTypedef);
 }
+
+TEST_CASE("bitstreams of classes") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    logic [22:0] i;
+    struct { logic l; byte b; } j;
+endclass
+
+interface class B;
+endclass
+
+class C;
+    int foo[];
+endclass
+
+class D;
+    event e;
+endclass
+
+localparam int ab = $bits(A);
+localparam int bb = $bits(B);
+localparam int cb = $bits(C);
+
+module m;
+    A a;
+    B b;
+    C c;
+    D d;
+    logic [ab:1] bits;
+
+    initial begin
+        bits = int'(a);
+        bits = int'(b);
+        bits = int'(c);
+        bits = int'(d);
+        d = D'(bits);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& a = compilation.getRoot().compilationUnits[0]->find<ParameterSymbol>("ab");
+    CHECK(a.getValue().integer() == 32);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[1].code == diag::QueryOnDynamicType);
+    CHECK(diags[2].code == diag::BadConversion);
+    CHECK(diags[3].code == diag::BadConversion);
+    CHECK(diags[4].code == diag::BadConversion);
+}

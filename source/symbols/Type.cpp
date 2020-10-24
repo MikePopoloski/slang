@@ -118,7 +118,15 @@ size_t Type::bitstreamWidth() const {
             width += field.getType().bitstreamWidth();
     }
 
-    // TODO: classes
+    if (isClass()) {
+        auto& ct = getCanonicalType().as<ClassType>();
+        if (ct.isInterface)
+            return 0;
+
+        for (auto& prop : ct.membersOfType<ClassPropertySymbol>())
+            width += prop.getType().bitstreamWidth();
+    }
+
     return width;
 }
 
@@ -247,7 +255,21 @@ bool Type::isBitstreamType(bool destination) const {
         return true;
     }
 
-    // TODO: classes
+    if (isClass()) {
+        if (destination)
+            return false;
+
+        auto& ct = getCanonicalType().as<ClassType>();
+        if (ct.isInterface)
+            return false;
+
+        for (auto& prop : ct.membersOfType<ClassPropertySymbol>()) {
+            if (!prop.getType().isBitstreamType(destination))
+                return false;
+        }
+        return true;
+    }
+
     return false;
 }
 
@@ -272,7 +294,18 @@ bool Type::isFixedSize() const {
         return true;
     }
 
-    // TODO: classes
+    if (isClass()) {
+        auto& ct = getCanonicalType().as<ClassType>();
+        if (ct.isInterface)
+            return false;
+
+        for (auto& prop : ct.membersOfType<ClassPropertySymbol>()) {
+            if (!prop.getType().isFixedSize())
+                return false;
+        }
+        return true;
+    }
+
     return false;
 }
 
@@ -521,7 +554,6 @@ bool Type::isBitstreamCastable(const Type& rhs) const {
     const Type* l = &getCanonicalType();
     const Type* r = &rhs.getCanonicalType();
     if (l->isBitstreamType(true) && r->isBitstreamType()) {
-        ASSERT(l->isAggregate() || r->isAggregate());
         if (l->isFixedSize() && r->isFixedSize())
             return l->bitstreamWidth() == r->bitstreamWidth();
         else

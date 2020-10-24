@@ -14,6 +14,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/symbols/AllTypes.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 
 namespace slang {
@@ -80,8 +81,15 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(const Type& type, Bitstrea
             fixedSize += fixedSizeElem;
         }
     }
+    else if (type.isClass()) {
+        auto& ct = type.getCanonicalType().as<ClassType>();
+        for (auto& prop : ct.membersOfType<ClassPropertySymbol>()) {
+            auto [multiplierElem, fixedSizeElem] = dynamicBitstreamSize(prop.getType(), mode);
+            multiplier = std::gcd(multiplier, multiplierElem);
+            fixedSize += fixedSizeElem;
+        }
+    }
 
-    // TODO: classes
     return { multiplier, fixedSize };
 }
 
@@ -261,10 +269,6 @@ static void packBitstream(ConstantValue& value, SmallVector<ConstantValue*>& pac
         for (auto& cv : *value.queue())
             packBitstream(cv, packed);
     }
-    else {
-        // TODO: classes
-        THROW_UNREACHABLE;
-    }
 }
 
 using PackIterator = ConstantValue* const*;
@@ -423,7 +427,6 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
         return constContainer(ct, buffer);
     }
 
-    // TODO: classes
     return nullptr;
 }
 
