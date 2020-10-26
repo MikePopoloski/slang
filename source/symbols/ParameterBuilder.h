@@ -37,6 +37,10 @@ public:
         definitionName(definitionName), parameterDecls(parameterDecls) {}
 
     void setAssignments(const ParameterValueAssignmentSyntax& syntax);
+    void setGlobalOverrides(const flat_hash_map<string_view, const ConstantValue*>& newVal) {
+        overrideMap = &newVal;
+    }
+
     bool createParams(Scope& newScope, LookupLocation lookupLocation, SourceLocation instanceLoc,
                       bool forceInvalidValues, bool suppressErrors);
 
@@ -50,6 +54,7 @@ private:
     string_view definitionName;
     span<const Decl> parameterDecls;
     SmallMap<string_view, const ExpressionSyntax*, 8> overrides;
+    const flat_hash_map<string_view, const ConstantValue*>* overrideMap = nullptr;
 };
 
 } // namespace slang

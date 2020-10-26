@@ -237,6 +237,9 @@ public:
     /// the string type itself as well as byte arrays and all integral types.
     bool canBeStringLike() const;
 
+    /// Coerces the given constant into one that is appropriate for this type.
+    ConstantValue coerceValue(const ConstantValue& value) const;
+
     std::string toString() const;
     size_t hash() const;
 

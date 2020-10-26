@@ -190,12 +190,13 @@ InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, Sourc
                    InstanceBodySymbol::fromDefinition(compilation, cacheKey, parameters)) {
 }
 
-InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
-                                              const Definition& definition) {
+InstanceSymbol& InstanceSymbol::createDefault(
+    Compilation& compilation, const Definition& definition,
+    const flat_hash_map<string_view, const ConstantValue*>* paramOverrides) {
     return *compilation.emplace<InstanceSymbol>(
         compilation, definition.name, definition.location,
         InstanceBodySymbol::fromDefinition(compilation, definition,
-                                           /* forceInvalidParams */ false));
+                                           /* forceInvalidParams */ false, paramOverrides));
 }
 
 InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
@@ -204,7 +205,7 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
     return *compilation.emplace<InstanceSymbol>(
         compilation, "", SourceLocation::NoLocation,
         InstanceBodySymbol::fromDefinition(compilation, definition,
-                                           /* forceInvalidParams */ true));
+                                           /* forceInvalidParams */ true, nullptr));
 }
 
 void InstanceSymbol::fromSyntax(Compilation& compilation,
@@ -346,11 +347,15 @@ InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceC
     setParent(cacheKey.getDefinition().scope, cacheKey.getDefinition().indexInScope);
 }
 
-const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& compilation,
-                                                             const Definition& definition,
-                                                             bool forceInvalidParams) {
-    // Create parameters with all default values set.
+const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
+    Compilation& compilation, const Definition& definition, bool forceInvalidParams,
+    const flat_hash_map<string_view, const ConstantValue*>* paramOverrides) {
+
     ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
+
+    if (paramOverrides)
+        paramBuilder.setGlobalOverrides(*paramOverrides);
+
     createParams(compilation, definition, paramBuilder, LookupLocation::max, definition.location,
                  forceInvalidParams);
 

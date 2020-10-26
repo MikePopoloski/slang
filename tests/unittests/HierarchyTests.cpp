@@ -1070,3 +1070,53 @@ endmodule
     CHECK(diags[1].code == diag::MisplacedTrailingSeparator);
     CHECK(diags[2].code == diag::TooManyParamAssignments);
 }
+
+TEST_CASE("Options to override top-level params") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter int foo, string bar, real baz);
+    localparam int j = foo + (bar == "asdf" ? baz : 0);
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.paramOverrides.push_back("foo=3");
+    coptions.paramOverrides.push_back("bar=\"asdf\"");
+    coptions.paramOverrides.push_back("baz=1.6");
+
+    Bag options;
+    options.set(coptions);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& j = compilation.getRoot().lookupName<ParameterSymbol>("m.j");
+    CHECK(j.getValue().integer() == 5);
+}
+
+TEST_CASE("Invalid param override option handling") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter int foo, string bar, real baz);
+    localparam int j = foo + (bar == "asdf" ? baz : 0);
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.paramOverrides.push_back("foo");
+    coptions.paramOverrides.push_back("bar=");
+    coptions.paramOverrides.push_back("bar=lkj");
+    coptions.paramOverrides.push_back("baz=\"asdf\"");
+    coptions.paramOverrides.push_back("m.baz=\"asdf\"");
+
+    Bag options;
+    options.set(coptions);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    for (size_t i = 0; i < diags.size(); i++) {
+        CHECK(diags[i].code == diag::InvalidParamOverrideOpt);
+    }
+}

@@ -96,6 +96,10 @@ struct CompilationOptions {
     /// top modules in the design. If empty, this will be automatically determined
     /// based on which modules are unreferenced elsewhere.
     flat_hash_set<string_view> topModules;
+
+    /// A list of parameters to override, of the form <name>=<value> -- note that
+    /// for now at least this only applies to parameters in top-level modules.
+    std::vector<std::string> paramOverrides;
 };
 
 /// A centralized location for creating and caching symbols. This includes
@@ -209,10 +213,16 @@ public:
     std::tuple<const FunctionDeclarationSyntax*, SymbolIndex> findOutOfBlockMethod(
         const Scope& scope, string_view className, string_view methodName) const;
 
-    /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
-    /// This is mostly for testing and API purposes; normal compilation never does this.
+    /// A convenience method for parsing a name string and turning it into a set
+    /// of syntax nodes. This is mostly for testing and API purposes; normal
+    /// compilation never does this.
     /// Throws an exception if there are errors parsing the name.
     const NameSyntax& parseName(string_view name);
+
+    /// A convenience method for parsing a name string and turning it into a set
+    /// of syntax nodes. This is mostly for testing and API purposes. Errors are
+    /// added to the provided diagnostics bag.
+    const NameSyntax& tryParseName(string_view name, Diagnostics& diags);
 
     /// Creates a new compilation unit within the design that can be modified dynamically,
     /// which is useful in runtime scripting scenarios. Note that this call will succeed
@@ -322,6 +332,8 @@ private:
     span<const AttributeSymbol* const> getAttributes(const void* ptr) const;
 
     Diagnostic& addDiag(Diagnostic diag);
+
+    void parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results);
 
     // Stored options object.
     CompilationOptions options;

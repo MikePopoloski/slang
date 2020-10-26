@@ -61,7 +61,9 @@ public:
 
     /// Creates a default-instantiated instance of the given definition. All parameters must
     /// have defaults specified.
-    static InstanceSymbol& createDefault(Compilation& compilation, const Definition& definition);
+    static InstanceSymbol& createDefault(
+        Compilation& compilation, const Definition& definition,
+        const flat_hash_map<string_view, const ConstantValue*>* paramOverrides = nullptr);
 
     /// Creates an intentionally invalid instance by forcing all parameters to null values.
     /// This allows type checking instance members as long as they don't depend on any parameters.
@@ -90,9 +92,9 @@ public:
     const Definition& getDefinition() const { return cacheKey.getDefinition(); }
     const InstanceCacheKey& getCacheKey() const { return cacheKey; }
 
-    static const InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                                    const Definition& definition,
-                                                    bool forceInvalidParams);
+    static const InstanceBodySymbol& fromDefinition(
+        Compilation& compilation, const Definition& definition, bool forceInvalidParams,
+        const flat_hash_map<string_view, const ConstantValue*>* paramOverrides);
 
     static const InstanceBodySymbol& fromDefinition(
         Compilation& compilation, const InstanceCacheKey& cacheKey,

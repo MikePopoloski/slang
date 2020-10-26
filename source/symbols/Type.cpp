@@ -652,6 +652,23 @@ bool Type::canBeStringLike() const {
     return t.isIntegral() || t.isString() || t.isByteArray();
 }
 
+ConstantValue Type::coerceValue(const ConstantValue& value) const {
+    if (isIntegral())
+        return value.convertToInt(getBitWidth(), isSigned(), isFourState());
+
+    if (isFloating()) {
+        if (getBitWidth() == 32)
+            return value.convertToShortReal();
+        else
+            return value.convertToReal();
+    }
+
+    if (isString())
+        return value.convertToStr();
+
+    return nullptr;
+}
+
 std::string Type::toString() const {
     TypePrinter printer;
     printer.append(*this);

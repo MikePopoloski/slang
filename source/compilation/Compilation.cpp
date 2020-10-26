@@ -8,6 +8,7 @@
 
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Definition.h"
+#include "slang/compilation/ScriptSession.h"
 #include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -363,6 +364,10 @@ const RootSymbol& Compilation::getRoot() {
     if (finalized)
         return *root;
 
+    // If any top-level parameter overrides were provided, parse them now.
+    flat_hash_map<string_view, const ConstantValue*> paramOverrides;
+    parseParamOverrides(paramOverrides);
+
     ASSERT(!finalizing);
     finalizing = true;
     auto guard = ScopeGuard([this] { finalizing = false; });
@@ -370,7 +375,7 @@ const RootSymbol& Compilation::getRoot() {
     auto isValidTop = [&](auto& definition) {
         // All parameters must have defaults.
         for (auto& param : definition.parameters) {
-            if (!param.hasDefault())
+            if (!param.hasDefault() && paramOverrides.find(param.name) == paramOverrides.end())
                 return false;
         }
 
@@ -455,7 +460,7 @@ const RootSymbol& Compilation::getRoot() {
 
     SmallVectorSized<const InstanceSymbol*, 4> topList;
     for (auto def : topDefs) {
-        auto& instance = InstanceSymbol::createDefault(*this, *def);
+        auto& instance = InstanceSymbol::createDefault(*this, *def, &paramOverrides);
         root->addMember(instance);
         topList.append(&instance);
     }
@@ -673,19 +678,24 @@ std::tuple<const FunctionDeclarationSyntax*, SymbolIndex> Compilation::findOutOf
 
 const NameSyntax& Compilation::parseName(string_view name) {
     Diagnostics localDiags;
-    SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
-    Preprocessor preprocessor(sourceMan, *this, localDiags);
-    preprocessor.pushSource(sourceMan.assignText(name));
-
-    Parser parser(preprocessor);
-    auto& result = parser.parseName();
+    auto& result = tryParseName(name, localDiags);
 
     if (!localDiags.empty()) {
+        SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
         localDiags.sort(sourceMan);
         throw std::runtime_error(DiagnosticEngine::reportAll(sourceMan, localDiags));
     }
 
     return result;
+}
+
+const NameSyntax& Compilation::tryParseName(string_view name, Diagnostics& localDiags) {
+    SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
+    Preprocessor preprocessor(sourceMan, *this, localDiags);
+    preprocessor.pushSource(sourceMan.assignText(name));
+
+    Parser parser(preprocessor);
+    return parser.parseName();
 }
 
 CompilationUnitSymbol& Compilation::createScriptScope() {
@@ -943,6 +953,40 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
     if (index == Scope::ImportDataIndex::Invalid)
         return {};
     return importData[index];
+}
+
+void Compilation::parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results) {
+    if (options.paramOverrides.empty())
+        return;
+
+    ScriptSession session;
+    for (auto& opt : options.paramOverrides) {
+        // Strings must be of the form <name>=<value>
+        size_t index = opt.find('=');
+        if (index != std::string::npos) {
+            // We found the equals sign, so split out the name and parse that.
+            // For now, the name must always be a simple identifier.
+            Diagnostics localDiags;
+            string_view optView = opt;
+            string_view name = optView.substr(0, index);
+            if (tryParseName(name, localDiags).kind == SyntaxKind::IdentifierName &&
+                localDiags.empty()) {
+
+                // The name is good, evaluate the value string. Using the ScriptSession
+                // here is a little bit lazy but oh well, this executes almost never
+                // compared to everything else during compilation.
+                string_view value = optView.substr(index + 1);
+                ConstantValue cv = session.eval(value);
+                if (cv) {
+                    // Success, store in the map so we can apply the value later.
+                    results.emplace(name, allocConstant(std::move(cv)));
+                    continue;
+                }
+            }
+        }
+
+        root->addDiag(diag::InvalidParamOverrideOpt, SourceLocation::NoLocation) << opt;
+    }
 }
 
 } // namespace slang
