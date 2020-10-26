@@ -1,6 +1,6 @@
 # slang - cmake entry point
 cmake_minimum_required(VERSION 3.12)
-project(slang VERSION 0.5.0 LANGUAGES CXX)
+project(slang VERSION 0.6.0 LANGUAGES CXX)
 
 option(SLANG_MSVC_W4 "Enable /W4 for MSVC builds" ON)
 option(SLANG_MSVC_STATIC_RUNTIME "Enable linking to the MSVC static runtime" ON)
@@ -17,7 +17,7 @@ set(DOXYGENPY_PATH "" CACHE STRING "When building docs, the path to doxygen.py t
 set(SLANG_SANITIZERS "" CACHE STRING "List of Clang sanitizers to include in build")
 
 set(SLANG_VERSION_MAJOR 0)
-set(SLANG_VERSION_MINOR 5)
+set(SLANG_VERSION_MINOR 6)
 
 # Default build type if none is set
 if(NOT CMAKE_BUILD_TYPE)
