@@ -59,12 +59,12 @@ add_library(slangcore
     util/Assert.cpp
     util/BumpAllocator.cpp
     util/CommandLine.cpp
-    util/Hash.cpp
     util/OS.cpp
     util/String.cpp
 
     ../external/fmt/format.cc
     ../external/fmt/os.cc
+    ../external/xxhash/xxhash.cpp
 )
 slang_define_lib(slangcore)
 add_dependencies(slangcore gen_version)

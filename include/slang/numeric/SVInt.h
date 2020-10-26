@@ -275,7 +275,7 @@ public:
     static SVInt createFillX(bitwidth_t bitWidth, bool isSigned);
     static SVInt createFillZ(bitwidth_t bitWidth, bool isSigned);
 
-    [[nodiscard]] size_t hash(size_t seed = Seed) const;
+    [[nodiscard]] size_t hash() const;
     void writeTo(SmallVector<char>& buffer, LiteralBase base) const;
     void writeTo(SmallVector<char>& buffer, LiteralBase base, bool includeBase) const;
     std::string toString() const;
@@ -599,8 +599,6 @@ private:
         uint32_t value = (bitWidth + BITS_PER_WORD - 1) / BITS_PER_WORD;
         return unknown ? value * 2 : value;
     }
-
-    static constexpr uint64_t Seed = 0x3765936aa9a6c480; // chosen by fair dice roll
 
     template<typename T, typename = void>
     struct IsSignedHelper {

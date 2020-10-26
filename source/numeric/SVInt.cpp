@@ -614,8 +614,8 @@ SVInt SVInt::replicate(const SVInt& times) const {
     return concat(span<SVInt const>(buffer.begin(), buffer.end()));
 }
 
-size_t SVInt::hash(size_t seed) const {
-    return xxhash(getRawData(), getNumWords() * WORD_SIZE, seed);
+size_t SVInt::hash() const {
+    return xxhash(getRawData(), getNumWords() * WORD_SIZE);
 }
 
 std::ostream& operator<<(std::ostream& os, const SVInt& rhs) {

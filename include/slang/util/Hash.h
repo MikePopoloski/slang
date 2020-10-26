@@ -6,13 +6,16 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <xxhash/xxhash.h>
+
 #include "slang/util/Util.h"
 
 namespace slang {
 
-/// Hashes the provided input using the xxhash algorithm.
-/// It uses XXH32 or XXH64, depending on the current platform.
-size_t xxhash(const void* input, size_t len, size_t seed);
+/// Hashes the provided input using the xxhash XXH3 algorithm.
+inline size_t xxhash(const void* input, size_t len) {
+    return XXH3_64bits(input, len);
+}
 
 inline void hash_combine(size_t&) {
 }
