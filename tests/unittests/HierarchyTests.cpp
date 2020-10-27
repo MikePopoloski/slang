@@ -1120,3 +1120,32 @@ endmodule
         CHECK(diags[i].code == diag::InvalidParamOverrideOpt);
     }
 }
+
+TEST_CASE("Empty params for uninstantiated modules") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+endmodule
+
+module other #(parameter int bar);
+    logic [3:0] asdf;
+    initial asdf[bar] = 1;
+endmodule
+
+module unused #(parameter int foo = -1);
+    other #(-2) inst();
+
+    logic [3:0] baz;
+    initial baz[foo] = 1;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.topModules.emplace("top"sv);
+
+    Bag options;
+    options.set(coptions);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

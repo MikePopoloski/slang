@@ -35,7 +35,7 @@ public:
 
     InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                    const InstanceCacheKey& cacheKey,
-                   span<const ParameterSymbolBase* const> parameters);
+                   span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
 
     const Definition& getDefinition() const;
     bool isModule() const;
@@ -80,7 +80,14 @@ private:
 
 class InstanceBodySymbol : public Symbol, public Scope {
 public:
-    InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey);
+    /// Indicates whether the module isn't actually instantiated in the design.
+    /// This might be because it was created with invalid parameters simply to
+    /// check name lookup rules but it's never actually referenced elsewhere
+    /// in the user's code.
+    bool isUninstantiated = false;
+
+    InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey,
+                       bool isUninstantiated);
 
     span<const Symbol* const> getPortList() const {
         ensureElaborated();
@@ -93,12 +100,12 @@ public:
     const InstanceCacheKey& getCacheKey() const { return cacheKey; }
 
     static const InstanceBodySymbol& fromDefinition(
-        Compilation& compilation, const Definition& definition, bool forceInvalidParams,
+        Compilation& compilation, const Definition& definition, bool isUninstantiated,
         const flat_hash_map<string_view, const ConstantValue*>* paramOverrides);
 
     static const InstanceBodySymbol& fromDefinition(
         Compilation& compilation, const InstanceCacheKey& cacheKey,
-        span<const ParameterSymbolBase* const> parameters);
+        span<const ParameterSymbolBase* const> parameters, bool isUninstantiated);
 
     void serializeTo(ASTSerializer& serializer) const;
 

@@ -30,10 +30,10 @@ class InstanceBuilder {
 public:
     InstanceBuilder(const BindContext& context, const InstanceCacheKey& cacheKeyBase,
                     span<const ParameterSymbolBase* const> parameters,
-                    span<const AttributeInstanceSyntax* const> attributes) :
+                    span<const AttributeInstanceSyntax* const> attributes, bool isUninstantiated) :
         compilation(context.getCompilation()),
         context(context), cacheKeyBase(cacheKeyBase), parameters(parameters),
-        attributes(attributes) {}
+        attributes(attributes), isUninstantiated(isUninstantiated) {}
 
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
@@ -51,6 +51,7 @@ private:
     SmallVectorSized<int32_t, 4> path;
     span<const ParameterSymbolBase* const> parameters;
     span<const AttributeInstanceSyntax* const> attributes;
+    bool isUninstantiated = false;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax) {
         // Find all port connections to interface instances so we can
@@ -65,8 +66,9 @@ private:
         if (!ifaceKeys.empty())
             cacheKey.setInterfacePortKeys(ifaceKeys.copy(compilation));
 
-        auto inst = compilation.emplace<InstanceSymbol>(
-            compilation, syntax.name.valueText(), syntax.name.location(), cacheKey, parameters);
+        auto inst = compilation.emplace<InstanceSymbol>(compilation, syntax.name.valueText(),
+                                                        syntax.name.location(), cacheKey,
+                                                        parameters, isUninstantiated);
 
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
@@ -119,13 +121,15 @@ void createParams(Compilation& compilation, const Definition& definition,
     // as we're evaluating them. We hold on to the initializer expressions and give them
     // to the instances later when we create them.
     struct TempInstance : public InstanceBodySymbol {
-        TempInstance(Compilation& compilation, const Definition& definition) :
-            InstanceBodySymbol(compilation, InstanceCacheKey(definition, {}, {})) {
+        TempInstance(Compilation& compilation, const Definition& definition,
+                     bool forceInvalidParams) :
+            InstanceBodySymbol(compilation, InstanceCacheKey(definition, {}, {}),
+                               forceInvalidParams) {
             setParent(definition.scope);
         }
     };
 
-    auto& tempDef = *compilation.emplace<TempInstance>(compilation, definition);
+    auto& tempDef = *compilation.emplace<TempInstance>(compilation, definition, forceInvalidParams);
 
     // Need the imports here as well, since parameters may depend on them.
     for (auto import : definition.syntax.header->imports)
@@ -185,9 +189,11 @@ InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, Sourc
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                                const InstanceCacheKey& cacheKey,
-                               span<const ParameterSymbolBase* const> parameters) :
-    InstanceSymbol(compilation, name, loc,
-                   InstanceBodySymbol::fromDefinition(compilation, cacheKey, parameters)) {
+                               span<const ParameterSymbolBase* const> parameters,
+                               bool isUninstantiated) :
+    InstanceSymbol(
+        compilation, name, loc,
+        InstanceBodySymbol::fromDefinition(compilation, cacheKey, parameters, isUninstantiated)) {
 }
 
 InstanceSymbol& InstanceSymbol::createDefault(
@@ -196,7 +202,7 @@ InstanceSymbol& InstanceSymbol::createDefault(
     return *compilation.emplace<InstanceSymbol>(
         compilation, definition.name, definition.location,
         InstanceBodySymbol::fromDefinition(compilation, definition,
-                                           /* forceInvalidParams */ false, paramOverrides));
+                                           /* isUninstantiated */ false, paramOverrides));
 }
 
 InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
@@ -205,7 +211,7 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
     return *compilation.emplace<InstanceSymbol>(
         compilation, "", SourceLocation::NoLocation,
         InstanceBodySymbol::fromDefinition(compilation, definition,
-                                           /* forceInvalidParams */ true, nullptr));
+                                           /* isUninstantiated */ true, nullptr));
 }
 
 void InstanceSymbol::fromSyntax(Compilation& compilation,
@@ -217,6 +223,16 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         return;
     }
 
+    // Figure out whether this instance is being created within
+    // an uninstantiated parent instance.
+    auto currScope = &scope;
+    while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
+        currScope = currScope->asSymbol().getParentScope();
+
+    bool isUninstantiated = false;
+    if (currScope)
+        isUninstantiated = currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
+
     ParameterBuilder paramBuilder(scope, definition->name, definition->parameters);
     if (syntax.parameters)
         paramBuilder.setAssignments(*syntax.parameters);
@@ -226,14 +242,14 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     // a cache key to lookup any instance bodies that may already be
     // suitable for the new instances we're about to create.
     createParams(compilation, *definition, paramBuilder, location,
-                 syntax.getFirstToken().location(),
-                 /* forceInvalidParams */ false);
+                 syntax.getFirstToken().location(), isUninstantiated);
 
     BindContext context(scope, location);
     InstanceCacheKey cacheKey(*definition, paramBuilder.paramValues.copy(compilation),
                               paramBuilder.typeParams.copy(compilation));
 
-    InstanceBuilder builder(context, cacheKey, paramBuilder.paramSymbols, syntax.attributes);
+    InstanceBuilder builder(context, cacheKey, paramBuilder.paramSymbols, syntax.attributes,
+                            isUninstantiated);
 
     // We have to check each port connection expression for any names that can't be resolved,
     // which represent implicit nets that need to be created now.
@@ -340,15 +356,16 @@ void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", body);
 }
 
-InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey) :
+InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey,
+                                       bool isUninstantiated) :
     Symbol(SymbolKind::InstanceBody, cacheKey.getDefinition().name,
            cacheKey.getDefinition().location),
-    Scope(compilation, this), cacheKey(cacheKey) {
+    Scope(compilation, this), isUninstantiated(isUninstantiated), cacheKey(cacheKey) {
     setParent(cacheKey.getDefinition().scope, cacheKey.getDefinition().indexInScope);
 }
 
 const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
-    Compilation& compilation, const Definition& definition, bool forceInvalidParams,
+    Compilation& compilation, const Definition& definition, bool isUninstantiated,
     const flat_hash_map<string_view, const ConstantValue*>* paramOverrides) {
 
     ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
@@ -357,22 +374,22 @@ const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
         paramBuilder.setGlobalOverrides(*paramOverrides);
 
     createParams(compilation, definition, paramBuilder, LookupLocation::max, definition.location,
-                 forceInvalidParams);
+                 isUninstantiated);
 
     return fromDefinition(compilation, InstanceCacheKey(definition, {}, {}),
-                          paramBuilder.paramSymbols);
+                          paramBuilder.paramSymbols, isUninstantiated);
 }
 
 const InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
     Compilation& comp, const InstanceCacheKey& cacheKey,
-    span<const ParameterSymbolBase* const> parameters) {
+    span<const ParameterSymbolBase* const> parameters, bool isUninstantiated) {
 
     // If there's already a cached body for this key, return that instead of creating a new one.
     if (auto cached = comp.getInstanceCache().find(cacheKey))
         return *cached;
 
     auto& declSyntax = cacheKey.getDefinition().syntax;
-    auto result = comp.emplace<InstanceBodySymbol>(comp, cacheKey);
+    auto result = comp.emplace<InstanceBodySymbol>(comp, cacheKey, isUninstantiated);
     result->setSyntax(declSyntax);
 
     // Package imports from the header always come first.
