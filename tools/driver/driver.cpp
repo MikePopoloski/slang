@@ -257,6 +257,7 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
     optional<uint32_t> maxConstexprBacktrace;
     optional<std::string> minTypMax;
     std::vector<std::string> topModules;
+    std::vector<std::string> paramOverrides;
     cmdLine.add("--max-hierarchy-depth", maxInstanceDepth, "Maximum depth of the design hierarchy",
                 "<depth>");
     cmdLine.add("--max-generate-steps", maxGenerateSteps,
@@ -279,6 +280,10 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
                 "One or more top-level modules to instantiate "
                 "(instead of figuring it out automatically)",
                 "<name>");
+    cmdLine.add("-G", paramOverrides,
+                "One or more parameter overrides to apply when"
+                "instantiating top-level modules",
+                "<name>=<value>");
 
     // Diagnostics control
     optional<bool> colorDiags;
@@ -388,6 +393,8 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
 
     for (auto& name : topModules)
         coptions.topModules.emplace(name);
+    for (auto& opt : paramOverrides)
+        coptions.paramOverrides.emplace_back(opt);
 
     if (minTypMax.has_value()) {
         if (minTypMax == "min")
