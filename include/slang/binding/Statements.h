@@ -818,6 +818,14 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::WaitOrder; }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        if (ifTrue)
+            ifTrue->visit(visitor);
+        if (ifFalse)
+            ifFalse->visit(visitor);
+    }
 };
 
 struct EventTriggerStatementSyntax;

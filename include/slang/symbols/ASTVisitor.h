@@ -45,6 +45,9 @@ struct ASTVisitor {
     template<typename T, typename Arg>
     using visitExprs_t = decltype(std::declval<T>().visitExprs(std::declval<Arg>()));
 
+    template<typename T, typename Arg>
+    using visitStmts_t = decltype(std::declval<T>().visitStmts(std::declval<Arg>()));
+
 #define DERIVED *static_cast<TDerived*>(this)
 
 public:
@@ -64,6 +67,10 @@ public:
             t.visitExprs(DERIVED);
         }
 
+        if constexpr (VisitStatements && is_detected_v<visitStmts_t, T, TDerived>) {
+            t.visitStmts(DERIVED);
+        }
+
         if constexpr (VisitExpressions && std::is_base_of_v<Symbol, T>) {
             if (auto declaredType = t.getDeclaredType()) {
                 if (auto init = declaredType->getInitializer())
@@ -74,10 +81,6 @@ public:
         if constexpr (std::is_base_of_v<Scope, T>) {
             for (auto& member : t.members())
                 member.visit(DERIVED);
-        }
-
-        if constexpr (VisitStatements && is_detected_v<getBody_t, T>) {
-            t.getBody().visit(DERIVED);
         }
 
         if constexpr (std::is_same_v<InstanceSymbol, T>) {

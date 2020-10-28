@@ -97,3 +97,40 @@ endmodule
     compilation.getRoot().visit(makeVisitor([&](const BinaryExpression&) { count++; }));
     CHECK(count == 3);
 }
+
+struct Visitor : public ASTVisitor<Visitor, true, true> {
+    int count = 0;
+    template<typename T>
+    void handle(const T& t) {
+        if constexpr (std::is_base_of_v<Statement, T>) {
+            count++;
+        }
+        visitDefault(t);
+    }
+};
+
+TEST_CASE("Test single counting of statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int j;
+    initial begin : asdf
+        j = j + 3;
+        if (1) begin : baz
+            static int i;
+            i = i + 2;
+            if (1) begin : boz
+                i = i + 4;
+            end
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Visit the whole tree and count the statements.
+    Visitor visitor;
+    compilation.getRoot().visit(visitor);
+    CHECK(visitor.count == 11);
+}

@@ -160,6 +160,11 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
 
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        getBody().visit(visitor);
+    }
+
 private:
     void addThisVar(const Type& type);
 
