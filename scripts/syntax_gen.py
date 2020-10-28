@@ -407,19 +407,26 @@ def generate(outf, name, tags, members, alltypes, kindmap):
         else:
             outf.write('    {} {};\n'.format(membertype, m[1]))
 
+    final = ' final'
+    if 'final' in tagdict and tagdict['final'] == 'false':
+        final = ''
+
     kindArg = 'SyntaxKind kind'
     kindValue = 'kind'
     argNames = []
 
-    if 'kind' in tagdict:
-        k = tagdict['kind']
+    if not final or tagdict.get('multiKind') == 'true':
+        argNames.append('kind')
+    else:
+        k = name
+        if k.endswith('Syntax'):
+            k = k[:-6]
+
         if k in kindmap:
             raise Exception("More than one kind map for {}".format(k))
         kindmap[k] = name
         kindArg = ''
         kindValue = 'SyntaxKind::' + k
-    else:
-        argNames.append('kind')
 
     if kindArg and processed_members:
         kindArg += ', '
@@ -427,10 +434,6 @@ def generate(outf, name, tags, members, alltypes, kindmap):
     initializers = ', '.join(['{0}({1}{0})'.format(x[1], '&' if x[1] in notNullMembers else '') for x in members])
     if initializers:
         initializers = ', ' + initializers
-
-    final = ' final'
-    if 'final' in tagdict and tagdict['final'] == 'false':
-        final = ''
 
     argMembers = []
     for m in processed_members:

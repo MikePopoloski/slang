@@ -6,20 +6,20 @@ empty
 
 // ----- ATTRIBUTES -----
 
-EqualsValueClause kind=EqualsValueClause
+EqualsValueClause
 token equals
 Expression expr
 
-AttributeSpec kind=AttributeSpec
+AttributeSpec
 token name
 EqualsValueClause? value
 
-AttributeInstance kind=AttributeInstance
+AttributeInstance
 token openParen
 separated_list<AttributeSpec> specs
 token closeParen
 
-NamedLabel kind=NamedLabel
+NamedLabel
 token name
 token colon
 
@@ -35,25 +35,25 @@ list<AttributeInstance> attributes
 Argument final=false
 empty
 
-EmptyArgument base=Argument kind=EmptyArgument
+EmptyArgument base=Argument
 token placeholder
 
-OrderedArgument base=Argument kind=OrderedArgument
+OrderedArgument base=Argument
 Expression expr
 
-NamedArgument base=Argument kind=NamedArgument
+NamedArgument base=Argument
 token dot
 token name
 token openParen
 Expression? expr
 token closeParen
 
-ArgumentList kind=ArgumentList
+ArgumentList
 token openParen
 separated_list<Argument> parameters
 token closeParen
 
-ParameterValueAssignment kind=ParameterValueAssignment
+ParameterValueAssignment
 token hash
 ArgumentList assignments
 
@@ -62,17 +62,17 @@ ArgumentList assignments
 Pattern final=false
 empty
 
-VariablePattern base=Pattern kind=VariablePattern
+VariablePattern base=Pattern
 token dot
 token variableName
 
-WildcardPattern base=Pattern kind=WildcardPattern
+WildcardPattern base=Pattern
 token dotStar
 
-ExpressionPattern base=Pattern kind=ExpressionPattern
+ExpressionPattern base=Pattern
 Expression expr
 
-TaggedPattern base=Pattern kind=TaggedPattern
+TaggedPattern base=Pattern
 token tagged
 token memberName
 Pattern? pattern
@@ -80,49 +80,49 @@ Pattern? pattern
 StructurePatternMember final=false
 empty
 
-OrderedStructurePatternMember base=StructurePatternMember kind=OrderedStructurePatternMember
+OrderedStructurePatternMember base=StructurePatternMember
 Pattern pattern
 
-NamedStructurePatternMember base=StructurePatternMember kind=NamedStructurePatternMember
+NamedStructurePatternMember base=StructurePatternMember
 token name
 token colon
 Pattern pattern
 
-StructurePattern base=Pattern kind=StructurePattern
+StructurePattern base=Pattern
 token openBrace
 separated_list<StructurePatternMember> members
 token closeBrace
 
-MatchesClause kind=MatchesClause
+MatchesClause
 token matchesKeyword
 Pattern pattern
 
-ConditionalPattern kind=ConditionalPattern
+ConditionalPattern
 Expression expr
 MatchesClause? matchesClause
 
-ConditionalPredicate kind=ConditionalPredicate
+ConditionalPredicate
 separated_list<ConditionalPattern> conditions
 
 AssignmentPattern final=false
 empty
 
-SimpleAssignmentPattern base=AssignmentPattern kind=SimpleAssignmentPattern
+SimpleAssignmentPattern base=AssignmentPattern
 token openBrace
 separated_list<Expression> items
 token closeBrace
 
-AssignmentPatternItem kind=AssignmentPatternItem
+AssignmentPatternItem
 Expression key
 token colon
 Expression expr
 
-StructuredAssignmentPattern base=AssignmentPattern kind=StructuredAssignmentPattern
+StructuredAssignmentPattern base=AssignmentPattern
 token openBrace
 separated_list<AssignmentPatternItem> items
 token closeBrace
 
-ReplicatedAssignmentPattern base=AssignmentPattern kind=ReplicatedAssignmentPattern
+ReplicatedAssignmentPattern base=AssignmentPattern
 token openBrace
 Expression countExpr
 token innerOpenBrace
@@ -132,13 +132,13 @@ token closeBrace
 
 // ----- EXPRESSIONS -----
 
-BadExpression base=Expression kind=BadExpression
+BadExpression base=Expression
 Expression expr
 
 PrimaryExpression base=Expression final=false
 empty
 
-PrefixUnaryExpression base=Expression
+PrefixUnaryExpression base=Expression multiKind=true
 token operatorToken
 list<AttributeInstance> attributes
 Expression operand
@@ -154,7 +154,7 @@ SyncRejectOnPropertyExpression NextTimePropertyExpression SNextTimePropertyExpre
 AlwaysPropertyExpression SAlwaysPropertyExpression EventuallyPropertyExpression
 SEventuallyPropertyExpression
 
-PostfixUnaryExpression base=Expression
+PostfixUnaryExpression base=Expression multiKind=true
 Expression operand
 list<AttributeInstance> attributes
 token operatorToken
@@ -162,7 +162,7 @@ token operatorToken
 kindmap<PostfixUnaryExpression>
 PostincrementExpression PostdecrementExpression
 
-BinaryExpression base=Expression
+BinaryExpression base=Expression multiKind=true
 Expression left
 token operatorToken
 list<AttributeInstance> attributes
@@ -190,36 +190,36 @@ LogicalLeftShiftAssignmentExpression LogicalRightShiftAssignmentExpression
 ArithmeticLeftShiftAssignmentExpression ArithmeticRightShiftAssignmentExpression
 NonblockingAssignmentExpression
 
-MinTypMaxExpression base=Expression kind=MinTypMaxExpression
+MinTypMaxExpression base=Expression
 Expression min
 token colon1
 Expression typ
 token colon2
 Expression max
 
-TaggedUnionExpression base=Expression kind=TaggedUnionExpression
+TaggedUnionExpression base=Expression
 token tagged
 token member
 Expression? expr
 
-OpenRangeExpression base=Expression kind=OpenRangeExpression
+OpenRangeExpression base=Expression
 token openBracket
 Expression left
 token colon
 Expression right
 token closeBracket
 
-OpenRangeList kind=OpenRangeList
+OpenRangeList
 token openBrace
 separated_list<Expression> valueRanges
 token closeBrace
 
-InsideExpression base=Expression kind=InsideExpression
+InsideExpression base=Expression
 Expression expr
 token inside
 OpenRangeList ranges
 
-ConditionalExpression base=Expression kind=ConditionalExpression
+ConditionalExpression base=Expression
 ConditionalPredicate predicate
 token question
 list<AttributeInstance> attributes
@@ -227,7 +227,7 @@ Expression left
 token colon
 Expression right
 
-AssignmentPatternExpression base=PrimaryExpression kind=AssignmentPatternExpression
+AssignmentPatternExpression base=PrimaryExpression
 DataType? type
 AssignmentPattern pattern
 
@@ -236,10 +236,10 @@ AssignmentPattern pattern
 Selector final=false
 empty
 
-BitSelect base=Selector kind=BitSelect
+BitSelect base=Selector
 Expression expr
 
-RangeSelect base=Selector
+RangeSelect base=Selector multiKind=true
 Expression left
 token range
 Expression right
@@ -247,7 +247,7 @@ Expression right
 kindmap<RangeSelect>
 SimpleRangeSelect AscendingRangeSelect DescendingRangeSelect
 
-ElementSelect kind=ElementSelect
+ElementSelect
 token openBracket
 Selector? selector
 token closeBracket
@@ -257,38 +257,38 @@ token closeBracket
 Name base=Expression final=false
 empty
 
-IdentifierName base=Name kind=IdentifierName
+IdentifierName base=Name
 token identifier
 
-SystemName base=Name kind=SystemName
+SystemName base=Name
 token systemIdentifier
 
-IdentifierSelectName base=Name kind=IdentifierSelectName
+IdentifierSelectName base=Name
 token identifier
 list<ElementSelect> selectors
 
-EmptyIdentifierName base=Name kind=EmptyIdentifierName
+EmptyIdentifierName base=Name
 token placeholder
 
-KeywordName base=Name
+KeywordName base=Name multiKind=true
 token keyword
 
 kindmap<KeywordName>
 LocalScope UnitScope RootScope ThisHandle SuperHandle ArrayUniqueMethod
 ArrayAndMethod ArrayOrMethod ArrayXorMethod ConstructorName
 
-ClassName base=Name kind=ClassName
+ClassName base=Name
 token identifier
 ParameterValueAssignment parameters
 
-ScopedName base=Name kind=ScopedName
+ScopedName base=Name
 Name left
 token separator
 Name right
 
 // ----- PRIMARY EXPRESSIONS -----
 
-LiteralExpression base=PrimaryExpression
+LiteralExpression base=PrimaryExpression multiKind=true
 token literal
 
 kindmap<LiteralExpression>
@@ -297,35 +297,35 @@ UnbasedUnsizedLiteralExpression RealLiteralExpression
 TimeLiteralExpression WildcardLiteralExpression OneStepLiteralExpression
 DefaultPatternKeyExpression
 
-IntegerVectorExpression base=PrimaryExpression kind=IntegerVectorExpression
+IntegerVectorExpression base=PrimaryExpression
 token size
 token base
 token value
 
-EmptyQueueExpression base=PrimaryExpression kind=EmptyQueueExpression
+EmptyQueueExpression base=PrimaryExpression
 token openBrace
 token closeBrace
 
-ConcatenationExpression base=PrimaryExpression kind=ConcatenationExpression
+ConcatenationExpression base=PrimaryExpression
 token openBrace
 separated_list<Expression> expressions
 token closeBrace
 
-MultipleConcatenationExpression base=PrimaryExpression kind=MultipleConcatenationExpression
+MultipleConcatenationExpression base=PrimaryExpression
 token openBrace
 Expression expression
 ConcatenationExpression concatenation
 token closeBrace
 
-StreamExpressionWithRange kind=StreamExpressionWithRange
+StreamExpressionWithRange
 token withKeyword
 ElementSelect range
 
-StreamExpression kind=StreamExpression
+StreamExpression
 Expression expression
 StreamExpressionWithRange? withRange
 
-StreamingConcatenationExpression base=PrimaryExpression kind=StreamingConcatenationExpression
+StreamingConcatenationExpression base=PrimaryExpression
 token openBrace
 token operatorToken
 Expression? sliceSize
@@ -334,48 +334,48 @@ separated_list<StreamExpression> expressions
 token innerCloseBrace
 token closeBrace
 
-ParenthesizedExpression base=PrimaryExpression kind=ParenthesizedExpression
+ParenthesizedExpression base=PrimaryExpression
 token openParen
 Expression expression
 token closeParen
 
-NewArrayExpression base=Expression kind=NewArrayExpression
+NewArrayExpression base=Expression
 Name newKeyword
 token openBracket
 Expression sizeExpr
 token closeBracket
 ParenthesizedExpression? initializer
 
-NewClassExpression base=Expression kind=NewClassExpression
+NewClassExpression base=Expression
 Name scopedNew
 ArgumentList? argList
 
-CopyClassExpression base=Expression kind=CopyClassExpression
+CopyClassExpression base=Expression
 Name scopedNew
 Expression expr
 
 // ----- POSTFIX EXPRESSIONS -----
 
-ElementSelectExpression base=Expression kind=ElementSelectExpression
+ElementSelectExpression base=Expression
 Expression left
 ElementSelect select
 
-MemberAccessExpression base=Expression kind=MemberAccessExpression
+MemberAccessExpression base=Expression
 Expression left
 token dot
 token name
 
-InvocationExpression base=Expression kind=InvocationExpression
+InvocationExpression base=Expression
 Expression left
 list<AttributeInstance> attributes
 ArgumentList? arguments
 
-CastExpression base=Expression kind=CastExpression
+CastExpression base=Expression
 Expression left
 token apostrophe
 ParenthesizedExpression right
 
-SignedCastExpression base=Expression kind=SignedCastExpression
+SignedCastExpression base=Expression
 token signing
 token apostrophe
 ParenthesizedExpression inner
@@ -385,14 +385,14 @@ ParenthesizedExpression inner
 TimingControl final=false
 empty
 
-Delay base=TimingControl
+Delay base=TimingControl multiKind=true
 token hash
 Expression delayValue
 
 kindmap<Delay>
 DelayControl CycleDelay
 
-Delay3 base=TimingControl kind=Delay3
+Delay3 base=TimingControl
 token hash
 token openParen
 Expression delay1
@@ -402,54 +402,54 @@ token comma2
 Expression? delay3
 token closeParen
 
-EventControl base=TimingControl kind=EventControl
+EventControl base=TimingControl
 token at
 Name eventName
 
 EventExpression final=false
 empty
 
-SignalEventExpression base=EventExpression kind=SignalEventExpression
+SignalEventExpression base=EventExpression
 token edge
 Expression expr
 
-BinaryEventExpression base=EventExpression kind=BinaryEventExpression
+BinaryEventExpression base=EventExpression
 EventExpression left
 token operatorToken
 EventExpression right
 
-ParenthesizedEventExpression base=EventExpression kind=ParenthesizedEventExpression
+ParenthesizedEventExpression base=EventExpression
 token openParen
 EventExpression expr
 token closeParen
 
-ImplicitEventControl base=TimingControl kind=ImplicitEventControl
+ImplicitEventControl base=TimingControl
 token at
 token openParen
 token star
 token closeParen
 
-EventControlWithExpression base=TimingControl kind=EventControlWithExpression
+EventControlWithExpression base=TimingControl
 token at
 EventExpression expr
 
-RepeatedEventControl base=TimingControl kind=RepeatedEventControl
+RepeatedEventControl base=TimingControl
 token repeat
 token openParen
 Expression expr
 token closeParen
 TimingControl? eventControl
 
-TimingControlExpression base=Expression kind=TimingControlExpression
+TimingControlExpression base=Expression
 TimingControl timing
 Expression expr
 
-TimingControlExpressionConcatenation base=Expression kind=TimingControlExpressionConcatenation
+TimingControlExpressionConcatenation base=Expression
 Expression left
 TimingControl timing
 Expression right
 
-ShortcutCycleDelayRange base=TimingControl kind=ShortcutCycleDelayRange
+ShortcutCycleDelayRange base=TimingControl
 token doubleHash
 token openBracket
 token op
@@ -460,50 +460,50 @@ token closeBracket
 DimensionSpecifier final=false
 empty
 
-RangeDimensionSpecifier base=DimensionSpecifier kind=RangeDimensionSpecifier
+RangeDimensionSpecifier base=DimensionSpecifier
 Selector selector
 
-WildcardDimensionSpecifier base=DimensionSpecifier kind=WildcardDimensionSpecifier
+WildcardDimensionSpecifier base=DimensionSpecifier
 token star
 
-ColonExpressionClause kind=ColonExpressionClause
+ColonExpressionClause
 token colon
 Expression expr
 
-QueueDimensionSpecifier base=DimensionSpecifier kind=QueueDimensionSpecifier
+QueueDimensionSpecifier base=DimensionSpecifier
 token dollar
 ColonExpressionClause? maxSizeClause
 
-VariableDimension kind=VariableDimension
+VariableDimension
 token openBracket
 DimensionSpecifier? specifier
 token closeBracket
 
-Declarator kind=Declarator
+Declarator
 token name
 list<VariableDimension> dimensions
 EqualsValueClause? initializer
 
-DataDeclaration base=Member kind=DataDeclaration
+DataDeclaration base=Member
 tokenlist modifiers
 DataType type
 separated_list<Declarator> declarators
 token semi
 
-TypedefDeclaration base=Member kind=TypedefDeclaration
+TypedefDeclaration base=Member
 token typedefKeyword
 DataType type
 token name
 list<VariableDimension> dimensions
 token semi
 
-ForwardTypedefDeclaration base=Member kind=ForwardTypedefDeclaration
+ForwardTypedefDeclaration base=Member
 token typedefKeyword
 token keyword
 token name
 token semi
 
-ForwardInterfaceClassTypedefDeclaration base=Member kind=ForwardInterfaceClassTypedefDeclaration
+ForwardInterfaceClassTypedefDeclaration base=Member
 token typedefKeyword
 token interfaceKeyword
 token classKeyword
@@ -513,19 +513,19 @@ token semi
 NetStrength final=false
 empty
 
-ChargeStrength base=NetStrength kind=ChargeStrength
+ChargeStrength base=NetStrength
 token openParen
 token strength
 token closeParen
 
-DriveStrength base=NetStrength kind=DriveStrength
+DriveStrength base=NetStrength
 token openParen
 token strength0
 token comma
 token strength1
 token closeParen
 
-NetDeclaration base=Member kind=NetDeclaration
+NetDeclaration base=Member
 token netType
 NetStrength? strength
 token expansionHint
@@ -534,23 +534,23 @@ TimingControl? delay
 separated_list<Declarator> declarators
 token semi
 
-WithFunctionClause kind=WithFunctionClause
+WithFunctionClause
 token with
 Name name
 
-NetTypeDeclaration base=Member kind=NetTypeDeclaration
+NetTypeDeclaration base=Member
 token keyword
 DataType type
 token name
 WithFunctionClause? withFunction
 token semi
 
-PackageImportItem kind=PackageImportItem
+PackageImportItem
 token package
 token doubleColon
 token item
 
-PackageImportDeclaration base=Member kind=PackageImportDeclaration
+PackageImportDeclaration base=Member
 token keyword
 separated_list<PackageImportItem> items
 token semi
@@ -558,42 +558,42 @@ token semi
 ParameterDeclarationBase final=false
 token keyword
 
-ParameterDeclaration base=ParameterDeclarationBase kind=ParameterDeclaration
+ParameterDeclaration base=ParameterDeclarationBase
 DataType type
 separated_list<Declarator> declarators
 
-EqualsTypeClause kind=EqualsTypeClause
+EqualsTypeClause
 token equals
 DataType type
 
-TypeAssignment kind=TypeAssignment
+TypeAssignment
 token name
 EqualsTypeClause? assignment
 
-TypeParameterDeclaration base=ParameterDeclarationBase kind=TypeParameterDeclaration
+TypeParameterDeclaration base=ParameterDeclarationBase
 token typeKeyword
 separated_list<TypeAssignment> declarators
 
-ParameterDeclarationStatement base=Member kind=ParameterDeclarationStatement
+ParameterDeclarationStatement base=Member
 ParameterDeclarationBase parameter
 token semi
 
 PortHeader final=false
 empty
 
-PortDeclaration base=Member kind=PortDeclaration
+PortDeclaration base=Member
 PortHeader header
 separated_list<Declarator> declarators
 token semi
 
-GenvarDeclaration base=Member kind=GenvarDeclaration
+GenvarDeclaration base=Member
 token keyword
 separated_list<IdentifierName> identifiers
 token semi
 
 // ----- TYPES -----
 
-IntegerType base=DataType
+IntegerType base=DataType multiKind=true
 token keyword
 token signing
 list<VariableDimension> dimensions
@@ -602,24 +602,24 @@ kindmap<IntegerType>
 BitType LogicType RegType ByteType ShortIntType IntType LongIntType
 IntegerType TimeType
 
-KeywordType base=DataType
+KeywordType base=DataType multiKind=true
 token keyword
 
 kindmap<KeywordType>
 ShortRealType RealType RealTimeType StringType CHandleType EventType
 VoidType Untyped PropertyType SequenceType
 
-NamedType base=DataType kind=NamedType
+NamedType base=DataType
 Name name
 
-StructUnionMember kind=StructUnionMember
+StructUnionMember
 list<AttributeInstance> attributes
 token randomQualifier
 DataType type
 separated_list<Declarator> declarators
 token semi
 
-StructUnionType base=DataType
+StructUnionType base=DataType multiKind=true
 token keyword
 token tagged
 token packed
@@ -632,7 +632,7 @@ list<VariableDimension> dimensions
 kindmap<StructUnionType>
 StructType UnionType
 
-EnumType base=DataType kind=EnumType
+EnumType base=DataType
 token keyword
 DataType? baseType
 token openBrace
@@ -640,43 +640,43 @@ separated_list<Declarator> members
 token closeBrace
 list<VariableDimension> dimensions
 
-TypeReference base=DataType kind=TypeReference
+TypeReference base=DataType
 token typeKeyword
 token openParen
 Expression expr
 token closeParen
 
-DotMemberClause kind=DotMemberClause
+DotMemberClause
 token dot
 token member
 
-VirtualInterfaceType base=DataType kind=VirtualInterfaceType
+VirtualInterfaceType base=DataType
 token virtualKeyword
 token interfaceKeyword
 token name
 ParameterValueAssignment? parameters
 DotMemberClause? modport
 
-ImplicitType base=DataType kind=ImplicitType
+ImplicitType base=DataType
 token signing
 list<VariableDimension> dimensions
 
 // ----- ASSERTIONS -----
 
-DeferredAssertion kind=DeferredAssertion
+DeferredAssertion
 token hash
 token zero
 token finalKeyword
 
-ElseClause kind=ElseClause
+ElseClause
 token elseKeyword
 SyntaxNode clause
 
-ActionBlock kind=ActionBlock
+ActionBlock
 Statement? statement
 ElseClause? elseClause
 
-ImmediateAssertionStatement base=Statement
+ImmediateAssertionStatement base=Statement multiKind=true
 token keyword
 DeferredAssertion? delay
 ParenthesizedExpression expr
@@ -685,19 +685,19 @@ ActionBlock action
 kindmap<ImmediateAssertionStatement>
 ImmediateAssertStatement ImmediateAssumeStatement ImmediateCoverStatement
 
-DisableIff kind=DisableIff
+DisableIff
 token disable
 token iff
 token openParen
 Expression expr
 token closeParen
 
-PropertySpec kind=PropertySpec
+PropertySpec
 TimingControl? clocking
 DisableIff? disable
 Expression expr
 
-ConcurrentAssertionStatement base=Statement
+ConcurrentAssertionStatement base=Statement multiKind=true
 token keyword
 token propertyOrSequence
 token openParen
@@ -709,18 +709,18 @@ kindmap<ConcurrentAssertionStatement>
 AssertPropertyStatement AssumePropertyStatement CoverSequenceStatement
 CoverPropertyStatement RestrictPropertyStatement ExpectPropertyStatement
 
-ConcurrentAssertionMember base=Member kind=ConcurrentAssertionMember
+ConcurrentAssertionMember base=Member
 ConcurrentAssertionStatement statement
 
-ImmediateAssertionMember base=Member kind=ImmediateAssertionMember
+ImmediateAssertionMember base=Member
 ImmediateAssertionStatement statement
 
 // ----- STATEMENTS -----
 
-EmptyStatement base=Statement kind=EmptyStatement
+EmptyStatement base=Statement
 token semicolon
 
-ConditionalStatement base=Statement kind=ConditionalStatement
+ConditionalStatement base=Statement
 token uniqueOrPriority
 token ifKeyword
 token openParen
@@ -732,24 +732,24 @@ ElseClause? elseClause
 CaseItem final=false
 empty
 
-DefaultCaseItem base=CaseItem kind=DefaultCaseItem
+DefaultCaseItem base=CaseItem
 token defaultKeyword
 token colon
 SyntaxNode clause
 
-PatternCaseItem base=CaseItem kind=PatternCaseItem
+PatternCaseItem base=CaseItem
 Pattern pattern
 token tripleAnd
 Expression? expr
 token colon
 Statement statement
 
-StandardCaseItem base=CaseItem kind=StandardCaseItem
+StandardCaseItem base=CaseItem
 separated_list<Expression> expressions
 token colon
 SyntaxNode clause
 
-CaseStatement base=Statement kind=CaseStatement
+CaseStatement base=Statement
 token uniqueOrPriority
 token caseKeyword
 token openParen
@@ -759,18 +759,18 @@ token matchesOrInside
 list<CaseItem> items
 token endcase
 
-ForeverStatement base=Statement kind=ForeverStatement
+ForeverStatement base=Statement
 token foreverKeyword
 Statement statement
 
-LoopStatement base=Statement kind=LoopStatement
+LoopStatement base=Statement
 token repeatOrWhile
 token openParen
 Expression expr
 token closeParen
 Statement statement
 
-DoWhileStatement base=Statement kind=DoWhileStatement
+DoWhileStatement base=Statement
 token doKeyword
 Statement statement
 token whileKeyword
@@ -779,12 +779,12 @@ Expression expr
 token closeParen
 token semi
 
-ForVariableDeclaration kind=ForVariableDeclaration
+ForVariableDeclaration
 token varKeyword
 DataType? type
 Declarator declarator
 
-ForLoopStatement base=Statement kind=ForLoopStatement
+ForLoopStatement base=Statement
 token forKeyword
 token openParen
 separated_list<SyntaxNode> initializers
@@ -795,7 +795,7 @@ separated_list<Expression> steps
 token closeParen
 Statement statement
 
-ForeachLoopList kind=ForeachLoopList
+ForeachLoopList
 token openParen
 Name arrayName
 token openBracket
@@ -803,29 +803,29 @@ separated_list<Name> loopVariables
 token closeBracket
 token closeParen
 
-ForeachLoopStatement base=Statement kind=ForeachLoopStatement
+ForeachLoopStatement base=Statement
 token keyword
 ForeachLoopList loopList
 Statement statement
 
-ReturnStatement base=Statement kind=ReturnStatement
+ReturnStatement base=Statement
 token returnKeyword
 Expression? returnValue
 token semi
 
-JumpStatement base=Statement kind=JumpStatement
+JumpStatement base=Statement
 token breakOrContinue
 token semi
 
-TimingControlStatement base=Statement kind=TimingControlStatement
+TimingControlStatement base=Statement
 TimingControl timingControl
 Statement statement
 
-ExpressionStatement base=Statement kind=ExpressionStatement
+ExpressionStatement base=Statement
 Expression expr
 token semi
 
-VoidCastedCallStatement base=Statement kind=VoidCastedCallStatement
+VoidCastedCallStatement base=Statement
 token voidKeyword
 token apostrophe
 token openParen
@@ -833,7 +833,7 @@ Expression expr
 token closeParen
 token semi
 
-ProceduralAssignStatement base=Statement
+ProceduralAssignStatement base=Statement multiKind=true
 token keyword
 Expression lvalue
 token equals
@@ -843,7 +843,7 @@ token semi
 kindmap<ProceduralAssignStatement>
 ProceduralAssignStatement ProceduralForceStatement
 
-ProceduralDeassignStatement base=Statement
+ProceduralDeassignStatement base=Statement multiKind=true
 token keyword
 Expression variable
 token semi
@@ -851,21 +851,21 @@ token semi
 kindmap<ProceduralDeassignStatement>
 ProceduralDeassignStatement ProceduralReleaseStatement
 
-DisableStatement base=Statement kind=DisableStatement
+DisableStatement base=Statement
 token disable
 Name name
 token semi
 
-DisableForkStatement base=Statement kind=DisableForkStatement
+DisableForkStatement base=Statement
 token disable
 token fork
 token semi
 
-NamedBlockClause kind=NamedBlockClause
+NamedBlockClause
 token colon
 token name
 
-BlockStatement base=Statement
+BlockStatement base=Statement multiKind=true
 token begin
 NamedBlockClause? blockName
 list<SyntaxNode> items
@@ -875,36 +875,36 @@ NamedBlockClause? endBlockName
 kindmap<BlockStatement>
 SequentialBlockStatement ParallelBlockStatement
 
-WaitStatement base=Statement kind=WaitStatement
+WaitStatement base=Statement
 token wait
 token openParen
 Expression expr
 token closeParen
 Statement statement
 
-WaitForkStatement base=Statement kind=WaitForkStatement
+WaitForkStatement base=Statement
 token wait
 token fork
 token semi
 
-WaitOrderStatement base=Statement kind=WaitOrderStatement
+WaitOrderStatement base=Statement
 token wait_order
 token openParen
 separated_list<Name> names
 token closeParen
 ActionBlock action
 
-RandCaseItem kind=RandCaseItem
+RandCaseItem
 Expression expr
 token colon
 Statement statement
 
-RandCaseStatement base=Statement kind=RandCaseStatement
+RandCaseStatement base=Statement
 token randCase
 list<RandCaseItem> items
 token endCase
 
-EventTriggerStatement base=Statement
+EventTriggerStatement base=Statement multiKind=true
 token trigger
 TimingControl? timing
 Name name
@@ -924,54 +924,54 @@ empty
 PortExpression final=false
 empty
 
-PortReference base=PortExpression kind=PortReference
+PortReference base=PortExpression
 token name
 ElementSelect? select
 
-PortConcatenation base=PortExpression kind=PortConcatenation
+PortConcatenation base=PortExpression
 token openBrace
 separated_list<PortReference> references
 token closeBrace
 
-ImplicitNonAnsiPort base=NonAnsiPort kind=ImplicitNonAnsiPort
+ImplicitNonAnsiPort base=NonAnsiPort
 PortExpression? expr
 
-ExplicitNonAnsiPort base=NonAnsiPort kind=ExplicitNonAnsiPort
+ExplicitNonAnsiPort base=NonAnsiPort
 token dot
 token name
 token openParen
 PortExpression? expr
 token closeParen
 
-NonAnsiPortList base=PortList kind=NonAnsiPortList
+NonAnsiPortList base=PortList
 token openParen
 separated_list<NonAnsiPort> ports
 token closeParen
 
-InterfacePortHeader base=PortHeader kind=InterfacePortHeader
+InterfacePortHeader base=PortHeader
 token nameOrKeyword
 DotMemberClause? modport
 
-VariablePortHeader base=PortHeader kind=VariablePortHeader
+VariablePortHeader base=PortHeader
 token direction
 token varKeyword
 DataType dataType
 
-InterconnectPortHeader base=PortHeader kind=InterconnectPortHeader
+InterconnectPortHeader base=PortHeader
 token direction
 token interconnect
 ImplicitType type
 
-NetPortHeader base=PortHeader kind=NetPortHeader
+NetPortHeader base=PortHeader
 token direction
 token netType
 DataType dataType
 
-ImplicitAnsiPort base=Member kind=ImplicitAnsiPort
+ImplicitAnsiPort base=Member
 PortHeader header
 Declarator declarator
 
-ExplicitAnsiPort base=Member kind=ExplicitAnsiPort
+ExplicitAnsiPort base=Member
 token direction
 token dot
 token name
@@ -979,23 +979,23 @@ token openParen
 Expression? expr
 token closeParen
 
-AnsiPortList base=PortList kind=AnsiPortList
+AnsiPortList base=PortList
 token openParen
 separated_list<Member> ports
 token closeParen
 
-WildcardPortList base=PortList kind=WildcardPortList
+WildcardPortList base=PortList
 token openParen
 token dotStar
 token closeParen
 
-ParameterPortList kind=ParameterPortList
+ParameterPortList
 token hash
 token openParen
 separated_list<ParameterDeclarationBase> declarations
 token closeParen
 
-ModuleHeader
+ModuleHeader multiKind=true
 token moduleKeyword
 token lifetime
 token name
@@ -1007,7 +1007,7 @@ token semi
 kindmap<ModuleHeader>
 ModuleHeader ProgramHeader InterfaceHeader PackageHeader
 
-ModuleDeclaration base=Member
+ModuleDeclaration base=Member multiKind=true
 ModuleHeader header
 list<Member> members
 token endmodule
@@ -1016,29 +1016,29 @@ NamedBlockClause? blockName
 kindmap<ModuleDeclaration>
 ModuleDeclaration InterfaceDeclaration ProgramDeclaration PackageDeclaration
 
-ExternModule kind=ExternModule
+ExternModule
 token externKeyword
 ModuleHeader header
 
 // ----- MEMBERS -----
 
-EmptyMember base=Member kind=EmptyMember
+EmptyMember base=Member
 tokenlist qualifiers
 token semi
 
-ProceduralBlock base=Member
+ProceduralBlock base=Member multiKind=true
 token keyword
 Statement statement
 
 kindmap<ProceduralBlock>
 InitialBlock FinalBlock AlwaysBlock AlwaysCombBlock AlwaysFFBlock AlwaysLatchBlock
 
-GenerateRegion base=Member kind=GenerateRegion
+GenerateRegion base=Member
 token keyword
 list<Member> members
 token endgenerate
 
-LoopGenerate base=Member kind=LoopGenerate
+LoopGenerate base=Member
 token keyword
 token openParen
 token genvar
@@ -1052,7 +1052,7 @@ Expression iterationExpr
 token closeParen
 Member block
 
-IfGenerate base=Member kind=IfGenerate
+IfGenerate base=Member
 token keyword
 token openParen
 Expression condition
@@ -1060,7 +1060,7 @@ token closeParen
 Member block
 ElseClause? elseClause
 
-CaseGenerate base=Member kind=CaseGenerate
+CaseGenerate base=Member
 token keyword
 token openParen
 Expression condition
@@ -1068,7 +1068,7 @@ token closeParen
 list<CaseItem> items
 token endCase
 
-GenerateBlock base=Member kind=GenerateBlock
+GenerateBlock base=Member
 NamedLabel? label
 token begin
 NamedBlockClause? beginName
@@ -1076,11 +1076,11 @@ list<Member> members
 token end
 NamedBlockClause? endName
 
-DividerClause kind=DividerClause
+DividerClause
 token divide
 token value
 
-TimeUnitsDeclaration base=Member kind=TimeUnitsDeclaration
+TimeUnitsDeclaration base=Member
 token keyword
 token time
 DividerClause? divider
@@ -1089,63 +1089,63 @@ token semi
 PortConnection final=false
 list<AttributeInstance> attributes
 
-EmptyPortConnection base=PortConnection kind=EmptyPortConnection
+EmptyPortConnection base=PortConnection
 token placeholder
 
-OrderedPortConnection base=PortConnection kind=OrderedPortConnection
+OrderedPortConnection base=PortConnection
 Expression expr
 
-NamedPortConnection base=PortConnection kind=NamedPortConnection
+NamedPortConnection base=PortConnection
 token dot
 token name
 token openParen
 Expression? expr
 token closeParen
 
-WildcardPortConnection base=PortConnection kind=WildcardPortConnection
+WildcardPortConnection base=PortConnection
 token dotStar
 
-HierarchicalInstance kind=HierarchicalInstance
+HierarchicalInstance
 token name
 list<VariableDimension> dimensions
 token openParen
 separated_list<PortConnection> connections
 token closeParen
 
-HierarchyInstantiation base=Member kind=HierarchyInstantiation
+HierarchyInstantiation base=Member
 token type
 ParameterValueAssignment? parameters
 separated_list<HierarchicalInstance> instances
 token semi
 
-BindTargetList kind=BindTargetList
+BindTargetList
 token colon
 separated_list<Name> targets
 
-BindDirective base=Member kind=BindDirective
+BindDirective base=Member
 token bind
 Name target
 BindTargetList? targetInstances
 HierarchyInstantiation instantiation
 
-GateInstanceName kind=GateInstanceName
+GateInstanceName
 token name
 list<VariableDimension> dimensions
 
-GateInstance kind=GateInstance
+GateInstance
 GateInstanceName? decl
 token openParen
 separated_list<Expression> connections
 token closeParen
 
-GateInstantiation base=Member kind=GateInstantiation
+GateInstantiation base=Member
 token gateType
 DriveStrength? strength
 TimingControl? delay
 separated_list<GateInstance> instances
 token semi
 
-FunctionPort kind=FunctionPort
+FunctionPort
 list<AttributeInstance> attributes
 token constKeyword
 token direction
@@ -1153,19 +1153,19 @@ token varKeyword
 DataType? dataType
 Declarator declarator
 
-FunctionPortList kind=FunctionPortList
+FunctionPortList
 token openParen
 separated_list<FunctionPort> ports
 token closeParen
 
-FunctionPrototype kind=FunctionPrototype
+FunctionPrototype
 token keyword
 token lifetime
 DataType returnType
 Name name
 FunctionPortList? portList
 
-FunctionDeclaration base=Member
+FunctionDeclaration base=Member multiKind=true
 FunctionPrototype prototype
 token semi
 list<SyntaxNode> items
@@ -1175,26 +1175,26 @@ NamedBlockClause? endBlockName
 kindmap<FunctionDeclaration>
 FunctionDeclaration TaskDeclaration
 
-AssertionItemPort kind=AssertionItemPort
+AssertionItemPort
 list<AttributeInstance> attributes
 token local
 token direction
 DataType type
 Declarator declarator
 
-AssertionItemPortList kind=AssertionItemPortList
+AssertionItemPortList
 token openParen
 separated_list<AssertionItemPort> ports
 token closeParen
 
-LetDeclaration kind=LetDeclaration base=Member
+LetDeclaration base=Member
 token let
 token identifier
 AssertionItemPortList? portList
 EqualsValueClause initializer
 token semi
 
-PropertyDeclaration kind=PropertyDeclaration base=Member
+PropertyDeclaration base=Member
 token keyword
 token name
 AssertionItemPortList? portList
@@ -1205,7 +1205,7 @@ token optionalSemi
 token end
 NamedBlockClause? endBlockName
 
-SequenceDeclaration kind=SequenceDeclaration base=Member
+SequenceDeclaration base=Member
 token keyword
 token name
 AssertionItemPortList? portList
@@ -1216,16 +1216,16 @@ token optionalSemi
 token end
 NamedBlockClause? endBlockName
 
-ExtendsClause kind=ExtendsClause
+ExtendsClause
 token keyword
 Name baseName
 ArgumentList? arguments
 
-ImplementsClause kind=ImplementsClause
+ImplementsClause
 token keyword
 separated_list<Name> interfaces
 
-ClassDeclaration base=Member kind=ClassDeclaration
+ClassDeclaration base=Member
 token virtualOrInterface
 token classKeyword
 token lifetime
@@ -1238,93 +1238,93 @@ list<Member> items
 token endClass
 NamedBlockClause? endBlockName
 
-ClassPropertyDeclaration base=Member kind=ClassPropertyDeclaration
+ClassPropertyDeclaration base=Member
 tokenlist qualifiers
 Member declaration
 
-ClassMethodDeclaration base=Member kind=ClassMethodDeclaration
+ClassMethodDeclaration base=Member
 tokenlist qualifiers
 FunctionDeclaration declaration
 
-ClassMethodPrototype base=Member kind=ClassMethodPrototype
+ClassMethodPrototype base=Member
 tokenlist qualifiers
 FunctionPrototype prototype
 token semi
 
-ContinuousAssign base=Member kind=ContinuousAssign
+ContinuousAssign base=Member
 token assign
 DriveStrength? strength
 TimingControl? delay
 separated_list<Expression> assignments
 token semi
 
-DefParamAssignment kind=DefParamAssignment
+DefParamAssignment
 Name name
 EqualsValueClause? setter
 
-DefParam base=Member kind=DefParam
+DefParam base=Member
 token defparam
 separated_list<DefParamAssignment> assignments
 token semi
 
-ModportClockingPort base=Member kind=ModportClockingPort
+ModportClockingPort base=Member
 token clocking
 token name
 
 ModportPort final=false
 empty
 
-ModportNamedPort base=ModportPort kind=ModportNamedPort
+ModportNamedPort base=ModportPort
 token name
 
-ModportExplicitPort base=ModportPort kind=ModportExplicitPort
+ModportExplicitPort base=ModportPort
 token dot
 token name
 token openParen
 Expression? expr
 token closeParen
 
-ModportSimplePortList base=Member kind=ModportSimplePortList
+ModportSimplePortList base=Member
 token direction
 separated_list<ModportPort> ports
 
-ModportSubroutinePort base=ModportPort kind=ModportSubroutinePort
+ModportSubroutinePort base=ModportPort
 FunctionPrototype prototype
 
-ModportSubroutinePortList base=Member kind=ModportSubroutinePortList
+ModportSubroutinePortList base=Member
 token importExport
 separated_list<ModportPort> ports
 
-ModportItem kind=ModportItem
+ModportItem
 token name
 AnsiPortList ports
 
-ModportDeclaration base=Member kind=ModportDeclaration
+ModportDeclaration base=Member
 token keyword
 separated_list<ModportItem> items
 token semi
 
-ClockingSkew kind=ClockingSkew
+ClockingSkew
 token edge
 Delay? delay
 
-ClockingDirection kind=ClockingDirection
+ClockingDirection
 token input
 ClockingSkew? inputSkew
 token output
 ClockingSkew? ouputSkew
 
-DefaultSkewItem base=Member kind=DefaultSkewItem
+DefaultSkewItem base=Member
 token keyword
 ClockingDirection direction
 token semi
 
-ClockingItem base=Member kind=ClockingItem
+ClockingItem base=Member
 ClockingDirection direction
 separated_list<AttributeSpec> decls
 token semi
 
-ClockingDeclaration base=Member kind=ClockingDeclaration
+ClockingDeclaration base=Member
 token globalOrDefault
 token clocking
 token blockName
@@ -1335,13 +1335,13 @@ list<Member> items
 token endClocking
 NamedBlockClause? endBlockName
 
-DefaultClockingReference base=Member kind=DefaultClockingReference
+DefaultClockingReference base=Member
 token defaultKeyword
 token clocking
 token name
 token semi
 
-DPIImportExport base=Member kind=DPIImportExport
+DPIImportExport base=Member
 token keyword
 token stringLiteral
 token property
@@ -1350,7 +1350,7 @@ token equals
 FunctionPrototype method
 token semi
 
-ElabSystemTask base=Member kind=ElabSystemTask
+ElabSystemTask base=Member
 token name
 ArgumentList? arguments
 token semi
@@ -1360,44 +1360,44 @@ token semi
 ConstraintItem final=false
 empty
 
-DistWeight kind=DistWeight
+DistWeight
 token op
 Expression expr
 
-DistItem kind=DistItem
+DistItem
 Expression range
 DistWeight? weight
 
-DistConstraintList kind=DistConstraintList
+DistConstraintList
 token dist
 token openBrace
 separated_list<DistItem> items
 token closeBrace
 
-ExpressionOrDist base=Expression kind=ExpressionOrDist
+ExpressionOrDist base=Expression
 Expression expr
 DistConstraintList distribution
 
-ExpressionConstraint base=ConstraintItem kind=ExpressionConstraint
+ExpressionConstraint base=ConstraintItem
 token soft
 Expression expr
 token semi
 
-UniquenessConstraint base=ConstraintItem kind=UniquenessConstraint
+UniquenessConstraint base=ConstraintItem
 token unique
 OpenRangeList ranges
 token semi
 
-ImplicationConstraint base=ConstraintItem kind=ImplicationConstraint
+ImplicationConstraint base=ConstraintItem
 Expression left
 token arrow
 ConstraintItem constraints
 
-ElseConstraintClause kind=ElseConstraintClause
+ElseConstraintClause
 token elseKeyword
 ConstraintItem constraints
 
-ConditionalConstraint base=ConstraintItem kind=ConditionalConstraint
+ConditionalConstraint base=ConstraintItem
 token ifKeyword
 token openParen
 Expression condition
@@ -1405,47 +1405,47 @@ token closeParen
 ConstraintItem constraints
 ElseConstraintClause? elseClause
 
-LoopConstraint base=ConstraintItem kind=LoopConstraint
+LoopConstraint base=ConstraintItem
 token foreachKeyword
 ForeachLoopList loopList
 ConstraintItem constraints
 
-DisableConstraint base=ConstraintItem kind=DisableConstraint
+DisableConstraint base=ConstraintItem
 token disable
 token soft
 Name name
 token semi
 
-SolveBeforeConstraint base=ConstraintItem kind=SolveBeforeConstraint
+SolveBeforeConstraint base=ConstraintItem
 token solve
 separated_list<Expression> beforeExpr
 token before
 separated_list<Expression> afterExpr
 token semi
 
-ConstraintBlock base=ConstraintItem kind=ConstraintBlock
+ConstraintBlock base=ConstraintItem
 token openBrace
 list<ConstraintItem> items
 token closeBrace
 
-ConstraintPrototype base=Member kind=ConstraintPrototype
+ConstraintPrototype base=Member
 tokenlist qualifiers
 token keyword
 token name
 token semi
 
-ConstraintDeclaration base=Member kind=ConstraintDeclaration
+ConstraintDeclaration base=Member
 tokenlist qualifiers
 token keyword
 token name
 ConstraintBlock block
 
-ParenExpressionList kind=ParenExpressionList
+ParenExpressionList
 token openParen
 separated_list<Expression> expressions
 token closeParen
 
-ArrayOrRandomizeMethodExpression base=Expression kind=ArrayOrRandomizeMethodExpression
+ArrayOrRandomizeMethodExpression base=Expression
 Expression method
 token with
 ParenExpressionList? args
@@ -1453,7 +1453,7 @@ ConstraintBlock? constraints
 
 // ----- COVER GROUPS -----
 
-WithFunctionSample kind=WithFunctionSample
+WithFunctionSample
 token with
 token function
 token sample
@@ -1462,22 +1462,22 @@ AnsiPortList portList
 BlockEventExpression final=false
 empty
 
-BinaryBlockEventExpression base=BlockEventExpression kind=BinaryBlockEventExpression
+BinaryBlockEventExpression base=BlockEventExpression
 BlockEventExpression left
 token orKeyword
 BlockEventExpression right
 
-PrimaryBlockEventExpression base=BlockEventExpression kind=PrimaryBlockEventExpression
+PrimaryBlockEventExpression base=BlockEventExpression
 token keyword
 Name name
 
-BlockCoverageEvent kind=BlockCoverageEvent
+BlockCoverageEvent
 token atat
 token openParen
 BlockEventExpression expr
 token closeParen
 
-CovergroupDeclaration base=Member kind=CovergroupDeclaration
+CovergroupDeclaration base=Member
 token covergroup
 token name
 AnsiPortList? portList
@@ -1487,7 +1487,7 @@ list<Member> members
 token endgroup
 NamedBlockClause? endBlockName
 
-CoverageOption base=Member kind=CoverageOption
+CoverageOption base=Member
 token option
 token dot
 token name
@@ -1495,7 +1495,7 @@ token equals
 Expression expr
 token semi
 
-Coverpoint base=Member kind=Coverpoint
+Coverpoint base=Member
 DataType? type
 NamedLabel? label
 token coverpoint
@@ -1508,50 +1508,50 @@ token emptySemi
 CoverageBinInitializer final=false
 empty
 
-DefaultCoverageBinInitializer base=CoverageBinInitializer kind=DefaultCoverageBinInitializer
+DefaultCoverageBinInitializer base=CoverageBinInitializer
 token defaultKeyword
 token sequenceKeyword
 
-WithClause kind=WithClause
+WithClause
 token with
 token openParen
 Expression expr
 token closeParen
 
-ExpressionCoverageBinInitializer base=CoverageBinInitializer kind=ExpressionCoverageBinInitializer
+ExpressionCoverageBinInitializer base=CoverageBinInitializer
 Expression expr
 WithClause? withClause
 
-RangeCoverageBinInitializer base=CoverageBinInitializer kind=RangeCoverageBinInitializer
+RangeCoverageBinInitializer base=CoverageBinInitializer
 OpenRangeList ranges
 WithClause? withClause
 
-TransRepeatRange kind=TransRepeatRange
+TransRepeatRange
 token openBracket
 token specifier
 Selector? selector
 token closeBracket
 
-TransRange kind=TransRange
+TransRange
 separated_list<Expression> items
 TransRepeatRange? repeat
 
-TransSet kind=TransSet
+TransSet
 token openParen
 separated_list<TransRange> ranges
 token closeParen
 
-TransListCoverageBinInitializer base=CoverageBinInitializer kind=TransListCoverageBinInitializer
+TransListCoverageBinInitializer base=CoverageBinInitializer
 separated_list<TransSet> sets
 WithClause? withClause
 
-IffClause kind=IffClause
+IffClause
 token iff
 token openParen
 Expression expr
 token closeParen
 
-CoverageBins base=Member kind=CoverageBins
+CoverageBins base=Member
 token wildcard
 token keyword
 token name
@@ -1563,7 +1563,7 @@ token semi
 
 // ----- TOP LEVEL -----
 
-CompilationUnit kind=CompilationUnit
+CompilationUnit
 list<Member> members
 token endOfFile
 
@@ -1572,100 +1572,100 @@ token endOfFile
 Directive final=false
 token directive
 
-SimpleDirective base=Directive
+SimpleDirective base=Directive multiKind=true
 
 kindmap<SimpleDirective>
 CellDefineDirective NoUnconnectedDriveDirective EndCellDefineDirective EndKeywordsDirective
 ResetAllDirective UndefineAllDirective
 
-IncludeDirective base=Directive kind=IncludeDirective
+IncludeDirective base=Directive
 token fileName
 
-ConditionalBranchDirective base=Directive
+ConditionalBranchDirective base=Directive multiKind=true
 token name
 tokenlist disabledTokens
 
 kindmap<ConditionalBranchDirective>
 ElsIfDirective IfDefDirective IfNDefDirective
 
-UnconditionalBranchDirective base=Directive
+UnconditionalBranchDirective base=Directive multiKind=true
 tokenlist disabledTokens
 
 kindmap<UnconditionalBranchDirective>
 EndIfDirective ElseDirective
 
-MacroArgumentDefault kind=MacroArgumentDefault
+MacroArgumentDefault
 token equals
 tokenlist tokens
 
-MacroFormalArgument kind=MacroFormalArgument
+MacroFormalArgument
 token name
 MacroArgumentDefault? defaultValue
 
-MacroFormalArgumentList kind=MacroFormalArgumentList
+MacroFormalArgumentList
 token openParen
 separated_list<MacroFormalArgument> args
 token closeParen
 
-DefineDirective base=Directive kind=DefineDirective
+DefineDirective base=Directive
 token name
 MacroFormalArgumentList? formalArguments
 tokenlist body
 
-MacroActualArgument kind=MacroActualArgument
+MacroActualArgument
 tokenlist tokens
 
-MacroActualArgumentList kind=MacroActualArgumentList
+MacroActualArgumentList
 token openParen
 separated_list<MacroActualArgument> args
 token closeParen
 
-MacroUsage base=Directive kind=MacroUsage
+MacroUsage base=Directive
 MacroActualArgumentList? args
 
-TimeScaleDirective base=Directive kind=TimeScaleDirective
+TimeScaleDirective base=Directive
 token timeUnit
 token slash
 token timePrecision
 
-DefaultNetTypeDirective base=Directive kind=DefaultNetTypeDirective
+DefaultNetTypeDirective base=Directive
 token netType
 
-UnconnectedDriveDirective base=Directive kind=UnconnectedDriveDirective
+UnconnectedDriveDirective base=Directive
 token strength
 
-LineDirective base=Directive kind=LineDirective
+LineDirective base=Directive
 token lineNumber
 token fileName
 token level
 
-UndefDirective base=Directive kind=UndefDirective
+UndefDirective base=Directive
 token name
 
-BeginKeywordsDirective base=Directive kind=BeginKeywordsDirective
+BeginKeywordsDirective base=Directive
 token versionSpecifier
 
 PragmaExpression final=false
 empty
 
-SimplePragmaExpression base=PragmaExpression kind=SimplePragmaExpression
+SimplePragmaExpression base=PragmaExpression
 token value
 
-NameValuePragmaExpression base=PragmaExpression kind=NameValuePragmaExpression
+NameValuePragmaExpression base=PragmaExpression
 token name
 token equals
 PragmaExpression value
 
-NumberPragmaExpression base=PragmaExpression kind=NumberPragmaExpression
+NumberPragmaExpression base=PragmaExpression
 token size
 token base
 token value
 
-ParenPragmaExpression base=PragmaExpression kind=ParenPragmaExpression
+ParenPragmaExpression base=PragmaExpression
 token openParen
 separated_list<PragmaExpression> values
 token closeParen
 
-PragmaDirective base=Directive kind=PragmaDirective
+PragmaDirective base=Directive
 token name
 separated_list<PragmaExpression> args
