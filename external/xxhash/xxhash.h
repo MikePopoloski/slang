@@ -1357,7 +1357,7 @@ XXH32_endian_align(const xxh_u8* input, size_t len, xxh_u32 seed, XXH_alignment 
     xxh_u32 h32;
 
 #if defined(XXH_ACCEPT_NULL_INPUT_POINTER) && (XXH_ACCEPT_NULL_INPUT_POINTER>=1)
-    if (input==NULL) {
+    if (input==nullptr) {
         len=0;
         bEnd=input=(const xxh_u8*)(size_t)16;
     }
@@ -1445,7 +1445,7 @@ XXH_PUBLIC_API XXH_errorcode XXH32_reset(XXH32_state_t* statePtr, XXH32_hash_t s
 XXH_PUBLIC_API XXH_errorcode
 XXH32_update(XXH32_state_t* state, const void* input, size_t len)
 {
-    if (input==NULL)
+    if (input== nullptr)
 #if defined(XXH_ACCEPT_NULL_INPUT_POINTER) && (XXH_ACCEPT_NULL_INPUT_POINTER>=1)
         return XXH_OK;
 #else
@@ -1895,7 +1895,7 @@ XXH64_endian_align(const xxh_u8* input, size_t len, xxh_u64 seed, XXH_alignment 
     xxh_u64 h64;
 
 #if defined(XXH_ACCEPT_NULL_INPUT_POINTER) && (XXH_ACCEPT_NULL_INPUT_POINTER>=1)
-    if (input==NULL) {
+    if (input== nullptr) {
         len=0;
         bEnd=input=(const xxh_u8*)(size_t)32;
     }
@@ -1985,7 +1985,7 @@ XXH_PUBLIC_API XXH_errorcode XXH64_reset(XXH64_state_t* statePtr, XXH64_hash_t s
 XXH_PUBLIC_API XXH_errorcode
 XXH64_update (XXH64_state_t* state, const void* input, size_t len)
 {
-    if (input==NULL)
+    if (input== nullptr)
 #if defined(XXH_ACCEPT_NULL_INPUT_POINTER) && (XXH_ACCEPT_NULL_INPUT_POINTER>=1)
         return XXH_OK;
 #else
@@ -2763,9 +2763,9 @@ static XXH64_hash_t XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len)
 XXH_FORCE_INLINE XXH64_hash_t
 XXH3_len_1to3_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
-    XXH_ASSERT(input != NULL);
+    XXH_ASSERT(input != nullptr);
     XXH_ASSERT(1 <= len && len <= 3);
-    XXH_ASSERT(secret != NULL);
+    XXH_ASSERT(secret != nullptr);
     /*
      * len = 1: combined = { input[0], 0x01, input[0], input[0] }
      * len = 2: combined = { input[1], 0x02, input[0], input[1] }
@@ -2785,8 +2785,8 @@ XXH3_len_1to3_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_h
 XXH_FORCE_INLINE XXH64_hash_t
 XXH3_len_4to8_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
-    XXH_ASSERT(input != NULL);
-    XXH_ASSERT(secret != NULL);
+    XXH_ASSERT(input != nullptr);
+    XXH_ASSERT(secret != nullptr);
     XXH_ASSERT(4 <= len && len < 8);
     seed ^= (xxh_u64)XXH_swap32((xxh_u32)seed) << 32;
     {   xxh_u32 const input1 = XXH_readLE32(input);
@@ -2801,8 +2801,8 @@ XXH3_len_4to8_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_h
 XXH_FORCE_INLINE XXH64_hash_t
 XXH3_len_9to16_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
-    XXH_ASSERT(input != NULL);
-    XXH_ASSERT(secret != NULL);
+    XXH_ASSERT(input != nullptr);
+    XXH_ASSERT(secret != nullptr);
     XXH_ASSERT(8 <= len && len <= 16);
     {   xxh_u64 const bitflip1 = (XXH_readLE64(secret+24) ^ XXH_readLE64(secret+32)) + seed;
         xxh_u64 const bitflip2 = (XXH_readLE64(secret+40) ^ XXH_readLE64(secret+48)) - seed;
@@ -3913,7 +3913,7 @@ static void* XXH_alignedMalloc(size_t s, size_t align)
     XXH_ASSERT(s != 0 && s < (s + align));  /* empty/overflow */
     {   /* Overallocate to make room for manual realignment and an offset byte */
         xxh_u8* base = (xxh_u8*)XXH_malloc(s + align);
-        if (base != NULL) {
+        if (base != nullptr) {
             /*
              * Get the offset needed to align this pointer.
              *
@@ -3930,7 +3930,7 @@ static void* XXH_alignedMalloc(size_t s, size_t align)
             ptr[-1] = (xxh_u8)offset;
             return ptr;
         }
-        return NULL;
+        return nullptr;
     }
 }
 /*
@@ -3939,7 +3939,7 @@ static void* XXH_alignedMalloc(size_t s, size_t align)
  */
 static void XXH_alignedFree(void* p)
 {
-    if (p != NULL) {
+    if (p != nullptr) {
         xxh_u8* ptr = (xxh_u8*)p;
         /* Get the offset byte we added in XXH_malloc. */
         xxh_u8 offset = ptr[-1];
@@ -3951,7 +3951,7 @@ static void XXH_alignedFree(void* p)
 XXH_PUBLIC_API XXH3_state_t* XXH3_createState(void)
 {
     XXH3_state_t* const state = (XXH3_state_t*)XXH_alignedMalloc(sizeof(XXH3_state_t), 64);
-    if (state==NULL) return NULL;
+    if (state== nullptr) return nullptr;
     XXH3_INITSTATE(state);
     return state;
 }
@@ -3976,7 +3976,7 @@ XXH3_64bits_reset_internal(XXH3_state_t* statePtr,
     size_t const initStart = offsetof(XXH3_state_t, bufferedSize);
     size_t const initLength = offsetof(XXH3_state_t, nbStripesPerBlock) - initStart;
     XXH_ASSERT(offsetof(XXH3_state_t, nbStripesPerBlock) > initStart);
-    XXH_ASSERT(statePtr != NULL);
+    XXH_ASSERT(statePtr != nullptr);
     /* set members from bufferedSize to nbStripesPerBlock (excluded) to 0 */
     memset((char*)statePtr + initStart, 0, initLength);
     statePtr->acc[0] = XXH_PRIME32_3;
@@ -3997,7 +3997,7 @@ XXH3_64bits_reset_internal(XXH3_state_t* statePtr,
 XXH_PUBLIC_API XXH_errorcode
 XXH3_64bits_reset(XXH3_state_t* statePtr)
 {
-    if (statePtr == NULL) return XXH_ERROR;
+    if (statePtr == nullptr) return XXH_ERROR;
     XXH3_64bits_reset_internal(statePtr, 0, XXH3_kSecret, XXH_SECRET_DEFAULT_SIZE);
     return XXH_OK;
 }
@@ -4005,9 +4005,9 @@ XXH3_64bits_reset(XXH3_state_t* statePtr)
 XXH_PUBLIC_API XXH_errorcode
 XXH3_64bits_reset_withSecret(XXH3_state_t* statePtr, const void* secret, size_t secretSize)
 {
-    if (statePtr == NULL) return XXH_ERROR;
+    if (statePtr == nullptr) return XXH_ERROR;
     XXH3_64bits_reset_internal(statePtr, 0, secret, secretSize);
-    if (secret == NULL) return XXH_ERROR;
+    if (secret == nullptr) return XXH_ERROR;
     if (secretSize < XXH3_SECRET_SIZE_MIN) return XXH_ERROR;
     return XXH_OK;
 }
@@ -4015,10 +4015,10 @@ XXH3_64bits_reset_withSecret(XXH3_state_t* statePtr, const void* secret, size_t 
 XXH_PUBLIC_API XXH_errorcode
 XXH3_64bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t seed)
 {
-    if (statePtr == NULL) return XXH_ERROR;
+    if (statePtr == nullptr) return XXH_ERROR;
     if (seed==0) return XXH3_64bits_reset(statePtr);
     if (seed != statePtr->seed) XXH3_initCustomSecret(statePtr->customSecret, seed);
-    XXH3_64bits_reset_internal(statePtr, seed, NULL, XXH_SECRET_DEFAULT_SIZE);
+    XXH3_64bits_reset_internal(statePtr, seed, nullptr, XXH_SECRET_DEFAULT_SIZE);
     return XXH_OK;
 }
 
@@ -4058,7 +4058,7 @@ XXH3_update(XXH3_state_t* state,
             XXH3_f_accumulate_512 f_acc512,
             XXH3_f_scrambleAcc f_scramble)
 {
-    if (input==NULL)
+    if (input== nullptr)
 #if defined(XXH_ACCEPT_NULL_INPUT_POINTER) && (XXH_ACCEPT_NULL_INPUT_POINTER>=1)
         return XXH_OK;
 #else
@@ -4066,7 +4066,7 @@ XXH3_update(XXH3_state_t* state,
 #endif
 
     {   const xxh_u8* const bEnd = input + len;
-        const unsigned char* const secret = (state->extSecret == NULL) ? state->customSecret : state->extSecret;
+        const unsigned char* const secret = (state->extSecret == nullptr) ? state->customSecret : state->extSecret;
 
         state->totalLen += len;
 
@@ -4165,7 +4165,7 @@ XXH3_digest_long (XXH64_hash_t* acc,
 
 XXH_PUBLIC_API XXH64_hash_t XXH3_64bits_digest (const XXH3_state_t* state)
 {
-    const unsigned char* const secret = (state->extSecret == NULL) ? state->customSecret : state->extSecret;
+    const unsigned char* const secret = (state->extSecret == nullptr) ? state->customSecret : state->extSecret;
     if (state->totalLen > XXH3_MIDSIZE_MAX) {
         XXH_ALIGN(XXH_ACC_ALIGN) XXH64_hash_t acc[XXH_ACC_NB];
         XXH3_digest_long(acc, state, secret);
@@ -4186,12 +4186,12 @@ XXH_PUBLIC_API XXH64_hash_t XXH3_64bits_digest (const XXH3_state_t* state)
 XXH_PUBLIC_API void
 XXH3_generateSecret(void* secretBuffer, const void* customSeed, size_t customSeedSize)
 {
-    XXH_ASSERT(secretBuffer != NULL);
+    XXH_ASSERT(secretBuffer != nullptr);
     if (customSeedSize == 0) {
         memcpy(secretBuffer, XXH3_kSecret, XXH_SECRET_DEFAULT_SIZE);
         return;
     }
-    XXH_ASSERT(customSeed != NULL);
+    XXH_ASSERT(customSeed != nullptr);
 
     {   size_t const segmentSize = sizeof(XXH128_hash_t);
         size_t const nbSegments = XXH_SECRET_DEFAULT_SIZE / segmentSize;
@@ -4247,9 +4247,9 @@ XXH_FORCE_INLINE XXH128_hash_t
 XXH3_len_1to3_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
     /* A doubled version of 1to3_64b with different constants. */
-    XXH_ASSERT(input != NULL);
+    XXH_ASSERT(input != nullptr);
     XXH_ASSERT(1 <= len && len <= 3);
-    XXH_ASSERT(secret != NULL);
+    XXH_ASSERT(secret != nullptr);
     /*
      * len = 1: combinedl = { input[0], 0x01, input[0], input[0] }
      * len = 2: combinedl = { input[1], 0x02, input[0], input[1] }
@@ -4275,8 +4275,8 @@ XXH3_len_1to3_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_
 XXH_FORCE_INLINE XXH128_hash_t
 XXH3_len_4to8_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
-    XXH_ASSERT(input != NULL);
-    XXH_ASSERT(secret != NULL);
+    XXH_ASSERT(input != nullptr);
+    XXH_ASSERT(secret != nullptr);
     XXH_ASSERT(4 <= len && len <= 8);
     seed ^= (xxh_u64)XXH_swap32((xxh_u32)seed) << 32;
     {   xxh_u32 const input_lo = XXH_readLE32(input);
@@ -4302,8 +4302,8 @@ XXH3_len_4to8_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_
 XXH_FORCE_INLINE XXH128_hash_t
 XXH3_len_9to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
-    XXH_ASSERT(input != NULL);
-    XXH_ASSERT(secret != NULL);
+    XXH_ASSERT(input != nullptr);
+    XXH_ASSERT(secret != nullptr);
     XXH_ASSERT(9 <= len && len <= 16);
     {   xxh_u64 const bitflipl = (XXH_readLE64(secret+32) ^ XXH_readLE64(secret+40)) - seed;
         xxh_u64 const bitfliph = (XXH_readLE64(secret+48) ^ XXH_readLE64(secret+56)) + seed;
@@ -4643,7 +4643,7 @@ XXH3_128bits_reset_internal(XXH3_state_t* statePtr,
 XXH_PUBLIC_API XXH_errorcode
 XXH3_128bits_reset(XXH3_state_t* statePtr)
 {
-    if (statePtr == NULL) return XXH_ERROR;
+    if (statePtr == nullptr) return XXH_ERROR;
     XXH3_128bits_reset_internal(statePtr, 0, XXH3_kSecret, XXH_SECRET_DEFAULT_SIZE);
     return XXH_OK;
 }
@@ -4651,9 +4651,9 @@ XXH3_128bits_reset(XXH3_state_t* statePtr)
 XXH_PUBLIC_API XXH_errorcode
 XXH3_128bits_reset_withSecret(XXH3_state_t* statePtr, const void* secret, size_t secretSize)
 {
-    if (statePtr == NULL) return XXH_ERROR;
+    if (statePtr == nullptr) return XXH_ERROR;
     XXH3_128bits_reset_internal(statePtr, 0, secret, secretSize);
-    if (secret == NULL) return XXH_ERROR;
+    if (secret == nullptr) return XXH_ERROR;
     if (secretSize < XXH3_SECRET_SIZE_MIN) return XXH_ERROR;
     return XXH_OK;
 }
@@ -4661,10 +4661,10 @@ XXH3_128bits_reset_withSecret(XXH3_state_t* statePtr, const void* secret, size_t
 XXH_PUBLIC_API XXH_errorcode
 XXH3_128bits_reset_withSeed(XXH3_state_t* statePtr, XXH64_hash_t seed)
 {
-    if (statePtr == NULL) return XXH_ERROR;
+    if (statePtr == nullptr) return XXH_ERROR;
     if (seed==0) return XXH3_128bits_reset(statePtr);
     if (seed != statePtr->seed) XXH3_initCustomSecret(statePtr->customSecret, seed);
-    XXH3_128bits_reset_internal(statePtr, seed, NULL, XXH_SECRET_DEFAULT_SIZE);
+    XXH3_128bits_reset_internal(statePtr, seed, nullptr, XXH_SECRET_DEFAULT_SIZE);
     return XXH_OK;
 }
 
@@ -4677,7 +4677,7 @@ XXH3_128bits_update(XXH3_state_t* state, const void* input, size_t len)
 
 XXH_PUBLIC_API XXH128_hash_t XXH3_128bits_digest (const XXH3_state_t* state)
 {
-    const unsigned char* const secret = (state->extSecret == NULL) ? state->customSecret : state->extSecret;
+    const unsigned char* const secret = (state->extSecret == nullptr) ? state->customSecret : state->extSecret;
     if (state->totalLen > XXH3_MIDSIZE_MAX) {
         XXH_ALIGN(XXH_ACC_ALIGN) XXH64_hash_t acc[XXH_ACC_NB];
         XXH3_digest_long(acc, state, secret);
