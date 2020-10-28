@@ -1178,6 +1178,7 @@ static bool isModuleCommonItem(SyntaxKind kind) {
         case SyntaxKind::IfGenerate:
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::ElabSystemTask:
+        case SyntaxKind::BindDirective:
             return true;
         default:
             return isModuleCommonDecl(kind);
@@ -1191,6 +1192,7 @@ bool SyntaxFacts::isAllowedInCompilationUnit(SyntaxKind kind) {
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration:
         case SyntaxKind::PackageDeclaration:
+        case SyntaxKind::BindDirective:
             return true;
         default:
             return isAllowedInPackage(kind);

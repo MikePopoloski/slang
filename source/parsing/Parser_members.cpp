@@ -136,8 +136,9 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
                 return &parseModule(attributes, parentKind, anyLocalModules);
         case TokenKind::ModPortKeyword:
             return &parseModportDeclaration(attributes);
-        case TokenKind::SpecParamKeyword:
         case TokenKind::BindKeyword:
+            return &parseBindDirective(attributes);
+        case TokenKind::SpecParamKeyword:
         case TokenKind::AliasKeyword:
         case TokenKind::CheckerKeyword:
         case TokenKind::SpecifyKeyword:
@@ -2027,6 +2028,30 @@ GateInstanceSyntax& Parser::parseGateInstance() {
         [this] { return &parseExpression(); });
 
     return factory.gateInstance(decl, openParen, items, closeParen);
+}
+
+BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
+    Token keyword = consume();
+    auto& target = parseName();
+
+    BindTargetListSyntax* targetInstances = nullptr;
+    if (peek(TokenKind::Colon)) {
+        auto colon = consume();
+
+        SmallVectorSized<TokenOrSyntax, 4> names;
+        while (true) {
+            names.append(&parseName());
+            if (!peek(TokenKind::Comma))
+                break;
+
+            names.append(consume());
+        }
+
+        targetInstances = &factory.bindTargetList(colon, names.copy(alloc));
+    }
+
+    auto& instantiation = parseHierarchyInstantiation({});
+    return factory.bindDirective(attr, keyword, target, targetInstances, instantiation);
 }
 
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {

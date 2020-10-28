@@ -281,6 +281,7 @@ private:
     TransListCoverageBinInitializerSyntax& parseTransListInitializer();
     ExpressionSyntax& parseSubExpression(bitmask<ExpressionOptions> options, int precedence);
     ExpressionSyntax& parsePrefixExpression(bitmask<ExpressionOptions> options, SyntaxKind opKind);
+    BindDirectiveSyntax& parseBindDirective(AttrList attributes);
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>

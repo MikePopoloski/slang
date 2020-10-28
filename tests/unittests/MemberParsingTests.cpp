@@ -467,3 +467,16 @@ endclass
     CHECK(diagnostics[0].code == diag::InvalidSuperNew);
     CHECK(diagnostics[1].code == diag::InvalidSuperNew);
 }
+
+TEST_CASE("Bind directive parsing") {
+    auto& text = R"(
+module m1 #(parameter int i)(input logic f);
+endmodule;
+
+bind targetScope.foo[3].bar m1 #(3) a(1);
+bind other: b1, $root.b1[1] m1 #(4) b(0);
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

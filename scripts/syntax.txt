@@ -1118,6 +1118,16 @@ ParameterValueAssignment? parameters
 separated_list<HierarchicalInstance> instances
 token semi
 
+BindTargetList kind=BindTargetList
+token colon
+separated_list<Name> targets
+
+BindDirective base=Member kind=BindDirective
+token bind
+Name target
+BindTargetList? targetInstances
+HierarchyInstantiation instantiation
+
 GateInstanceName kind=GateInstanceName
 token name
 list<VariableDimension> dimensions
