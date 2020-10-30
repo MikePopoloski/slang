@@ -162,6 +162,7 @@ public:
     /// Gets the index of the symbol within its parent scope, which can be used
     /// to determine the relative ordering of scope members.
     SymbolIndex getIndex() const { return indexInScope; }
+    void setIndex(SymbolIndex index) { indexInScope = index; }
 
     /// Sets the syntax that was used to create this symbol. Mostly called by
     /// various factory functions.

@@ -562,3 +562,18 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Non-ANSI I/O lookup location") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(a);
+    input a;
+    var integer c;
+    initial c = a; 
+    integer a;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
