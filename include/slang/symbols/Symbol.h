@@ -56,6 +56,7 @@ struct AttributeInstanceSyntax;
     x(Port) \
     x(InterfacePort) \
     x(Modport) \
+    x(ModportPort) \
     x(Instance) \
     x(InstanceBody) \
     x(InstanceArray) \

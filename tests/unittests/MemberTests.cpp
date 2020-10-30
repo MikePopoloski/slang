@@ -93,6 +93,7 @@ endpackage
 TEST_CASE("JSON dump") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
+    logic f;
     modport m(input f);
 endinterface
 
@@ -955,4 +956,21 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstVarNoInitializer);
+}
+
+TEST_CASE("Modport port lookup location") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic a;
+    modport m(input a, b);
+    logic b;
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
 }

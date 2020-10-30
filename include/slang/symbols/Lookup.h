@@ -50,9 +50,13 @@ enum class LookupFlags {
 
     /// The lookup is for a typedef target type, which has a special exemption
     /// to allow scoped access to incomplete forward class types.
-    TypedefTarget = 32
+    TypedefTarget = 32,
+
+    /// The lookup should not continue looking into parent scopes if the name
+    /// is not found in the initial search scope.
+    NoParentScope = 64
 };
-BITMASK(LookupFlags, TypedefTarget);
+BITMASK(LookupFlags, NoParentScope);
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.

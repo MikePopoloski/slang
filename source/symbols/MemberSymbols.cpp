@@ -656,20 +656,78 @@ void SubroutineSymbol::addThisVar(const Type& type) {
     addMember(*thisVar);
 }
 
+ModportPortSymbol::ModportPortSymbol(string_view name, SourceLocation loc,
+                                     PortDirection direction) :
+    Symbol(SymbolKind::ModportPort, name, loc),
+    direction(direction) {
+}
+
+ModportPortSymbol& ModportPortSymbol::fromSyntax(const Scope& parent, LookupLocation lookupLocation,
+                                                 PortDirection direction,
+                                                 const ModportNamedPortSyntax& syntax) {
+    auto& comp = parent.getCompilation();
+    auto name = syntax.name;
+    auto result = comp.emplace<ModportPortSymbol>(name.valueText(), name.location(), direction);
+    result->setSyntax(syntax);
+    result->internalSymbol = Lookup::unqualifiedAt(parent, name.valueText(), lookupLocation,
+                                                   name.range(), LookupFlags::NoParentScope);
+
+    return *result;
+}
+
+void ModportPortSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("direction", toString(direction));
+    if (internalSymbol)
+        serializer.writeLink("internalSymbol", *internalSymbol);
+}
+
 ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
     Symbol(SymbolKind::Modport, name, loc), Scope(compilation, this) {
 }
 
 void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSyntax& syntax,
+                               LookupLocation lookupLocation,
                                SmallVector<const ModportSymbol*>& results) {
     auto& comp = parent.getCompilation();
     for (auto item : syntax.items) {
-        // TODO: handle port list
-        auto name = item->name;
-        auto symbol = comp.emplace<ModportSymbol>(comp, name.valueText(), name.location());
-        symbol->setSyntax(*item);
-        symbol->setAttributes(parent, syntax.attributes);
-        results.append(symbol);
+        auto modport =
+            comp.emplace<ModportSymbol>(comp, item->name.valueText(), item->name.location());
+        modport->setSyntax(*item);
+        modport->setAttributes(parent, syntax.attributes);
+        results.append(modport);
+
+        for (auto port : item->ports->ports) {
+            switch (port->kind) {
+                case SyntaxKind::ModportSimplePortList: {
+                    auto& portList = port->as<ModportSimplePortListSyntax>();
+                    auto direction = SemanticFacts::getPortDirection(portList.direction.kind);
+                    for (auto simplePort : portList.ports) {
+                        switch (simplePort->kind) {
+                            case SyntaxKind::ModportNamedPort: {
+                                auto& mpp = ModportPortSymbol::fromSyntax(
+                                    parent, lookupLocation, direction,
+                                    simplePort->as<ModportNamedPortSyntax>());
+                                mpp.setAttributes(*modport, portList.attributes);
+                                modport->addMember(mpp);
+                                break;
+                            }
+                            case SyntaxKind::ModportExplicitPort:
+                                parent.addDiag(diag::NotYetSupported, simplePort->sourceRange());
+                                break;
+                            default:
+                                THROW_UNREACHABLE;
+                        }
+                    }
+                    break;
+                }
+                case SyntaxKind::ModportClockingPort:
+                case SyntaxKind::ModportSubroutinePortList:
+                    parent.addDiag(diag::NotYetSupported, port->sourceRange());
+                    break;
+                default:
+                    THROW_UNREACHABLE;
+            }
+        }
     }
 }
 

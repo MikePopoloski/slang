@@ -191,7 +191,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::GateInstantiation:
-        case SyntaxKind::ContinuousAssign: {
+        case SyntaxKind::ContinuousAssign:
+        case SyntaxKind::ModportDeclaration: {
             auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
             addMember(*sym);
             getOrAddDeferredData().addMember(sym);
@@ -201,13 +202,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             getOrAddDeferredData().addPortDeclaration(syntax.as<PortDeclarationSyntax>(),
                                                       lastMember);
             break;
-        case SyntaxKind::ModportDeclaration: {
-            SmallVectorSized<const ModportSymbol*, 16> results;
-            ModportSymbol::fromSyntax(*this, syntax.as<ModportDeclarationSyntax>(), results);
-            for (auto symbol : results)
-                addMember(*symbol);
-            break;
-        }
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration: {
             auto subroutine = SubroutineSymbol::fromSyntax(
@@ -654,6 +648,14 @@ void Scope::elaborate() const {
                                                    member.node.as<ContinuousAssignSyntax>(), *this,
                                                    location, symbols);
                 insertMembers(symbols, symbol);
+                break;
+            }
+            case SyntaxKind::ModportDeclaration: {
+                SmallVectorSized<const ModportSymbol*, 4> results;
+                LookupLocation location = LookupLocation::before(*symbol);
+                ModportSymbol::fromSyntax(*this, member.node.as<ModportDeclarationSyntax>(),
+                                          location, results);
+                insertMembers(results, symbol);
                 break;
             }
             default:
