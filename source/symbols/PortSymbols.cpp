@@ -149,6 +149,7 @@ public:
                         auto& diag = scope.addDiag(diag::NotAModport, member.range());
                         diag << modport;
                         diag << def->name;
+                        modport = {};
                     }
                 }
 

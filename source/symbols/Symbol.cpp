@@ -166,6 +166,19 @@ optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
     return std::nullopt;
 }
 
+const Definition* Symbol::getDeclaringDefinition() const {
+    auto curr = this;
+    while (curr->kind != SymbolKind::InstanceBody) {
+        auto scope = curr->getParentScope();
+        if (!scope)
+            return nullptr;
+
+        curr = &scope->asSymbol();
+    }
+
+    return &curr->as<InstanceBodySymbol>().getDefinition();
+}
+
 void Symbol::setAttributes(const Scope& scope, span<const AttributeInstanceSyntax* const> syntax) {
     if (syntax.empty())
         return;
@@ -195,6 +208,7 @@ bool ValueSymbol::isKind(SymbolKind kind) {
         case SymbolKind::EnumValue:
         case SymbolKind::Parameter:
         case SymbolKind::Port:
+        case SymbolKind::ModportPort:
             return true;
         default:
             return VariableSymbol::isKind(kind);

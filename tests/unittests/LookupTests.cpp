@@ -1456,3 +1456,34 @@ endmodule
     CHECK(diags[0].code == diag::ValueMustNotBeUnknown);
     CHECK(diags[1].code == diag::GenvarUnknownBits);
 }
+
+TEST_CASE("Modport lookup restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic f;
+    logic g;
+    parameter int foo = 1;
+    typedef int type_t;
+    modport m(input f, type_t);
+endinterface
+
+module m(I.m i);
+    logic a = i.f;
+    logic b = i.g;
+    logic c = i.foo;
+endmodule
+
+module top;
+    I i();
+    m m1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NotAllowedInModport);
+    CHECK(diags[1].code == diag::InvalidModportAccess);
+}

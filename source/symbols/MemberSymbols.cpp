@@ -658,7 +658,7 @@ void SubroutineSymbol::addThisVar(const Type& type) {
 
 ModportPortSymbol::ModportPortSymbol(string_view name, SourceLocation loc,
                                      PortDirection direction) :
-    Symbol(SymbolKind::ModportPort, name, loc),
+    ValueSymbol(SymbolKind::ModportPort, name, loc),
     direction(direction) {
 }
 
@@ -671,6 +671,21 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const Scope& parent, LookupLoca
     result->setSyntax(syntax);
     result->internalSymbol = Lookup::unqualifiedAt(parent, name.valueText(), lookupLocation,
                                                    name.range(), LookupFlags::NoParentScope);
+
+    // TODO: decide whether subroutines should be handled specially here once they
+    // are supported at all in modports.
+    if (result->internalSymbol &&
+        (!SemanticFacts::isAllowedInModport(result->internalSymbol->kind) ||
+         result->internalSymbol->kind == SymbolKind::Subroutine)) {
+        parent.addDiag(diag::NotAllowedInModport, name.range()) << name.valueText();
+        result->internalSymbol = nullptr;
+    }
+
+    if (result->internalSymbol) {
+        auto sourceType = result->internalSymbol->getDeclaredType();
+        ASSERT(sourceType);
+        result->getDeclaredType()->copyTypeFrom(*sourceType);
+    }
 
     return *result;
 }

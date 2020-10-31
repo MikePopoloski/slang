@@ -222,4 +222,15 @@ void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
     // TODO: error if inferred timescale is invalid (because precision > units)
 }
 
+bool SemanticFacts::isAllowedInModport(SymbolKind kind) {
+    switch (kind) {
+        case SymbolKind::Net:
+        case SymbolKind::Variable:
+        case SymbolKind::Subroutine:
+            return true;
+        default:
+            return false;
+    }
+}
+
 } // namespace slang

@@ -14,6 +14,7 @@
 namespace slang {
 
 class Scope;
+enum class SymbolKind;
 struct BlockStatementSyntax;
 struct TimeUnitsDeclarationSyntax;
 
@@ -142,6 +143,8 @@ public:
     static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
                                   optional<TimeScale> directiveTimeScale, bool hasBase,
                                   bool hasPrecision);
+
+    static bool isAllowedInModport(SymbolKind kind);
 
 private:
     SemanticFacts() = default;

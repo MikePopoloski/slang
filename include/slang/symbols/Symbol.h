@@ -15,6 +15,7 @@ namespace slang {
 
 class ASTSerializer;
 class Compilation;
+class Definition;
 class Scope;
 class Type;
 struct AttributeInstanceSyntax;
@@ -139,6 +140,10 @@ public:
     /// compilation unit as this one, returns std::nullopt.
     optional<bool> isDeclaredBefore(const Symbol& symbol) const;
     optional<bool> isDeclaredBefore(LookupLocation location) const;
+
+    /// Gets the definition in which this symbol is declared. If the symbol isn't
+    /// declared in a definition, returns nullptr.
+    const Definition* getDeclaringDefinition() const;
 
     void setAttributes(const Scope& scope, span<const AttributeInstanceSyntax* const> syntax);
 

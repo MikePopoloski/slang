@@ -150,8 +150,8 @@ module m6(I.bar bar); endmodule
     checkIfacePort("m3", "k", "K", "");
     checkWirePort("m3", "w", PortDirection::InOut, wire, "logic");
     checkWirePort("m4", "v", PortDirection::Out, nullptr, "logic");
-    checkIfacePort("m5", "a1", "J", "foo");
-    checkIfacePort("m5", "a2", "K", "f");
+    checkIfacePort("m5", "a1", "J", "");
+    checkIfacePort("m5", "a2", "K", "");
     checkIfacePort("m6", "bar", "I", "bar");
 
     auto& diags = compilation.getAllDiagnostics();

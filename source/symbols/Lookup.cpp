@@ -230,11 +230,14 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
             }
         }
 
+        string_view modportName;
         if (symbol->kind == SymbolKind::InterfacePort) {
-            // TODO: modports
-            symbol = symbol->as<InterfacePortSymbol>().getConnection();
+            auto& ifacePort = symbol->as<InterfacePortSymbol>();
+            symbol = ifacePort.getConnection();
             if (!symbol)
                 return false;
+
+            modportName = ifacePort.modport;
         }
 
         if ((!symbol->isScope() && symbol->kind != SymbolKind::Instance) || symbol->isType()) {
@@ -267,16 +270,53 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         if (symbol->kind == SymbolKind::Instance)
             symbol = &symbol->as<InstanceSymbol>().body;
 
+        // If there is a modport name restricting our lookup, translate to that
+        // modport's scope now.
+        if (!modportName.empty()) {
+            symbol = symbol->as<Scope>().find(modportName);
+            if (!symbol)
+                return false;
+        }
+
         name = *it->name;
         if (name.text().empty())
             return false;
 
-        SymbolKind previousKind = symbol->kind;
-        symbol = symbol->as<Scope>().find(name.text());
+        auto& scope = symbol->as<Scope>();
+        symbol = scope.find(name.text());
         if (!symbol) {
+            // If we did the lookup in a modport, check to see if the symbol actually
+            // exists in the parent interface.
+            auto& prevSym = scope.asSymbol();
+            if (prevSym.kind == SymbolKind::Modport) {
+                symbol = prevSym.getParentScope()->find(name.text());
+                if (symbol) {
+                    // Variables, nets, subroutines can only be accessed via the modport.
+                    // Other symbols aren't permitted in a modport, so they are allowed
+                    // to be accessed through it as if we had accessed the interface
+                    // instance itself.
+                    if (SemanticFacts::isAllowedInModport(symbol->kind)) {
+                        // This is an error, the modport disallows access.
+                        auto def = prevSym.getDeclaringDefinition();
+                        ASSERT(def);
+
+                        auto& diag =
+                            result.addDiag(context.scope, diag::InvalidModportAccess, name.range());
+                        diag << name.text();
+                        diag << def->name;
+                        diag << prevSym.name;
+                        return false;
+                    }
+                    else {
+                        // This is fine, we found what we needed.
+                        continue;
+                    }
+                }
+            }
+
             // Give a slightly nicer error if this is a compilation unit lookup.
             DiagCode code = diag::CouldNotResolveHierarchicalPath;
-            if (previousKind == SymbolKind::CompilationUnit)
+            if (prevSym.kind == SymbolKind::CompilationUnit)
                 code = diag::UnknownUnitMember;
 
             auto& diag = result.addDiag(context.scope, code, it->dotLocation);

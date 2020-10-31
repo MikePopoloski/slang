@@ -175,7 +175,7 @@ private:
 struct ModportNamedPortSyntax;
 
 /// Represents a single port specifier in a modport declaration.
-class ModportPortSymbol : public Symbol {
+class ModportPortSymbol : public ValueSymbol {
 public:
     /// The direction of data flowing across the port.
     PortDirection direction = PortDirection::InOut;
