@@ -813,10 +813,13 @@ private:
             scope.getCompilation().addDiagnostics(result.getDiagnostics());
 
         // If we found the interface but it's actually a port, unwrap to the target connection.
-        // TODO: check this
         const Symbol* symbol = result.found;
+        string_view modport;
         if (symbol && symbol->kind == SymbolKind::InterfacePort) {
-            symbol = symbol->as<InterfacePortSymbol>().getConnection();
+            auto& ifacePort = symbol->as<InterfacePortSymbol>();
+            modport = ifacePort.modport;
+
+            symbol = ifacePort.getConnection();
             if (symbol && !result.selectors.empty()) {
                 SmallVectorSized<const ElementSelectSyntax*, 4> selectors;
                 for (auto& sel : result.selectors)
@@ -829,7 +832,7 @@ private:
 
         const Symbol* conn = nullptr;
         if (symbol)
-            conn = getInterface(port, symbol, expr->sourceRange());
+            conn = getInterface(port, symbol, modport, expr->sourceRange());
 
         return createConnection(port, conn, attributes);
     }
@@ -848,7 +851,7 @@ private:
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
         }
 
-        auto conn = getInterface(port, symbol, range);
+        auto conn = getInterface(port, symbol, {}, range);
         return createConnection(port, conn, attributes);
     }
 
@@ -865,13 +868,18 @@ private:
     }
 
     const Symbol* getInterface(const InterfacePortSymbol& port, const Symbol* symbol,
-                               SourceRange range) {
+                               string_view providedModport, SourceRange range) {
         if (!port.interfaceDef)
             return nullptr;
 
         // If the symbol is another port, unwrap it now.
         if (symbol->kind == SymbolKind::InterfacePort) {
-            symbol = symbol->as<InterfacePortSymbol>().getConnection();
+            // Should be impossible to already have a modport specified here.
+            ASSERT(providedModport.empty());
+
+            auto& ifacePort = symbol->as<InterfacePortSymbol>();
+            providedModport = ifacePort.modport;
+            symbol = ifacePort.getConnection();
             if (!symbol)
                 return nullptr;
         }
@@ -910,6 +918,13 @@ private:
         auto portDims = port.getDeclaredRange();
         if (!portDims)
             return nullptr;
+
+        // If a modport was provided and our port requires a modport, make sure they match.
+        if (!providedModport.empty() && !port.modport.empty() && providedModport != port.modport) {
+            auto& diag = scope.addDiag(diag::ModportConnMismatch, range);
+            diag << connDef->name << providedModport;
+            diag << port.interfaceDef->name << port.modport;
+        }
 
         // If the dimensions match exactly what the port is expecting make the connection.
         if (areDimSizesEqual(*portDims, dims))

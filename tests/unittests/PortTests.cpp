@@ -577,3 +577,30 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Modport conn mismatches") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    wire a, b;
+    modport m(input a);
+    modport n(input b);
+endinterface
+
+module m(I.m conn);
+    n n1(conn);
+    n n2(.conn);
+endmodule
+
+module n(I.n conn);
+endmodule
+
+module top;
+    I i();
+    m m1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
