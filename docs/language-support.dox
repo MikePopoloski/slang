@@ -346,12 +346,14 @@ LRM | Feature | Supported
 --- | ------- | ---------
 {{m-success}} 25.3 | Interface syntax | v0.2
 {{m-success}} 25.4 | Ports in interfaces | v0.2
-{{m-warning}} 25.5 | Modports | partial
+{{m-success}} 25.5 | Modports | v0.6
+{{m-danger}}  25.5.4 | Modport expressions | no
+{{m-danger}}  25.5.5 | Clocking blocks and modports | no
 {{m-danger}}  25.6 | Interfaces and specify blocks | no
 {{m-warning}} 25.7 | Tasks and functions in interfaces | partial
 {{m-success}} 25.8 | Parameterized interfaces | v0.2
 {{m-danger}}  25.9 | Virtual interfaces | no
-{{m-warning}} 25.10 | Access to interface objects | partial
+{{m-success}} 25.10 | Access to interface objects | v0.6
 
 ## 26. Packages
 
