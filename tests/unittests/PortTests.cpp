@@ -602,5 +602,47 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ModportConnMismatch);
+    CHECK(diags[1].code == diag::ModportConnMismatch);
+}
+
+TEST_CASE("External modport connection") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    wire a, b;
+    modport m(input a);
+    modport n(input b);
+endinterface
+
+module m(I.m conn);
+endmodule
+
+module n(I.n conn);
+endmodule
+
+module o(I conn);
+    m m2(conn);
+    logic foo = conn.a;
+endmodule
+
+module top;
+    I i();
+    m m1(i.m);
+    n n1(i.m); // error
+    o o1(i.m);
+    o o2(i.n); // error because of access inside o
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ModportConnMismatch);
+    CHECK(diags[1].code == diag::InvalidModportAccess);
+    CHECK(diags[2].code == diag::ModportConnMismatch);
 }

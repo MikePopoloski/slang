@@ -22,7 +22,8 @@ public:
     InstanceCacheKey(const Definition& def, span<const ConstantValue* const> paramValues,
                      span<const Type* const> typeParams);
 
-    void setInterfacePortKeys(span<const InstanceCacheKey* const> keys);
+    using IfacePortEntry = std::pair<const InstanceCacheKey*, string_view>;
+    void setInterfacePortKeys(span<const IfacePortEntry> keys);
 
     const Definition& getDefinition() const { return *definition; }
     size_t hash() const { return savedHash; }
@@ -36,7 +37,7 @@ private:
     const Definition* definition;
     span<const ConstantValue* const> paramValues;
     span<const Type* const> typeParams;
-    span<const InstanceCacheKey* const> interfacePorts;
+    span<const IfacePortEntry> interfacePorts;
     size_t savedHash;
 };
 

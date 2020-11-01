@@ -22,15 +22,17 @@ InstanceCacheKey::InstanceCacheKey(const Definition& def,
     computeHash();
 }
 
-void InstanceCacheKey::setInterfacePortKeys(span<const InstanceCacheKey* const> keys) {
+void InstanceCacheKey::setInterfacePortKeys(span<const IfacePortEntry> keys) {
     // If we previously has interface ports set, we need to back out their
     // contribution to the hash.
     if (!interfacePorts.empty())
         computeHash();
 
     interfacePorts = keys;
-    for (auto key : keys)
-        hash_combine(savedHash, key->hash());
+    for (auto& key : keys) {
+        hash_combine(savedHash, key.first->hash());
+        hash_combine(savedHash, std::hash<string_view>()(key.second));
+    }
 }
 
 void InstanceCacheKey::computeHash() {
@@ -81,9 +83,7 @@ bool InstanceCacheKey::operator==(const InstanceCacheKey& other) const {
 
     for (auto lit = interfacePorts.begin(), rit = other.interfacePorts.begin();
          lit != interfacePorts.end(); lit++, rit++) {
-        const InstanceCacheKey* l = *lit;
-        const InstanceCacheKey* r = *rit;
-        if (*l != *r)
+        if (*lit != *rit)
             return false;
     }
 

@@ -57,7 +57,7 @@ private:
         // Find all port connections to interface instances so we can
         // extract their cache keys.
         auto& def = cacheKeyBase.getDefinition();
-        SmallVectorSized<const InstanceCacheKey*, 8> ifaceKeys;
+        SmallVectorSized<std::pair<const InstanceCacheKey*, string_view>, 8> ifaceKeys;
         InterfacePortSymbol::findInterfaceInstanceKeys(context.scope, def, syntax.connections,
                                                        ifaceKeys);
 

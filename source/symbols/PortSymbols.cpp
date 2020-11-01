@@ -872,6 +872,43 @@ private:
         if (!port.interfaceDef)
             return nullptr;
 
+        auto portDims = port.getDeclaredRange();
+        if (!portDims)
+            return nullptr;
+
+        // The user can explicitly connect a modport symbol.
+        if (symbol->kind == SymbolKind::Modport) {
+            // Interface that owns the modport must match our expected interface.
+            auto connDef = symbol->getDeclaringDefinition();
+            ASSERT(connDef);
+            if (connDef != port.interfaceDef) {
+                // TODO: print the potentially nested name path instead of the simple name
+                auto& diag = scope.addDiag(diag::InterfacePortTypeMismatch, range);
+                diag << connDef->name << port.interfaceDef->name;
+                diag.addNote(diag::NoteDeclarationHere, port.location);
+                return nullptr;
+            }
+
+            // Modport must match the specified requirement, if we have one.
+            ASSERT(providedModport.empty());
+            if (!port.modport.empty() && symbol->name != port.modport) {
+                auto& diag = scope.addDiag(diag::ModportConnMismatch, range);
+                diag << connDef->name << symbol->name;
+                diag << port.interfaceDef->name << port.modport;
+                return nullptr;
+            }
+
+            // Make sure the port doesn't require an array.
+            if (!portDims->empty()) {
+                auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, range) << port.name;
+                diag.addNote(diag::NoteDeclarationHere, port.location);
+                return nullptr;
+            }
+
+            // Everything checks out. Connect to the modport.
+            return symbol;
+        }
+
         // If the symbol is another port, unwrap it now.
         if (symbol->kind == SymbolKind::InterfacePort) {
             // Should be impossible to already have a modport specified here.
@@ -915,15 +952,12 @@ private:
             return nullptr;
         }
 
-        auto portDims = port.getDeclaredRange();
-        if (!portDims)
-            return nullptr;
-
         // If a modport was provided and our port requires a modport, make sure they match.
         if (!providedModport.empty() && !port.modport.empty() && providedModport != port.modport) {
             auto& diag = scope.addDiag(diag::ModportConnMismatch, range);
             diag << connDef->name << providedModport;
             diag << port.interfaceDef->name << port.modport;
+            return nullptr;
         }
 
         // If the dimensions match exactly what the port is expecting make the connection.
@@ -1092,7 +1126,7 @@ const Symbol* InterfacePortSymbol::getConnection() const {
 void InterfacePortSymbol::findInterfaceInstanceKeys(
     const Scope& scope, const Definition& definition,
     const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
-    SmallVector<const InstanceCacheKey*>& results) {
+    SmallVector<std::pair<const InstanceCacheKey*, string_view>>& results) {
 
     // This method only tries to find an interface instance connection for each
     // provided interface port. We don't bother trying to diagnose errors, that
@@ -1119,7 +1153,12 @@ void InterfacePortSymbol::findInterfaceInstanceKeys(
         }
 
         if (symbol->kind == SymbolKind::Instance)
-            results.append(&symbol->as<InstanceSymbol>().body.getCacheKey());
+            results.emplace(&symbol->as<InstanceSymbol>().body.getCacheKey(), string_view());
+        else if (symbol->kind == SymbolKind::Modport) {
+            auto& parent = symbol->getParentScope()->asSymbol();
+            if (parent.kind == SymbolKind::InstanceBody)
+                results.emplace(&parent.as<InstanceBodySymbol>().getCacheKey(), symbol->name);
+        }
     };
 
     auto findIface = [&](const ExpressionSyntax& syntax) {

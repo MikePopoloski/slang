@@ -79,7 +79,7 @@ public:
     static void findInterfaceInstanceKeys(
         const Scope& scope, const Definition& definition,
         const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
-        SmallVector<const InstanceCacheKey*>& results);
+        SmallVector<std::pair<const InstanceCacheKey*, string_view>>& results);
 
 private:
     mutable optional<span<const ConstantRange>> range;
