@@ -116,24 +116,27 @@ public:
     /// Gets the EndOfFile token, if one has been consumed. Otherwise returns an empty token.
     Token getEOFToken();
 
-    /// Collection of metadata that can be associated with a syntax node at parse time.
-    struct NodeMetadata {
-        TokenKind defaultNetType;
-        TokenKind unconnectedDrive;
-        optional<TimeScale> timeScale;
+    /// Various metadata collected during parsing.
+    struct Metadata {
+        /// Collection of metadata that can be associated with a syntax node at parse time.
+        struct Node {
+            TokenKind defaultNetType;
+            TokenKind unconnectedDrive;
+            optional<TimeScale> timeScale;
+        };
+
+        /// Specific metadata that was in effect when certain syntax nodes were parsed
+        /// (such as various bits of preprocessor state).
+        flat_hash_map<const SyntaxNode*, Node> nodeMap;
+
+        /// A set of names of all instantiations of global modules/interfaces/programs.
+        /// This can be used to determine which modules should be considered as top-level
+        /// roots of the design.
+        flat_hash_set<string_view> globalInstances;
     };
-    using MetadataMap = flat_hash_map<const SyntaxNode*, NodeMetadata>;
 
-    /// Gets metadata that was in effect when certain syntax nodes were parsed (such as various
-    /// bits of preprocessor state).
-    MetadataMap&& getMetadataMap() { return std::move(metadataMap); }
-
-    using NameSet = flat_hash_set<string_view>;
-
-    /// Gets a set of names of all instantiations of global modules/interfaces/programs.
-    /// This can be used to determine which modules should be considered as top-level
-    /// roots of the design.
-    NameSet&& getGlobalInstantiations() { return std::move(globalInstances); }
+    /// Gets the current set of metadata collected during parsing.
+    Metadata&& getMetadata() { return std::move(meta); }
 
 private:
     using ExpressionOptions = detail::ExpressionOptions;
@@ -360,8 +363,8 @@ private:
     // Stored parse options.
     ParserOptions parseOptions;
 
-    // Map of metadata for previously parsed nodes.
-    MetadataMap metadataMap;
+    // Various metadata collected during parsing.
+    Metadata meta;
 
     // Helper class for parsing out numeric literals.
     NumberParser numberParser;
@@ -370,12 +373,7 @@ private:
     // A stack of names of modules declared locally within the given scope.
     // This is used to detect and ignore instantiations of local modules when
     // trying to find the set of globally instantiated modules.
-    SmallVectorSized<NameSet, 4> moduleDeclStack;
-
-    // The names of all globally instantiated modules/interfaces/programs that
-    // the parser has found. This is later used to determine which modules should
-    // be considered as roots of the design.
-    NameSet globalInstances;
+    SmallVectorSized<flat_hash_set<string_view>, 4> moduleDeclStack;
 
     // The current depth of recursion in the parser.
     size_t recursionDepth = 0;

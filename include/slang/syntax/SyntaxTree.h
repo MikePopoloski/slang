@@ -109,14 +109,8 @@ public:
     /// the lifetime of the child tree.
     const SyntaxTree* getParentTree() const { return parentTree.get(); }
 
-    /// Gets metadata that was in effect when various syntax nodes were parsed
-    /// (this includes bits of preprocessor state like the current timescale or default nettype).
-    const Parser::MetadataMap& getMetadataMap() const { return metadataMap; }
-
-    /// Gets a set of names of all instantiations of global modules/interfaces/programs.
-    /// This can be used to determine which modules should be considered as top-level
-    /// roots of the design.
-    const Parser::NameSet& getGlobalInstantiations() const { return globalInstantiations; }
+    /// Gets various bits of metadata collected during parsing.
+    const Parser::Metadata& getMetadata() const { return metadata; }
 
     /// This is a shared default source manager for cases where the user doesn't
     /// care about managing the lifetime of loaded source. Note that all of
@@ -126,8 +120,7 @@ public:
 
 private:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap,
-               Parser::NameSet&& globalInstantiations, Bag options, Token eof);
+               Diagnostics&& diagnostics, Parser::Metadata&& metadata, Bag options, Token eof);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
                                               span<const SourceBuffer> source, const Bag& options,
@@ -135,8 +128,7 @@ private:
 
     SyntaxNode* rootNode;
     SourceManager& sourceMan;
-    Parser::MetadataMap metadataMap;
-    Parser::NameSet globalInstantiations;
+    Parser::Metadata metadata;
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
     Bag options_;

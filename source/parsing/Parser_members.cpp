@@ -53,7 +53,7 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind par
     }
 
     SyntaxKind declKind = getModuleDeclarationKind(header.moduleKeyword.kind);
-    NodeMetadata meta{ pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale() };
+    Metadata::Node node{ pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale() };
 
     Token endmodule;
     auto members = parseMemberList<MemberSyntax>(
@@ -69,7 +69,7 @@ ModuleDeclarationSyntax& Parser::parseModule(AttrList attributes, SyntaxKind par
     auto& result =
         factory.moduleDeclaration(declKind, attributes, header, members, endmodule, endName);
 
-    metadataMap[&result] = meta;
+    meta.nodeMap[&result] = node;
     return result;
 }
 
@@ -1964,7 +1964,7 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
             }
         }
         if (!found)
-            globalInstances.emplace(name);
+            meta.globalInstances.emplace(name);
     }
 
     Token semi;

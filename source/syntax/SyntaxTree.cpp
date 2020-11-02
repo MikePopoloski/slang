@@ -62,11 +62,10 @@ SourceManager& SyntaxTree::getDefaultSourceManager() {
 }
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-                       Diagnostics&& diagnostics, Parser::MetadataMap&& metadataMap,
-                       Parser::NameSet&& globalInstantiations, Bag options, Token eof) :
+                       Diagnostics&& diagnostics, Parser::Metadata&& metadata, Bag options,
+                       Token eof) :
     rootNode(root),
-    sourceMan(sourceManager), metadataMap(std::move(metadataMap)),
-    globalInstantiations(std::move(globalInstantiations)), alloc(std::move(alloc)),
+    sourceMan(sourceManager), metadata(std::move(metadata)), alloc(std::move(alloc)),
     diagnosticsBuffer(std::move(diagnostics)), options_(std::move(options)), eof(eof) {
 }
 
@@ -91,9 +90,9 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
             return create(sourceManager, sources, options, false);
     }
 
-    return std::shared_ptr<SyntaxTree>(new SyntaxTree(
-        root, sourceManager, std::move(alloc), std::move(diagnostics), parser.getMetadataMap(),
-        parser.getGlobalInstantiations(), options, parser.getEOFToken()));
+    return std::shared_ptr<SyntaxTree>(new SyntaxTree(root, sourceManager, std::move(alloc),
+                                                      std::move(diagnostics), parser.getMetadata(),
+                                                      options, parser.getEOFToken()));
 }
 
 } // namespace slang

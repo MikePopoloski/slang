@@ -316,7 +316,7 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     root->addMember(*unit);
     compilationUnits.push_back(unit);
 
-    for (auto& [n, meta] : tree->getMetadataMap()) {
+    for (auto& [n, meta] : tree->getMetadata().nodeMap) {
         auto decl = &n->as<ModuleDeclarationSyntax>();
         DefinitionMetadata result;
         result.defaultNetType = &getNetType(meta.defaultNetType);
@@ -337,7 +337,7 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         definitionMetadata[decl] = result;
     }
 
-    for (auto& name : tree->getGlobalInstantiations())
+    for (auto& name : tree->getMetadata().globalInstances)
         globalInstantiations.emplace(name);
 
     if (node.kind == SyntaxKind::CompilationUnit) {
