@@ -401,6 +401,14 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
             return *result;
         }
 
+        // Direction must match.
+        if (da->direction != pa->direction) {
+            auto& diag = parent.addDiag(diag::MethodArgDirectionMismatch, da->location);
+            diag << da->name;
+            diag.addNote(diag::NoteDeclarationHere, pa->location);
+            return *result;
+        }
+
         // If the definition provides a default value for an argument, the prototype
         // must also have that default, and they must be identical expressions.
         // If the definition does't provide a default but the prototype does, copy
@@ -547,6 +555,14 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
         if (!dt.isMatching(pt) && !dt.isError() && !pt.isError()) {
             auto& diag = scope.addDiag(diag::VirtualArgTypeMismatch, da->location);
             diag << da->name << dt << pt;
+            diag.addNote(diag::NoteDeclarationHere, pa->location);
+            return;
+        }
+
+        // Direction must match.
+        if (da->direction != pa->direction) {
+            auto& diag = scope.addDiag(diag::VirtualArgDirectionMismatch, da->location);
+            diag << da->name;
             diag.addNote(diag::NoteDeclarationHere, pa->location);
             return;
         }

@@ -532,6 +532,7 @@ class C;
     extern function int f5(int bar);
     extern function int f6(int bar = 1 + 1);
     extern function int f7(int bar = 1 + 1 + 2);
+    extern function int f8(output logic bar);
 endclass
 
 function real C::f1;
@@ -586,13 +587,16 @@ endfunction
 
 function int F::baz;
 endfunction
+
+function int C::f8(logic bar);
+endfunction
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 13);
+    REQUIRE(diags.size() == 14);
     CHECK(diags[0].code == diag::MethodReturnMismatch);
     CHECK(diags[1].code == diag::MethodArgCountMismatch);
     CHECK(diags[2].code == diag::MethodArgNameMismatch);
@@ -606,6 +610,7 @@ endfunction
     CHECK(diags[10].code == diag::UndeclaredIdentifier);
     CHECK(diags[11].code == diag::NotAClass);
     CHECK(diags[12].code == diag::NoMethodInClass);
+    CHECK(diags[13].code == diag::MethodArgDirectionMismatch);
 }
 
 TEST_CASE("Out-of-block default value") {
@@ -973,19 +978,24 @@ endclass
 class H extends A;
     function void bar(real a); endfunction
 endclass
+
+class I extends A;
+    function void bar(output int a); endfunction
+endclass
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::VirtualReturnMismatch);
     CHECK(diags[1].code == diag::VirtualArgNameMismatch);
     CHECK(diags[2].code == diag::VirtualArgCountMismatch);
     CHECK(diags[3].code == diag::VirtualArgNoDerivedDefault);
     CHECK(diags[4].code == diag::VirtualArgNoParentDefault);
     CHECK(diags[5].code == diag::VirtualArgTypeMismatch);
+    CHECK(diags[6].code == diag::VirtualArgDirectionMismatch);
 }
 
 TEST_CASE("Virtual method with derived return type") {
