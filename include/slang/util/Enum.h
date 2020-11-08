@@ -119,6 +119,9 @@ public:
     constexpr bitmask() noexcept = default;
     constexpr bitmask(T value) noexcept : m_bits{ static_cast<underlying_type>(value) } {}
 
+    /// Returns true iff (*this & r) != 0.
+    constexpr bool has(const bitmask& r) const noexcept { return (*this & r) != 0; }
+
     /// @return the underlying integer value containing the combined flags.
     constexpr underlying_type bits() const noexcept { return m_bits; }
 

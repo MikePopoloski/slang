@@ -362,8 +362,9 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     while (true) {
         if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
-            auto& proto = parseFunctionPrototype(SyntaxKind::Unknown, /* allowEmptyNames */ true,
-                                                 /* allowTasks */ true);
+            auto& proto =
+                parseFunctionPrototype(SyntaxKind::Unknown, FunctionOptions::AllowEmptyArgNames |
+                                                                FunctionOptions::AllowTasks);
             buffer.append(&factory.modportSubroutinePort(proto));
         }
         else {
@@ -515,17 +516,19 @@ static bool checkSubroutineName(const NameSyntax& name) {
     return checkKind(name);
 }
 
-FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind, bool allowEmptyNames,
-                                                        bool allowTasks, bool* isConstructor) {
+FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
+                                                        bitmask<FunctionOptions> options,
+                                                        bool* isConstructor) {
     Token keyword;
-    if (allowTasks && peek(TokenKind::TaskKeyword))
+    if (options.has(FunctionOptions::AllowTasks) && peek(TokenKind::TaskKeyword))
         keyword = consume();
     else
         keyword = expect(TokenKind::FunctionKeyword);
 
     auto lifetime = parseLifetime();
 
-    // check for a return type here
+    // Return type is optional for function declarations, and should not be given
+    // for tasks and constructors (we'll check that below).
     DataTypeSyntax* returnType = nullptr;
     uint32_t index = 0;
     if (!scanQualifiedName(index, /* allowNew */ true))
@@ -560,7 +563,12 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind, b
              parentKind != SyntaxKind::ClassDeclaration) {
         addDiag(diag::ConstructorOutsideClass, keyword.location()) << name.sourceRange();
     }
+    else if (!constructor && !options.has(FunctionOptions::AllowImplicitReturn) &&
+             returnType->kind == SyntaxKind::ImplicitType) {
+        addDiag(diag::ImplicitNotAllowed, name.getFirstToken().location());
+    }
 
+    const bool allowEmptyNames = options.has(FunctionOptions::AllowEmptyArgNames);
     FunctionPortListSyntax* portList = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
         auto openParen = consume();
@@ -583,8 +591,10 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
                                                             SyntaxKind parentKind) {
     Token end;
     bool isConstructor;
-    auto& prototype = parseFunctionPrototype(parentKind, /* allowEmptyNames */ false,
-                                             /* allowTasks */ true, &isConstructor);
+    auto& prototype = parseFunctionPrototype(
+        parentKind, FunctionOptions::AllowImplicitReturn | FunctionOptions::AllowTasks,
+        &isConstructor);
+
     auto semi = expect(TokenKind::Semicolon);
     auto items = parseBlockItems(endKind, end, isConstructor);
     auto endBlockName = parseNamedBlockClause();
@@ -1083,8 +1093,8 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
 
         // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
-            auto& proto = parseFunctionPrototype(
-                SyntaxKind::ClassDeclaration, /* allowEmptyNames */ false, /* allowTasks */ true);
+            auto& proto =
+                parseFunctionPrototype(SyntaxKind::ClassDeclaration, FunctionOptions::AllowTasks);
             checkProto(proto);
 
             if (proto.name->kind == SyntaxKind::ScopedName)
@@ -1713,8 +1723,11 @@ DPIImportExportSyntax& Parser::parseDPIImportExport(AttrList attributes) {
         equals = expect(TokenKind::Equals);
     }
 
-    auto& method = parseFunctionPrototype(SyntaxKind::Unknown, /* allowEmptyNames */ true,
-                                          /* allowTasks */ property.kind != TokenKind::PureKeyword);
+    bitmask<FunctionOptions> options = FunctionOptions::AllowEmptyArgNames;
+    if (property.kind != TokenKind::PureKeyword)
+        options |= FunctionOptions::AllowTasks;
+
+    auto& method = parseFunctionPrototype(SyntaxKind::Unknown, options);
     auto semi = expect(TokenKind::Semicolon);
     return factory.dPIImportExport(attributes, keyword, stringLiteral, property, name, equals,
                                    method, semi);

@@ -77,6 +77,22 @@ enum class TypeOptions {
 };
 BITMASK(TypeOptions, AllowVoid);
 
+/// Various options for parsing functions.
+enum class FunctionOptions {
+    /// No special options specified.
+    None = 0,
+
+    /// Allow tasks (as opposed to just functions).
+    AllowTasks = 1,
+
+    /// Allow formal argument names to be ommitted.
+    AllowEmptyArgNames = 2,
+
+    /// Allow the return type to be ommitted.
+    AllowImplicitReturn = 4
+};
+BITMASK(FunctionOptions, AllowImplicitReturn);
+
 } // namespace detail
 
 /// Contains various options that can control parsing behavior.
@@ -142,6 +158,7 @@ private:
     using ExpressionOptions = detail::ExpressionOptions;
     using NameOptions = detail::NameOptions;
     using TypeOptions = detail::TypeOptions;
+    using FunctionOptions = detail::FunctionOptions;
     using AttrList = span<AttributeInstanceSyntax*>;
 
     // ---- Recursive-descent parsing routines, by syntax type ----
@@ -249,7 +266,7 @@ private:
     GateInstanceSyntax& parseGateInstance();
     PortConnectionSyntax& parsePortConnection();
     FunctionPortSyntax& parseFunctionPort(bool allowEmptyName);
-    FunctionPrototypeSyntax& parseFunctionPrototype(SyntaxKind parentKind, bool allowEmptyNames, bool allowTasks, bool* isConstructor = nullptr);
+    FunctionPrototypeSyntax& parseFunctionPrototype(SyntaxKind parentKind, bitmask<FunctionOptions> options, bool* isConstructor = nullptr);
     FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, SyntaxKind functionKind, TokenKind endKind, SyntaxKind parentKind);
     Token parseLifetime();
     span<SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end, bool inConstructor);

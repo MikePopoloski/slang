@@ -103,10 +103,10 @@ class C;
     protected local int j;
     const randc int l = 6;
 
-    virtual pure function foo1;
-    local extern function foo2;
-    pure function foo3;
-    pure local function foo4;
+    virtual pure function logic foo1;
+    local extern function logic foo2;
+    pure function logic foo3;
+    pure local function logic foo4;
     virtual static function foo5; endfunction
 
     virtual int m;
@@ -120,7 +120,7 @@ class C;
     import p::*;
 
     // This should be fine
-    pure virtual protected function func1;
+    pure virtual protected function logic func1;
 
     // Invalid qualifiers for constructors
     static function new(); endfunction
@@ -130,7 +130,7 @@ class C;
     static function foo::bar(); endfunction
 
     // Scoped name for prototype.
-    extern function foo::baz();
+    extern function logic foo::baz();
 
     protected parameter int z = 4;
 
@@ -821,7 +821,7 @@ endclass
 
 class B extends A;
     static local function void frob; endfunction
-    extern function foo;
+    extern function logic foo;
 
     class N;
         function baz(B b);
@@ -1191,7 +1191,7 @@ interface class C;
     interface class E; endclass
 
     local typedef int int_t;
-    pure virtual protected function foo;
+    pure virtual protected function logic foo;
 
     function int bar(); endfunction
 endclass
