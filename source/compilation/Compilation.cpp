@@ -88,7 +88,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.issueDiagnostic();
     }
 
-    void handle(const ClassMethodPrototypeSymbol& symbol) {
+    void handle(const MethodPrototypeSymbol& symbol) {
         if (!handleDefault(symbol))
             return;
 

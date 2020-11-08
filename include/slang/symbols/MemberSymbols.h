@@ -97,7 +97,7 @@ private:
 enum class MethodFlags : uint8_t { None = 0, Virtual = 1, Pure = 2, Static = 4, Constructor = 8 };
 BITMASK(MethodFlags, Constructor);
 
-class ClassMethodPrototypeSymbol;
+class MethodPrototypeSymbol;
 struct ClassMethodDeclarationSyntax;
 struct FunctionDeclarationSyntax;
 struct FunctionPortListSyntax;
@@ -142,12 +142,12 @@ public:
 
     static SubroutineSymbol& createOutOfBlock(Compilation& compilation,
                                               const FunctionDeclarationSyntax& syntax,
-                                              const ClassMethodPrototypeSymbol& prototype,
+                                              const MethodPrototypeSymbol& prototype,
                                               const Scope& newParent, const Scope& definitionScope,
                                               SymbolIndex outOfBlockIndex);
 
     static SubroutineSymbol& createPureVirtual(Compilation& compilation,
-                                               const ClassMethodPrototypeSymbol& prototype,
+                                               const MethodPrototypeSymbol& prototype,
                                                const Scope& parent);
 
     static void buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
@@ -170,6 +170,40 @@ private:
 
     StatementBinder binder;
     mutable const SubroutineSymbol* overrides = nullptr;
+};
+
+struct ClassMethodPrototypeSyntax;
+
+class MethodPrototypeSymbol : public Symbol, public Scope {
+public:
+    DeclaredType declaredReturnType;
+    span<const FormalArgumentSymbol* const> arguments;
+    SubroutineKind subroutineKind;
+    Visibility visibility;
+    bitmask<MethodFlags> flags;
+
+    MethodPrototypeSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                          SubroutineKind subroutineKind, Visibility visibility,
+                          bitmask<MethodFlags> flags);
+
+    const Type& getReturnType() const { return declaredReturnType.getType(); }
+    const SubroutineSymbol* getSubroutine() const;
+
+    void setOverrides(const MethodPrototypeSymbol& overrideTarget) const {
+        overrides = &overrideTarget;
+    }
+    const MethodPrototypeSymbol* getOverrides() const { return overrides; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
+                                             const ClassMethodPrototypeSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::MethodPrototype; }
+
+private:
+    mutable optional<const SubroutineSymbol*> subroutine;
+    mutable const MethodPrototypeSymbol* overrides = nullptr;
 };
 
 struct ModportNamedPortSyntax;

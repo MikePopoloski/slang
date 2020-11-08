@@ -101,7 +101,7 @@ VariableLifetime Scope::getDefaultLifetime() const {
             return sym->as<StatementBlockSymbol>().defaultLifetime;
         case SymbolKind::Subroutine:
             return sym->as<SubroutineSymbol>().defaultLifetime;
-        case SymbolKind::ClassMethodPrototype:
+        case SymbolKind::MethodPrototype:
             return VariableLifetime::Automatic;
         default:
             return VariableLifetime::Static;
@@ -341,8 +341,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::ClassMethodPrototype:
-            addMember(ClassMethodPrototypeSymbol::fromSyntax(
-                *this, syntax.as<ClassMethodPrototypeSyntax>()));
+            addMember(
+                MethodPrototypeSymbol::fromSyntax(*this, syntax.as<ClassMethodPrototypeSyntax>()));
             break;
         case SyntaxKind::ElabSystemTask:
             addMember(
@@ -376,8 +376,8 @@ const Symbol* Scope::find(string_view name) const {
             return nullptr;
         case SymbolKind::TransparentMember:
             return &symbol->as<TransparentMemberSymbol>().wrapped;
-        case SymbolKind::ClassMethodPrototype:
-            return symbol->as<ClassMethodPrototypeSymbol>().getSubroutine();
+        case SymbolKind::MethodPrototype:
+            return symbol->as<MethodPrototypeSymbol>().getSubroutine();
         default:
             return symbol;
     }

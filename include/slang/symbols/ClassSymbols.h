@@ -35,40 +35,6 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassProperty; }
 };
 
-struct ClassMethodPrototypeSyntax;
-
-class ClassMethodPrototypeSymbol : public Symbol, public Scope {
-public:
-    DeclaredType declaredReturnType;
-    span<const FormalArgumentSymbol* const> arguments;
-    SubroutineKind subroutineKind;
-    Visibility visibility;
-    bitmask<MethodFlags> flags;
-
-    ClassMethodPrototypeSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                               SubroutineKind subroutineKind, Visibility visibility,
-                               bitmask<MethodFlags> flags);
-
-    const Type& getReturnType() const { return declaredReturnType.getType(); }
-    const SubroutineSymbol* getSubroutine() const;
-
-    void setOverrides(const ClassMethodPrototypeSymbol& overrideTarget) const {
-        overrides = &overrideTarget;
-    }
-    const ClassMethodPrototypeSymbol* getOverrides() const { return overrides; }
-
-    void serializeTo(ASTSerializer& serializer) const;
-
-    static ClassMethodPrototypeSymbol& fromSyntax(const Scope& scope,
-                                                  const ClassMethodPrototypeSyntax& syntax);
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClassMethodPrototype; }
-
-private:
-    mutable optional<const SubroutineSymbol*> subroutine;
-    mutable const ClassMethodPrototypeSymbol* overrides = nullptr;
-};
-
 class Expression;
 class GenericClassDefSymbol;
 struct ClassDeclarationSyntax;

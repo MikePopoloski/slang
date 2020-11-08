@@ -99,144 +99,6 @@ void ClassPropertySymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("visibility", toString(visibility));
 }
 
-ClassMethodPrototypeSymbol::ClassMethodPrototypeSymbol(Compilation& compilation, string_view name,
-                                                       SourceLocation loc,
-                                                       SubroutineKind subroutineKind,
-                                                       Visibility visibility,
-                                                       bitmask<MethodFlags> flags) :
-    Symbol(SymbolKind::ClassMethodPrototype, name, loc),
-    Scope(compilation, this), declaredReturnType(*this), subroutineKind(subroutineKind),
-    visibility(visibility), flags(flags) {
-}
-
-ClassMethodPrototypeSymbol& ClassMethodPrototypeSymbol::fromSyntax(
-    const Scope& scope, const ClassMethodPrototypeSyntax& syntax) {
-    auto& comp = scope.getCompilation();
-    auto& proto = *syntax.prototype;
-
-    Visibility visibility = Visibility::Public;
-    bitmask<MethodFlags> flags;
-    Token nameToken = proto.name->getLastToken();
-    auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
-                                                                       : SubroutineKind::Function;
-
-    for (Token qual : syntax.qualifiers) {
-        switch (qual.kind) {
-            case TokenKind::LocalKeyword:
-                visibility = Visibility::Local;
-                break;
-            case TokenKind::ProtectedKeyword:
-                visibility = Visibility::Protected;
-                break;
-            case TokenKind::StaticKeyword:
-                flags |= MethodFlags::Static;
-                break;
-            case TokenKind::PureKeyword:
-                flags |= MethodFlags::Pure;
-                break;
-            case TokenKind::VirtualKeyword:
-                flags |= MethodFlags::Virtual;
-                break;
-            case TokenKind::ConstKeyword:
-            case TokenKind::ExternKeyword:
-            case TokenKind::RandKeyword:
-                // Parser already issued errors for these, so just ignore them here.
-                break;
-            default:
-                THROW_UNREACHABLE;
-        }
-    }
-
-    if (nameToken.valueText() == "new")
-        flags |= MethodFlags::Constructor;
-
-    auto result = comp.emplace<ClassMethodPrototypeSymbol>(
-        comp, nameToken.valueText(), nameToken.location(), subroutineKind, visibility, flags);
-    result->setSyntax(syntax);
-    result->setAttributes(scope, syntax.attributes);
-
-    if (subroutineKind == SubroutineKind::Function)
-        result->declaredReturnType.setTypeSyntax(*proto.returnType);
-    else
-        result->declaredReturnType.setType(comp.getVoidType());
-
-    // Pure virtual methods can only appear in virtual or interface classes.
-    if (flags & MethodFlags::Pure) {
-        auto& classType = scope.asSymbol().as<ClassType>();
-        if (!classType.isAbstract && !classType.isInterface) {
-            scope.addDiag(diag::PureInAbstract, nameToken.range());
-            flags &= ~MethodFlags::Pure;
-        }
-    }
-
-    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
-    if (proto.portList) {
-        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
-                                         arguments);
-    }
-
-    result->arguments = arguments.copy(comp);
-    return *result;
-}
-
-const SubroutineSymbol* ClassMethodPrototypeSymbol::getSubroutine() const {
-    if (subroutine)
-        return *subroutine;
-
-    // The out-of-block definition must be in our class's parent scope.
-    ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
-    auto& classType = getParentScope()->asSymbol();
-    auto& scope = *classType.getParentScope();
-
-    auto& comp = scope.getCompilation();
-    auto [syntax, index] = comp.findOutOfBlockMethod(scope, classType.name, name);
-
-    if (flags & MethodFlags::Pure) {
-        // A pure method should not have a body defined.
-        if (syntax) {
-            auto& diag = scope.addDiag(diag::BodyForPure, syntax->prototype->name->sourceRange());
-            diag.addNote(diag::NoteDeclarationHere, location);
-            subroutine = nullptr;
-        }
-        else {
-            // Create a stub subroutine that we can return for callers to reference.
-            subroutine = &SubroutineSymbol::createPureVirtual(comp, *this, scope);
-        }
-        return *subroutine;
-    }
-
-    // Otherwise, there must be a body for any declared prototype.
-    if (!syntax) {
-        scope.addDiag(diag::NoMethodImplFound, location) << name;
-        subroutine = nullptr;
-        return nullptr;
-    }
-
-    // The method definition must be located after the class definition.
-    if (index <= classType.getIndex()) {
-        auto& diag = scope.addDiag(diag::MethodDefinitionBeforeClass,
-                                   syntax->prototype->name->getLastToken().location());
-        diag << name << classType.name;
-        diag.addNote(diag::NoteDeclarationHere, classType.location);
-    }
-
-    subroutine =
-        &SubroutineSymbol::createOutOfBlock(comp, *syntax, *this, *getParentScope(), scope, index);
-    return *subroutine;
-}
-
-void ClassMethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("returnType", getReturnType());
-    serializer.write("subroutineKind", toString(subroutineKind));
-    serializer.write("visibility", toString(visibility));
-
-    serializer.startArray("arguments");
-    for (auto const arg : arguments) {
-        arg->serializeTo(serializer);
-    }
-    serializer.endArray();
-}
-
 void ClassType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
     if (!firstForward)
         firstForward = &decl;
@@ -356,8 +218,8 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
 
         // If this is a pure virtual method being inherited and we aren't ourselves
         // an abstract class, issue an error.
-        if (!isAbstract && toWrap->kind == SymbolKind::ClassMethodPrototype) {
-            auto& sub = toWrap->as<ClassMethodPrototypeSymbol>();
+        if (!isAbstract && toWrap->kind == SymbolKind::MethodPrototype) {
+            auto& sub = toWrap->as<MethodPrototypeSymbol>();
             if (sub.flags & MethodFlags::Pure) {
                 if (!pureVirtualError) {
                     auto& diag =
@@ -529,18 +391,18 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                         auto& existing = it->second->as<TransparentMemberSymbol>().wrapped;
                         const Symbol* origExisting = &existing;
                         const Symbol* origNew = toWrap;
-                        if (origExisting->kind == SymbolKind::ClassMethodPrototype &&
-                            origNew->kind == SymbolKind::ClassMethodPrototype) {
+                        if (origExisting->kind == SymbolKind::MethodPrototype &&
+                            origNew->kind == SymbolKind::MethodPrototype) {
                             // This checks to see if the method prototype overrides (in the case of
                             // interfaces, this means exactly redeclaring) a parent method. We
                             // should check the original symbols in this case.
                             if (auto overrides =
-                                    origExisting->as<ClassMethodPrototypeSymbol>().getOverrides()) {
+                                    origExisting->as<MethodPrototypeSymbol>().getOverrides()) {
                                 origExisting = overrides;
                             }
 
                             if (auto overrides =
-                                    origNew->as<ClassMethodPrototypeSymbol>().getOverrides()) {
+                                    origNew->as<MethodPrototypeSymbol>().getOverrides()) {
                                 origNew = overrides;
                             }
                         }
@@ -556,12 +418,12 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                             diag.addNote(diag::NoteDeclarationHere, existing.location);
                         }
                     }
-                    else if (it->second->kind == SymbolKind::ClassMethodPrototype &&
-                             toWrap->kind == SymbolKind::ClassMethodPrototype) {
+                    else if (it->second->kind == SymbolKind::MethodPrototype &&
+                             toWrap->kind == SymbolKind::MethodPrototype) {
                         // If this is a locally declared method check that it matches the method
                         // declared in the parent interface.
-                        auto& parent = toWrap->as<ClassMethodPrototypeSymbol>();
-                        auto& derived = it->second->as<ClassMethodPrototypeSymbol>();
+                        auto& parent = toWrap->as<MethodPrototypeSymbol>();
+                        auto& derived = it->second->as<MethodPrototypeSymbol>();
 
                         auto parentSub = parent.getSubroutine();
                         auto derivedSub = derived.getSubroutine();
@@ -575,7 +437,7 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                         else
                             derived.setOverrides(parent);
                     }
-                    else if (toWrap->kind == SymbolKind::ClassMethodPrototype) {
+                    else if (toWrap->kind == SymbolKind::MethodPrototype) {
                         auto& diag = context.addDiag(diag::IfaceMethodHidden, it->second->location);
                         diag << it->second->name << iface->name;
                         diag.addNote(diag::NoteDeclarationHere, toWrap->location);
@@ -604,12 +466,12 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                 if (member.kind == SymbolKind::TransparentMember)
                     unwrapped = &member.as<TransparentMemberSymbol>().wrapped;
 
-                if (unwrapped->kind != SymbolKind::ClassMethodPrototype)
+                if (unwrapped->kind != SymbolKind::MethodPrototype)
                     continue;
 
                 // For each method declared in an interface, look for a corresponding
                 // implementation via a virtual method in the class.
-                auto& method = unwrapped->as<ClassMethodPrototypeSymbol>();
+                auto& method = unwrapped->as<MethodPrototypeSymbol>();
                 auto methodSub = method.getSubroutine();
                 if (!methodSub)
                     continue;

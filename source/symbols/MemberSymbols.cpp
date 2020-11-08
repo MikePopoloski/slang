@@ -319,7 +319,7 @@ static bool isSameExpr(const SyntaxNode& l, const SyntaxNode& r) {
 
 SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
                                                      const FunctionDeclarationSyntax& syntax,
-                                                     const ClassMethodPrototypeSymbol& prototype,
+                                                     const MethodPrototypeSymbol& prototype,
                                                      const Scope& parent,
                                                      const Scope& definitionScope,
                                                      SymbolIndex outOfBlockIndex) {
@@ -461,7 +461,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
 }
 
 SubroutineSymbol& SubroutineSymbol::createPureVirtual(Compilation& compilation,
-                                                      const ClassMethodPrototypeSymbol& prototype,
+                                                      const MethodPrototypeSymbol& prototype,
                                                       const Scope& parent) {
     // Create a stub subroutine symbol that exists only to allow the normal expression
     // machinery to call it (checking argument types, return values, etc).
@@ -670,6 +670,142 @@ void SubroutineSymbol::addThisVar(const Type& type) {
     tv->isCompilerGenerated = true;
     thisVar = tv;
     addMember(*thisVar);
+}
+
+MethodPrototypeSymbol::MethodPrototypeSymbol(Compilation& compilation, string_view name,
+                                             SourceLocation loc, SubroutineKind subroutineKind,
+                                             Visibility visibility, bitmask<MethodFlags> flags) :
+    Symbol(SymbolKind::MethodPrototype, name, loc),
+    Scope(compilation, this), declaredReturnType(*this), subroutineKind(subroutineKind),
+    visibility(visibility), flags(flags) {
+}
+
+MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
+                                                         const ClassMethodPrototypeSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto& proto = *syntax.prototype;
+
+    Visibility visibility = Visibility::Public;
+    bitmask<MethodFlags> flags;
+    Token nameToken = proto.name->getLastToken();
+    auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
+                                                                       : SubroutineKind::Function;
+
+    for (Token qual : syntax.qualifiers) {
+        switch (qual.kind) {
+            case TokenKind::LocalKeyword:
+                visibility = Visibility::Local;
+                break;
+            case TokenKind::ProtectedKeyword:
+                visibility = Visibility::Protected;
+                break;
+            case TokenKind::StaticKeyword:
+                flags |= MethodFlags::Static;
+                break;
+            case TokenKind::PureKeyword:
+                flags |= MethodFlags::Pure;
+                break;
+            case TokenKind::VirtualKeyword:
+                flags |= MethodFlags::Virtual;
+                break;
+            case TokenKind::ConstKeyword:
+            case TokenKind::ExternKeyword:
+            case TokenKind::RandKeyword:
+                // Parser already issued errors for these, so just ignore them here.
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    if (nameToken.valueText() == "new")
+        flags |= MethodFlags::Constructor;
+
+    auto result = comp.emplace<MethodPrototypeSymbol>(
+        comp, nameToken.valueText(), nameToken.location(), subroutineKind, visibility, flags);
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+
+    if (subroutineKind == SubroutineKind::Function)
+        result->declaredReturnType.setTypeSyntax(*proto.returnType);
+    else
+        result->declaredReturnType.setType(comp.getVoidType());
+
+    // Pure virtual methods can only appear in virtual or interface classes.
+    if (flags & MethodFlags::Pure) {
+        auto& classType = scope.asSymbol().as<ClassType>();
+        if (!classType.isAbstract && !classType.isInterface) {
+            scope.addDiag(diag::PureInAbstract, nameToken.range());
+            flags &= ~MethodFlags::Pure;
+        }
+    }
+
+    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
+    if (proto.portList) {
+        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
+                                         arguments);
+    }
+
+    result->arguments = arguments.copy(comp);
+    return *result;
+}
+
+const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
+    if (subroutine)
+        return *subroutine;
+
+    // The out-of-block definition must be in our class's parent scope.
+    ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
+    auto& classType = getParentScope()->asSymbol();
+    auto& scope = *classType.getParentScope();
+
+    auto& comp = scope.getCompilation();
+    auto [syntax, index] = comp.findOutOfBlockMethod(scope, classType.name, name);
+
+    if (flags & MethodFlags::Pure) {
+        // A pure method should not have a body defined.
+        if (syntax) {
+            auto& diag = scope.addDiag(diag::BodyForPure, syntax->prototype->name->sourceRange());
+            diag.addNote(diag::NoteDeclarationHere, location);
+            subroutine = nullptr;
+        }
+        else {
+            // Create a stub subroutine that we can return for callers to reference.
+            subroutine = &SubroutineSymbol::createPureVirtual(comp, *this, scope);
+        }
+        return *subroutine;
+    }
+
+    // Otherwise, there must be a body for any declared prototype.
+    if (!syntax) {
+        scope.addDiag(diag::NoMethodImplFound, location) << name;
+        subroutine = nullptr;
+        return nullptr;
+    }
+
+    // The method definition must be located after the class definition.
+    if (index <= classType.getIndex()) {
+        auto& diag = scope.addDiag(diag::MethodDefinitionBeforeClass,
+                                   syntax->prototype->name->getLastToken().location());
+        diag << name << classType.name;
+        diag.addNote(diag::NoteDeclarationHere, classType.location);
+    }
+
+    subroutine =
+        &SubroutineSymbol::createOutOfBlock(comp, *syntax, *this, *getParentScope(), scope, index);
+    return *subroutine;
+}
+
+void MethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("returnType", getReturnType());
+    serializer.write("subroutineKind", toString(subroutineKind));
+    serializer.write("visibility", toString(visibility));
+
+    serializer.startArray("arguments");
+    for (auto const arg : arguments) {
+        arg->serializeTo(serializer);
+    }
+    serializer.endArray();
 }
 
 ModportPortSymbol::ModportPortSymbol(string_view name, SourceLocation loc,

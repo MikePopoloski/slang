@@ -893,8 +893,8 @@ const ClassType* Lookup::getContainingClass(const Scope& scope) {
 
 Visibility Lookup::getVisibility(const Symbol& symbol) {
     switch (symbol.kind) {
-        case SymbolKind::ClassMethodPrototype:
-            return symbol.as<ClassMethodPrototypeSymbol>().visibility;
+        case SymbolKind::MethodPrototype:
+            return symbol.as<MethodPrototypeSymbol>().visibility;
         case SymbolKind::ClassProperty:
             return symbol.as<ClassPropertySymbol>().visibility;
         case SymbolKind::Subroutine:
@@ -968,9 +968,9 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                     // If we find a forwarding typedef, the actual typedef was never defined.
                     // Just ignore it, we'll issue a better error later.
                     break;
-                case SymbolKind::ClassMethodPrototype:
+                case SymbolKind::MethodPrototype:
                     // Looking up a prototype should always forward on to the actual method.
-                    result.found = symbol->as<ClassMethodPrototypeSymbol>().getSubroutine();
+                    result.found = symbol->as<MethodPrototypeSymbol>().getSubroutine();
                     break;
                 default:
                     result.found = symbol;
