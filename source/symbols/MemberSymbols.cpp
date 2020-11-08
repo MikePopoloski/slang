@@ -384,7 +384,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
         // Names must be identical.
         const FormalArgumentSymbol* da = *di;
         const FormalArgumentSymbol* pa = *pi;
-        if (da->name != pa->name) {
+        if (da->name != pa->name && !da->name.empty() && !pa->name.empty()) {
             auto& diag = parent.addDiag(diag::MethodArgNameMismatch, da->location);
             diag << da->name << pa->name;
             diag.addNote(diag::NoteDeclarationHere, pa->location);
@@ -534,7 +534,7 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
         // Names must be identical.
         const FormalArgumentSymbol* da = *di;
         const FormalArgumentSymbol* pa = *pi;
-        if (da->name != pa->name) {
+        if (da->name != pa->name && !da->name.empty() && !pa->name.empty()) {
             auto& diag = scope.addDiag(diag::VirtualArgNameMismatch, da->location);
             diag << da->name << pa->name;
             diag.addNote(diag::NoteDeclarationHere, pa->location);

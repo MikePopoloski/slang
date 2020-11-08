@@ -248,8 +248,8 @@ private:
     GateInstantiationSyntax& parseGateInstantiation(AttrList attributes);
     GateInstanceSyntax& parseGateInstance();
     PortConnectionSyntax& parsePortConnection();
-    FunctionPortSyntax& parseFunctionPort();
-    FunctionPrototypeSyntax& parseFunctionPrototype(SyntaxKind parentKind, bool allowTasks = true, bool* isConstructor = nullptr);
+    FunctionPortSyntax& parseFunctionPort(bool allowEmptyName);
+    FunctionPrototypeSyntax& parseFunctionPrototype(SyntaxKind parentKind, bool allowEmptyNames, bool allowTasks, bool* isConstructor = nullptr);
     FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, SyntaxKind functionKind, TokenKind endKind, SyntaxKind parentKind);
     Token parseLifetime();
     span<SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end, bool inConstructor);

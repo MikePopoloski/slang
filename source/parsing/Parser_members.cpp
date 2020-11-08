@@ -362,7 +362,8 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     while (true) {
         if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
-            auto& proto = parseFunctionPrototype(SyntaxKind::Unknown);
+            auto& proto = parseFunctionPrototype(SyntaxKind::Unknown, /* allowEmptyNames */ true,
+                                                 /* allowTasks */ true);
             buffer.append(&factory.modportSubroutinePort(proto));
         }
         else {
@@ -466,7 +467,7 @@ ModportDeclarationSyntax& Parser::parseModportDeclaration(AttrList attributes) {
     return factory.modportDeclaration(attributes, keyword, buffer.copy(alloc), semi);
 }
 
-FunctionPortSyntax& Parser::parseFunctionPort() {
+FunctionPortSyntax& Parser::parseFunctionPort(bool allowEmptyName) {
     auto attributes = parseAttributes();
     auto constKeyword = consumeIf(TokenKind::ConstKeyword);
 
@@ -489,8 +490,13 @@ FunctionPortSyntax& Parser::parseFunctionPort() {
     else if (!isPlainPortName())
         dataType = &parseDataType();
 
-    return factory.functionPort(attributes, constKeyword, direction, varKeyword, dataType,
-                                parseDeclarator());
+    DeclaratorSyntax* decl;
+    if (!allowEmptyName || peek(TokenKind::Identifier) || peek(TokenKind::Equals))
+        decl = &parseDeclarator();
+    else
+        decl = &factory.declarator(placeholderToken(), nullptr, nullptr);
+
+    return factory.functionPort(attributes, constKeyword, direction, varKeyword, dataType, *decl);
 }
 
 static bool checkSubroutineName(const NameSyntax& name) {
@@ -509,8 +515,8 @@ static bool checkSubroutineName(const NameSyntax& name) {
     return checkKind(name);
 }
 
-FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind, bool allowTasks,
-                                                        bool* isConstructor) {
+FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind, bool allowEmptyNames,
+                                                        bool allowTasks, bool* isConstructor) {
     Token keyword;
     if (allowTasks && peek(TokenKind::TaskKeyword))
         keyword = consume();
@@ -562,7 +568,8 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind, b
         SmallVectorSized<TokenOrSyntax, 8> buffer;
         parseList<isPossibleFunctionPort, isEndOfParenList>(
             buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
-            diag::ExpectedFunctionPort, [this] { return &parseFunctionPort(); });
+            diag::ExpectedFunctionPort,
+            [this, allowEmptyNames] { return &parseFunctionPort(allowEmptyNames); });
 
         portList = &factory.functionPortList(openParen, buffer.copy(alloc), closeParen);
     }
@@ -576,7 +583,8 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
                                                             SyntaxKind parentKind) {
     Token end;
     bool isConstructor;
-    auto& prototype = parseFunctionPrototype(parentKind, /* allowTasks */ true, &isConstructor);
+    auto& prototype = parseFunctionPrototype(parentKind, /* allowEmptyNames */ false,
+                                             /* allowTasks */ true, &isConstructor);
     auto semi = expect(TokenKind::Semicolon);
     auto items = parseBlockItems(endKind, end, isConstructor);
     auto endBlockName = parseNamedBlockClause();
@@ -1075,7 +1083,8 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
 
         // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
-            auto& proto = parseFunctionPrototype(SyntaxKind::ClassDeclaration);
+            auto& proto = parseFunctionPrototype(
+                SyntaxKind::ClassDeclaration, /* allowEmptyNames */ false, /* allowTasks */ true);
             checkProto(proto);
 
             if (proto.name->kind == SyntaxKind::ScopedName)
@@ -1704,8 +1713,8 @@ DPIImportExportSyntax& Parser::parseDPIImportExport(AttrList attributes) {
         equals = expect(TokenKind::Equals);
     }
 
-    auto& method =
-        parseFunctionPrototype(SyntaxKind::Unknown, property.kind != TokenKind::PureKeyword);
+    auto& method = parseFunctionPrototype(SyntaxKind::Unknown, /* allowEmptyNames */ true,
+                                          /* allowTasks */ property.kind != TokenKind::PureKeyword);
     auto semi = expect(TokenKind::Semicolon);
     return factory.dPIImportExport(attributes, keyword, stringLiteral, property, name, equals,
                                    method, semi);
