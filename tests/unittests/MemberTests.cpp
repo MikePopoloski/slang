@@ -974,3 +974,44 @@ endinterface
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UsedBeforeDeclared);
 }
+
+TEST_CASE("Modport subroutine import") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    function void foo; endfunction
+    modport m(import foo);
+endinterface
+
+module n(I.m a);
+    initial a.foo();
+endmodule
+
+module m;
+    I i();
+    n n1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Modport subroutine errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    function void foo; endfunction
+    logic bar;
+    modport m(input foo, import bar, baz);
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ExpectedImportExport);
+    CHECK(diags[1].code == diag::NotASubroutine);
+    CHECK(diags[2].code == diag::TypoIdentifier);
+}

@@ -750,9 +750,41 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
+MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(
+    const Scope& scope, const ModportSubroutinePortSyntax& syntax) {
+
+    auto& comp = scope.getCompilation();
+    auto& proto = *syntax.prototype;
+
+    Token nameToken = proto.name->getLastToken();
+    auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
+                                                                       : SubroutineKind::Function;
+
+    auto result =
+        comp.emplace<MethodPrototypeSymbol>(comp, nameToken.valueText(), nameToken.location(),
+                                            subroutineKind, Visibility::Public, MethodFlags::None);
+    result->setSyntax(syntax);
+
+    if (subroutineKind == SubroutineKind::Function)
+        result->declaredReturnType.setTypeSyntax(*proto.returnType);
+    else
+        result->declaredReturnType.setType(comp.getVoidType());
+
+    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
+    if (proto.portList) {
+        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
+                                         arguments);
+    }
+
+    result->arguments = arguments.copy(comp);
+    return *result;
+}
+
 const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
     if (subroutine)
         return *subroutine;
+
+    // TODO: make this method support modport / interface prototype rules
 
     // The out-of-block definition must be in our class's parent scope.
     ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
@@ -824,13 +856,19 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const Scope& parent, LookupLoca
     result->internalSymbol = Lookup::unqualifiedAt(parent, name.valueText(), lookupLocation,
                                                    name.range(), LookupFlags::NoParentScope);
 
-    // TODO: decide whether subroutines should be handled specially here once they
-    // are supported at all in modports.
-    if (result->internalSymbol &&
-        (!SemanticFacts::isAllowedInModport(result->internalSymbol->kind) ||
-         result->internalSymbol->kind == SymbolKind::Subroutine)) {
-        parent.addDiag(diag::NotAllowedInModport, name.range()) << name.valueText();
-        result->internalSymbol = nullptr;
+    if (result->internalSymbol) {
+        if (result->internalSymbol->kind == SymbolKind::Subroutine) {
+            auto& diag = parent.addDiag(diag::ExpectedImportExport, name.range());
+            diag << name.valueText();
+            diag.addNote(diag::NoteDeclarationHere, result->internalSymbol->location);
+            result->internalSymbol = nullptr;
+        }
+        else if (!SemanticFacts::isAllowedInModport(result->internalSymbol->kind)) {
+            auto& diag = parent.addDiag(diag::NotAllowedInModport, name.range());
+            diag << name.valueText();
+            diag.addNote(diag::NoteDeclarationHere, result->internalSymbol->location);
+            result->internalSymbol = nullptr;
+        }
     }
 
     if (result->internalSymbol) {
@@ -850,6 +888,24 @@ void ModportPortSymbol::serializeTo(ASTSerializer& serializer) const {
 
 ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
     Symbol(SymbolKind::Modport, name, loc), Scope(compilation, this) {
+}
+
+static Symbol* findNamedSubroutine(const Scope& parent, LookupLocation lookupLocation,
+                                   const ModportNamedPortSyntax& syntax) {
+    auto result = Lookup::unqualifiedAt(parent, syntax.name.valueText(), lookupLocation,
+                                        syntax.name.range(), LookupFlags::NoParentScope);
+    if (!result)
+        return nullptr;
+
+    if (result->kind != SymbolKind::Subroutine && result->kind != SymbolKind::MethodPrototype) {
+        auto& diag = parent.addDiag(diag::NotASubroutine, syntax.name.range());
+        diag << result->name;
+        diag.addNote(diag::NoteDeclarationHere, result->location);
+        return nullptr;
+    }
+
+    auto& comp = parent.getCompilation();
+    return comp.emplace<TransparentMemberSymbol>(*result);
 }
 
 void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSyntax& syntax,
@@ -887,8 +943,39 @@ void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSynt
                     }
                     break;
                 }
+                case SyntaxKind::ModportSubroutinePortList: {
+                    auto& portList = port->as<ModportSubroutinePortListSyntax>();
+                    if (portList.importExport.kind == TokenKind::ExportKeyword) {
+                        // TODO: implement
+                    }
+                    else {
+                        for (auto subPort : portList.ports) {
+                            switch (subPort->kind) {
+                                case SyntaxKind::ModportNamedPort: {
+                                    auto sym =
+                                        findNamedSubroutine(parent, lookupLocation,
+                                                            subPort->as<ModportNamedPortSyntax>());
+                                    if (sym) {
+                                        sym->setAttributes(*modport, portList.attributes);
+                                        modport->addMember(*sym);
+                                    }
+                                    break;
+                                }
+                                case SyntaxKind::ModportSubroutinePort: {
+                                    auto& msp = MethodPrototypeSymbol::fromSyntax(
+                                        parent, subPort->as<ModportSubroutinePortSyntax>());
+                                    msp.setAttributes(*modport, portList.attributes);
+                                    modport->addMember(msp);
+                                    break;
+                                }
+                                default:
+                                    THROW_UNREACHABLE;
+                            }
+                        }
+                    }
+                    break;
+                }
                 case SyntaxKind::ModportClockingPort:
-                case SyntaxKind::ModportSubroutinePortList:
                     parent.addDiag(diag::NotYetSupported, port->sourceRange());
                     break;
                 default:

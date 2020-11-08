@@ -173,6 +173,7 @@ private:
 };
 
 struct ClassMethodPrototypeSyntax;
+struct ModportSubroutinePortSyntax;
 
 class MethodPrototypeSymbol : public Symbol, public Scope {
 public:
@@ -198,6 +199,8 @@ public:
 
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
                                              const ClassMethodPrototypeSyntax& syntax);
+    static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
+                                             const ModportSubroutinePortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::MethodPrototype; }
 
