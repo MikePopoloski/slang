@@ -339,6 +339,9 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
     if ((result->flags & MethodFlags::Static) == 0)
         result->addThisVar(parent.asSymbol().as<ClassType>());
 
+    if (!prototype.checkMethodMatch(parent, *result))
+        return *result;
+
     // The return type is not allowed to use a simple name to access class members.
     auto& defRetType = result->getReturnType();
     if (defRetType.getParentScope() == &parent) {
@@ -359,60 +362,16 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
         }
     }
 
-    // Check that return type and arguments match what was declared in the prototype.
-    auto& protoRetType = prototype.getReturnType();
-    if (!defRetType.isMatching(protoRetType) && !defRetType.isError() && !protoRetType.isError()) {
-        auto& diag =
-            parent.addDiag(diag::MethodReturnMismatch, syntax.prototype->returnType->sourceRange());
-        diag << defRetType;
-        diag << result->name;
-        diag << protoRetType;
-        diag.addNote(diag::NoteDeclarationHere, prototype.location);
-        return *result;
-    }
-
+    // Handle default value expressions.
     auto defArgs = result->arguments;
     auto protoArgs = prototype.arguments;
-    if (defArgs.size() != protoArgs.size()) {
-        auto& diag = parent.addDiag(diag::MethodArgCountMismatch, result->location);
-        diag << result->name;
-        diag.addNote(diag::NoteDeclarationHere, prototype.location);
-        return *result;
-    }
-
     for (auto di = defArgs.begin(), pi = protoArgs.begin(); di != defArgs.end(); di++, pi++) {
-        // Names must be identical.
-        const FormalArgumentSymbol* da = *di;
-        const FormalArgumentSymbol* pa = *pi;
-        if (da->name != pa->name && !da->name.empty() && !pa->name.empty()) {
-            auto& diag = parent.addDiag(diag::MethodArgNameMismatch, da->location);
-            diag << da->name << pa->name;
-            diag.addNote(diag::NoteDeclarationHere, pa->location);
-            return *result;
-        }
-
-        // Types must match.
-        const Type& dt = da->getType();
-        const Type& pt = pa->getType();
-        if (!dt.isMatching(pt) && !dt.isError() && !pt.isError()) {
-            auto& diag = parent.addDiag(diag::MethodArgTypeMismatch, da->location);
-            diag << da->name << dt << pt;
-            diag.addNote(diag::NoteDeclarationHere, pa->location);
-            return *result;
-        }
-
-        // Direction must match.
-        if (da->direction != pa->direction) {
-            auto& diag = parent.addDiag(diag::MethodArgDirectionMismatch, da->location);
-            diag << da->name;
-            diag.addNote(diag::NoteDeclarationHere, pa->location);
-            return *result;
-        }
-
         // If the definition provides a default value for an argument, the prototype
         // must also have that default, and they must be identical expressions.
         // If the definition does't provide a default but the prototype does, copy
         // that default into the definition.
+        const FormalArgumentSymbol* da = *di;
+        const FormalArgumentSymbol* pa = *pi;
         const Expression* de = da->getInitializer();
         const Expression* pe = pa->getInitializer();
         if (de) {
@@ -460,9 +419,29 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
     return *result;
 }
 
-SubroutineSymbol& SubroutineSymbol::createPureVirtual(Compilation& compilation,
-                                                      const MethodPrototypeSymbol& prototype,
-                                                      const Scope& parent) {
+static span<const FormalArgumentSymbol* const> cloneArguments(
+    Compilation& compilation, Scope& newParent, span<const FormalArgumentSymbol* const> source) {
+
+    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments(source.size());
+    for (auto arg : source) {
+        auto copied = compilation.emplace<FormalArgumentSymbol>(arg->name, arg->location,
+                                                                arg->direction, arg->lifetime);
+        copied->isCompilerGenerated = arg->isCompilerGenerated;
+        copied->isConstant = arg->isConstant;
+        copied->getDeclaredType()->copyTypeFrom(*arg->getDeclaredType());
+        if (auto init = arg->getDeclaredType()->getInitializer())
+            copied->getDeclaredType()->setInitializer(*init);
+
+        newParent.addMember(*copied);
+        arguments.append(copied);
+    }
+
+    return arguments.copy(compilation);
+}
+
+SubroutineSymbol& SubroutineSymbol::createFromPrototype(Compilation& compilation,
+                                                        const MethodPrototypeSymbol& prototype,
+                                                        const Scope& parent) {
     // Create a stub subroutine symbol that exists only to allow the normal expression
     // machinery to call it (checking argument types, return values, etc).
     auto result = compilation.emplace<SubroutineSymbol>(
@@ -473,22 +452,7 @@ SubroutineSymbol& SubroutineSymbol::createPureVirtual(Compilation& compilation,
     result->declaredReturnType.copyTypeFrom(prototype.declaredReturnType);
     result->visibility = prototype.visibility;
     result->flags = prototype.flags;
-
-    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments(prototype.arguments.size());
-    for (auto arg : prototype.arguments) {
-        auto copied = compilation.emplace<FormalArgumentSymbol>(arg->name, arg->location,
-                                                                arg->direction, arg->lifetime);
-        copied->isCompilerGenerated = arg->isCompilerGenerated;
-        copied->isConstant = arg->isConstant;
-        copied->getDeclaredType()->copyTypeFrom(*arg->getDeclaredType());
-        if (auto init = arg->getDeclaredType()->getInitializer())
-            copied->getDeclaredType()->setInitializer(*init);
-
-        result->addMember(*copied);
-        arguments.append(copied);
-    }
-
-    result->arguments = arguments.copy(compilation);
+    result->arguments = cloneArguments(compilation, *result, prototype.arguments);
     return *result;
 }
 
@@ -760,9 +724,9 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(
     auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
                                                                        : SubroutineKind::Function;
 
-    auto result =
-        comp.emplace<MethodPrototypeSymbol>(comp, nameToken.valueText(), nameToken.location(),
-                                            subroutineKind, Visibility::Public, MethodFlags::None);
+    auto result = comp.emplace<MethodPrototypeSymbol>(
+        comp, nameToken.valueText(), nameToken.location(), subroutineKind, Visibility::Public,
+        MethodFlags::InterfaceImport);
     result->setSyntax(syntax);
 
     if (subroutineKind == SubroutineKind::Function)
@@ -780,20 +744,93 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(
     return *result;
 }
 
+MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
+                                                         LookupLocation lookupLocation,
+                                                         const ModportNamedPortSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto name = syntax.name;
+    auto result = comp.emplace<MethodPrototypeSymbol>(comp, name.valueText(), name.location(),
+                                                      SubroutineKind::Function, Visibility::Public,
+                                                      MethodFlags::InterfaceImport);
+    result->setSyntax(syntax);
+
+    // Find the target subroutine that is being imported.
+    auto target = Lookup::unqualifiedAt(scope, syntax.name.valueText(), lookupLocation,
+                                        syntax.name.range(), LookupFlags::NoParentScope);
+    if (!target)
+        return *result;
+
+    // Target must actually be a subroutine (or a prototype of one).
+    if (target->kind != SymbolKind::Subroutine && target->kind != SymbolKind::MethodPrototype) {
+        auto& diag = scope.addDiag(diag::NotASubroutine, name.range());
+        diag << target->name;
+        diag.addNote(diag::NoteDeclarationHere, target->location);
+        return *result;
+    }
+
+    // Copy details from the found subroutine into the newly created prototype.
+    // This lambda exists to handle both SubroutineSymbols and MethodPrototypeSymbols.
+    auto copyDetails = [&](auto& source) {
+        result->declaredReturnType.copyTypeFrom(source.declaredReturnType);
+        result->subroutineKind = source.subroutineKind;
+        result->arguments = cloneArguments(comp, *result, source.arguments);
+    };
+
+    if (target->kind == SymbolKind::Subroutine)
+        copyDetails(target->as<SubroutineSymbol>());
+    else
+        copyDetails(target->as<MethodPrototypeSymbol>());
+
+    return *result;
+}
+
 const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
     if (subroutine)
         return *subroutine;
 
-    // TODO: make this method support modport / interface prototype rules
-
-    // The out-of-block definition must be in our class's parent scope.
     ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
-    auto& classType = getParentScope()->asSymbol();
-    auto& scope = *classType.getParentScope();
-
+    auto& parentSym = getParentScope()->asSymbol();
+    auto& scope = *parentSym.getParentScope();
     auto& comp = scope.getCompilation();
-    auto [syntax, index] = comp.findOutOfBlockMethod(scope, classType.name, name);
 
+    if (flags.has(MethodFlags::InterfaceImport)) {
+        // This is a prototype declared in a modport or an interface. If it's in a
+        // modport, check whether the parent interface declares the method already.
+        if (parentSym.kind == SymbolKind::Modport) {
+            auto result = Lookup::unqualified(
+                scope, name, LookupFlags::NoParentScope | LookupFlags::AllowDeclaredAfter);
+
+            if (result) {
+                // If we found a symbol, make sure it's actually a subroutine.
+                if (result->kind != SymbolKind::Subroutine &&
+                    result->kind != SymbolKind::MethodPrototype) {
+                    auto& diag = scope.addDiag(diag::NotASubroutine, location);
+                    diag << result->name;
+                    diag.addNote(diag::NoteDeclarationHere, result->location);
+                }
+                else {
+                    if (result->kind == SymbolKind::MethodPrototype)
+                        subroutine = result->as<MethodPrototypeSymbol>().getSubroutine();
+                    else
+                        subroutine = &result->as<SubroutineSymbol>();
+
+                    if (*subroutine && !checkMethodMatch(*getParentScope(), *subroutine.value()))
+                        subroutine = nullptr;
+
+                    return *subroutine;
+                }
+            }
+        }
+
+        // It's allowed to not have an immediate body for this method anywhere
+        // (though it will need to be connected if this method is called at runtime).
+        // For now, create a placeholder subroutine to return.
+        subroutine = &SubroutineSymbol::createFromPrototype(comp, *this, scope);
+        return *subroutine;
+    }
+
+    // The out-of-block definition must be in our parent scope.
+    auto [syntax, index] = comp.findOutOfBlockMethod(scope, parentSym.name, name);
     if (flags & MethodFlags::Pure) {
         // A pure method should not have a body defined.
         if (syntax) {
@@ -803,7 +840,7 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
         }
         else {
             // Create a stub subroutine that we can return for callers to reference.
-            subroutine = &SubroutineSymbol::createPureVirtual(comp, *this, scope);
+            subroutine = &SubroutineSymbol::createFromPrototype(comp, *this, scope);
         }
         return *subroutine;
     }
@@ -816,16 +853,78 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
     }
 
     // The method definition must be located after the class definition.
-    if (index <= classType.getIndex()) {
+    if (index <= parentSym.getIndex()) {
         auto& diag = scope.addDiag(diag::MethodDefinitionBeforeClass,
                                    syntax->prototype->name->getLastToken().location());
-        diag << name << classType.name;
-        diag.addNote(diag::NoteDeclarationHere, classType.location);
+        diag << name << parentSym.name;
+        diag.addNote(diag::NoteDeclarationHere, parentSym.location);
     }
 
     subroutine =
         &SubroutineSymbol::createOutOfBlock(comp, *syntax, *this, *getParentScope(), scope, index);
     return *subroutine;
+}
+
+bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
+                                             const SubroutineSymbol& method) const {
+    // Check that return type and arguments match what was declared in the prototype.
+    auto& protoRetType = getReturnType();
+    auto& defRetType = method.getReturnType();
+    if (!defRetType.isMatching(protoRetType) && !defRetType.isError() && !protoRetType.isError()) {
+        Diagnostic* diag;
+        auto typeSyntax = declaredReturnType.getTypeSyntax();
+        if (typeSyntax)
+            diag = &scope.addDiag(diag::MethodReturnMismatch, typeSyntax->sourceRange());
+        else
+            diag = &scope.addDiag(diag::MethodReturnMismatch, location);
+
+        (*diag) << defRetType;
+        (*diag) << method.name;
+        (*diag) << protoRetType;
+        diag->addNote(diag::NoteDeclarationHere, method.location);
+        return false;
+    }
+
+    auto defArgs = method.arguments;
+    auto protoArgs = arguments;
+    if (defArgs.size() != protoArgs.size()) {
+        auto& diag = scope.addDiag(diag::MethodArgCountMismatch, method.location);
+        diag << name;
+        diag.addNote(diag::NoteDeclarationHere, location);
+        return false;
+    }
+
+    for (auto di = defArgs.begin(), pi = protoArgs.begin(); di != defArgs.end(); di++, pi++) {
+        // Names must be identical.
+        const FormalArgumentSymbol* da = *di;
+        const FormalArgumentSymbol* pa = *pi;
+        if (da->name != pa->name && !da->name.empty() && !pa->name.empty()) {
+            auto& diag = scope.addDiag(diag::MethodArgNameMismatch, da->location);
+            diag << da->name << pa->name;
+            diag.addNote(diag::NoteDeclarationHere, pa->location);
+            return false;
+        }
+
+        // Types must match.
+        const Type& dt = da->getType();
+        const Type& pt = pa->getType();
+        if (!dt.isMatching(pt) && !dt.isError() && !pt.isError()) {
+            auto& diag = scope.addDiag(diag::MethodArgTypeMismatch, da->location);
+            diag << da->name << dt << pt;
+            diag.addNote(diag::NoteDeclarationHere, pa->location);
+            return false;
+        }
+
+        // Direction must match.
+        if (da->direction != pa->direction) {
+            auto& diag = scope.addDiag(diag::MethodArgDirectionMismatch, da->location);
+            diag << da->name;
+            diag.addNote(diag::NoteDeclarationHere, pa->location);
+            return false;
+        }
+    }
+
+    return true;
 }
 
 void MethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -890,24 +989,6 @@ ModportSymbol::ModportSymbol(Compilation& compilation, string_view name, SourceL
     Symbol(SymbolKind::Modport, name, loc), Scope(compilation, this) {
 }
 
-static Symbol* findNamedSubroutine(const Scope& parent, LookupLocation lookupLocation,
-                                   const ModportNamedPortSyntax& syntax) {
-    auto result = Lookup::unqualifiedAt(parent, syntax.name.valueText(), lookupLocation,
-                                        syntax.name.range(), LookupFlags::NoParentScope);
-    if (!result)
-        return nullptr;
-
-    if (result->kind != SymbolKind::Subroutine && result->kind != SymbolKind::MethodPrototype) {
-        auto& diag = parent.addDiag(diag::NotASubroutine, syntax.name.range());
-        diag << result->name;
-        diag.addNote(diag::NoteDeclarationHere, result->location);
-        return nullptr;
-    }
-
-    auto& comp = parent.getCompilation();
-    return comp.emplace<TransparentMemberSymbol>(*result);
-}
-
 void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSyntax& syntax,
                                LookupLocation lookupLocation,
                                SmallVector<const ModportSymbol*>& results) {
@@ -952,20 +1033,18 @@ void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSynt
                         for (auto subPort : portList.ports) {
                             switch (subPort->kind) {
                                 case SyntaxKind::ModportNamedPort: {
-                                    auto sym =
-                                        findNamedSubroutine(parent, lookupLocation,
-                                                            subPort->as<ModportNamedPortSyntax>());
-                                    if (sym) {
-                                        sym->setAttributes(*modport, portList.attributes);
-                                        modport->addMember(*sym);
-                                    }
+                                    auto& mps = MethodPrototypeSymbol::fromSyntax(
+                                        parent, lookupLocation,
+                                        subPort->as<ModportNamedPortSyntax>());
+                                    mps.setAttributes(*modport, portList.attributes);
+                                    modport->addMember(mps);
                                     break;
                                 }
                                 case SyntaxKind::ModportSubroutinePort: {
-                                    auto& msp = MethodPrototypeSymbol::fromSyntax(
+                                    auto& mps = MethodPrototypeSymbol::fromSyntax(
                                         parent, subPort->as<ModportSubroutinePortSyntax>());
-                                    msp.setAttributes(*modport, portList.attributes);
-                                    modport->addMember(msp);
+                                    mps.setAttributes(*modport, portList.attributes);
+                                    modport->addMember(mps);
                                     break;
                                 }
                                 default:

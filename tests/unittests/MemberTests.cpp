@@ -978,12 +978,16 @@ endinterface
 TEST_CASE("Modport subroutine import") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
-    function void foo; endfunction
-    modport m(import foo);
+    function void foo(int i); endfunction
+    modport m(import foo, import function void bar(int, logic), task baz);
 endinterface
 
 module n(I.m a);
-    initial a.foo();
+    initial begin
+        a.foo(42);
+        a.bar(1, 1);
+        a.baz();
+    end
 endmodule
 
 module m;
@@ -1002,7 +1006,8 @@ TEST_CASE("Modport subroutine errors") {
 interface I;
     function void foo; endfunction
     logic bar;
-    modport m(input foo, import bar, baz);
+    function void asdf(int i, real r); endfunction
+    modport m(input foo, import bar, baz, function int asdf(real, int), task bar);
 endinterface
 )");
 
@@ -1010,8 +1015,11 @@ endinterface
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ExpectedImportExport);
     CHECK(diags[1].code == diag::NotASubroutine);
     CHECK(diags[2].code == diag::TypoIdentifier);
+    CHECK(diags[3].code == diag::MethodReturnMismatch);
+    CHECK(diags[4].code == diag::Redefinition);
+    CHECK(diags[5].code == diag::NotASubroutine);
 }

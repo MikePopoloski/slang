@@ -94,8 +94,15 @@ private:
     mutable optional<const PackageSymbol*> package;
 };
 
-enum class MethodFlags : uint8_t { None = 0, Virtual = 1, Pure = 2, Static = 4, Constructor = 8 };
-BITMASK(MethodFlags, Constructor);
+enum class MethodFlags : uint8_t {
+    None = 0,
+    Virtual = 1,
+    Pure = 2,
+    Static = 4,
+    Constructor = 8,
+    InterfaceImport = 16
+};
+BITMASK(MethodFlags, InterfaceImport);
 
 class MethodPrototypeSymbol;
 struct ClassMethodDeclarationSyntax;
@@ -146,9 +153,9 @@ public:
                                               const Scope& newParent, const Scope& definitionScope,
                                               SymbolIndex outOfBlockIndex);
 
-    static SubroutineSymbol& createPureVirtual(Compilation& compilation,
-                                               const MethodPrototypeSymbol& prototype,
-                                               const Scope& parent);
+    static SubroutineSymbol& createFromPrototype(Compilation& compilation,
+                                                 const MethodPrototypeSymbol& prototype,
+                                                 const Scope& parent);
 
     static void buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
                                VariableLifetime defaultLifetime,
@@ -173,6 +180,7 @@ private:
 };
 
 struct ClassMethodPrototypeSyntax;
+struct ModportNamedPortSyntax;
 struct ModportSubroutinePortSyntax;
 
 class MethodPrototypeSymbol : public Symbol, public Scope {
@@ -195,12 +203,16 @@ public:
     }
     const MethodPrototypeSymbol* getOverrides() const { return overrides; }
 
+    bool checkMethodMatch(const Scope& scope, const SubroutineSymbol& method) const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
                                              const ClassMethodPrototypeSyntax& syntax);
     static MethodPrototypeSymbol& fromSyntax(const Scope& scope,
                                              const ModportSubroutinePortSyntax& syntax);
+    static MethodPrototypeSymbol& fromSyntax(const Scope& scope, LookupLocation lookupLocation,
+                                             const ModportNamedPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::MethodPrototype; }
 
@@ -208,8 +220,6 @@ private:
     mutable optional<const SubroutineSymbol*> subroutine;
     mutable const MethodPrototypeSymbol* overrides = nullptr;
 };
-
-struct ModportNamedPortSyntax;
 
 /// Represents a single port specifier in a modport declaration.
 class ModportPortSymbol : public ValueSymbol {
