@@ -346,10 +346,14 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked
             result.kind = DimensionKind::Unknown;
         }
         else if (result.range.width() > SVInt::MAX_BITS) {
-            if (isPacked)
-                addDiag(diag::PackedArrayTooLarge, syntax.sourceRange()) << (int)SVInt::MAX_BITS;
-            else
-                addDiag(diag::ArrayDimTooLarge, syntax.sourceRange()) << (int)SVInt::MAX_BITS;
+            if (isPacked) {
+                addDiag(diag::PackedArrayTooLarge, syntax.sourceRange())
+                    << result.range.width() << (int)SVInt::MAX_BITS;
+            }
+            else {
+                addDiag(diag::ArrayDimTooLarge, syntax.sourceRange())
+                    << result.range.width() << (int)SVInt::MAX_BITS;
+            }
             result.kind = DimensionKind::Unknown;
         }
     }

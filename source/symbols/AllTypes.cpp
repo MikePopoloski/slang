@@ -532,7 +532,9 @@ const Type& PackedArrayType::fromSyntax(const Scope& scope, const Type& elementT
 
     auto width = checkedMulU32(elementType.getBitWidth(), range.width());
     if (!width || width > (uint32_t)SVInt::MAX_BITS) {
-        scope.addDiag(diag::PackedArrayTooLarge, syntax.sourceRange()) << (uint32_t)SVInt::MAX_BITS;
+        uint64_t fullWidth = uint64_t(elementType.getBitWidth()) * range.width();
+        scope.addDiag(diag::PackedArrayTooLarge, syntax.sourceRange())
+            << fullWidth << (uint32_t)SVInt::MAX_BITS;
         return comp.getErrorType();
     }
 
@@ -760,8 +762,8 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
         }
 
         for (auto decl : member->declarators) {
-            auto variable =
-                compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(), 0u);
+            auto name = decl->name;
+            auto variable = compilation.emplace<FieldSymbol>(name.valueText(), name.location(), 0u);
             variable->setType(type);
             variable->setSyntax(*decl);
             variable->setAttributes(scope, member->attributes);
@@ -779,8 +781,9 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
 
             if (!bitWidth)
                 bitWidth = type.getBitWidth();
-            else if (bitWidth != type.getBitWidth() && !issuedError) {
-                scope.addDiag(diag::PackedUnionWidthMismatch, decl->name.range());
+            else if (bitWidth != type.getBitWidth() && !issuedError && !name.valueText().empty()) {
+                auto& diag = scope.addDiag(diag::PackedUnionWidthMismatch, name.range());
+                diag << name.valueText() << type.getBitWidth() << bitWidth;
                 issuedError = true;
             }
 
