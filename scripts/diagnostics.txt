@@ -476,7 +476,6 @@ error FormatEmptyArg "empty argument not allowed -- expecting value for '%{}' fo
 error FormatTooManyArgs "too many arguments provided for format string"
 error InvalidStringArg "value of type {} is not a valid string argument"
 error ArrayReductionIntegral "array reduction methods can only be called on unpacked arrays of integral values"
-error BadFinishNum "finish argument must have value of 0, 1, or 2"
 error SysFuncNotConst "'{}' is not allowed in a constant context"
 error QueryOnDynamicType "array query function '{}' cannot be called on a dynamically sized type identifier"
 error DimensionIndexInvalid "{} is not a valid dimension for {}"
@@ -487,6 +486,7 @@ error ExpectedModuleName "expected module name"
 error ExpectedModOrVarName "expected module or variable name"
 error CastArgSingular "argument to $cast cannot be of aggregate type (type is {})"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
+warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 
 subsystem ConstEval
 note NoteInCallTo "in call to '{}'"
@@ -545,7 +545,7 @@ group default = { real-underflow real-overflow literal-overflow case-gen-dup
                   redef-macro nonstandard-generate not-supported unknown-pragma extra-pragma-args
                   expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static static-skipped
                   elem-not-found dynarray-index dynarray-range queue-range empty-queue unknown-escape-code
-                  no-top warning-task unsized-concat }
+                  no-top warning-task unsized-concat finish-num }
 
 group extra = { empty-member empty-stmt dup-import unused-def ignored-macro-paste pointless-void-cast
                 unused-result format-real ignored-slice task-ignored }
