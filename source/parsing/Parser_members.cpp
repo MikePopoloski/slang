@@ -234,11 +234,11 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             return &parseDefParam(attributes);
         case TokenKind::ImportKeyword:
             if (peek(1).kind == TokenKind::StringLiteral) {
-                return &parseDPIImportExport(attributes);
+                return &parseDPIImport(attributes);
             }
             return &parseImportDeclaration(attributes);
         case TokenKind::ExportKeyword:
-            return &parseDPIImportExport(attributes);
+            return &parseDPIExport(attributes);
         case TokenKind::Semicolon:
             return &factory.emptyMember(attributes, nullptr, consume());
         case TokenKind::PropertyKeyword:
@@ -1704,22 +1704,24 @@ PackageImportItemSyntax& Parser::parsePackageImportItem() {
     return factory.packageImportItem(package, doubleColon, item);
 }
 
-DPIImportExportSyntax& Parser::parseDPIImportExport(AttrList attributes) {
-    auto keyword = consume();
-    auto stringLiteral = expect(TokenKind::StringLiteral);
-    if (!stringLiteral.isMissing() && stringLiteral.valueText() != "DPI-C" &&
-        stringLiteral.valueText() != "DPI") {
-        addDiag(diag::ExpectedDPISpecString, stringLiteral.location());
-    }
+Token Parser::parseDPISpecString() {
+    Token token = expect(TokenKind::StringLiteral);
+    if (!token.isMissing() && token.valueText() != "DPI-C" && token.valueText() != "DPI")
+        addDiag(diag::ExpectedDPISpecString, token.location());
+    return token;
+}
 
-    Token property, name, equals;
-    if (keyword.kind == TokenKind::ImportKeyword &&
-        (peek(TokenKind::ContextKeyword) || peek(TokenKind::PureKeyword))) {
+DPIImportSyntax& Parser::parseDPIImport(AttrList attributes) {
+    Token keyword = consume();
+    Token specString = parseDPISpecString();
+
+    Token property;
+    if (peek(TokenKind::ContextKeyword) || peek(TokenKind::PureKeyword))
         property = consume();
-    }
 
+    Token c_identifier, equals;
     if (peek(TokenKind::Identifier)) {
-        name = consume();
+        c_identifier = consume();
         equals = expect(TokenKind::Equals);
     }
 
@@ -1728,9 +1730,31 @@ DPIImportExportSyntax& Parser::parseDPIImportExport(AttrList attributes) {
         options |= FunctionOptions::AllowTasks;
 
     auto& method = parseFunctionPrototype(SyntaxKind::Unknown, options);
-    auto semi = expect(TokenKind::Semicolon);
-    return factory.dPIImportExport(attributes, keyword, stringLiteral, property, name, equals,
-                                   method, semi);
+    Token semi = expect(TokenKind::Semicolon);
+    return factory.dPIImport(attributes, keyword, specString, property, c_identifier, equals,
+                             method, semi);
+}
+
+DPIExportSyntax& Parser::parseDPIExport(AttrList attributes) {
+    Token keyword = consume();
+    Token specString = parseDPISpecString();
+
+    Token c_identifier, equals;
+    if (peek(TokenKind::Identifier)) {
+        c_identifier = consume();
+        equals = expect(TokenKind::Equals);
+    }
+
+    Token functionOrTask;
+    if (peek(TokenKind::TaskKeyword))
+        functionOrTask = consume();
+    else
+        functionOrTask = expect(TokenKind::FunctionKeyword);
+
+    Token name = expect(TokenKind::Identifier);
+    Token semi = expect(TokenKind::Semicolon);
+    return factory.dPIExport(attributes, keyword, specString, c_identifier, equals, functionOrTask,
+                             name, semi);
 }
 
 ElabSystemTaskSyntax* Parser::parseElabSystemTask(AttrList attributes) {

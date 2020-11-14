@@ -248,7 +248,8 @@ private:
     PackageImportDeclarationSyntax& parseImportDeclaration(AttrList attributes);
     PackageImportItemSyntax& parsePackageImportItem();
     NetTypeDeclarationSyntax& parseNetTypeDecl(AttrList attributes);
-    DPIImportExportSyntax& parseDPIImportExport(AttrList attributes);
+    DPIImportSyntax& parseDPIImport(AttrList attributes);
+    DPIExportSyntax& parseDPIExport(AttrList attributes);
     ElabSystemTaskSyntax* parseElabSystemTask(AttrList attributes);
     AssertionItemPortListSyntax* parseAssertionItemPortList(TokenKind declarationKind);
     PropertyDeclarationSyntax& parsePropertyDeclaration(AttrList attributes);
@@ -321,6 +322,7 @@ private:
                         IsItemFunc&& isItem, ParseItemFunc&& parseItem);
 
     span<Token> parseClassQualifiers(bool& isPureOrExtern);
+    Token parseDPISpecString();
 
     // ---- Lookahead routines, for determining which kind of syntax to parse ----
 

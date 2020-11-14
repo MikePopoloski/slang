@@ -1341,13 +1341,22 @@ token clocking
 token name
 token semi
 
-DPIImportExport base=Member
+DPIImport base=Member
 token keyword
-token stringLiteral
+token specString
 token property
 token c_identifier
 token equals
 FunctionPrototype method
+token semi
+
+DPIExport base=Member
+token keyword
+token specString
+token c_identifier
+token equals
+token functionOrTask
+token name
 token semi
 
 ElabSystemTask base=Member

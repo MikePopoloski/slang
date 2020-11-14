@@ -1140,7 +1140,8 @@ static bool isModuleOrPackageDecl(SyntaxKind kind) {
         case SyntaxKind::DataDeclaration:
         case SyntaxKind::TaskDeclaration:
         case SyntaxKind::FunctionDeclaration:
-        case SyntaxKind::DPIImportExport:
+        case SyntaxKind::DPIImport:
+        case SyntaxKind::DPIExport:
         case SyntaxKind::ClassDeclaration:
         case SyntaxKind::ParameterDeclarationStatement:
         case SyntaxKind::CovergroupDeclaration:
