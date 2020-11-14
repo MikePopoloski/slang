@@ -262,6 +262,92 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     }
 }
 
+void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    BindContext context(scope, LookupLocation::max);
+    const Definition* targetDef = nullptr;
+
+    // TODO: check results of noteBindDirective
+
+    auto createInstances = [&](const Scope& targetScope) {
+        SmallVectorSized<const Symbol*, 4> instances;
+        fromSyntax(comp, *syntax.instantiation, LookupLocation::max, targetScope, instances);
+
+        // If instances is an empty array, an error must have occurred and we should
+        // not attempt creating more instances later.
+        if (instances.empty())
+            return false;
+
+        // The nature of bind directives makes this const_cast necessary; we maintain the
+        // outward invariant of a scope having all its members by making the Compilation
+        // object search through all instances and find bind directives up front before
+        // handing off access to any nodes.
+        Scope& newScope = const_cast<Scope&>(targetScope);
+        for (auto inst : instances)
+            newScope.addMember(*inst);
+
+        return true;
+    };
+
+    // If an instance list is given, then the target name must be a definition name.
+    // Otherwise, the target name can be either an instance name or a definition name,
+    // preferencing the instance if found.
+    if (syntax.targetInstances) {
+        comp.noteBindDirective(syntax, nullptr);
+
+        // TODO: The parser checks for an invalid target name here.
+        if (syntax.target->kind != SyntaxKind::IdentifierName)
+            return;
+
+        Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
+        targetDef = comp.getDefinition(name.valueText(), scope);
+        if (!targetDef) {
+            scope.addDiag(diag::UnknownModule, name.range()) << name.valueText();
+            return;
+        }
+
+        // TODO: check that def is not a program here
+
+        for (auto inst : syntax.targetInstances->targets) {
+            LookupResult result;
+            Lookup::name(scope, *inst, LookupLocation::max, LookupFlags::None, result);
+            result.reportErrors(context);
+
+            if (result.found) {
+                // TODO: check valid target
+                // TODO: check that instance is of targetDef
+                if (!createInstances(result.found->as<InstanceSymbol>().body))
+                    return;
+            }
+        }
+    }
+    else {
+        LookupResult result;
+        Lookup::name(scope, *syntax.target, LookupLocation::max, LookupFlags::None, result);
+
+        if (result.found) {
+            // TODO: check valid target
+            comp.noteBindDirective(syntax, nullptr);
+            createInstances(result.found->as<InstanceSymbol>().body);
+        }
+        else {
+            // If we didn't find the name as an instance, try as a definition.
+            if (syntax.target->kind == SyntaxKind::IdentifierName) {
+                Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
+                targetDef = comp.getDefinition(name.valueText(), scope);
+            }
+
+            comp.noteBindDirective(syntax, targetDef);
+
+            // If no name and no definition, report an error.
+            if (!targetDef) {
+                result.reportErrors(context);
+                return;
+            }
+        }
+    }
+}
+
 static void getInstanceArrayDimensions(const InstanceArraySymbol& array,
                                        SmallVector<ConstantRange>& dimensions) {
     auto scope = array.getParentScope();

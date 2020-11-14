@@ -2073,7 +2073,10 @@ BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
     }
 
     auto& instantiation = parseHierarchyInstantiation({});
-    return factory.bindDirective(attr, keyword, target, targetInstances, instantiation);
+    auto& result = factory.bindDirective(attr, keyword, target, targetInstances, instantiation);
+
+    meta.bindDirectives.append(&result);
+    return result;
 }
 
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {

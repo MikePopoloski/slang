@@ -192,7 +192,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::GateInstantiation:
         case SyntaxKind::ContinuousAssign:
-        case SyntaxKind::ModportDeclaration: {
+        case SyntaxKind::ModportDeclaration:
+        case SyntaxKind::BindDirective: {
             auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
             addMember(*sym);
             getOrAddDeferredData().addMember(sym);
@@ -658,6 +659,9 @@ void Scope::elaborate() const {
                 insertMembers(results, symbol);
                 break;
             }
+            case SyntaxKind::BindDirective:
+                InstanceSymbol::fromBindDirective(*this, member.node.as<BindDirectiveSyntax>());
+                break;
             default:
                 break;
         }

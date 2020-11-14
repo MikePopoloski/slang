@@ -149,6 +149,9 @@ public:
         /// This can be used to determine which modules should be considered as top-level
         /// roots of the design.
         flat_hash_set<string_view> globalInstances;
+
+        /// A list of all bind directives parsed.
+        SmallVectorSized<const BindDirectiveSyntax*, 4> bindDirectives;
     };
 
     /// Gets the current set of metadata collected during parsing.

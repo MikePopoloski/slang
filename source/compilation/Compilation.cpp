@@ -167,6 +167,57 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     SmallVectorSized<const GenericClassDefSymbol*, 8> genericClasses;
 };
 
+// This visitor is for finding all bind directives in the hierarchy.
+struct BindVisitor : public ASTVisitor<BindVisitor, false, false> {
+    BindVisitor(const flat_hash_set<const BindDirectiveSyntax*>& foundDirectives, size_t expected) :
+        foundDirectives(foundDirectives), expected(expected) {}
+
+    void handle(const RootSymbol& symbol) { visitDefault(symbol); }
+
+    void handle(const CompilationUnitSymbol& symbol) {
+        if (foundDirectives.size() == expected)
+            return;
+        visitDefault(symbol);
+    }
+
+    void handle(const InstanceSymbol& symbol) {
+        if (foundDirectives.size() == expected)
+            return;
+
+        if (!visitedInstances.emplace(&symbol.body).second) {
+            errored = true;
+            return;
+        }
+
+        visitDefault(symbol.body);
+    }
+
+    void handle(const GenerateBlockSymbol& symbol) {
+        if (foundDirectives.size() == expected || !symbol.isInstantiated)
+            return;
+        visitDefault(symbol);
+    }
+
+    void handle(const GenerateBlockArraySymbol& symbol) {
+        if (foundDirectives.size() == expected)
+            return;
+
+        auto members = symbol.members();
+        if (members.begin() == members.end())
+            return;
+
+        visit(*members.begin());
+    }
+
+    template<typename T>
+    void handle(const T&) {}
+
+    const flat_hash_set<const BindDirectiveSyntax*>& foundDirectives;
+    flat_hash_set<const InstanceBodySymbol*> visitedInstances;
+    size_t expected;
+    bool errored = false;
+};
+
 } // namespace
 
 namespace slang::Builtins {
@@ -475,7 +526,23 @@ const RootSymbol& Compilation::getRoot() {
 
     root->topInstances = topList.copy(*this);
     root->compilationUnits = compilationUnits;
+    finalizing = false;
     finalized = true;
+
+    // If there are any bind directives in the design, we need to opportunistically
+    // traverse the hierarchy now to find them (because they can modify the hierarchy and
+    // accessing other nodes / expressions might not be valid without those bound
+    // instances present).
+    size_t numBinds = 0;
+    for (auto& tree : syntaxTrees)
+        numBinds += tree->getMetadata().bindDirectives.size();
+
+    if (numBinds) {
+        BindVisitor visitor(seenBindDirectives, numBinds);
+        root->visit(visitor);
+        ASSERT(visitor.errored || seenBindDirectives.size() == numBinds);
+    }
+
     return *root;
 }
 
@@ -651,6 +718,17 @@ span<const InstanceSymbol* const> Compilation::getParentInstances(
 
 void Compilation::noteInterfacePort(const Definition& definition) {
     usedIfacePorts.emplace(&definition);
+}
+
+bool Compilation::noteBindDirective(const BindDirectiveSyntax& syntax,
+                                    const Definition* targetDef) {
+    if (!seenBindDirectives.emplace(&syntax).second)
+        return false;
+
+    if (targetDef)
+        bindDirectivesByDef[targetDef].push_back(&syntax);
+
+    return true;
 }
 
 void Compilation::addOutOfBlockMethod(const Scope& scope, const FunctionDeclarationSyntax& syntax,

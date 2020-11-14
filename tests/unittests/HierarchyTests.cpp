@@ -1149,3 +1149,28 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Bind directives") {
+    auto tree = SyntaxTree::fromText(R"(
+module foo #(parameter int bar) (input a);
+    logic b;
+endmodule
+
+module n #(parameter int f);
+    logic thing;
+endmodule
+
+module m;
+    localparam int j = 42;
+    n #(j + 5) n1();
+
+    initial m.n1.foo2.b <= 1;
+
+    bind m.n1 foo #(f * 2) foo1(thing), foo2(thing);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

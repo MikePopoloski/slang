@@ -21,6 +21,7 @@ class ParameterSymbolBase;
 class PortConnection;
 class PortSymbol;
 
+struct BindDirectiveSyntax;
 struct HierarchicalInstanceSyntax;
 struct HierarchyInstantiationSyntax;
 
@@ -58,6 +59,10 @@ public:
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            LookupLocation location, const Scope& scope,
                            SmallVector<const Symbol*>& results);
+
+    /// Creates one or more instances and binds them into a target scoped, based on the
+    /// provided syntax directive.
+    static void fromBindDirective(const Scope& scope, const BindDirectiveSyntax& syntax);
 
     /// Creates a default-instantiated instance of the given definition. All parameters must
     /// have defaults specified.

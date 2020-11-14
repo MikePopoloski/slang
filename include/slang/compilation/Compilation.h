@@ -33,6 +33,7 @@ class Statement;
 class SyntaxTree;
 class SystemSubroutine;
 
+struct BindDirectiveSyntax;
 struct CompilationUnitSyntax;
 struct FunctionDeclarationSyntax;
 struct ModuleDeclarationSyntax;
@@ -200,6 +201,14 @@ public:
     /// Notes the fact that the given definition has been used in an interface port.
     /// This prevents warning about that interface definition being unused in the design.
     void noteInterfacePort(const Definition& definition);
+
+    /// Notes the presence of a bind directive. The compilation uses this to decide
+    /// when it has done enough traversal of the hierarchy to have seen all bind directives.
+    /// If @a targetDef is non-null, the bind directive applies to all instances of the
+    /// given definition, which needs special handling.
+    /// @returns true if this is the first time this directive has been encountered,
+    /// and false if it's already been elaborated (thus constituting an error).
+    bool noteBindDirective(const BindDirectiveSyntax& syntax, const Definition* targetDef);
 
     /// Tracks the existence of an out-of-block metohd definition in the given scope.
     /// This can later be retrieved by calling findOutOfBlockMethod().
@@ -472,6 +481,14 @@ private:
 
     // A list of interface definitions used in interface ports.
     flat_hash_set<const Definition*> usedIfacePorts;
+
+    // A map from definitions to bind directives that will create
+    // instances within those definitions.
+    flat_hash_map<const Definition*, std::vector<const BindDirectiveSyntax*>> bindDirectivesByDef;
+
+    // A set tracking all bind directives we've encountered during elaboration,
+    // which is used to know when we've seen them all and can stop doing early scanning.
+    flat_hash_set<const BindDirectiveSyntax*> seenBindDirectives;
 };
 
 } // namespace slang
