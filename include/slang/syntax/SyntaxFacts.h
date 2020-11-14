@@ -117,6 +117,9 @@ public:
     /// @return true if the given token represents an identifier or a comma.
     static bool isIdentifierOrComma(TokenKind kind);
 
+    /// @return true if the given token is not an identifier or a comma.
+    static bool isNotIdOrComma(TokenKind kind);
+
     /// @return true if the given token represents a possible expression or a comma.
     static bool isPossibleExpressionOrComma(TokenKind kind);
 

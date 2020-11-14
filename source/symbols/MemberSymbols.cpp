@@ -30,10 +30,24 @@ namespace slang {
 EmptyMemberSymbol& EmptyMemberSymbol::fromSyntax(Compilation& compilation, const Scope& scope,
                                                  const EmptyMemberSyntax& syntax) {
     auto result = compilation.emplace<EmptyMemberSymbol>(syntax.semi.location());
-
     result->setAttributes(scope, syntax.attributes);
-    if (syntax.attributes.empty())
-        scope.addDiag(diag::EmptyMember, syntax.sourceRange());
+
+    // Report a warning if this is just an empty semicolon hanging out for no reason,
+    // but don't report if this was inserted due to an error elsewhere.
+    if (syntax.attributes.empty() && !syntax.semi.isMissing()) {
+        // If there are skipped nodes behind this semicolon don't report the warning,
+        // as it's likely it's due to the error itself.
+        bool anySkipped = false;
+        for (auto trivia : syntax.getFirstToken().trivia()) {
+            if (trivia.kind == TriviaKind::SkippedTokens) {
+                anySkipped = true;
+                break;
+            }
+        }
+
+        if (!anySkipped)
+            scope.addDiag(diag::EmptyMember, syntax.sourceRange());
+    }
 
     return *result;
 }

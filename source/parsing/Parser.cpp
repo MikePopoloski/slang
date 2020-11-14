@@ -760,7 +760,7 @@ span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end, bool
 }
 
 span<TokenOrSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypMax) {
-    return parseDeclarators<isSemicolon>(TokenKind::Semicolon, semi, allowMinTypMax);
+    return parseDeclarators<isNotIdOrComma>(TokenKind::Semicolon, semi, allowMinTypMax);
 }
 
 Parser::AttrList Parser::parseAttributes() {

@@ -699,6 +699,10 @@ bool SyntaxFacts::isIdentifierOrComma(TokenKind kind) {
     return kind == TokenKind::Identifier || kind == TokenKind::Comma;
 }
 
+bool SyntaxFacts::isNotIdOrComma(TokenKind kind) {
+    return kind != TokenKind::Identifier && kind != TokenKind::Comma;
+}
+
 bool SyntaxFacts::isPossibleExpressionOrComma(TokenKind kind) {
     return kind == TokenKind::Comma || isPossibleExpression(kind);
 }

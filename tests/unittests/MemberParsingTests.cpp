@@ -257,8 +257,9 @@ endmodule : m1;
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 1);
+    REQUIRE(diagnostics.size() == 2);
     CHECK(diagnostics[0].code == diag::ImplicitNotAllowed);
+    CHECK(diagnostics[1].code == diag::ExpectedDeclarator);
 }
 
 TEST_CASE("Errors for directives inside design elements") {
@@ -479,4 +480,22 @@ bind other: b1, $root.b1[1] m1 #(4) b(0);
 
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Missing semicolon error recovery") {
+    auto& text = R"(
+module test;
+    int a
+    int b;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    std::string result = "\n" + reportGlobalDiags();
+    CHECK(result == R"(
+source:3:10: error: expected ';'
+    int a
+         ^
+)");
 }
