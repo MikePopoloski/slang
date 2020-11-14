@@ -306,6 +306,35 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     return result;
 }
 
+SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
+                                               const DPIImportSyntax& syntax, const Scope& parent) {
+    auto& proto = *syntax.method;
+    Token nameToken = proto.name->getLastToken();
+    auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
+                                                                       : SubroutineKind::Function;
+
+    auto result = compilation.emplace<SubroutineSymbol>(
+        compilation, nameToken.valueText(), nameToken.location(), VariableLifetime::Automatic,
+        subroutineKind);
+    result->setSyntax(syntax);
+    result->setAttributes(parent, syntax.attributes);
+    result->flags = MethodFlags::DPIImport;
+
+    if (subroutineKind == SubroutineKind::Function)
+        result->declaredReturnType.setTypeSyntax(*proto.returnType);
+    else
+        result->declaredReturnType.setType(compilation.getVoidType());
+
+    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
+    if (proto.portList) {
+        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
+                                         arguments);
+    }
+
+    result->arguments = arguments.copy(compilation);
+    return *result;
+}
+
 static bool isSameExpr(const SyntaxNode& l, const SyntaxNode& r) {
     size_t childCount = l.getChildCount();
     if (l.kind != r.kind || childCount != r.getChildCount())

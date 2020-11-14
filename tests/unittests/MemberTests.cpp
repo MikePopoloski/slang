@@ -1023,3 +1023,18 @@ endinterface
     CHECK(diags[4].code == diag::Redefinition);
     CHECK(diags[5].code == diag::NotASubroutine);
 }
+
+TEST_CASE("DPI Imports") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    import "DPI-C" pure \begin = function void f(input, output logic[3:0]);
+
+    logic [3:0] r;
+    initial f(1, r);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

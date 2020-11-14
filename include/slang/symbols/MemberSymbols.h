@@ -100,12 +100,14 @@ enum class MethodFlags : uint8_t {
     Pure = 2,
     Static = 4,
     Constructor = 8,
-    InterfaceImport = 16
+    InterfaceImport = 16,
+    DPIImport = 32
 };
-BITMASK(MethodFlags, InterfaceImport);
+BITMASK(MethodFlags, DPIImport);
 
 class MethodPrototypeSymbol;
 struct ClassMethodDeclarationSyntax;
+struct DPIImportSyntax;
 struct FunctionDeclarationSyntax;
 struct FunctionPortListSyntax;
 
@@ -145,6 +147,9 @@ public:
 
     static SubroutineSymbol* fromSyntax(Compilation& compilation,
                                         const ClassMethodDeclarationSyntax& syntax,
+                                        const Scope& parent);
+
+    static SubroutineSymbol& fromSyntax(Compilation& compilation, const DPIImportSyntax& syntax,
                                         const Scope& parent);
 
     static SubroutineSymbol& createOutOfBlock(Compilation& compilation,
