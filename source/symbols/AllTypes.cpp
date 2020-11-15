@@ -613,6 +613,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
     ASSERT(syntax.packed);
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword || forceSigned;
     bool isFourState = false;
+    bool issuedError = false;
     bitwidth_t bitWidth = 0;
 
     // We have to look at all the members up front to know our width and four-statedness.
@@ -621,9 +622,9 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
     for (auto member : make_reverse_range(syntax.members)) {
         const Type& type = compilation.getType(*member->type, location, scope);
         isFourState |= type.isFourState();
+        issuedError |= type.isError();
 
-        bool issuedError = false;
-        if (!type.isIntegral() && !type.isError()) {
+        if (!issuedError && !type.isIntegral()) {
             issuedError = true;
             auto& diag = scope.addDiag(diag::PackedMemberNotIntegral,
                                        member->type->getFirstToken().location());
@@ -659,7 +660,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation,
         }
     }
 
-    if (!bitWidth)
+    if (!bitWidth || issuedError)
         return compilation.getErrorType();
 
     auto structType = compilation.emplace<PackedStructType>(
@@ -744,6 +745,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
     ASSERT(syntax.packed);
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword || forceSigned;
     bool isFourState = false;
+    bool issuedError = false;
     bitwidth_t bitWidth = 0;
 
     // We have to look at all the members up front to know our width and four-statedness.
@@ -751,9 +753,9 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
     for (auto member : syntax.members) {
         const Type& type = compilation.getType(*member->type, location, scope);
         isFourState |= type.isFourState();
+        issuedError |= type.isError();
 
-        bool issuedError = false;
-        if (!type.isIntegral() && !type.isError()) {
+        if (!issuedError && !type.isIntegral()) {
             issuedError = true;
             auto& diag = scope.addDiag(diag::PackedMemberNotIntegral,
                                        member->type->getFirstToken().location());
@@ -795,7 +797,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& compilation,
         }
     }
 
-    if (!bitWidth)
+    if (!bitWidth || issuedError)
         return compilation.getErrorType();
 
     auto unionType = compilation.emplace<PackedUnionType>(
