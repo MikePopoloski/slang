@@ -103,7 +103,8 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
 
 bool runCompiler(Compilation& compilation, const std::vector<std::string>& warningOptions,
                  uint32_t errorLimit, bool quiet, bool onlyParse, bool showColors,
-                 const optional<std::string>& astJsonFile) {
+                 const optional<std::string>& astJsonFile,
+                 const std::vector<std::string>& astJsonScopes) {
     DiagnosticEngine diagEngine(*compilation.getSourceManager());
     Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
     Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
@@ -143,7 +144,16 @@ bool runCompiler(Compilation& compilation, const std::vector<std::string>& warni
         writer.setPrettyPrint(true);
 
         ASTSerializer serializer(compilation, writer);
-        serializer.serialize(compilation.getRoot());
+        if (astJsonScopes.empty()) {
+            serializer.serialize(compilation.getRoot());
+        }
+        else {
+            for (auto& scopeName : astJsonScopes) {
+                auto sym = compilation.getRoot().lookupName(scopeName);
+                if (sym)
+                    serializer.serialize(*sym);
+            }
+        }
 
         writeToFile(*astJsonFile, writer.view());
     }
@@ -248,6 +258,12 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
     cmdLine.add("--ast-json", astJsonFile,
                 "Dump the compiled AST in JSON format to the specified file, or '-' for stdout",
                 "<file>");
+
+    std::vector<std::string> astJsonScopes;
+    cmdLine.add("--ast-json-scope", astJsonScopes,
+                "When dumping AST to JSON, include only the scopes specified by the "
+                "given hierarchical paths",
+                "<path>");
 
     // Compilation
     optional<uint32_t> maxInstanceDepth;
@@ -463,8 +479,9 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
                         SyntaxTree::fromBuffer(buffer, sourceManager, options));
             }
 
-            anyErrors = !runCompiler(compilation, warningOptions, errorLimit.value_or(20),
-                                     quiet == true, onlyParse == true, showColors, astJsonFile);
+            anyErrors =
+                !runCompiler(compilation, warningOptions, errorLimit.value_or(20), quiet == true,
+                             onlyParse == true, showColors, astJsonFile, astJsonScopes);
 
 #if defined(INCLUDE_SIM)
             if (!anyErrors && !onlyParse.value_or(false) && shouldSim == true) {
