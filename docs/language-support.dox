@@ -201,7 +201,7 @@ LRM | Feature | Supported
 {{m-success}} 13.3 | Tasks | v0.2
 {{m-success}} 13.4 | Functions | v0.2
 {{m-warning}} 13.5 | Subroutine calls and argument passing | partial
-{{m-danger}}  13.6 | Import and export functions | no
+{{m-warning}} 13.6 | Import and export functions | partial
 {{m-success}} 13.7 | Task and function names | v0.2
 {{m-dim}}     13.8 | Parameterized tasks and functions | N/A
 
@@ -273,7 +273,7 @@ LRM | Feature | Supported
 {{m-success}} 20.9 | Bit vector system functions | v0.2
 {{m-success}} 20.10 | Severity tasks | v0.2
 {{m-success}} 20.11 | Elaboration tasks | v0.5
-{{m-danger}}  20.12 | Assertion control tasks | no
+{{m-success}} 20.12 | Assertion control tasks | v0.6
 {{m-danger}}  20.13 | Sampled value system functions | no
 {{m-danger}}  20.14 | Coverage control functions | no
 {{m-warning}} 20.15 | Probabilistic distribution functions | partial
@@ -328,7 +328,7 @@ LRM | Feature | Supported
 {{m-success}} 23.9 | Scope rules | v0.2
 {{m-success}} 23.10 | Overriding module parameters | v0.2
 {{m-danger}}  23.10.1 | defparam statement | no
-{{m-danger}}  23.11 | Binding auxiliary code to scopes or instances | no
+{{m-warning}} 23.11 | Binding auxiliary code to scopes or instances | partial
 
 ## 24. Programs
 

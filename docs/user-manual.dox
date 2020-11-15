@@ -9,8 +9,8 @@ The `slang` binary runs a full compilation of given SystemVerilog source files.
 Eventually it will produce a full simulation binary as output, but for now it
 serves as a checker of source code syntax, types, and various language rules.
 
-Running it on one or more valid SystemVerilog files will produce no output, and
-will return zero:
+Running it on one or more valid SystemVerilog files will note the top level modules
+found, and will return zero:
 
 @code{.sv}
 // test1.sv
@@ -22,7 +22,12 @@ endmodule
 @endcode
 
 @code{.ansi}
-> slang test.sv
+> slang test1.sv
+[93mTop level design units:
+[0m    m
+
+[1;32mBuild succeeded: [0m0 errors, 0 warnings
+
 > echo $?
 0
 @endcode
@@ -39,9 +44,14 @@ endmodule
 @endcode
 
 @code{.ansi}
-[0;36m../test.sv[0m:[1;36m3:12[0m: [1;31merror: [0m[1;37minvalid operands to binary expression ('<unnamed unpacked struct>' and 'int')[0m
+[93mTop level design units:
+[0m    m
+
+[0;36m../test2.sv[0m:[1;36m4:12[0m: [1;31merror: [0m[1;37minvalid operands to binary expression ('<unnamed unpacked struct>' and 'int')[0m
         int i = s + 1;
 [1;32m                ~ ^ ~[0m
+
+[31mBuild failed: [0m1 error, 0 warnings
 @endcode
 
 @section compilation-units Compilation Units

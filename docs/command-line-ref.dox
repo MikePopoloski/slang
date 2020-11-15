@@ -108,6 +108,12 @@ The default is 64.
 
 Dump the compiled AST in JSON format to the specified file, or '-' for stdout.
 
+`--ast-json-scope <path>`
+
+When dumping AST to JSON, include only the scope (or symbol) specified by the given hierarchical path.
+This option can be specified more than once to include more than one scope. If not provided, all
+symbols are dumped.
+
 @section compilation-limits Compilation
 
 `--top <name>`
@@ -150,6 +156,11 @@ The default is 10.
 
 Select which expressions in min:typ:max triplets should be processed as part of
 the compilation. By default this will be the "typical", or middle expression.
+
+`-G <name>=<value>`
+
+Override all parameters with the given name in top-level modules to the provided value.
+This option can be specified more than once to override multiple parameters.
 
 @section diag-control Diagnostic Control
 
