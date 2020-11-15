@@ -395,6 +395,52 @@ public:
     }
 };
 
+class AssertControlTask : public SystemTaskBase {
+public:
+    explicit AssertControlTask(const std::string& name) :
+        SystemTaskBase(name), isFullMethod(name == "$assertcontrol") {}
+
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        if ((isFullMethod && argIndex < 4) || (!isFullMethod && argIndex == 0) ||
+            !NameSyntax::isKind(syntax.kind)) {
+            return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
+        }
+
+        return HierarchicalReferenceExpression::fromSyntax(context.getCompilation(),
+                                                           syntax.as<NameSyntax>(), context);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, isFullMethod ? 1 : 0, INT32_MAX))
+            return comp.getErrorType();
+
+        for (size_t i = 0; i < args.size(); i++) {
+            // If this is $assertcontrol, the first four args are integer expressions.
+            // Otherwise, only the first arg is an integer expression. The rest, in both
+            // cases, are hierarchical references.
+            if ((isFullMethod && i < 4) || (!isFullMethod && i == 0)) {
+                if (!args[i]->type->isIntegral())
+                    return badArg(context, *args[i]);
+            }
+            else {
+                if (args[i]->kind != ExpressionKind::HierarchicalReference ||
+                    !args[i]->as<HierarchicalReferenceExpression>().symbol->isScope()) {
+                    context.addDiag(diag::ExpectedScopeOrAssert, args[i]->sourceRange);
+                    return comp.getErrorType();
+                }
+            }
+        }
+
+        return comp.getVoidType();
+    }
+
+private:
+    bool isFullMethod;
+};
+
 void registerSystemTasks(Compilation& c) {
 #define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
     REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
@@ -492,6 +538,20 @@ void registerSystemTasks(Compilation& c) {
     TASK("$dumpportsflush", 0, string_t);
 
 #undef TASK
+
+#define ASSERTCTRL(name) c.addSystemSubroutine(std::make_unique<AssertControlTask>(name))
+    ASSERTCTRL("$assertcontrol");
+    ASSERTCTRL("$asserton");
+    ASSERTCTRL("$assertoff");
+    ASSERTCTRL("$assertkill");
+    ASSERTCTRL("$assertpasson");
+    ASSERTCTRL("$assertpassoff");
+    ASSERTCTRL("$assertfailon");
+    ASSERTCTRL("$assertfailoff");
+    ASSERTCTRL("$assertnonvacuouson");
+    ASSERTCTRL("$assertvacuousoff");
+
+#undef ASSERTCTRL
 }
 
 } // namespace slang::Builtins

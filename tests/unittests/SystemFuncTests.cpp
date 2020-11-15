@@ -432,6 +432,38 @@ endmodule
     CHECK(diags[5].code == diag::BadSystemSubroutineArg);
 }
 
+TEST_CASE("assertcontrol") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo[];
+    initial begin : asdf
+        $asserton;
+        $assertpasson(3);
+        $assertpassoff(4, asdf);
+        $assertoff;
+        $assertkill(1, m.foo); // error, not scope
+        $assertfailon(foo); // error
+        $assertfailoff(1, 2); // error
+        $assertnonvacuouson();
+        $assertvacuousoff(1, m.asdf);
+
+        $assertcontrol(1, 2, 3, 4, m.asdf);
+        $assertcontrol(); // error
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ExpectedScopeOrAssert);
+    CHECK(diags[1].code == diag::BadSystemSubroutineArg);
+    CHECK(diags[2].code == diag::ExpectedScopeOrAssert);
+    CHECK(diags[3].code == diag::TooFewArguments);
+}
+
 TEST_CASE("file i/o functions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
