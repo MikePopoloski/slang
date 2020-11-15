@@ -116,6 +116,7 @@ ParameterSymbol& ParameterSymbol::clone(Compilation& compilation) const {
         result->setInitializer(*declared->getInitializer());
 
     result->value = value;
+    result->fromStringLit = fromStringLit;
     return *result;
 }
 
@@ -130,12 +131,28 @@ const ConstantValue& ParameterSymbol::getValue() const {
 
             BindContext ctx(*scope, LookupLocation::max);
             value = scope->getCompilation().allocConstant(ctx.eval(*init));
+
+            // If this parameter has an implicit type declared and it was assigned
+            // a string literal, make a note so that this parameter gets treated
+            // as an implicit string itself in further expressions.
+            auto typeSyntax = getDeclaredType()->getTypeSyntax();
+            if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType) {
+                auto& its = typeSyntax->as<ImplicitTypeSyntax>();
+                if (!its.signing && its.dimensions.empty())
+                    fromStringLit = init->isImplicitString();
+            }
         }
         else {
             value = &ConstantValue::Invalid;
         }
     }
     return *value;
+}
+
+bool ParameterSymbol::isImplicitString() const {
+    if (!value)
+        getValue();
+    return fromStringLit;
 }
 
 void ParameterSymbol::setValue(ConstantValue newValue) {

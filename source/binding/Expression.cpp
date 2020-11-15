@@ -365,6 +365,15 @@ bool Expression::isImplicitString() const {
             auto& mtm = as<MinTypMaxExpression>();
             return mtm.selected().isImplicitString();
         }
+        case ExpressionKind::NamedValue: {
+            auto& nv = as<NamedValueExpression>();
+            return nv.symbol.kind == SymbolKind::Parameter &&
+                   nv.symbol.as<ParameterSymbol>().isImplicitString();
+        }
+        case ExpressionKind::Conversion: {
+            auto& conv = as<ConversionExpression>();
+            return conv.isImplicit() && conv.operand().isImplicitString();
+        }
         default:
             return false;
     }

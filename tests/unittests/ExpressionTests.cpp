@@ -1773,3 +1773,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExpressionNotAssignable);
 }
+
+TEST_CASE("Implicit param string literal propagation") {
+    auto tree = SyntaxTree::fromText(R"(
+module n #(parameter foo);
+    string s;
+    initial s = foo;
+endmodule
+
+module m;
+    localparam f = "asdf";
+    n #(f) n1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -57,10 +57,13 @@ public:
     const ConstantValue& getValue() const;
     void setValue(ConstantValue value);
 
+    bool isImplicitString() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
     mutable const ConstantValue* value = nullptr;
+    mutable bool fromStringLit = false;
 };
 
 struct TypeParameterDeclarationSyntax;
