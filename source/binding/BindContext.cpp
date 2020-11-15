@@ -345,15 +345,14 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked
             addDiag(diag::PackedDimsRequireFullRange, syntax.sourceRange());
             result.kind = DimensionKind::Unknown;
         }
-        else if (result.range.width() > SVInt::MAX_BITS) {
-            if (isPacked) {
-                addDiag(diag::PackedArrayTooLarge, syntax.sourceRange())
-                    << result.range.width() << (int)SVInt::MAX_BITS;
-            }
-            else {
-                addDiag(diag::ArrayDimTooLarge, syntax.sourceRange())
-                    << result.range.width() << (int)SVInt::MAX_BITS;
-            }
+        else if (isPacked && result.range.width() > SVInt::MAX_BITS) {
+            addDiag(diag::PackedArrayTooLarge, syntax.sourceRange())
+                << result.range.width() << (int)SVInt::MAX_BITS;
+            result.kind = DimensionKind::Unknown;
+        }
+        else if (!isPacked && result.range.width() > INT32_MAX) {
+            addDiag(diag::ArrayDimTooLarge, syntax.sourceRange())
+                << result.range.width() << INT32_MAX;
             result.kind = DimensionKind::Unknown;
         }
     }

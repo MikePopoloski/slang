@@ -556,9 +556,10 @@ const Type& FixedSizeUnpackedArrayType::fromDims(Compilation& compilation, const
 
     const Type* result = &elementType;
     size_t count = dimensions.size();
-    for (size_t i = 0; i < count; i++)
+    for (size_t i = 0; i < count; i++) {
         result =
             compilation.emplace<FixedSizeUnpackedArrayType>(*result, dimensions[count - i - 1]);
+    }
 
     return *result;
 }
