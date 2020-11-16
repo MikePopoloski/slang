@@ -90,9 +90,10 @@ struct Expression::PropagationVisitor {
 
     const BindContext& context;
     const Type& newType;
+    bool isAssignment;
 
-    PropagationVisitor(const BindContext& context, const Type& newType) :
-        context(context), newType(newType) {}
+    PropagationVisitor(const BindContext& context, const Type& newType, bool isAssignment) :
+        context(context), newType(newType), isAssignment(isAssignment) {}
 
     template<typename T>
     Expression& visit(T& expr) {
@@ -121,8 +122,9 @@ struct Expression::PropagationVisitor {
 
         Expression* result = &expr;
         if (needConversion) {
-            result = &ConversionExpression::makeImplicit(context, newType,
-                                                         ConversionKind::Propagated, expr);
+            result = &ConversionExpression::makeImplicit(
+                context, newType,
+                isAssignment ? ConversionKind::Implicit : ConversionKind::Propagated, expr);
         }
 
         return *result;
@@ -786,14 +788,14 @@ void Expression::findPotentiallyImplicitNets(const ExpressionSyntax& expr,
 }
 
 void Expression::contextDetermined(const BindContext& context, Expression*& expr,
-                                   const Type& newType) {
-    PropagationVisitor visitor(context, newType);
+                                   const Type& newType, bool isAssignment) {
+    PropagationVisitor visitor(context, newType, isAssignment);
     expr = &expr->visit(visitor);
 }
 
 void Expression::selfDetermined(const BindContext& context, Expression*& expr) {
     ASSERT(expr->type);
-    PropagationVisitor visitor(context, *expr->type);
+    PropagationVisitor visitor(context, *expr->type, /* isAssignment */ false);
     expr = &expr->visit(visitor);
 }
 

@@ -328,7 +328,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
 
         rt = binaryOperatorType(compilation, &type, rt, false);
-        contextDetermined(context, result, *rt);
+        contextDetermined(context, result, *rt, /* isAssignment */ true);
 
         if (type.isEquivalent(*rt)) {
             result->type = &type;
@@ -602,10 +602,11 @@ Expression& ConversionExpression::makeImplicit(const BindContext& context, const
     Expression* op = &expr;
     selfDetermined(context, op);
 
-    // Warn for width mismatches.
-    if (targetType.isIntegral() && op->type->isIntegral() &&
-        targetType.getBitWidth() != op->type->getBitWidth()) {
-
+    // Warn for implicit assignments between integral types of differing widths.
+    // Note that this does not apply to propagated conversions, as those almost
+    // always do the right thing and the warnings would be very noisy.
+    if (conversionKind == ConversionKind::Implicit && targetType.isIntegral() &&
+        op->type->isIntegral() && targetType.getBitWidth() != op->type->getBitWidth()) {
         // Don't warn if the source has a known constant value. It's very common
         // to have, say, integer literals not match a target assignment type.
         // We'll report a warning later if a conversion of a constant leads to
