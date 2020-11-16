@@ -570,9 +570,10 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
         return false;
 
     // Recursive function calls check body only once
-    // otherwise never finish until exceeding depth limit
+    // otherwise never finish until exceeding depth limit.
     if (inRecursion)
         return true;
+
     inRecursion = true;
     auto guard = ScopeGuard([this] { inRecursion = false; });
 
@@ -591,6 +592,11 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
 
     if (subroutine.subroutineKind == SubroutineKind::Task) {
         context.addDiag(diag::ConstEvalTaskNotConstant, range);
+        return false;
+    }
+
+    if (subroutine.flags.has(MethodFlags::DPIImport)) {
+        context.addDiag(diag::ConstEvalDPINotConstant, range);
         return false;
     }
 

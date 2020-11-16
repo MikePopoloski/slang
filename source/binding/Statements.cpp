@@ -1727,7 +1727,7 @@ ER ExpressionStatement::evalImpl(EvalContext& context) const {
 
 bool ExpressionStatement::verifyConstantImpl(EvalContext& context) const {
     // Skip system task invocations, but provide a warning.
-    if (expr.kind == ExpressionKind::Call &&
+    if (expr.kind == ExpressionKind::Call && expr.as<CallExpression>().isSystemCall() &&
         expr.as<CallExpression>().getSubroutineKind() == SubroutineKind::Task) {
         context.addDiag(diag::ConstSysTaskIgnored, expr.sourceRange)
             << expr.as<CallExpression>().getSubroutineName();

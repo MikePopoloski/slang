@@ -1038,3 +1038,43 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Non-const subroutine check failures") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    import "DPI-C" function int f1(input);
+    function void g; endfunction
+    task t; endtask
+    function int u(output o); endfunction
+
+    if (1) begin : asdf
+        function int v; endfunction
+    end
+
+    localparam int i = f1(1);
+    localparam int j = f2();
+    localparam int k = f3();
+    localparam int l = f4();
+    localparam int m = f5();
+
+    function int f2; g(); endfunction
+    function int f3; t(); endfunction
+    function int f4;
+        automatic logic l;
+        return u(l);
+    endfunction
+    function int f5; return asdf.v(); endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::ConstEvalDPINotConstant);
+    CHECK(diags[1].code == diag::ConstEvalVoidNotConstant);
+    CHECK(diags[2].code == diag::ConstEvalTaskNotConstant);
+    CHECK(diags[3].code == diag::ConstEvalFunctionArgDirection);
+    CHECK(diags[4].code == diag::ConstEvalFunctionInsideGenerate);
+}
