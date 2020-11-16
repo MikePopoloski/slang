@@ -121,9 +121,8 @@ struct Expression::PropagationVisitor {
 
         Expression* result = &expr;
         if (needConversion) {
-            Expression::selfDetermined(context, result);
-            result = context.scope.getCompilation().emplace<ConversionExpression>(
-                newType, ConversionKind::Propagated, expr, expr.sourceRange);
+            result = &ConversionExpression::makeImplicit(context, newType,
+                                                         ConversionKind::Propagated, expr);
         }
 
         return *result;

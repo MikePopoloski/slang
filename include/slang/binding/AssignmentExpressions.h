@@ -98,6 +98,9 @@ public:
                                   const SignedCastExpressionSyntax& syntax,
                                   const BindContext& context);
 
+    static Expression& makeImplicit(const BindContext& context, const Type& targetType,
+                                    ConversionKind conversionKind, Expression& expr);
+
     static ConstantValue convert(EvalContext& context, const Type& from, const Type& to,
                                  SourceRange sourceRange, ConstantValue&& value,
                                  ConversionKind conversionKind);

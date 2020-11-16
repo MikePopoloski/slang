@@ -106,18 +106,6 @@ bool isSameEnum(const Expression& expr, const Type& enumType) {
 
 namespace slang {
 
-Expression& Expression::implicitConversion(const BindContext& context, const Type& targetType,
-                                           Expression& expr) {
-    ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
-           ((targetType.isString() || targetType.isByteArray()) && expr.isImplicitString()) ||
-           (targetType.isEnum() && isSameEnum(expr, targetType)));
-
-    Expression* result = &expr;
-    selfDetermined(context, result);
-    return *context.scope.getCompilation().emplace<ConversionExpression>(
-        targetType, ConversionKind::Implicit, *result, result->sourceRange);
-}
-
 Expression* Expression::tryConnectPortArray(const BindContext& context, const Type& portType,
                                             Expression& expr, const InstanceSymbol& instance) {
     // This lambda is shared code for reporting an error and returning an invalid expression.
@@ -239,8 +227,9 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
     // bit ranges from it -- the range select expression works on the declared
     // range of the packed array so a multidimensional wouldn't work correctly
     // without this conversion.
-    result = &implicitConversion(context, comp.getType(portWidth, result->type->getIntegralFlags()),
-                                 *result);
+    result = &ConversionExpression::makeImplicit(
+        context, comp.getType(portWidth, result->type->getIntegralFlags()),
+        ConversionKind::Implicit, *result);
 
     // We have enough bits to assign each port on each instance, so now we just need
     // to pick the right ones. The spec says we start with all right hand indices
@@ -299,7 +288,8 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         if (((type.isString() || type.isByteArray()) && expr.isImplicitString()) ||
             (type.isEnum() && isSameEnum(expr, type))) {
 
-            result = &implicitConversion(context, type, *result);
+            result = &ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit,
+                                                         *result);
             selfDetermined(context, result);
             return *result;
         }
@@ -352,7 +342,8 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
     }
     else {
-        result = &implicitConversion(context, type, *result);
+        result =
+            &ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit, *result);
     }
 
     selfDetermined(context, result);
@@ -600,6 +591,33 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 
     result->type = &compilation.getType(operand.type->getBitWidth(), flags);
     return *result;
+}
+
+Expression& ConversionExpression::makeImplicit(const BindContext& context, const Type& targetType,
+                                               ConversionKind conversionKind, Expression& expr) {
+    ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
+           ((targetType.isString() || targetType.isByteArray()) && expr.isImplicitString()) ||
+           (targetType.isEnum() && isSameEnum(expr, targetType)));
+
+    Expression* op = &expr;
+    selfDetermined(context, op);
+
+    // Warn for width mismatches.
+    if (targetType.isIntegral() && op->type->isIntegral() &&
+        targetType.getBitWidth() != op->type->getBitWidth()) {
+
+        // Don't warn if the source has a known constant value. It's very common
+        // to have, say, integer literals not match a target assignment type.
+        // We'll report a warning later if a conversion of a constant leads to
+        // loss of a data.
+        if (!context.inUnevaluatedBranch() && !context.tryEval(*op)) {
+            context.addDiag(diag::WidthMismatch, op->sourceRange)
+                << op->type->getBitWidth() << targetType.getBitWidth();
+        }
+    }
+
+    return *context.getCompilation().emplace<ConversionExpression>(targetType, conversionKind, *op,
+                                                                   op->sourceRange);
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
