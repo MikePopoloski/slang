@@ -277,7 +277,7 @@ warning unconnected-port UnconnectedNamedPort "port '{}' has no connection"
 warning unconnected-unnamed-port UnconnectedUnnamedPort "instance does not provide a connection for an unnamed port"
 warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed because `default_nettype is set to 'none'"
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
-warning empty-member EmptyMember "empty member has no effect"
+warning empty-member EmptyMember "extra ';' has no effect"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -360,7 +360,7 @@ error NewVirtualClass "cannot create instance of virtual class '{}'"
 error NewInterfaceClass "cannot create instance of interface class '{}'"
 error AssignToCHandle "cannot assign to a chandle outside of a procedural context"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
-warning unsized-concat UnsizedInConcat "unsized integer in concat -- using a width of {}"
+warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -378,7 +378,7 @@ error CaseInsideKeyword "set membership cannot be used with {} statements"
 error InvalidDisableTarget "disable statement must specify a task or block name"
 error NotAnEvent "'{}' is not a triggerable event"
 warning event-const EventExpressionConstant "edge expression is constant"
-warning empty-stmt EmptyStatement "empty statement has no effect"
+warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"
 warning unused-result UnusedResult "ignoring return value of '{}', cast to void to suppress"
 
@@ -543,7 +543,7 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 
 group default = { real-underflow real-overflow literal-overflow case-gen-dup
                   case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
-                  redef-macro nonstandard-generate not-supported unknown-pragma extra-pragma-args
+                  redef-macro not-supported unknown-pragma extra-pragma-args
                   expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static static-skipped
                   elem-not-found dynarray-index dynarray-range queue-range empty-queue unknown-escape-code
                   no-top warning-task unsized-concat finish-num }
@@ -551,4 +551,4 @@ group default = { real-underflow real-overflow literal-overflow case-gen-dup
 group extra = { empty-member empty-stmt dup-import unused-def ignored-macro-paste pointless-void-cast
                 unused-result format-real ignored-slice task-ignored }
 
-group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code }
+group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate }

@@ -522,13 +522,13 @@ endmodule
         engine.issue(diag);
 
     CHECK("\n"s + client->getString() == R"(
-source:3:5: warning: empty member has no effect [-Wempty-member]
+source:3:5: warning: extra ';' has no effect [-Wempty-member]
     ; // warn
     ^
-source:9:5: error: empty member has no effect [-Wempty-member]
+source:9:5: error: extra ';' has no effect [-Wempty-member]
     ; // error
     ^
-source:11:5: warning: empty member has no effect [-Wempty-member]
+source:11:5: warning: extra ';' has no effect [-Wempty-member]
     ; // warn
     ^
 )");
