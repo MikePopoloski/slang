@@ -575,7 +575,7 @@ module m;
     function foo;
         input i;
         output logic [1:0] baz;
-        baz = i;
+        baz[0] = i;
         foo = i;
     endfunction
 

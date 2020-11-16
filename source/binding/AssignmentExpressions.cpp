@@ -611,8 +611,16 @@ Expression& ConversionExpression::makeImplicit(const BindContext& context, const
         // to have, say, integer literals not match a target assignment type.
         // We'll report a warning later if a conversion of a constant leads to
         // loss of a data.
-        if (!context.inUnevaluatedBranch() && !context.tryEval(*op)) {
-            context.addDiag(diag::WidthMismatch, op->sourceRange)
+        //
+        // Also don't warn if we are in a constant context -- again, there is
+        // a more explicit warning for actual loss of data during conversion.
+        if (!context.inUnevaluatedBranch() && !context.flags.has(BindFlags::Constant) &&
+            !context.tryEval(*op)) {
+            DiagCode code = (targetType.getBitWidth() < op->type->getBitWidth())
+                                ? diag::WidthTruncate
+                                : diag::WidthExpand;
+
+            context.addDiag(code, op->sourceRange)
                 << op->type->getBitWidth() << targetType.getBitWidth();
         }
     }

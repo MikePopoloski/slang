@@ -287,7 +287,7 @@ module m(input int a, b, c);
 endmodule
 
 module test;
-    logic foo;
+    int foo;
     m m1(foo, bar(), 1 + 2);
     function int bar(); return 1; endfunction
 endmodule

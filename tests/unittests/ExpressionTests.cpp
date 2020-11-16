@@ -1629,7 +1629,7 @@ module m;
         C c = null;
         C d, e;
 
-        int i = c == null;
+        int i = (c == null) ? 1 : 0;
         if (c)
             i++;
 
@@ -1672,7 +1672,7 @@ module m;
         chandle c = null;
         chandle d, e;
 
-        int i = c == null;
+        int i = (c == null) ? 1 : 0;
         if (c)
             i++;
 
@@ -1739,7 +1739,7 @@ module m;
         event c = null;
         event d, e;
 
-        int i = c == null;
+        int i = (c == null) ? 1 : 0;
         if (c)
             i++;
 
