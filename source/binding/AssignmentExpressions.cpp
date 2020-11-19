@@ -336,19 +336,13 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
 
         // Do not convert (truncate) enum initializer so out of range value can be checked.
-        if (!(context.flags & BindFlags::EnumInitializer)) {
-            result = compilation.emplace<ConversionExpression>(type, ConversionKind::Implicit,
-                                                               *result, result->sourceRange);
+        if (context.flags.has(BindFlags::EnumInitializer)) {
+            selfDetermined(context, result);
+            return *result;
         }
     }
-    else {
-        result =
-            &ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit, *result);
-    }
 
-    selfDetermined(context, result);
-
-    return *result;
+    return ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit, *result);
 }
 
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
