@@ -228,7 +228,7 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
     // range of the packed array so a multidimensional wouldn't work correctly
     // without this conversion.
     result = &ConversionExpression::makeImplicit(
-        context, comp.getType(portWidth, result->type->getIntegralFlags()),
+        context, comp.getType(numInstances * portWidth, result->type->getIntegralFlags()),
         ConversionKind::Implicit, *result, result->sourceRange.start());
 
     // We have enough bits to assign each port on each instance, so now we just need
