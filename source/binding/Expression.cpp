@@ -222,7 +222,7 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
         case ArgumentDirection::Ref:
         case ArgumentDirection::ConstRef:
             // TODO: implement this
-            break;
+            return badExpr(context.getCompilation(), nullptr);
     }
     THROW_UNREACHABLE;
 }
