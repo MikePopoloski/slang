@@ -544,14 +544,15 @@ warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'
 // Following are groups of diagnostics, to make it easy to control them from the command line.
 // The default group is the set of warnings that are enabled by default.
 
-group default = { real-underflow real-overflow literal-overflow case-gen-dup
-                  case-gen-none unconnected-port unconnected-unnamed-port dup-attr event-const
-                  redef-macro not-supported unknown-pragma extra-pragma-args
-                  expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static static-skipped
-                  elem-not-found dynarray-index dynarray-range queue-range empty-queue unknown-escape-code
-                  no-top warning-task unsized-concat finish-num width-trunc }
+group default = { real-underflow real-overflow literal-overflow unconnected-port
+                  unconnected-unnamed-port event-const redef-macro not-supported unknown-pragma
+                  extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
+                  static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
+                  unknown-escape-code no-top warning-task unsized-concat finish-num }
 
-group extra = { empty-member empty-stmt dup-import unused-def pointless-void-cast
-                unused-result format-real ignored-slice task-ignored width-expand }
+group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
+                unused-result format-real ignored-slice task-ignored width-trunc dup-attr }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate }
+
+group conversion = { width-trunc width-expand }
