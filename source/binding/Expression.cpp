@@ -76,6 +76,27 @@ struct VerifyVisitor {
     bool visitInvalid(const Expression&, EvalContext&) { return false; }
 };
 
+class EffectiveWidthVisitor {
+    template<typename T>
+    using getEffectiveWidth_t = decltype(std::declval<T>().getEffectiveWidthImpl());
+
+public:
+    template<typename T>
+    optional<bitwidth_t> visit(const T& expr) {
+        if constexpr (is_detected_v<getEffectiveWidth_t, T>) {
+            if (expr.bad())
+                return std::nullopt;
+
+            return expr.getEffectiveWidthImpl();
+        }
+        else {
+            return expr.type->getBitWidth();
+        }
+    }
+
+    optional<bitwidth_t> visitInvalid(const Expression&) { return std::nullopt; }
+};
+
 } // namespace
 
 namespace slang {
@@ -323,6 +344,11 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
     auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
     diag << sourceRange;
     return false;
+}
+
+optional<bitwidth_t> Expression::getEffectiveWidth() const {
+    EffectiveWidthVisitor visitor;
+    return visit(visitor);
 }
 
 bool Expression::bad() const {

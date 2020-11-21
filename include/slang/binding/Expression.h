@@ -228,6 +228,11 @@ public:
     /// of the given type.
     bool isImplicitlyAssignableTo(const Type& type) const;
 
+    /// Traverses the expression tree and computes what its width would be (in bits)
+    /// if the types of all known constants were declared with only the bits necessary to
+    /// represent them. If any encountered expressions have errors, returns nullopt.
+    optional<bitwidth_t> getEffectiveWidth() const;
+
     template<typename T>
     T& as() {
         ASSERT(T::isKind(kind));

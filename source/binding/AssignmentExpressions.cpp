@@ -599,23 +599,37 @@ Expression& ConversionExpression::makeImplicit(const BindContext& context, const
     // Warn for implicit assignments between integral types of differing widths.
     // Note that this does not apply to propagated conversions, as those almost
     // always do the right thing and the warnings would be very noisy.
+    //
+    // Also don't warn if we are in a constant context -- we will diagnose actual
+    // loss of data in constant expressions later when we evaluate them.
+    bitwidth_t targetWidth = targetType.getBitWidth();
+    bitwidth_t actualWidth = op->type->getBitWidth();
     if (conversionKind == ConversionKind::Implicit && targetType.isIntegral() &&
-        op->type->isIntegral() && targetType.getBitWidth() != op->type->getBitWidth()) {
-        // Don't warn if the source has a known constant value. It's very common
-        // to have, say, integer literals not match a target assignment type.
-        // We'll report a warning later if a conversion of a constant leads to
-        // loss of a data.
-        //
-        // Also don't warn if we are in a constant context -- again, there is
-        // a more explicit warning for actual loss of data during conversion.
-        if (!context.inUnevaluatedBranch() && !context.flags.has(BindFlags::Constant) &&
-            !context.tryEval(*op)) {
-            DiagCode code = (targetType.getBitWidth() < op->type->getBitWidth())
-                                ? diag::WidthTruncate
-                                : diag::WidthExpand;
+        op->type->isIntegral() && targetWidth != actualWidth && !context.inUnevaluatedBranch() &&
+        !context.flags.has(BindFlags::Constant)) {
 
-            context.addDiag(code, op->sourceRange)
-                << op->type->getBitWidth() << targetType.getBitWidth();
+        // Before we go and issue this warning, weed out false positives by
+        // recomputing the width of the expression, with all constants sized
+        // to the minimum width necessary to represent them. Otherwise, even
+        // code as simple as this will result in a warning:
+        //    logic [3:0] a = 1;
+        optional<bitwidth_t> effective = op->getEffectiveWidth();
+        if (effective) {
+            ASSERT(effective <= actualWidth);
+
+            // Now that we know the effective width, compare it to the expression's
+            // actual width. We don't warn if the target is anywhere in between the
+            // effective and the actual width.
+            if (targetWidth < effective || targetWidth > actualWidth) {
+                // Final check to rule out false positives: try to eval as a constant.
+                // We'll ignore any constants, because as described above they
+                // will get their own more fine grained warning later during eval.
+                if (!context.tryEval(*op)) {
+                    DiagCode code =
+                        targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
+                    context.addDiag(code, op->sourceRange) << actualWidth << targetWidth;
+                }
+            }
         }
     }
 
@@ -719,6 +733,12 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
 
 bool ConversionExpression::verifyConstantImpl(EvalContext& context) const {
     return operand().verifyConstant(context);
+}
+
+optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
+    if (isImplicit())
+        return operand().getEffectiveWidth();
+    return type->getBitWidth();
 }
 
 void ConversionExpression::serializeTo(ASTSerializer& serializer) const {

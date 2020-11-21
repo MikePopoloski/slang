@@ -29,6 +29,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext& context) const;
+    optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -72,6 +73,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext& context) const;
+    optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -113,6 +115,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext& context) const;
+    optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

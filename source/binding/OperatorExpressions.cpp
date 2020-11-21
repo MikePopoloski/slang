@@ -412,6 +412,17 @@ bool UnaryExpression::propagateType(const BindContext& context, const Type& newT
     THROW_UNREACHABLE;
 }
 
+optional<bitwidth_t> UnaryExpression::getEffectiveWidthImpl() const {
+    switch (op) {
+        case UnaryOperator::Plus:
+        case UnaryOperator::Minus:
+        case UnaryOperator::BitwiseNot:
+            return operand().getEffectiveWidth();
+        default:
+            return type->getBitWidth();
+    }
+}
+
 ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     // Handle operations that require an lvalue up front.
     if (isLValueOp(op)) {
@@ -785,6 +796,29 @@ bool BinaryExpression::propagateType(const BindContext& context, const Type& new
     THROW_UNREACHABLE;
 }
 
+optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
+    switch (op) {
+        case BinaryOperator::Add:
+        case BinaryOperator::Subtract:
+        case BinaryOperator::Multiply:
+        case BinaryOperator::Divide:
+        case BinaryOperator::Mod:
+        case BinaryOperator::BinaryAnd:
+        case BinaryOperator::BinaryOr:
+        case BinaryOperator::BinaryXor:
+        case BinaryOperator::BinaryXnor:
+            return std::max(left().getEffectiveWidth(), right().getEffectiveWidth());
+        case BinaryOperator::LogicalShiftLeft:
+        case BinaryOperator::LogicalShiftRight:
+        case BinaryOperator::ArithmeticShiftLeft:
+        case BinaryOperator::ArithmeticShiftRight:
+        case BinaryOperator::Power:
+            return left().getEffectiveWidth();
+        default:
+            return type->getBitWidth();
+    }
+}
+
 ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
     ConstantValue cvl = left().eval(context);
     if (!cvl)
@@ -919,6 +953,10 @@ bool ConditionalExpression::propagateType(const BindContext& context, const Type
     contextDetermined(context, left_, newType);
     contextDetermined(context, right_, newType);
     return true;
+}
+
+optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl() const {
+    return std::max(left().getEffectiveWidth(), right().getEffectiveWidth());
 }
 
 ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {

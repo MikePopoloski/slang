@@ -211,6 +211,31 @@ bool NamedValueExpression::verifyAssignableImpl(const BindContext& context, bool
     return true;
 }
 
+optional<bitwidth_t> NamedValueExpression::getEffectiveWidthImpl() const {
+    auto cvToWidth = [this](const ConstantValue& cv) -> optional<bitwidth_t> {
+        if (!cv.isInteger())
+            return std::nullopt;
+
+        auto& sv = cv.integer();
+        if (sv.hasUnknown())
+            return type->getBitWidth();
+
+        if (sv.isNegative())
+            return sv.getMinRepresentedBits();
+
+        return sv.getActiveBits();
+    };
+
+    switch (symbol.kind) {
+        case SymbolKind::Parameter:
+            return cvToWidth(symbol.as<ParameterSymbol>().getValue());
+        case SymbolKind::EnumValue:
+            return cvToWidth(symbol.as<EnumValueSymbol>().getValue());
+        default:
+            return type->getBitWidth();
+    }
+}
+
 void NamedValueExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("symbol", symbol);
     serializer.write("isHierarchical", isHierarchical);
@@ -755,6 +780,10 @@ ConstantValue MinTypMaxExpression::evalImpl(EvalContext& context) const {
 
 bool MinTypMaxExpression::verifyConstantImpl(EvalContext& context) const {
     return selected().verifyConstant(context);
+}
+
+optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl() const {
+    return selected().getEffectiveWidth();
 }
 
 void MinTypMaxExpression::serializeTo(ASTSerializer& serializer) const {

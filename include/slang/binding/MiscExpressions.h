@@ -25,6 +25,7 @@ public:
     bool verifyConstantImpl(EvalContext& context) const;
     bool verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
                               SourceLocation location) const;
+    optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -201,6 +202,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const BindContext& context, const Type& newType);
     bool verifyConstantImpl(EvalContext& context) const;
+    optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

@@ -68,6 +68,17 @@ ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
     return result;
 }
 
+optional<bitwidth_t> IntegerLiteral::getEffectiveWidthImpl() const {
+    auto&& val = getValue();
+    if (val.hasUnknown())
+        return val.getBitWidth();
+
+    if (val.isNegative())
+        return val.getMinRepresentedBits();
+
+    return val.getActiveBits();
+}
+
 void IntegerLiteral::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }

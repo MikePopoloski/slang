@@ -27,6 +27,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool verifyConstantImpl(EvalContext&) const { return true; }
+    optional<bitwidth_t> getEffectiveWidthImpl() const;
 
     void serializeTo(ASTSerializer&) const;
 
