@@ -521,7 +521,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    BindContext iterContext(iterScope, LookupLocation::max, BindFlags::NoHierarchicalNames);
+    BindContext iterContext(iterScope, LookupLocation::max, BindFlags::Constant);
     const auto& stopExpr = Expression::bind(*syntax.stopExpr, iterContext);
     const auto& iterExpr =
         Expression::bind(*syntax.iterationExpr, iterContext, BindFlags::AssignmentAllowed);
@@ -529,18 +529,6 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
         return *result;
 
     if (!bindContext.requireBooleanConvertible(stopExpr))
-        return *result;
-
-    EvalContext stopVerifyContext(compilation, EvalFlags::IsVerifying);
-    bool canBeConst = stopExpr.verifyConstant(stopVerifyContext);
-    stopVerifyContext.reportDiags(iterContext);
-    if (!canBeConst)
-        return *result;
-
-    EvalContext iterVerifyContext(compilation, EvalFlags::IsVerifying);
-    canBeConst = iterExpr.verifyConstant(iterVerifyContext);
-    iterVerifyContext.reportDiags(iterContext);
-    if (!canBeConst)
         return *result;
 
     // Create storage for the iteration variable.
