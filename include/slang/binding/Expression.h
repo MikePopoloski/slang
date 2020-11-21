@@ -292,7 +292,7 @@ protected:
 
     // Perform type propagation and constant folding of a context-determined subexpression.
     static void contextDetermined(const BindContext& context, Expression*& expr,
-                                  const Type& newType, bool isAssignment = false);
+                                  const Type& newType, SourceLocation assignmentLoc = {});
 
     // Perform type propagation and constant folding of a self-determined subexpression.
     static void selfDetermined(const BindContext& context, Expression*& expr);

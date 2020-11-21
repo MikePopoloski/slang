@@ -328,7 +328,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
 
         rt = binaryOperatorType(compilation, &type, rt, false);
-        contextDetermined(context, result, *rt, /* isAssignment */ true);
+        contextDetermined(context, result, *rt, location);
 
         if (type.isEquivalent(*rt)) {
             result->type = &type;

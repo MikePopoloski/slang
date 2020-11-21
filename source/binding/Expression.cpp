@@ -111,10 +111,12 @@ struct Expression::PropagationVisitor {
 
     const BindContext& context;
     const Type& newType;
-    bool isAssignment;
+    SourceLocation assignmentLoc;
 
-    PropagationVisitor(const BindContext& context, const Type& newType, bool isAssignment) :
-        context(context), newType(newType), isAssignment(isAssignment) {}
+    PropagationVisitor(const BindContext& context, const Type& newType,
+                       SourceLocation assignmentLoc) :
+        context(context),
+        newType(newType), assignmentLoc(assignmentLoc) {}
 
     template<typename T>
     Expression& visit(T& expr) {
@@ -143,10 +145,14 @@ struct Expression::PropagationVisitor {
 
         Expression* result = &expr;
         if (needConversion) {
-            result = &ConversionExpression::makeImplicit(context, newType,
-                                                         isAssignment ? ConversionKind::Implicit
-                                                                      : ConversionKind::Propagated,
-                                                         expr, expr.sourceRange.start());
+            if (assignmentLoc) {
+                result = &ConversionExpression::makeImplicit(
+                    context, newType, ConversionKind::Implicit, expr, assignmentLoc);
+            }
+            else {
+                result = &ConversionExpression::makeImplicit(
+                    context, newType, ConversionKind::Propagated, expr, expr.sourceRange.start());
+            }
         }
 
         return *result;
@@ -815,14 +821,14 @@ void Expression::findPotentiallyImplicitNets(const ExpressionSyntax& expr,
 }
 
 void Expression::contextDetermined(const BindContext& context, Expression*& expr,
-                                   const Type& newType, bool isAssignment) {
-    PropagationVisitor visitor(context, newType, isAssignment);
+                                   const Type& newType, SourceLocation assignmentLoc) {
+    PropagationVisitor visitor(context, newType, assignmentLoc);
     expr = &expr->visit(visitor);
 }
 
 void Expression::selfDetermined(const BindContext& context, Expression*& expr) {
     ASSERT(expr->type);
-    PropagationVisitor visitor(context, *expr->type, /* isAssignment */ false);
+    PropagationVisitor visitor(context, *expr->type, {});
     expr = &expr->visit(visitor);
 }
 
