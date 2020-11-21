@@ -143,9 +143,10 @@ struct Expression::PropagationVisitor {
 
         Expression* result = &expr;
         if (needConversion) {
-            result = &ConversionExpression::makeImplicit(
-                context, newType,
-                isAssignment ? ConversionKind::Implicit : ConversionKind::Propagated, expr);
+            result = &ConversionExpression::makeImplicit(context, newType,
+                                                         isAssignment ? ConversionKind::Implicit
+                                                                      : ConversionKind::Propagated,
+                                                         expr, expr.sourceRange.start());
         }
 
         return *result;

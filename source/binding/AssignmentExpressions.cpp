@@ -229,7 +229,7 @@ Expression* Expression::tryConnectPortArray(const BindContext& context, const Ty
     // without this conversion.
     result = &ConversionExpression::makeImplicit(
         context, comp.getType(portWidth, result->type->getIntegralFlags()),
-        ConversionKind::Implicit, *result);
+        ConversionKind::Implicit, *result, result->sourceRange.start());
 
     // We have enough bits to assign each port on each instance, so now we just need
     // to pick the right ones. The spec says we start with all right hand indices
@@ -289,7 +289,7 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
             (type.isEnum() && isSameEnum(expr, type))) {
 
             result = &ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit,
-                                                         *result);
+                                                         *result, location);
             selfDetermined(context, result);
             return *result;
         }
@@ -342,7 +342,8 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
     }
 
-    return ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit, *result);
+    return ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit, *result,
+                                              location);
 }
 
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
@@ -588,7 +589,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 }
 
 Expression& ConversionExpression::makeImplicit(const BindContext& context, const Type& targetType,
-                                               ConversionKind conversionKind, Expression& expr) {
+                                               ConversionKind conversionKind, Expression& expr,
+                                               SourceLocation loc) {
     ASSERT(targetType.isAssignmentCompatible(*expr.type) ||
            ((targetType.isString() || targetType.isByteArray()) && expr.isImplicitString()) ||
            (targetType.isEnum() && isSameEnum(expr, targetType)));
@@ -627,7 +629,7 @@ Expression& ConversionExpression::makeImplicit(const BindContext& context, const
                 if (!context.tryEval(*op)) {
                     DiagCode code =
                         targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
-                    context.addDiag(code, op->sourceRange) << actualWidth << targetWidth;
+                    context.addDiag(code, loc) << actualWidth << targetWidth << op->sourceRange;
                 }
             }
         }
