@@ -596,7 +596,7 @@ module m;
     function foo(int j, int b);
         input i;
         output logic [1:0] baz;
-        baz = i;
+        baz = 2'(i);
         foo = i;
     endfunction
 endmodule
@@ -703,7 +703,7 @@ TEST_CASE("always_comb") {
     auto tree = SyntaxTree::fromText(R"(
 module module1
 #(
-    parameter int P1 = 4,
+    parameter int P1 = 5,
     parameter int P2 = 5
 )
 (
@@ -720,7 +720,7 @@ module module1
 
     always_comb begin
         out2 = in2;
-        out3 = in3;
+        out3 = {1'b0, in3};
     end
 
     logic [7:0] arr1;
@@ -745,7 +745,7 @@ TEST_CASE("Function declaration") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     function static logic [15:0] foo(a, int b, output logic [15:0] u, v, inout w);
-        return a + b;
+        return 16'(a + b);
     endfunction
 endmodule
 )");

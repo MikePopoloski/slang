@@ -579,7 +579,7 @@ module m;
     end
 
     localparam int i = foo();
-    function foo;
+    function int foo;
         int j;
         j = #2 2;
         return j;
@@ -824,7 +824,7 @@ endmodule
 TEST_CASE("Lifetimes of nested statement blocks") {
     auto tree = SyntaxTree::fromText(R"(
 module automatic m;
-    function automatic func1;
+    function automatic int func1;
         int i = 4;
         for (int j = 0; j < 10; j++) begin
             int k = j + i;
@@ -833,7 +833,7 @@ module automatic m;
         return i;
     endfunction
 
-    function func2;
+    function int func2;
         int i = 4;
         for (int j = 0; j < 10; j++) begin
             int k = j + i;

@@ -18,7 +18,7 @@ TEST_CASE("Eval function calls") {
     ScriptSession session;
     session.eval(R"(
 function logic [15:0] foo(int a, int b);
-    return a + b;
+    return 16'(a + b);
 endfunction
 )");
 
@@ -166,7 +166,7 @@ function automatic logic [15:0] foo(int a);
     for (int i = 0; i < a; i+=1) begin
         temp = i * 2;
         for (int j = temp + 1; j < 10; j++)
-            result += j;
+            result += 16'(j);
     end
     return result;
 endfunction
@@ -754,7 +754,7 @@ TEST_CASE("String literal ops") {
     SVInt v = session.eval("str = \"Hello world\";").integer();
     CHECK(v == "112'h48656c6c6f20776f726c64"_si);
 
-    v = session.eval("str = {str, \"!!!\"};").integer();
+    v = session.eval("str = 112'({str, \"!!!\"});").integer();
     CHECK(v == "112'h48656c6c6f20776f726c64212121"_si);
 
     session.eval("bit [8*10:1] s1, s2;");

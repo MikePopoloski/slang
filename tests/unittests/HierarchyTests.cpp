@@ -952,7 +952,7 @@ TEST_CASE("Error checking in uninstantiated modules") {
     auto tree = SyntaxTree::fromText(R"(
 module bar #(parameter int foo);
     localparam int bar = foo;
-    int j = bar[foo];
+    int j = int'(bar[foo]);
     if (j != 10) begin
         int k = j[3.4];
     end
