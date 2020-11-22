@@ -192,6 +192,7 @@ module m;
     // following are invalid
     always @;
     always @(foo or posedge r);
+    always @(i iff foo);
 
 endmodule
 )");
@@ -200,12 +201,26 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::EventExpressionConstant);
     CHECK(diags[1].code == diag::EventExpressionConstant);
     CHECK(diags[2].code == diag::ExpectedIdentifier);
     CHECK(diags[3].code == diag::InvalidEventExpression);
     CHECK(diags[4].code == diag::ExprMustBeIntegral);
+    CHECK(diags[5].code == diag::NotBooleanConvertible);
+}
+
+TEST_CASE("Conditional event control") {
+    auto tree = SyntaxTree::fromText(R"(
+module latch (output logic [31:0] y, input [31:0] a, input enable);
+    always @(a iff enable == 1)
+        y <= a;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Case statements") {

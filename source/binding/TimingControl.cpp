@@ -86,19 +86,25 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
                                               const BindContext& context) {
     auto edge = SemanticFacts::getEdgeKind(syntax.edge.kind);
     auto& expr = Expression::bind(*syntax.expr, context);
-    return fromExpr(compilation, edge, expr, context);
+
+    const Expression* iffCond = nullptr;
+    if (syntax.iffClause)
+        iffCond = &Expression::bind(*syntax.iffClause->expr, context);
+
+    return fromExpr(compilation, edge, expr, iffCond, context);
 }
 
 TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
                                               const EventControlSyntax& syntax,
                                               const BindContext& context) {
     auto& expr = Expression::bind(*syntax.eventName, context);
-    return fromExpr(compilation, EdgeKind::None, expr, context);
+    return fromExpr(compilation, EdgeKind::None, expr, nullptr, context);
 }
 
 TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind edge,
-                                            const Expression& expr, const BindContext& context) {
-    auto result = compilation.emplace<SignalEventControl>(edge, expr);
+                                            const Expression& expr, const Expression* iffCondition,
+                                            const BindContext& context) {
+    auto result = compilation.emplace<SignalEventControl>(edge, expr, iffCondition);
     if (expr.bad())
         return badCtrl(compilation, result);
 
@@ -111,6 +117,11 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
     else if (!expr.type->isIntegral()) {
         context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange);
         return badCtrl(compilation, result);
+    }
+
+    if (iffCondition) {
+        if (!context.requireBooleanConvertible(*iffCondition))
+            return badCtrl(compilation, result);
     }
 
     // Warn if the expression is constant, since it'll never change to trigger off.

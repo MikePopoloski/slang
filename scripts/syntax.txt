@@ -406,12 +406,17 @@ EventControl base=TimingControl
 token at
 Name eventName
 
+IffEventClause
+token iff
+Expression expr
+
 EventExpression final=false
 empty
 
 SignalEventExpression base=EventExpression
 token edge
 Expression expr
+IffEventClause? iffClause
 
 BinaryEventExpression base=EventExpression
 EventExpression left
@@ -1554,7 +1559,7 @@ TransListCoverageBinInitializer base=CoverageBinInitializer
 separated_list<TransSet> sets
 WithClause? withClause
 
-IffClause
+CoverageIffClause
 token iff
 token openParen
 Expression expr
@@ -1567,7 +1572,7 @@ token name
 ElementSelect? selector
 token equals
 CoverageBinInitializer initializer
-IffClause? iff
+CoverageIffClause? iff
 token semi
 
 // ----- TOP LEVEL -----

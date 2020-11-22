@@ -1374,12 +1374,13 @@ MemberSyntax* Parser::parseCoverpointMember() {
         }
     }
 
-    IffClauseSyntax* iffClause = nullptr;
+    CoverageIffClauseSyntax* iffClause = nullptr;
     if (peek(TokenKind::IffKeyword)) {
         auto iff = consume();
         auto openParen = expect(TokenKind::OpenParenthesis);
         auto& expr = parseExpression();
-        iffClause = &factory.iffClause(iff, openParen, expr, expect(TokenKind::CloseParenthesis));
+        iffClause =
+            &factory.coverageIffClause(iff, openParen, expr, expect(TokenKind::CloseParenthesis));
     }
 
     return &factory.coverageBins(attributes, wildcard, bins, name, selector, equals, *initializer,
@@ -1975,7 +1976,7 @@ MemberSyntax& Parser::parseClockingDeclaration(AttrList attributes) {
         event = &parseEventExpression();
     else {
         auto& name = parseName();
-        event = &factory.signalEventExpression({}, name);
+        event = &factory.signalEventExpression({}, name, nullptr);
     }
 
     Token semi = expect(TokenKind::Semicolon);

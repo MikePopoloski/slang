@@ -94,10 +94,12 @@ struct SignalEventExpressionSyntax;
 class SignalEventControl : public TimingControl {
 public:
     const Expression& expr;
+    const Expression* iffCondition;
     EdgeKind edge;
 
-    SignalEventControl(EdgeKind edge, const Expression& expr) :
-        TimingControl(TimingControlKind::SignalEvent), expr(expr), edge(edge) {}
+    SignalEventControl(EdgeKind edge, const Expression& expr, const Expression* iffCondition) :
+        TimingControl(TimingControlKind::SignalEvent), expr(expr), iffCondition(iffCondition),
+        edge(edge) {}
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const SignalEventExpressionSyntax& syntax,
@@ -112,7 +114,7 @@ public:
 
 private:
     static TimingControl& fromExpr(Compilation& compilation, EdgeKind edge, const Expression& expr,
-                                   const BindContext& context);
+                                   const Expression* iffCondition, const BindContext& context);
 };
 
 struct EventExpressionSyntax;

@@ -82,9 +82,11 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         if (opKind == SyntaxKind::Unknown)
             break;
 
-        // the "or" operator in event expressions is special, we don't handle it here
-        if (opKind == SyntaxKind::OrSequenceExpression &&
-            (options & ExpressionOptions::EventExpressionContext)) {
+        // the "or" operator and "iff" clause in event expressions are special,
+        // we don't handle them here
+        if ((opKind == SyntaxKind::OrSequenceExpression ||
+             opKind == SyntaxKind::IffPropertyExpression) &&
+            options.has(ExpressionOptions::EventExpressionContext)) {
             break;
         }
 
@@ -857,7 +859,15 @@ EventExpressionSyntax& Parser::parseEventExpression() {
         }
 
         auto& expr = parseSubExpression(ExpressionOptions::EventExpressionContext, 0);
-        left = &factory.signalEventExpression(edge, expr);
+
+        IffEventClauseSyntax* iffClause = nullptr;
+        if (peek(TokenKind::IffKeyword)) {
+            auto iff = consume();
+            auto& iffExpr = parseSubExpression(ExpressionOptions::EventExpressionContext, 0);
+            iffClause = &factory.iffEventClause(iff, iffExpr);
+        }
+
+        left = &factory.signalEventExpression(edge, expr, iffClause);
     }
 
     kind = peek().kind;
