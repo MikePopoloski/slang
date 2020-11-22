@@ -138,11 +138,11 @@ LRM | Feature | Supported
 {{m-success}} 9.3.5 | Statement labels | v0.2
 {{m-success}} 9.4.1 | Delay control | v0.2
 {{m-success}} 9.4.2 | Event control | v0.2
-{{m-danger}}  9.4.2.3 | Conditional event controls | no
+{{m-success}} 9.4.2.3 | Conditional event controls | v0.6
 {{m-danger}}  9.4.2.4 | Sequence events | no
-{{m-danger}}  9.4.3 | Level-sensitive event control | no
+{{m-success}} 9.4.3 | Level-sensitive event control | v0.6
 {{m-danger}}  9.4.4 | Level-sensitive sequence controls | no
-{{m-warning}} 9.4.5 | Intra-assignment timing controls | partial
+{{m-success}} 9.4.5 | Intra-assignment timing controls | v0.6
 {{m-dim}}     9.5 | Process execution threads | N/A
 {{m-success}} 9.6.1 | Wait fork statement | v0.4
 {{m-success}} 9.6.2 | Disable statement | v0.4
@@ -156,7 +156,7 @@ LRM | Feature | Supported
 {{m-warning}} 10.3 | Continuous assignments | partial
 {{m-success}} 10.4 | Procedural assignments | v0.2
 {{m-success}} 10.5 | Variable declarations assignment | v0.2
-{{m-danger}}  10.6 | Procedural continuous assignments | no
+{{m-warning}} 10.6 | Procedural continuous assignments | partial
 {{m-success}} 10.7 | Assignment extension and truncation | v0.2
 {{m-success}} 10.8 | Assignment-like contexts | v0.2
 {{m-warning}} 10.9 | Assignment patterns | partial
