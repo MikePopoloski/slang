@@ -365,6 +365,7 @@ bool SyntaxFacts::isPossibleExpression(TokenKind kind) {
         case TokenKind::Hash:
         case TokenKind::DoubleHash:
         case TokenKind::At:
+        case TokenKind::RepeatKeyword:
         case TokenKind::TypeKeyword:
         case TokenKind::ApostropheOpenBrace:
         case TokenKind::FirstMatchKeyword:

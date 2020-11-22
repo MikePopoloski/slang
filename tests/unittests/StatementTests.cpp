@@ -962,3 +962,29 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Repeat event controls") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic clk;
+    int a;
+    int foo[3];
+    initial begin
+        a = repeat (3) @(clk) a + 1;
+        a = repeat (3) ;
+        a = repeat (foo) @(clk) a + 1;
+        a = repeat (3) #4 a + 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::RepeatControlNotEvent);
+    CHECK(diags[1].code == diag::ExpectedExpression);
+    CHECK(diags[2].code == diag::RepeatNotNumeric);
+    CHECK(diags[3].code == diag::RepeatControlNotEvent);
+}

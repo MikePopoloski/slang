@@ -40,8 +40,11 @@ const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
             result = &ImplicitEventControl::fromSyntax(
                 comp, syntax.as<ImplicitEventControlSyntax>(), timingCtx);
             break;
-        case SyntaxKind::CycleDelay:
         case SyntaxKind::RepeatedEventControl:
+            result = &RepeatedEventControl::fromSyntax(
+                comp, syntax.as<RepeatedEventControlSyntax>(), timingCtx);
+            break;
+        case SyntaxKind::CycleDelay:
             timingCtx.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badCtrl(comp, nullptr);
             break;
@@ -188,6 +191,40 @@ TimingControl& ImplicitEventControl::fromSyntax(Compilation& compilation,
                                                 const BindContext&) {
     // Nothing to do here except return the object.
     return *compilation.emplace<ImplicitEventControl>();
+}
+
+TimingControl& RepeatedEventControl::fromSyntax(Compilation& compilation,
+                                                const RepeatedEventControlSyntax& syntax,
+                                                const BindContext& context) {
+    if (!syntax.eventControl) {
+        context.addDiag(diag::RepeatControlNotEvent, syntax.sourceRange());
+        return badCtrl(compilation, nullptr);
+    }
+
+    auto& expr = Expression::bind(*syntax.expr, context);
+    auto& event = TimingControl::bind(*syntax.eventControl, context);
+    auto result = compilation.emplace<RepeatedEventControl>(expr, event);
+    if (expr.bad())
+        return badCtrl(compilation, result);
+
+    if (!expr.type->isNumeric()) {
+        context.addDiag(diag::RepeatNotNumeric, expr.sourceRange) << *expr.type;
+        return badCtrl(compilation, result);
+    }
+
+    if (event.kind != TimingControlKind::SignalEvent &&
+        event.kind != TimingControlKind::EventList &&
+        event.kind != TimingControlKind::ImplicitEvent) {
+        context.addDiag(diag::RepeatControlNotEvent, syntax.eventControl->sourceRange());
+        return badCtrl(compilation, result);
+    }
+
+    return *result;
+}
+
+void RepeatedEventControl::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr", expr);
+    serializer.write("event", event);
 }
 
 } // namespace slang

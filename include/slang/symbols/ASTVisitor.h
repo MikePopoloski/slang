@@ -227,6 +227,7 @@ decltype(auto) TimingControl::visit(TVisitor& visitor, Args&&... args) const {
         CASE(SignalEvent, SignalEventControl);
         CASE(EventList, EventListControl);
         CASE(ImplicitEvent, ImplicitEventControl);
+        CASE(RepeatedEvent, RepeatedEventControl);
     }
 #undef CASE
     // clang-format on
