@@ -836,6 +836,29 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Wait statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a, b;
+    int foo[3];
+    initial begin
+        wait (1) begin : asdf
+            automatic int i = 1;
+            i++;
+        end
+        wait (foo) a += b;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NotBooleanConvertible);
+}
+
 TEST_CASE("Lifetimes of nested statement blocks") {
     auto tree = SyntaxTree::fromText(R"(
 module automatic m;

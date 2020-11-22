@@ -200,6 +200,10 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             result =
                 &DisableForkStatement::fromSyntax(comp, syntax.as<DisableForkStatementSyntax>());
             break;
+        case SyntaxKind::WaitStatement:
+            result = &WaitStatement::fromSyntax(comp, syntax.as<WaitStatementSyntax>(), context,
+                                                stmtCtx);
+            break;
         case SyntaxKind::WaitForkStatement:
             result = &WaitForkStatement::fromSyntax(comp, syntax.as<WaitForkStatementSyntax>());
             break;
@@ -216,7 +220,6 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
         case SyntaxKind::ProceduralForceStatement:
         case SyntaxKind::ProceduralDeassignStatement:
         case SyntaxKind::ProceduralReleaseStatement:
-        case SyntaxKind::WaitStatement:
         case SyntaxKind::RandCaseStatement:
         case SyntaxKind::AssertPropertyStatement:
         case SyntaxKind::AssumePropertyStatement:
@@ -1876,6 +1879,34 @@ ER DisableForkStatement::evalImpl(EvalContext&) const {
 bool DisableForkStatement::verifyConstantImpl(EvalContext& context) const {
     context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
     return false;
+}
+
+Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStatementSyntax& syntax,
+                                     const BindContext& context, StatementContext& stmtCtx) {
+    auto& cond = Expression::bind(*syntax.expr, context);
+    auto& stmt = Statement::bind(*syntax.statement, context, stmtCtx);
+    auto result = compilation.emplace<WaitStatement>(cond, stmt, syntax.sourceRange());
+    if (cond.bad() || stmt.bad())
+        return badStmt(compilation, result);
+
+    if (!context.requireBooleanConvertible(cond))
+        return badStmt(compilation, result);
+
+    return *result;
+}
+
+ER WaitStatement::evalImpl(EvalContext&) const {
+    return ER::Fail;
+}
+
+bool WaitStatement::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalTimedStmtNotConst, sourceRange);
+    return false;
+}
+
+void WaitStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("cond", cond);
+    serializer.write("stmt", stmt);
 }
 
 Statement& WaitForkStatement::fromSyntax(Compilation& compilation,

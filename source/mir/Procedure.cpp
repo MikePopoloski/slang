@@ -57,6 +57,7 @@ public:
     void visit(const TimedStatement&) {}
     void visit(const AssertionStatement&) {}
     void visit(const DisableForkStatement&) {}
+    void visit(const WaitStatement&) {}
     void visit(const WaitForkStatement&) {}
     void visit(const WaitOrderStatement&) {}
     void visit(const EventTriggerStatement&) {}

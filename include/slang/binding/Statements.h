@@ -44,6 +44,7 @@ struct StatementSyntax;
     x(Timed) \
     x(Assertion) \
     x(DisableFork) \
+    x(Wait) \
     x(WaitFork) \
     x(WaitOrder) \
     x(EventTrigger)
@@ -777,6 +778,37 @@ public:
     void serializeTo(const ASTSerializer&) const {}
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::DisableFork; }
+};
+
+struct WaitStatementSyntax;
+
+class WaitStatement : public Statement {
+public:
+    const Expression& cond;
+    const Statement& stmt;
+
+    WaitStatement(const Expression& cond, const Statement& stmt, SourceRange sourceRange) :
+        Statement(StatementKind::Wait, sourceRange), cond(cond), stmt(stmt) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation, const WaitStatementSyntax& syntax,
+                                 const BindContext& context, StatementContext& stmtCtx);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Wait; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        cond.visit(visitor);
+    }
+
+    template<typename TVisitor>
+    void visitStmts(TVisitor&& visitor) const {
+        stmt.visit(visitor);
+    }
 };
 
 struct WaitForkStatementSyntax;
