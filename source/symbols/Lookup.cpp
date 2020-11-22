@@ -508,25 +508,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
     if (result.fromForwardTypedef && (flags & LookupFlags::TypedefTarget) == 0)
         result.addDiag(context.scope, diag::ScopeIncompleteTypedef, name.range());
 
-    bool isClass = false;
-    while (colonParts--) {
-        if (name.selectors) {
-            result.addDiag(context.scope, diag::InvalidScopeIndexExpression,
-                           name.selectors->sourceRange());
-            return false;
-        }
-
-        auto& part = nameParts.back();
-        isClass = isClassType(*symbol);
-
-        if (symbol->kind != SymbolKind::Package && !isClass) {
-            auto& diag = result.addDiag(context.scope, diag::NotAClass, part.dotLocation);
-            diag << name.range();
-            diag << symbol->name;
-            diag.addNote(diag::NoteDeclarationHere, symbol->location);
-            return false;
-        }
-
+    auto validateSymbol = [&] {
         // Handle generic classes and parameter assignments. If this is a generic class,
         // we must have param assignments here (even if the generic class has a default
         // specialization, the spec says you can't use that with colon-scoped lookup).
@@ -538,6 +520,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
                     return false;
 
                 symbol = &type;
+                name.paramAssignments = nullptr;
             }
             else {
                 // The unadorned generic class name here is an error if we're outside the context
@@ -560,6 +543,31 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
 
         // If this is a type alias, check its visibility.
         checkVisibility(*symbol, context.scope, name.range(), result);
+
+        return true;
+    };
+
+    bool isClass = false;
+    while (colonParts--) {
+        if (name.selectors) {
+            result.addDiag(context.scope, diag::InvalidScopeIndexExpression,
+                           name.selectors->sourceRange());
+            return false;
+        }
+
+        auto& part = nameParts.back();
+        isClass = isClassType(*symbol);
+
+        if (symbol->kind != SymbolKind::Package && !isClass) {
+            auto& diag = result.addDiag(context.scope, diag::NotAClass, part.dotLocation);
+            diag << name.range();
+            diag << symbol->name;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+            return false;
+        }
+
+        if (!validateSymbol())
+            return false;
 
         name = *part.name;
         if (name.text().empty())
@@ -589,6 +597,9 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
 
         nameParts.pop();
     }
+
+    if (!validateSymbol())
+        return false;
 
     result.found = symbol;
     return true;

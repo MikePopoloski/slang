@@ -1569,3 +1569,17 @@ endmodule
     CHECK(diags[3].code == diag::BadConversion);
     CHECK(diags[4].code == diag::BadConversion);
 }
+
+TEST_CASE("Class lookup from package") {
+    auto tree = SyntaxTree::fromText(R"(
+package Package;
+    interface class Bar #(parameter A, B); endclass
+endpackage
+
+class Foo implements Package::Bar#(1, 2); endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
