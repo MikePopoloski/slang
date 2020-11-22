@@ -722,6 +722,12 @@ void HierarchicalReferenceExpression::serializeTo(ASTSerializer& serializer) con
         serializer.writeLink("symbol", *symbol);
 }
 
+ConstantValue LValueReferenceExpression::evalImpl(EvalContext& context) const {
+    auto lvalue = context.getTopLValue();
+    ASSERT(lvalue);
+    return lvalue->load();
+}
+
 Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,
                                             const MinTypMaxExpressionSyntax& syntax,
                                             const BindContext& context,

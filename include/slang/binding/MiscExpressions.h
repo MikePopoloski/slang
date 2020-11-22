@@ -162,6 +162,22 @@ public:
     }
 };
 
+/// A placeholder expression that is generated to take the place of one side of
+/// a compound assignment expression's binary operator. It indicates to the constant
+/// evaluator that it should look on the lvalue stack for the value to use.
+class LValueReferenceExpression : public Expression {
+public:
+    LValueReferenceExpression(const Type& type, SourceRange sourceRange) :
+        Expression(ExpressionKind::LValueReference, type, sourceRange) {}
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext&) const { return true; }
+
+    void serializeTo(ASTSerializer&) const {}
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::LValueReference; }
+};
+
 /// Represents an empty argument. There's no actual syntax to go along with this,
 /// but we use this as a placeholder to hold the fact that the argument is empty.
 class EmptyArgumentExpression : public Expression {

@@ -63,6 +63,21 @@ void EvalContext::popFrame() {
     stack.pop();
 }
 
+void EvalContext::pushLValue(LValue& lval) {
+    lvalStack.append(&lval);
+}
+
+void EvalContext::popLValue() {
+    lvalStack.pop();
+}
+
+LValue* EvalContext::getTopLValue() const {
+    if (lvalStack.empty())
+        return nullptr;
+
+    return lvalStack.back();
+}
+
 bool EvalContext::step(SourceLocation loc) {
     if (++steps < compilation.getOptions().maxConstexprSteps)
         return true;

@@ -441,13 +441,21 @@ Expression& AssignmentExpression::fromComponents(
                                     context)) {
             return badExpr(compilation, result);
         }
+        return *result;
     }
-    else {
-        result->right_ =
-            &convertAssignment(context, *lhs.type, *result->right_, assignLoc, lhs.sourceRange);
-        if (result->right_->bad())
-            return badExpr(compilation, result);
+
+    // If this is a compound assignment operator create a binary expression that will
+    // apply the operator for us on the right hand side.
+    if (op) {
+        auto lvalRef = compilation.emplace<LValueReferenceExpression>(*lhs.type, lhs.sourceRange);
+        result->right_ = &BinaryExpression::fromComponents(*lvalRef, *result->right_, *op,
+                                                           assignLoc, sourceRange, context);
     }
+
+    result->right_ =
+        &convertAssignment(context, *lhs.type, *result->right_, assignLoc, lhs.sourceRange);
+    if (result->right_->bad())
+        return badExpr(compilation, result);
 
     return *result;
 }
@@ -462,12 +470,19 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     }
 
     LValue lvalue = left().evalLValue(context);
-    ConstantValue rvalue = right().eval(context);
-    if (!lvalue || !rvalue)
+    if (!lvalue)
         return nullptr;
 
     if (isCompound())
-        rvalue = evalBinaryOperator(*op, lvalue.load(), rvalue);
+        context.pushLValue(lvalue);
+
+    ConstantValue rvalue = right().eval(context);
+
+    if (isCompound())
+        context.popLValue();
+
+    if (!rvalue)
+        return nullptr;
 
     lvalue.store(rvalue);
     return rvalue;

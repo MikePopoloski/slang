@@ -17,6 +17,7 @@
 namespace slang {
 
 class BindContext;
+class LValue;
 class SubroutineSymbol;
 
 /// Various flags that can be applied to a constant expression evaluation.
@@ -76,6 +77,17 @@ public:
 
     /// Pop the active frame from the call stack.
     void popFrame();
+
+    /// Pushes an lvalue onto the stack for later reference during evaluation.
+    /// NOTE: the lvalue storage must remain alive for as long as it remains
+    /// on the eval context's lvalue stack.
+    void pushLValue(LValue& lval);
+
+    /// Pops the top of the lvalue stack (requires that the stack be non-empty).
+    void popLValue();
+
+    /// Gets the top of the lvalue stack, or nullptr if the stack is empty.
+    LValue* getTopLValue() const;
 
     /// Records the fact that we are executing another statement. This is used to count
     /// the number of statements executed so far to detect if we've been evaluating
@@ -140,6 +152,7 @@ private:
     bitmask<EvalFlags> flags;
     const Symbol* disableTarget = nullptr;
     SmallVectorSized<Frame, 4> stack;
+    SmallVectorSized<LValue*, 2> lvalStack;
     Diagnostics diags;
     SourceRange disableRange;
 };

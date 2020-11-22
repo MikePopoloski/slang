@@ -80,6 +80,10 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
+    static Expression& fromComponents(Expression& lhs, Expression& rhs, BinaryOperator op,
+                                      SourceLocation opLoc, SourceRange sourceRange,
+                                      const BindContext& context);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
 
     template<typename TVisitor>

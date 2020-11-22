@@ -553,11 +553,22 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                                          const BindContext& context) {
     Expression& lhs = create(compilation, *syntax.left, context);
     Expression& rhs = create(compilation, *syntax.right, context);
+
+    auto& result = fromComponents(lhs, rhs, getBinaryOperator(syntax.kind),
+                                  syntax.operatorToken.location(), syntax.sourceRange(), context);
+    context.setAttributes(result, syntax.attributes);
+
+    return result;
+}
+
+Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, BinaryOperator op,
+                                             SourceLocation opLoc, SourceRange sourceRange,
+                                             const BindContext& context) {
+    auto& compilation = context.getCompilation();
     const Type* lt = lhs.type;
     const Type* rt = rhs.type;
 
-    auto result = compilation.emplace<BinaryExpression>(getBinaryOperator(syntax.kind), *lhs.type,
-                                                        lhs, rhs, syntax.sourceRange());
+    auto result = compilation.emplace<BinaryExpression>(op, *lt, lhs, rhs, sourceRange);
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
 
@@ -580,35 +591,35 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
     };
 
     bool good;
-    switch (syntax.kind) {
-        case SyntaxKind::AddExpression:
-        case SyntaxKind::SubtractExpression:
-        case SyntaxKind::MultiplyExpression:
+    switch (op) {
+        case BinaryOperator::Add:
+        case BinaryOperator::Subtract:
+        case BinaryOperator::Multiply:
             good = bothNumeric;
             result->type = binaryOperatorType(compilation, lt, rt, false);
             break;
-        case SyntaxKind::DivideExpression:
+        case BinaryOperator::Divide:
             // Result is forced to 4-state because result can be X.
             good = bothNumeric;
             result->type = binaryOperatorType(compilation, lt, rt, true);
             break;
-        case SyntaxKind::ModExpression:
+        case BinaryOperator::Mod:
             // Result is forced to 4-state because result can be X.
             // Different from divide because only integers are allowed.
             good = bothIntegral;
             result->type = binaryOperatorType(compilation, lt, rt, true);
             break;
-        case SyntaxKind::BinaryAndExpression:
-        case SyntaxKind::BinaryOrExpression:
-        case SyntaxKind::BinaryXorExpression:
-        case SyntaxKind::BinaryXnorExpression:
+        case BinaryOperator::BinaryAnd:
+        case BinaryOperator::BinaryOr:
+        case BinaryOperator::BinaryXor:
+        case BinaryOperator::BinaryXnor:
             good = bothIntegral;
             result->type = binaryOperatorType(compilation, lt, rt, false);
             break;
-        case SyntaxKind::LogicalShiftLeftExpression:
-        case SyntaxKind::LogicalShiftRightExpression:
-        case SyntaxKind::ArithmeticShiftLeftExpression:
-        case SyntaxKind::ArithmeticShiftRightExpression:
+        case BinaryOperator::LogicalShiftLeft:
+        case BinaryOperator::LogicalShiftRight:
+        case BinaryOperator::ArithmeticShiftLeft:
+        case BinaryOperator::ArithmeticShiftRight:
             // The result is always the same type as the lhs, except that if the rhs is
             // four state then the lhs also becomes four state.
             good = bothIntegral;
@@ -618,7 +629,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 result->type = lt;
             selfDetermined(context, result->right_);
             break;
-        case SyntaxKind::PowerExpression:
+        case BinaryOperator::Power:
             good = bothNumeric;
             if (lt->isFloating() || rt->isFloating()) {
                 result->type = binaryOperatorType(compilation, lt, rt, false);
@@ -630,10 +641,10 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 selfDetermined(context, result->right_);
             }
             break;
-        case SyntaxKind::GreaterThanEqualExpression:
-        case SyntaxKind::GreaterThanExpression:
-        case SyntaxKind::LessThanEqualExpression:
-        case SyntaxKind::LessThanExpression: {
+        case BinaryOperator::GreaterThanEqual:
+        case BinaryOperator::GreaterThan:
+        case BinaryOperator::LessThanEqual:
+        case BinaryOperator::LessThan: {
             // Result is always a single bit.
             good = bothNumeric || bothStrings;
             result->type = singleBitType(compilation, lt, rt);
@@ -646,22 +657,22 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
             contextDetermined(context, result->right_, *nt);
             break;
         }
-        case SyntaxKind::LogicalAndExpression:
-        case SyntaxKind::LogicalOrExpression:
-        case SyntaxKind::LogicalImplicationExpression:
-        case SyntaxKind::LogicalEquivalenceExpression:
+        case BinaryOperator::LogicalAnd:
+        case BinaryOperator::LogicalOr:
+        case BinaryOperator::LogicalImplication:
+        case BinaryOperator::LogicalEquivalence:
             // Result is always a single bit.
             good = bothNumeric;
             result->type = singleBitType(compilation, lt, rt);
             selfDetermined(context, result->left_);
             selfDetermined(context, result->right_);
             break;
-        case SyntaxKind::EqualityExpression:
-        case SyntaxKind::InequalityExpression:
-        case SyntaxKind::WildcardEqualityExpression:
-        case SyntaxKind::WildcardInequalityExpression:
-        case SyntaxKind::CaseEqualityExpression:
-        case SyntaxKind::CaseInequalityExpression:
+        case BinaryOperator::Equality:
+        case BinaryOperator::Inequality:
+        case BinaryOperator::WildcardEquality:
+        case BinaryOperator::WildcardInequality:
+        case BinaryOperator::CaseEquality:
+        case BinaryOperator::CaseInequality:
             // Two types are comparable if:
             // - they are both integral or floating
             // - both classes or null, and assignment compatible
@@ -672,13 +683,12 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
                 // four state. For case equality and case inequality, result is never four
                 // state. For wildcard equality / inequality, result is four state only if
                 // lhs is four state.
-                if (syntax.kind == SyntaxKind::EqualityExpression ||
-                    syntax.kind == SyntaxKind::InequalityExpression) {
+                if (op == BinaryOperator::Equality || op == BinaryOperator::Inequality) {
                     good = true;
                     result->type = singleBitType(compilation, lt, rt);
                 }
-                else if (syntax.kind == SyntaxKind::CaseEqualityExpression ||
-                         syntax.kind == SyntaxKind::CaseInequalityExpression) {
+                else if (op == BinaryOperator::CaseEquality ||
+                         op == BinaryOperator::CaseInequality) {
                     good = true;
                     result->type = &compilation.getBitType();
                 }
@@ -696,8 +706,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
             }
             else {
                 bool isContext = false;
-                bool isWildcard = syntax.kind == SyntaxKind::WildcardEqualityExpression ||
-                                  syntax.kind == SyntaxKind::WildcardInequalityExpression;
+                bool isWildcard = op == BinaryOperator::WildcardEquality ||
+                                  op == BinaryOperator::WildcardInequality;
 
                 if (bothStrings) {
                     good = !isWildcard;
@@ -739,16 +749,14 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
             THROW_UNREACHABLE;
     }
 
-    auto location = syntax.operatorToken.location();
     if (!good) {
-        auto& diag = context.addDiag(diag::BadBinaryExpression, location);
+        auto& diag = context.addDiag(diag::BadBinaryExpression, opLoc);
         diag << *lt << *rt;
         diag << lhs.sourceRange;
         diag << rhs.sourceRange;
         return badExpr(compilation, result);
     }
 
-    context.setAttributes(*result, syntax.attributes);
     return *result;
 }
 

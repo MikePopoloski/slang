@@ -1791,3 +1791,24 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Compound assignment checking") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a[3];
+    int i;
+    initial begin
+        a += a;
+        i %= 3.14;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BadBinaryExpression);
+    CHECK(diags[1].code == diag::BadBinaryExpression);
+}
