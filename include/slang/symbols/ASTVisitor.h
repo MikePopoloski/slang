@@ -211,6 +211,8 @@ decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
         CASE(WaitFork, WaitForkStatement);
         CASE(WaitOrder, WaitOrderStatement);
         CASE(EventTrigger, EventTriggerStatement);
+        CASE(ProceduralAssign, ProceduralAssignStatement);
+        CASE(ProceduralDeassign, ProceduralDeassignStatement);
     }
 #undef CASE
     // clang-format on

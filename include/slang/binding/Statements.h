@@ -47,7 +47,9 @@ struct StatementSyntax;
     x(Wait) \
     x(WaitFork) \
     x(WaitOrder) \
-    x(EventTrigger)
+    x(EventTrigger) \
+    x(ProceduralAssign) \
+    x(ProceduralDeassign)
 ENUM(StatementKind, STATEMENT);
 #undef STATEMENT
 
@@ -883,6 +885,62 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::EventTrigger; }
+};
+
+struct ProceduralAssignStatementSyntax;
+
+class ProceduralAssignStatement : public Statement {
+public:
+    const Expression& lvalue;
+    const Expression& rvalue;
+
+    ProceduralAssignStatement(const Expression& lvalue, const Expression& rvalue,
+                              SourceRange sourceRange) :
+        Statement(StatementKind::ProceduralAssign, sourceRange),
+        lvalue(lvalue), rvalue(rvalue) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const ProceduralAssignStatementSyntax& syntax,
+                                 const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::ProceduralAssign; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        lvalue.visit(visitor);
+        rvalue.visit(visitor);
+    }
+};
+
+struct ProceduralDeassignStatementSyntax;
+
+class ProceduralDeassignStatement : public Statement {
+public:
+    const Expression& lvalue;
+
+    ProceduralDeassignStatement(const Expression& lvalue, SourceRange sourceRange) :
+        Statement(StatementKind::ProceduralDeassign, sourceRange), lvalue(lvalue) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const ProceduralDeassignStatementSyntax& syntax,
+                                 const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::ProceduralDeassign; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        lvalue.visit(visitor);
+    }
 };
 
 } // namespace slang

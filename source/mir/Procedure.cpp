@@ -61,6 +61,8 @@ public:
     void visit(const WaitForkStatement&) {}
     void visit(const WaitOrderStatement&) {}
     void visit(const EventTriggerStatement&) {}
+    void visit(const ProceduralAssignStatement&) {}
+    void visit(const ProceduralDeassignStatement&) {}
 
     MIRValue visit(const IntegerLiteral& expr) { return emitConst(expr); }
     MIRValue visit(const RealLiteral& expr) { return emitConst(expr); }

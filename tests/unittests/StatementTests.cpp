@@ -988,3 +988,21 @@ endmodule
     CHECK(diags[2].code == diag::RepeatNotNumeric);
     CHECK(diags[3].code == diag::RepeatControlNotEvent);
 }
+
+TEST_CASE("Procedural assign / deassign statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a;
+    initial begin
+        assign a = 5;
+        deassign a;
+        force a = 5;
+        release a;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

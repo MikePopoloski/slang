@@ -218,8 +218,14 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         case SyntaxKind::ProceduralAssignStatement:
         case SyntaxKind::ProceduralForceStatement:
+            result = &ProceduralAssignStatement::fromSyntax(
+                comp, syntax.as<ProceduralAssignStatementSyntax>(), context);
+            break;
         case SyntaxKind::ProceduralDeassignStatement:
         case SyntaxKind::ProceduralReleaseStatement:
+            result = &ProceduralDeassignStatement::fromSyntax(
+                comp, syntax.as<ProceduralDeassignStatementSyntax>(), context);
+            break;
         case SyntaxKind::RandCaseStatement:
         case SyntaxKind::AssertPropertyStatement:
         case SyntaxKind::AssumePropertyStatement:
@@ -2024,6 +2030,59 @@ void EventTriggerStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isNonBlocking", isNonBlocking);
     if (timing)
         serializer.write("timing", *timing);
+}
+
+Statement& ProceduralAssignStatement::fromSyntax(Compilation& compilation,
+                                                 const ProceduralAssignStatementSyntax& syntax,
+                                                 const BindContext& context) {
+    // TODO: error checking on components here
+    auto& lvalue = Expression::bind(*syntax.lvalue, context);
+    auto& rvalue = Expression::bind(*syntax.value, context);
+    auto result =
+        compilation.emplace<ProceduralAssignStatement>(lvalue, rvalue, syntax.sourceRange());
+    if (lvalue.bad() || rvalue.bad())
+        return badStmt(compilation, result);
+
+    return *result;
+}
+
+ER ProceduralAssignStatement::evalImpl(EvalContext&) const {
+    return ER::Fail;
+}
+
+bool ProceduralAssignStatement::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalProceduralAssign, sourceRange);
+    return false;
+}
+
+void ProceduralAssignStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("lvalue", lvalue);
+    serializer.write("rvalue", rvalue);
+}
+
+Statement& ProceduralDeassignStatement::fromSyntax(Compilation& compilation,
+                                                   const ProceduralDeassignStatementSyntax& syntax,
+                                                   const BindContext& context) {
+    // TODO: error checking on components here
+    auto& lvalue = Expression::bind(*syntax.variable, context);
+    auto result = compilation.emplace<ProceduralDeassignStatement>(lvalue, syntax.sourceRange());
+    if (lvalue.bad())
+        return badStmt(compilation, result);
+
+    return *result;
+}
+
+ER ProceduralDeassignStatement::evalImpl(EvalContext&) const {
+    return ER::Fail;
+}
+
+bool ProceduralDeassignStatement::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalProceduralAssign, sourceRange);
+    return false;
+}
+
+void ProceduralDeassignStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("lvalue", lvalue);
 }
 
 } // namespace slang

@@ -403,7 +403,6 @@ JumpStatementSyntax& Parser::parseJumpStatement(NamedLabelSyntax* label, AttrLis
 ProceduralAssignStatementSyntax& Parser::parseProceduralAssignStatement(NamedLabelSyntax* label,
                                                                         AttrList attributes,
                                                                         SyntaxKind kind) {
-
     auto keyword = consume();
     auto& lvalue = parsePrimaryExpression(/* disallowVector */ false);
     auto equals = expect(TokenKind::Equals);
@@ -416,7 +415,6 @@ ProceduralAssignStatementSyntax& Parser::parseProceduralAssignStatement(NamedLab
 ProceduralDeassignStatementSyntax& Parser::parseProceduralDeassignStatement(NamedLabelSyntax* label,
                                                                             AttrList attributes,
                                                                             SyntaxKind kind) {
-
     auto keyword = consume();
     auto& variable = parsePrimaryExpression(/* disallowVector */ false);
     auto semi = expect(TokenKind::Semicolon);
