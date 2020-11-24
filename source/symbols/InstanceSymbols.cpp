@@ -217,12 +217,6 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
 void InstanceSymbol::fromSyntax(Compilation& compilation,
                                 const HierarchyInstantiationSyntax& syntax, LookupLocation location,
                                 const Scope& scope, SmallVector<const Symbol*>& results) {
-    auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
-    if (!definition) {
-        scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
-        return;
-    }
-
     // Figure out whether this instance is being created within
     // an uninstantiated parent instance.
     auto currScope = &scope;
@@ -232,6 +226,13 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     bool isUninstantiated = false;
     if (currScope)
         isUninstantiated = currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
+
+    auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
+    if (!definition) {
+        if (!isUninstantiated)
+            scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
+        return;
+    }
 
     ParameterBuilder paramBuilder(scope, definition->name, definition->parameters);
     if (syntax.parameters)
