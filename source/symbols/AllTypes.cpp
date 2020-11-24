@@ -253,7 +253,8 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& bas
 }
 
 const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                 LookupLocation location, const Scope& scope, bool forceSigned) {
+                                 LookupLocation location, const Scope& scope, bool forceSigned,
+                                 const Type* typedefTarget) {
     const Type* base;
     const Type* cb;
     bitwidth_t bitWidth;
@@ -452,6 +453,15 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 inferValue(ev, member->sourceRange());
             }
         }
+    }
+
+    // If this enum is inside a typedef, override the types of each member to be
+    // the typedef instead of the enum itself. This is done as a separate pass
+    // so that we don't try to access the type of the enum values while we're
+    // still in the middle of resolving it.
+    if (typedefTarget) {
+        for (auto& value : resultType->membersOfType<EnumValueSymbol>())
+            const_cast<EnumValueSymbol&>(value).getDeclaredType()->setType(*typedefTarget);
     }
 
     return createPackedDims(context, resultType, syntax.dimensions);

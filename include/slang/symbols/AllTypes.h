@@ -101,7 +101,8 @@ public:
              LookupLocation lookupLocation, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope, bool forceSigned);
+                                  LookupLocation location, const Scope& scope, bool forceSigned,
+                                  const Type* typedefTarget);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
     iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {

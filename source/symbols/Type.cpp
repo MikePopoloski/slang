@@ -751,7 +751,7 @@ const Type* Type::getCommonBase(const Type& left, const Type& right) {
 
 const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node,
                              LookupLocation location, const Scope& parent, bool forceSigned,
-                             bool isTypedefTarget) {
+                             const Type* typedefTarget) {
     switch (node.kind) {
         case SyntaxKind::BitType:
         case SyntaxKind::LogicType:
@@ -788,7 +788,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
             return compilation.getType(node.kind);
         case SyntaxKind::EnumType:
             return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), location, parent,
-                                        forceSigned);
+                                        forceSigned, typedefTarget);
         case SyntaxKind::StructType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
             return structUnion.packed
@@ -805,7 +805,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         }
         case SyntaxKind::NamedType:
             return lookupNamedType(compilation, *node.as<NamedTypeSyntax>().name, location, parent,
-                                   isTypedefTarget);
+                                   typedefTarget != nullptr);
         case SyntaxKind::ImplicitType: {
             auto& implicit = node.as<ImplicitTypeSyntax>();
             return IntegralType::fromSyntax(

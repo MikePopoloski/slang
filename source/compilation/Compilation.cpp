@@ -966,8 +966,8 @@ const Type& Compilation::getType(SyntaxKind typeKind) const {
 }
 
 const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation location,
-                                 const Scope& parent, bool forceSigned, bool isTypedefTarget) {
-    return Type::fromSyntax(*this, node, location, parent, forceSigned, isTypedefTarget);
+                                 const Scope& parent, bool forceSigned, const Type* typedefTarget) {
+    return Type::fromSyntax(*this, node, location, parent, forceSigned, typedefTarget);
 }
 
 const Type& Compilation::getType(const Type& elementType,

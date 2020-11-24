@@ -833,6 +833,8 @@ module top;
         AB_t AB[10];
         struct {node A,B;} bar;
     end
+    typedef enum{J,K} e_t;
+    e_t baz;
 endmodule
 )");
 
@@ -846,6 +848,8 @@ endmodule
     CHECK(tn("top.foo.AB") == "struct{bit A;bit B;}top.foo.AB_t$[0:9]");
     CHECK(tn("top.foo.bar") == "struct{bit A;bit B;}top.foo.s$2");
     CHECK(tn("foo") == "logic[3:0][1:4]$[$][][0:3][*][logic[3:0]][2:1][$:99]");
+    CHECK(tn("top.baz") == "enum{J=32'sd0,K=32'sd1}top.e_t");
+    CHECK(tn("top.J") == "enum{J=32'sd0,K=32'sd1}top.e_t");
 
     NO_SESSION_ERRORS;
 }

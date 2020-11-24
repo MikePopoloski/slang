@@ -249,7 +249,7 @@ public:
 
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope, bool forceSigned,
-                                  bool isTypedefTarget);
+                                  const Type* typedefTarget);
 
     static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
                                   const SyntaxList<VariableDimensionSyntax>& dimensions,

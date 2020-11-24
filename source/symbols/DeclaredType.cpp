@@ -90,10 +90,13 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
         return;
     }
 
+    const Type* typedefTarget = nullptr;
+    if (flags.has(DeclaredTypeFlags::TypedefTarget))
+        typedefTarget = &parent.as<Type>();
+
     BindContext typeContext = getBindContext();
     type = &comp.getType(*typeSyntax, typeContext.lookupLocation, scope,
-                         (flags & DeclaredTypeFlags::ForceSigned) != 0,
-                         (flags & DeclaredTypeFlags::TypedefTarget) != 0);
+                         flags.has(DeclaredTypeFlags::ForceSigned), typedefTarget);
     if (dimensions)
         type = &comp.getType(*type, *dimensions, typeContext.lookupLocation, scope);
 

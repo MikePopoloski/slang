@@ -69,7 +69,7 @@ TEST_CASE("Class handle expression types") {
     CHECK(typeof("p.current_status()") == "integer");
     CHECK(typeof("p.clean") == "void");
     CHECK(typeof("p.ERR_OVERFLOW") ==
-          "enum{ERR_OVERFLOW=32'sd10,ERR_UNDERFLOW=32'sd1123}Packet::e$1");
+          "enum{ERR_OVERFLOW=32'sd10,ERR_UNDERFLOW=32'sd1123}Packet::PCKT_TYPE");
     CHECK(typeof("p.bar") == "int");
 
     declare(R"(
