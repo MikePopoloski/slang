@@ -363,6 +363,7 @@ warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streami
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"
 warning width-trunc WidthTruncate "implicit conversion truncates from {} to {} bits"
+warning implicit-conv ImplicitConvert "implicit conversion from {} to {}"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -551,11 +552,11 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
                   unconnected-unnamed-port event-const redef-macro not-supported unknown-pragma
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
-                  unknown-escape-code no-top warning-task unsized-concat finish-num }
+                  unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate }
 
-group conversion = { width-trunc width-expand }
+group conversion = { width-trunc width-expand implicit-conv }

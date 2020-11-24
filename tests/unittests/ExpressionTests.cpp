@@ -1812,3 +1812,30 @@ endmodule
     CHECK(diags[0].code == diag::BadBinaryExpression);
     CHECK(diags[1].code == diag::BadBinaryExpression);
 }
+
+TEST_CASE("Implicit conversion warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { logic a; int b; } foo;
+    union packed { int a; int b; } bar;
+    logic [43:0] i;
+    int j;
+    logic [2:0] b;
+
+    initial begin
+        foo = bar;
+        i = b;
+        b = #1 j;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ImplicitConvert);
+    CHECK(diags[1].code == diag::WidthExpand);
+    CHECK(diags[2].code == diag::WidthTruncate);
+}

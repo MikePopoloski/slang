@@ -328,12 +328,13 @@ Expression& Expression::convertAssignment(const BindContext& context, const Type
         }
 
         rt = binaryOperatorType(compilation, &type, rt, false);
-        contextDetermined(context, result, *rt, location);
+        bool expanding = type.isEquivalent(*rt);
+        if (expanding)
+            rt = &type;
 
-        if (type.isEquivalent(*rt)) {
-            result->type = &type;
+        contextDetermined(context, result, *rt, location);
+        if (expanding)
             return *result;
-        }
 
         // Do not convert (truncate) enum initializer so out of range value can be checked.
         if (context.flags.has(BindFlags::EnumInitializer)) {
@@ -603,6 +604,55 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
+static void checkImplicitConversions(const BindContext& context, const Type& targetType,
+                                     const Expression& op, SourceLocation loc) {
+    auto isStructUnionEnum = [](const Type& t) {
+        return t.kind == SymbolKind::PackedStructType || t.kind == SymbolKind::PackedUnionType ||
+               t.kind == SymbolKind::EnumType;
+    };
+
+    const Type& sourceType = *op.type;
+    const Type& lt = targetType.getCanonicalType();
+    const Type& rt = sourceType.getCanonicalType();
+    if (lt.isIntegral() && rt.isIntegral()) {
+        // Warn for conversions between different enums/structs/unions.
+        if (isStructUnionEnum(lt) && isStructUnionEnum(rt) && !lt.isMatching(rt)) {
+            context.addDiag(diag::ImplicitConvert, loc)
+                << sourceType << targetType << op.sourceRange;
+            return;
+        }
+
+        // Warn for implicit assignments between integral types of differing widths.
+        bitwidth_t targetWidth = lt.getBitWidth();
+        bitwidth_t actualWidth = rt.getBitWidth();
+        if (targetWidth == actualWidth || context.flags.has(BindFlags::Constant))
+            return;
+
+        // Before we go and issue this warning, weed out false positives by
+        // recomputing the width of the expression, with all constants sized
+        // to the minimum width necessary to represent them. Otherwise, even
+        // code as simple as this will result in a warning:
+        //    logic [3:0] a = 1;
+        optional<bitwidth_t> effective = op.getEffectiveWidth();
+        if (!effective)
+            return;
+
+        // Now that we know the effective width, compare it to the expression's
+        // actual width. We don't warn if the target is anywhere in between the
+        // effective and the actual width.
+        ASSERT(effective <= actualWidth);
+        if (targetWidth < effective || targetWidth > actualWidth) {
+            // Final check to rule out false positives: try to eval as a constant.
+            // We'll ignore any constants, because as described above they
+            // will get their own more fine grained warning later during eval.
+            if (!context.tryEval(op)) {
+                DiagCode code = targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
+                context.addDiag(code, loc) << actualWidth << targetWidth << op.sourceRange;
+            }
+        }
+    }
+}
+
 Expression& ConversionExpression::makeImplicit(const BindContext& context, const Type& targetType,
                                                ConversionKind conversionKind, Expression& expr,
                                                SourceLocation loc) {
@@ -613,42 +663,11 @@ Expression& ConversionExpression::makeImplicit(const BindContext& context, const
     Expression* op = &expr;
     selfDetermined(context, op);
 
-    // Warn for implicit assignments between integral types of differing widths.
+    // Check if we should issue any warnings for implicit integer conversions.
     // Note that this does not apply to propagated conversions, as those almost
     // always do the right thing and the warnings would be very noisy.
-    //
-    // Also don't warn if we are in a constant context -- we will diagnose actual
-    // loss of data in constant expressions later when we evaluate them.
-    bitwidth_t targetWidth = targetType.getBitWidth();
-    bitwidth_t actualWidth = op->type->getBitWidth();
-    if (conversionKind == ConversionKind::Implicit && targetType.isIntegral() &&
-        op->type->isIntegral() && targetWidth != actualWidth && !context.inUnevaluatedBranch() &&
-        !context.flags.has(BindFlags::Constant)) {
-
-        // Before we go and issue this warning, weed out false positives by
-        // recomputing the width of the expression, with all constants sized
-        // to the minimum width necessary to represent them. Otherwise, even
-        // code as simple as this will result in a warning:
-        //    logic [3:0] a = 1;
-        optional<bitwidth_t> effective = op->getEffectiveWidth();
-        if (effective) {
-            ASSERT(effective <= actualWidth);
-
-            // Now that we know the effective width, compare it to the expression's
-            // actual width. We don't warn if the target is anywhere in between the
-            // effective and the actual width.
-            if (targetWidth < effective || targetWidth > actualWidth) {
-                // Final check to rule out false positives: try to eval as a constant.
-                // We'll ignore any constants, because as described above they
-                // will get their own more fine grained warning later during eval.
-                if (!context.tryEval(*op)) {
-                    DiagCode code =
-                        targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
-                    context.addDiag(code, loc) << actualWidth << targetWidth << op->sourceRange;
-                }
-            }
-        }
-    }
+    if (conversionKind == ConversionKind::Implicit && !context.inUnevaluatedBranch())
+        checkImplicitConversions(context, targetType, *op, loc);
 
     return *context.getCompilation().emplace<ConversionExpression>(targetType, conversionKind, *op,
                                                                    op->sourceRange);
