@@ -538,9 +538,12 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     if (loopVal->integer().hasUnknown())
         iterContext.addDiag(diag::GenvarUnknownBits, genvar.range()) << *loopVal;
 
-    // Generate blocks!
+    // Generate blocks! In the first pass we evaluate all indices for correctness,
+    // letting us enforce the loop limit to detect infinite loops before trying
+    // to generate more hierarchy.
     uint64_t loopCount = 0;
     SmallSet<SVInt, 8> usedValues;
+    SmallVectorSized<SVInt, 8> indices;
     while (true) {
         loopCount += baseCount;
         if (loopCount > loopLimit) {
@@ -554,13 +557,12 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
             break;
         }
 
+        indices.emplace(loopVal->integer());
         auto pair = usedValues.emplace(loopVal->integer());
         if (!pair.second) {
             iterContext.addDiag(diag::GenvarDuplicate, genvar.range()) << *loopVal;
             break;
         }
-
-        createBlock(*loopVal, true);
 
         if (!iterExpr.eval(evalContext))
             break;
@@ -572,6 +574,12 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(
     }
 
     evalContext.reportDiags(iterContext);
+
+    // If the generate loop completed successfully, go through and create blocks.
+    if (result->valid) {
+        for (auto& index : indices)
+            createBlock(index, true);
+    }
 
     result->entries = entries.copy(compilation);
     if (entries.empty())
