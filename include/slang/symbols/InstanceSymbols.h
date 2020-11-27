@@ -144,4 +144,33 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }
 };
 
+/// Represents an instance of some unknown module (or interface / program).
+/// This is a placeholder in the AST so that we don't record further errors
+/// after the initial one about the unknown module itself.
+class UnknownModuleSymbol : public Symbol {
+public:
+    /// The self-determined expressions that are assigned to the parameters
+    /// in the instantiation. These aren't necessarily correctly typed
+    /// since we can't know the destination type of each parameter.
+    span<const Expression* const> paramExpressions;
+
+    /// The self-determined expressions that are assigned to the ports
+    /// in the instantiation. These aren't necessarily correctly typed
+    /// since we can't know the destination type of each port.
+    span<const Expression* const> portConnections;
+
+    UnknownModuleSymbol(string_view name, SourceLocation loc, span<const Expression* const> params,
+                        span<const Expression* const> ports) :
+        Symbol(SymbolKind::UnknownModule, name, loc),
+        paramExpressions(params), portConnections(ports) {}
+
+    static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
+                           LookupLocation location, const Scope& scope,
+                           SmallVector<const Symbol*>& results);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnknownModule; }
+};
+
 } // namespace slang

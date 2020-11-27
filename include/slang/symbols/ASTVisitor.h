@@ -153,6 +153,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(ElabSystemTask);
         SYMBOL(GenericClassDef);
         SYMBOL(MethodPrototype);
+        SYMBOL(UnknownModule);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);

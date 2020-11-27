@@ -231,6 +231,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     if (!definition) {
         if (!isUninstantiated)
             scope.addDiag(diag::UnknownModule, syntax.type.range()) << syntax.type.valueText();
+
+        UnknownModuleSymbol::fromSyntax(compilation, syntax, location, scope, results);
         return;
     }
 
@@ -563,6 +565,61 @@ string_view InstanceArraySymbol::getArrayName() const {
 
 void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("range", range.toString());
+}
+
+void UnknownModuleSymbol::fromSyntax(Compilation& compilation,
+                                     const HierarchyInstantiationSyntax& syntax,
+                                     LookupLocation location, const Scope& scope,
+                                     SmallVector<const Symbol*>& results) {
+    SmallVectorSized<const Expression*, 8> params;
+    BindContext context(scope, location);
+
+    if (syntax.parameters) {
+        for (auto expr : syntax.parameters->assignments->parameters) {
+            // Empty expressions are just ignored here.
+            if (expr->kind == SyntaxKind::OrderedArgument)
+                params.append(&Expression::bind(*expr->as<OrderedArgumentSyntax>().expr, context));
+            else if (expr->kind == SyntaxKind::NamedArgument) {
+                if (auto ex = expr->as<NamedArgumentSyntax>().expr)
+                    params.append(&Expression::bind(*ex, context));
+            }
+        }
+    }
+
+    SmallSet<string_view, 8> implicitNetNames;
+    auto& netType = scope.getDefaultNetType();
+    auto paramSpan = params.copy(compilation);
+
+    for (auto instanceSyntax : syntax.instances) {
+        createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, results);
+
+        SmallVectorSized<const Expression*, 8> ports;
+        for (auto port : instanceSyntax->connections) {
+            if (port->kind == SyntaxKind::OrderedPortConnection)
+                ports.append(
+                    &Expression::bind(*port->as<OrderedPortConnectionSyntax>().expr, context));
+            else if (port->kind == SyntaxKind::NamedPortConnection) {
+                if (auto ex = port->as<NamedPortConnectionSyntax>().expr)
+                    ports.append(&Expression::bind(*ex, context));
+            }
+        }
+
+        auto name = instanceSyntax->name;
+        results.append(compilation.emplace<UnknownModuleSymbol>(
+            name.valueText(), name.location(), paramSpan, ports.copy(compilation)));
+    }
+}
+
+void UnknownModuleSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("parameters");
+    for (auto expr : paramExpressions)
+        serializer.serialize(*expr);
+    serializer.endArray();
+
+    serializer.startArray("ports");
+    for (auto expr : portConnections)
+        serializer.serialize(*expr);
+    serializer.endArray();
 }
 
 } // namespace slang

@@ -958,7 +958,7 @@ module bar #(parameter int foo);
     end
     int k = {};
 
-    UnknownMod #(3, 4) m();
+    UnknownMod #(3, 4) m(j + 1);
 endmodule
 
 module top;

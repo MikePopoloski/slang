@@ -81,7 +81,8 @@ struct AttributeInstanceSyntax;
     x(GateArray) \
     x(ElabSystemTask) \
     x(GenericClassDef) \
-    x(MethodPrototype)
+    x(MethodPrototype) \
+    x(UnknownModule)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)
