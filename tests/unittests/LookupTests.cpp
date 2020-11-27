@@ -1487,3 +1487,23 @@ endmodule
     CHECK(diags[0].code == diag::NotAllowedInModport);
     CHECK(diags[1].code == diag::InvalidModportAccess);
 }
+
+TEST_CASE("Lookup into uninstantiated module") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter p);
+    UnknownMod #(3) um(1,2);
+endmodule
+
+module top;
+    m #(1) m1();
+    initial m1.um.foo.bar = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnknownModule);
+}

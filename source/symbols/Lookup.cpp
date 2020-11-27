@@ -241,6 +241,11 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
         }
 
         if ((!symbol->isScope() && symbol->kind != SymbolKind::Instance) || symbol->isType()) {
+            // If we found an unknown module, exit silently. An appropriate error was
+            // already issued, so no need to pile on.
+            if (symbol->kind == SymbolKind::UnknownModule)
+                return false;
+
             bool isType = symbol->isType() || isClassType(*symbol);
             auto code = isType ? diag::DotOnType : diag::NotAHierarchicalScope;
             auto& diag = result.addDiag(context.scope, code, it->dotLocation);
