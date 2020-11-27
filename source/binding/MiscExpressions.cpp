@@ -61,8 +61,8 @@ static bool isAccessibleFrom(const Symbol& target, const Symbol& sourceScope) {
     return targetType.isAssignmentCompatible(sourceType);
 }
 
-Expression& NamedValueExpression::fromSymbol(const BindContext& context, const Symbol& symbol,
-                                             bool isHierarchical, SourceRange sourceRange) {
+Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Symbol& symbol,
+                                            bool isHierarchical, SourceRange sourceRange) {
     Compilation& compilation = context.getCompilation();
     if (!symbol.isValue()) {
         context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
@@ -93,8 +93,63 @@ Expression& NamedValueExpression::fromSymbol(const BindContext& context, const S
         }
     }
 
-    return *compilation.emplace<NamedValueExpression>(symbol.as<ValueSymbol>(), isHierarchical,
-                                                      sourceRange);
+    auto& value = symbol.as<ValueSymbol>();
+    if (isHierarchical)
+        return *compilation.emplace<HierarchicalValueExpression>(value, sourceRange);
+    else
+        return *compilation.emplace<NamedValueExpression>(value, sourceRange);
+}
+
+bool ValueExpressionBase::verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
+                                               SourceLocation location) const {
+    if (symbol.kind == SymbolKind::Parameter || symbol.kind == SymbolKind::EnumValue) {
+        auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
+        diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        diag << sourceRange;
+        return false;
+    }
+
+    // chandles can only be assigned in procedural contexts.
+    if ((context.flags & BindFlags::ProceduralStatement) == 0 && symbol.getType().isCHandle()) {
+        context.addDiag(diag::AssignToCHandle, sourceRange);
+        return false;
+    }
+
+    if (VariableSymbol::isKind(symbol.kind)) {
+        return context.requireAssignable(symbol.as<VariableSymbol>(), isNonBlocking, location,
+                                         sourceRange);
+    }
+
+    return true;
+}
+
+optional<bitwidth_t> ValueExpressionBase::getEffectiveWidthImpl() const {
+    auto cvToWidth = [this](const ConstantValue& cv) -> optional<bitwidth_t> {
+        if (!cv.isInteger())
+            return std::nullopt;
+
+        auto& sv = cv.integer();
+        if (sv.hasUnknown())
+            return type->getBitWidth();
+
+        if (sv.isNegative())
+            return sv.getMinRepresentedBits();
+
+        return sv.getActiveBits();
+    };
+
+    switch (symbol.kind) {
+        case SymbolKind::Parameter:
+            return cvToWidth(symbol.as<ParameterSymbol>().getValue());
+        case SymbolKind::EnumValue:
+            return cvToWidth(symbol.as<EnumValueSymbol>().getValue());
+        default:
+            return type->getBitWidth();
+    }
+}
+
+void ValueExpressionBase::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("symbol", symbol);
 }
 
 ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
@@ -137,12 +192,6 @@ LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
 bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     if (context.isScriptEval())
         return true;
-
-    // Hierarchical names are disallowed in constant expressions and constant functions
-    if (isHierarchical) {
-        context.addDiag(diag::ConstEvalHierarchicalNameInCE, sourceRange) << symbol.name;
-        return false;
-    }
 
     // Class types are disallowed in constant expressions. Note that I don't see anything
     // in the spec that would explicitly disallow them, but literally every tool issues
@@ -188,57 +237,13 @@ bool NamedValueExpression::verifyConstantImpl(EvalContext& context) const {
     return true;
 }
 
-bool NamedValueExpression::verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
-                                                SourceLocation location) const {
-    if (symbol.kind == SymbolKind::Parameter || symbol.kind == SymbolKind::EnumValue) {
-        auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
-        diag.addNote(diag::NoteDeclarationHere, symbol.location);
-        diag << sourceRange;
-        return false;
-    }
-
-    // chandles can only be assigned in procedural contexts.
-    if ((context.flags & BindFlags::ProceduralStatement) == 0 && symbol.getType().isCHandle()) {
-        context.addDiag(diag::AssignToCHandle, sourceRange);
-        return false;
-    }
-
-    if (VariableSymbol::isKind(symbol.kind)) {
-        return context.requireAssignable(symbol.as<VariableSymbol>(), isNonBlocking, location,
-                                         sourceRange);
-    }
-
-    return true;
+ConstantValue HierarchicalValueExpression::evalImpl(EvalContext&) const {
+    return nullptr;
 }
 
-optional<bitwidth_t> NamedValueExpression::getEffectiveWidthImpl() const {
-    auto cvToWidth = [this](const ConstantValue& cv) -> optional<bitwidth_t> {
-        if (!cv.isInteger())
-            return std::nullopt;
-
-        auto& sv = cv.integer();
-        if (sv.hasUnknown())
-            return type->getBitWidth();
-
-        if (sv.isNegative())
-            return sv.getMinRepresentedBits();
-
-        return sv.getActiveBits();
-    };
-
-    switch (symbol.kind) {
-        case SymbolKind::Parameter:
-            return cvToWidth(symbol.as<ParameterSymbol>().getValue());
-        case SymbolKind::EnumValue:
-            return cvToWidth(symbol.as<EnumValueSymbol>().getValue());
-        default:
-            return type->getBitWidth();
-    }
-}
-
-void NamedValueExpression::serializeTo(ASTSerializer& serializer) const {
-    serializer.writeLink("symbol", symbol);
-    serializer.write("isHierarchical", isHierarchical);
+bool HierarchicalValueExpression::verifyConstantImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalHierarchicalNameInCE, sourceRange) << symbol.name;
+    return false;
 }
 
 Expression& CallExpression::fromSyntax(Compilation& compilation,

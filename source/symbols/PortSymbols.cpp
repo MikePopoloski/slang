@@ -778,7 +778,7 @@ private:
             return emptyConnection(port);
 
         BindContext context(scope, LookupLocation::max);
-        auto expr = &NamedValueExpression::fromSymbol(context, *symbol, false, range);
+        auto expr = &ValueExpressionBase::fromSymbol(context, *symbol, false, range);
         if (expr->bad())
             return emptyConnection(port);
 

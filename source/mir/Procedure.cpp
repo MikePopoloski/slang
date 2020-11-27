@@ -86,6 +86,8 @@ public:
         return proc.emitGlobal(var);
     }
 
+    MIRValue visit(const HierarchicalValueExpression&) { return {}; }
+
     MIRValue visit(const UnaryExpression& expr) {
         MIRValue val = expr.operand().visit(*this);
         if (val.isConstant())

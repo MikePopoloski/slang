@@ -1340,7 +1340,9 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
     if (arrayRef.bad()) {
         bad = true;
     }
-    else if (arrayRef.kind != ExpressionKind::NamedValue || !arrayRef.type->isArray()) {
+    else if ((arrayRef.kind != ExpressionKind::NamedValue &&
+              arrayRef.kind != ExpressionKind::HierarchicalValue) ||
+             !arrayRef.type->isArray()) {
         context.addDiag(diag::NotAnArray, arrayRef.sourceRange);
         bad = true;
     }

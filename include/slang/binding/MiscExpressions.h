@@ -10,19 +10,11 @@
 
 namespace slang {
 
-/// Represents an expression that references a named value.
-class NamedValueExpression : public Expression {
+/// Common base class for both NamedValueExpression and HierarchicalValueExpression.
+class ValueExpressionBase : public Expression {
 public:
     const ValueSymbol& symbol;
-    bool isHierarchical;
 
-    NamedValueExpression(const ValueSymbol& symbol, bool isHierarchical, SourceRange sourceRange) :
-        Expression(ExpressionKind::NamedValue, symbol.getType(), sourceRange), symbol(symbol),
-        isHierarchical(isHierarchical) {}
-
-    ConstantValue evalImpl(EvalContext& context) const;
-    LValue evalLValueImpl(EvalContext& context) const;
-    bool verifyConstantImpl(EvalContext& context) const;
     bool verifyAssignableImpl(const BindContext& context, bool isNonBlocking,
                               SourceLocation location) const;
     optional<bitwidth_t> getEffectiveWidthImpl() const;
@@ -32,7 +24,34 @@ public:
     static Expression& fromSymbol(const BindContext& context, const Symbol& symbol,
                                   bool isHierarchical, SourceRange sourceRange);
 
+protected:
+    ValueExpressionBase(ExpressionKind kind, const ValueSymbol& symbol, SourceRange sourceRange) :
+        Expression(kind, symbol.getType(), sourceRange), symbol(symbol) {}
+};
+
+/// Represents an expression that references a named value.
+class NamedValueExpression : public ValueExpressionBase {
+public:
+    NamedValueExpression(const ValueSymbol& symbol, SourceRange sourceRange) :
+        ValueExpressionBase(ExpressionKind::NamedValue, symbol, sourceRange) {}
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    LValue evalLValueImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
+};
+
+/// Represents an expression that references a named value via hierarchical path.
+class HierarchicalValueExpression : public ValueExpressionBase {
+public:
+    HierarchicalValueExpression(const ValueSymbol& symbol, SourceRange sourceRange) :
+        ValueExpressionBase(ExpressionKind::HierarchicalValue, symbol, sourceRange) {}
+
+    ConstantValue evalImpl(EvalContext& context) const;
+    bool verifyConstantImpl(EvalContext& context) const;
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::HierarchicalValue; }
 };
 
 struct ArgumentListSyntax;

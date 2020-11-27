@@ -31,6 +31,7 @@ struct InvocationExpressionSyntax;
     x(NullLiteral) \
     x(StringLiteral) \
     x(NamedValue) \
+    x(HierarchicalValue) \
     x(UnaryOp) \
     x(BinaryOp) \
     x(ConditionalOp) \

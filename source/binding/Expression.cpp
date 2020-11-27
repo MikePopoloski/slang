@@ -310,6 +310,10 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
             auto& nv = as<NamedValueExpression>();
             return nv.verifyAssignableImpl(context, isNonBlocking, location);
         }
+        case ExpressionKind::HierarchicalValue: {
+            auto& hv = as<HierarchicalValueExpression>();
+            return hv.verifyAssignableImpl(context, isNonBlocking, location);
+        }
         case ExpressionKind::ElementSelect: {
             auto& select = as<ElementSelectExpression>();
             return select.value().verifyAssignable(context, isNonBlocking, location);
@@ -723,8 +727,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         invocation = nullptr;
     }
     else {
-        expr = &NamedValueExpression::fromSymbol(context, *symbol, result.isHierarchical,
-                                                 syntax.sourceRange());
+        expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
+                                                syntax.sourceRange());
     }
 
     // Drill down into member accesses.

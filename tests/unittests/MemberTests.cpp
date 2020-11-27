@@ -215,7 +215,6 @@ endmodule
                 "target": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.e$1"
               },
               "symbol": "STATE_0",
-              "isHierarchical": false,
               "constant": "1'b0"
             },
             "lifetime": "Static",

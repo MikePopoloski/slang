@@ -254,6 +254,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(NullLiteral, NullLiteral);
         CASE(StringLiteral, StringLiteral);
         CASE(NamedValue, NamedValueExpression);
+        CASE(HierarchicalValue, HierarchicalValueExpression);
         CASE(UnaryOp, UnaryExpression);
         CASE(BinaryOp, BinaryExpression);
         CASE(ConditionalOp, ConditionalExpression);

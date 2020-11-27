@@ -33,6 +33,7 @@ bool recurseCheckEnum(const Expression& expr) {
     switch (expr.kind) {
         case ExpressionKind::UnbasedUnsizedIntegerLiteral:
         case ExpressionKind::NamedValue:
+        case ExpressionKind::HierarchicalValue:
         case ExpressionKind::MemberAccess:
             return true;
         case ExpressionKind::IntegerLiteral:
