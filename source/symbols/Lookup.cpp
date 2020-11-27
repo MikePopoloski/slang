@@ -1089,6 +1089,17 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                            outOfBlockIndex, result);
 }
 
+static bool isUninstantiated(const Scope& scope) {
+    auto currScope = &scope;
+    while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
+        currScope = currScope->asSymbol().getParentScope();
+
+    if (currScope)
+        return currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
+
+    return false;
+}
+
 void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, LookupLocation location,
                        bitmask<LookupFlags> flags, LookupResult& result) {
     // Split the name into easier to manage chunks. The parser will always produce a
@@ -1129,6 +1140,10 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
             unqualifiedImpl(scope, name, location, first.range(), flags, {}, result);
             break;
         case SyntaxKind::UnitScope:
+            // Ignore hierarchical lookups that occur inside uninstantiated modules.
+            if (isUninstantiated(scope))
+                return;
+
             result.found = getCompilationUnit(scope.asSymbol());
             lookupDownward(nameParts, first, context, result, flags);
             return;
@@ -1140,6 +1155,10 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
                 result.addDiag(scope, diag::HierarchicalNotAllowedInConstant, first.range());
                 return;
             }
+
+            // Ignore hierarchical lookups that occur inside uninstantiated modules.
+            if (isUninstantiated(scope))
+                return;
 
             result.found = &compilation.getRoot();
             lookupDownward(nameParts, first, context, result, flags);
@@ -1177,7 +1196,8 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
         if (!result.found || !isClassType(*result.found)) {
             result.found = compilation.getPackage(name);
             if (!result.found) {
-                result.addDiag(scope, diag::UnknownClassOrPackage, first.range()) << name;
+                if (!isUninstantiated(scope))
+                    result.addDiag(scope, diag::UnknownClassOrPackage, first.range()) << name;
                 return;
             }
         }
@@ -1239,7 +1259,7 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     // downward lookup (if any), so it's fine to just return it as is. If we never found any
     // symbol originally, issue an appropriate error for that.
     result.copyFrom(originalResult);
-    if (!result.found && !result.hasError())
+    if (!result.found && !result.hasError() && !isUninstantiated(scope))
         reportUndeclared(scope, name, first.range(), flags, true, result);
 }
 

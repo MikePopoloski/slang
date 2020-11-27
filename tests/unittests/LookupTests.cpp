@@ -1507,3 +1507,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnknownModule);
 }
+
+TEST_CASE("Hierarchical name inside unused module") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter p);
+    int i = $root.foo.baz;
+    int j = foo.bar.baz;
+    int k = $unit::baz;
+endmodule
+
+module top;
+    initial $display("hello");
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
