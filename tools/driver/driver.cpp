@@ -162,7 +162,7 @@ bool runCompiler(Compilation& compilation, const std::vector<std::string>& warni
 
 #ifndef FUZZ_TARGET
     std::string diagStr = client->getString();
-    OS::print("{}", diagStr);
+    OS::error_print("{}", diagStr);
 
     if (!quiet && !onlyParse) {
         if (diagStr.size() > 1)

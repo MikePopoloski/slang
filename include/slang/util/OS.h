@@ -62,6 +62,23 @@ public:
             fmt::vprint(format, fmt::make_format_args(args...));
         }
     }
+
+    /// Prints formatted text to stderr, handling Unicode conversions where necessary.
+    template<typename... Args>
+    static void error_print(string_view format, const Args&... args) {
+        fmt::vprint(stderr, format, fmt::make_format_args(args...));
+    }
+
+    /// Prints colored formatted text to stdout, handling Unicode conversions where necessary.
+    template<typename... Args>
+    static void error_print(const fmt::text_style& style, string_view format, const Args&... args) {
+        if (showColors) {
+            fmt::vprint(stderr, style, format, fmt::make_format_args(args...));
+        }
+        else {
+            fmt::vprint(stderr, format, fmt::make_format_args(args...));
+        }
+    }
 #endif
 
 private:
