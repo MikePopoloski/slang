@@ -209,7 +209,7 @@ error PortDeclDimensionsMismatch "dimensions of port '{}' do not match its decla
 error PortDeclInANSIModule "can't use port declaration in module with ANSI style port list"
 error UnusedPortDecl "port declaration '{}' does not match any port in the module's port list"
 error UnknownPackage "unknown package '{}'"
-error UnknownModule "unknown module '{}'"
+warning unknown-module UnknownModule "unknown module '{}'"
 error UnknownInterface "unknown interface '{}'"
 error MixingOrderedAndNamedPorts "mixing ordered and named port connections is not allowed"
 error DuplicateWildcardPortConnection "duplicate wildcard port connection"
