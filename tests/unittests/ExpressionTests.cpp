@@ -1839,3 +1839,19 @@ endmodule
     CHECK(diags[1].code == diag::WidthExpand);
     CHECK(diags[2].code == diag::WidthTruncate);
 }
+
+TEST_CASE("Assign to net in procedural context") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire i;
+    initial i = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssignToNet);
+}

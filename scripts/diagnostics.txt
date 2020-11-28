@@ -359,6 +359,7 @@ error BadStreamWithOrder "'with' expression cannot appear after unconstrained dy
 error NewVirtualClass "cannot create instance of virtual class '{}'"
 error NewInterfaceClass "cannot create instance of interface class '{}'"
 error AssignToCHandle "cannot assign to a chandle outside of a procedural context"
+error AssignToNet "cannot assign to a net within a procedural context"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"
