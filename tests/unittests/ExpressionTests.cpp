@@ -1855,3 +1855,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssignToNet);
 }
+
+TEST_CASE("Selects of vectored nets") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire vectored integer i;
+    logic j = i[1];
+    logic [1:0] k = i[1:0];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::SelectOfVectoredNet);
+    CHECK(diags[1].code == diag::SelectOfVectoredNet);
+}

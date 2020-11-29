@@ -168,15 +168,26 @@ void FieldSymbol::serializeTo(ASTSerializer& serializer) const {
 
 void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results) {
-
     // TODO: other net features
     auto& comp = scope.getCompilation();
     const NetType& netType = comp.getNetType(syntax.netType.kind);
 
+    ExpansionHint expansionHint = ExpansionHint::None;
+    switch (syntax.expansionHint.kind) {
+        case TokenKind::VectoredKeyword:
+            expansionHint = ExpansionHint::Vectored;
+            break;
+        case TokenKind::ScalaredKeyword:
+            expansionHint = ExpansionHint::Scalared;
+            break;
+        default:
+            break;
+    }
+
     for (auto declarator : syntax.declarators) {
         auto net = comp.emplace<NetSymbol>(declarator->name.valueText(),
                                            declarator->name.location(), netType);
-
+        net->expansionHint = expansionHint;
         net->setDeclaredType(*syntax.type, declarator->dimensions);
         net->setFromDeclarator(*declarator);
         net->setAttributes(scope, syntax.attributes);

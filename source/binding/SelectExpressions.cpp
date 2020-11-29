@@ -111,11 +111,31 @@ optional<int32_t> getDynamicIndex(const ConstantValue& cs, const ConstantValue& 
 
 namespace slang {
 
+static const ValueSymbol* getValueFrom(const Expression& expr) {
+    if (expr.kind == ExpressionKind::NamedValue)
+        return &expr.as<NamedValueExpression>().symbol;
+    if (expr.kind == ExpressionKind::HierarchicalValue)
+        return &expr.as<HierarchicalValueExpression>().symbol;
+    return nullptr;
+}
+
+static void checkForVectoredSelect(const Expression& value, SourceRange range,
+                                   const BindContext& context) {
+    if (auto sym = getValueFrom(value); sym && sym->kind == SymbolKind::Net &&
+                                        sym->as<NetSymbol>().expansionHint == NetSymbol::Vectored) {
+        auto& diag = context.addDiag(diag::SelectOfVectoredNet, range);
+        diag.addNote(diag::NoteDeclarationHere, sym->location);
+    }
+}
+
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                                 const ExpressionSyntax& syntax,
                                                 SourceRange fullRange, const BindContext& context) {
     if (value.bad())
         return badExpr(compilation, nullptr);
+
+    // Selects of vectored nets are disallowed.
+    checkForVectoredSelect(value, fullRange, context);
 
     const Type& valueType = *value.type;
     const Type& resultType = getIndexedType(compilation, context, valueType, syntax.sourceRange(),
@@ -347,6 +367,9 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                                              value.sourceRange, true);
     if (elementType.isError())
         return badExpr(compilation, result);
+
+    // Selects of vectored nets are disallowed.
+    checkForVectoredSelect(value, fullRange, context);
 
     // If this is selecting from a queue, the result is always a queue.
     if (isQueue) {

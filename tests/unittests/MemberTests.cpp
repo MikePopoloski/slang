@@ -24,6 +24,7 @@ module m;
     wire int i = 1;
     wire real r = 3.1;
     wire struct { real r; } s;
+    wire vectored v;
 endmodule
 )");
 
@@ -31,10 +32,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::InvalidNetType);
     CHECK(diags[1].code == diag::InvalidNetType);
     CHECK(diags[2].code == diag::InvalidNetType);
+    CHECK(diags[3].code == diag::SingleBitVectored);
 }
 
 TEST_CASE("Bad signed specifier") {

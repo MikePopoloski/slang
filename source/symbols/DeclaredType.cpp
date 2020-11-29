@@ -207,6 +207,10 @@ void DeclaredType::checkType(const BindContext& context) const {
     else if (flags.has(DeclaredTypeFlags::NetType)) {
         if (!type->isError() && !isValidForNet(*type))
             context.addDiag(diag::InvalidNetType, parent.location) << *type;
+        else if (type->getBitWidth() == 1 &&
+                 parent.as<NetSymbol>().expansionHint != NetSymbol::None) {
+            context.addDiag(diag::SingleBitVectored, parent.location);
+        }
     }
     else if (flags.has(DeclaredTypeFlags::UserDefinedNetType)) {
         if (!type->isError() && !isValidForUserDefinedNet(*type))
