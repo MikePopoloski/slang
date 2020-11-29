@@ -10,6 +10,8 @@ TEST_CASE("Nets") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     wire logic f = 1;
+    wire #5 g;
+    wire logic #(1:2:3, 3:2:1, 1:2:1) h;
 endmodule
 )");
 
@@ -25,6 +27,10 @@ module m;
     wire real r = 3.1;
     wire struct { real r; } s;
     wire vectored v;
+
+    logic foo[2];
+    wire #(1,b) asdf;
+    wire #(1, foo) asdf2;
 endmodule
 )");
 
@@ -32,11 +38,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::InvalidNetType);
     CHECK(diags[1].code == diag::InvalidNetType);
     CHECK(diags[2].code == diag::InvalidNetType);
     CHECK(diags[3].code == diag::SingleBitVectored);
+    CHECK(diags[4].code == diag::UndeclaredIdentifier);
+    CHECK(diags[5].code == diag::DelayNotNumeric);
 }
 
 TEST_CASE("Bad signed specifier") {

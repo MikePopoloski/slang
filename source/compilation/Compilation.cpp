@@ -112,6 +112,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getDataType();
     }
 
+    void handle(const NetSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getDelay();
+    }
+
     void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit)
             return;

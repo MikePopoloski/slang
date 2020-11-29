@@ -227,6 +227,7 @@ decltype(auto) TimingControl::visit(TVisitor& visitor, Args&&... args) const {
     switch (kind) {
         case TimingControlKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
         CASE(Delay, DelayControl);
+        CASE(Delay3, Delay3Control);
         CASE(SignalEvent, SignalEventControl);
         CASE(EventList, EventListControl);
         CASE(ImplicitEvent, ImplicitEventControl);

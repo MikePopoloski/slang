@@ -27,6 +27,9 @@ const TimingControl& TimingControl::bind(const TimingControlSyntax& syntax,
         case SyntaxKind::DelayControl:
             result = &DelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), timingCtx);
             break;
+        case SyntaxKind::Delay3:
+            result = &Delay3Control::fromSyntax(comp, syntax.as<Delay3Syntax>(), timingCtx);
+            break;
         case SyntaxKind::EventControl:
             result =
                 &SignalEventControl::fromSyntax(comp, syntax.as<EventControlSyntax>(), timingCtx);
@@ -82,6 +85,44 @@ TimingControl& DelayControl::fromSyntax(Compilation& compilation, const DelaySyn
 
 void DelayControl::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
+}
+
+TimingControl& Delay3Control::fromSyntax(Compilation& compilation, const Delay3Syntax& syntax,
+                                         const BindContext& context) {
+    auto& expr1 = Expression::bind(*syntax.delay1, context);
+
+    const Expression* expr2 = nullptr;
+    if (syntax.delay2)
+        expr2 = &Expression::bind(*syntax.delay2, context);
+
+    const Expression* expr3 = nullptr;
+    if (syntax.delay3)
+        expr3 = &Expression::bind(*syntax.delay3, context);
+
+    auto result = compilation.emplace<Delay3Control>(expr1, expr2, expr3);
+    if (expr1.bad() || (expr2 && expr2->bad()) || (expr3 && expr3->bad()))
+        return badCtrl(compilation, result);
+
+    auto checkType = [&](const Expression& expr) {
+        if (!expr.type->isNumeric()) {
+            context.addDiag(diag::DelayNotNumeric, expr.sourceRange) << *expr.type;
+            return false;
+        }
+        return true;
+    };
+
+    if (!checkType(expr1) || (expr2 && !checkType(*expr2)) || (expr3 && !checkType(*expr3)))
+        return badCtrl(compilation, result);
+
+    return *result;
+}
+
+void Delay3Control::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("expr1", expr1);
+    if (expr2)
+        serializer.write("expr2", *expr2);
+    if (expr3)
+        serializer.write("expr3", *expr3);
 }
 
 TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,

@@ -12,6 +12,7 @@
 namespace slang {
 
 class NetType;
+class TimingControl;
 
 struct IdentifierNameSyntax;
 struct DataDeclarationSyntax;
@@ -101,12 +102,17 @@ public:
     NetSymbol(string_view name, SourceLocation loc, const NetType& netType) :
         ValueSymbol(SymbolKind::Net, name, loc, DeclaredTypeFlags::NetType), netType(netType) {}
 
-    void serializeTo(ASTSerializer&) const {}
+    const TimingControl* getDelay() const;
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Net; }
+
+private:
+    mutable optional<const TimingControl*> delay;
 };
 
 } // namespace slang

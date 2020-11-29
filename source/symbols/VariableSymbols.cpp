@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "slang/symbols/VariableSymbols.h"
 
+#include "slang/binding/BindContext.h"
+#include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
@@ -193,6 +195,46 @@ void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& synta
         net->setAttributes(scope, syntax.attributes);
         results.append(net);
     }
+}
+
+const TimingControl* NetSymbol::getDelay() const {
+    if (delay)
+        return *delay;
+
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    if (!scope || !syntax || !syntax->parent ||
+        syntax->parent->kind != SyntaxKind::NetDeclaration) {
+        delay = nullptr;
+        return nullptr;
+    }
+
+    auto delaySyntax = syntax->parent->as<NetDeclarationSyntax>().delay;
+    if (!delaySyntax) {
+        delay = nullptr;
+        return nullptr;
+    }
+
+    delay = &TimingControl::bind(*delaySyntax, BindContext(*scope, LookupLocation::before(*this)));
+    return *delay;
+}
+
+void NetSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("netType", netType);
+
+    switch (expansionHint) {
+        case Vectored:
+            serializer.write("expansionHint", "vectored"sv);
+            break;
+        case Scalared:
+            serializer.write("expansionHint", "scalared"sv);
+            break;
+        default:
+            break;
+    }
+
+    if (auto delayCtrl = getDelay())
+        serializer.write("delay", *delayCtrl);
 }
 
 } // namespace slang
