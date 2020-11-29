@@ -979,7 +979,8 @@ NetType::NetType(NetKind netKind, string_view name, const Type& dataType) :
 }
 
 NetType::NetType(string_view name, SourceLocation location) :
-    Symbol(SymbolKind::NetType, name, location), netKind(UserDefined), declaredType(*this) {
+    Symbol(SymbolKind::NetType, name, location), netKind(UserDefined),
+    declaredType(*this, DeclaredTypeFlags::UserDefinedNetType) {
 }
 
 const NetType* NetType::getAliasTarget() const {

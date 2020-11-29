@@ -1491,7 +1491,7 @@ module sub(input bit[3:0] a[0:3]);
     bit [0:1] c [1:0];
     sub u({>>{c}});
 endmodule
-module sub(inout byte b);
+module sub(inout logic[7:0] b);
             )",
           diag::BadStreamContext },
 

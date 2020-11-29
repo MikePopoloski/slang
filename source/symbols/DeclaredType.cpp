@@ -84,8 +84,8 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
                                                          initializerLocation, initializerContext);
             type = initializer->type;
 
-            if (flags & DeclaredTypeFlags::Port)
-                checkPortType(initializerContext);
+            if (flags.has(DeclaredTypeFlags::NeedsTypeCheck))
+                checkType(initializerContext);
         }
         return;
     }
@@ -100,8 +100,8 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
     if (dimensions)
         type = &comp.getType(*type, *dimensions, typeContext.lookupLocation, scope);
 
-    if (flags & DeclaredTypeFlags::Port)
-        checkPortType(typeContext);
+    if (flags.has(DeclaredTypeFlags::NeedsTypeCheck))
+        checkType(initializerContext);
 }
 
 const Type* DeclaredType::resolveForeachVar(const BindContext& context) const {
@@ -152,9 +152,66 @@ const Type* DeclaredType::resolveForeachVar(const BindContext& context) const {
     return &comp.getIntType();
 }
 
-void DeclaredType::checkPortType(const BindContext& context) const {
-    if (type->isCHandle())
-        context.addDiag(diag::InvalidPortType, parent.location) << *type;
+static bool isValidForNet(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    if (ct.isIntegral())
+        return ct.isFourState();
+
+    if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType)
+        return isValidForNet(ct.as<FixedSizeUnpackedArrayType>().elementType);
+
+    if (ct.isUnpackedStruct()) {
+        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
+            if (!isValidForNet(field.getType()))
+                return false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+static bool isValidForUserDefinedNet(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    if (ct.isIntegral() || ct.isFloating())
+        return true;
+
+    if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType)
+        return isValidForUserDefinedNet(ct.as<FixedSizeUnpackedArrayType>().elementType);
+
+    if (ct.isUnpackedStruct()) {
+        for (auto& field : ct.as<UnpackedStructType>().membersOfType<FieldSymbol>()) {
+            if (!isValidForUserDefinedNet(field.getType()))
+                return false;
+        }
+        return true;
+    }
+
+    if (ct.isUnpackedUnion()) {
+        for (auto& field : ct.as<UnpackedUnionType>().membersOfType<FieldSymbol>()) {
+            if (!isValidForUserDefinedNet(field.getType()))
+                return false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+void DeclaredType::checkType(const BindContext& context) const {
+    if (flags.has(DeclaredTypeFlags::Port)) {
+        // Ports cannot be chandles.
+        if (type->isCHandle())
+            context.addDiag(diag::InvalidPortType, parent.location) << *type;
+    }
+    else if (flags.has(DeclaredTypeFlags::NetType)) {
+        if (!type->isError() && !isValidForNet(*type))
+            context.addDiag(diag::InvalidNetType, parent.location) << *type;
+    }
+    else if (flags.has(DeclaredTypeFlags::UserDefinedNetType)) {
+        if (!type->isError() && !isValidForUserDefinedNet(*type))
+            context.addDiag(diag::InvalidUserDefinedNetType, parent.location) << *type;
+    }
 }
 
 void DeclaredType::resolveAt(const BindContext& context) const {

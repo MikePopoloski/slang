@@ -585,6 +585,9 @@ TimingControlSyntax* Parser::parseDelay3() {
 MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     auto netType = consume();
 
+    if (peek(TokenKind::RegKeyword))
+        addDiag(diag::RegAfterNettype, peek().location());
+
     NetStrengthSyntax* strength = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
         if (isChargeStrength(peek(1).kind)) {

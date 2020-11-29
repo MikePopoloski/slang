@@ -105,6 +105,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         genericClasses.append(&symbol);
     }
 
+    void handle(const NetType& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getDataType();
+    }
+
     void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit)
             return;

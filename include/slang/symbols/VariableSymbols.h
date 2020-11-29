@@ -98,7 +98,7 @@ public:
     const NetType& netType;
 
     NetSymbol(string_view name, SourceLocation loc, const NetType& netType) :
-        ValueSymbol(SymbolKind::Net, name, loc), netType(netType) {}
+        ValueSymbol(SymbolKind::Net, name, loc, DeclaredTypeFlags::NetType), netType(netType) {}
 
     void serializeTo(ASTSerializer&) const {}
 

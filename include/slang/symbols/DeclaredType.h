@@ -23,17 +23,21 @@ struct VariableDimensionSyntax;
 
 enum class DeclaredTypeFlags {
     None = 0,
-    InferImplicit = 1,
-    RequireConstant = 2,
-    ForceSigned = 4,
-    LookupMax = 8,
-    InProceduralContext = 16,
-    AutomaticInitializer = 32,
-    ForeachVar = 64,
-    Port = 128,
-    TypedefTarget = 256
+    InferImplicit = 1 << 0,
+    RequireConstant = 1 << 1,
+    ForceSigned = 1 << 2,
+    LookupMax = 1 << 3,
+    InProceduralContext = 1 << 4,
+    AutomaticInitializer = 1 << 5,
+    ForeachVar = 1 << 6,
+    Port = 1 << 7,
+    TypedefTarget = 1 << 8,
+    NetType = 1 << 9,
+    UserDefinedNetType = 1 << 10,
+
+    NeedsTypeCheck = Port | NetType | UserDefinedNetType
 };
-BITMASK(DeclaredTypeFlags, TypedefTarget);
+BITMASK(DeclaredTypeFlags, UserDefinedNetType);
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type.
@@ -89,7 +93,7 @@ private:
     const Scope& getScope() const;
     void resolveType(const BindContext& initializerContext) const;
     const Type* resolveForeachVar(const BindContext& context) const;
-    void checkPortType(const BindContext& context) const;
+    void checkType(const BindContext& context) const;
 
     template<typename T = BindContext> // templated to avoid having to include BindContext.h
     T getBindContext() const;

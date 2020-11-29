@@ -103,13 +103,21 @@ public:
                 // - For input and inout, default to a net
                 // - For output, if we have a data type it's a var, otherwise net
                 // - For ref it's always a var
+                //
+                // Unfortunately, all major simulators ignore the rule for input ports,
+                // and treat them the same as output ports (i.e. it's not a net if there
+                // is a data type specified). This is pretty noticeable as otherwise a
+                // port like this:
+                //    input int i
+                // will throw an error because int is not a valid type for a net. Actually
+                // noticing the other fact, that it's a net port vs a variable port, is very
+                // hard to do, so we go along with everyone else and use the same rule.
+
                 PortDirection direction = getDirection(header.direction);
                 const NetType* netType = nullptr;
-                if (!header.varKeyword &&
-                    (direction == PortDirection::In || direction == PortDirection::InOut ||
-                     (direction == PortDirection::Out &&
-                      header.dataType->kind == SyntaxKind::ImplicitType))) {
-
+                if (!header.varKeyword && (direction == PortDirection::InOut ||
+                                           (direction != PortDirection::Ref &&
+                                            header.dataType->kind == SyntaxKind::ImplicitType))) {
                     netType = &getDefaultNetType(scope, decl.name.location());
                 }
 

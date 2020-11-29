@@ -499,3 +499,16 @@ source:3:10: error: expected ';'
          ^
 )");
 }
+
+TEST_CASE("reg after nettype") {
+    auto& text = R"(
+module m;
+    wire reg p;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::RegAfterNettype);
+}

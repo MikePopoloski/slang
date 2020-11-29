@@ -18,6 +18,25 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Invalid nets") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire int i = 1;
+    wire real r = 3.1;
+    wire struct { real r; } s;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InvalidNetType);
+    CHECK(diags[1].code == diag::InvalidNetType);
+    CHECK(diags[2].code == diag::InvalidNetType);
+}
+
 TEST_CASE("Bad signed specifier") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
@@ -88,6 +107,32 @@ endpackage
     CHECK(root.lookupName<NetSymbol>("m.b").getType().toString() == "logic[3:0]");
     CHECK(root.lookupName<NetSymbol>("m.c").getType().toString() == "logic[10:0]");
     CHECK(root.lookupName<NetSymbol>("m.e").getType().toString() == "logic[3:0]$[0:4]");
+}
+
+TEST_CASE("Invalid user defined nettypes") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef event t1[3];
+
+    nettype event n1;
+    nettype t1 n2;
+    nettype struct { event e; } n3;
+    nettype union { event e; } n4;
+
+    nettype struct { real r; } n5;
+    nettype union { real r; } n6;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::InvalidUserDefinedNetType);
+    CHECK(diags[1].code == diag::InvalidUserDefinedNetType);
+    CHECK(diags[2].code == diag::InvalidUserDefinedNetType);
+    CHECK(diags[3].code == diag::InvalidUserDefinedNetType);
 }
 
 TEST_CASE("JSON dump") {
