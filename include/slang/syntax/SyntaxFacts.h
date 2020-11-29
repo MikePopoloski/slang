@@ -268,6 +268,12 @@ public:
     /// @return true if the given syntax node is allowed within a clocking block.
     static bool isAllowedInClocking(SyntaxKind kind);
 
+    /// @return true if the given token kind is a drive strength for value '0'.
+    static bool isStrength0(TokenKind kind);
+
+    /// @return true if the given token kind is a drive strength for value '1'.
+    static bool isStrength1(TokenKind kind);
+
     /// @return a string representing the name of the given data type, if it has a simple name.
     static string_view getSimpleTypeName(const DataTypeSyntax& syntax);
 

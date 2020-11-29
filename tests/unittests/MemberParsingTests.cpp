@@ -500,15 +500,23 @@ source:3:10: error: expected ';'
 )");
 }
 
-TEST_CASE("reg after nettype") {
+TEST_CASE("Net decl errors") {
     auto& text = R"(
 module m;
     wire reg p;
+    wire (supply0, supply1) q;
+    wire (small) r;
+    wire (strong1, pull1) s = 1;
+    wire (highz0, highz1) t = 1;
 endmodule
 )";
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 1);
+    REQUIRE(diagnostics.size() == 5);
     CHECK(diagnostics[0].code == diag::RegAfterNettype);
+    CHECK(diagnostics[1].code == diag::InitializerRequired);
+    CHECK(diagnostics[2].code == diag::ChargeWithTriReg);
+    CHECK(diagnostics[3].code == diag::DriveStrengthInvalid);
+    CHECK(diagnostics[4].code == diag::DriveStrengthHighZ);
 }

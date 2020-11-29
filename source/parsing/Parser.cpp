@@ -535,20 +535,32 @@ DriveStrengthSyntax* Parser::parseDriveStrength() {
     if (!peek(TokenKind::OpenParenthesis))
         return nullptr;
 
-    auto expectStrength = [&] {
+    auto expectStrength = [&](TokenKind defaultKind) {
         Token next = peek();
         if (isDriveStrength(next.kind))
             return consume();
 
         addDiag(diag::ExpectedNetStrength, next.location());
-        return missingToken(TokenKind::Supply0Keyword, next.location());
+        return missingToken(defaultKind, next.location());
     };
 
     auto openParen = consume();
-    auto strength0 = expectStrength();
+    auto strength0 = expectStrength(TokenKind::Strong1Keyword);
     auto comma = expect(TokenKind::Comma);
-    auto strength1 = expectStrength();
+    auto strength1 = expectStrength(TokenKind::Strong0Keyword);
     auto closeParen = expect(TokenKind::CloseParenthesis);
+
+    if (isStrength0(strength0.kind) == isStrength0(strength1.kind)) {
+        addDiag(diag::DriveStrengthInvalid, strength1.location())
+            << strength0.range() << strength1.range();
+    }
+    else if ((strength0.kind == TokenKind::HighZ0Keyword ||
+              strength0.kind == TokenKind::HighZ1Keyword) &&
+             (strength1.kind == TokenKind::HighZ0Keyword ||
+              strength1.kind == TokenKind::HighZ1Keyword)) {
+        addDiag(diag::DriveStrengthHighZ, strength1.location())
+            << strength0.range() << strength1.range();
+    }
 
     return &factory.driveStrength(openParen, strength0, comma, strength1, closeParen);
 }
@@ -588,9 +600,13 @@ MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     if (peek(TokenKind::RegKeyword))
         addDiag(diag::RegAfterNettype, peek().location());
 
+    bool hasDriveStrength = false;
     NetStrengthSyntax* strength = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
         if (isChargeStrength(peek(1).kind)) {
+            if (netType.kind != TokenKind::TriRegKeyword)
+                addDiag(diag::ChargeWithTriReg, peek(1).location());
+
             auto openParen = consume();
             auto charge = consume();
             auto closeParen = expect(TokenKind::CloseParenthesis);
@@ -598,6 +614,7 @@ MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
         }
         else {
             strength = parseDriveStrength();
+            hasDriveStrength = true;
         }
     }
 
@@ -609,7 +626,8 @@ MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     auto delay = parseDelay3();
 
     Token semi;
-    auto declarators = parseDeclarators(semi);
+    auto declarators = parseDeclarators(semi, /* allowMinTypMax */ false,
+                                        /* requireInitializers */ hasDriveStrength);
 
     return factory.netDeclaration(attributes, netType, strength, expansionHint, type, delay,
                                   declarators, semi);
@@ -738,7 +756,7 @@ MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
     return factory.dataDeclaration(attributes, modifiers.copy(alloc), dataType, declarators, semi);
 }
 
-DeclaratorSyntax& Parser::parseDeclarator(bool allowMinTypMax) {
+DeclaratorSyntax& Parser::parseDeclarator(bool allowMinTypMax, bool requireInitializers) {
     auto name = expect(TokenKind::Identifier);
     auto dimensions = parseDimensionList();
 
@@ -748,22 +766,30 @@ DeclaratorSyntax& Parser::parseDeclarator(bool allowMinTypMax) {
         initializer = &factory.equalsValueClause(equals, allowMinTypMax ? parseMinTypMaxExpression()
                                                                         : parseExpression());
     }
+    else if (requireInitializers) {
+        addDiag(diag::InitializerRequired, name.location());
+    }
 
     return factory.declarator(name, dimensions, initializer);
 }
 
 template<bool (*IsEnd)(TokenKind)>
-span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end, bool allowMinTypMax) {
+span<TokenOrSyntax> Parser::parseDeclarators(TokenKind endKind, Token& end, bool allowMinTypMax,
+                                             bool requireInitializers) {
     SmallVectorSized<TokenOrSyntax, 4> buffer;
     parseList<isIdentifierOrComma, IsEnd>(
         buffer, endKind, TokenKind::Comma, end, RequireItems::True, diag::ExpectedDeclarator,
-        [this, allowMinTypMax] { return &parseDeclarator(allowMinTypMax); });
+        [this, allowMinTypMax, requireInitializers] {
+            return &parseDeclarator(allowMinTypMax, requireInitializers);
+        });
 
     return buffer.copy(alloc);
 }
 
-span<TokenOrSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypMax) {
-    return parseDeclarators<isNotIdOrComma>(TokenKind::Semicolon, semi, allowMinTypMax);
+span<TokenOrSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypMax,
+                                             bool requireInitializers) {
+    return parseDeclarators<isNotIdOrComma>(TokenKind::Semicolon, semi, allowMinTypMax,
+                                            requireInitializers);
 }
 
 Parser::AttrList Parser::parseAttributes() {

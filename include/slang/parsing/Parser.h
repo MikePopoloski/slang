@@ -283,7 +283,7 @@ private:
     ClassDeclarationSyntax& parseClassDeclaration(AttrList attributes, Token virtualOrInterface);
     MemberSyntax* parseClassMember(bool isIfaceClass);
     ContinuousAssignSyntax& parseContinuousAssign(AttrList attributes);
-    DeclaratorSyntax& parseDeclarator(bool allowMinTypMax = false);
+    DeclaratorSyntax& parseDeclarator(bool allowMinTypMax = false, bool requireInitializers = false);
     MemberSyntax* parseCoverageMember();
     BlockEventExpressionSyntax& parseBlockEventExpression();
     WithClauseSyntax* parseWithClause();
@@ -309,9 +309,10 @@ private:
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>
-    span<TokenOrSyntax> parseDeclarators(TokenKind endKind, Token& end,
-                                         bool allowMinTypMax = false);
-    span<TokenOrSyntax> parseDeclarators(Token& semi, bool allowMinTypMax = false);
+    span<TokenOrSyntax> parseDeclarators(TokenKind endKind, Token& end, bool allowMinTypMax = false,
+                                         bool requireInitializers = false);
+    span<TokenOrSyntax> parseDeclarators(Token& semi, bool allowMinTypMax = false,
+                                         bool requireInitializers = false);
 
     template<typename TMember, typename TParseFunc>
     span<TMember*> parseMemberList(TokenKind endKind, Token& endToken, SyntaxKind parentKind,
