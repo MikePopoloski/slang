@@ -596,6 +596,15 @@ TimingControlSyntax* Parser::parseDelay3() {
 
 MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
     auto netType = consume();
+    if (netType.kind == TokenKind::Identifier) {
+        auto delay = parseTimingControl(/* isSequenceExpr */ false);
+        ASSERT(delay);
+
+        Token semi;
+        auto declarators = parseDeclarators(semi);
+
+        return factory.userDefinedNetDeclaration(attributes, netType, *delay, declarators, semi);
+    }
 
     if (peek(TokenKind::RegKeyword))
         addDiag(diag::RegAfterNettype, peek().location());
@@ -939,8 +948,47 @@ bool Parser::isPortDeclaration() {
 }
 
 bool Parser::isNetDeclaration() {
-    // TODO: other net types
-    return isNetType(peek().kind);
+    if (isNetType(peek().kind))
+        return true;
+
+    // This can be a user-defined nettype with a delay value here.
+    // This can look pretty similar to a hierarchical instantiation,
+    // so try hard to disambiguate them here.
+    uint32_t index = 0;
+    if (peek(index++).kind != TokenKind::Identifier)
+        return false;
+
+    if (peek(index++).kind != TokenKind::Hash)
+        return false;
+
+    // This case will be handled later because we have to disambiguate with
+    // class parameter assignments.
+    if (peek(index).kind == TokenKind::OpenParenthesis)
+        return false;
+
+    switch (peek(index++).kind) {
+        case TokenKind::IntegerLiteral:
+        case TokenKind::OneStep:
+        case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
+            break;
+        case TokenKind::Identifier:
+        case TokenKind::UnitSystemName:
+            if (peek(index).kind == TokenKind::Colon) {
+                if (peek(++index).kind != TokenKind::Identifier)
+                    return false;
+                index++;
+            }
+            break;
+        default:
+            return false;
+    }
+
+    if (peek(index++).kind != TokenKind::Identifier)
+        return false;
+
+    TokenKind kind = peek(index).kind;
+    return kind == TokenKind::Comma || kind == TokenKind::Equals || kind == TokenKind::Semicolon;
 }
 
 bool Parser::isVariableDeclaration() {

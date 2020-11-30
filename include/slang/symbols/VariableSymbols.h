@@ -92,6 +92,7 @@ public:
 };
 
 struct NetDeclarationSyntax;
+struct UserDefinedNetDeclarationSyntax;
 
 /// Represents a net declaration.
 class NetSymbol : public ValueSymbol {
@@ -108,6 +109,9 @@ public:
 
     static void fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results);
+
+    static void fromSyntax(const Scope& scope, const UserDefinedNetDeclarationSyntax& syntax,
+                           LookupLocation location, SmallVector<const NetSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Net; }
 

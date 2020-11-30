@@ -539,6 +539,12 @@ TimingControl? delay
 separated_list<Declarator> declarators
 token semi
 
+UserDefinedNetDeclaration base=Member
+token netType
+TimingControl delay
+separated_list<Declarator> declarators
+token semi
+
 WithFunctionClause
 token with
 Name name

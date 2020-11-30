@@ -18,13 +18,25 @@
 
 namespace slang {
 
+static string_view getPotentialNetTypeName(const DataTypeSyntax& syntax) {
+    if (syntax.kind == SyntaxKind::NamedType) {
+        auto& namedType = syntax.as<NamedTypeSyntax>();
+        if (namedType.name->kind == SyntaxKind::IdentifierName)
+            return namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
+
+        if (namedType.name->kind == SyntaxKind::ClassName)
+            return namedType.name->as<ClassNameSyntax>().identifier.valueText();
+    }
+    return "";
+}
+
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                                 const Scope& scope, SmallVector<const ValueSymbol*>& results) {
     // This might actually be a net declaration with a user defined net type. That can only
-    // be true if the data type syntax is a simple identifier, so if we see that it is,
-    // perform a lookup and see what comes back.
+    // be true if the data type syntax is a simple identifier or a "class name",
+    // so if we see that it is, perform a lookup and see what comes back.
     if (syntax.modifiers.empty()) {
-        string_view simpleName = SyntaxFacts::getSimpleTypeName(*syntax.type);
+        string_view simpleName = getPotentialNetTypeName(*syntax.type);
         if (!simpleName.empty()) {
             auto result = Lookup::unqualified(scope, simpleName);
             if (result && result->kind == SymbolKind::NetType) {
@@ -35,7 +47,6 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
                 for (auto declarator : syntax.declarators) {
                     auto net = compilation.emplace<NetSymbol>(declarator->name.valueText(),
                                                               declarator->name.location(), netType);
-
                     net->getDeclaredType()->copyTypeFrom(declaredType);
                     net->setFromDeclarator(*declarator);
                     net->setAttributes(scope, syntax.attributes);
@@ -170,7 +181,6 @@ void FieldSymbol::serializeTo(ASTSerializer& serializer) const {
 
 void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& syntax,
                            SmallVector<const NetSymbol*>& results) {
-    // TODO: other net features
     auto& comp = scope.getCompilation();
     const NetType& netType = comp.getNetType(syntax.netType.kind);
 
@@ -197,26 +207,72 @@ void NetSymbol::fromSyntax(const Scope& scope, const NetDeclarationSyntax& synta
     }
 }
 
+void NetSymbol::fromSyntax(const Scope& scope, const UserDefinedNetDeclarationSyntax& syntax,
+                           LookupLocation location, SmallVector<const NetSymbol*>& results) {
+    auto& comp = scope.getCompilation();
+
+    const NetType* netType;
+    auto result =
+        Lookup::unqualifiedAt(scope, syntax.netType.valueText(), location, syntax.netType.range());
+
+    if (result && result->kind != SymbolKind::NetType) {
+        scope.addDiag(diag::VarDeclWithDelay, syntax.delay->sourceRange());
+        result = nullptr;
+    }
+
+    if (!result)
+        netType = &comp.getNetType(TokenKind::Unknown);
+    else
+        netType = &result->as<NetType>();
+
+    netType->getAliasTarget(); // force resolution of target
+    auto& declaredType = *netType->getDeclaredType();
+
+    for (auto declarator : syntax.declarators) {
+        auto net = comp.emplace<NetSymbol>(declarator->name.valueText(),
+                                           declarator->name.location(), *netType);
+        net->getDeclaredType()->copyTypeFrom(declaredType);
+        net->setFromDeclarator(*declarator);
+        net->setAttributes(scope, syntax.attributes);
+        results.append(net);
+    }
+}
+
 const TimingControl* NetSymbol::getDelay() const {
     if (delay)
         return *delay;
 
     auto scope = getParentScope();
     auto syntax = getSyntax();
-    if (!scope || !syntax || !syntax->parent ||
-        syntax->parent->kind != SyntaxKind::NetDeclaration) {
+    if (!scope || !syntax || !syntax->parent) {
         delay = nullptr;
         return nullptr;
     }
 
-    auto delaySyntax = syntax->parent->as<NetDeclarationSyntax>().delay;
-    if (!delaySyntax) {
-        delay = nullptr;
-        return nullptr;
+    BindContext context(*scope, LookupLocation::before(*this));
+
+    auto& parent = *syntax->parent;
+    if (parent.kind == SyntaxKind::NetDeclaration) {
+        auto delaySyntax = parent.as<NetDeclarationSyntax>().delay;
+        if (delaySyntax) {
+            delay = &TimingControl::bind(*delaySyntax, context);
+            return *delay;
+        }
+    }
+    else if (parent.kind == SyntaxKind::DataDeclaration) {
+        auto type = parent.as<DataDeclarationSyntax>().type;
+        if (type->kind == SyntaxKind::NamedType) {
+            auto& nt = type->as<NamedTypeSyntax>();
+            if (nt.name->kind == SyntaxKind::ClassName) {
+                auto exprs = nt.name->as<ClassNameSyntax>().parameters->assignments;
+                delay = &DelayControl::fromArguments(scope->getCompilation(), *exprs, context);
+                return *delay;
+            }
+        }
     }
 
-    delay = &TimingControl::bind(*delaySyntax, BindContext(*scope, LookupLocation::before(*this)));
-    return *delay;
+    delay = nullptr;
+    return nullptr;
 }
 
 void NetSymbol::serializeTo(ASTSerializer& serializer) const {

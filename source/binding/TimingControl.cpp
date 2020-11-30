@@ -83,6 +83,28 @@ TimingControl& DelayControl::fromSyntax(Compilation& compilation, const DelaySyn
     return *result;
 }
 
+TimingControl& DelayControl::fromArguments(Compilation& compilation,
+                                           const ArgumentListSyntax& exprs,
+                                           const BindContext& context) {
+    auto& items = exprs.parameters;
+    if (items.size() != 1 || items[0]->kind != SyntaxKind::OrderedArgument) {
+        context.addDiag(diag::ExpectedNetDelay, exprs.sourceRange());
+        return badCtrl(compilation, nullptr);
+    }
+
+    auto& expr = Expression::bind(*items[0]->as<OrderedArgumentSyntax>().expr, context);
+    auto result = compilation.emplace<DelayControl>(expr);
+    if (expr.bad())
+        return badCtrl(compilation, result);
+
+    if (!expr.type->isNumeric()) {
+        context.addDiag(diag::DelayNotNumeric, expr.sourceRange) << *expr.type;
+        return badCtrl(compilation, result);
+    }
+
+    return *result;
+}
+
 void DelayControl::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
 }

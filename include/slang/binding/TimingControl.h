@@ -73,6 +73,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
+struct ArgumentListSyntax;
 struct DelaySyntax;
 
 class DelayControl : public TimingControl {
@@ -84,6 +85,9 @@ public:
 
     static TimingControl& fromSyntax(Compilation& compilation, const DelaySyntax& syntax,
                                      const BindContext& context);
+
+    static TimingControl& fromArguments(Compilation& compilation, const ArgumentListSyntax& exprs,
+                                        const BindContext& context);
 
     static bool isKind(TimingControlKind kind) { return kind == TimingControlKind::Delay; }
 

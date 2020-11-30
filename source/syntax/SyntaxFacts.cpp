@@ -1133,6 +1133,7 @@ bool SyntaxFacts::isModifierAllowedAfter(TokenKind mod, TokenKind prev) {
 static bool isModuleOrPackageDecl(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::NetDeclaration:
+        case SyntaxKind::UserDefinedNetDeclaration:
         case SyntaxKind::NetTypeDeclaration:
         case SyntaxKind::TypedefDeclaration:
         case SyntaxKind::ForwardTypedefDeclaration:

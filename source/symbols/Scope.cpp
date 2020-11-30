@@ -193,6 +193,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::GateInstantiation:
         case SyntaxKind::ContinuousAssign:
         case SyntaxKind::ModportDeclaration:
+        case SyntaxKind::UserDefinedNetDeclaration:
         case SyntaxKind::BindDirective: {
             auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
             addMember(*sym);
@@ -666,6 +667,14 @@ void Scope::elaborate() const {
             case SyntaxKind::BindDirective:
                 InstanceSymbol::fromBindDirective(*this, member.node.as<BindDirectiveSyntax>());
                 break;
+            case SyntaxKind::UserDefinedNetDeclaration: {
+                SmallVectorSized<const NetSymbol*, 4> results;
+                LookupLocation location = LookupLocation::before(*symbol);
+                NetSymbol::fromSyntax(*this, member.node.as<UserDefinedNetDeclarationSyntax>(),
+                                      location, results);
+                insertMembers(results, symbol);
+                break;
+            }
             default:
                 break;
         }

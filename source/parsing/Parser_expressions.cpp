@@ -777,7 +777,8 @@ ArgumentSyntax& Parser::parseArgument(bool isParamAssignment) {
         return factory.namedArgument(dot, name, innerOpenParen, expr, innerCloseParen);
     }
 
-    return factory.orderedArgument(parseExpression());
+    return factory.orderedArgument(isParamAssignment ? parseMinTypMaxExpression()
+                                                     : parseExpression());
 }
 
 PatternSyntax& Parser::parsePattern() {

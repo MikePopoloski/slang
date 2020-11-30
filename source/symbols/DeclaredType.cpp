@@ -205,10 +205,12 @@ void DeclaredType::checkType(const BindContext& context) const {
             context.addDiag(diag::InvalidPortType, parent.location) << *type;
     }
     else if (flags.has(DeclaredTypeFlags::NetType)) {
-        if (!type->isError() && !isValidForNet(*type))
+        auto& net = parent.as<NetSymbol>();
+        if (!type->isError() && net.netType.netKind != NetType::UserDefined &&
+            !isValidForNet(*type)) {
             context.addDiag(diag::InvalidNetType, parent.location) << *type;
-        else if (type->getBitWidth() == 1 &&
-                 parent.as<NetSymbol>().expansionHint != NetSymbol::None) {
+        }
+        else if (type->getBitWidth() == 1 && net.expansionHint != NetSymbol::None) {
             context.addDiag(diag::SingleBitVectored, parent.location);
         }
     }

@@ -97,6 +97,9 @@ module m;
     blah d = SDF;
     bar e[5];
 
+    baz #(3:2:1) f, g;
+    baz #3.4 h = 1;
+
 endmodule
 )");
     auto tree2 = SyntaxTree::fromText(R"(
@@ -131,6 +134,11 @@ module m;
 
     nettype struct { real r; } n5;
     nettype union { real r; } n6;
+
+    int foo[3];
+    n6 #(foo) asdf;
+
+    t1 #3 baz;
 endmodule
 )");
 
@@ -138,11 +146,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::InvalidUserDefinedNetType);
     CHECK(diags[1].code == diag::InvalidUserDefinedNetType);
     CHECK(diags[2].code == diag::InvalidUserDefinedNetType);
     CHECK(diags[3].code == diag::InvalidUserDefinedNetType);
+    CHECK(diags[4].code == diag::DelayNotNumeric);
+    CHECK(diags[5].code == diag::VarDeclWithDelay);
 }
 
 TEST_CASE("JSON dump") {
