@@ -47,8 +47,10 @@ LRM | Feature | Supported
 {{m-success}} 6.3 | Value set | v0.2
 {{m-success}} 6.4 | Singular and aggregate types | v0.2
 {{m-success}} 6.5 | Nets and variables | v0.2
-{{m-warning}} 6.6 | Net types | partial
-{{m-warning}} 6.7 | Net declarations | partial
+{{m-success}} 6.6 | Net types | v0.2
+{{m-warning}} 6.6.7 | User-defined nettypes | partial
+{{m-danger}}  6.6.8 | Generic interconnect | no
+{{m-success}} 6.7 | Net declarations | v0.6
 {{m-success}} 6.8 | Variable declarations | v0.2
 {{m-success}} 6.9 | Vector declarations | v0.2
 {{m-success}} 6.10 | Implicit declarations | v0.3
