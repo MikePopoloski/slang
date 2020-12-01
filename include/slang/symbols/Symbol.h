@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/symbols/DeclaredType.h"
 #include "slang/symbols/Lookup.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Util.h"
@@ -15,8 +14,10 @@ namespace slang {
 
 class ASTSerializer;
 class Compilation;
+class DeclaredType;
 class Definition;
 class Scope;
+class SyntaxNode;
 class Type;
 struct AttributeInstanceSyntax;
 
@@ -204,52 +205,6 @@ private:
     mutable SymbolIndex indexInScope{ 0 };
 
     const SyntaxNode* originatingSyntax = nullptr;
-};
-
-/// A base class for symbols that represent a value (for example a variable or a parameter).
-/// The common functionality is that they all have a type.
-class ValueSymbol : public Symbol {
-public:
-    /// Gets the type of the value.
-    const Type& getType() const { return declaredType.getType(); }
-
-    /// Sets the type of the value.
-    void setType(const Type& type) { declaredType.setType(type); }
-
-    /// Gets access to the symbol's declared type.
-    not_null<const DeclaredType*> getDeclaredType() const { return &declaredType; }
-    not_null<DeclaredType*> getDeclaredType() { return &declaredType; }
-
-    /// Sets the symbol's declared type.
-    void setDeclaredType(const DataTypeSyntax& newType) { declaredType.setTypeSyntax(newType); }
-    void setDeclaredType(const DataTypeSyntax& newType,
-                         const SyntaxList<VariableDimensionSyntax>& newDimensions) {
-        declaredType.setTypeSyntax(newType);
-        declaredType.setDimensionSyntax(newDimensions);
-    }
-
-    /// Gets the initializer for this value, if it has one.
-    const Expression* getInitializer() const { return declaredType.getInitializer(); }
-
-    /// Sets the initializer for this value.
-    void setInitializer(const Expression& expr) { declaredType.setInitializer(expr); }
-
-    /// Sets the expression tree used to initialize this value.
-    void setInitializerSyntax(const ExpressionSyntax& syntax, SourceLocation initLocation) {
-        declaredType.setInitializerSyntax(syntax, initLocation);
-    }
-
-    /// Initializes the value's dimension and initializer syntax from the given declarator.
-    void setFromDeclarator(const DeclaratorSyntax& decl);
-
-    static bool isKind(SymbolKind kind);
-
-protected:
-    ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
-                bitmask<DeclaredTypeFlags> flags = DeclaredTypeFlags::None);
-
-private:
-    DeclaredType declaredType;
 };
 
 } // namespace slang

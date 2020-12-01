@@ -8,7 +8,7 @@
 
 #include "slang/binding/Statements.h"
 #include "slang/symbols/SemanticFacts.h"
-#include "slang/symbols/Symbol.h"
+#include "slang/symbols/ValueSymbol.h"
 #include "slang/util/Enum.h"
 
 namespace slang {

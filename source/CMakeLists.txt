@@ -158,6 +158,7 @@ add_library(slangcompiler
     symbols/InstanceSymbols.cpp
     symbols/Lookup.cpp
     symbols/MemberSymbols.cpp
+    symbols/NetType.cpp
     symbols/ParameterBuilder.cpp
     symbols/ParameterSymbols.cpp
     symbols/PortSymbols.cpp
@@ -166,6 +167,7 @@ add_library(slangcompiler
     symbols/Symbol.cpp
     symbols/TypePrinter.cpp
     symbols/Type.cpp
+    symbols/ValueSymbol.cpp
     symbols/VariableSymbols.cpp
 )
 slang_define_lib(slangcompiler)

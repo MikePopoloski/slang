@@ -12,13 +12,13 @@
 
 #include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/Scope.h"
-#include "slang/symbols/Symbol.h"
 
 namespace slang {
 
 class BindContext;
 class LValue;
 class SubroutineSymbol;
+class ValueSymbol;
 
 /// Various flags that can be applied to a constant expression evaluation.
 enum class EvalFlags : uint8_t {

@@ -15,6 +15,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/NetType.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/Type.h"

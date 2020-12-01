@@ -35,8 +35,10 @@ class SystemSubroutine;
 
 struct BindDirectiveSyntax;
 struct CompilationUnitSyntax;
+struct DataTypeSyntax;
 struct FunctionDeclarationSyntax;
 struct ModuleDeclarationSyntax;
+struct VariableDimensionSyntax;
 
 enum class IntegralFlags : uint8_t;
 enum class UnconnectedDrive;

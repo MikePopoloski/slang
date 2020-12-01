@@ -8,10 +8,12 @@
 
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
+#include "slang/text/SourceLocation.h"
 
 namespace slang {
 
 struct AttributeInstanceSyntax;
+struct ExpressionSyntax;
 
 class AttributeSymbol : public Symbol {
 public:

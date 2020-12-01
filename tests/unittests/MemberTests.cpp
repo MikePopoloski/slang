@@ -4,6 +4,7 @@
 #include "slang/compilation/Definition.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AttributeSymbol.h"
+#include "slang/symbols/NetType.h"
 #include "slang/text/Json.h"
 
 TEST_CASE("Nets") {

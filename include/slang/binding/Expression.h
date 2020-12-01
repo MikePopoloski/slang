@@ -17,6 +17,7 @@ class ASTSerializer;
 class InstanceSymbol;
 class Type;
 struct AssignmentPatternExpressionSyntax;
+struct DataTypeSyntax;
 struct ElementSelectExpressionSyntax;
 struct ExpressionSyntax;
 struct InvocationExpressionSyntax;

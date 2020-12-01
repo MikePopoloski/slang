@@ -15,6 +15,7 @@
 namespace slang {
 
 class Definition;
+class Expression;
 class InstanceBodySymbol;
 class InterfacePortSymbol;
 class ParameterSymbolBase;

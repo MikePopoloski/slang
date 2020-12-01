@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/binding/Expression.h"
+#include "slang/symbols/ValueSymbol.h"
 
 namespace slang {
 

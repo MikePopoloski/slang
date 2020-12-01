@@ -10,6 +10,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/AllTypes.h"
+#include "slang/symbols/NetType.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/symbols/VariableSymbols.h"

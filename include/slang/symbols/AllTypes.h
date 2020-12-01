@@ -8,6 +8,7 @@
 
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Type.h"
+#include "slang/symbols/ValueSymbol.h"
 
 namespace slang {
 
