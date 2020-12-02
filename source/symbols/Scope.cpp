@@ -377,12 +377,13 @@ const Symbol* Scope::find(string_view name) const {
     // Unwrap the symbol if it's a transparent member. Don't return imported
     // symbols; this function is for querying direct members only.
     const Symbol* symbol = it->second;
+    while (symbol->kind == SymbolKind::TransparentMember)
+        symbol = &symbol->as<TransparentMemberSymbol>().wrapped;
+
     switch (symbol->kind) {
         case SymbolKind::ExplicitImport:
         case SymbolKind::ForwardingTypedef:
             return nullptr;
-        case SymbolKind::TransparentMember:
-            return &symbol->as<TransparentMemberSymbol>().wrapped;
         case SymbolKind::MethodPrototype:
             return symbol->as<MethodPrototypeSymbol>().getSubroutine();
         default:

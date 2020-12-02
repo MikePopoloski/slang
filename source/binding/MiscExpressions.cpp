@@ -569,6 +569,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     for (size_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
 
+    ASSERT(symbol.returnValVar);
     context.createLocal(symbol.returnValVar);
 
     using ER = Statement::EvalResult;
@@ -636,6 +637,11 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
 
     if (subroutine.flags.has(MethodFlags::DPIImport)) {
         context.addDiag(diag::ConstEvalDPINotConstant, range);
+        return false;
+    }
+
+    if (subroutine.flags.has(MethodFlags::Virtual | MethodFlags::Pure | MethodFlags::Constructor)) {
+        context.addDiag(diag::ConstEvalMethodNotConstant, range);
         return false;
     }
 

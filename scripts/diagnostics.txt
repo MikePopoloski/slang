@@ -529,6 +529,7 @@ error ConstEvalExceededMaxSteps "constant evaluation hit maximum step limit; pos
 error ConstEvalTaskNotConstant "cannot invoke a task in a constant expression"
 error ConstEvalVoidNotConstant "cannot call a void function in a constant expression"
 error ConstEvalDPINotConstant "cannot call DPI import function in a constant expression"
+error ConstEvalMethodNotConstant "cannot call class method in a constant expression"
 error ConstEvalFunctionArgDirection "cannot call a function with output, inout, or ref arguments in a constant expression"
 error ConstEvalFunctionInsideGenerate "cannot call a function declared inside a generate block in a constant expression"
 error ConstEvalDynamicToFixedSize "cannot assign {} of length {} to {}"

@@ -972,13 +972,13 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
 
         if (locationGood) {
             // Unwrap the symbol if it's hidden behind an import or hoisted enum member.
+            while (symbol->kind == SymbolKind::TransparentMember)
+                symbol = &symbol->as<TransparentMemberSymbol>().wrapped;
+
             switch (symbol->kind) {
                 case SymbolKind::ExplicitImport:
                     result.found = symbol->as<ExplicitImportSymbol>().importedSymbol();
                     result.wasImported = true;
-                    break;
-                case SymbolKind::TransparentMember:
-                    result.found = &symbol->as<TransparentMemberSymbol>().wrapped;
                     break;
                 case SymbolKind::ForwardingTypedef:
                     // If we find a forwarding typedef, the actual typedef was never defined.

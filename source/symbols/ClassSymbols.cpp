@@ -205,6 +205,11 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             baseConstructor = &member;
             continue;
         }
+        if (member.kind == SymbolKind::MethodPrototype &&
+            (member.as<MethodPrototypeSymbol>().flags & MethodFlags::Constructor) != 0) {
+            baseConstructor = member.as<MethodPrototypeSymbol>().getSubroutine();
+            continue;
+        }
 
         // Don't inherit if the member is already overriden.
         if (auto it = scopeNameMap.find(member.name); it != scopeNameMap.end())
@@ -241,15 +246,10 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
         insertCB(*wrapper);
     }
 
-    // Check all methods in our class for overriding virtual methods in parent classes.
-    for (auto& member : members()) {
-        if (member.kind != SymbolKind::Subroutine)
-            continue;
-
+    auto checkForOverride = [&](auto& member) {
         // Constructors and static methods can never be virtual.
-        auto& sub = member.as<SubroutineSymbol>();
-        if (sub.flags & (MethodFlags::Constructor | MethodFlags::Static))
-            continue;
+        if (member.flags.has(MethodFlags::Constructor | MethodFlags::Static))
+            return;
 
         // Look in the parent class for a method with the same name.
         auto currentBase = baseType;
@@ -258,8 +258,8 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             if (found) {
                 if (found->kind == SymbolKind::Subroutine) {
                     auto& baseSub = found->as<SubroutineSymbol>();
-                    if ((baseSub.flags & MethodFlags::Virtual) != 0 || baseSub.getOverride())
-                        sub.setOverride(baseSub);
+                    if (baseSub.isVirtual())
+                        member.setOverride(baseSub);
                 }
                 break;
             }
@@ -270,6 +270,24 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
                 break;
 
             currentBase = &possibleBase->getCanonicalType().as<ClassType>();
+        }
+    };
+
+    // Check all methods in our class for overriding virtual methods in parent classes.
+    for (auto& member : members()) {
+        if (member.kind == SymbolKind::Subroutine)
+            checkForOverride(member.as<SubroutineSymbol>());
+        else if (member.kind == SymbolKind::MethodPrototype) {
+            auto& proto = member.as<MethodPrototypeSymbol>();
+            checkForOverride(proto);
+
+            if (auto baseSub = proto.getOverride()) {
+                if (auto protoSub = proto.getSubroutine()) {
+                    SubroutineSymbol::checkVirtualMethodMatch(
+                        context.scope, baseSub->as<SubroutineSymbol>(), *protoSub,
+                        /* allowDerivedReturn */ true);
+                }
+            }
         }
     }
 
@@ -397,12 +415,12 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                             // interfaces, this means exactly redeclaring) a parent method. We
                             // should check the original symbols in this case.
                             if (auto overrides =
-                                    origExisting->as<MethodPrototypeSymbol>().getOverrides()) {
+                                    origExisting->as<MethodPrototypeSymbol>().getOverride()) {
                                 origExisting = overrides;
                             }
 
                             if (auto overrides =
-                                    origNew->as<MethodPrototypeSymbol>().getOverrides()) {
+                                    origNew->as<MethodPrototypeSymbol>().getOverride()) {
                                 origNew = overrides;
                             }
                         }
@@ -432,10 +450,10 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
                                 *this, *parentSub, *derivedSub, /* allowDerivedReturn */ false);
                         }
 
-                        if (auto overrides = parent.getOverrides())
-                            derived.setOverrides(*overrides);
+                        if (auto overrides = parent.getOverride())
+                            derived.setOverride(*overrides);
                         else
-                            derived.setOverrides(parent);
+                            derived.setOverride(parent);
                     }
                     else if (toWrap->kind == SymbolKind::MethodPrototype) {
                         auto& diag = context.addDiag(diag::IfaceMethodHidden, it->second->location);
@@ -486,7 +504,7 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
 
                 // The method must be virtual in order to be a valid implementation.
                 auto& implSub = impl->as<SubroutineSymbol>();
-                if ((implSub.flags & MethodFlags::Virtual) == 0 && !implSub.getOverride()) {
+                if (!implSub.isVirtual()) {
                     auto& diag =
                         context.addDiag(diag::IfaceMethodNotVirtual, nameSyntax->sourceRange());
                     diag << name << method.name << iface->name;

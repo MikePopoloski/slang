@@ -139,6 +139,8 @@ public:
     void setOverride(const SubroutineSymbol& parentMethod) const;
     const SubroutineSymbol* getOverride() const { return overrides; }
 
+    bool isVirtual() const { return flags.has(MethodFlags::Virtual) || overrides != nullptr; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static SubroutineSymbol* fromSyntax(Compilation& compilation,
@@ -203,10 +205,10 @@ public:
     const Type& getReturnType() const { return declaredReturnType.getType(); }
     const SubroutineSymbol* getSubroutine() const;
 
-    void setOverrides(const MethodPrototypeSymbol& overrideTarget) const {
-        overrides = &overrideTarget;
-    }
-    const MethodPrototypeSymbol* getOverrides() const { return overrides; }
+    void setOverride(const Symbol& overrideTarget) const { overrides = &overrideTarget; }
+    const Symbol* getOverride() const { return overrides; }
+
+    bool isVirtual() const { return flags.has(MethodFlags::Virtual) || overrides != nullptr; }
 
     bool checkMethodMatch(const Scope& scope, const SubroutineSymbol& method) const;
 
@@ -223,7 +225,7 @@ public:
 
 private:
     mutable optional<const SubroutineSymbol*> subroutine;
-    mutable const MethodPrototypeSymbol* overrides = nullptr;
+    mutable const Symbol* overrides = nullptr;
 };
 
 /// Represents a single port specifier in a modport declaration.
