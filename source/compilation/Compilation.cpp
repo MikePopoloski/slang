@@ -157,35 +157,35 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
     void finalize() {
         // Once everything has been visited, go back over and check things that might
-        // have been influenced by visiting later symbols.
+        // have been influenced by visiting later symbols. Unfortunately visiting
+        // a specialization can trigger more specializations to be made for the
+        // same or other generic classs, so we need to be careful here when iterating.
+        SmallSet<const Type*, 8> visitedSpecs;
+        SmallVectorSized<const Type*, 8> toVisit;
+        bool didSomething;
+        do {
+            didSomething = false;
+            for (auto symbol : genericClasses) {
+                for (auto& spec : symbol->specializations()) {
+                    if (visitedSpecs.emplace(&spec).second)
+                        toVisit.append(&spec);
+                }
+
+                for (auto spec : toVisit) {
+                    spec->visit(*this);
+                    didSomething = true;
+                }
+
+                toVisit.clear();
+            }
+        } while (didSomething);
+
+        // Go back over and find generic classes that were never instantiated
+        // and force an empty one to make sure we collect all diagnostics that
+        // don't depend on parameter values.
         for (auto symbol : genericClasses) {
-            // If there have been no specializations, force an empty one now
-            // to make sure we collect all diagnostics that don't depend on
-            // parameter values.
             if (symbol->numSpecializations() == 0)
                 symbol->getInvalidSpecialization(compilation).visit(*this);
-            else {
-                // Make sure we fully visit each specialization. Unfortunately visiting
-                // a specialization can trigger more specializations to be made for the
-                // same generic class, so we need to be careful here when iterating.
-                SmallSet<const Type*, 8> visitedSpecs;
-                SmallVectorSized<const Type*, 8> toVisit;
-                while (true) {
-                    size_t currCount = symbol->numSpecializations();
-                    for (auto& spec : symbol->specializations()) {
-                        if (visitedSpecs.emplace(&spec).second)
-                            toVisit.append(&spec);
-                    }
-
-                    for (auto spec : toVisit)
-                        spec->visit(*this);
-
-                    if (symbol->numSpecializations() == currCount)
-                        break;
-
-                    toVisit.clear();
-                }
-            }
         }
     }
 

@@ -1583,3 +1583,31 @@ class Foo implements Package::Bar#(1, 2); endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Specialization within specialization") {
+    auto tree = SyntaxTree::fromText(R"(
+class D #(parameter type T);
+    T t = 1;
+endclass
+
+class C #(parameter type T);
+    T t = 1;
+    typedef logic bad_t[3];
+    function void foo;
+        C #(real) c2;
+        D #(bad_t) d1;
+    endfunction
+endclass
+
+module m;
+    C #(int) c1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}
