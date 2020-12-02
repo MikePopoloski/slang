@@ -744,7 +744,9 @@ void HierarchicalReferenceExpression::serializeTo(ASTSerializer& serializer) con
 
 ConstantValue LValueReferenceExpression::evalImpl(EvalContext& context) const {
     auto lvalue = context.getTopLValue();
-    ASSERT(lvalue);
+    if (!lvalue)
+        return nullptr;
+
     return lvalue->load();
 }
 
