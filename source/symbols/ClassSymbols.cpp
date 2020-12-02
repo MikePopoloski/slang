@@ -254,7 +254,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
         // Look in the parent class for a method with the same name.
         auto currentBase = baseType;
         while (true) {
-            auto found = currentBase->find(member.name);
+            const Symbol* found = currentBase->find(member.name);
             if (found) {
                 if (found->kind == SymbolKind::Subroutine) {
                     auto& baseSub = found->as<SubroutineSymbol>();
