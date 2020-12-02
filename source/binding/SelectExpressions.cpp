@@ -15,8 +15,8 @@
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AllTypes.h"
 #include "slang/symbols/ClassSymbols.h"
-#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
+#include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 

@@ -164,6 +164,7 @@ add_library(slangcompiler
     symbols/PortSymbols.cpp
     symbols/Scope.cpp
     symbols/SemanticFacts.cpp
+    symbols/SubroutineSymbols.cpp
     symbols/Symbol.cpp
     symbols/TypePrinter.cpp
     symbols/Type.cpp

@@ -11,7 +11,7 @@
 #include "slang/binding/BindContext.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
-#include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 

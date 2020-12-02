@@ -9,7 +9,6 @@
 #include <flat_hash_map.hpp>
 
 #include "slang/compilation/Definition.h"
-#include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Type.h"
 #include "slang/symbols/VariableSymbols.h"

@@ -20,6 +20,7 @@
 #include "slang/symbols/NetType.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/PortSymbols.h"
+#include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"

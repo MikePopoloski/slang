@@ -12,7 +12,7 @@
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/MemberSymbols.h"
+#include "slang/symbols/SubroutineSymbols.h"
 
 namespace slang {
 

@@ -27,6 +27,7 @@
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/PortSymbols.h"
+#include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
@@ -193,7 +194,7 @@ inline const CompilationUnitSyntax& parseCompilationUnit(const std::string& text
 }
 
 inline const InstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax,
-                                              Compilation& compilation) {
+                                        Compilation& compilation) {
     compilation.addSyntaxTree(syntax);
     const RootSymbol& root = compilation.getRoot();
 
