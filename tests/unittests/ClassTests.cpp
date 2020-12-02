@@ -1611,3 +1611,58 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadAssignment);
 }
+
+TEST_CASE("Inherit with out-of-band constructor") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    extern function new(int i);
+endclass
+
+class B extends A;
+    function new;
+    endfunction
+endclass
+
+function A::new(int i);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BaseConstructorNotCalled);
+}
+
+TEST_CASE("Virtualness from out-of-band override") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    extern virtual function void foo;
+endclass
+
+class B extends A;
+    extern function void foo;
+endclass
+
+class C extends B;
+    function void foo(int i); endfunction
+endclass
+
+class D extends B;
+    extern function void foo(int i);
+endclass
+
+function void A::foo; endfunction
+function void B::foo; endfunction
+function void D::foo(int i); endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::VirtualArgCountMismatch);
+    CHECK(diags[1].code == diag::VirtualArgCountMismatch);
+}

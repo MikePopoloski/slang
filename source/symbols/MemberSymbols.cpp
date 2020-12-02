@@ -380,6 +380,9 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
     result->visibility = prototype.visibility;
     result->flags = prototype.flags;
 
+    if (prototype.isVirtual())
+        result->flags |= MethodFlags::Virtual;
+
     if ((result->flags & MethodFlags::Static) == 0)
         result->addThisVar(parent.asSymbol().as<ClassType>());
 
