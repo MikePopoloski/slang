@@ -165,9 +165,26 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             if (symbol->numSpecializations() == 0)
                 symbol->getInvalidSpecialization(compilation).visit(*this);
             else {
-                // Make sure we fully visit each specialization.
-                for (auto& spec : symbol->specializations())
-                    spec.visit(*this);
+                // Make sure we fully visit each specialization. Unfortunately visiting
+                // a specialization can trigger more specializations to be made for the
+                // same generic class, so we need to be careful here when iterating.
+                SmallSet<const Type*, 8> visitedSpecs;
+                SmallVectorSized<const Type*, 8> toVisit;
+                while (true) {
+                    size_t currCount = symbol->numSpecializations();
+                    for (auto& spec : symbol->specializations()) {
+                        if (visitedSpecs.emplace(&spec).second)
+                            toVisit.append(&spec);
+                    }
+
+                    for (auto spec : toVisit)
+                        spec->visit(*this);
+
+                    if (symbol->numSpecializations() == currCount)
+                        break;
+
+                    toVisit.clear();
+                }
             }
         }
     }
