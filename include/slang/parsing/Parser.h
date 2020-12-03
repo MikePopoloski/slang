@@ -241,7 +241,7 @@ private:
     NonAnsiPortSyntax& parseNonAnsiPort();
     MemberSyntax& parseAnsiPort();
     AnsiPortListSyntax& parseAnsiPortList(Token openParen);
-    PortHeaderSyntax& parsePortHeader(Token direction);
+    PortHeaderSyntax& parsePortHeader(Token constKeyword, Token direction);
     PortDeclarationSyntax& parsePortDeclaration(AttrList attributes);
     TimeUnitsDeclarationSyntax& parseTimeUnitsDeclaration(AttrList attributes);
     span<PackageImportDeclarationSyntax*> parsePackageImports();

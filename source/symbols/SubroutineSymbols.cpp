@@ -13,10 +13,10 @@
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
-#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
+#include "slang/types/Type.h"
 
 namespace slang {
 
@@ -100,7 +100,6 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
             portListError = true;
         }
 
-        // TODO: const ref is not currently handled by parser
         auto& header = portDecl.header->as<VariablePortHeaderSyntax>();
         ArgumentDirection direction;
         switch (header.direction.kind) {
@@ -114,7 +113,10 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
                 direction = ArgumentDirection::InOut;
                 break;
             case TokenKind::RefKeyword:
-                direction = ArgumentDirection::Ref;
+                if (header.constKeyword)
+                    direction = ArgumentDirection::ConstRef;
+                else
+                    direction = ArgumentDirection::Ref;
                 break;
             default:
                 THROW_UNREACHABLE;

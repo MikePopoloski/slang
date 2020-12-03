@@ -644,13 +644,15 @@ module m;
     function foo;
         input i;
         output logic [1:0] baz;
+        const ref int asdf;
         baz[0] = i;
         foo = i;
     endfunction
 
     logic [1:0] b;
     logic j;
-    initial j = foo(1, b);
+    int q;
+    initial j = foo(1, b, q);
 endmodule
 )");
 

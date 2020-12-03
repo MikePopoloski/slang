@@ -130,11 +130,13 @@ void Definition::resolvePorts() const {
                     // A variable port header might still be an interface port; check if it has
                     // a simple type name that resolves to a definition name somewhere.
                     auto& vph = iap.header->as<VariablePortHeaderSyntax>();
-                    string_view simpleName = SyntaxFacts::getSimpleTypeName(*vph.dataType);
-                    if (!simpleName.empty()) {
-                        auto def = scope.getCompilation().getDefinition(simpleName, scope);
-                        if (def && def->definitionKind == DefinitionKind::Interface)
-                            isIface = true;
+                    if (!vph.varKeyword && !vph.direction) {
+                        string_view simpleName = SyntaxFacts::getSimpleTypeName(*vph.dataType);
+                        if (!simpleName.empty()) {
+                            auto def = scope.getCompilation().getDefinition(simpleName, scope);
+                            if (def && def->definitionKind == DefinitionKind::Interface)
+                                isIface = true;
+                        }
                     }
                 }
                 ports.emplace(iap.declarator->name.valueText(), index, isIface);

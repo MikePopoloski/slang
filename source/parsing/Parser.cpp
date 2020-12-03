@@ -183,39 +183,43 @@ NonAnsiPortSyntax& Parser::parseNonAnsiPort() {
     return factory.implicitNonAnsiPort(&parsePortExpression());
 }
 
-PortHeaderSyntax& Parser::parsePortHeader(Token direction) {
+PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
     auto kind = peek().kind;
-    if (isNetType(kind)) {
-        auto netType = consume();
-        return factory.netPortHeader(direction, netType, parseDataType(TypeOptions::AllowImplicit));
-    }
 
-    if (kind == TokenKind::InterfaceKeyword) {
-        if (direction)
-            addDiag(diag::DirectionOnInterfacePort, direction.location());
+    if (!constKeyword) {
+        if (isNetType(kind)) {
+            auto netType = consume();
+            return factory.netPortHeader(direction, netType,
+                                         parseDataType(TypeOptions::AllowImplicit));
+        }
 
-        auto keyword = consume();
-        return factory.interfacePortHeader(keyword, parseDotMemberClause());
-    }
+        if (kind == TokenKind::InterfaceKeyword) {
+            if (direction)
+                addDiag(diag::DirectionOnInterfacePort, direction.location());
 
-    if (kind == TokenKind::InterconnectKeyword) {
-        auto keyword = consume();
-        auto signing = parseSigning();
-        auto dimensions = parseDimensionList();
-        auto& type = factory.implicitType(signing, dimensions);
-        return factory.interconnectPortHeader(direction, keyword, type);
+            auto keyword = consume();
+            return factory.interfacePortHeader(keyword, parseDotMemberClause());
+        }
+
+        if (kind == TokenKind::InterconnectKeyword) {
+            auto keyword = consume();
+            auto signing = parseSigning();
+            auto dimensions = parseDimensionList();
+            auto& type = factory.implicitType(signing, dimensions);
+            return factory.interconnectPortHeader(direction, keyword, type);
+        }
     }
 
     if (kind == TokenKind::VarKeyword) {
         auto varKeyword = consume();
-        return factory.variablePortHeader(direction, varKeyword,
+        return factory.variablePortHeader(constKeyword, direction, varKeyword,
                                           parseDataType(TypeOptions::AllowImplicit));
     }
 
     if (kind == TokenKind::Identifier) {
         // could be a bunch of different things here; scan ahead to see
-        if (peek(1).kind == TokenKind::Dot && peek(2).kind == TokenKind::Identifier &&
-            peek(3).kind == TokenKind::Identifier) {
+        if (!constKeyword && peek(1).kind == TokenKind::Dot &&
+            peek(2).kind == TokenKind::Identifier && peek(3).kind == TokenKind::Identifier) {
             auto name = consume();
             return factory.interfacePortHeader(name, parseDotMemberClause());
         }
@@ -226,11 +230,11 @@ PortHeaderSyntax& Parser::parsePortHeader(Token direction) {
         else
             type = &factory.implicitType(Token(), nullptr);
 
-        return factory.variablePortHeader(direction, Token(), *type);
+        return factory.variablePortHeader(constKeyword, direction, Token(), *type);
     }
 
     // assume we have some kind of data type here
-    return factory.variablePortHeader(direction, Token(),
+    return factory.variablePortHeader(constKeyword, direction, Token(),
                                       parseDataType(TypeOptions::AllowImplicit));
 }
 
@@ -257,17 +261,18 @@ MemberSyntax& Parser::parseAnsiPort() {
                                         expect(TokenKind::CloseParenthesis));
     }
 
-    auto& header = parsePortHeader(direction);
+    auto& header = parsePortHeader(Token(), direction);
     auto& declarator = parseDeclarator();
     return factory.implicitAnsiPort(attributes, header, declarator);
 }
 
 PortDeclarationSyntax& Parser::parsePortDeclaration(AttrList attributes) {
+    Token constKeyword = consumeIf(TokenKind::ConstKeyword);
     Token direction;
     if (isPortDirection(peek().kind))
         direction = consume();
 
-    auto& header = parsePortHeader(direction);
+    auto& header = parsePortHeader(constKeyword, direction);
 
     Token semi;
     auto declarators = parseDeclarators(semi);
@@ -942,6 +947,11 @@ bool Parser::isPortDeclaration() {
     uint32_t index = 0;
     if (!scanAttributes(index))
         return false;
+
+    if (peek(index).kind == TokenKind::ConstKeyword &&
+        peek(index + 1).kind == TokenKind::RefKeyword) {
+        return true;
+    }
 
     // TODO: check for interface port declaration
     return isPortDirection(peek(index).kind);
