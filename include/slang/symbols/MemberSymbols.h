@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/Expression.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/ValueSymbol.h"
