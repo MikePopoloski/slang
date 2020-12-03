@@ -10,7 +10,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/symbols/AllTypes.h"
+#include "slang/types/AllTypes.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {

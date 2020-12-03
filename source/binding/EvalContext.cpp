@@ -12,7 +12,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/symbols/SubroutineSymbols.h"
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 
 namespace slang {

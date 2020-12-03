@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/symbols/TypePrinter.h"
+#include "slang/types/TypePrinter.h"
 
 #include "../text/FormatBuffer.h"
 

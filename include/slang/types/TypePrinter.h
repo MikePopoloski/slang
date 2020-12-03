@@ -7,7 +7,7 @@
 #pragma once
 
 #include "slang/diagnostics/DiagArgFormatter.h"
-#include "slang/symbols/AllTypes.h"
+#include "slang/types/AllTypes.h"
 
 namespace slang {
 

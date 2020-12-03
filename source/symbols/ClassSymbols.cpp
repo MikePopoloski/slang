@@ -14,7 +14,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/symbols/AllTypes.h"
+#include "slang/types/AllTypes.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/syntax/AllSyntax.h"

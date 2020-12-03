@@ -10,7 +10,7 @@
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/mir/Procedure.h"
-#include "slang/symbols/AllTypes.h"
+#include "slang/types/AllTypes.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/text/SFormat.h"
 

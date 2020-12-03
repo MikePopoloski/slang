@@ -148,17 +148,14 @@ add_library(slangcompiler
     mir/MIRPrinter.cpp
     mir/Procedure.cpp
 
-    symbols/AllTypes.cpp
     symbols/ASTSerializer.cpp
     symbols/AttributeSymbol.cpp
     symbols/BlockSymbols.cpp
     symbols/ClassSymbols.cpp
     symbols/CompilationUnitSymbols.cpp
-    symbols/DeclaredType.cpp
     symbols/InstanceSymbols.cpp
     symbols/Lookup.cpp
     symbols/MemberSymbols.cpp
-    symbols/NetType.cpp
     symbols/ParameterBuilder.cpp
     symbols/ParameterSymbols.cpp
     symbols/PortSymbols.cpp
@@ -166,10 +163,14 @@ add_library(slangcompiler
     symbols/SemanticFacts.cpp
     symbols/SubroutineSymbols.cpp
     symbols/Symbol.cpp
-    symbols/TypePrinter.cpp
-    symbols/Type.cpp
     symbols/ValueSymbol.cpp
     symbols/VariableSymbols.cpp
+
+    types/AllTypes.cpp
+    types/DeclaredType.cpp
+    types/NetType.cpp
+    types/TypePrinter.cpp
+    types/Type.cpp
 )
 slang_define_lib(slangcompiler)
 add_dependencies(slangcompiler slangparser)

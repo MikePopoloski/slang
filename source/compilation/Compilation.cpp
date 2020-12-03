@@ -15,9 +15,9 @@
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/symbols/ASTVisitor.h"
-#include "slang/symbols/TypePrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
+#include "slang/types/TypePrinter.h"
 
 namespace {
 

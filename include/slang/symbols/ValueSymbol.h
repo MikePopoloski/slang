@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/symbols/DeclaredType.h"
+#include "slang/types/DeclaredType.h"
 #include "slang/symbols/Symbol.h"
 
 namespace slang {

@@ -4,17 +4,17 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/symbols/DeclaredType.h"
+#include "slang/types/DeclaredType.h"
 
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
-#include "slang/symbols/AllTypes.h"
-#include "slang/symbols/NetType.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/AllTypes.h"
+#include "slang/types/NetType.h"
 #include "slang/util/ScopeGuard.h"
 
 namespace slang {

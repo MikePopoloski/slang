@@ -8,7 +8,7 @@
 
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {

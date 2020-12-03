@@ -7,7 +7,7 @@
 #pragma once
 
 #include "slang/symbols/Scope.h"
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 #include "slang/symbols/ValueSymbol.h"
 
 namespace slang {

@@ -8,7 +8,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
-#include "slang/symbols/TypePrinter.h"
+#include "slang/types/TypePrinter.h"
 
 namespace slang::Builtins {
 

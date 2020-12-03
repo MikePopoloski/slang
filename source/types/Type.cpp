@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 
 #include "slang/binding/Bitstream.h"
 #include "slang/compilation/Compilation.h"
@@ -13,9 +13,9 @@
 #include "slang/parsing/LexerFacts.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ASTVisitor.h"
-#include "slang/symbols/AllTypes.h"
-#include "slang/symbols/TypePrinter.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/AllTypes.h"
+#include "slang/types/TypePrinter.h"
 #include "slang/util/StackContainer.h"
 
 namespace slang {

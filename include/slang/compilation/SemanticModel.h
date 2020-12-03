@@ -8,7 +8,7 @@
 
 #include <flat_hash_map.hpp>
 
-#include "slang/symbols/AllTypes.h"
+#include "slang/types/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"

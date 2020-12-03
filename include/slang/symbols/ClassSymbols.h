@@ -10,7 +10,7 @@
 
 #include "slang/compilation/Definition.h"
 #include "slang/symbols/Scope.h"
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/util/Function.h"
 

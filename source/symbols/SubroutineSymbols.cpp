@@ -13,7 +13,7 @@
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"

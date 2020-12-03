@@ -12,7 +12,7 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/parsing/LexerFacts.h"
-#include "slang/symbols/AllTypes.h"
+#include "slang/types/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"

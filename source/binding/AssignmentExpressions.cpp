@@ -19,7 +19,7 @@
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/symbols/AllTypes.h"
+#include "slang/types/AllTypes.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"

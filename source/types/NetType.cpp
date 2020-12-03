@@ -4,12 +4,12 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/symbols/NetType.h"
+#include "slang/types/NetType.h"
 
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/Scope.h"
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {

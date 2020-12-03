@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
-#include "slang/symbols/AllTypes.h"
+#include "slang/types/AllTypes.h"
 
 #include "slang/binding/BindContext.h"
 #include "slang/binding/Expression.h"

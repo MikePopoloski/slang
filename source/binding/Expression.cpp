@@ -12,7 +12,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ASTVisitor.h"
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxVisitor.h"
 

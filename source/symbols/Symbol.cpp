@@ -11,7 +11,7 @@
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/StackContainer.h"

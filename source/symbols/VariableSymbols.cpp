@@ -11,9 +11,9 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/symbols/NetType.h"
+#include "slang/types/NetType.h"
 #include "slang/symbols/Scope.h"
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
 

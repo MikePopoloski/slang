@@ -10,7 +10,7 @@
 #include <llvm/IR/Module.h>
 
 #include "slang/codegen/CodeGenerator.h"
-#include "slang/symbols/AllTypes.h"
+#include "slang/types/AllTypes.h"
 
 namespace slang {
 

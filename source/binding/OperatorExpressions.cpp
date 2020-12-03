@@ -15,7 +15,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/symbols/AllTypes.h"
+#include "slang/types/AllTypes.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace {

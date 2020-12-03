@@ -9,7 +9,7 @@
 #include "slang/compilation/Definition.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/InstanceSymbols.h"
-#include "slang/symbols/Type.h"
+#include "slang/types/Type.h"
 #include "slang/util/Hash.h"
 
 namespace slang {
