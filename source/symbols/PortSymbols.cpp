@@ -12,14 +12,14 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
-#include "slang/types/NetType.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
+#include "slang/types/AllTypes.h"
+#include "slang/types/NetType.h"
 #include "slang/util/StackContainer.h"
 
 namespace slang {
@@ -114,10 +114,10 @@ public:
                 // noticing the other fact, that it's a net port vs a variable port, is very
                 // hard to do, so we go along with everyone else and use the same rule.
 
-                PortDirection direction = getDirection(header.direction);
+                ArgumentDirection direction = getDirection(header.direction);
                 const NetType* netType = nullptr;
-                if (!header.varKeyword && (direction == PortDirection::InOut ||
-                                           (direction != PortDirection::Ref &&
+                if (!header.varKeyword && (direction == ArgumentDirection::InOut ||
+                                           (direction != ArgumentDirection::Ref &&
                                             header.dataType->kind == SyntaxKind::ImplicitType))) {
                     netType = &getDefaultNetType(scope, decl.name.location());
                 }
@@ -193,8 +193,8 @@ public:
     }
 
 private:
-    PortDirection getDirection(Token token) const {
-        return token ? SemanticFacts::getPortDirection(token.kind) : lastDirection;
+    ArgumentDirection getDirection(Token token) const {
+        return token ? SemanticFacts::getDirection(token.kind) : lastDirection;
     }
 
     Symbol* addInherited(const DeclaratorSyntax& decl,
@@ -207,8 +207,9 @@ private:
         return add(decl, lastDirection, *lastType, lastNetType, attrs);
     }
 
-    Symbol* add(const DeclaratorSyntax& decl, PortDirection direction, const DataTypeSyntax& type,
-                const NetType* netType, span<const AttributeInstanceSyntax* const> attrs) {
+    Symbol* add(const DeclaratorSyntax& decl, ArgumentDirection direction,
+                const DataTypeSyntax& type, const NetType* netType,
+                span<const AttributeInstanceSyntax* const> attrs) {
 
         auto port = compilation.emplace<PortSymbol>(decl.name.valueText(), decl.name.location());
         port->direction = direction;
@@ -216,9 +217,9 @@ private:
         port->setDeclaredType(type, decl.dimensions);
         port->setAttributes(scope, attrs);
 
-        if (port->direction == PortDirection::InOut && !netType)
+        if (port->direction == ArgumentDirection::InOut && !netType)
             scope.addDiag(diag::InOutPortCannotBeVariable, port->location) << port->name;
-        else if (port->direction == PortDirection::Ref && netType)
+        else if (port->direction == ArgumentDirection::Ref && netType)
             scope.addDiag(diag::RefPortMustBeVariable, port->location) << port->name;
 
         // Create a new symbol to represent this port internally to the instance.
@@ -262,7 +263,7 @@ private:
         port->setSyntax(decl);
         port->setAttributes(scope, attrs);
 
-        lastDirection = PortDirection::InOut;
+        lastDirection = ArgumentDirection::InOut;
         lastType = &UnsetType;
         lastNetType = nullptr;
         lastInterface = iface;
@@ -274,7 +275,7 @@ private:
     const Scope& scope;
     SmallVector<std::pair<Symbol*, const Symbol*>>& implicitMembers;
 
-    PortDirection lastDirection = PortDirection::InOut;
+    ArgumentDirection lastDirection = ArgumentDirection::InOut;
     const DataTypeSyntax* lastType = &UnsetType;
     const NetType* lastNetType = nullptr;
     const Definition* lastInterface = nullptr;
@@ -369,7 +370,7 @@ private:
         const DeclaratorSyntax* syntax = nullptr;
         span<const AttributeInstanceSyntax* const> attrs;
         const Symbol* internalSymbol = nullptr;
-        PortDirection direction = PortDirection::In;
+        ArgumentDirection direction = ArgumentDirection::In;
         bool used = false;
 
         PortInfo(const DeclaratorSyntax* syntax, span<const AttributeInstanceSyntax* const> attrs) :
@@ -400,7 +401,7 @@ private:
         switch (header.kind) {
             case SyntaxKind::VariablePortHeader: {
                 auto& varHeader = header.as<VariablePortHeaderSyntax>();
-                info.direction = SemanticFacts::getPortDirection(varHeader.direction.kind);
+                info.direction = SemanticFacts::getDirection(varHeader.direction.kind);
 
                 // If the port has any kind of type declared, this constitutes a full symbol
                 // definition. Otherwise we need to see if there's an existing symbol to match with.
@@ -433,11 +434,11 @@ private:
                     setInternalSymbol(*net, decl, *varHeader.dataType, info, insertionPoint);
                 }
 
-                if (info.direction == PortDirection::InOut &&
+                if (info.direction == ArgumentDirection::InOut &&
                     info.internalSymbol->kind != SymbolKind::Net) {
                     scope.addDiag(diag::InOutPortCannotBeVariable, declLoc) << name;
                 }
-                else if (info.direction == PortDirection::Ref &&
+                else if (info.direction == ArgumentDirection::Ref &&
                          info.internalSymbol->kind == SymbolKind::Net) {
                     scope.addDiag(diag::RefPortMustBeVariable, declLoc) << name;
                 }
@@ -445,8 +446,8 @@ private:
             }
             case SyntaxKind::NetPortHeader: {
                 auto& netHeader = header.as<NetPortHeaderSyntax>();
-                info.direction = SemanticFacts::getPortDirection(netHeader.direction.kind);
-                if (info.direction == PortDirection::Ref)
+                info.direction = SemanticFacts::getDirection(netHeader.direction.kind);
+                if (info.direction == ArgumentDirection::Ref)
                     scope.addDiag(diag::RefPortMustBeVariable, declLoc) << name;
 
                 // Create a new symbol to represent this port internally to the instance.
@@ -744,9 +745,7 @@ private:
         BindContext context(scope, lookupLocation);
         context.instance = &instance;
 
-        auto& expr = Expression::bindArgument(
-            port.getType(), SemanticFacts::getArgDirection(port.direction), syntax, context);
-
+        auto& expr = Expression::bindArgument(port.getType(), port.direction, syntax, context);
         return createConnection(port, &expr, attributes);
     }
 

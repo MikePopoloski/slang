@@ -28,10 +28,10 @@ ENUM(VariableLifetime, LIFETIME);
 ENUM(Visibility, VISIBILITY);
 #undef VISIBILITY
 
-#define FORMAL(x) x(In) x(Out) x(InOut) x(Ref) x(ConstRef)
+#define DIRECTION(x) x(In) x(Out) x(InOut) x(Ref)
 /// Specifies behavior of an argument passed to a subroutine.
-ENUM(ArgumentDirection, FORMAL);
-#undef FORMAL
+ENUM(ArgumentDirection, DIRECTION);
+#undef DIRECTION
 
 #define BLOCK(x) x(Initial) x(Final) x(Always) x(AlwaysComb) x(AlwaysLatch) x(AlwaysFF)
 /// Specifies possible procedural block kinds.
@@ -42,11 +42,6 @@ ENUM(ProceduralBlockKind, BLOCK);
 /// Specifies possible statement block kinds.
 ENUM(StatementBlockKind, BLOCK);
 #undef BLOCK
-
-#define PORT(x) x(In) x(Out) x(InOut) x(Ref)
-/// Specifies the behavior of connections to a particular port.
-ENUM(PortDirection, PORT);
-#undef PORT
 
 #define DEF(x) x(Module) x(Interface) x(Program)
 /// Specifies possible definition kinds.
@@ -116,8 +111,8 @@ public:
     /// Interprets a keyword token as a variable lifetime value.
     static std::optional<VariableLifetime> getVariableLifetime(Token token);
 
-    /// Interprets a token type as a port direction value.
-    static PortDirection getPortDirection(TokenKind kind);
+    /// Interprets a token type as an argument direction value.
+    static ArgumentDirection getDirection(TokenKind kind);
 
     static ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind);
 
@@ -128,8 +123,6 @@ public:
     static AssertionKind getAssertKind(SyntaxKind kind);
 
     static StatementBlockKind getStatementBlockKind(const BlockStatementSyntax& syntax);
-
-    static ArgumentDirection getArgDirection(PortDirection direction);
 
     static GateType getGateType(TokenKind kind);
 

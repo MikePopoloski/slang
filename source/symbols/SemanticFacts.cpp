@@ -23,12 +23,12 @@ std::optional<VariableLifetime> SemanticFacts::getVariableLifetime(Token token) 
     }
 }
 
-PortDirection SemanticFacts::getPortDirection(TokenKind kind) {
+ArgumentDirection SemanticFacts::getDirection(TokenKind kind) {
     switch (kind) {
-        case TokenKind::InputKeyword: return PortDirection::In;
-        case TokenKind::InOutKeyword: return PortDirection::InOut;
-        case TokenKind::OutputKeyword: return PortDirection::Out;
-        case TokenKind::RefKeyword: return PortDirection::Ref;
+        case TokenKind::InputKeyword: return ArgumentDirection::In;
+        case TokenKind::InOutKeyword: return ArgumentDirection::InOut;
+        case TokenKind::OutputKeyword: return ArgumentDirection::Out;
+        case TokenKind::RefKeyword: return ArgumentDirection::Ref;
         default: THROW_UNREACHABLE;
     }
 }
@@ -68,16 +68,6 @@ AssertionKind SemanticFacts::getAssertKind(SyntaxKind kind) {
         case SyntaxKind::ImmediateAssertStatement: return AssertionKind::Assert;
         case SyntaxKind::ImmediateAssumeStatement: return AssertionKind::Assume;
         case SyntaxKind::ImmediateCoverStatement: return AssertionKind::Cover;
-        default: THROW_UNREACHABLE;
-    }
-}
-
-ArgumentDirection SemanticFacts::getArgDirection(PortDirection direction) {
-    switch (direction) {
-        case PortDirection::In: return ArgumentDirection::In;
-        case PortDirection::Out: return ArgumentDirection::Out;
-        case PortDirection::InOut: return ArgumentDirection::InOut;
-        case PortDirection::Ref: return ArgumentDirection::Ref;
         default: THROW_UNREACHABLE;
     }
 }

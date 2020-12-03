@@ -101,30 +101,18 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         }
 
         auto& header = portDecl.header->as<VariablePortHeaderSyntax>();
-        ArgumentDirection direction;
-        switch (header.direction.kind) {
-            case TokenKind::InputKeyword:
-                direction = ArgumentDirection::In;
-                break;
-            case TokenKind::OutputKeyword:
-                direction = ArgumentDirection::Out;
-                break;
-            case TokenKind::InOutKeyword:
-                direction = ArgumentDirection::InOut;
-                break;
-            case TokenKind::RefKeyword:
-                if (header.constKeyword)
-                    direction = ArgumentDirection::ConstRef;
-                else
-                    direction = ArgumentDirection::Ref;
-                break;
-            default:
-                THROW_UNREACHABLE;
+        ArgumentDirection direction = SemanticFacts::getDirection(header.direction.kind);
+
+        bool isConst = false;
+        if (header.constKeyword) {
+            ASSERT(direction == ArgumentDirection::Ref);
+            isConst = true;
         }
 
         for (auto declarator : portDecl.declarators) {
             auto arg = compilation.emplace<FormalArgumentSymbol>(
                 declarator->name.valueText(), declarator->name.location(), direction, *lifetime);
+            arg->isConstant = isConst;
             arg->setDeclaredType(*header.dataType);
             arg->setFromDeclarator(*declarator);
             arg->setAttributes(*result, syntax.attributes);
@@ -499,35 +487,25 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
 
     for (const FunctionPortSyntax* portSyntax : syntax.ports) {
         ArgumentDirection direction;
-        bool directionSpecified = true;
-        switch (portSyntax->direction.kind) {
-            case TokenKind::InputKeyword:
-                direction = ArgumentDirection::In;
-                break;
-            case TokenKind::OutputKeyword:
-                direction = ArgumentDirection::Out;
-                break;
-            case TokenKind::InOutKeyword:
-                direction = ArgumentDirection::InOut;
-                break;
-            case TokenKind::RefKeyword:
-                if (portSyntax->constKeyword)
-                    direction = ArgumentDirection::ConstRef;
-                else
-                    direction = ArgumentDirection::Ref;
-                break;
-            case TokenKind::Unknown:
-                // Otherwise, we "inherit" the previous argument
-                direction = lastDirection;
-                directionSpecified = false;
-                break;
-            default:
-                THROW_UNREACHABLE;
+        bool directionSpecified;
+        if (portSyntax->direction) {
+            directionSpecified = true;
+            direction = SemanticFacts::getDirection(portSyntax->direction.kind);
+        }
+        else {
+            // Otherwise, we "inherit" the previous argument
+            directionSpecified = false;
+            direction = lastDirection;
         }
 
         auto declarator = portSyntax->declarator;
         auto arg = comp.emplace<FormalArgumentSymbol>(
             declarator->name.valueText(), declarator->name.location(), direction, defaultLifetime);
+
+        if (portSyntax->constKeyword) {
+            ASSERT(direction == ArgumentDirection::Ref);
+            arg->isConstant = true;
+        }
 
         // If we're given a type, use that. Otherwise, if we were given a
         // direction, default to logic. Otherwise, use the last type.

@@ -27,7 +27,7 @@ struct PortListSyntax;
 class PortSymbol : public ValueSymbol {
 public:
     /// The direction of data flowing across the port.
-    PortDirection direction = PortDirection::InOut;
+    ArgumentDirection direction = ArgumentDirection::InOut;
 
     /// An instance-internal symbol that this port connects to, if any.
     /// Ports that do not connect directly to an internal symbol will have

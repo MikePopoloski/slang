@@ -11,11 +11,11 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/types/NetType.h"
 #include "slang/symbols/Scope.h"
-#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
+#include "slang/types/NetType.h"
+#include "slang/types/Type.h"
 
 namespace slang {
 
@@ -166,8 +166,6 @@ FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation loc,
                                            ArgumentDirection direction, VariableLifetime lifetime) :
     VariableSymbol(SymbolKind::FormalArgument, name, loc, lifetime),
     direction(direction) {
-    if (direction == ArgumentDirection::ConstRef)
-        isConstant = true;
 }
 
 void FormalArgumentSymbol::serializeTo(ASTSerializer& serializer) const {

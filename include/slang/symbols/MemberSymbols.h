@@ -99,19 +99,19 @@ struct ModportNamedPortSyntax;
 class ModportPortSymbol : public ValueSymbol {
 public:
     /// The direction of data flowing across the port.
-    PortDirection direction = PortDirection::InOut;
+    ArgumentDirection direction = ArgumentDirection::InOut;
 
     /// An instance-internal symbol that this port connects to, if any.
     /// Ports that do not connect directly to an internal symbol will have
     /// this set to nullptr.
     const Symbol* internalSymbol = nullptr;
 
-    ModportPortSymbol(string_view name, SourceLocation loc, PortDirection direction);
+    ModportPortSymbol(string_view name, SourceLocation loc, ArgumentDirection direction);
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static ModportPortSymbol& fromSyntax(const Scope& parent, LookupLocation lookupLocation,
-                                         PortDirection direction,
+                                         ArgumentDirection direction,
                                          const ModportNamedPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportPort; }

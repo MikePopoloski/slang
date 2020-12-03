@@ -220,7 +220,6 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
             // TODO: additional restrictions on inout
             return bindLValue(syntax, argType, loc, context, direction == ArgumentDirection::InOut);
         case ArgumentDirection::Ref:
-        case ArgumentDirection::ConstRef:
             // TODO: implement this
             return badExpr(context.getCompilation(), nullptr);
     }

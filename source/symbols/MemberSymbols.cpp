@@ -16,11 +16,11 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
-#include "slang/types/NetType.h"
 #include "slang/symbols/SubroutineSymbols.h"
-#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/NetType.h"
+#include "slang/types/Type.h"
 #include "slang/util/StackContainer.h"
 
 namespace slang {
@@ -127,13 +127,13 @@ void WildcardImportSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 ModportPortSymbol::ModportPortSymbol(string_view name, SourceLocation loc,
-                                     PortDirection direction) :
+                                     ArgumentDirection direction) :
     ValueSymbol(SymbolKind::ModportPort, name, loc),
     direction(direction) {
 }
 
 ModportPortSymbol& ModportPortSymbol::fromSyntax(const Scope& parent, LookupLocation lookupLocation,
-                                                 PortDirection direction,
+                                                 ArgumentDirection direction,
                                                  const ModportNamedPortSyntax& syntax) {
     auto& comp = parent.getCompilation();
     auto name = syntax.name;
@@ -191,7 +191,7 @@ void ModportSymbol::fromSyntax(const Scope& parent, const ModportDeclarationSynt
             switch (port->kind) {
                 case SyntaxKind::ModportSimplePortList: {
                     auto& portList = port->as<ModportSimplePortListSyntax>();
-                    auto direction = SemanticFacts::getPortDirection(portList.direction.kind);
+                    auto direction = SemanticFacts::getDirection(portList.direction.kind);
                     for (auto simplePort : portList.ports) {
                         switch (simplePort->kind) {
                             case SyntaxKind::ModportNamedPort: {
