@@ -292,7 +292,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
 
     // Handle default value expressions.
     auto defArgs = result->arguments;
-    auto protoArgs = prototype.arguments;
+    auto protoArgs = prototype.getArguments();
     for (auto di = defArgs.begin(), pi = protoArgs.begin(); di != defArgs.end(); di++, pi++) {
         // If the definition provides a default value for an argument, the prototype
         // must also have that default, and they must be identical expressions.
@@ -380,7 +380,7 @@ SubroutineSymbol& SubroutineSymbol::createFromPrototype(Compilation& compilation
     result->declaredReturnType.copyTypeFrom(prototype.declaredReturnType);
     result->visibility = prototype.visibility;
     result->flags = prototype.flags;
-    result->arguments = cloneArguments(compilation, *result, prototype.arguments);
+    result->arguments = cloneArguments(compilation, *result, prototype.getArguments());
     return *result;
 }
 
@@ -691,7 +691,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
     auto copyDetails = [&](auto& source) {
         result->declaredReturnType.copyTypeFrom(source.declaredReturnType);
         result->subroutineKind = source.subroutineKind;
-        result->arguments = cloneArguments(comp, *result, source.arguments);
+        result->arguments = cloneArguments(comp, *result, source.getArguments());
     };
 
     if (target->kind == SymbolKind::Subroutine)
@@ -803,7 +803,7 @@ bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
         return false;
     }
 
-    auto defArgs = method.arguments;
+    auto defArgs = method.getArguments();
     auto protoArgs = arguments;
     if (defArgs.size() != protoArgs.size()) {
         auto& diag = scope.addDiag(diag::MethodArgCountMismatch, method.location);

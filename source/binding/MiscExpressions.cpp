@@ -359,7 +359,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     SmallVectorSized<const Expression*, 8> boundArgs;
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
 
-    for (auto formal : symbol.arguments) {
+    for (auto formal : symbol.getArguments()) {
         const Expression* expr = nullptr;
         if (orderedIndex < orderedArgs.size()) {
             auto arg = orderedArgs[orderedIndex++];
@@ -408,7 +408,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
             if (!expr) {
                 if (namedArgs.empty()) {
                     auto& diag = context.addDiag(diag::TooFewArguments, range);
-                    diag << symbol.arguments.size() << orderedArgs.size();
+                    diag << symbol.getArguments().size() << orderedArgs.size();
                     bad = true;
                     break;
                 }
@@ -430,7 +430,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     // Make sure there weren't too many ordered arguments provided.
     if (orderedIndex < orderedArgs.size()) {
         auto& diag = context.addDiag(diag::TooManyArguments, range);
-        diag << symbol.arguments.size();
+        diag << symbol.getArguments().size();
         diag << orderedArgs.size();
         bad = true;
     }
@@ -565,7 +565,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     if (!context.pushFrame(symbol, sourceRange.start(), lookupLocation))
         return nullptr;
 
-    span<const FormalArgumentSymbol* const> formals = symbol.arguments;
+    span<const FormalArgumentSymbol* const> formals = symbol.getArguments();
     for (size_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
 
@@ -650,7 +650,7 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
         return false;
     }
 
-    for (auto arg : subroutine.arguments) {
+    for (auto arg : subroutine.getArguments()) {
         if (arg->direction != ArgumentDirection::In) {
             context.addDiag(diag::ConstEvalFunctionArgDirection, range);
             return false;

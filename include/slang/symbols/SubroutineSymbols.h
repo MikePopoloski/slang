@@ -37,7 +37,6 @@ public:
     using ArgList = span<const FormalArgumentSymbol* const>;
 
     DeclaredType declaredReturnType;
-    ArgList arguments;
     VariableLifetime defaultLifetime;
     SubroutineKind subroutineKind;
     Visibility visibility = Visibility::Public;
@@ -52,6 +51,11 @@ public:
         Symbol(SymbolKind::Subroutine, name, loc),
         Scope(compilation, this), declaredReturnType(*this), defaultLifetime(defaultLifetime),
         subroutineKind(subroutineKind) {}
+
+    ArgList getArguments() const {
+        ensureElaborated();
+        return arguments;
+    }
 
     const Statement& getBody(EvalContext* evalContext = nullptr) const;
     const Type& getReturnType() const { return declaredReturnType.getType(); }
@@ -103,6 +107,7 @@ private:
     void addThisVar(const Type& type);
 
     StatementBinder binder;
+    ArgList arguments;
     mutable const SubroutineSymbol* overrides = nullptr;
 };
 
@@ -113,7 +118,6 @@ struct ModportSubroutinePortSyntax;
 class MethodPrototypeSymbol : public Symbol, public Scope {
 public:
     DeclaredType declaredReturnType;
-    span<const FormalArgumentSymbol* const> arguments;
     SubroutineKind subroutineKind;
     Visibility visibility;
     bitmask<MethodFlags> flags;
@@ -122,6 +126,7 @@ public:
                           SubroutineKind subroutineKind, Visibility visibility,
                           bitmask<MethodFlags> flags);
 
+    span<const FormalArgumentSymbol* const> getArguments() const { return arguments; }
     const Type& getReturnType() const { return declaredReturnType.getType(); }
     const SubroutineSymbol* getSubroutine() const;
 
@@ -144,6 +149,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::MethodPrototype; }
 
 private:
+    span<const FormalArgumentSymbol* const> arguments;
     mutable optional<const SubroutineSymbol*> subroutine;
     mutable const Symbol* overrides = nullptr;
 };

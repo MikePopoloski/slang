@@ -829,7 +829,7 @@ endmodule
     CHECK(foo.getReturnType().getBitWidth() == 16);
     CHECK(foo.name == "foo");
 
-    auto args = foo.arguments;
+    auto args = foo.getArguments();
     REQUIRE(args.size() == 5);
     CHECK(args[0]->getType().getBitWidth() == 1);
     CHECK(args[0]->direction == ArgumentDirection::In);

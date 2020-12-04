@@ -346,7 +346,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
     // If we have a base class constructor and nothing called it, make sure
     // it has no arguments or all of the arguments have default values.
     if (baseConstructor && !baseConstructorCall) {
-        for (auto arg : baseConstructor->as<SubroutineSymbol>().arguments) {
+        for (auto arg : baseConstructor->as<SubroutineSymbol>().getArguments()) {
             if (!arg->getInitializer()) {
                 auto& diag =
                     context.addDiag(diag::BaseConstructorNotCalled, extendsClause.sourceRange());

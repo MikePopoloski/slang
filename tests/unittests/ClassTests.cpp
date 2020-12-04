@@ -632,7 +632,7 @@ endfunction
 
     auto& C = compilation.getRoot().compilationUnits[0]->lookupName<ClassType>("C");
     auto& f1 = C.find<SubroutineSymbol>("f1");
-    auto init = f1.arguments[0]->getInitializer();
+    auto init = f1.getArguments()[0]->getInitializer();
     REQUIRE(init);
 
     EvalContext ctx(compilation);

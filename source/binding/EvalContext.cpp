@@ -12,8 +12,8 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/symbols/SubroutineSymbols.h"
-#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/types/Type.h"
 
 namespace slang {
 
@@ -141,12 +141,12 @@ static void reportFrame(const EvalContext& context, Diagnostic& diag,
     FormatBuffer buffer;
     buffer.format("{}(", frame.subroutine->name);
 
-    for (auto arg : frame.subroutine->arguments) {
+    for (auto arg : frame.subroutine->getArguments()) {
         auto it = frame.temporaries.find(arg);
         ASSERT(it != frame.temporaries.end());
 
         buffer.append(it->second.toString());
-        if (arg != frame.subroutine->arguments.last(1)[0])
+        if (arg != frame.subroutine->getArguments().last(1)[0])
             buffer.append(", ");
     }
 
