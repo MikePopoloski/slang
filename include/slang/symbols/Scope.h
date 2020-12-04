@@ -193,6 +193,10 @@ public:
         return { firstMember, nullptr };
     }
 
+    /// Gets a pointer to the first member in the scope. Note that this does not
+    /// force elaboration of the scope.
+    const Symbol* getFirstMember() const { return firstMember; }
+
     /// Gets a pointer to the last member in the scope. Note that this does not
     /// force elaboration of the scope.
     const Symbol* getLastMember() const { return lastMember; }

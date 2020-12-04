@@ -176,6 +176,9 @@ public:
     /// various factory functions.
     void setSyntax(const SyntaxNode& node) { originatingSyntax = &node; }
 
+    /// Returns the next sibling symbol in the parent scope, if one exists.
+    const Symbol* getNextSibling() const { return nextInScope; }
+
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor&& visitor, Args&&... args) const;
 

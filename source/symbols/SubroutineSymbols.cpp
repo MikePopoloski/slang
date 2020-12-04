@@ -9,7 +9,6 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
-#include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
@@ -78,50 +77,6 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     if (proto->portList)
         buildArguments(*result, *proto->portList, *lifetime, arguments);
 
-    // Subroutines can also declare arguments inside their bodies as port declarations.
-    // Let's go looking for them. They're required to be declared before any other statements.
-    bool portListError = false;
-    for (auto item : syntax.items) {
-        if (StatementSyntax::isKind(item->kind))
-            break;
-
-        if (item->kind != SyntaxKind::PortDeclaration)
-            continue;
-
-        auto& portDecl = item->as<PortDeclarationSyntax>();
-        if (portDecl.header->kind != SyntaxKind::VariablePortHeader) {
-            parent.addDiag(diag::ExpectedFunctionPort, portDecl.header->sourceRange());
-            continue;
-        }
-
-        if (!portListError && proto->portList) {
-            auto& diag = parent.addDiag(diag::MixingSubroutinePortKinds, portDecl.sourceRange());
-            diag.addNote(diag::NoteDeclarationHere, proto->portList->getFirstToken().location());
-            portListError = true;
-        }
-
-        auto& header = portDecl.header->as<VariablePortHeaderSyntax>();
-        ArgumentDirection direction = SemanticFacts::getDirection(header.direction.kind);
-
-        bool isConst = false;
-        if (header.constKeyword) {
-            ASSERT(direction == ArgumentDirection::Ref);
-            isConst = true;
-        }
-
-        for (auto declarator : portDecl.declarators) {
-            auto arg = compilation.emplace<FormalArgumentSymbol>(
-                declarator->name.valueText(), declarator->name.location(), direction, *lifetime);
-            arg->isConstant = isConst;
-            arg->setDeclaredType(*header.dataType);
-            arg->setFromDeclarator(*declarator);
-            arg->setAttributes(*result, syntax.attributes);
-
-            result->addMember(*arg);
-            arguments.append(arg);
-        }
-    }
-
     // The function gets an implicit variable inserted that represents the return value.
     if (subroutineKind == SubroutineKind::Function) {
         auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location,
@@ -136,8 +91,33 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         result->declaredReturnType.setType(compilation.getVoidType());
     }
 
-    result->arguments = arguments.copy(compilation);
+    // Set statement body and collect all declared local variables.
+    const Symbol* last = result->getLastMember();
     result->binder.setItems(*result, syntax.items, syntax.sourceRange(), /* inLoop */ false);
+
+    // Subroutines can also declare arguments inside their bodies as port declarations.
+    // Find them by walking through members that were added by setItems().
+    if (!last)
+        last = result->getFirstMember();
+    else
+        last = last->getNextSibling();
+
+    bool portListError = false;
+    while (last) {
+        if (last->kind == SymbolKind::FormalArgument) {
+            if (!portListError && proto->portList) {
+                auto& diag = parent.addDiag(diag::MixingSubroutinePortKinds, last->location);
+                diag.addNote(diag::NoteDeclarationHere,
+                             proto->portList->getFirstToken().location());
+                portListError = true;
+            }
+
+            arguments.append(&last->as<FormalArgumentSymbol>());
+        }
+        last = last->getNextSibling();
+    }
+
+    result->arguments = arguments.copy(compilation);
     return result;
 }
 

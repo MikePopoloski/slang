@@ -63,6 +63,8 @@ protected:
         lifetime(lifetime) {}
 };
 
+struct PortDeclarationSyntax;
+
 /// Represents a formal argument in subroutine (task or function).
 class FormalArgumentSymbol : public VariableSymbol {
 public:
@@ -72,6 +74,9 @@ public:
                          VariableLifetime lifetime);
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    static void fromSyntax(const Scope& scope, const PortDeclarationSyntax& syntax,
+                           SmallVector<const FormalArgumentSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::FormalArgument; }
 };

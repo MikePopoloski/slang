@@ -458,9 +458,16 @@ void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items
                 scope.addMembers(*item);
                 break;
             case SyntaxKind::PortDeclaration:
-                // These get handled in subroutine symbol creation.
-                // TODO: make sure we error if there are port declarations that aren't
-                // inside a subroutine.
+                if (scope.asSymbol().kind == SymbolKind::Subroutine) {
+                    SmallVectorSized<const FormalArgumentSymbol*, 8> args;
+                    FormalArgumentSymbol::fromSyntax(scope, item->as<PortDeclarationSyntax>(),
+                                                     args);
+                    for (auto arg : args)
+                        scope.addMember(*arg);
+                }
+                else {
+                    scope.addDiag(diag::UnexpectedPortDecl, item->sourceRange());
+                }
                 break;
             case SyntaxKind::LetDeclaration:
             case SyntaxKind::NetTypeDeclaration:

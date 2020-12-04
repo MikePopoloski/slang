@@ -1006,3 +1006,27 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Unexpected port decls") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        input i;
+    end
+
+    function void bar;
+        begin
+            input k;
+        end
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnexpectedPortDecl);
+    CHECK(diags[1].code == diag::UnexpectedPortDecl);
+}

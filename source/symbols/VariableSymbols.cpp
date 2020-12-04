@@ -10,6 +10,7 @@
 #include "slang/binding/TimingControl.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/Scope.h"
 #include "slang/syntax/AllSyntax.h"
@@ -166,6 +167,35 @@ FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation loc,
                                            ArgumentDirection direction, VariableLifetime lifetime) :
     VariableSymbol(SymbolKind::FormalArgument, name, loc, lifetime),
     direction(direction) {
+}
+
+void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationSyntax& syntax,
+                                      SmallVector<const FormalArgumentSymbol*>& results) {
+    if (syntax.header->kind != SyntaxKind::VariablePortHeader) {
+        scope.addDiag(diag::ExpectedFunctionPort, syntax.header->sourceRange());
+        return;
+    }
+
+    auto& comp = scope.getCompilation();
+    auto& header = syntax.header->as<VariablePortHeaderSyntax>();
+    ArgumentDirection direction = SemanticFacts::getDirection(header.direction.kind);
+    VariableLifetime lifetime = scope.getDefaultLifetime();
+
+    bool isConst = false;
+    if (header.constKeyword) {
+        ASSERT(direction == ArgumentDirection::Ref);
+        isConst = true;
+    }
+
+    for (auto declarator : syntax.declarators) {
+        auto arg = comp.emplace<FormalArgumentSymbol>(
+            declarator->name.valueText(), declarator->name.location(), direction, lifetime);
+        arg->isConstant = isConst;
+        arg->setDeclaredType(*header.dataType);
+        arg->setFromDeclarator(*declarator);
+        arg->setAttributes(scope, syntax.attributes);
+        results.append(arg);
+    }
 }
 
 void FormalArgumentSymbol::serializeTo(ASTSerializer& serializer) const {
