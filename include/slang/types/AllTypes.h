@@ -7,8 +7,8 @@
 #pragma once
 
 #include "slang/symbols/Scope.h"
-#include "slang/types/Type.h"
 #include "slang/symbols/ValueSymbol.h"
+#include "slang/types/Type.h"
 
 namespace slang {
 
@@ -37,7 +37,7 @@ public:
     bool isDeclaredReg() const;
 
     static const Type& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope, bool forceSigned);
+                                  LookupLocation location, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, SyntaxKind integerKind,
                                   span<const VariableDimensionSyntax* const> dimensions,
@@ -102,7 +102,7 @@ public:
              LookupLocation lookupLocation, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope, bool forceSigned,
+                                  LookupLocation location, const Scope& scope,
                                   const Type* typedefTarget);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
@@ -212,7 +212,7 @@ public:
                      SourceLocation loc, LookupLocation lookupLocation, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope, bool forceSigned);
+                                  LookupLocation location, const Scope& scope);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedStructType; }
 };
@@ -242,7 +242,7 @@ public:
                     SourceLocation loc, LookupLocation lookupLocation, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope, bool forceSigned);
+                                  LookupLocation location, const Scope& scope);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedUnionType; }
 };

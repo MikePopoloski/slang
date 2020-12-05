@@ -750,14 +750,14 @@ const Type* Type::getCommonBase(const Type& left, const Type& right) {
 }
 
 const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node,
-                             LookupLocation location, const Scope& parent, bool forceSigned,
+                             LookupLocation location, const Scope& parent,
                              const Type* typedefTarget) {
     switch (node.kind) {
         case SyntaxKind::BitType:
         case SyntaxKind::LogicType:
         case SyntaxKind::RegType:
             return IntegralType::fromSyntax(compilation, node.as<IntegerTypeSyntax>(), location,
-                                            parent, forceSigned);
+                                            parent);
         case SyntaxKind::ByteType:
         case SyntaxKind::ShortIntType:
         case SyntaxKind::IntType:
@@ -788,19 +788,17 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
             return compilation.getType(node.kind);
         case SyntaxKind::EnumType:
             return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), location, parent,
-                                        forceSigned, typedefTarget);
+                                        typedefTarget);
         case SyntaxKind::StructType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
             return structUnion.packed
-                       ? PackedStructType::fromSyntax(compilation, structUnion, location, parent,
-                                                      forceSigned)
+                       ? PackedStructType::fromSyntax(compilation, structUnion, location, parent)
                        : UnpackedStructType::fromSyntax(parent, location, structUnion);
         }
         case SyntaxKind::UnionType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
             return structUnion.packed
-                       ? PackedUnionType::fromSyntax(compilation, structUnion, location, parent,
-                                                     forceSigned)
+                       ? PackedUnionType::fromSyntax(compilation, structUnion, location, parent)
                        : UnpackedUnionType::fromSyntax(parent, location, structUnion);
         }
         case SyntaxKind::NamedType:
@@ -808,9 +806,9 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                                    typedefTarget != nullptr);
         case SyntaxKind::ImplicitType: {
             auto& implicit = node.as<ImplicitTypeSyntax>();
-            return IntegralType::fromSyntax(
-                compilation, SyntaxKind::LogicType, implicit.dimensions,
-                implicit.signing.kind == TokenKind::SignedKeyword || forceSigned, location, parent);
+            return IntegralType::fromSyntax(compilation, SyntaxKind::LogicType, implicit.dimensions,
+                                            implicit.signing.kind == TokenKind::SignedKeyword,
+                                            location, parent);
         }
         case SyntaxKind::TypeReference: {
             BindContext context(parent, location, BindFlags::NoHierarchicalNames);

@@ -16,28 +16,31 @@ class Expression;
 class Scope;
 class Symbol;
 class Type;
+class ValueSymbol;
+
 struct DataTypeSyntax;
-struct ExpressionSyntax;
 struct DeclaratorSyntax;
+struct ExpressionSyntax;
+struct ImplicitTypeSyntax;
 struct VariableDimensionSyntax;
 
 enum class DeclaredTypeFlags {
     None = 0,
     InferImplicit = 1 << 0,
     RequireConstant = 1 << 1,
-    ForceSigned = 1 << 2,
-    LookupMax = 1 << 3,
-    InProceduralContext = 1 << 4,
-    AutomaticInitializer = 1 << 5,
-    ForeachVar = 1 << 6,
-    Port = 1 << 7,
-    TypedefTarget = 1 << 8,
-    NetType = 1 << 9,
-    UserDefinedNetType = 1 << 10,
+    LookupMax = 1 << 2,
+    InProceduralContext = 1 << 3,
+    AutomaticInitializer = 1 << 4,
+    ForeachVar = 1 << 5,
+    Port = 1 << 6,
+    TypedefTarget = 1 << 7,
+    NetType = 1 << 8,
+    UserDefinedNetType = 1 << 9,
+    FormalArgMergeVar = 1 << 10,
 
-    NeedsTypeCheck = Port | NetType | UserDefinedNetType
+    NeedsTypeCheck = Port | NetType | UserDefinedNetType | FormalArgMergeVar
 };
-BITMASK(DeclaredTypeFlags, UserDefinedNetType);
+BITMASK(DeclaredTypeFlags, FormalArgMergeVar);
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type.
@@ -78,12 +81,13 @@ public:
     bool isEvaluating() const { return evaluating; }
     bool hasInitializer() const { return initializer != nullptr; }
 
-    void setForceSigned() {
+    void addFlags(bitmask<DeclaredTypeFlags> toAdd) {
         type = nullptr;
-        flags |= DeclaredTypeFlags::ForceSigned;
+        flags |= toAdd;
     }
 
-    void addFlags(bitmask<DeclaredTypeFlags> toAdd) { flags |= toAdd; }
+    void mergeImplicitPort(const ImplicitTypeSyntax& implicit, SourceLocation location,
+                           span<const VariableDimensionSyntax* const> unpackedDimensions);
 
     void copyTypeFrom(const DeclaredType& source);
 
@@ -94,6 +98,9 @@ private:
     void resolveType(const BindContext& initializerContext) const;
     const Type* resolveForeachVar(const BindContext& context) const;
     void checkType(const BindContext& context) const;
+    void mergePortTypes(const BindContext& context, const ValueSymbol& sourceSymbol,
+                        const ImplicitTypeSyntax& implicit, SourceLocation location,
+                        span<const VariableDimensionSyntax* const> unpackedDimensions) const;
 
     template<typename T = BindContext> // templated to avoid having to include BindContext.h
     T getBindContext() const;

@@ -189,11 +189,9 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind intege
 }
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                     LookupLocation location, const Scope& scope,
-                                     bool forceSigned) {
+                                     LookupLocation location, const Scope& scope) {
     return fromSyntax(compilation, syntax.kind, syntax.dimensions,
-                      syntax.signing.kind == TokenKind::SignedKeyword || forceSigned, location,
-                      scope);
+                      syntax.signing.kind == TokenKind::SignedKeyword, location, scope);
 }
 
 ConstantValue IntegralType::getDefaultValueImpl() const {
@@ -253,7 +251,7 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const Type& bas
 }
 
 const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                 LookupLocation location, const Scope& scope, bool forceSigned,
+                                 LookupLocation location, const Scope& scope,
                                  const Type* typedefTarget) {
     const Type* base;
     const Type* cb;
@@ -266,7 +264,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         bitWidth = cb->getBitWidth();
     }
     else {
-        base = &compilation.getType(*syntax.baseType, location, scope, forceSigned);
+        base = &compilation.getType(*syntax.baseType, location, scope);
         cb = &base->getCanonicalType();
         if (!cb->isError() && !cb->isSimpleBitVector()) {
             scope.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
@@ -619,10 +617,9 @@ PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth
 
 const Type& PackedStructType::fromSyntax(Compilation& compilation,
                                          const StructUnionTypeSyntax& syntax,
-                                         LookupLocation location, const Scope& scope,
-                                         bool forceSigned) {
+                                         LookupLocation location, const Scope& scope) {
     ASSERT(syntax.packed);
-    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword || forceSigned;
+    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool isFourState = false;
     bool issuedError = false;
     bitwidth_t bitWidth = 0;
@@ -751,10 +748,9 @@ PackedUnionType::PackedUnionType(Compilation& compilation, bitwidth_t bitWidth, 
 
 const Type& PackedUnionType::fromSyntax(Compilation& compilation,
                                         const StructUnionTypeSyntax& syntax,
-                                        LookupLocation location, const Scope& scope,
-                                        bool forceSigned) {
+                                        LookupLocation location, const Scope& scope) {
     ASSERT(syntax.packed);
-    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword || forceSigned;
+    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool isFourState = false;
     bool issuedError = false;
     bitwidth_t bitWidth = 0;

@@ -12,6 +12,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
@@ -196,6 +197,28 @@ void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationS
         arg->setAttributes(scope, syntax.attributes);
         results.append(arg);
     }
+}
+
+bool FormalArgumentSymbol::mergeVariable(const VariableSymbol& variable) {
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    ASSERT(scope && syntax && syntax->parent);
+    if (syntax->parent->kind != SyntaxKind::PortDeclaration)
+        return false;
+
+    auto& portDecl = syntax->parent->as<PortDeclarationSyntax>();
+    auto& header = portDecl.header->as<VariablePortHeaderSyntax>();
+
+    // If the port has a type declared this is already a full definition and
+    // we shouldn't merge with any other variables (the caller will error for us).
+    if (header.varKeyword || header.dataType->kind != SyntaxKind::ImplicitType)
+        return false;
+
+    // Save this variable reference; our DeclaredType will look into it later
+    // when our type is fully resolved to merge in the variable's type info.
+    getDeclaredType()->addFlags(DeclaredTypeFlags::FormalArgMergeVar);
+    mergedVar = &variable;
+    return true;
 }
 
 void FormalArgumentSymbol::serializeTo(ASTSerializer& serializer) const {

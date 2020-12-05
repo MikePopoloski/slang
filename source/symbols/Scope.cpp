@@ -11,18 +11,18 @@
 #include "slang/compilation/Definition.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/InstanceSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
-#include "slang/types/NetType.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/PortSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/AllTypes.h"
+#include "slang/types/NetType.h"
 #include "slang/util/StackContainer.h"
 
 namespace {
@@ -511,6 +511,32 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
             if (gen2.isInstantiated)
                 existing = &member;
             return;
+        }
+    }
+
+    // A formal argument (port) and its associated variable declaration get merged into one.
+    // This is a pretty gross "feature" but oh well.
+    if ((existing->kind == SymbolKind::FormalArgument || existing->kind == SymbolKind::Variable) &&
+        (member.kind == SymbolKind::FormalArgument || member.kind == SymbolKind::Variable) &&
+        member.kind != existing->kind) {
+
+        // The lookup index should be whichever symbol is earlier.
+        uint32_t index = std::min(uint32_t(existing->getIndex()), uint32_t(member.getIndex()));
+
+        if (existing->kind == SymbolKind::FormalArgument) {
+            if (const_cast<FormalArgumentSymbol&>(existing->as<FormalArgumentSymbol>())
+                    .mergeVariable(member.as<VariableSymbol>())) {
+                const_cast<Symbol*>(existing)->setIndex(SymbolIndex(index));
+                return;
+            }
+        }
+        else {
+            if (const_cast<FormalArgumentSymbol&>(member.as<FormalArgumentSymbol>())
+                    .mergeVariable(existing->as<VariableSymbol>())) {
+                const_cast<Symbol*>(existing)->setIndex(SymbolIndex(index));
+                existing = &member;
+                return;
+            }
         }
     }
 

@@ -252,7 +252,7 @@ public:
     static const Type* getCommonBase(const Type& left, const Type& right);
 
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
-                                  LookupLocation location, const Scope& scope, bool forceSigned,
+                                  LookupLocation location, const Scope& scope,
                                   const Type* typedefTarget);
 
     static const Type& fromSyntax(Compilation& compilation, const Type& elementType,

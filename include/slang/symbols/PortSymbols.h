@@ -18,6 +18,7 @@ class Definition;
 class InstanceBodySymbol;
 class InstanceCacheKey;
 
+struct ImplicitTypeSyntax;
 struct PortDeclarationSyntax;
 struct PortListSyntax;
 

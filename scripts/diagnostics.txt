@@ -209,7 +209,7 @@ error DirectionWithInterfacePort "port direction not allowed on an interface por
 error InOutPortCannotBeVariable "variable port '{}' cannot have direction inout"
 error RefPortMustBeVariable "ref port '{}' cannot be of net type"
 error MissingPortIODeclaration "port '{}' has no I/O member declaration"
-error CantDeclarePortSigned "port '{}' cannot be declared signed because its type {} is not integral"
+error CantDeclarePortSigned "'{}' cannot be declared '{}' because its type {} is not integral"
 error PortDeclDimensionsMismatch "dimensions of port '{}' do not match its declaration"
 error PortDeclInANSIModule "can't use port declaration in module with ANSI style port list"
 error UnusedPortDecl "port declaration '{}' does not match any port in the module's port list"
@@ -287,6 +287,7 @@ warning unconnected-unnamed-port UnconnectedUnnamedPort "instance does not provi
 warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed because `default_nettype is set to 'none'"
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
 warning empty-member EmptyMember "extra ';' has no effect"
+warning ineffective-sign SignednessNoEffect "'{}' on I/O declaration has no effect on type {}"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"

@@ -414,18 +414,20 @@ private:
                 else if (auto symbol = scope.find(name);
                          symbol && (symbol->kind == SymbolKind::Variable ||
                                     symbol->kind == SymbolKind::Net)) {
-
-                    // Port kind and type come from the matching symbol
+                    // Port kind and type come from the matching symbol. Unfortunately
+                    // that means we need to merge our own type info with whatever is
+                    // declared for that symbol, so we need this ugly const_cast here.
                     info.internalSymbol = symbol;
-                    mergePortTypes(symbol->as<ValueSymbol>(),
-                                   varHeader.dataType->as<ImplicitTypeSyntax>(), declLoc, scope,
-                                   decl.dimensions);
+                    ValueSymbol& val = const_cast<ValueSymbol&>(symbol->as<ValueSymbol>());
 
                     // If the I/O declaration is located prior to the symbol, we should update
                     // its index so that lookups in between will resolve correctly.
                     uint32_t ioIndex = insertionPoint ? uint32_t(insertionPoint->getIndex()) : 1;
                     if (uint32_t(symbol->getIndex()) > ioIndex)
-                        const_cast<Symbol*>(symbol)->setIndex(SymbolIndex(ioIndex));
+                        val.setIndex(SymbolIndex(ioIndex));
+
+                    val.getDeclaredType()->mergeImplicitPort(
+                        varHeader.dataType->as<ImplicitTypeSyntax>(), declLoc, decl.dimensions);
                 }
                 else {
                     // No symbol and no data type defaults to a basic net.
@@ -473,43 +475,6 @@ private:
         symbol.setAttributes(scope, info.attrs);
         implicitMembers.emplace(&symbol, insertionPoint);
         info.internalSymbol = &symbol;
-    }
-
-    static void mergePortTypes(const ValueSymbol& symbol, const ImplicitTypeSyntax& implicit,
-                               SourceLocation location, const Scope& scope,
-                               span<const VariableDimensionSyntax* const> unpackedDimensions) {
-        // There's this really terrible "feature" where the port declaration can influence the type
-        // of the actual symbol somewhere else in the tree. This is ugly but should be safe since
-        // nobody else can look at that symbol's type until we've gone through elaboration.
-
-        if (implicit.signing) {
-            // Drill past any unpacked arrays to figure out if this thing is even integral.
-            const Type* type = &symbol.getType();
-            while (type->isUnpackedArray())
-                type = type->getArrayElementType();
-
-            if (!type->isIntegral()) {
-                auto& diag = scope.addDiag(diag::CantDeclarePortSigned, location);
-                diag << symbol.name << *type;
-            }
-            else if (implicit.signing.kind == TokenKind::SignedKeyword && !type->isSigned()) {
-                // Yeah, this is ugly.
-                const_cast<DeclaredType&>(*symbol.getDeclaredType()).setForceSigned();
-
-                // Verify that the sign flag had an effect; it's not always possible to force it.
-                type = &symbol.getType();
-                while (type->isUnpackedArray())
-                    type = type->getArrayElementType();
-
-                if (!type->isSigned()) {
-                    // TODO: error
-                }
-            }
-        }
-
-        if (!implicit.dimensions.empty() || !unpackedDimensions.empty()) {
-            // TODO: check dimensions
-        }
     }
 };
 

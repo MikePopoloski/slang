@@ -73,12 +73,18 @@ public:
     FormalArgumentSymbol(string_view name, SourceLocation loc, ArgumentDirection direction,
                          VariableLifetime lifetime);
 
+    bool mergeVariable(const VariableSymbol& variable);
+    const VariableSymbol* getMergedVariable() const { return mergedVar; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(const Scope& scope, const PortDeclarationSyntax& syntax,
                            SmallVector<const FormalArgumentSymbol*>& results);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::FormalArgument; }
+
+private:
+    const VariableSymbol* mergedVar = nullptr;
 };
 
 /// Represents a field member of a struct or union.

@@ -219,10 +219,10 @@ endmodule
     checkPort("test", "f", Ref, wire, "logic");
 
     checkPort("test", "g", In, nullptr, "logic");
-    checkPort("test", "h", In, nullptr, "struct{logic f;}test.s$2");
+    checkPort("test", "h", In, nullptr, "struct{logic f;}test.s$1");
     checkPort("test", "i", Out, wire, "logic[2:0]");
     checkPort("test", "j", Out, wire, "logic");
-    checkPort("test", "k", In, nullptr, "struct{logic f;}test.s$1");
+    checkPort("test", "k", In, nullptr, "struct{logic f;}test.s$2");
     checkPort("test", "l", In, nullptr, "logic[1:0]$[0:1]");
     checkPort("test", "m", In, nullptr, "logic[2:0]");
     checkPort("test", "n", In, nullptr, "logic$[0:2]");

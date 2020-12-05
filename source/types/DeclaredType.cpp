@@ -46,6 +46,13 @@ void DeclaredType::copyTypeFrom(const DeclaredType& source) {
     type = source.type;
 }
 
+void DeclaredType::mergeImplicitPort(
+    const ImplicitTypeSyntax& implicit, SourceLocation location,
+    span<const VariableDimensionSyntax* const> unpackedDimensions) {
+    mergePortTypes(getBindContext(), parent.as<ValueSymbol>(), implicit, location,
+                   unpackedDimensions);
+}
+
 const Scope& DeclaredType::getScope() const {
     const Scope* scope = parent.getParentScope();
     ASSERT(scope);
@@ -71,6 +78,8 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
     evaluating = true;
     auto guard = ScopeGuard([this] { evaluating = false; });
 
+    // If we are configured to infer implicit types, bind the initializer expression
+    // first so that we can derive our type from whatever that happens to be.
     if (typeSyntax->kind == SyntaxKind::ImplicitType &&
         (flags & DeclaredTypeFlags::InferImplicit) != 0) {
         if (dimensions) {
@@ -84,24 +93,20 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
             initializer = &Expression::bindImplicitParam(*typeSyntax, *initializerSyntax,
                                                          initializerLocation, initializerContext);
             type = initializer->type;
-
-            if (flags.has(DeclaredTypeFlags::NeedsTypeCheck))
-                checkType(initializerContext);
         }
-        return;
+    }
+    else {
+        const Type* typedefTarget = nullptr;
+        if (flags.has(DeclaredTypeFlags::TypedefTarget))
+            typedefTarget = &parent.as<Type>();
+
+        BindContext typeContext = getBindContext();
+        type = &comp.getType(*typeSyntax, typeContext.lookupLocation, scope, typedefTarget);
+        if (dimensions)
+            type = &comp.getType(*type, *dimensions, typeContext.lookupLocation, scope);
     }
 
-    const Type* typedefTarget = nullptr;
-    if (flags.has(DeclaredTypeFlags::TypedefTarget))
-        typedefTarget = &parent.as<Type>();
-
-    BindContext typeContext = getBindContext();
-    type = &comp.getType(*typeSyntax, typeContext.lookupLocation, scope,
-                         flags.has(DeclaredTypeFlags::ForceSigned), typedefTarget);
-    if (dimensions)
-        type = &comp.getType(*type, *dimensions, typeContext.lookupLocation, scope);
-
-    if (flags.has(DeclaredTypeFlags::NeedsTypeCheck))
+    if (flags.has(DeclaredTypeFlags::NeedsTypeCheck) && !type->isError())
         checkType(initializerContext);
 }
 
@@ -207,18 +212,114 @@ void DeclaredType::checkType(const BindContext& context) const {
     }
     else if (flags.has(DeclaredTypeFlags::NetType)) {
         auto& net = parent.as<NetSymbol>();
-        if (!type->isError() && net.netType.netKind != NetType::UserDefined &&
-            !isValidForNet(*type)) {
+        if (net.netType.netKind != NetType::UserDefined && !isValidForNet(*type))
             context.addDiag(diag::InvalidNetType, parent.location) << *type;
-        }
-        else if (type->getBitWidth() == 1 && net.expansionHint != NetSymbol::None) {
+        else if (type->getBitWidth() == 1 && net.expansionHint != NetSymbol::None)
             context.addDiag(diag::SingleBitVectored, parent.location);
-        }
     }
     else if (flags.has(DeclaredTypeFlags::UserDefinedNetType)) {
-        if (!type->isError() && !isValidForUserDefinedNet(*type))
+        if (!isValidForUserDefinedNet(*type))
             context.addDiag(diag::InvalidUserDefinedNetType, parent.location) << *type;
     }
+    else if (flags.has(DeclaredTypeFlags::FormalArgMergeVar)) {
+        if (auto var = parent.as<FormalArgumentSymbol>().getMergedVariable()) {
+            ASSERT(typeSyntax);
+            mergePortTypes(context, *var, typeSyntax->as<ImplicitTypeSyntax>(), parent.location,
+                           dimensions ? *dimensions : span<const VariableDimensionSyntax* const>{});
+        }
+    }
+}
+
+static const Type* makeSigned(Compilation& compilation, const Type& type) {
+    // This deliberately does not look at the canonical type; type aliases
+    // are not convertible to a different signedness.
+    SmallVectorSized<ConstantRange, 4> dims;
+    const Type* curr = &type;
+    while (curr->kind == SymbolKind::PackedArrayType) {
+        dims.append(curr->getFixedRange());
+        curr = curr->getArrayElementType();
+    }
+
+    if (curr->kind != SymbolKind::ScalarType)
+        return &type;
+
+    auto flags = curr->getIntegralFlags() | IntegralFlags::Signed;
+    if (dims.size() == 1)
+        return &compilation.getType(type.getBitWidth(), flags);
+
+    curr = &compilation.getScalarType(flags);
+    size_t count = dims.size();
+    for (size_t i = 0; i < count; i++)
+        curr = compilation.emplace<PackedArrayType>(*curr, dims[count - i - 1]);
+
+    return curr;
+}
+
+void DeclaredType::mergePortTypes(
+    const BindContext& context, const ValueSymbol& sourceSymbol, const ImplicitTypeSyntax& implicit,
+    SourceLocation location, span<const VariableDimensionSyntax* const> unpackedDimensions) const {
+
+    // There's this really terrible "feature" where the port declaration can influence the type
+    // of the actual symbol somewhere else in the tree. This is ugly but should be safe since
+    // nobody else can look at that symbol's type until we've gone through elaboration.
+    //
+    // In this context, the sourceSymbol is the actual variable declaration with, presumably,
+    // a full type declared. The implicit syntax is from the port I/O declaration, which needs
+    // to be merged. For example:
+    //
+    //   input signed [1:0] foo;    // implicit + unpackedDimensions + location
+    //   logic foo;                 // sourceSymbol
+    const Type* destType = &sourceSymbol.getType();
+
+    if (implicit.signing) {
+        // Drill past any unpacked arrays to figure out if this thing is even integral.
+        SmallVectorSized<ConstantRange, 4> destDims;
+        const Type* sourceType = destType;
+        while (sourceType->getCanonicalType().kind == SymbolKind::FixedSizeUnpackedArrayType) {
+            destDims.append(sourceType->getFixedRange());
+            sourceType = sourceType->getArrayElementType();
+        }
+
+        if (sourceType->isError())
+            return;
+
+        if (!sourceType->isIntegral()) {
+            auto& diag = context.addDiag(diag::CantDeclarePortSigned, location);
+            diag << sourceSymbol.name << implicit.signing.valueText() << *destType;
+            diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
+            return;
+        }
+
+        auto warnSignedness = [&] {
+            auto& diag = context.addDiag(diag::SignednessNoEffect, implicit.signing.range());
+            diag << implicit.signing.valueText() << *destType;
+            diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
+        };
+
+        bool shouldBeSigned = implicit.signing.kind == TokenKind::SignedKeyword;
+        if (shouldBeSigned && !sourceType->isSigned()) {
+            sourceType = makeSigned(context.getCompilation(), *sourceType);
+            if (!sourceType->isSigned()) {
+                warnSignedness();
+            }
+            else {
+                // Put the unpacked dimensions back on the type now that it
+                // has been made signed.
+                destType = &FixedSizeUnpackedArrayType::fromDims(context.getCompilation(),
+                                                                 *sourceType, destDims);
+            }
+        }
+        else if (!shouldBeSigned && sourceType->isSigned()) {
+            warnSignedness();
+        }
+    }
+
+    if (!implicit.dimensions.empty() || !unpackedDimensions.empty()) {
+        // TODO: check dimensions
+    }
+
+    // We have the final merged type, store it in this declared type.
+    this->type = destType;
 }
 
 void DeclaredType::resolveAt(const BindContext& context) const {
