@@ -565,3 +565,29 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CastArgSingular);
 }
+
+TEST_CASE("Associative array non-const methods") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i[*];
+    int j[string];
+
+    int k;
+    string l;
+
+    initial begin
+        i.first(k);
+        k = j.last(l);
+        k = j.next(l);
+        k = j.prev(l);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssociativeWildcardNotAllowed);
+}

@@ -610,6 +610,9 @@ TEST_CASE("Associative array eval") {
     CHECK(session.eval("arr.size").integer() == 3);
     CHECK(session.eval("arr.num").integer() == 3);
 
+    CHECK(session.eval("arr.exists(\"bye\")").integer() == 1);
+    CHECK(session.eval("arr.exists(\"byebye\")").integer() == 0);
+
     CHECK(session.eval("arr.or").integer() == 31);
 
     session.eval("arr.delete(\"foo\")");

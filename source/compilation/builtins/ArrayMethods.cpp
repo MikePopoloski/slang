@@ -148,6 +148,89 @@ public:
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
+class AssocArrayExistsMethod : public SystemSubroutine {
+public:
+    AssocArrayExistsMethod() : SystemSubroutine("exists", SubroutineKind::Function) {}
+
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        // Argument type comes from the index type of the previous argument.
+        if (argIndex == 1) {
+            auto indexType = args[0]->type->getAssociativeIndexType();
+            if (indexType)
+                return Expression::bindArgument(*indexType, ArgumentDirection::In, syntax, context);
+        }
+
+        return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 1, 1))
+            return comp.getErrorType();
+
+        auto& type = *args[0]->type;
+        auto indexType = type.getAssociativeIndexType();
+        if (!indexType && !args[1]->type->isIntegral())
+            return badArg(context, *args[1]);
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+        auto array = args[0]->eval(context);
+        auto index = args[1]->eval(context);
+        if (!array || !index)
+            return nullptr;
+
+        bool exists = array.map()->count(index);
+        return SVInt(32, exists ? 1 : 0, true);
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+};
+
+class AssocArrayTraversalMethod : public SystemSubroutine {
+public:
+    explicit AssocArrayTraversalMethod(const std::string& name) :
+        SystemSubroutine(name, SubroutineKind::Function) {}
+
+    const Expression& bindArgument(size_t argIndex, const BindContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        // Argument type comes from the index type of the previous argument.
+        if (argIndex == 1) {
+            auto indexType = args[0]->type->getAssociativeIndexType();
+            if (indexType)
+                return Expression::bindArgument(*indexType, ArgumentDirection::Ref, syntax,
+                                                context);
+        }
+
+        return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args,
+                               SourceRange range) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 1, 1))
+            return comp.getErrorType();
+
+        auto& type = *args[0]->type;
+        auto indexType = type.getAssociativeIndexType();
+        if (!indexType) {
+            context.addDiag(diag::AssociativeWildcardNotAllowed, range) << name;
+            return context.getCompilation().getErrorType();
+        }
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
 class QueuePopMethod : public SystemSubroutine {
 public:
     QueuePopMethod(const std::string& name, bool front) :
@@ -365,6 +448,13 @@ void registerArrayMethods(Compilation& c) {
     REGISTER(SymbolKind::DynamicArrayType, DynArrayDelete, c);
     REGISTER(SymbolKind::AssociativeArrayType, AssocArrayDelete, );
     REGISTER(SymbolKind::QueueType, QueueDelete, );
+
+    // Associative array methods.
+    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayExists, );
+    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, "first");
+    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, "last");
+    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, "next");
+    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, "prev");
 
     // Queue methods
     REGISTER(SymbolKind::QueueType, QueuePop, "pop_front", true);
