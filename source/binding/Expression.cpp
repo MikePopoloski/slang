@@ -215,6 +215,11 @@ const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
                                          const BindContext& context) {
     Compilation& comp = context.scope.getCompilation();
     Expression& expr = selfDetermined(comp, rhs, context);
+    if (expr.bad())
+        return expr;
+
+    if (lhs.isError())
+        return badExpr(comp, &expr);
 
     if (!expr.canConnectToRefArg(isConstRef)) {
         // If we can't bind to ref but we can bind to 'const ref', issue a more
