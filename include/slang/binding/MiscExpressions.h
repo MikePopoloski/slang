@@ -25,6 +25,10 @@ public:
     static Expression& fromSymbol(const BindContext& context, const Symbol& symbol,
                                   bool isHierarchical, SourceRange sourceRange);
 
+    static bool isKind(ExpressionKind kind) {
+        return kind == ExpressionKind::NamedValue || kind == ExpressionKind::HierarchicalValue;
+    }
+
 protected:
     ValueExpressionBase(ExpressionKind kind, const ValueSymbol& symbol, SourceRange sourceRange) :
         Expression(kind, symbol.getType(), sourceRange), symbol(symbol) {}

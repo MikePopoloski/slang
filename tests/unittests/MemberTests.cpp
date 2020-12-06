@@ -1183,3 +1183,61 @@ endmodule
     CHECK(diags[3].code == diag::ConstEvalFunctionArgDirection);
     CHECK(diags[4].code == diag::ConstEvalFunctionInsideGenerate);
 }
+
+TEST_CASE("Subroutine ref arguments") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void foo;
+        ref int a;
+        const ref int b;
+        ref int c;
+    endfunction
+
+    class C;
+        int b;
+    endclass
+
+    int a;
+    const C c = new;
+    int d[3];
+    initial begin
+        foo(c.b, a, d[2]);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Subroutine ref argument errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function void foo;
+        ref int a;
+        const ref int b;
+        ref int c;
+        ref int d;
+    endfunction
+
+    const int a = 1;
+    localparam int b = 2;
+    logic [3:0] c;
+    
+    initial begin
+        foo(a, a + 2, b, c);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ConstVarToRef);
+    CHECK(diags[1].code == diag::InvalidRefArg);
+    CHECK(diags[2].code == diag::InvalidRefArg);
+    CHECK(diags[3].code == diag::RefTypeMismatch);
+}

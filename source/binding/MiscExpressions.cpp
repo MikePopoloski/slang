@@ -371,7 +371,8 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
             }
             else {
                 expr = &Expression::bindArgument(formal->getType(), formal->direction,
-                                                 arg->as<ExpressionSyntax>(), context);
+                                                 arg->as<ExpressionSyntax>(), context,
+                                                 formal->isConstant);
             }
 
             // Make sure there isn't also a named value for this argument.
@@ -399,8 +400,8 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
                 }
             }
             else {
-                expr =
-                    &Expression::bindArgument(formal->getType(), formal->direction, *arg, context);
+                expr = &Expression::bindArgument(formal->getType(), formal->direction, *arg,
+                                                 context, formal->isConstant);
             }
         }
         else {

@@ -150,10 +150,15 @@ public:
     static const Expression& bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                         SourceLocation location, const BindContext& context);
 
+    /// Binds a connection to a ref argument from the given syntax nodes.
+    static const Expression& bindRefArg(const Type& lhs, bool isConstRef,
+                                        const ExpressionSyntax& rhs, SourceLocation location,
+                                        const BindContext& context);
+
     /// Binds an argument or port connection with the given direction and syntax nodes.
     static const Expression& bindArgument(const Type& argType, ArgumentDirection direction,
                                           const ExpressionSyntax& syntax,
-                                          const BindContext& context);
+                                          const BindContext& context, bool isConstRef = false);
 
     /// Binds an initializer expression for an implicitly typed parameter.
     /// There are special inference rules for parameters.
@@ -226,6 +231,10 @@ public:
     /// will be issued.
     bool verifyAssignable(const BindContext& context, bool isNonBlocking = false,
                           SourceLocation location = {}) const;
+
+    /// Checks whether this kind of expression can be connected to a ref argument
+    /// for a subroutine or module port.
+    bool canConnectToRefArg(bool isConstRef, bool allowConstClassHandle = false) const;
 
     /// Returns true if this expression can be implicitly assigned to value
     /// of the given type.

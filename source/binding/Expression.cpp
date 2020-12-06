@@ -12,9 +12,9 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ASTVisitor.h"
-#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxVisitor.h"
+#include "slang/types/Type.h"
 
 namespace {
 
@@ -190,9 +190,11 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     selfDetermined(context, lhsExpr);
 
     SourceRange lhsRange = lhs.sourceRange();
-    return AssignmentExpression::fromComponents(comp, std::nullopt, /* nonBlocking */ false,
-                                                *lhsExpr, *rhsExpr, lhsRange.start(),
-                                                /* timingControl */ nullptr, lhsRange, context);
+    auto& result = AssignmentExpression::fromComponents(
+        comp, std::nullopt, /* nonBlocking */ false, *lhsExpr, *rhsExpr, lhsRange.start(),
+        /* timingControl */ nullptr, lhsRange, context);
+
+    return checkBindFlags(result, context);
 }
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
@@ -208,9 +210,35 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
     return checkBindFlags(result, context);
 }
 
+const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
+                                         const ExpressionSyntax& rhs, SourceLocation location,
+                                         const BindContext& context) {
+    Compilation& comp = context.scope.getCompilation();
+    Expression& expr = selfDetermined(comp, rhs, context);
+
+    if (!expr.canConnectToRefArg(isConstRef)) {
+        // If we can't bind to ref but we can bind to 'const ref', issue a more
+        // specific error about constness.
+        DiagCode code = diag::InvalidRefArg;
+        if (!isConstRef && expr.canConnectToRefArg(true))
+            code = diag::ConstVarToRef;
+
+        context.addDiag(code, location) << expr.sourceRange;
+        return badExpr(comp, &expr);
+    }
+
+    if (!lhs.isEquivalent(*expr.type)) {
+        auto& diag = context.addDiag(diag::RefTypeMismatch, location) << expr.sourceRange;
+        diag << *expr.type << lhs;
+        return badExpr(comp, &expr);
+    }
+
+    return checkBindFlags(expr, context);
+}
+
 const Expression& Expression::bindArgument(const Type& argType, ArgumentDirection direction,
                                            const ExpressionSyntax& syntax,
-                                           const BindContext& context) {
+                                           const BindContext& context, bool isConstRef) {
     auto loc = syntax.getFirstToken().location();
     switch (direction) {
         case ArgumentDirection::In:
@@ -220,8 +248,7 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
             // TODO: additional restrictions on inout
             return bindLValue(syntax, argType, loc, context, direction == ArgumentDirection::InOut);
         case ArgumentDirection::Ref:
-            // TODO: implement this
-            return badExpr(context.getCompilation(), nullptr);
+            return bindRefArg(argType, isConstRef, syntax, loc, context);
     }
     THROW_UNREACHABLE;
 }
@@ -354,6 +381,34 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
     auto& diag = context.addDiag(diag::ExpressionNotAssignable, location);
     diag << sourceRange;
     return false;
+}
+
+bool Expression::canConnectToRefArg(bool isConstRef, bool allowConstClassHandle) const {
+    auto canConnectSymbol = [&](const Symbol& sym) {
+        if (!VariableSymbol::isKind(sym.kind))
+            return false;
+
+        auto& var = sym.as<VariableSymbol>();
+        return isConstRef || !var.isConstant || (allowConstClassHandle && var.getType().isClass());
+    };
+
+    switch (kind) {
+        case ExpressionKind::NamedValue:
+        case ExpressionKind::HierarchicalValue:
+            return canConnectSymbol(as<ValueExpressionBase>().symbol);
+        case ExpressionKind::ElementSelect: {
+            auto& val = as<ElementSelectExpression>().value();
+            return val.type->isUnpackedArray() && val.canConnectToRefArg(isConstRef, false);
+        }
+        case ExpressionKind::MemberAccess: {
+            auto& access = as<MemberAccessExpression>();
+            auto& val = access.value();
+            return (val.type->isClass() || val.type->isUnpackedStruct()) &&
+                   val.canConnectToRefArg(isConstRef, true) && canConnectSymbol(access.member);
+        }
+        default:
+            return false;
+    }
 }
 
 optional<bitwidth_t> Expression::getEffectiveWidth() const {
