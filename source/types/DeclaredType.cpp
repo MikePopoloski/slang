@@ -314,12 +314,46 @@ void DeclaredType::mergePortTypes(
         }
     }
 
-    if (!implicit.dimensions.empty() || !unpackedDimensions.empty()) {
-        // TODO: check dimensions
-    }
-
-    // We have the final merged type, store it in this declared type.
+    // Our declared type takes on the merged type from the variable definition.
     this->type = destType;
+
+    auto errorDims = [&](auto& dims) {
+        auto& diag = context.addDiag(diag::PortDeclDimensionsMismatch, dims.sourceRange());
+        diag << sourceSymbol.name;
+        diag.addNote(diag::NoteDeclarationHere, sourceSymbol.location);
+    };
+
+    auto checkDims = [&](auto& dims, SymbolKind arrayKind, bool isPacked) {
+        if (!dims.empty()) {
+            auto it = dims.begin();
+            while (destType->getCanonicalType().kind == arrayKind) {
+                if (it == dims.end()) {
+                    errorDims(*dims.back());
+                    return;
+                }
+
+                auto dim = isPacked ? context.evalPackedDimension(**it)
+                                    : context.evalUnpackedDimension(**it);
+                if (!dim || destType->getFixedRange() != *dim) {
+                    errorDims(**it);
+                    return;
+                }
+
+                destType = destType->getArrayElementType();
+                it++;
+            }
+
+            if (it != dims.end()) {
+                errorDims(**it);
+                return;
+            }
+        }
+    };
+
+    // Unpacked dim checks have to come first because it unwraps the destType
+    // for the packed one to look at.
+    checkDims(unpackedDimensions, SymbolKind::FixedSizeUnpackedArrayType, false);
+    checkDims(implicit.dimensions, SymbolKind::PackedArrayType, true);
 }
 
 void DeclaredType::resolveAt(const BindContext& context) const {

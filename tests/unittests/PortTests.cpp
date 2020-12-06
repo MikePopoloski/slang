@@ -242,6 +242,7 @@ endmodule
     CHECK((it++)->code == diag::Redefinition);
     CHECK((it++)->code == diag::RedefinitionDifferentType);
     CHECK((it++)->code == diag::CantDeclarePortSigned);
+    CHECK((it++)->code == diag::PortDeclDimensionsMismatch);
     CHECK(it == diags.end());
 }
 

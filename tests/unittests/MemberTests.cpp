@@ -4,8 +4,8 @@
 #include "slang/compilation/Definition.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/AttributeSymbol.h"
-#include "slang/types/NetType.h"
 #include "slang/text/Json.h"
+#include "slang/types/NetType.h"
 
 TEST_CASE("Nets") {
     auto tree = SyntaxTree::fromText(R"(
@@ -645,6 +645,7 @@ module m;
         input i;
         output logic [1:0] baz;
         const ref int asdf;
+        logic [$bits(baz) - 2:0] i;
         baz[0] = i;
         foo = i;
     endfunction
@@ -659,6 +660,39 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Functions -- body params -- port merging") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef logic[31:0] foo_t;
+    function foo;
+        input unsigned a;
+        int a;
+        input signed b;
+        foo_t b[3];
+        ref c[1:3][4:2];
+        int c[1:3][1:1];
+        input d[1:2];
+        int d;
+        input e[1:2];
+        int e[1:2][3:4];
+        int e;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::SignednessNoEffect);
+    CHECK(diags[1].code == diag::SignednessNoEffect);
+    CHECK(diags[2].code == diag::PortDeclDimensionsMismatch);
+    CHECK(diags[3].code == diag::PortDeclDimensionsMismatch);
+    CHECK(diags[4].code == diag::PortDeclDimensionsMismatch);
+    CHECK(diags[5].code == diag::RedefinitionDifferentType);
 }
 
 TEST_CASE("Functions -- mixed param types") {

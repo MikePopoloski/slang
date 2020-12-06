@@ -200,6 +200,10 @@ void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationS
 }
 
 bool FormalArgumentSymbol::mergeVariable(const VariableSymbol& variable) {
+    // If we've already merged one variable already, we can't do any more.
+    if (mergedVar)
+        return false;
+
     auto scope = getParentScope();
     auto syntax = getSyntax();
     ASSERT(scope && syntax && syntax->parent);
