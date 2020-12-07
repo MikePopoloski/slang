@@ -99,6 +99,10 @@ void ExplicitImportSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.writeLink("import", *sym);
 }
 
+void WildcardImportSymbol::setPackage(const PackageSymbol& pkg) {
+    package = &pkg;
+}
+
 const PackageSymbol* WildcardImportSymbol::getPackage() const {
     if (!package) {
         const Scope* scope = getParentScope();

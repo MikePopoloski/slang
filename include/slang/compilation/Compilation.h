@@ -158,6 +158,9 @@ public:
     /// Gets the package with the give name, or null if there is no such package.
     const PackageSymbol* getPackage(string_view name) const;
 
+    /// Gets the built-in 'std' package.
+    const PackageSymbol& getStdPackage() const { return *stdPkg; }
+
     /// Creates a new package in the given scope based on the given syntax.
     const PackageSymbol& createPackage(const Scope& scope, const ModuleDeclarationSyntax& syntax);
 
@@ -491,6 +494,9 @@ private:
     // A set tracking all bind directives we've encountered during elaboration,
     // which is used to know when we've seen them all and can stop doing early scanning.
     flat_hash_set<const BindDirectiveSyntax*> seenBindDirectives;
+
+    // The built-in std package.
+    const PackageSymbol* stdPkg = nullptr;
 };
 
 } // namespace slang

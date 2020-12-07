@@ -262,6 +262,7 @@ void registerNonConstFuncs(Compilation&);
 void registerQueryFuncs(Compilation&);
 void registerStringMethods(Compilation&);
 void registerSystemTasks(Compilation&);
+const PackageSymbol& createStdPackage(Compilation&);
 
 } // namespace slang::Builtins
 
@@ -363,6 +364,10 @@ Compilation::Compilation(const Bag& options) :
     Builtins::registerStringMethods(*this);
     Builtins::registerSystemTasks(*this);
 
+    // Register the built-in std package.
+    stdPkg = &Builtins::createStdPackage(*this);
+    packageMap.emplace(stdPkg->name, stdPkg);
+
     // Set a default handler for printing types and symbol paths, for convenience.
     DiagnosticEngine::setDefaultFormatter<const Type*>(std::make_unique<TypeArgFormatter>());
     TextDiagnosticClient::setDefaultSymbolPathCB([](const Symbol& sym) {
@@ -370,6 +375,12 @@ Compilation::Compilation(const Bag& options) :
         sym.getHierarchicalPath(str);
         return str;
     });
+
+    // Reset systemId counters that may have been changed due to creation of types
+    // in the std package.
+    nextEnumSystemId = 1;
+    nextStructSystemId = 1;
+    nextUnionSystemId = 1;
 }
 
 Compilation::~Compilation() = default;

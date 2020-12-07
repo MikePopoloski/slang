@@ -845,7 +845,11 @@ void Scope::addWildcardImport(const PackageImportItemSyntax& item,
     import->setSyntax(item);
     import->setAttributes(*this, attributes);
     addMember(*import);
-    compilation.trackImport(importDataIndex, *import);
+    addWildcardImport(*import);
+}
+
+void Scope::addWildcardImport(const WildcardImportSymbol& item) {
+    compilation.trackImport(importDataIndex, item);
 }
 
 void Scope::DeferredMemberData::addMember(Symbol* symbol) {

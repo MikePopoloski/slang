@@ -7,6 +7,7 @@
 #include "slang/symbols/CompilationUnitSymbols.h"
 
 #include "slang/compilation/Compilation.h"
+#include "slang/symbols/MemberSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang {
@@ -17,6 +18,12 @@ CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :
     // Default the time scale to the compilation default. If it turns out
     // this scope has a time unit declaration it will overwrite the member.
     timeScale = compilation.getDefaultTimeScale();
+
+    // All compilation units import the std package automatically.
+    auto& stdPkg = compilation.getStdPackage();
+    auto import = compilation.emplace<WildcardImportSymbol>(stdPkg.name, SourceLocation::NoLocation);
+    import->setPackage(stdPkg);
+    addWildcardImport(*import);
 }
 
 void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {

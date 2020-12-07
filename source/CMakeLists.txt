@@ -134,6 +134,7 @@ add_library(slangcompiler
     compilation/builtins/MiscSystemFuncs.cpp
     compilation/builtins/NonConstFuncs.cpp
     compilation/builtins/QueryFuncs.cpp
+    compilation/builtins/StdPackage.cpp
     compilation/builtins/StringMethods.cpp
     compilation/builtins/SystemTasks.cpp
 

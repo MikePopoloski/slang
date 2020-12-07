@@ -591,3 +591,18 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssociativeWildcardNotAllowed);
 }
+
+TEST_CASE("std package lookups") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    std::process p;
+    std::process::state s = std::process::RUNNING;
+    process p2;
+    int i = process::KILLED;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

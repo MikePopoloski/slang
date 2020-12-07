@@ -221,6 +221,9 @@ protected:
     /// Flag the need for this scope to be elaborated before members are accessed.
     void setNeedElaboration() { getOrAddDeferredData(); }
 
+    /// Add a preconstructed wildcard import to this scope.
+    void addWildcardImport(const WildcardImportSymbol& item);
+
 private:
     friend class Compilation;
 

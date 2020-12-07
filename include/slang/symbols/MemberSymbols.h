@@ -83,6 +83,7 @@ public:
     WildcardImportSymbol(string_view packageName, SourceLocation location) :
         Symbol(SymbolKind::WildcardImport, "", location), packageName(packageName) {}
 
+    void setPackage(const PackageSymbol& package);
     const PackageSymbol* getPackage() const;
 
     void serializeTo(ASTSerializer& serializer) const;
