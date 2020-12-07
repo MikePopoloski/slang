@@ -599,10 +599,41 @@ module m;
     std::process::state s = std::process::RUNNING;
     process p2;
     int i = process::KILLED;
+
+    initial begin
+        void'(process::self());
+        p.set_randstate(p.get_randstate());
+        p.srandom(1);
+    end
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("std package error handling") {
+    auto tree = SyntaxTree::fromText(R"(
+package std;
+endpackage
+
+module m;
+    string s;
+
+    localparam int i = foo();
+    function int foo;
+        automatic std::process p = process::self();
+        return 1;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::Redefinition);
+    CHECK(diags[1].code == diag::ConstEvalSubroutineNotConstant);
 }

@@ -218,8 +218,12 @@ void DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
     for (auto& client : clients)
         client->report(report);
 
-    for (const Diagnostic& note : diagnostic.notes)
-        issue(note);
+    // Notes are ignored if location is "NoLocation" since they frequently make no
+    // sense without location information.
+    for (const Diagnostic& note : diagnostic.notes) {
+        if (note.location != SourceLocation::NoLocation)
+            issue(note);
+    }
 }
 
 std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {

@@ -646,6 +646,11 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
         return false;
     }
 
+    if (subroutine.flags.has(MethodFlags::NotConst)) {
+        context.addDiag(diag::ConstEvalSubroutineNotConstant, range) << subroutine.name;
+        return false;
+    }
+
     if (subroutine.getReturnType().isVoid()) {
         context.addDiag(diag::ConstEvalVoidNotConstant, range);
         return false;

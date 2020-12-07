@@ -21,9 +21,10 @@ enum class MethodFlags : uint8_t {
     Static = 4,
     Constructor = 8,
     InterfaceImport = 16,
-    DPIImport = 32
+    DPIImport = 32,
+    NotConst = 64
 };
-BITMASK(MethodFlags, DPIImport);
+BITMASK(MethodFlags, NotConst);
 
 class MethodPrototypeSymbol;
 struct ClassMethodDeclarationSyntax;
@@ -56,6 +57,8 @@ public:
         ensureElaborated();
         return arguments;
     }
+
+    void setArguments(ArgList args) { arguments = args; }
 
     const Statement& getBody(EvalContext* evalContext = nullptr) const;
     const Type& getReturnType() const { return declaredReturnType.getType(); }
