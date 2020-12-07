@@ -1342,7 +1342,12 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
     auto guard = stmtCtx.enterLoop();
     bool bad = false;
 
-    // Find the array over which we are looping. Make sure it's actually an array.
+    // Find the array over which we are looping. Make sure it's actually iterable:
+    // - Must be a referenceable variable, class property, etc.
+    // - Type can be:
+    //    - Any kind of array
+    //    - Any multi-dimensional integral type
+    //    - A string
     auto& arrayRef = Expression::bind(*syntax.loopList->arrayName, context);
     const Type* type = arrayRef.type;
     bool isIterable =
@@ -1351,7 +1356,8 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
     if (arrayRef.bad()) {
         bad = true;
     }
-    else if (!ValueExpressionBase::isKind(arrayRef.kind) || !isIterable) {
+    else if ((!arrayRef.canConnectToRefArg(true) && !ValueExpressionBase::isKind(arrayRef.kind)) ||
+             !isIterable) {
         context.addDiag(diag::NotAnArray, arrayRef.sourceRange);
         bad = true;
     }

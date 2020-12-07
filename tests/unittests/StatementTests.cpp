@@ -23,10 +23,14 @@ endmodule
 
 TEST_CASE("Foreach loop statements") {
     auto tree = SyntaxTree::fromText(R"(
-module m;
+class C;
     bit [3:0][2:1] asdf [5:1][4][1];
+endclass
+
+module m;
+    C c;
     initial begin
-        foreach (asdf[i,j,,k]) begin end
+        foreach (c.asdf[i,j,,k]) begin end
     end
 endmodule
 )");
