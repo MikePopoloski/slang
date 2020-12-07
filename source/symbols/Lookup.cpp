@@ -155,14 +155,20 @@ struct NameComponents {
     string_view text() const { return id.valueText(); }
 };
 
+const Symbol* unwrapTypeParam(const Symbol* symbol) {
+    if (symbol->kind == SymbolKind::TypeParameter) {
+        auto result = &symbol->as<TypeParameterSymbol>().targetType.getType();
+        if (result->isError())
+            return nullptr;
+
+        return result;
+    }
+    return symbol;
+}
+
 bool isClassType(const Symbol& symbol) {
     if (symbol.isType())
         return symbol.as<Type>().isClass();
-
-    if (symbol.kind == SymbolKind::TypeParameter) {
-        auto& target = symbol.as<TypeParameterSymbol>().targetType.getType();
-        return target.isClass();
-    }
 
     return symbol.kind == SymbolKind::GenericClassDef;
 }
@@ -245,6 +251,10 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
             // If we found an unknown module, exit silently. An appropriate error was
             // already issued, so no need to pile on.
             if (symbol->kind == SymbolKind::UnknownModule)
+                return false;
+
+            symbol = unwrapTypeParam(symbol);
+            if (!symbol)
                 return false;
 
             bool isType = symbol->isType() || isClassType(*symbol);
@@ -562,8 +572,11 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         }
 
         auto& part = nameParts.back();
-        isClass = isClassType(*symbol);
+        symbol = unwrapTypeParam(symbol);
+        if (!symbol)
+            return false;
 
+        isClass = isClassType(*symbol);
         if (symbol->kind != SymbolKind::Package && !isClass) {
             auto& diag = result.addDiag(context.scope, diag::NotAClass, part.dotLocation);
             diag << name.range();
@@ -578,11 +591,6 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         name = *part.name;
         if (name.text().empty())
             return false;
-
-        // Unwrap typedefs and type params to their target types in order
-        // to look up members within them.
-        if (symbol->kind == SymbolKind::TypeParameter)
-            symbol = &symbol->as<TypeParameterSymbol>().targetType.getType();
 
         if (symbol->isType())
             symbol = &symbol->as<Type>().getCanonicalType();
@@ -1192,6 +1200,13 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     // [23.7.1] If we are starting with a colon separator, always do a downwards name
     // resolution.
     if (colonParts) {
+        // Unwrap the symbol if it's a type parameter, and bail early if it's an error type.
+        if (result.found) {
+            result.found = unwrapTypeParam(result.found);
+            if (!result.found)
+                return;
+        }
+
         // If the prefix name resolved normally to a class object, use that. Otherwise we need
         // to look for a package with the corresponding name.
         if (!result.found || !isClassType(*result.found)) {
