@@ -305,7 +305,12 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             }
         };
 
+        // If the body is invalid, early out now so we don't report
+        // spurious errors on top of it.
         auto& body = ourConstructor->as<SubroutineSymbol>().getBody();
+        if (body.bad())
+            return;
+
         if (body.kind != StatementKind::List)
             checkForSuperNew(body);
         else {
