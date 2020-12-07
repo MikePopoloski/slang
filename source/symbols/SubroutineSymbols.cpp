@@ -687,22 +687,23 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
         return *subroutine;
 
     ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
-    auto& parentSym = getParentScope()->asSymbol();
-    auto& scope = *parentSym.getParentScope();
-    auto& comp = scope.getCompilation();
+    auto& nearScope = *getParentScope();
+    auto& parentSym = nearScope.asSymbol();
+    auto& outerScope = *parentSym.getParentScope();
+    auto& comp = outerScope.getCompilation();
 
     if (flags.has(MethodFlags::InterfaceImport)) {
         // This is a prototype declared in a modport or an interface. If it's in a
         // modport, check whether the parent interface declares the method already.
         if (parentSym.kind == SymbolKind::Modport) {
             auto result = Lookup::unqualified(
-                scope, name, LookupFlags::NoParentScope | LookupFlags::AllowDeclaredAfter);
+                outerScope, name, LookupFlags::NoParentScope | LookupFlags::AllowDeclaredAfter);
 
             if (result) {
                 // If we found a symbol, make sure it's actually a subroutine.
                 if (result->kind != SymbolKind::Subroutine &&
                     result->kind != SymbolKind::MethodPrototype) {
-                    auto& diag = scope.addDiag(diag::NotASubroutine, location);
+                    auto& diag = outerScope.addDiag(diag::NotASubroutine, location);
                     diag << result->name;
                     diag.addNote(diag::NoteDeclarationHere, result->location);
                 }
@@ -712,7 +713,7 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
                     else
                         subroutine = &result->as<SubroutineSymbol>();
 
-                    if (*subroutine && !checkMethodMatch(*getParentScope(), *subroutine.value()))
+                    if (*subroutine && !checkMethodMatch(nearScope, *subroutine.value()))
                         subroutine = nullptr;
 
                     return *subroutine;
@@ -723,43 +724,44 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
         // It's allowed to not have an immediate body for this method anywhere
         // (though it will need to be connected if this method is called at runtime).
         // For now, create a placeholder subroutine to return.
-        subroutine = &SubroutineSymbol::createFromPrototype(comp, *this, scope);
+        subroutine = &SubroutineSymbol::createFromPrototype(comp, *this, nearScope);
         return *subroutine;
     }
 
     // The out-of-block definition must be in our parent scope.
-    auto [syntax, index] = comp.findOutOfBlockMethod(scope, parentSym.name, name);
+    auto [syntax, index] = comp.findOutOfBlockMethod(outerScope, parentSym.name, name);
     if (flags & MethodFlags::Pure) {
         // A pure method should not have a body defined.
         if (syntax) {
-            auto& diag = scope.addDiag(diag::BodyForPure, syntax->prototype->name->sourceRange());
+            auto& diag =
+                outerScope.addDiag(diag::BodyForPure, syntax->prototype->name->sourceRange());
             diag.addNote(diag::NoteDeclarationHere, location);
             subroutine = nullptr;
         }
         else {
             // Create a stub subroutine that we can return for callers to reference.
-            subroutine = &SubroutineSymbol::createFromPrototype(comp, *this, scope);
+            subroutine = &SubroutineSymbol::createFromPrototype(comp, *this, nearScope);
         }
         return *subroutine;
     }
 
     // Otherwise, there must be a body for any declared prototype.
     if (!syntax) {
-        scope.addDiag(diag::NoMethodImplFound, location) << name;
+        outerScope.addDiag(diag::NoMethodImplFound, location) << name;
         subroutine = nullptr;
         return nullptr;
     }
 
     // The method definition must be located after the class definition.
     if (index <= parentSym.getIndex()) {
-        auto& diag = scope.addDiag(diag::MethodDefinitionBeforeClass,
-                                   syntax->prototype->name->getLastToken().location());
+        auto& diag = outerScope.addDiag(diag::MethodDefinitionBeforeClass,
+                                        syntax->prototype->name->getLastToken().location());
         diag << name << parentSym.name;
         diag.addNote(diag::NoteDeclarationHere, parentSym.location);
     }
 
     subroutine =
-        &SubroutineSymbol::createOutOfBlock(comp, *syntax, *this, *getParentScope(), scope, index);
+        &SubroutineSymbol::createOutOfBlock(comp, *syntax, *this, nearScope, outerScope, index);
     return *subroutine;
 }
 
