@@ -53,7 +53,7 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
                 break;
             case TokenKind::RandKeyword:
             case TokenKind::RandCKeyword:
-                scope.addDiag(diag::NotYetSupported, qual.range());
+                scope.addDiag(diag::WarnNotYetSupported, qual.range());
                 break;
             case TokenKind::PureKeyword:
             case TokenKind::VirtualKeyword:
