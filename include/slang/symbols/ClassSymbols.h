@@ -10,8 +10,8 @@
 
 #include "slang/compilation/Definition.h"
 #include "slang/symbols/Scope.h"
-#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
+#include "slang/types/Type.h"
 #include "slang/util/Function.h"
 
 namespace slang {
@@ -122,16 +122,16 @@ public:
 
     /// Gets the default specialization for the class, or nullptr if the generic
     /// class has no default specialization (because some parameters are not defaulted).
-    const Type* getDefaultSpecialization(Compilation& compilation) const;
+    const Type* getDefaultSpecialization() const;
 
     /// Gets the specialization for the class given the specified parameter value
     /// assignments. The result is cached and reused if requested more than once.
-    const Type& getSpecialization(Compilation& compilation, LookupLocation lookupLocation,
+    const Type& getSpecialization(const BindContext& context,
                                   const ParameterValueAssignmentSyntax& syntax) const;
 
     /// Forces a specialization with all parameters set to invalid values. This allows
     /// determining members that aren't dependent on parameters.
-    const Type& getInvalidSpecialization(Compilation& compilation) const;
+    const Type& getInvalidSpecialization() const;
 
     /// Gets the number of specializations that have been made for this generic class.
     size_t numSpecializations() const { return specMap.size(); }
@@ -172,8 +172,8 @@ private:
         size_t operator()(const SpecializationKey& key) const { return key.hash(); }
     };
 
-    const Type* getSpecializationImpl(Compilation& compilation, LookupLocation lookupLocation,
-                                      SourceLocation instanceLoc, bool forceInvalidParams,
+    const Type* getSpecializationImpl(const BindContext& context, SourceLocation instanceLoc,
+                                      bool forceInvalidParams,
                                       const ParameterValueAssignmentSyntax* syntax) const;
 
     SmallVectorSized<Definition::ParameterDecl, 8> paramDecls;

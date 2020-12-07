@@ -14,10 +14,10 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/AllTypes.h"
 
 namespace slang {
 
@@ -550,53 +550,57 @@ const Symbol& GenericClassDefSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-const Type* GenericClassDefSymbol::getDefaultSpecialization(Compilation& compilation) const {
+const Type* GenericClassDefSymbol::getDefaultSpecialization() const {
     if (defaultSpecialization)
         return *defaultSpecialization;
 
-    auto result = getSpecializationImpl(compilation, LookupLocation::max, location,
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    auto result = getSpecializationImpl(BindContext(*scope, LookupLocation::max), location,
                                         /* forceInvalidParams */ false, nullptr);
     defaultSpecialization = result;
     return result;
 }
 
 const Type& GenericClassDefSymbol::getSpecialization(
-    Compilation& compilation, LookupLocation lookupLocation,
-    const ParameterValueAssignmentSyntax& syntax) const {
+    const BindContext& context, const ParameterValueAssignmentSyntax& syntax) const {
 
-    auto result =
-        getSpecializationImpl(compilation, lookupLocation, syntax.getFirstToken().location(),
-                              /* forceInvalidParams */ false, &syntax);
+    auto result = getSpecializationImpl(context, syntax.getFirstToken().location(),
+                                        /* forceInvalidParams */ false, &syntax);
     if (!result)
-        return compilation.getErrorType();
+        return context.getCompilation().getErrorType();
 
     return *result;
 }
 
-const Type& GenericClassDefSymbol::getInvalidSpecialization(Compilation& compilation) const {
-    auto result = getSpecializationImpl(compilation, LookupLocation::max, location,
+const Type& GenericClassDefSymbol::getInvalidSpecialization() const {
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    auto result = getSpecializationImpl(BindContext(*scope, LookupLocation::max), location,
                                         /* forceInvalidParams */ true, nullptr);
     if (!result)
-        return compilation.getErrorType();
+        return scope->getCompilation().getErrorType();
 
     return *result;
 }
 
 const Type* GenericClassDefSymbol::getSpecializationImpl(
-    Compilation& compilation, LookupLocation lookupLocation, SourceLocation instanceLoc,
-    bool forceInvalidParams, const ParameterValueAssignmentSyntax* syntax) const {
+    const BindContext& context, SourceLocation instanceLoc, bool forceInvalidParams,
+    const ParameterValueAssignmentSyntax* syntax) const {
 
+    auto& comp = context.getCompilation();
     auto scope = getParentScope();
     ASSERT(scope);
 
     // Create a class type instance to hold the parameters. If it turns out we already
     // have this specialization cached we'll throw it away, but that's not a big deal.
-    auto classType = compilation.emplace<ClassType>(compilation, name, location);
+    auto classType = comp.emplace<ClassType>(comp, name, location);
     classType->genericClass = this;
     classType->setParent(*scope, getIndex());
 
-    auto paramScope = lookupLocation.getScope() ? lookupLocation.getScope() : scope;
-    ParameterBuilder paramBuilder(*paramScope, name, paramDecls);
+    ParameterBuilder paramBuilder(context.scope, name, paramDecls);
     if (syntax)
         paramBuilder.setAssignments(*syntax);
 
@@ -604,17 +608,17 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     // We want to suppress errors about params not having values and just
     // return null so that the caller can figure out if this is actually a problem.
     bool isForDefault = syntax == nullptr;
-    if (!paramBuilder.createParams(*classType, lookupLocation, instanceLoc, forceInvalidParams,
-                                   isForDefault)) {
+    if (!paramBuilder.createParams(*classType, context.lookupLocation, instanceLoc,
+                                   forceInvalidParams, isForDefault)) {
         if (isForDefault)
             return nullptr;
 
         // Otherwise use an error type instead.
-        return &compilation.getErrorType();
+        return &comp.getErrorType();
     }
 
-    SpecializationKey key(*this, paramBuilder.paramValues.copy(compilation),
-                          paramBuilder.typeParams.copy(compilation));
+    SpecializationKey key(*this, paramBuilder.paramValues.copy(comp),
+                          paramBuilder.typeParams.copy(comp));
     if (auto it = specMap.find(key); it != specMap.end())
         return it->second;
 

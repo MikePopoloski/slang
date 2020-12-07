@@ -1666,3 +1666,22 @@ function void D::foo(int i); endfunction
     CHECK(diags[0].code == diag::VirtualArgCountMismatch);
     CHECK(diags[1].code == diag::VirtualArgCountMismatch);
 }
+
+TEST_CASE("Specialization inside block scope -- regression") {
+    auto tree = SyntaxTree::fromText(R"(
+class A #(parameter int i);
+    static function int bar; return i; endfunction
+endclass
+
+class B;
+    localparam int i = 1;
+    static function int foo;
+        return A #(i)::bar();
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

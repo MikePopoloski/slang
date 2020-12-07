@@ -12,7 +12,6 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/parsing/LexerFacts.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/BlockSymbols.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
@@ -25,6 +24,7 @@
 #include "slang/symbols/Symbol.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/AllTypes.h"
 #include "slang/util/String.h"
 
 namespace slang {
@@ -521,7 +521,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         if (symbol->kind == SymbolKind::GenericClassDef) {
             if (name.paramAssignments) {
                 auto& type = symbol->as<GenericClassDefSymbol>().getSpecialization(
-                    context.getCompilation(), context.lookupLocation, *name.paramAssignments);
+                    context, *name.paramAssignments);
                 if (type.isError())
                     return false;
 
@@ -640,7 +640,7 @@ void unwrapResult(const Scope& scope, optional<SourceRange> range, LookupResult&
     // the default specialization (if possible).
     if (result.found->kind == SymbolKind::GenericClassDef) {
         auto& genericClass = result.found->as<GenericClassDefSymbol>();
-        result.found = genericClass.getDefaultSpecialization(scope.getCompilation());
+        result.found = genericClass.getDefaultSpecialization();
 
         if (!result.found && range)
             result.addDiag(scope, diag::NoDefaultSpecialization, *range) << genericClass.name;
@@ -737,8 +737,8 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
         }
         else {
             auto& classDef = result.found->as<GenericClassDefSymbol>();
-            result.found = &classDef.getSpecialization(scope.getCompilation(), location,
-                                                       *name.paramAssignments);
+            result.found =
+                &classDef.getSpecialization(BindContext(scope, location), *name.paramAssignments);
         }
     }
 

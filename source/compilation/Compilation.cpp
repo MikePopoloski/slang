@@ -185,7 +185,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // don't depend on parameter values.
         for (auto symbol : genericClasses) {
             if (symbol->numSpecializations() == 0)
-                symbol->getInvalidSpecialization(compilation).visit(*this);
+                symbol->getInvalidSpecialization().visit(*this);
         }
     }
 
