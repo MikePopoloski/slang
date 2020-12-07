@@ -1747,7 +1747,8 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
         return badStmt(compilation, result);
 
     if (expr.kind != ExpressionKind::Call ||
-        expr.as<CallExpression>().getSubroutineKind() == SubroutineKind::Task) {
+        (expr.as<CallExpression>().getSubroutineKind() == SubroutineKind::Task &&
+         expr.type->isVoid())) {
         context.addDiag(diag::VoidCastFuncCall, expr.sourceRange);
         return badStmt(compilation, result);
     }
