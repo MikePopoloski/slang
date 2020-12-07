@@ -1344,24 +1344,33 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
 
     // Find the array over which we are looping. Make sure it's actually an array.
     auto& arrayRef = Expression::bind(*syntax.loopList->arrayName, context);
+    const Type* type = arrayRef.type;
+    bool isIterable =
+        (type->hasFixedRange() || type->isArray() || type->isString()) && !type->isScalar();
+
     if (arrayRef.bad()) {
         bad = true;
     }
-    else if ((arrayRef.kind != ExpressionKind::NamedValue &&
-              arrayRef.kind != ExpressionKind::HierarchicalValue) ||
-             !arrayRef.type->isArray()) {
+    else if (!ValueExpressionBase::isKind(arrayRef.kind) || !isIterable) {
         context.addDiag(diag::NotAnArray, arrayRef.sourceRange);
         bad = true;
     }
 
     SmallVectorSized<LoopDim, 4> dims;
-    const Type* type = arrayRef.type;
-    while (type->isArray()) {
-        if (type->hasFixedRange())
-            dims.append({ type->getFixedRange() });
-        else
-            dims.emplace();
-        type = type->getArrayElementType();
+    if (type->isArray()) {
+        do {
+            if (type->hasFixedRange())
+                dims.append({ type->getFixedRange() });
+            else
+                dims.emplace();
+            type = type->getArrayElementType();
+        } while (type->isArray());
+    }
+    else if (type->isString()) {
+        dims.emplace();
+    }
+    else {
+        dims.append({ type->getFixedRange() });
     }
 
     if (syntax.loopList->loopVariables.size() > dims.size()) {
@@ -1472,6 +1481,18 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue
             else
                 result = body.eval(context);
 
+            if (result != ER::Success && result != ER::Continue)
+                return result;
+        }
+    }
+    else if (cv.isString()) {
+        ASSERT(currDims.size() == 1);
+
+        auto& str = cv.str();
+        for (size_t i = 0; i < str.size(); i++) {
+            *local = SVInt(32, i, true);
+
+            ER result = body.eval(context);
             if (result != ER::Success && result != ER::Continue)
                 return result;
         }

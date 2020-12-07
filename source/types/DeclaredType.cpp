@@ -139,7 +139,7 @@ const Type* DeclaredType::resolveForeachVar(const BindContext& context) const {
         currType = currType->getArrayElementType();
     }
 
-    if (!currType->isArray())
+    if (!currType->isArray() && !currType->isString() && !currType->isIntegral())
         return &comp.getErrorType();
 
     // If this is an associative array, we take the type from the index type.

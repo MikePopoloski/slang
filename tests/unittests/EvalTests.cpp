@@ -1197,6 +1197,7 @@ TEST_CASE("Eval foreach loop") {
     session.eval(R"(
 function automatic int foo();
     bit [1:0][2:1] asdf [3:-1][2];
+    int qq = 7;
 
     int result = 0;
     foreach (asdf[a,b,,d]) begin
@@ -1211,11 +1212,16 @@ function automatic int foo();
         result += 99;
     end
 
+    foreach (qq[i]) begin
+        result += qq[i];
+    end
+
     return result;
 endfunction
 )");
 
-    CHECK(session.eval("foo()").integer() == 1510);
+    auto cv = session.eval("foo()");
+    CHECK(cv.integer() == 1513);
     NO_SESSION_ERRORS;
 }
 
@@ -1226,6 +1232,7 @@ function automatic int foo();
     int result = 0;
     int asdf [3][];
     int baz [2][string][$];
+    string str = "Hello";
 
     asdf[0] = '{1, 2, 3, 4};
     asdf[2] = '{10, 11};
@@ -1244,11 +1251,16 @@ function automatic int foo();
             result++;
     end
 
+    foreach (str[s]) begin
+        if (str[s] == "l")
+            result++;
+    end
+
     return result;
 endfunction
 )");
 
-    CHECK(session.eval("foo()").integer() == 51);
+    CHECK(session.eval("foo()").integer() == 53);
     NO_SESSION_ERRORS;
 }
 
