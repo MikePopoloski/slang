@@ -1685,3 +1685,16 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Method arg with default that refers to other arg") {
+    auto tree = SyntaxTree::fromText(R"(
+class A #(parameter int i);
+    function void foo(int a, int b = a + 1);
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

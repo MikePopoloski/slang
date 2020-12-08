@@ -58,9 +58,7 @@ public:
 
 protected:
     VariableSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
-                   VariableLifetime lifetime) :
-        ValueSymbol(childKind, name, loc),
-        lifetime(lifetime) {}
+                   VariableLifetime lifetime);
 };
 
 struct PortDeclarationSyntax;

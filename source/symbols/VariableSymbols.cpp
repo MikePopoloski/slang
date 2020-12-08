@@ -150,7 +150,12 @@ VariableSymbol& VariableSymbol::fromForeachVar(Compilation& compilation,
 
 VariableSymbol::VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime) :
     VariableSymbol(SymbolKind::Variable, name, loc, lifetime) {
+}
 
+VariableSymbol::VariableSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
+                               VariableLifetime lifetime) :
+    ValueSymbol(childKind, name, loc),
+    lifetime(lifetime) {
     // Automatic variables are always in a procedural context.
     if (lifetime == VariableLifetime::Automatic) {
         getDeclaredType()->addFlags(DeclaredTypeFlags::AutomaticInitializer |
