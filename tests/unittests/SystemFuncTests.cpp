@@ -599,11 +599,17 @@ module m;
     std::process::state s = std::process::RUNNING;
     process p2;
     int i = process::KILLED;
+    semaphore sem = new;
 
     initial begin
         void'(process::self());
         p.set_randstate(p.get_randstate());
         p.srandom(1);
+
+        sem = new(5);
+        sem.get();
+        i = sem.try_get(9);
+        sem.put(2);
     end
 endmodule
 )");
