@@ -77,8 +77,12 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     if (proto->portList)
         buildArguments(*result, *proto->portList, *lifetime, arguments);
 
-    // The function gets an implicit variable inserted that represents the return value.
-    if (subroutineKind == SubroutineKind::Function) {
+    if (result->name == "new") {
+        result->flags |= MethodFlags::Constructor;
+        result->declaredReturnType.setType(compilation.getVoidType());
+    }
+    else if (subroutineKind == SubroutineKind::Function) {
+        // The function gets an implicit variable inserted that represents the return value.
         auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location,
                                                                      VariableLifetime::Automatic);
         implicitReturnVar->setDeclaredType(*proto->returnType);
@@ -158,9 +162,6 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
                 THROW_UNREACHABLE;
         }
     }
-
-    if (result->name == "new")
-        result->flags |= MethodFlags::Constructor;
 
     if ((result->flags & MethodFlags::Static) == 0)
         result->addThisVar(parent.asSymbol().as<ClassType>());
@@ -588,7 +589,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
-    if (subroutineKind == SubroutineKind::Function)
+    if (subroutineKind == SubroutineKind::Function && !flags.has(MethodFlags::Constructor))
         result->declaredReturnType.setTypeSyntax(*proto.returnType);
     else
         result->declaredReturnType.setType(comp.getVoidType());

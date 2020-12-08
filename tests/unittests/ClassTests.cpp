@@ -1698,3 +1698,25 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Return within constructor") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    function new;
+        return;
+    endfunction
+endclass
+
+class B;
+    extern function new;
+endclass
+
+function B::new;
+    return;
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
