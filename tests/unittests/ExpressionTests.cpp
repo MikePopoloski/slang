@@ -1873,3 +1873,15 @@ endmodule
     CHECK(diags[0].code == diag::SelectOfVectoredNet);
     CHECK(diags[1].code == diag::SelectOfVectoredNet);
 }
+
+TEST_CASE("Initializing based on own variable") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum { A, B } e = e.first;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
