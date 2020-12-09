@@ -307,7 +307,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     // Can only omit the parentheses for invocation if the subroutine is a task,
     // void function, or class method.
     if (!syntax && subroutineParent.kind != SymbolKind::ClassType) {
-        if (sub->subroutineKind != SubroutineKind::Task && !sub->getReturnType().isVoid()) {
+        if (!sub->getReturnType().isVoid()) {
             context.addDiag(diag::MissingInvocationParens, range) << sub->name;
             return badExpr(compilation, nullptr);
         }

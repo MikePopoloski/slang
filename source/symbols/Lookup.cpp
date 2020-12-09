@@ -958,19 +958,36 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
         // scope, so the location doesn't matter for them.
         symbol = it->second;
         bool locationGood = true;
-        if ((flags & LookupFlags::AllowDeclaredAfter) == 0) {
+        if (!flags.has(LookupFlags::AllowDeclaredAfter)) {
             locationGood = LookupLocation::before(*symbol) < location;
             if (!locationGood) {
                 // A type alias can have forward definitions, so check those locations as well.
                 // The forward decls form a linked list that are always ordered by location,
                 // so we only need to check the first one.
                 const ForwardingTypedefSymbol* forward = nullptr;
-                if (symbol->kind == SymbolKind::TypeAlias)
-                    forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
-                else if (symbol->kind == SymbolKind::ClassType)
-                    forward = symbol->as<ClassType>().getFirstForwardDecl();
-                else if (symbol->kind == SymbolKind::GenericClassDef)
-                    forward = symbol->as<GenericClassDefSymbol>().getFirstForwardDecl();
+                switch (symbol->kind) {
+                    case SymbolKind::TypeAlias:
+                        forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
+                        break;
+                    case SymbolKind::ClassType:
+                        forward = symbol->as<ClassType>().getFirstForwardDecl();
+                        break;
+                    case SymbolKind::GenericClassDef:
+                        forward = symbol->as<GenericClassDefSymbol>().getFirstForwardDecl();
+                        break;
+                    case SymbolKind::Subroutine:
+                        // Subroutines can be referenced before they are declared if they
+                        // are tasks or return void (tasks are always set to have a void
+                        // return type internally so we only need one check here).
+                        locationGood = symbol->as<SubroutineSymbol>().getReturnType().isVoid();
+                        break;
+                    case SymbolKind::MethodPrototype:
+                        // Same as above.
+                        locationGood = symbol->as<MethodPrototypeSymbol>().getReturnType().isVoid();
+                        break;
+                    default:
+                        break;
+                }
 
                 if (forward) {
                     locationGood = LookupLocation::before(*forward) < location;

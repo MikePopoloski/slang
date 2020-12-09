@@ -1903,3 +1903,16 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MissingInvocationParens);
 }
+
+TEST_CASE("Invoke task declared later") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial foo;
+    task foo; endtask
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
