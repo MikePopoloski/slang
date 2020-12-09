@@ -387,7 +387,7 @@ module M;
         return a;
     endfunction
 
-    localparam int b = stuff;
+    localparam int b = stuff();
 endmodule
 )");
 
@@ -407,7 +407,7 @@ module M(I i);
         return i.foo;
     endfunction
     
-    localparam int b = stuff;
+    localparam int b = stuff();
 endmodule
 
 module top;

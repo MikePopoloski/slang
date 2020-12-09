@@ -442,10 +442,10 @@ module m1;
     endfunction
 
     logic [3:0] asdf;
-    always_comb asdf = asdf[foo:0];
-    always_comb asdf = asdf[0+:foo];
-    always_comb asdf = {foo {32'd1}};
-    always_comb asdf = foo'(1);
+    always_comb asdf = asdf[foo():0];
+    always_comb asdf = asdf[0+:foo()];
+    always_comb asdf = {foo() {32'd1}};
+    always_comb asdf = foo()'(1);
 
 endmodule
 )");
@@ -805,7 +805,7 @@ function int foo;
 endfunction
 
 function int bar;
-    return foo;
+    return foo();
 endfunction
 
 module m;
@@ -1884,4 +1884,22 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Error for missing parens in invocation") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function int foo;
+        return 1;
+    endfunction
+    int i = foo;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MissingInvocationParens);
 }

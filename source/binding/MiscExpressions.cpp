@@ -287,6 +287,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     // If we're being called through a class handle (thisClass is non-null) that's fine,
     // otherwise we need to be called by a non-static member within the same class.
     auto sub = std::get<0>(subroutine);
+    ASSERT(sub->getParentScope());
     auto& subroutineParent = sub->getParentScope()->asSymbol();
     if ((sub->flags & MethodFlags::Static) == 0 && !thisClass &&
         subroutineParent.kind == SymbolKind::ClassType) {
@@ -299,6 +300,15 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         }
         else if (!parent || inStatic || (context.flags & BindFlags::StaticInitializer) != 0) {
             context.addDiag(diag::NonStaticClassMethod, range);
+            return badExpr(compilation, nullptr);
+        }
+    }
+
+    // Can only omit the parentheses for invocation if the subroutine is a task,
+    // void function, or class method.
+    if (!syntax && subroutineParent.kind != SymbolKind::ClassType) {
+        if (sub->subroutineKind != SubroutineKind::Task && !sub->getReturnType().isVoid()) {
+            context.addDiag(diag::MissingInvocationParens, range) << sub->name;
             return badExpr(compilation, nullptr);
         }
     }

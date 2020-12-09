@@ -982,8 +982,8 @@ module M;
         return $root.M.asdf;
     endfunction
 
-    localparam int bar = foo1;
-    localparam int baz = foo2;
+    localparam int bar = foo1();
+    localparam int baz = foo2();
 
     if (bar == 10) begin
         localparam int i = 99;
@@ -994,7 +994,7 @@ module M;
     end
 
     int legit;
-    always_comb legit = foo2;
+    always_comb legit = foo2();
 
 endmodule
 )",
@@ -1010,13 +1010,13 @@ source:9:20: error: could not resolve hierarchical path name 'bar'
         return gen1.bar;
                    ^~~~
 source:16:26: note: in call to 'foo1'
-    localparam int bar = foo1;
+    localparam int bar = foo1();
                          ^
 source:13:16: error: reference to 'asdf' by hierarchical name is not allowed in a constant expression
         return $root.M.asdf;
                ^~~~~~~~~~~~
 source:17:26: note: in call to 'foo2'
-    localparam int baz = foo2;
+    localparam int baz = foo2();
                          ^
 )");
 }

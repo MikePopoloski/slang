@@ -770,6 +770,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
     // Recursive function call
     if (invocation && symbol->kind == SymbolKind::Variable && result.selectors.empty()) {
+        // TODO: check nested scopes?
         auto scope = symbol->getParentScope();
         if (scope && scope->asSymbol().kind == SymbolKind::Subroutine &&
             scope->asSymbol().as<SubroutineSymbol>().returnValVar == symbol) {
