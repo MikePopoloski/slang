@@ -598,8 +598,8 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                 compilation, syntax.as<BinaryExpressionSyntax>(), context);
             break;
         case SyntaxKind::InvocationExpression:
-            result = &CallExpression::fromSyntax(compilation,
-                                                 syntax.as<InvocationExpressionSyntax>(), context);
+            result = &CallExpression::fromSyntax(
+                compilation, syntax.as<InvocationExpressionSyntax>(), nullptr, context);
             break;
         case SyntaxKind::ConditionalExpression:
             result = &ConditionalExpression::fromSyntax(
@@ -611,7 +611,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         case SyntaxKind::MemberAccessExpression:
             result = &MemberAccessExpression::fromSyntax(
-                compilation, syntax.as<MemberAccessExpressionSyntax>(), nullptr, context);
+                compilation, syntax.as<MemberAccessExpressionSyntax>(), nullptr, nullptr, context);
             break;
         case SyntaxKind::ConcatenationExpression:
             result = &ConcatenationExpression::fromSyntax(
@@ -678,10 +678,13 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &MinTypMaxExpression::fromSyntax(
                 compilation, syntax.as<MinTypMaxExpressionSyntax>(), context, assignmentTarget);
             break;
+        case SyntaxKind::ArrayOrRandomizeMethodExpression:
+            result = &CallExpression::fromSyntax(
+                compilation, syntax.as<ArrayOrRandomizeMethodExpressionSyntax>(), context);
+            break;
         case SyntaxKind::AcceptOnPropertyExpression:
         case SyntaxKind::AlwaysPropertyExpression:
         case SyntaxKind::AndSequenceExpression:
-        case SyntaxKind::ArrayOrRandomizeMethodExpression:
         case SyntaxKind::BinarySequenceDelayExpression:
         case SyntaxKind::EventuallyPropertyExpression:
         case SyntaxKind::ExpressionOrDist:
@@ -719,7 +722,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         default:
             if (NameSyntax::isKind(syntax.kind)) {
-                result = &bindName(compilation, syntax.as<NameSyntax>(), nullptr, context);
+                result = &bindName(compilation, syntax.as<NameSyntax>(), nullptr, nullptr, context);
                 break;
             }
             else if (DataTypeSyntax::isKind(syntax.kind)) {
@@ -736,6 +739,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
 
 Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax,
                                  const InvocationExpressionSyntax* invocation,
+                                 const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                  const BindContext& context) {
     bitmask<LookupFlags> flags = LookupFlags::None;
     if (invocation && invocation->arguments)
@@ -752,8 +756,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         // There won't be any selectors here; this gets checked in the lookup call.
         ASSERT(result.selectors.empty());
         CallExpression::SystemCallInfo callInfo{ result.systemSubroutine, &context.scope };
-        return CallExpression::fromLookup(compilation, callInfo, nullptr, invocation, callRange,
-                                          context);
+        return CallExpression::fromLookup(compilation, callInfo, nullptr, invocation, withClause,
+                                          callRange, context);
     }
 
     const Symbol* symbol = result.found;
@@ -762,7 +766,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
     if (symbol->isType() && (context.flags & BindFlags::AllowDataType) != 0) {
         // We looked up a named data type and we were allowed to do so, so return it.
-        ASSERT(!invocation);
+        ASSERT(!invocation && !withClause);
         const Type& resultType = Type::fromLookupResult(compilation, result, syntax,
                                                         context.lookupLocation, context.scope);
         return *compilation.emplace<DataTypeExpression>(resultType, syntax.sourceRange());
@@ -783,8 +787,9 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     Expression* expr;
     if (symbol->kind == SymbolKind::Subroutine) {
         expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), nullptr,
-                                           invocation, callRange, context);
+                                           invocation, withClause, callRange, context);
         invocation = nullptr;
+        withClause = nullptr;
     }
     else {
         expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
@@ -799,9 +804,11 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         auto memberSelect = std::get_if<LookupResult::MemberSelector>(&selector);
         if (memberSelect) {
             expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
-                                                         invocation, context);
-            if (expr->kind == ExpressionKind::Call)
+                                                         invocation, withClause, context);
+            if (expr->kind == ExpressionKind::Call) {
                 invocation = nullptr;
+                withClause = nullptr;
+            }
         }
         else {
             // Element / range selectors.
@@ -819,6 +826,9 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         auto& diag = context.addDiag(diag::ExpressionNotCallable, loc);
         diag << syntax.sourceRange();
         return badExpr(compilation, nullptr);
+    }
+    else if (withClause && !expr->bad()) {
+        context.addDiag(diag::UnexpectedWithClause, withClause->with.range());
     }
 
     return *expr;

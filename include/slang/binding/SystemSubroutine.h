@@ -7,8 +7,8 @@
 #pragma once
 
 #include "slang/binding/Expression.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/SemanticFacts.h"
+#include "slang/types/AllTypes.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
@@ -26,6 +26,9 @@ public:
 
     std::string name;
     SubroutineKind kind;
+
+    enum class WithClauseMode { None, Iterator, Randomize };
+    WithClauseMode withClauseMode = WithClauseMode::None;
 
     virtual bool allowEmptyArgument(size_t argIndex) const;
     virtual const Expression& bindArgument(size_t argIndex, const BindContext& context,

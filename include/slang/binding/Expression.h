@@ -16,6 +16,7 @@ namespace slang {
 class ASTSerializer;
 class InstanceSymbol;
 class Type;
+struct ArrayOrRandomizeMethodExpressionSyntax;
 struct AssignmentPatternExpressionSyntax;
 struct DataTypeSyntax;
 struct ElementSelectExpressionSyntax;
@@ -285,6 +286,7 @@ protected:
 
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax,
                                 const InvocationExpressionSyntax* invocation,
+                                const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                 const BindContext& context);
     static Expression& bindSelectExpression(Compilation& compilation,
                                             const ElementSelectExpressionSyntax& syntax,

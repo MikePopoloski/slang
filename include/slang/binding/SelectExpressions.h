@@ -132,11 +132,13 @@ public:
     static Expression& fromSelector(Compilation& compilation, Expression& expr,
                                     const LookupResult::MemberSelector& selector,
                                     const InvocationExpressionSyntax* invocation,
+                                    const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                     const BindContext& context);
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const MemberAccessExpressionSyntax& syntax,
                                   const InvocationExpressionSyntax* invocation,
+                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                   const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::MemberAccess; }

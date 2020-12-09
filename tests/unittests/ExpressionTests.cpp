@@ -1916,3 +1916,33 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Array method with-clause plumbing") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { int i; } asdf_t;
+    function asdf_t foo;
+    endfunction
+
+    asdf_t a;
+
+    int j = foo().i();
+    int k = foo().i with (bar);
+    int l = a.i with (bar);
+    int m = foo() with (bar);
+    int mn = $bits(a) with (bar);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::ExpressionNotCallable);
+    CHECK(diags[1].code == diag::UnexpectedWithClause);
+    CHECK(diags[2].code == diag::UnexpectedWithClause);
+    CHECK(diags[3].code == diag::WithClauseNotAllowed);
+    CHECK(diags[4].code == diag::WithClauseNotAllowed);
+}

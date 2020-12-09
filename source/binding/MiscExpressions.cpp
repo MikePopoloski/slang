@@ -257,30 +257,52 @@ bool HierarchicalValueExpression::verifyConstantImpl(EvalContext& context) const
 
 Expression& CallExpression::fromSyntax(Compilation& compilation,
                                        const InvocationExpressionSyntax& syntax,
+                                       const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                        const BindContext& context) {
-    if (syntax.left->kind == SyntaxKind::MemberAccessExpression) {
-        return MemberAccessExpression::fromSyntax(
-            compilation, syntax.left->as<MemberAccessExpressionSyntax>(), &syntax, context);
+    return fromSyntaxImpl(compilation, *syntax.left, &syntax, withClause, context);
+}
+
+Expression& CallExpression::fromSyntax(Compilation& compilation,
+                                       const ArrayOrRandomizeMethodExpressionSyntax& syntax,
+                                       const BindContext& context) {
+    if (syntax.method->kind == SyntaxKind::InvocationExpression) {
+        auto& invoc = syntax.method->as<InvocationExpressionSyntax>();
+        return fromSyntax(compilation, invoc, &syntax, context);
     }
 
-    if (!NameSyntax::isKind(syntax.left->kind)) {
-        SourceLocation loc = syntax.arguments ? syntax.arguments->openParen.location()
-                                              : syntax.left->getFirstToken().location();
+    return fromSyntaxImpl(compilation, *syntax.method, nullptr, &syntax, context);
+}
+
+Expression& CallExpression::fromSyntaxImpl(Compilation& compilation, const ExpressionSyntax& left,
+                                           const InvocationExpressionSyntax* invocation,
+                                           const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                           const BindContext& context) {
+    if (left.kind == SyntaxKind::MemberAccessExpression) {
+        return MemberAccessExpression::fromSyntax(
+            compilation, left.as<MemberAccessExpressionSyntax>(), invocation, withClause, context);
+    }
+
+    if (!NameSyntax::isKind(left.kind)) {
+        SourceLocation loc = (invocation && invocation->arguments)
+                                 ? invocation->arguments->openParen.location()
+                                 : left.getFirstToken().location();
         auto& diag = context.addDiag(diag::ExpressionNotCallable, loc);
-        diag << syntax.left->sourceRange();
+        diag << left.sourceRange();
         return badExpr(compilation, nullptr);
     }
 
-    return bindName(compilation, syntax.left->as<NameSyntax>(), &syntax, context);
+    return bindName(compilation, left.as<NameSyntax>(), invocation, withClause, context);
 }
 
 Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutine& subroutine,
                                        const Expression* thisClass,
-                                       const InvocationExpressionSyntax* syntax, SourceRange range,
-                                       const BindContext& context) {
+                                       const InvocationExpressionSyntax* syntax,
+                                       const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                       SourceRange range, const BindContext& context) {
     if (subroutine.index() == 1) {
         const SystemCallInfo& info = std::get<1>(subroutine);
-        return createSystemCall(compilation, *info.subroutine, nullptr, syntax, range, context);
+        return createSystemCall(compilation, *info.subroutine, nullptr, syntax, withClause, range,
+                                context);
     }
 
     // If this is a non-static class method make sure we're allowed to call it.
@@ -302,6 +324,11 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
             context.addDiag(diag::NonStaticClassMethod, range);
             return badExpr(compilation, nullptr);
         }
+    }
+
+    if (withClause) {
+        context.addDiag(diag::WithClauseNotAllowed, withClause->with.range()) << sub->name;
+        return badExpr(compilation, nullptr);
     }
 
     // Can only omit the parentheses for invocation if the subroutine is a task,
@@ -466,10 +493,11 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     return *result;
 }
 
-Expression& CallExpression::fromSystemMethod(Compilation& compilation, const Expression& expr,
-                                             const LookupResult::MemberSelector& selector,
-                                             const InvocationExpressionSyntax* syntax,
-                                             const BindContext& context) {
+Expression& CallExpression::fromSystemMethod(
+    Compilation& compilation, const Expression& expr, const LookupResult::MemberSelector& selector,
+    const InvocationExpressionSyntax* syntax,
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const BindContext& context) {
+
     const Type& type = expr.type->getCanonicalType();
     auto subroutine = compilation.getSystemMethod(type.kind, selector.name);
     if (!subroutine) {
@@ -486,46 +514,61 @@ Expression& CallExpression::fromSystemMethod(Compilation& compilation, const Exp
         return badExpr(compilation, &expr);
     }
 
-    return createSystemCall(compilation, *subroutine, &expr, syntax,
+    return createSystemCall(compilation, *subroutine, &expr, syntax, withClause,
                             syntax ? syntax->sourceRange() : expr.sourceRange, context);
 }
 
-Expression& CallExpression::createSystemCall(Compilation& compilation,
-                                             const SystemSubroutine& subroutine,
-                                             const Expression* firstArg,
-                                             const InvocationExpressionSyntax* syntax,
-                                             SourceRange range, const BindContext& context) {
+Expression& CallExpression::createSystemCall(
+    Compilation& compilation, const SystemSubroutine& subroutine, const Expression* firstArg,
+    const InvocationExpressionSyntax* syntax,
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, SourceRange range,
+    const BindContext& context) {
+
     SmallVectorSized<const Expression*, 8> buffer;
     if (firstArg)
         buffer.append(firstArg);
 
-    if (syntax && syntax->arguments) {
-        auto actualArgs = syntax->arguments->parameters;
-        for (size_t i = 0; i < actualArgs.size(); i++) {
-            size_t index = i + (firstArg ? 1 : 0);
-            switch (actualArgs[i]->kind) {
-                case SyntaxKind::OrderedArgument: {
-                    const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-                    buffer.append(&subroutine.bindArgument(index, context, *arg.expr, buffer));
-                    break;
-                }
-                case SyntaxKind::NamedArgument:
-                    context.addDiag(diag::NamedArgNotAllowed, actualArgs[i]->sourceRange());
-                    return badExpr(compilation, nullptr);
-                case SyntaxKind::EmptyArgument:
-                    if (subroutine.allowEmptyArgument(index)) {
-                        buffer.append(compilation.emplace<EmptyArgumentExpression>(
-                            compilation.getVoidType(), actualArgs[i]->sourceRange()));
+    if (subroutine.withClauseMode == SystemSubroutine::WithClauseMode::None) {
+        // If 'with' clauses are not allowed, make sure we don't have one.
+        if (withClause) {
+            context.addDiag(diag::WithClauseNotAllowed, withClause->with.range())
+                << subroutine.name;
+            return badExpr(compilation, nullptr);
+        }
+
+        // If 'with' clauses are not supported by this method, bind arguments as we
+        // would for any ordinary method.
+        if (syntax && syntax->arguments) {
+            auto actualArgs = syntax->arguments->parameters;
+            for (size_t i = 0; i < actualArgs.size(); i++) {
+                size_t index = i + (firstArg ? 1 : 0);
+                switch (actualArgs[i]->kind) {
+                    case SyntaxKind::OrderedArgument: {
+                        const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
+                        buffer.append(&subroutine.bindArgument(index, context, *arg.expr, buffer));
+                        break;
                     }
-                    else {
-                        context.addDiag(diag::EmptyArgNotAllowed, actualArgs[i]->sourceRange());
+                    case SyntaxKind::NamedArgument:
+                        context.addDiag(diag::NamedArgNotAllowed, actualArgs[i]->sourceRange());
                         return badExpr(compilation, nullptr);
-                    }
-                    break;
-                default:
-                    THROW_UNREACHABLE;
+                    case SyntaxKind::EmptyArgument:
+                        if (subroutine.allowEmptyArgument(index)) {
+                            buffer.append(compilation.emplace<EmptyArgumentExpression>(
+                                compilation.getVoidType(), actualArgs[i]->sourceRange()));
+                        }
+                        else {
+                            context.addDiag(diag::EmptyArgNotAllowed, actualArgs[i]->sourceRange());
+                            return badExpr(compilation, nullptr);
+                        }
+                        break;
+                    default:
+                        THROW_UNREACHABLE;
+                }
             }
         }
+    }
+    else {
+        // TODO: implement 'with' support
     }
 
     SystemCallInfo callInfo{ &subroutine, &context.scope };

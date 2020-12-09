@@ -13,12 +13,12 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
-#include "slang/types/AllTypes.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/AllTypes.h"
 
 namespace {
 
@@ -711,10 +711,11 @@ void RangeSelectExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("right", right());
 }
 
-Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expression& expr,
-                                                 const LookupResult::MemberSelector& selector,
-                                                 const InvocationExpressionSyntax* invocation,
-                                                 const BindContext& context) {
+Expression& MemberAccessExpression::fromSelector(
+    Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
+    const InvocationExpressionSyntax* invocation,
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const BindContext& context) {
+
     // If the selector name is invalid just give up early.
     if (selector.name.empty())
         return badExpr(compilation, &expr);
@@ -736,7 +737,7 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
         case SymbolKind::QueueType:
         case SymbolKind::EventType:
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
-                                                    context);
+                                                    withClause, context);
         default: {
             auto& diag = context.addDiag(diag::InvalidMemberAccess, selector.dotLocation);
             diag << expr.sourceRange;
@@ -765,7 +766,6 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
                                                                 field.offset, range);
         }
         case SymbolKind::ClassProperty: {
-            // Index doesn't matter here, so we pass 0.
             Lookup::ensureVisible(*member, context, selector.nameRange);
             auto& prop = member->as<ClassPropertySymbol>();
             return *compilation.emplace<MemberAccessExpression>(prop.getType(), expr, prop, 0u,
@@ -774,15 +774,13 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
         case SymbolKind::Subroutine:
             Lookup::ensureVisible(*member, context, selector.nameRange);
             return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(), &expr,
-                                              invocation, range, context);
+                                              invocation, withClause, range, context);
         case SymbolKind::EnumValue: {
-            // Index doesn't matter here, so we pass 0.
             auto& value = member->as<EnumValueSymbol>();
             return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0u,
                                                                 range);
         }
         case SymbolKind::Parameter: {
-            // Index doesn't matter here, so we pass 0.
             auto& value = member->as<ParameterSymbol>();
             return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0u,
                                                                 range);
@@ -797,10 +795,11 @@ Expression& MemberAccessExpression::fromSelector(Compilation& compilation, Expre
     }
 }
 
-Expression& MemberAccessExpression::fromSyntax(Compilation& compilation,
-                                               const MemberAccessExpressionSyntax& syntax,
-                                               const InvocationExpressionSyntax* invocation,
-                                               const BindContext& context) {
+Expression& MemberAccessExpression::fromSyntax(
+    Compilation& compilation, const MemberAccessExpressionSyntax& syntax,
+    const InvocationExpressionSyntax* invocation,
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const BindContext& context) {
+
     auto name = syntax.name.valueText();
     Expression& lhs = selfDetermined(compilation, *syntax.left, context);
     if (lhs.bad() || name.empty())
@@ -810,7 +809,20 @@ Expression& MemberAccessExpression::fromSyntax(Compilation& compilation,
     selector.name = name;
     selector.dotLocation = syntax.dot.location();
     selector.nameRange = syntax.name.range();
-    return fromSelector(compilation, lhs, selector, invocation, context);
+
+    auto& result = fromSelector(compilation, lhs, selector, invocation, withClause, context);
+    if (result.kind != ExpressionKind::Call) {
+        if (invocation) {
+            auto& diag = context.addDiag(diag::ExpressionNotCallable, invocation->sourceRange());
+            diag << selector.nameRange;
+            return badExpr(compilation, &result);
+        }
+
+        if (withClause)
+            context.addDiag(diag::UnexpectedWithClause, withClause->with.range());
+    }
+
+    return result;
 }
 
 ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {

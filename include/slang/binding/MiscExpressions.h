@@ -98,12 +98,18 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const InvocationExpressionSyntax& syntax,
+                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                  const BindContext& context);
+
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const ArrayOrRandomizeMethodExpressionSyntax& syntax,
                                   const BindContext& context);
 
     static Expression& fromLookup(Compilation& compilation, const Subroutine& subroutine,
                                   const Expression* thisClass,
-                                  const InvocationExpressionSyntax* syntax, SourceRange range,
-                                  const BindContext& context);
+                                  const InvocationExpressionSyntax* syntax,
+                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                  SourceRange range, const BindContext& context);
 
     static Expression& fromArgs(Compilation& compilation, const Subroutine& subroutine,
                                 const Expression* thisClass, const ArgumentListSyntax* argSyntax,
@@ -112,6 +118,7 @@ public:
     static Expression& fromSystemMethod(Compilation& compilation, const Expression& expr,
                                         const LookupResult::MemberSelector& selector,
                                         const InvocationExpressionSyntax* syntax,
+                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                         const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
@@ -126,11 +133,17 @@ public:
     }
 
 private:
+    static Expression& fromSyntaxImpl(Compilation& compilation, const ExpressionSyntax& left,
+                                      const InvocationExpressionSyntax* invocation,
+                                      const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                      const BindContext& context);
+
     static Expression& createSystemCall(Compilation& compilation,
                                         const SystemSubroutine& subroutine,
                                         const Expression* firstArg,
-                                        const InvocationExpressionSyntax* syntax, SourceRange range,
-                                        const BindContext& context);
+                                        const InvocationExpressionSyntax* syntax,
+                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                        SourceRange range, const BindContext& context);
 
     static bool checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                               SourceRange range);
