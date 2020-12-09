@@ -233,6 +233,11 @@ public:
     static bool ensureVisible(const Symbol& symbol, const BindContext& context,
                               optional<SourceRange> sourceRange);
 
+    /// Checks whether the given name looks up the given symbol. If it does, returns true
+    /// and populates the selectors in @a result if applicable. Otherwise returns false.
+    static bool matchSymbol(const Scope& scope, const Symbol& symbol, const NameSyntax& name,
+                            LookupResult& result);
+
 private:
     Lookup() = default;
 

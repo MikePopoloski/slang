@@ -67,6 +67,7 @@ public:
     struct SystemCallInfo {
         not_null<const SystemSubroutine*> subroutine;
         not_null<const Scope*> scope;
+        const Expression* iterExpr = nullptr;
     };
 
     using Subroutine = std::variant<const SubroutineSymbol*, SystemCallInfo>;

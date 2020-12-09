@@ -1930,19 +1930,39 @@ module m;
     int k = foo().i with (bar);
     int l = a.i with (bar);
     int m = foo() with (bar);
-    int mn = $bits(a) with (bar);
+    int n = $bits(a) with (bar);
+
+    int o[3];
+    int p = o.and(a);
+    int q = o.and();
+    int r = o.and with (1) { 1; };
+    int s = o.and with;
+    int t = o.and with (a, b);
+    int u = o.and(a, b) with (a == 1);
+    int v = o.and(a[1]) with (a == 1);
+    int w = o.and(,) with (a == 1);
+
+    // These are ok.
+    int x = o.and(b) with (b + 1);
+    int y = o.and with (item + x);
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 12);
     CHECK(diags[0].code == diag::ExpressionNotCallable);
     CHECK(diags[1].code == diag::UnexpectedWithClause);
     CHECK(diags[2].code == diag::UnexpectedWithClause);
     CHECK(diags[3].code == diag::WithClauseNotAllowed);
     CHECK(diags[4].code == diag::WithClauseNotAllowed);
+    CHECK(diags[5].code == diag::IteratorArgsWithoutWithClause);
+    CHECK(diags[6].code == diag::UnexpectedConstraintBlock);
+    CHECK(diags[7].code == diag::ExpectedIterationExpression);
+    CHECK(diags[8].code == diag::ExpectedIterationExpression);
+    CHECK(diags[9].code == diag::ExpectedIteratorName);
+    CHECK(diags[10].code == diag::ExpectedIteratorName);
+    CHECK(diags[11].code == diag::ExpectedIteratorName);
 }

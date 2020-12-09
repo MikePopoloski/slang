@@ -354,4 +354,10 @@ void NetSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("delay", *delayCtrl);
 }
 
+IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc) :
+    VariableSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic) {
+    isConstant = true;
+    setParent(scope);
+}
+
 } // namespace slang

@@ -173,6 +173,26 @@ bool isClassType(const Symbol& symbol) {
     return symbol.kind == SymbolKind::GenericClassDef;
 }
 
+const NameSyntax* splitScopedName(const ScopedNameSyntax& syntax,
+                                  SmallVector<NamePlusLoc>& nameParts, int& colonParts) {
+    // Split the name into easier to manage chunks. The parser will always produce a
+    // left-recursive name tree, so that's all we'll bother to handle.
+    const ScopedNameSyntax* scoped = &syntax;
+    while (true) {
+        nameParts.append({ scoped->right, scoped->separator.location() });
+        if (scoped->separator.kind == TokenKind::Dot)
+            colonParts = 0;
+        else
+            colonParts++;
+
+        if (scoped->left->kind != SyntaxKind::ScopedName)
+            break;
+
+        scoped = &scoped->left->as<ScopedNameSyntax>();
+    }
+    return scoped->left;
+}
+
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
@@ -946,6 +966,38 @@ bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
     return false;
 }
 
+bool Lookup::matchSymbol(const Scope& scope, const Symbol& symbol, const NameSyntax& syntax,
+                         LookupResult& result) {
+    int colonParts = 0;
+    SmallVectorSized<NamePlusLoc, 8> nameParts;
+    const NameSyntax* first = &syntax;
+    if (syntax.kind == SyntaxKind::ScopedName)
+        first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
+
+    NameComponents name;
+    switch (first->kind) {
+        case SyntaxKind::IdentifierName:
+        case SyntaxKind::IdentifierSelectName:
+        case SyntaxKind::ClassName:
+            name = syntax;
+            break;
+        default:
+            return false;
+    }
+
+    if (name.text() != symbol.name || colonParts)
+        return false;
+
+    result.found = &symbol;
+    if (!nameParts.empty()) {
+        BindContext context(scope, LookupLocation::max);
+        if (!lookupDownward(nameParts, name, context, result, LookupFlags::None))
+            return false;
+    }
+
+    return true;
+}
+
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
                              optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              SymbolIndex outOfBlockIndex, LookupResult& result) {
@@ -1132,21 +1184,9 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     // left-recursive name tree, so that's all we'll bother to handle.
     int colonParts = 0;
     SmallVectorSized<NamePlusLoc, 8> nameParts;
-    const ScopedNameSyntax* scoped = &syntax;
-    while (true) {
-        nameParts.append({ scoped->right, scoped->separator.location() });
-        if (scoped->separator.kind == TokenKind::Dot)
-            colonParts = 0;
-        else
-            colonParts++;
+    auto leftMost = splitScopedName(syntax, nameParts, colonParts);
 
-        if (scoped->left->kind != SyntaxKind::ScopedName)
-            break;
-
-        scoped = &scoped->left->as<ScopedNameSyntax>();
-    }
-
-    NameComponents first = *scoped->left;
+    NameComponents first = *leftMost;
     auto name = first.text();
     if (name.empty())
         return;
@@ -1158,7 +1198,7 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     BindContext context(scope, location);
     bool inConstantEval = (flags & LookupFlags::Constant) != 0;
 
-    switch (scoped->left->kind) {
+    switch (leftMost->kind) {
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
         case SyntaxKind::ClassName:

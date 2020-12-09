@@ -17,7 +17,9 @@ public:
     using Operator = function_ref<void(SVInt&, const SVInt&)>;
 
     ArrayReductionMethod(const std::string& name, Operator op) :
-        SystemSubroutine(name, SubroutineKind::Function), op(op) {}
+        SystemSubroutine(name, SubroutineKind::Function), op(op) {
+        withClauseMode = WithClauseMode::Iterator;
+    }
 
     const Type& checkArguments(const BindContext& context, const Args& args,
                                SourceRange range) const final {

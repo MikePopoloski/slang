@@ -156,6 +156,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(GenericClassDef);
         SYMBOL(MethodPrototype);
         SYMBOL(UnknownModule);
+        SYMBOL(Iterator);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);
         TYPE(FloatingType);

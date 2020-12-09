@@ -53,7 +53,8 @@ public:
 
     static bool isKind(SymbolKind kind) {
         return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument ||
-               kind == SymbolKind::Field || kind == SymbolKind::ClassProperty;
+               kind == SymbolKind::Field || kind == SymbolKind::ClassProperty ||
+               kind == SymbolKind::Iterator;
     }
 
 protected:
@@ -126,6 +127,16 @@ public:
 
 private:
     mutable optional<const TimingControl*> delay;
+};
+
+/// Represents an iterator variable created for array manipulation methods.
+class IteratorSymbol : public VariableSymbol {
+public:
+    IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc);
+
+    void serializeTo(ASTSerializer&) const {};
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Iterator; }
 };
 
 } // namespace slang

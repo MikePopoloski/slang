@@ -16,6 +16,7 @@ class Compilation;
 class EvalContext;
 class Expression;
 class InstanceSymbol;
+class IteratorSymbol;
 class Scope;
 class Statement;
 class Type;
@@ -103,6 +104,10 @@ public:
     /// If the expression being bound is for an instance port connection, this is
     /// a pointer to that instance; otherwise, it's nullptr.
     const InstanceSymbol* instance = nullptr;
+
+    /// If an array iteration expression is being bound, this contains the symbol
+    /// representing the iterator.
+    const IteratorSymbol* activeIterator = nullptr;
 
     BindContext(const Scope& scope, LookupLocation lookupLocation,
                 bitmask<BindFlags> flags = BindFlags::None) :

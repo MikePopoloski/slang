@@ -518,6 +518,65 @@ Expression& CallExpression::fromSystemMethod(
                             syntax ? syntax->sourceRange() : expr.sourceRange, context);
 }
 
+static const Expression* bindIteratorExpr(Compilation& compilation,
+                                          const InvocationExpressionSyntax* invocation,
+                                          const ArrayOrRandomizeMethodExpressionSyntax& withClause,
+                                          const Type& iterType, const BindContext& context) {
+    // Can't be a constraint block here.
+    if (withClause.constraints) {
+        context.addDiag(diag::UnexpectedConstraintBlock, withClause.constraints->sourceRange());
+        return nullptr;
+    }
+
+    if (!withClause.args) {
+        context.addDiag(diag::ExpectedIterationExpression, withClause.with.range());
+        return nullptr;
+    }
+
+    if (withClause.args->expressions.size() != 1) {
+        context.addDiag(diag::ExpectedIterationExpression, withClause.args->sourceRange());
+        return nullptr;
+    }
+
+    // If arguments are provided, there should be only one and it should
+    // be the name of the iterator symbol. Otherwise, we need to automatically
+    // generate an iterator symbol named 'item'.
+    SourceLocation iteratorLoc = SourceLocation::NoLocation;
+    string_view iteratorName;
+    if (invocation && invocation->arguments) {
+        auto actualArgs = invocation->arguments->parameters;
+        if (actualArgs.size() == 1 && actualArgs[0]->kind == SyntaxKind::OrderedArgument) {
+            auto& arg = actualArgs[0]->as<OrderedArgumentSyntax>();
+            if (arg.expr->kind == SyntaxKind::IdentifierName) {
+                auto id = arg.expr->as<IdentifierNameSyntax>().identifier;
+                iteratorLoc = id.location();
+                iteratorName = id.valueText();
+                if (iteratorName.empty())
+                    return nullptr;
+            }
+        }
+
+        if (iteratorName.empty() && !actualArgs.empty()) {
+            context.addDiag(diag::ExpectedIteratorName, invocation->arguments->sourceRange());
+            return nullptr;
+        }
+    }
+
+    if (iteratorName.empty())
+        iteratorName = "item"sv;
+
+    // Create the iterator variable and set it up with a bind context so that it
+    // can be found by the iteration expression.
+    auto it = compilation.emplace<IteratorSymbol>(context.scope, iteratorName, iteratorLoc);
+    it->setType(iterType);
+
+    BindContext iterCtx = context;
+    iterCtx.activeIterator = it;
+    iterCtx.flags &= ~BindFlags::StaticInitializer;
+
+    return &Expression::bind(*withClause.args->expressions[0], iterCtx);
+}
+
 Expression& CallExpression::createSystemCall(
     Compilation& compilation, const SystemSubroutine& subroutine, const Expression* firstArg,
     const InvocationExpressionSyntax* syntax,
@@ -528,16 +587,37 @@ Expression& CallExpression::createSystemCall(
     if (firstArg)
         buffer.append(firstArg);
 
-    if (subroutine.withClauseMode == SystemSubroutine::WithClauseMode::None) {
-        // If 'with' clauses are not allowed, make sure we don't have one.
+    const Expression* iterExpr = nullptr;
+    using WithClauseMode = SystemSubroutine::WithClauseMode;
+    if (subroutine.withClauseMode == WithClauseMode::Iterator) {
+        // 'with' clause is not required. If it's not there, no arguments
+        // can be provided.
+        if (!withClause) {
+            if (syntax && syntax->arguments && !syntax->arguments->parameters.empty()) {
+                context.addDiag(diag::IteratorArgsWithoutWithClause,
+                                syntax->arguments->sourceRange())
+                    << subroutine.name;
+                return badExpr(compilation, nullptr);
+            }
+        }
+        else if (firstArg) {
+            const Type& iterType = subroutine.getIteratorType(compilation, *firstArg);
+            iterExpr = bindIteratorExpr(compilation, syntax, *withClause, iterType, context);
+            if (!iterExpr || iterExpr->bad())
+                return badExpr(compilation, iterExpr);
+        }
+    }
+    else if (subroutine.withClauseMode == WithClauseMode::Randomize) {
+        // TODO: support randomize calls
+    }
+    else {
         if (withClause) {
             context.addDiag(diag::WithClauseNotAllowed, withClause->with.range())
                 << subroutine.name;
             return badExpr(compilation, nullptr);
         }
 
-        // If 'with' clauses are not supported by this method, bind arguments as we
-        // would for any ordinary method.
+        // Bind arguments as we would for any ordinary method.
         if (syntax && syntax->arguments) {
             auto actualArgs = syntax->arguments->parameters;
             for (size_t i = 0; i < actualArgs.size(); i++) {
@@ -567,11 +647,8 @@ Expression& CallExpression::createSystemCall(
             }
         }
     }
-    else {
-        // TODO: implement 'with' support
-    }
 
-    SystemCallInfo callInfo{ &subroutine, &context.scope };
+    SystemCallInfo callInfo{ &subroutine, &context.scope, iterExpr };
     const Type& type = subroutine.checkArguments(context, buffer, range);
     auto expr = compilation.emplace<CallExpression>(
         callInfo, type, nullptr, buffer.copy(compilation), context.lookupLocation, range);

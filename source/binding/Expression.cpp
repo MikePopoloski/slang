@@ -741,6 +741,17 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                                  const InvocationExpressionSyntax* invocation,
                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                  const BindContext& context) {
+    // If we're in an array iterator expression, the iterator variable needs to be findable
+    // even though it's not added to any scope. Check for that case and manually look for
+    // its name here.
+    if (context.activeIterator) {
+        LookupResult result;
+        if (Lookup::matchSymbol(context.scope, *context.activeIterator, syntax, result)) {
+            return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
+                                    withClause, context);
+        }
+    }
+
     bitmask<LookupFlags> flags = LookupFlags::None;
     if (invocation && invocation->arguments)
         flags |= LookupFlags::AllowDeclaredAfter;
@@ -751,10 +762,11 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     Lookup::name(context.scope, syntax, context.lookupLocation, flags, result);
     result.reportErrors(context);
 
-    SourceRange callRange = invocation ? invocation->sourceRange() : syntax.sourceRange();
     if (result.systemSubroutine) {
         // There won't be any selectors here; this gets checked in the lookup call.
         ASSERT(result.selectors.empty());
+
+        SourceRange callRange = invocation ? invocation->sourceRange() : syntax.sourceRange();
         CallExpression::SystemCallInfo callInfo{ result.systemSubroutine, &context.scope };
         return CallExpression::fromLookup(compilation, callInfo, nullptr, invocation, withClause,
                                           callRange, context);
@@ -784,16 +796,28 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         }
     }
 
+    result.found = symbol;
+    return bindLookupResult(compilation, result, syntax.sourceRange(), invocation, withClause,
+                            context);
+}
+
+Expression& Expression::bindLookupResult(Compilation& compilation, const LookupResult& result,
+                                         SourceRange sourceRange,
+                                         const InvocationExpressionSyntax* invocation,
+                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                         const BindContext& context) {
+    const Symbol* symbol = result.found;
     Expression* expr;
     if (symbol->kind == SymbolKind::Subroutine) {
+        SourceRange callRange = invocation ? invocation->sourceRange() : sourceRange;
         expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), nullptr,
                                            invocation, withClause, callRange, context);
         invocation = nullptr;
         withClause = nullptr;
     }
     else {
-        expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
-                                                syntax.sourceRange());
+        expr =
+            &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical, sourceRange);
     }
 
     // Drill down into member accesses.
@@ -822,9 +846,9 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     // nulled out if we used it above.
     if (invocation && !expr->bad()) {
         SourceLocation loc = invocation->arguments ? invocation->arguments->openParen.location()
-                                                   : syntax.getFirstToken().location();
+                                                   : sourceRange.start();
         auto& diag = context.addDiag(diag::ExpressionNotCallable, loc);
-        diag << syntax.sourceRange();
+        diag << sourceRange;
         return badExpr(compilation, nullptr);
     }
     else if (withClause && !expr->bad()) {

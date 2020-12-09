@@ -40,6 +40,7 @@ public:
                                const Args& args) const = 0;
     virtual bool verifyConstant(EvalContext& context, const Args& args,
                                 SourceRange range) const = 0;
+    virtual const Type& getIteratorType(Compilation& compilation, const Expression& thisExpr) const;
 
     virtual void lower(mir::Procedure&, const Args&) const {}
 
