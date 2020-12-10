@@ -749,6 +749,9 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
 
     if (isSystemCall()) {
         auto& callInfo = std::get<1>(subroutine);
+        if (callInfo.iterExpr && !callInfo.iterExpr->verifyConstant(context))
+            return false;
+
         return callInfo.subroutine->verifyConstant(context, arguments(), sourceRange);
     }
 
