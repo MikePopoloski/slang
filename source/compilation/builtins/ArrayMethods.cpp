@@ -29,39 +29,76 @@ public:
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
-                               const Expression*) const final {
+                               const Expression* iterExpr) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
             return comp.getErrorType();
 
-        auto& type = *args[0]->type;
-        auto elemType = type.getArrayElementType();
-        ASSERT(elemType);
+        if (iterExpr) {
+            if (!iterExpr->type->isIntegral()) {
+                context.addDiag(diag::ArrayReductionIntegral, iterExpr->sourceRange);
+                return comp.getErrorType();
+            }
 
-        if (!elemType->isIntegral()) {
-            context.addDiag(diag::ArrayReductionIntegral, args[0]->sourceRange);
-            return comp.getErrorType();
+            return *iterExpr->type;
         }
+        else {
+            auto elemType = args[0]->type->getArrayElementType();
+            ASSERT(elemType);
 
-        return *elemType;
+            if (!elemType->isIntegral()) {
+                context.addDiag(diag::ArrayReductionIntegral, args[0]->sourceRange);
+                return comp.getErrorType();
+            }
+
+            return *elemType;
+        }
     }
 
     ConstantValue eval(EvalContext& context, const Args& args,
-                       const CallExpression::SystemCallInfo&) const final {
+                       const CallExpression::SystemCallInfo& callInfo) const final {
         ConstantValue arr = args[0]->eval(context);
         if (!arr)
             return nullptr;
 
-        auto elemType = args[0]->type->getArrayElementType();
-        if (arr.empty())
-            return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
+        if (callInfo.iterExpr) {
+            ASSERT(callInfo.iterVar);
+            if (arr.empty()) {
+                auto elemType = callInfo.iterExpr->type;
+                return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
+            }
 
-        auto it = begin(arr);
-        SVInt result = it->integer();
-        for (++it; it != end(arr); ++it)
-            op(result, it->integer());
+            auto it = begin(arr);
+            auto iterVal = context.createLocal(callInfo.iterVar, *it);
+            ConstantValue cv = callInfo.iterExpr->eval(context);
+            if (!cv)
+                return nullptr;
 
-        return result;
+            SVInt result = cv.integer();
+            for (++it; it != end(arr); ++it) {
+                *iterVal = *it;
+                cv = callInfo.iterExpr->eval(context);
+                if (!cv)
+                    return nullptr;
+
+                op(result, cv.integer());
+            }
+
+            return result;
+        }
+        else {
+            if (arr.empty()) {
+                auto elemType = args[0]->type->getArrayElementType();
+                return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
+            }
+
+            auto it = begin(arr);
+            SVInt result = it->integer();
+            for (++it; it != end(arr); ++it)
+                op(result, it->integer());
+
+            return result;
+        }
     }
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
@@ -455,6 +492,8 @@ void registerArrayMethods(Compilation& c) {
         REGISTER(kind, ArrayReduction, "or", [](auto& l, auto& r) { l |= r; });
         REGISTER(kind, ArrayReduction, "and", [](auto& l, auto& r) { l &= r; });
         REGISTER(kind, ArrayReduction, "xor", [](auto& l, auto& r) { l ^= r; });
+        REGISTER(kind, ArrayReduction, "sum", [](auto& l, auto& r) { l += r; });
+        REGISTER(kind, ArrayReduction, "product", [](auto& l, auto& r) { l *= r; });
     }
 
     for (auto kind : { SymbolKind::DynamicArrayType, SymbolKind::AssociativeArrayType,

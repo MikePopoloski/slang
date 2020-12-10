@@ -979,7 +979,7 @@ bool Lookup::matchSymbol(const Scope& scope, const Symbol& symbol, const NameSyn
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
         case SyntaxKind::ClassName:
-            name = syntax;
+            name = *first;
             break;
         default:
             return false;

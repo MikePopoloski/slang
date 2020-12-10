@@ -2010,3 +2010,18 @@ endfunction
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Array reduction methods") {
+    ScriptSession session;
+    session.eval("byte b[] = { 1, 2, 3, 4 };");
+    session.eval("logic [7:0] m [2][2] = '{ '{5, 10}, '{15, 20} };");
+    session.eval("logic bit_arr [16] = '{0:1, 1:1, 2:1, default:0};");
+
+    CHECK(session.eval("b.sum").integer() == 10);
+    CHECK(session.eval("b.product").integer() == 24);
+    CHECK(session.eval("b.xor with (item + 4)").integer() == 12);
+    CHECK(session.eval("m.sum with (item.sum with (item));").integer() == 50);
+    CHECK(session.eval("bit_arr.sum with ( int'(item) );").integer() == 3);
+
+    NO_SESSION_ERRORS;
+}

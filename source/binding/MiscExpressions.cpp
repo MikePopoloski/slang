@@ -521,7 +521,8 @@ Expression& CallExpression::fromSystemMethod(
 static const Expression* bindIteratorExpr(Compilation& compilation,
                                           const InvocationExpressionSyntax* invocation,
                                           const ArrayOrRandomizeMethodExpressionSyntax& withClause,
-                                          const Type& iterType, const BindContext& context) {
+                                          const Type& iterType, const BindContext& context,
+                                          const ValueSymbol*& iterVar) {
     // Can't be a constraint block here.
     if (withClause.constraints) {
         context.addDiag(diag::UnexpectedConstraintBlock, withClause.constraints->sourceRange());
@@ -569,6 +570,7 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
     // can be found by the iteration expression.
     auto it = compilation.emplace<IteratorSymbol>(context.scope, iteratorName, iteratorLoc);
     it->setType(iterType);
+    iterVar = it;
 
     BindContext iterCtx = context;
     iterCtx.activeIterator = it;
@@ -588,6 +590,7 @@ Expression& CallExpression::createSystemCall(
         buffer.append(firstArg);
 
     const Expression* iterExpr = nullptr;
+    const ValueSymbol* iterVar = nullptr;
     using WithClauseMode = SystemSubroutine::WithClauseMode;
     if (subroutine.withClauseMode == WithClauseMode::Iterator) {
         // 'with' clause is not required. If it's not there, no arguments
@@ -602,7 +605,8 @@ Expression& CallExpression::createSystemCall(
         }
         else if (firstArg) {
             const Type& iterType = subroutine.getIteratorType(compilation, *firstArg);
-            iterExpr = bindIteratorExpr(compilation, syntax, *withClause, iterType, context);
+            iterExpr =
+                bindIteratorExpr(compilation, syntax, *withClause, iterType, context, iterVar);
             if (!iterExpr || iterExpr->bad())
                 return badExpr(compilation, iterExpr);
         }
@@ -648,7 +652,7 @@ Expression& CallExpression::createSystemCall(
         }
     }
 
-    SystemCallInfo callInfo{ &subroutine, &context.scope, iterExpr };
+    SystemCallInfo callInfo{ &subroutine, &context.scope, iterExpr, iterVar };
     const Type& type = subroutine.checkArguments(context, buffer, range, iterExpr);
     auto expr = compilation.emplace<CallExpression>(
         callInfo, type, nullptr, buffer.copy(compilation), context.lookupLocation, range);
