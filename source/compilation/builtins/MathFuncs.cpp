@@ -14,8 +14,8 @@ class Clog2Function : public SystemSubroutine {
 public:
     Clog2Function() : SystemSubroutine("$clog2", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
@@ -28,7 +28,8 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         ConstantValue v = args[0]->eval(context);
         if (!v)
             return nullptr;
@@ -43,8 +44,8 @@ class CountBitsFunction : public SystemSubroutine {
 public:
     CountBitsFunction() : SystemSubroutine("$countbits", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, INT32_MAX))
             return comp.getErrorType();
@@ -62,7 +63,8 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         ConstantValue value = args[0]->eval(context);
         if (!value)
             return nullptr;
@@ -118,8 +120,8 @@ class CountOnesFunction : public SystemSubroutine {
 public:
     CountOnesFunction() : SystemSubroutine("$countones", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
@@ -132,7 +134,8 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         ConstantValue value = args[0]->eval(context);
         if (!value)
             return nullptr;
@@ -152,8 +155,8 @@ public:
     BooleanBitVectorFunction(const std::string& name, BVFKind kind) :
         SystemSubroutine(name, SubroutineKind::Function), kind(kind) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
@@ -166,7 +169,8 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         ConstantValue value = args[0]->eval(context);
         if (!value)
             return nullptr;
@@ -197,7 +201,8 @@ public:
         SimpleSystemSubroutine(name, SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getRealType(), false) {}
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         ConstantValue v = args[0]->eval(context);
         if (!v)
             return nullptr;
@@ -215,7 +220,8 @@ public:
                                { &comp.getRealType(), &comp.getRealType() }, comp.getRealType(),
                                false) {}
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         ConstantValue a = args[0]->eval(context);
         ConstantValue b = args[1]->eval(context);
         if (!a || !b)

@@ -20,8 +20,8 @@ public:
         return Expression::bind(syntax, makeNonConst(context));
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
             return comp.getErrorType();
@@ -29,7 +29,8 @@ public:
         return *args[0]->type;
     }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args& args) const final {
+    ConstantValue eval(EvalContext&, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         // Expression isn't actually evaluated here; we know the value to return at compile time.
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
 
@@ -74,8 +75,8 @@ public:
                                         ArgumentDirection::In, syntax, context);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
             return comp.getErrorType();
@@ -83,7 +84,8 @@ public:
         return *args[0]->type;
     }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -155,7 +157,8 @@ public:
         SimpleSystemSubroutine("num", SubroutineKind::Function, 0, {}, comp.getIntType(),
                                /* isMethod */ true, /* allowNonConst */ true) {}
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args& args) const final {
+    ConstantValue eval(EvalContext&, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         // Expression isn't actually evaluated here; we know the value to return at compile time.
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
         return SVInt(32, (uint64_t)type.values().size(), true);
@@ -168,7 +171,8 @@ public:
         SimpleSystemSubroutine("name", SubroutineKind::Function, 0, {}, comp.getStringType(),
                                true) {}
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;

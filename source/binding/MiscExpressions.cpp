@@ -649,7 +649,7 @@ Expression& CallExpression::createSystemCall(
     }
 
     SystemCallInfo callInfo{ &subroutine, &context.scope, iterExpr };
-    const Type& type = subroutine.checkArguments(context, buffer, range);
+    const Type& type = subroutine.checkArguments(context, buffer, range, iterExpr);
     auto expr = compilation.emplace<CallExpression>(
         callInfo, type, nullptr, buffer.copy(compilation), context.lookupLocation, range);
 
@@ -671,7 +671,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     // Delegate system calls to their appropriate handler.
     if (isSystemCall()) {
         auto& callInfo = std::get<1>(subroutine);
-        return callInfo.subroutine->eval(*callInfo.scope, context, arguments());
+        return callInfo.subroutine->eval(context, arguments(), callInfo);
     }
 
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);

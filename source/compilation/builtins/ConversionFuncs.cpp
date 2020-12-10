@@ -15,8 +15,8 @@ public:
     SignedConversionFunction(const std::string& name, bool toSigned) :
         SystemSubroutine(name, SubroutineKind::Function), toSigned(toSigned) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
@@ -32,7 +32,8 @@ public:
         return comp.getType(type.getBitWidth(), flags);
     }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -53,7 +54,8 @@ public:
         SimpleSystemSubroutine("$rtoi", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getIntegerType(), false) {}
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -66,8 +68,8 @@ class ItoRFunction : public SystemSubroutine {
 public:
     explicit ItoRFunction(Compilation&) : SystemSubroutine("$itor", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
@@ -80,7 +82,8 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -95,7 +98,8 @@ public:
         SimpleSystemSubroutine("$realtobits", SubroutineKind::Function, 1, { &comp.getRealType() },
                                comp.getType(64, IntegralFlags::Unsigned), false) {}
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -111,7 +115,8 @@ public:
                                { &comp.getType(64, IntegralFlags::Unsigned) }, comp.getRealType(),
                                false) {}
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -128,7 +133,8 @@ public:
                                { &comp.getShortRealType() },
                                comp.getType(32, IntegralFlags::Unsigned), false) {}
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -144,7 +150,8 @@ public:
                                { &comp.getType(32, IntegralFlags::Unsigned) },
                                comp.getShortRealType(), false) {}
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;

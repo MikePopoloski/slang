@@ -22,8 +22,8 @@ public:
         return Expression::bind(syntax, nonConstCtx, BindFlags::AllowDataType);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
@@ -40,7 +40,8 @@ public:
         return comp.getIntegerType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         size_t width;
         if (args[0]->type->isFixedSize())
             width = args[0]->type->bitstreamWidth();
@@ -75,8 +76,8 @@ public:
         return Expression::bind(syntax, nonConstCtx, BindFlags::AllowDataType);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
@@ -84,7 +85,8 @@ public:
         return comp.getStringType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args& args) const final {
+    ConstantValue eval(EvalContext&, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         TypePrinter printer;
         printer.append(*args[0]->type);
 
@@ -104,8 +106,8 @@ public:
         return Expression::bind(syntax, makeNonConst(context), flags);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 2))
             return comp.getErrorType();
@@ -293,11 +295,12 @@ protected:
     }
 };
 
-#define SUBROUTINE(className, base, ...)                                                      \
-    class className : public base {                                                           \
-    public:                                                                                   \
-        className() : base(__VA_ARGS__) {}                                                    \
-        ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final; \
+#define SUBROUTINE(className, base, ...)                                       \
+    class className : public base {                                            \
+    public:                                                                    \
+        className() : base(__VA_ARGS__) {}                                     \
+        ConstantValue eval(EvalContext& context, const Args& args,             \
+                           const CallExpression::SystemCallInfo&) const final; \
     }
 
 #define FUNC SubroutineKind::Function
@@ -309,7 +312,8 @@ SUBROUTINE(RightFunction, ArrayQueryFunction, "$right", FUNC);
 SUBROUTINE(SizeFunction, ArrayQueryFunction, "$size", FUNC);
 SUBROUTINE(IncrementFunction, ArrayQueryFunction, "$increment", FUNC);
 
-ConstantValue LowFunction::eval(const Scope&, EvalContext& context, const Args& args) const {
+ConstantValue LowFunction::eval(EvalContext& context, const Args& args,
+                                const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
         return nullptr;
@@ -330,7 +334,8 @@ ConstantValue LowFunction::eval(const Scope&, EvalContext& context, const Args& 
     return SVInt(32, uint64_t(dim.range.lower()), true);
 }
 
-ConstantValue HighFunction::eval(const Scope&, EvalContext& context, const Args& args) const {
+ConstantValue HighFunction::eval(EvalContext& context, const Args& args,
+                                 const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
         return nullptr;
@@ -351,7 +356,8 @@ ConstantValue HighFunction::eval(const Scope&, EvalContext& context, const Args&
     return SVInt(32, uint64_t(dim.range.upper()), true);
 }
 
-ConstantValue LeftFunction::eval(const Scope&, EvalContext& context, const Args& args) const {
+ConstantValue LeftFunction::eval(EvalContext& context, const Args& args,
+                                 const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
         return nullptr;
@@ -365,7 +371,8 @@ ConstantValue LeftFunction::eval(const Scope&, EvalContext& context, const Args&
     return SVInt(32, uint64_t(dim.range.left), true);
 }
 
-ConstantValue RightFunction::eval(const Scope&, EvalContext& context, const Args& args) const {
+ConstantValue RightFunction::eval(EvalContext& context, const Args& args,
+                                  const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
         return nullptr;
@@ -383,7 +390,8 @@ ConstantValue RightFunction::eval(const Scope&, EvalContext& context, const Args
     return SVInt(32, uint64_t(dim.range.right), true);
 }
 
-ConstantValue SizeFunction::eval(const Scope&, EvalContext& context, const Args& args) const {
+ConstantValue SizeFunction::eval(EvalContext& context, const Args& args,
+                                 const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
         return nullptr;
@@ -400,7 +408,8 @@ ConstantValue SizeFunction::eval(const Scope&, EvalContext& context, const Args&
     return SVInt(32, dim.range.width(), true);
 }
 
-ConstantValue IncrementFunction::eval(const Scope&, EvalContext& context, const Args& args) const {
+ConstantValue IncrementFunction::eval(EvalContext& context, const Args& args,
+                                      const CallExpression::SystemCallInfo&) const {
     DimResult dim = getDim(context, args);
     if (dim.hardFail)
         return nullptr;
@@ -424,8 +433,8 @@ public:
         return Expression::bind(syntax, makeNonConst(context), BindFlags::AllowDataType);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
@@ -445,7 +454,8 @@ public:
 
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args& args) const final {
+    ConstantValue eval(EvalContext&, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         // Count the number of dimensions by unwrapping arrays.
         uint64_t count = 0;
         const Type* type = args[0]->type;

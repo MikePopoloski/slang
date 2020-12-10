@@ -96,7 +96,7 @@ const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const Bi
 }
 
 const Type& SimpleSystemSubroutine::checkArguments(const BindContext& context, const Args& args,
-                                                   SourceRange range) const {
+                                                   SourceRange range, const Expression*) const {
     auto& comp = context.getCompilation();
     if (!checkArgCount(context, isMethod, args, range, requiredArgs, argTypes.size()))
         return comp.getErrorType();

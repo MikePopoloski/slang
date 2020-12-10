@@ -15,8 +15,8 @@ class SFormatFunction : public SystemSubroutine {
 public:
     SFormatFunction() : SystemSubroutine("$sformatf", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, INT32_MAX))
             return comp.getErrorType();
@@ -33,13 +33,14 @@ public:
         return comp.getStringType();
     }
 
-    ConstantValue eval(const Scope& scope, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo& callInfo) const final {
         ConstantValue formatStr = args[0]->eval(context).convertToStr();
         if (!formatStr)
             return nullptr;
 
-        auto result = FmtHelpers::formatArgs(formatStr.str(), args[0]->sourceRange.start(), scope,
-                                             context, args.subspan(1));
+        auto result = FmtHelpers::formatArgs(formatStr.str(), args[0]->sourceRange.start(),
+                                             *callInfo.scope, context, args.subspan(1));
         if (!result)
             return nullptr;
 
@@ -53,8 +54,8 @@ class ValuePlusArgsFunction : public SystemSubroutine {
 public:
     ValuePlusArgsFunction() : SystemSubroutine("$value$plusargs", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 2))
             return comp.getErrorType();
@@ -77,7 +78,10 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
         return notConst(context, range);
     }

@@ -21,8 +21,15 @@ public:
         withClauseMode = WithClauseMode::Iterator;
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& getIteratorType(Compilation& compilation, const Expression& source) const final {
+        auto elem = source.type->getArrayElementType();
+        if (elem)
+            return *elem;
+        return compilation.getErrorType();
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
             return comp.getErrorType();
@@ -39,7 +46,8 @@ public:
         return *elemType;
     }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         ConstantValue arr = args[0]->eval(context);
         if (!arr)
             return nullptr;
@@ -67,7 +75,8 @@ public:
     ArraySizeMethod(Compilation& comp, const std::string& name) :
         SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getIntType(), true) {}
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto val = args[0]->eval(context);
         if (!val)
             return nullptr;
@@ -82,7 +91,8 @@ public:
         SimpleSystemSubroutine("delete", SubroutineKind::Function, 0, {}, comp.getVoidType(),
                                true) {}
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         if (!lval)
             return nullptr;
@@ -108,8 +118,8 @@ public:
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
             return comp.getErrorType();
@@ -124,7 +134,8 @@ public:
         return comp.getVoidType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         if (!lval)
             return nullptr;
@@ -166,8 +177,8 @@ public:
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 1, 1))
             return comp.getErrorType();
@@ -180,7 +191,8 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto array = args[0]->eval(context);
         auto index = args[1]->eval(context);
         if (!array || !index)
@@ -211,8 +223,8 @@ public:
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 1, 1))
             return comp.getErrorType();
@@ -227,7 +239,10 @@ public:
         return comp.getIntType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
         return notConst(context, range);
     }
@@ -238,8 +253,8 @@ public:
     QueuePopMethod(const std::string& name, bool front) :
         SystemSubroutine(name, SubroutineKind::Function), front(front) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 0))
             return comp.getErrorType();
@@ -247,7 +262,8 @@ public:
         return *args[0]->type->getArrayElementType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         if (!lval)
             return nullptr;
@@ -293,8 +309,8 @@ public:
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 1, 1))
             return comp.getErrorType();
@@ -302,7 +318,8 @@ public:
         return comp.getVoidType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         auto cv = args[1]->eval(context);
         if (!lval || !cv)
@@ -342,8 +359,8 @@ public:
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 2, 2))
             return comp.getErrorType();
@@ -354,7 +371,8 @@ public:
         return comp.getVoidType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         auto ci = args[1]->eval(context);
         auto cv = args[2]->eval(context);
@@ -383,8 +401,8 @@ class QueueDeleteMethod : public SystemSubroutine {
 public:
     QueueDeleteMethod() : SystemSubroutine("delete", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, true, args, range, 0, 1))
             return comp.getErrorType();
@@ -397,7 +415,8 @@ public:
         return comp.getVoidType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext& context, const Args& args) const final {
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
         auto lval = args[0]->evalLValue(context);
         if (!lval)
             return nullptr;

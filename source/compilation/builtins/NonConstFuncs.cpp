@@ -17,7 +17,10 @@ public:
         SimpleSystemSubroutine(name, SubroutineKind::Function, requiredArgs, argTypes, returnType,
                                isMethod) {}
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
         return notConst(context, range);
     }
@@ -27,8 +30,8 @@ class FErrorFunc : public SystemSubroutine {
 public:
     FErrorFunc() : SystemSubroutine("$ferror", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 2))
             return comp.getErrorType();
@@ -48,7 +51,10 @@ public:
         return comp.getIntegerType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
         return notConst(context, range);
     }
@@ -58,8 +64,8 @@ class FGetsFunc : public SystemSubroutine {
 public:
     FGetsFunc() : SystemSubroutine("$fgets", SubroutineKind::Function) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 2))
             return comp.getErrorType();
@@ -79,7 +85,10 @@ public:
         return comp.getIntegerType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
         return notConst(context, range);
     }
@@ -91,8 +100,8 @@ public:
         SystemSubroutine(isFscanf ? "$fscanf" : "$sscanf", SubroutineKind::Function),
         isFscanf(isFscanf) {}
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, INT32_MAX))
             return comp.getErrorType();
@@ -121,7 +130,10 @@ public:
         return comp.getIntegerType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
         return notConst(context, range);
     }
@@ -136,8 +148,8 @@ public:
 
     bool allowEmptyArgument(size_t argIndex) const final { return argIndex == 2; }
 
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final {
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 2, 4))
             return comp.getErrorType();
@@ -168,7 +180,10 @@ public:
         return comp.getIntegerType();
     }
 
-    ConstantValue eval(const Scope&, EvalContext&, const Args&) const final { return nullptr; }
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
     bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
         return notConst(context, range);
     }

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/binding/Expression.h"
+#include "slang/binding/MiscExpressions.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/types/AllTypes.h"
 #include "slang/util/SmallVector.h"
@@ -35,9 +36,9 @@ public:
                                            const ExpressionSyntax& syntax,
                                            const Args& previousArgs) const;
     virtual const Type& checkArguments(const BindContext& context, const Args& args,
-                                       SourceRange range) const = 0;
-    virtual ConstantValue eval(const Scope& scope, EvalContext& context,
-                               const Args& args) const = 0;
+                                       SourceRange range, const Expression* iterExpr) const = 0;
+    virtual ConstantValue eval(EvalContext& context, const Args& args,
+                               const CallExpression::SystemCallInfo& callInfo) const = 0;
     virtual bool verifyConstant(EvalContext& context, const Args& args,
                                 SourceRange range) const = 0;
     virtual const Type& getIteratorType(Compilation& compilation, const Expression& thisExpr) const;
@@ -65,8 +66,8 @@ public:
     const Expression& bindArgument(size_t argIndex, const BindContext& context,
                                    const ExpressionSyntax& syntax,
                                    const Args& previousArgs) const final;
-    const Type& checkArguments(const BindContext& context, const Args& args,
-                               SourceRange range) const final;
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression* iterExpr) const final;
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const override { return true; }
 
 protected:
