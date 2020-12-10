@@ -643,3 +643,20 @@ endmodule
     CHECK(diags[0].code == diag::Redefinition);
     CHECK(diags[1].code == diag::ConstEvalSubroutineNotConstant);
 }
+
+TEST_CASE("Non-const array funcs") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a[3];
+    int b[$];
+    initial begin
+        a.shuffle();
+        b.shuffle();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

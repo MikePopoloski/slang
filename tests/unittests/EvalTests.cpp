@@ -2041,5 +2041,13 @@ TEST_CASE("Array ordering methods") {
     session.eval("b.rsort");
     CHECK(session.eval("b").toString() == "[8,4,1,-2,-8,-9]");
 
+    session.eval("int c[] = {1, 9, 4, 3};");
+    session.eval("string d[$] = {\"asdf\", \"baz\", \"bar\"};");
+    session.eval("c.reverse");
+    session.eval("d.reverse");
+
+    CHECK(session.eval("c").toString() == "[3,4,9,1]");
+    CHECK(session.eval("d").toString() == "[bar,baz,asdf]");
+
     NO_SESSION_ERRORS;
 }

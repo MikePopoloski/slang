@@ -10,22 +10,6 @@
 
 namespace slang::Builtins {
 
-class NonConstantFunction : public SimpleSystemSubroutine {
-public:
-    NonConstantFunction(const std::string& name, const Type& returnType, size_t requiredArgs = 0,
-                        const std::vector<const Type*>& argTypes = {}, bool isMethod = false) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, requiredArgs, argTypes, returnType,
-                               isMethod) {}
-
-    ConstantValue eval(EvalContext&, const Args&,
-                       const CallExpression::SystemCallInfo&) const final {
-        return nullptr;
-    }
-    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
-        return notConst(context, range);
-    }
-};
-
 class FErrorFunc : public SystemSubroutine {
 public:
     FErrorFunc() : SystemSubroutine("$ferror", SubroutineKind::Function) {}

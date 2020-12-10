@@ -198,6 +198,41 @@ private:
     bool reversed;
 };
 
+class ArrayReverseMethod : public SystemSubroutine {
+public:
+    ArrayReverseMethod() : SystemSubroutine("reverse", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        return comp.getVoidType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo&) const final {
+        auto lval = args[0]->evalLValue(context);
+        if (!lval)
+            return nullptr;
+
+        auto target = lval.resolve();
+        if (!target)
+            return nullptr;
+
+        auto doReverse = [](auto& target) { std::reverse(target.begin(), target.end()); };
+        if (target->isQueue())
+            doReverse(*target->queue());
+        else
+            doReverse(std::get<ConstantValue::Elements>(target->getVariant()));
+
+        return nullptr;
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+};
+
 class ArraySizeMethod : public SimpleSystemSubroutine {
 public:
     ArraySizeMethod(Compilation& comp, const std::string& name) :
@@ -631,6 +666,11 @@ void registerArrayMethods(Compilation& c) {
                        SymbolKind::QueueType }) {
         REGISTER(kind, ArraySort, "sort", false);
         REGISTER(kind, ArraySort, "rsort", true);
+        REGISTER(kind, ArrayReverse, );
+
+        c.addSystemMethod(kind,
+                          std::make_unique<NonConstantFunction>("shuffle", c.getVoidType(), 0,
+                                                                std::vector<const Type*>{}, true));
     }
 
     // Associative arrays also alias "size" to "num" for some reason.
