@@ -17,10 +17,6 @@ bool SystemSubroutine::allowEmptyArgument(size_t) const {
     return false;
 }
 
-const Type& SystemSubroutine::getIteratorType(Compilation& compilation, const Expression&) const {
-    return compilation.getErrorType();
-}
-
 const Expression& SystemSubroutine::bindArgument(size_t, const BindContext& context,
                                                  const ExpressionSyntax& syntax,
                                                  const Args&) const {

@@ -720,6 +720,16 @@ Expression& MemberAccessExpression::fromSelector(
     if (selector.name.empty())
         return badExpr(compilation, &expr);
 
+    // Special case for iterator index methods, since iterators aren't a type themselves.
+    if (expr.kind == ExpressionKind::NamedValue) {
+        if (expr.as<NamedValueExpression>().symbol.kind == SymbolKind::Iterator) {
+            auto result = CallExpression::fromIteratorMethod(compilation, expr, selector,
+                                                             invocation, withClause, context);
+            if (result)
+                return *result;
+        }
+    }
+
     // This might look like a member access but actually be a built-in type method.
     const Type& type = expr.type->getCanonicalType();
     switch (type.kind) {

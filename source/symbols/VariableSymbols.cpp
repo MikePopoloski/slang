@@ -354,10 +354,19 @@ void NetSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("delay", *delayCtrl);
 }
 
-IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc) :
-    VariableSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic) {
+IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc,
+                               const Type& arrayType) :
+    VariableSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
+    arrayType(arrayType) {
+
     isConstant = true;
     setParent(scope);
+
+    const Type* elemType = arrayType.getArrayElementType();
+    if (!elemType)
+        elemType = &scope.getCompilation().getErrorType();
+
+    setType(*elemType);
 }
 
 } // namespace slang

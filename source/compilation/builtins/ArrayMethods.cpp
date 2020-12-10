@@ -8,6 +8,7 @@
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/symbols/VariableSymbols.h"
 #include "slang/util/Function.h"
 
 namespace slang::Builtins {
@@ -19,13 +20,6 @@ public:
     ArrayReductionMethod(const std::string& name, Operator op) :
         SystemSubroutine(name, SubroutineKind::Function), op(op) {
         withClauseMode = WithClauseMode::Iterator;
-    }
-
-    const Type& getIteratorType(Compilation& compilation, const Expression& source) const final {
-        auto elem = source.type->getArrayElementType();
-        if (elem)
-            return *elem;
-        return compilation.getErrorType();
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
@@ -483,6 +477,41 @@ public:
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
+class IteratorIndexMethod : public SystemSubroutine {
+public:
+    IteratorIndexMethod() : SystemSubroutine("index", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 1))
+            return comp.getErrorType();
+
+        if (args.size() > 1 && !args[1]->type->isIntegral())
+            return badArg(context, *args[1]);
+
+        auto& iterator = args[0]->as<NamedValueExpression>().symbol.as<IteratorSymbol>();
+        if (iterator.arrayType.isAssociativeArray()) {
+            auto indexType = iterator.arrayType.getAssociativeIndexType();
+            if (!indexType) {
+                context.addDiag(diag::AssociativeWildcardNotAllowed, range) << name;
+                return context.getCompilation().getErrorType();
+            }
+            return *indexType;
+        }
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
 void registerArrayMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -522,6 +551,9 @@ void registerArrayMethods(Compilation& c) {
     REGISTER(SymbolKind::QueueType, QueuePush, "push_front", true);
     REGISTER(SymbolKind::QueueType, QueuePush, "push_back", false);
     REGISTER(SymbolKind::QueueType, QueueInsert, );
+
+    // Iterator methods
+    REGISTER(SymbolKind::Iterator, IteratorIndex, );
 }
 
 } // namespace slang::Builtins

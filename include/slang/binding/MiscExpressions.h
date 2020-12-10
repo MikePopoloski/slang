@@ -123,6 +123,12 @@ public:
                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                         const BindContext& context);
 
+    static Expression* fromIteratorMethod(Compilation& compilation, const Expression& expr,
+                                          const LookupResult::MemberSelector& selector,
+                                          const InvocationExpressionSyntax* syntax,
+                                          const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                          const BindContext& context);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
 
     template<typename TVisitor>

@@ -518,10 +518,23 @@ Expression& CallExpression::fromSystemMethod(
                             syntax ? syntax->sourceRange() : expr.sourceRange, context);
 }
 
+Expression* CallExpression::fromIteratorMethod(
+    Compilation& compilation, const Expression& expr, const LookupResult::MemberSelector& selector,
+    const InvocationExpressionSyntax* syntax,
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const BindContext& context) {
+
+    auto subroutine = compilation.getSystemMethod(SymbolKind::Iterator, selector.name);
+    if (!subroutine)
+        return nullptr;
+
+    return &createSystemCall(compilation, *subroutine, &expr, syntax, withClause,
+                             syntax ? syntax->sourceRange() : expr.sourceRange, context);
+}
+
 static const Expression* bindIteratorExpr(Compilation& compilation,
                                           const InvocationExpressionSyntax* invocation,
                                           const ArrayOrRandomizeMethodExpressionSyntax& withClause,
-                                          const Type& iterType, const BindContext& context,
+                                          const Type& arrayType, const BindContext& context,
                                           const ValueSymbol*& iterVar) {
     // Can't be a constraint block here.
     if (withClause.constraints) {
@@ -568,8 +581,8 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
 
     // Create the iterator variable and set it up with a bind context so that it
     // can be found by the iteration expression.
-    auto it = compilation.emplace<IteratorSymbol>(context.scope, iteratorName, iteratorLoc);
-    it->setType(iterType);
+    auto it =
+        compilation.emplace<IteratorSymbol>(context.scope, iteratorName, iteratorLoc, arrayType);
     iterVar = it;
 
     BindContext iterCtx = context;
@@ -604,9 +617,8 @@ Expression& CallExpression::createSystemCall(
             }
         }
         else if (firstArg) {
-            const Type& iterType = subroutine.getIteratorType(compilation, *firstArg);
-            iterExpr =
-                bindIteratorExpr(compilation, syntax, *withClause, iterType, context, iterVar);
+            iterExpr = bindIteratorExpr(compilation, syntax, *withClause, *firstArg->type, context,
+                                        iterVar);
             if (!iterExpr || iterExpr->bad())
                 return badExpr(compilation, iterExpr);
         }

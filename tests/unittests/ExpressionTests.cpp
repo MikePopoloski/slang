@@ -1966,3 +1966,19 @@ endmodule
     CHECK(diags[10].code == diag::ExpectedIteratorName);
     CHECK(diags[11].code == diag::ExpectedIteratorName);
 }
+
+TEST_CASE("Iterator index method") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo[3];
+    int i = foo.sum(a) with (a + a.index);
+
+    int bar[string];
+    int k = bar.sum(b) with (b.index().atoi);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

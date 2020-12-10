@@ -138,7 +138,10 @@ public:
     /// not useful to other consumers.
     const IteratorSymbol* nextIterator = nullptr;
 
-    IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc);
+    /// The type of the array that this iterator traverses.
+    const Type& arrayType;
+
+    IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc, const Type& arrayType);
 
     void serializeTo(ASTSerializer&) const {};
 
