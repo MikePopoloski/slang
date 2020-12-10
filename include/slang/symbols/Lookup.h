@@ -14,6 +14,7 @@ namespace slang {
 
 class BindContext;
 class ClassType;
+class IteratorSymbol;
 class Scope;
 class Symbol;
 class SystemSubroutine;
@@ -233,10 +234,10 @@ public:
     static bool ensureVisible(const Symbol& symbol, const BindContext& context,
                               optional<SourceRange> sourceRange);
 
-    /// Checks whether the given name looks up the given symbol. If it does, returns true
-    /// and populates the selectors in @a result if applicable. Otherwise returns false.
-    static bool matchSymbol(const Scope& scope, const Symbol& symbol, const NameSyntax& name,
-                            LookupResult& result);
+    /// Searches a linked list of iterator symbols to see if any match the given name.
+    /// If one is found, populates @a result returns true. Otherwise returns false.
+    static bool findIterator(const Scope& scope, const IteratorSymbol& symbol,
+                             const NameSyntax& name, LookupResult& result);
 
 private:
     Lookup() = default;

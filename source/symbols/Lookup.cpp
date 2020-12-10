@@ -966,13 +966,16 @@ bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
     return false;
 }
 
-bool Lookup::matchSymbol(const Scope& scope, const Symbol& symbol, const NameSyntax& syntax,
-                         LookupResult& result) {
+bool Lookup::findIterator(const Scope& scope, const IteratorSymbol& symbol,
+                          const NameSyntax& syntax, LookupResult& result) {
     int colonParts = 0;
     SmallVectorSized<NamePlusLoc, 8> nameParts;
     const NameSyntax* first = &syntax;
-    if (syntax.kind == SyntaxKind::ScopedName)
+    if (syntax.kind == SyntaxKind::ScopedName) {
         first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
+        if (colonParts)
+            return false;
+    }
 
     NameComponents name;
     switch (first->kind) {
@@ -985,15 +988,21 @@ bool Lookup::matchSymbol(const Scope& scope, const Symbol& symbol, const NameSyn
             return false;
     }
 
-    if (name.text() != symbol.name || colonParts)
+    const IteratorSymbol* curr = &symbol;
+    do {
+        if (curr->name == name.text()) {
+            result.found = curr;
+            break;
+        }
+        curr = curr->nextIterator;
+    } while (curr);
+
+    if (!result.found)
         return false;
 
-    result.found = &symbol;
-    if (!nameParts.empty()) {
-        BindContext context(scope, LookupLocation::max);
-        if (!lookupDownward(nameParts, name, context, result, LookupFlags::None))
-            return false;
-    }
+    BindContext context(scope, LookupLocation::max);
+    if (!lookupDownward(nameParts, name, context, result, LookupFlags::None))
+        return false;
 
     return true;
 }

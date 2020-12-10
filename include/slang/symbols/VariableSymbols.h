@@ -132,6 +132,12 @@ private:
 /// Represents an iterator variable created for array manipulation methods.
 class IteratorSymbol : public VariableSymbol {
 public:
+    /// For efficiency purposes, each iterator symbol can form a linked list
+    /// so that when binding nested iteration expressions we don't need to
+    /// manage memory separately for list nodes. This member is otherwise
+    /// not useful to other consumers.
+    const IteratorSymbol* nextIterator = nullptr;
+
     IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc);
 
     void serializeTo(ASTSerializer&) const {};

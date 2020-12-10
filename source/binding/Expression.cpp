@@ -744,9 +744,9 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     // If we're in an array iterator expression, the iterator variable needs to be findable
     // even though it's not added to any scope. Check for that case and manually look for
     // its name here.
-    if (context.activeIterator) {
+    if (context.firstIterator) {
         LookupResult result;
-        if (Lookup::matchSymbol(context.scope, *context.activeIterator, syntax, result)) {
+        if (Lookup::findIterator(context.scope, *context.firstIterator, syntax, result)) {
             return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
                                     withClause, context);
         }

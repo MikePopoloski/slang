@@ -106,8 +106,9 @@ public:
     const InstanceSymbol* instance = nullptr;
 
     /// If an array iteration expression is being bound, this contains the symbol
-    /// representing the iterator.
-    const IteratorSymbol* activeIterator = nullptr;
+    /// representing the first iterator, along with a linked list of any others
+    /// that may be active.
+    const IteratorSymbol* firstIterator = nullptr;
 
     BindContext(const Scope& scope, LookupLocation lookupLocation,
                 bitmask<BindFlags> flags = BindFlags::None) :

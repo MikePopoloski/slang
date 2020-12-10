@@ -573,7 +573,7 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
     iterVar = it;
 
     BindContext iterCtx = context;
-    iterCtx.activeIterator = it;
+    it->nextIterator = std::exchange(iterCtx.firstIterator, it);
     iterCtx.flags &= ~BindFlags::StaticInitializer;
 
     return &Expression::bind(*withClause.args->expressions[0], iterCtx);

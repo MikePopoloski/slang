@@ -2020,7 +2020,7 @@ TEST_CASE("Array reduction methods") {
     CHECK(session.eval("b.sum").integer() == 10);
     CHECK(session.eval("b.product").integer() == 24);
     CHECK(session.eval("b.xor with (item + 4)").integer() == 12);
-    CHECK(session.eval("m.sum with (item.sum with (item));").integer() == 50);
+    CHECK(session.eval("m.sum(a) with (a.sum with (a[0] + item));").integer() == 90);
     CHECK(session.eval("bit_arr.sum with ( int'(item) );").integer() == 3);
 
     NO_SESSION_ERRORS;
