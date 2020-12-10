@@ -30,7 +30,7 @@ public:
 
         if (iterExpr) {
             if (!iterExpr->type->isIntegral()) {
-                context.addDiag(diag::ArrayReductionIntegral, iterExpr->sourceRange);
+                context.addDiag(diag::ArrayMethodIntegral, iterExpr->sourceRange) << name;
                 return comp.getErrorType();
             }
 
@@ -41,7 +41,7 @@ public:
             ASSERT(elemType);
 
             if (!elemType->isIntegral()) {
-                context.addDiag(diag::ArrayReductionIntegral, args[0]->sourceRange);
+                context.addDiag(diag::ArrayMethodIntegral, args[0]->sourceRange) << name;
                 return comp.getErrorType();
             }
 
@@ -99,6 +99,103 @@ public:
 
 private:
     Operator op;
+};
+
+class ArraySortMethod : public SystemSubroutine {
+public:
+    ArraySortMethod(const std::string& name, bool reversed) :
+        SystemSubroutine(name, SubroutineKind::Function), reversed(reversed) {
+        withClauseMode = WithClauseMode::Iterator;
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression* iterExpr) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        if (iterExpr) {
+            if (!iterExpr->type->isIntegral()) {
+                context.addDiag(diag::ArrayMethodIntegral, iterExpr->sourceRange) << name;
+                return comp.getErrorType();
+            }
+        }
+        else {
+            auto elemType = args[0]->type->getArrayElementType();
+            ASSERT(elemType);
+
+            if (!elemType->isIntegral()) {
+                context.addDiag(diag::ArrayMethodIntegral, args[0]->sourceRange) << name;
+                return comp.getErrorType();
+            }
+        }
+
+        return comp.getVoidType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo& callInfo) const final {
+        auto lval = args[0]->evalLValue(context);
+        if (!lval)
+            return nullptr;
+
+        auto target = lval.resolve();
+        if (!target)
+            return nullptr;
+
+        if (callInfo.iterExpr) {
+            ASSERT(callInfo.iterVar);
+            auto iterVal = context.createLocal(callInfo.iterVar);
+
+            auto sortTarget = [&](auto& target) {
+                auto pred = [&](ConstantValue& a, ConstantValue& b) {
+                    *iterVal = a;
+                    ConstantValue cva = callInfo.iterExpr->eval(context);
+
+                    *iterVal = b;
+                    ConstantValue cvb = callInfo.iterExpr->eval(context);
+
+                    return cva < cvb;
+                };
+
+                if (reversed)
+                    std::sort(target.rbegin(), target.rend(), pred);
+                else
+                    std::sort(target.begin(), target.end(), pred);
+            };
+
+            if (target->isQueue()) {
+                sortTarget(*target->queue());
+            }
+            else {
+                auto& vec = std::get<ConstantValue::Elements>(target->getVariant());
+                sortTarget(vec);
+            }
+        }
+        else {
+            auto sortTarget = [&](auto& target) {
+                if (reversed)
+                    std::sort(target.rbegin(), target.rend());
+                else
+                    std::sort(target.begin(), target.end());
+            };
+
+            if (target->isQueue()) {
+                sortTarget(*target->queue());
+            }
+            else {
+                auto& vec = std::get<ConstantValue::Elements>(target->getVariant());
+                sortTarget(vec);
+            }
+        }
+
+        return nullptr;
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+
+private:
+    bool reversed;
 };
 
 class ArraySizeMethod : public SimpleSystemSubroutine {
@@ -528,6 +625,12 @@ void registerArrayMethods(Compilation& c) {
     for (auto kind : { SymbolKind::DynamicArrayType, SymbolKind::AssociativeArrayType,
                        SymbolKind::QueueType }) {
         REGISTER(kind, ArraySize, c, "size");
+    }
+
+    for (auto kind : { SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
+                       SymbolKind::QueueType }) {
+        REGISTER(kind, ArraySort, "sort", false);
+        REGISTER(kind, ArraySort, "rsort", true);
     }
 
     // Associative arrays also alias "size" to "num" for some reason.

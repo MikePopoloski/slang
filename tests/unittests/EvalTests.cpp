@@ -2025,3 +2025,21 @@ TEST_CASE("Array reduction methods") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Array ordering methods") {
+    ScriptSession session;
+    session.eval("int a[] = {1, 4, 2, 9, 8, 8};");
+    session.eval("int b[$] = {1, 4, -2, -9, -8, 8};");
+
+    session.eval("a.sort");
+    CHECK(session.eval("a").toString() == "[1,2,4,8,8,9]");
+    session.eval("b.rsort with (item * -1)");
+    CHECK(session.eval("b").toString() == "[-9,-8,-2,1,4,8]");
+
+    session.eval("a.sort with (item == 2 ? 100 : item)");
+    CHECK(session.eval("a").toString() == "[1,4,8,8,9,2]");
+    session.eval("b.rsort");
+    CHECK(session.eval("b").toString() == "[8,4,1,-2,-8,-9]");
+
+    NO_SESSION_ERRORS;
+}
