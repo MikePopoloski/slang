@@ -84,7 +84,8 @@ struct AttributeInstanceSyntax;
     x(GenericClassDef) \
     x(MethodPrototype) \
     x(UnknownModule) \
-    x(Iterator)
+    x(Iterator) \
+    x(ConstraintBlock)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)

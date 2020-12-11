@@ -221,4 +221,34 @@ public:
     }
 };
 
+struct ConstraintDeclarationSyntax;
+struct ConstraintPrototypeSyntax;
+
+/// Represents a named constraint block declaration within a class.
+class ConstraintBlockSymbol : public Symbol, public Scope {
+public:
+    /// Set to true if this is a static constraint block.
+    bool isStatic = false;
+
+    /// Set to true if this constraint block was declared extern, either
+    /// implicitly or explicitly.
+    bool isExtern = false;
+
+    /// Set to true if this constraint block was explicitly declared extern,
+    /// which means an out-of-block body is required instead of optional.
+    bool isExplicitExtern = false;
+
+    ConstraintBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static ConstraintBlockSymbol& fromSyntax(const Scope& scope,
+                                             const ConstraintDeclarationSyntax& syntax);
+
+    static ConstraintBlockSymbol& fromSyntax(const Scope& scope,
+                                             const ConstraintPrototypeSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ConstraintBlock; }
+};
+
 } // namespace slang

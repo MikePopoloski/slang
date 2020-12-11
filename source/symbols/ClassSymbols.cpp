@@ -709,4 +709,53 @@ bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKe
     return true;
 }
 
+ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& compilation, string_view name,
+                                             SourceLocation loc) :
+    Symbol(SymbolKind::ConstraintBlock, name, loc),
+    Scope(compilation, this) {
+}
+
+ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(
+    const Scope& scope, const ConstraintDeclarationSyntax& syntax) {
+
+    auto& comp = scope.getCompilation();
+    auto result =
+        comp.emplace<ConstraintBlockSymbol>(comp, syntax.name.valueText(), syntax.name.location());
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+
+    // Static is the only allowed qualifier, enforced by the parser.
+    for (auto qual : syntax.qualifiers) {
+        if (qual.kind == TokenKind::StaticKeyword)
+            result->isStatic = true;
+    }
+
+    return *result;
+}
+
+ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
+                                                         const ConstraintPrototypeSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result =
+        comp.emplace<ConstraintBlockSymbol>(comp, syntax.name.valueText(), syntax.name.location());
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+    result->isExtern = true;
+
+    for (auto qual : syntax.qualifiers) {
+        if (qual.kind == TokenKind::StaticKeyword)
+            result->isStatic = true;
+        else if (qual.kind == TokenKind::ExternKeyword)
+            result->isExplicitExtern = true;
+    }
+
+    return *result;
+}
+
+void ConstraintBlockSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isStatic", isStatic);
+    serializer.write("isExtern", isExtern);
+    serializer.write("isExplicitExtern", isExplicitExtern);
+}
+
 } // namespace slang

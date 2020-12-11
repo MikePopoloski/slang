@@ -356,6 +356,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(
                 SubroutineSymbol::fromSyntax(compilation, syntax.as<DPIImportSyntax>(), *this));
             break;
+        case SyntaxKind::ConstraintDeclaration:
+            addMember(
+                ConstraintBlockSymbol::fromSyntax(*this, syntax.as<ConstraintDeclarationSyntax>()));
+            break;
+        case SyntaxKind::ConstraintPrototype:
+            addMember(
+                ConstraintBlockSymbol::fromSyntax(*this, syntax.as<ConstraintPrototypeSyntax>()));
+            break;
         case SyntaxKind::ConcurrentAssertionMember:
         case SyntaxKind::ImmediateAssertionMember:
             // TODO: these aren't supported yet but we can compile everything else successfully
