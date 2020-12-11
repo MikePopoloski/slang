@@ -265,12 +265,12 @@ public:
                     context.addDiag(diag::AssociativeWildcardNotAllowed, range) << name;
                     return comp.getErrorType();
                 }
-                return *comp.emplace<QueueType>(*indexType, 0);
+                return *comp.emplace<QueueType>(*indexType, 0u);
             }
-            return *comp.emplace<QueueType>(comp.getIntType(), 0);
+            return *comp.emplace<QueueType>(comp.getIntType(), 0u);
         }
 
-        return *comp.emplace<QueueType>(*arrayType->getArrayElementType(), 0);
+        return *comp.emplace<QueueType>(*arrayType->getArrayElementType(), 0u);
     }
 
     ConstantValue eval(EvalContext& context, const Args& args,
@@ -374,7 +374,7 @@ public:
             return comp.getErrorType();
         }
 
-        return *comp.emplace<QueueType>(*elemType, 0);
+        return *comp.emplace<QueueType>(*elemType, 0u);
     }
 
     ConstantValue eval(EvalContext& context, const Args& args,
@@ -460,12 +460,12 @@ public:
                     context.addDiag(diag::AssociativeWildcardNotAllowed, range) << name;
                     return comp.getErrorType();
                 }
-                return *comp.emplace<QueueType>(*indexType, 0);
+                return *comp.emplace<QueueType>(*indexType, 0u);
             }
-            return *comp.emplace<QueueType>(comp.getIntType(), 0);
+            return *comp.emplace<QueueType>(comp.getIntType(), 0u);
         }
 
-        return *comp.emplace<QueueType>(*arrayType->getArrayElementType(), 0);
+        return *comp.emplace<QueueType>(*arrayType->getArrayElementType(), 0u);
     }
 
     ConstantValue eval(EvalContext& context, const Args& args,
