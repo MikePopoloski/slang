@@ -2051,3 +2051,20 @@ TEST_CASE("Array ordering methods") {
 
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Array locator methods") {
+    ScriptSession session;
+    session.eval("int a[] = {1, 4, 2, 9, 8, 8};");
+    session.eval("int b[$] = {1, 4, -2, -9, -8, 8};");
+    session.eval("int c[string] = '{\"hello\":1, \"good\":4, \"bye\":-2};");
+
+    CHECK(session.eval("a.find with (item > 7)").toString() == "[9,8,8]");
+    CHECK(session.eval("b.find_index with (item < 0)").toString() == "[2,3,4]");
+    CHECK(session.eval("c.find_first with (item == 4)").toString() == "[4]");
+    CHECK(session.eval("c.find_first_index with (item == 4)").toString() == "[good]");
+    CHECK(session.eval("c.find_last with (item < 100)").toString() == "[1]");
+    CHECK(session.eval("b.find_last_index with (item > 10)").toString() == "[]");
+    CHECK(session.eval("a.find_last_index with (item == 8)").toString() == "[5]");
+
+    NO_SESSION_ERRORS;
+}

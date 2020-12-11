@@ -516,6 +516,7 @@ error ExpectedModuleName "expected module name"
 error ExpectedModOrVarName "expected module or variable name"
 error ExpectedScopeOrAssert "expected scope or assertion name"
 error CastArgSingular "argument to $cast cannot be of aggregate type (type is {})"
+error ArrayLocatorWithClause "'{}' requires 'with' expression for searching"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 

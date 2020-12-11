@@ -233,6 +233,120 @@ public:
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
+class ArrayLocatorMethod : public SystemSubroutine {
+public:
+    enum Mode { All, First, Last } mode;
+    bool isIndexed;
+
+    ArrayLocatorMethod(const std::string& name, Mode mode, bool isIndexed) :
+        SystemSubroutine(name, SubroutineKind::Function), mode(mode), isIndexed(isIndexed) {
+        withClauseMode = WithClauseMode::Iterator;
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression* iterExpr) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        if (!iterExpr) {
+            context.addDiag(diag::ArrayLocatorWithClause, range) << name;
+            return comp.getErrorType();
+        }
+
+        if (!context.requireBooleanConvertible(*iterExpr))
+            return comp.getErrorType();
+
+        auto arrayType = args[0]->type;
+        if (isIndexed) {
+            if (arrayType->isAssociativeArray()) {
+                auto indexType = arrayType->getAssociativeIndexType();
+                if (!indexType) {
+                    context.addDiag(diag::AssociativeWildcardNotAllowed, range) << name;
+                    return comp.getErrorType();
+                }
+                return *comp.emplace<QueueType>(*indexType, 0);
+            }
+            return *comp.emplace<QueueType>(comp.getIntType(), 0);
+        }
+
+        return *comp.emplace<QueueType>(*arrayType->getArrayElementType(), 0);
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo& callInfo) const final {
+        ConstantValue arr = args[0]->eval(context);
+        if (!arr)
+            return nullptr;
+
+        SVQueue results;
+        auto iterVal = context.createLocal(callInfo.iterVar);
+
+        if (arr.isMap()) {
+            auto doFind = [&](auto it, auto end) {
+                for (; it != end; it++) {
+                    *iterVal = it->second;
+                    ConstantValue cv = callInfo.iterExpr->eval(context);
+                    if (cv.isTrue()) {
+                        if (isIndexed)
+                            results.emplace_back(it->first);
+                        else
+                            results.emplace_back(it->second);
+
+                        if (mode != All)
+                            break;
+                    }
+                }
+            };
+
+            auto& cont = *arr.map();
+            if (mode == Last)
+                doFind(std::rbegin(cont), std::rend(cont));
+            else
+                doFind(std::begin(cont), std::end(cont));
+        }
+        else {
+            auto doFind = [&](auto begin, auto end) {
+                for (auto it = begin; it != end; it++) {
+                    *iterVal = *it;
+                    ConstantValue cv = callInfo.iterExpr->eval(context);
+                    if (cv.isTrue()) {
+                        if (isIndexed) {
+                            auto dist = std::distance(begin, it);
+                            if (mode == Last)
+                                dist = std::distance(begin, end) - dist - 1;
+
+                            results.emplace_back(SVInt(32, (uint64_t)dist, true));
+                        }
+                        else {
+                            results.emplace_back(*it);
+                        }
+
+                        if (mode != All)
+                            break;
+                    }
+                }
+            };
+
+            auto find = [&](auto& cont) {
+                if (mode == Last)
+                    doFind(std::rbegin(cont), std::rend(cont));
+                else
+                    doFind(std::begin(cont), std::end(cont));
+            };
+
+            if (arr.isQueue())
+                find(*arr.queue());
+            else
+                find(std::get<ConstantValue::Elements>(arr.getVariant()));
+        }
+
+        return results;
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+};
+
 class ArraySizeMethod : public SimpleSystemSubroutine {
 public:
     ArraySizeMethod(Compilation& comp, const std::string& name) :
@@ -627,7 +741,7 @@ public:
             auto indexType = iterator.arrayType.getAssociativeIndexType();
             if (!indexType) {
                 context.addDiag(diag::AssociativeWildcardNotAllowed, range) << name;
-                return context.getCompilation().getErrorType();
+                return comp.getErrorType();
             }
             return *indexType;
         }
@@ -655,6 +769,13 @@ void registerArrayMethods(Compilation& c) {
         REGISTER(kind, ArrayReduction, "xor", [](auto& l, auto& r) { l ^= r; });
         REGISTER(kind, ArrayReduction, "sum", [](auto& l, auto& r) { l += r; });
         REGISTER(kind, ArrayReduction, "product", [](auto& l, auto& r) { l *= r; });
+
+        REGISTER(kind, ArrayLocator, "find", ArrayLocatorMethod::All, false);
+        REGISTER(kind, ArrayLocator, "find_index", ArrayLocatorMethod::All, true);
+        REGISTER(kind, ArrayLocator, "find_first", ArrayLocatorMethod::First, false);
+        REGISTER(kind, ArrayLocator, "find_first_index", ArrayLocatorMethod::First, true);
+        REGISTER(kind, ArrayLocator, "find_last", ArrayLocatorMethod::Last, false);
+        REGISTER(kind, ArrayLocator, "find_last_index", ArrayLocatorMethod::Last, true);
     }
 
     for (auto kind : { SymbolKind::DynamicArrayType, SymbolKind::AssociativeArrayType,
