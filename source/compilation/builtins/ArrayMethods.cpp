@@ -13,6 +13,10 @@
 
 namespace slang::Builtins {
 
+static bool isComparable(const Type& type) {
+    return type.isNumeric() || type.isString();
+}
+
 class ArrayReductionMethod : public SystemSubroutine {
 public:
     using Operator = function_ref<void(SVInt&, const SVInt&)>;
@@ -115,8 +119,8 @@ public:
             return comp.getErrorType();
 
         if (iterExpr) {
-            if (!iterExpr->type->isIntegral()) {
-                context.addDiag(diag::ArrayMethodIntegral, iterExpr->sourceRange) << name;
+            if (!isComparable(*iterExpr->type)) {
+                context.addDiag(diag::ArrayMethodComparable, iterExpr->sourceRange) << name;
                 return comp.getErrorType();
             }
         }
@@ -124,8 +128,8 @@ public:
             auto elemType = args[0]->type->getArrayElementType();
             ASSERT(elemType);
 
-            if (!elemType->isIntegral()) {
-                context.addDiag(diag::ArrayMethodIntegral, args[0]->sourceRange) << name;
+            if (!isComparable(*elemType)) {
+                context.addDiag(diag::ArrayMethodComparable, args[0]->sourceRange) << name;
                 return comp.getErrorType();
             }
         }
@@ -364,13 +368,13 @@ public:
         ASSERT(elemType);
 
         if (iterExpr) {
-            if (!iterExpr->type->isNumeric()) {
-                context.addDiag(diag::ArrayMethodNumeric, iterExpr->sourceRange) << name;
+            if (!isComparable(*iterExpr->type)) {
+                context.addDiag(diag::ArrayMethodComparable, iterExpr->sourceRange) << name;
                 return comp.getErrorType();
             }
         }
-        else if (!elemType->isNumeric()) {
-            context.addDiag(diag::ArrayMethodNumeric, args[0]->sourceRange) << name;
+        else if (!isComparable(*elemType)) {
+            context.addDiag(diag::ArrayMethodComparable, args[0]->sourceRange) << name;
             return comp.getErrorType();
         }
 

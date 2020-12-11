@@ -505,7 +505,7 @@ error FormatEmptyArg "empty argument not allowed -- expecting value for '%{}' fo
 error FormatTooManyArgs "too many arguments provided for format string"
 error InvalidStringArg "value of type {} is not a valid string argument"
 error ArrayMethodIntegral "array method '{}' can only be called on unpacked arrays of integral values"
-error ArrayMethodNumeric "array method '{}' can only be called on unpacked arrays of numeric values"
+error ArrayMethodComparable "array method '{}' can only be called on unpacked arrays of comparable values"
 error SysFuncNotConst "'{}' is not allowed in a constant context"
 error QueryOnDynamicType "array query function '{}' cannot be called on a dynamically sized type identifier"
 error DimensionIndexInvalid "{} is not a valid dimension for {}"
