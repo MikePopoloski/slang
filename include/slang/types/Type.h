@@ -14,6 +14,7 @@
 namespace slang {
 
 struct NameSyntax;
+enum class RandMode;
 
 /// Specifies possible traits for integral types.
 enum class IntegralFlags : uint8_t {
@@ -240,6 +241,10 @@ public:
     /// Returns true if the type can represent a string-like value; this includes
     /// the string type itself as well as byte arrays and all integral types.
     bool canBeStringLike() const;
+
+    /// Returns true if the type is valid for use as a random variable of
+    /// the given mode.
+    bool isValidForRand(RandMode mode) const;
 
     /// Coerces the given constant into one that is appropriate for this type.
     ConstantValue coerceValue(const ConstantValue& value) const;

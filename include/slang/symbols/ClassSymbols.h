@@ -22,6 +22,7 @@ struct ClassPropertyDeclarationSyntax;
 class ClassPropertySymbol : public VariableSymbol {
 public:
     Visibility visibility;
+    RandMode randMode = RandMode::None;
 
     ClassPropertySymbol(string_view name, SourceLocation loc, VariableLifetime lifetime,
                         Visibility visibility);

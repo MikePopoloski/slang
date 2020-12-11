@@ -36,6 +36,7 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
     bool isConst = false;
     VariableLifetime lifetime = VariableLifetime::Automatic;
     Visibility visibility = Visibility::Public;
+    RandMode randMode = RandMode::None;
 
     for (Token qual : syntax.qualifiers) {
         switch (qual.kind) {
@@ -52,8 +53,10 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
                 visibility = Visibility::Protected;
                 break;
             case TokenKind::RandKeyword:
+                randMode = RandMode::Rand;
+                break;
             case TokenKind::RandCKeyword:
-                scope.addDiag(diag::WarnNotYetSupported, qual.range());
+                randMode = RandMode::RandC;
                 break;
             case TokenKind::PureKeyword:
             case TokenKind::VirtualKeyword:
@@ -86,10 +89,14 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
         auto var = comp.emplace<ClassPropertySymbol>(
             declarator->name.valueText(), declarator->name.location(), lifetime, visibility);
         var->isConstant = isConst;
+        var->randMode = randMode;
         var->setDeclaredType(*dataSyntax.type);
         var->setFromDeclarator(*declarator);
         var->setAttributes(scope, syntax.attributes);
         results.append(var);
+
+        if (randMode != RandMode::None)
+            var->getDeclaredType()->addFlags(DeclaredTypeFlags::Rand);
 
         if (isConst && lifetime == VariableLifetime::Static && !declarator->initializer)
             scope.addDiag(diag::StaticConstNoInitializer, declarator->name.range());

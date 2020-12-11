@@ -652,6 +652,20 @@ bool Type::canBeStringLike() const {
     return t.isIntegral() || t.isString() || t.isByteArray();
 }
 
+bool Type::isValidForRand(RandMode mode) const {
+    if (isIntegral())
+        return true;
+
+    if (isArray())
+        return getArrayElementType()->isValidForRand(mode);
+
+    if (isClass() || isUnpackedStruct())
+        return mode == RandMode::Rand;
+
+    // TODO: rules for tagged unions
+    return false;
+}
+
 ConstantValue Type::coerceValue(const ConstantValue& value) const {
     if (isIntegral())
         return value.convertToInt(getBitWidth(), isSigned(), isFourState());

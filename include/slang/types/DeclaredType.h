@@ -37,10 +37,11 @@ enum class DeclaredTypeFlags {
     NetType = 1 << 8,
     UserDefinedNetType = 1 << 9,
     FormalArgMergeVar = 1 << 10,
+    Rand = 1 << 11,
 
-    NeedsTypeCheck = Port | NetType | UserDefinedNetType | FormalArgMergeVar
+    NeedsTypeCheck = Port | NetType | UserDefinedNetType | FormalArgMergeVar | Rand
 };
-BITMASK(DeclaredTypeFlags, FormalArgMergeVar);
+BITMASK(DeclaredTypeFlags, Rand);
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type.

@@ -106,6 +106,11 @@ ENUM(GateType, GATE)
 ENUM(ElabSystemTaskKind, ELAB);
 #undef ELAB
 
+#define MODE(x) x(None) x(Rand) x(RandC)
+/// Specifies possible assertion kinds.
+ENUM(RandMode, MODE);
+#undef MODE
+
 class SemanticFacts {
 public:
     /// Interprets a keyword token as a variable lifetime value.

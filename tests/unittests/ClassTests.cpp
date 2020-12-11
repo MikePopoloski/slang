@@ -1720,3 +1720,33 @@ endfunction
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Rand qualifiers") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int a;
+    randc int b[3];
+    randc A c;
+    rand real r;
+
+    struct { rand int i; randc logic j; } asdf;
+endclass
+
+module m;
+    struct packed { rand int i; } a;
+    union { rand int i; } b;
+    struct { rand real i; } c;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::InvalidRandType);
+    CHECK(diags[1].code == diag::InvalidRandType);
+    CHECK(diags[2].code == diag::RandOnPackedMember);
+    CHECK(diags[3].code == diag::RandOnUnionMember);
+    CHECK(diags[4].code == diag::InvalidRandType);
+}

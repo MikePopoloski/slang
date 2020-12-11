@@ -9,6 +9,7 @@
 #include "slang/binding/Expression.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/Scope.h"
 #include "slang/symbols/Symbol.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -226,6 +227,21 @@ void DeclaredType::checkType(const BindContext& context) const {
             ASSERT(typeSyntax);
             mergePortTypes(context, *var, typeSyntax->as<ImplicitTypeSyntax>(), parent.location,
                            dimensions ? *dimensions : span<const VariableDimensionSyntax* const>{});
+        }
+    }
+    else if (flags.has(DeclaredTypeFlags::Rand)) {
+        RandMode mode;
+        if (parent.kind == SymbolKind::ClassProperty)
+            mode = parent.as<ClassPropertySymbol>().randMode;
+        else
+            mode = parent.as<FieldSymbol>().randMode;
+
+        if (!type->isValidForRand(mode)) {
+            auto& diag = context.addDiag(diag::InvalidRandType, parent.location) << *type;
+            if (mode == RandMode::Rand)
+                diag << "rand"sv;
+            else
+                diag << "randc"sv;
         }
     }
 }

@@ -414,6 +414,14 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
                 case TokenKind::RandKeyword:
                 case TokenKind::RandCKeyword:
                     randomQualifier = consume();
+                    if (packed) {
+                        addDiag(diag::RandOnPackedMember, randomQualifier.location())
+                            << randomQualifier.range();
+                    }
+                    else if (keyword.kind == TokenKind::UnionKeyword) {
+                        addDiag(diag::RandOnUnionMember, randomQualifier.location())
+                            << randomQualifier.range();
+                    }
                     break;
                 default:
                     break;

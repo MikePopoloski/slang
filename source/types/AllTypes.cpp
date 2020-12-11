@@ -710,15 +710,35 @@ const Type& UnpackedStructType::fromSyntax(const Scope& scope, LookupLocation lo
         comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), location, scope);
 
     for (auto member : syntax.members) {
+        RandMode randMode = RandMode::None;
+        switch (member->randomQualifier.kind) {
+            case TokenKind::RandKeyword:
+                randMode = RandMode::Rand;
+                break;
+            case TokenKind::RandCKeyword:
+                randMode = RandMode::RandC;
+                break;
+            default:
+                break;
+        }
+
         for (auto decl : member->declarators) {
             auto variable = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
                                                       fieldIndex);
             variable->setDeclaredType(*member->type);
             variable->setFromDeclarator(*decl);
             variable->setAttributes(scope, member->attributes);
+            variable->randMode = randMode;
+
+            if (randMode != RandMode::None)
+                variable->getDeclaredType()->addFlags(DeclaredTypeFlags::Rand);
 
             result->addMember(*variable);
             fieldIndex++;
+
+            // Force resolution of the type right away, otherwise nothing
+            // is required to force it later.
+            variable->getType();
         }
     }
 
@@ -856,6 +876,10 @@ const Type& UnpackedUnionType::fromSyntax(const Scope& scope, LookupLocation loc
 
             if (variable->getType().isCHandle())
                 scope.addDiag(diag::InvalidUnionMember, decl->name.range()) << variable->getType();
+
+            // Force resolution of the type right away, otherwise nothing
+            // is required to force it later.
+            variable->getType();
         }
     }
 

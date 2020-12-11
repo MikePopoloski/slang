@@ -93,6 +93,9 @@ public:
     /// packed, this is an offset in bits. Otherwise it's an index into the list of fields.
     uint32_t offset;
 
+    /// If this field was marked with random qualifier, the mode indicated by that qualifier.
+    RandMode randMode = RandMode::None;
+
     FieldSymbol(string_view name, SourceLocation loc, uint32_t offset) :
         VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic), offset(offset) {}
 
