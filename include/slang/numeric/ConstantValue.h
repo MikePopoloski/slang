@@ -197,6 +197,8 @@ public:
     CVIterator& operator++();
     CVIterator& operator--();
 
+    const ConstantValue& key() const;
+
 private:
     std::variant<ConstantValue::Elements::iterator, AssociativeArray::iterator, SVQueue::iterator>
         current;
@@ -225,6 +227,8 @@ public:
     using iterator_facade::operator--;
     CVConstIterator& operator++();
     CVConstIterator& operator--();
+
+    const ConstantValue& key() const;
 
 private:
     std::variant<ConstantValue::Elements::const_iterator, AssociativeArray::const_iterator,
@@ -291,3 +295,12 @@ struct ConstantRange {
 };
 
 } // namespace slang
+
+namespace std {
+
+template<>
+struct hash<slang::ConstantValue> {
+    size_t operator()(const slang::ConstantValue& cv) const { return cv.hash(); }
+};
+
+} // namespace std

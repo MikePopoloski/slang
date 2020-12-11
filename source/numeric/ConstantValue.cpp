@@ -543,6 +543,18 @@ ConstantValue& CVIterator::operator*() {
         current);
 }
 
+const ConstantValue& CVIterator::key() const {
+    return std::visit(
+        [](auto&& arg) -> const ConstantValue& {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, AssociativeArray::iterator>)
+                return arg->first;
+            else
+                return *arg;
+        },
+        current);
+}
+
 CVIterator& CVIterator::operator++() {
     std::visit([](auto&& arg) { ++arg; }, current);
     return *this;
@@ -559,6 +571,18 @@ const ConstantValue& CVConstIterator::operator*() const {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, AssociativeArray::const_iterator>)
                 return arg->second;
+            else
+                return *arg;
+        },
+        current);
+}
+
+const ConstantValue& CVConstIterator::key() const {
+    return std::visit(
+        [](auto&& arg) -> const ConstantValue& {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, AssociativeArray::const_iterator>)
+                return arg->first;
             else
                 return *arg;
         },

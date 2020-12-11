@@ -439,6 +439,86 @@ private:
     bool isMin;
 };
 
+class ArrayUniqueMethod : public SystemSubroutine {
+public:
+    ArrayUniqueMethod(const std::string& name, bool isIndexed) :
+        SystemSubroutine(name, SubroutineKind::Function), isIndexed(isIndexed) {
+        withClauseMode = WithClauseMode::Iterator;
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        auto arrayType = args[0]->type;
+        if (isIndexed) {
+            if (arrayType->isAssociativeArray()) {
+                auto indexType = arrayType->getAssociativeIndexType();
+                if (!indexType) {
+                    context.addDiag(diag::AssociativeWildcardNotAllowed, range) << name;
+                    return comp.getErrorType();
+                }
+                return *comp.emplace<QueueType>(*indexType, 0);
+            }
+            return *comp.emplace<QueueType>(comp.getIntType(), 0);
+        }
+
+        return *comp.emplace<QueueType>(*arrayType->getArrayElementType(), 0);
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo& callInfo) const final {
+        ConstantValue arr = args[0]->eval(context);
+        if (!arr)
+            return nullptr;
+
+        SVQueue result;
+
+        if (callInfo.iterExpr) {
+            ASSERT(callInfo.iterVar);
+            auto iterVal = context.createLocal(callInfo.iterVar);
+
+            uint32_t index = 0;
+            flat_hash_set<ConstantValue> seen;
+            for (auto it = begin(arr); it != end(arr); ++it, ++index) {
+                *iterVal = *it;
+                auto cv = callInfo.iterExpr->eval(context);
+                if (seen.emplace(cv).second) {
+                    if (isIndexed && !arr.isMap())
+                        result.emplace_back(SVInt(32, index, true));
+                    else if (isIndexed)
+                        result.emplace_back(it.key());
+                    else
+                        result.emplace_back(std::move(*it));
+                }
+            }
+        }
+        else {
+            uint32_t index = 0;
+            flat_hash_set<ConstantValue> seen;
+            for (auto it = begin(arr); it != end(arr); ++it, ++index) {
+                if (seen.emplace(*it).second) {
+                    if (isIndexed && !arr.isMap())
+                        result.emplace_back(SVInt(32, index, true));
+                    else if (isIndexed)
+                        result.emplace_back(it.key());
+                    else
+                        result.emplace_back(std::move(*it));
+                }
+            }
+        }
+
+        return result;
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+
+private:
+    bool isIndexed;
+};
+
 class ArraySizeMethod : public SimpleSystemSubroutine {
 public:
     ArraySizeMethod(Compilation& comp, const std::string& name) :
@@ -871,6 +951,9 @@ void registerArrayMethods(Compilation& c) {
 
         REGISTER(kind, ArrayMinMax, "min", true);
         REGISTER(kind, ArrayMinMax, "max", false);
+
+        REGISTER(kind, ArrayUnique, "unique", false);
+        REGISTER(kind, ArrayUnique, "unique_index", true);
     }
 
     for (auto kind : { SymbolKind::DynamicArrayType, SymbolKind::AssociativeArrayType,

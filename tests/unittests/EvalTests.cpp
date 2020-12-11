@@ -2073,5 +2073,15 @@ TEST_CASE("Array locator methods") {
     CHECK(session.eval("a.max with (item == 2 ? 99 : item)").toString() == "[2]");
     CHECK(session.eval("d.max").toString() == "[]");
 
+    session.eval("int e[] = {1, 1, 4, 9, -3, 1, 2};");
+    CHECK(session.eval("e.unique").toString() == "[1,4,9,-3,2]");
+    CHECK(session.eval("e.unique_index").toString() == "[0,2,3,4,6]");
+    CHECK(session.eval("e.unique with (item == 4 ? 1 : item)").toString() == "[1,9,-3,2]");
+    CHECK(session.eval("e.unique_index with (item == 4 ? 1 : item)").toString() == "[0,3,4,6]");
+
+    session.eval("int f[string] = '{\"a\":1, \"b\":5, \"c\":1, \"d\":1};");
+    CHECK(session.eval("f.unique_index").toString() == "[a,b]");
+    CHECK(session.eval("f.unique_index with (item == 5 ? 1 : item)").toString() == "[a]");
+
     NO_SESSION_ERRORS;
 }
