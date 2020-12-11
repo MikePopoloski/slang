@@ -347,6 +347,98 @@ public:
     bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
 };
 
+class ArrayMinMaxMethod : public SystemSubroutine {
+public:
+    ArrayMinMaxMethod(const std::string& name, bool isMin) :
+        SystemSubroutine(name, SubroutineKind::Function), isMin(isMin) {
+        withClauseMode = WithClauseMode::Iterator;
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression* iterExpr) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        auto elemType = args[0]->type->getArrayElementType();
+        ASSERT(elemType);
+
+        if (iterExpr) {
+            if (!iterExpr->type->isNumeric()) {
+                context.addDiag(diag::ArrayMethodNumeric, iterExpr->sourceRange) << name;
+                return comp.getErrorType();
+            }
+        }
+        else if (!elemType->isNumeric()) {
+            context.addDiag(diag::ArrayMethodNumeric, args[0]->sourceRange) << name;
+            return comp.getErrorType();
+        }
+
+        return *comp.emplace<QueueType>(*elemType, 0);
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args,
+                       const CallExpression::SystemCallInfo& callInfo) const final {
+        ConstantValue arr = args[0]->eval(context);
+        if (!arr)
+            return nullptr;
+
+        SVQueue result;
+        if (arr.empty())
+            return result;
+
+        if (callInfo.iterExpr) {
+            ASSERT(callInfo.iterVar);
+
+            auto it = begin(arr);
+            auto iterVal = context.createLocal(callInfo.iterVar, *it);
+            ConstantValue elem = *it;
+            ConstantValue val = callInfo.iterExpr->eval(context);
+
+            for (++it; it != end(arr); ++it) {
+                *iterVal = *it;
+                auto cv = callInfo.iterExpr->eval(context);
+
+                if (isMin) {
+                    if (cv < val) {
+                        val = cv;
+                        elem = *it;
+                    }
+                }
+                else {
+                    if (val < cv) {
+                        val = cv;
+                        elem = *it;
+                    }
+                }
+            }
+            result.emplace_back(std::move(elem));
+        }
+        else {
+            auto it = begin(arr);
+            ConstantValue elem = *it;
+            for (++it; it != end(arr); ++it) {
+                if (isMin) {
+                    if (*it < elem)
+                        elem = *it;
+                }
+                else {
+                    if (elem < *it)
+                        elem = *it;
+                }
+            }
+            result.emplace_back(std::move(elem));
+        }
+
+        return result;
+    }
+
+    bool verifyConstant(EvalContext&, const Args&, SourceRange) const final { return true; }
+
+private:
+    bool isMin;
+};
+
 class ArraySizeMethod : public SimpleSystemSubroutine {
 public:
     ArraySizeMethod(Compilation& comp, const std::string& name) :
@@ -776,6 +868,9 @@ void registerArrayMethods(Compilation& c) {
         REGISTER(kind, ArrayLocator, "find_first_index", ArrayLocatorMethod::First, true);
         REGISTER(kind, ArrayLocator, "find_last", ArrayLocatorMethod::Last, false);
         REGISTER(kind, ArrayLocator, "find_last_index", ArrayLocatorMethod::Last, true);
+
+        REGISTER(kind, ArrayMinMax, "min", true);
+        REGISTER(kind, ArrayMinMax, "max", false);
     }
 
     for (auto kind : { SymbolKind::DynamicArrayType, SymbolKind::AssociativeArrayType,
