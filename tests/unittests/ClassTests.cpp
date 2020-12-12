@@ -1768,10 +1768,14 @@ function void B::post_randomize(int i); endfunction
 module m;
     A a = new;
     int i;
+    string s;
     initial begin
         i = a.randomize();
         a.pre_randomize();
         a.post_randomize();
+        s = a.get_randstate();
+        a.set_randstate(s);
+        a.srandom(1);
     end
 endmodule
 )");
