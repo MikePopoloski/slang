@@ -176,8 +176,9 @@ const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax
 
     auto& scopeNameMap = getUnelaboratedNameMap();
     auto makeFunc = [&](string_view funcName, const Type& returnType, bool allowOverride,
-                        bitmask<MethodFlags> extraFlags =
-                            MethodFlags::None) -> optional<MethodBuilder> {
+                        bitmask<MethodFlags> extraFlags = MethodFlags::None,
+                        SubroutineKind subroutineKind =
+                            SubroutineKind::Function) -> optional<MethodBuilder> {
         if (auto it = scopeNameMap.find(funcName); it != scopeNameMap.end()) {
             auto existing = it->second;
             if (allowOverride) {
@@ -196,7 +197,7 @@ const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax
             return {};
         }
 
-        MethodBuilder builder(comp, funcName, returnType);
+        MethodBuilder builder(comp, funcName, returnType, subroutineKind);
         builder.addFlags(extraFlags);
         addMember(builder.symbol);
         return builder;
@@ -214,6 +215,15 @@ const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax
     auto srandom = makeFunc("srandom", void_t, false);
     if (srandom)
         srandom->addArg("seed", int_t);
+
+    auto rand_mode = makeFunc("rand_mode", void_t, false, MethodFlags::None, SubroutineKind::Task);
+    if (rand_mode)
+        rand_mode->addArg("on_ff", comp.getBitType());
+
+    auto constraint_mode =
+        makeFunc("constraint_mode", void_t, false, MethodFlags::None, SubroutineKind::Task);
+    if (constraint_mode)
+        constraint_mode->addArg("on_ff", comp.getBitType());
 
     // This needs to happen last, otherwise setting "needs elaboration" before
     // trying to access the name map can cause infinite recursion.

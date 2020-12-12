@@ -1776,6 +1776,8 @@ module m;
         s = a.get_randstate();
         a.set_randstate(s);
         a.srandom(1);
+        a.rand_mode(1);
+        a.constraint_mode(0);
     end
 endmodule
 )");
