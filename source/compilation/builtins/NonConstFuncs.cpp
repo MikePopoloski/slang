@@ -177,13 +177,15 @@ void registerNonConstFuncs(Compilation& c) {
 #define REGISTER(...) c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
 
     auto& intType = c.getIntType();
+    auto& uintType = c.getUnsignedIntType();
     std::vector<const Type*> intArg = { &intType };
 
     REGISTER("$time", c.getTimeType());
     REGISTER("$stime", c.getUnsignedIntType());
     REGISTER("$realtime", c.getRealTimeType());
     REGISTER("$random", intType, 0, intArg);
-    REGISTER("$urandom", c.getUnsignedIntType(), 0, intArg);
+    REGISTER("$urandom", uintType, 0, intArg);
+    REGISTER("$urandom_range", uintType, 1, std::vector<const Type*>{ &uintType, &uintType });
 
     REGISTER("$fopen", intType, 1, std::vector{ &c.getStringType(), &c.getStringType() });
     REGISTER("$fclose", c.getVoidType(), 1, intArg);
