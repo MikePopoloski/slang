@@ -1750,3 +1750,38 @@ endmodule
     CHECK(diags[3].code == diag::RandOnUnionMember);
     CHECK(diags[4].code == diag::InvalidRandType);
 }
+
+
+TEST_CASE("Built-in class methods") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+endclass
+
+class B;
+    virtual function int randomize(); endfunction
+    function int pre_randomize(); endfunction
+    extern function void post_randomize(int i);
+endclass
+
+function void B::post_randomize(int i); endfunction
+
+module m;
+    A a = new;
+    int i;
+    initial begin
+        i = a.randomize();
+        a.pre_randomize();
+        a.post_randomize();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InvalidMethodOverride);
+    CHECK(diags[1].code == diag::InvalidRandomizeOverride);
+    CHECK(diags[2].code == diag::InvalidRandomizeOverride);
+}

@@ -140,10 +140,10 @@ const Symbol& ClassType::fromSyntax(const Scope& scope, const ClassDeclarationSy
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ClassType>(comp, syntax.name.valueText(), syntax.name.location());
-    return result->populate(syntax);
+    return result->populate(scope, syntax);
 }
 
-const Type& ClassType::populate(const ClassDeclarationSyntax& syntax) {
+const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& syntax) {
     // Save the current member index -- for generic classes, this is the location that
     // can see all parameter members but nothing else. This is needed to correctly
     // resolve type parameters used in extends and implements clauses.
@@ -161,6 +161,52 @@ const Type& ClassType::populate(const ClassDeclarationSyntax& syntax) {
     for (auto member : syntax.items)
         addMembers(*member);
 
+    // All class types get some built-in methods.
+    auto& comp = getCompilation();
+    auto& void_t = comp.getVoidType();
+    auto& int_t = comp.getIntType();
+
+    auto checkOverride = [](auto& s) {
+        return s.subroutineKind == SubroutineKind::Function && s.getArguments().empty() &&
+               s.getReturnType().isVoid() && s.visibility == Visibility::Public &&
+               s.flags == MethodFlags::None;
+    };
+
+    auto& scopeNameMap = getUnelaboratedNameMap();
+    auto makeFunc = [&](string_view funcName, const Type& returnType, bool allowOverride,
+                        bitmask<MethodFlags> extraFlags = MethodFlags::None) {
+        if (auto it = scopeNameMap.find(funcName); it != scopeNameMap.end()) {
+            auto existing = it->second;
+            if (allowOverride) {
+                bool ok = false;
+                if (existing->kind == SymbolKind::Subroutine)
+                    ok = checkOverride(existing->as<SubroutineSymbol>());
+                else if (existing->kind == SymbolKind::MethodPrototype)
+                    ok = checkOverride(existing->as<MethodPrototypeSymbol>());
+
+                if (!ok)
+                    scope.addDiag(diag::InvalidRandomizeOverride, existing->location) << funcName;
+            }
+            else {
+                scope.addDiag(diag::InvalidMethodOverride, existing->location) << funcName;
+            }
+            return;
+        }
+
+        auto func =
+            comp.emplace<SubroutineSymbol>(comp, funcName, SourceLocation::NoLocation,
+                                           VariableLifetime::Automatic, SubroutineKind::Function);
+        func->declaredReturnType.setType(returnType);
+        func->flags = MethodFlags::NotConst | extraFlags;
+        addMember(*func);
+    };
+
+    makeFunc("randomize", int_t, false, MethodFlags::Virtual);
+    makeFunc("pre_randomize", void_t, true);
+    makeFunc("post_randomize", void_t, true);
+
+    // This needs to happen last, otherwise setting "needs elaboration" before
+    // trying to access the name map can cause infinite recursion.
     if (syntax.extendsClause || syntax.implementsClause)
         setNeedElaboration();
 
@@ -636,7 +682,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
 
     // Not found, so this is a new entry. Fill in its members and store the
     // specialization for later lookup.
-    const Type& result = classType->populate(getSyntax()->as<ClassDeclarationSyntax>());
+    const Type& result = classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
     specMap.emplace(key, &result);
     return &result;
 }

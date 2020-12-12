@@ -93,7 +93,7 @@ private:
     friend class Scope;
     friend class GenericClassDefSymbol;
 
-    const Type& populate(const ClassDeclarationSyntax& syntax);
+    const Type& populate(const Scope& scope, const ClassDeclarationSyntax& syntax);
     void inheritMembers(function_ref<void(const Symbol&)> insertCB) const;
     void handleExtends(const ExtendsClauseSyntax& extendsClause, const BindContext& context,
                        function_ref<void(const Symbol&)> insertCB) const;

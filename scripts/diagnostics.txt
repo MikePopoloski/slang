@@ -278,6 +278,8 @@ error ExpectedImportExport "expected 'import' or 'export' for subroutine '{}' in
 error SingleBitVectored "net of width 1 cannot be 'vectored' or 'scalared'"
 error VarDeclWithDelay "cannot specify a net delay for a variable declaration"
 error InvalidRandType "{} is not a valid type for a '{}' property"
+error InvalidMethodOverride "cannot override built-in method '{}'"
+error InvalidRandomizeOverride "override for '{}' should be a public non-static function that returns void and takes no parameters"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 warning warning-task WarningTask "$warning encountered{}"

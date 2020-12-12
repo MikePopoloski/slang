@@ -206,6 +206,8 @@ public:
         return *nameMap;
     }
 
+    const SymbolMap& getUnelaboratedNameMap() const { return *nameMap; }
+
     span<const WildcardImportSymbol* const> getWildcardImports() const;
 
 protected:
