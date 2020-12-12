@@ -1755,6 +1755,10 @@ endmodule
 TEST_CASE("Built-in class methods") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
+    constraint c;
+    function void foo;
+        c.constraint_mode(1);
+    endfunction
 endclass
 
 class B;
@@ -1778,6 +1782,7 @@ module m;
         a.srandom(1);
         a.rand_mode(1);
         a.constraint_mode(0);
+        i = a.c.constraint_mode();
     end
 endmodule
 )");

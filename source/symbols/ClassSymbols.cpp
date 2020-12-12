@@ -782,10 +782,13 @@ bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKe
     return true;
 }
 
-ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& compilation, string_view name,
-                                             SourceLocation loc) :
-    Symbol(SymbolKind::ConstraintBlock, name, loc),
-    Scope(compilation, this) {
+ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::ConstraintBlock, name, loc), Scope(c, this) {
+
+    // Each constraint block gets a built-in method.
+    MethodBuilder method(c, "constraint_mode", c.getIntType(), SubroutineKind::Task);
+    method.addArg("on_off", c.getBitType(), ArgumentDirection::In, SVInt(32, 0u, true));
+    addMember(method.symbol);
 }
 
 ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(

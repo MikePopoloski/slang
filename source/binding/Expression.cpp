@@ -830,6 +830,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, const LookupR
             expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
                                                          invocation, withClause, context);
             if (expr->kind == ExpressionKind::Call) {
+                // TODO: what if this is not the last selector in the chain?
                 invocation = nullptr;
                 withClause = nullptr;
             }

@@ -720,14 +720,37 @@ Expression& MemberAccessExpression::fromSelector(
     if (selector.name.empty())
         return badExpr(compilation, &expr);
 
-    // Special case for iterator index methods, since iterators aren't a type themselves.
-    if (expr.kind == ExpressionKind::NamedValue) {
-        if (expr.as<NamedValueExpression>().symbol.kind == SymbolKind::Iterator) {
-            auto result = CallExpression::fromIteratorMethod(compilation, expr, selector,
-                                                             invocation, withClause, context);
-            if (result)
-                return *result;
+    // The source range of the entire member access starts from the value being selected.
+    SourceRange range{ expr.sourceRange.start(), selector.nameRange.end() };
+
+    // Special cases for built-in methods that don't cleanly fit the general
+    // mold of looking up members via the type of the expression.
+    switch (expr.kind) {
+        case ExpressionKind::NamedValue:
+            // Iterators aren't a type themselves, so special case the lookup
+            // for the 'index' method.
+            if (expr.as<NamedValueExpression>().symbol.kind == SymbolKind::Iterator) {
+                auto result = CallExpression::fromIteratorMethod(compilation, expr, selector,
+                                                                 invocation, withClause, context);
+                if (result)
+                    return *result;
+            }
+            break;
+        case ExpressionKind::HierarchicalReference: {
+            // We'll hit this for constraint blocks looking up the built-in 'constraint_mode'
+            // method. See comment below for more details.
+            auto& sym = *expr.as<HierarchicalReferenceExpression>().symbol;
+            if (sym.kind == SymbolKind::ConstraintBlock) {
+                if (const Symbol* member = sym.as<Scope>().find(selector.name)) {
+                    return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(),
+                                                      &expr, invocation, withClause, range,
+                                                      context);
+                }
+            }
+            break;
         }
+        default:
+            break;
     }
 
     // This might look like a member access but actually be a built-in type method.
@@ -766,9 +789,6 @@ Expression& MemberAccessExpression::fromSelector(
         return badExpr(compilation, &expr);
     }
 
-    // The source range of the entire member access starts from the value being selected.
-    SourceRange range{ expr.sourceRange.start(), selector.nameRange.end() };
-
     switch (member->kind) {
         case SymbolKind::Field: {
             auto& field = member->as<FieldSymbol>();
@@ -795,6 +815,13 @@ Expression& MemberAccessExpression::fromSelector(
             return *compilation.emplace<MemberAccessExpression>(value.getType(), expr, value, 0u,
                                                                 range);
         }
+        case SymbolKind::ConstraintBlock:
+            // Constraint blocks are not really value symbols and don't have a type. Accessing them
+            // via a class handle is only allowed in order to invoke the 'constraint_mode' built-in
+            // on them. Represent this via a hierarchical reference expression, which will result in
+            // errors about 'void' type accesses if the user tries to use this for anything else.
+            return *compilation.emplace<HierarchicalReferenceExpression>(
+                *member, compilation.getVoidType(), range);
         default:
             auto& diag = context.addDiag(diag::InvalidClassAccess, selector.dotLocation);
             diag << selector.nameRange;
