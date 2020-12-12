@@ -711,6 +711,25 @@ void RangeSelectExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("right", right());
 }
 
+static const Symbol* getBaseSymbol(const Expression& expr) {
+    switch (expr.kind) {
+        case ExpressionKind::NamedValue:
+        case ExpressionKind::HierarchicalValue:
+            return &expr.as<ValueExpressionBase>().symbol;
+        case ExpressionKind::ElementSelect:
+            return getBaseSymbol(expr.as<ElementSelectExpression>().value());
+        case ExpressionKind::MemberAccess: {
+            auto& access = expr.as<MemberAccessExpression>();
+            auto& val = access.value();
+            if (val.type->isClass() || val.type->isUnpackedStruct())
+                return &access.member;
+            return nullptr;
+        }
+        default:
+            return nullptr;
+    }
+}
+
 Expression& MemberAccessExpression::fromSelector(
     Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
     const InvocationExpressionSyntax* invocation,
@@ -730,8 +749,9 @@ Expression& MemberAccessExpression::fromSelector(
             // Iterators aren't a type themselves, so special case the lookup
             // for the 'index' method.
             if (expr.as<NamedValueExpression>().symbol.kind == SymbolKind::Iterator) {
-                auto result = CallExpression::fromIteratorMethod(compilation, expr, selector,
-                                                                 invocation, withClause, context);
+                auto result =
+                    CallExpression::fromBuiltInMethod(compilation, SymbolKind::Iterator, expr,
+                                                      selector, invocation, withClause, context);
                 if (result)
                     return *result;
             }
@@ -753,6 +773,30 @@ Expression& MemberAccessExpression::fromSelector(
             break;
     }
 
+    // There is a built-in 'rand_mode' method that is present on every 'rand' and 'randc' class
+    // property, and additionally on subelements of those properties. Rather than check that up
+    // front, which would be costly especially since 'rand_mode' calls will be extremely rare in
+    // real code, we wait until we fail to find anything else and only then look for the rand_mode
+    // call.
+    auto tryBindRandMode = [&]() -> Expression* {
+        if (selector.name == "rand_mode"sv) {
+            if (auto sym = getBaseSymbol(expr)) {
+                RandMode mode = RandMode::None;
+                if (sym->kind == SymbolKind::ClassProperty)
+                    mode = sym->as<ClassPropertySymbol>().randMode;
+                else if (sym->kind == SymbolKind::Field)
+                    mode = sym->as<FieldSymbol>().randMode;
+
+                if (mode != RandMode::None) {
+                    return CallExpression::fromBuiltInMethod(compilation, SymbolKind::ClassProperty,
+                                                             expr, selector, invocation, withClause,
+                                                             context);
+                }
+            }
+        }
+        return nullptr;
+    };
+
     // This might look like a member access but actually be a built-in type method.
     const Type& type = expr.type->getCanonicalType();
     switch (type.kind) {
@@ -772,6 +816,9 @@ Expression& MemberAccessExpression::fromSelector(
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     withClause, context);
         default: {
+            if (auto result = tryBindRandMode())
+                return *result;
+
             auto& diag = context.addDiag(diag::InvalidMemberAccess, selector.dotLocation);
             diag << expr.sourceRange;
             diag << selector.nameRange;
@@ -782,6 +829,9 @@ Expression& MemberAccessExpression::fromSelector(
 
     const Symbol* member = expr.type->getCanonicalType().as<Scope>().find(selector.name);
     if (!member) {
+        if (auto result = tryBindRandMode())
+            return *result;
+
         auto& diag = context.addDiag(diag::UnknownMember, selector.nameRange.start());
         diag << expr.sourceRange;
         diag << selector.name;

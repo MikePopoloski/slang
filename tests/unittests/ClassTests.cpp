@@ -1751,7 +1751,6 @@ endmodule
     CHECK(diags[4].code == diag::InvalidRandType);
 }
 
-
 TEST_CASE("Built-in class methods") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
@@ -1759,6 +1758,9 @@ class A;
     function void foo;
         c.constraint_mode(1);
     endfunction
+
+    rand int i;
+    struct { rand int i; } asdf[3];
 endclass
 
 class B;
@@ -1783,6 +1785,7 @@ module m;
         a.rand_mode(1);
         a.constraint_mode(0);
         i = a.c.constraint_mode();
+        a.asdf[0].i.rand_mode(1);
     end
 endmodule
 )");

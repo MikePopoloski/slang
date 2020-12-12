@@ -211,6 +211,12 @@ void registerNonConstFuncs(Compilation& c) {
                       std::make_unique<NonConstantFunction>("triggered", c.getBitType(), 0,
                                                             std::vector<const Type*>{},
                                                             /* isMethod */ true));
+
+    auto rand_mode = std::make_unique<NonConstantFunction>(
+        "rand_mode", c.getIntType(), 0, std::vector<const Type*>{ &c.getBitType() },
+        /* isMethod */ true);
+    rand_mode->kind = SubroutineKind::Task;
+    c.addSystemMethod(SymbolKind::ClassProperty, std::move(rand_mode));
 }
 
 } // namespace slang::Builtins

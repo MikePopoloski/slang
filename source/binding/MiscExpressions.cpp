@@ -518,12 +518,12 @@ Expression& CallExpression::fromSystemMethod(
                             syntax ? syntax->sourceRange() : expr.sourceRange, context);
 }
 
-Expression* CallExpression::fromIteratorMethod(
-    Compilation& compilation, const Expression& expr, const LookupResult::MemberSelector& selector,
-    const InvocationExpressionSyntax* syntax,
+Expression* CallExpression::fromBuiltInMethod(
+    Compilation& compilation, SymbolKind rootKind, const Expression& expr,
+    const LookupResult::MemberSelector& selector, const InvocationExpressionSyntax* syntax,
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, const BindContext& context) {
 
-    auto subroutine = compilation.getSystemMethod(SymbolKind::Iterator, selector.name);
+    auto subroutine = compilation.getSystemMethod(rootKind, selector.name);
     if (!subroutine)
         return nullptr;
 
