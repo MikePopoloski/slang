@@ -164,6 +164,7 @@ add_library(slangcompiler
     symbols/SemanticFacts.cpp
     symbols/SubroutineSymbols.cpp
     symbols/Symbol.cpp
+    symbols/SymbolBuilders.cpp
     symbols/ValueSymbol.cpp
     symbols/VariableSymbols.cpp
 

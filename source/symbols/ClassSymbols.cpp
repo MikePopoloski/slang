@@ -16,6 +16,7 @@
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/MemberSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
+#include "slang/symbols/SymbolBuilders.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/types/AllTypes.h"
 
@@ -175,7 +176,8 @@ const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax
 
     auto& scopeNameMap = getUnelaboratedNameMap();
     auto makeFunc = [&](string_view funcName, const Type& returnType, bool allowOverride,
-                        bitmask<MethodFlags> extraFlags = MethodFlags::None) -> SubroutineSymbol* {
+                        bitmask<MethodFlags> extraFlags =
+                            MethodFlags::None) -> optional<MethodBuilder> {
         if (auto it = scopeNameMap.find(funcName); it != scopeNameMap.end()) {
             auto existing = it->second;
             if (allowOverride) {
@@ -191,27 +193,13 @@ const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax
             else {
                 scope.addDiag(diag::InvalidMethodOverride, existing->location) << funcName;
             }
-            return nullptr;
+            return {};
         }
 
-        auto func =
-            comp.emplace<SubroutineSymbol>(comp, funcName, SourceLocation::NoLocation,
-                                           VariableLifetime::Automatic, SubroutineKind::Function);
-        func->declaredReturnType.setType(returnType);
-        func->flags = MethodFlags::NotConst | extraFlags;
-        addMember(*func);
-        return func;
-    };
-
-    auto setArg = [&](auto func, string_view argName, const Type& type) {
-        SmallVectorSized<const FormalArgumentSymbol*, 2> args;
-        auto arg =
-            comp.emplace<FormalArgumentSymbol>(argName, SourceLocation::NoLocation,
-                                               ArgumentDirection::In, VariableLifetime::Automatic);
-        arg->setType(type);
-        func->addMember(*arg);
-        args.append(arg);
-        func->setArguments(args.copy(comp));
+        MethodBuilder builder(comp, funcName, returnType);
+        builder.addFlags(extraFlags);
+        addMember(builder.symbol);
+        return builder;
     };
 
     makeFunc("randomize", int_t, false, MethodFlags::Virtual);
@@ -219,13 +207,13 @@ const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax
     makeFunc("post_randomize", void_t, true);
     makeFunc("get_randstate", string_t, false);
 
-    auto func = makeFunc("set_randstate", void_t, false);
-    if (func)
-        setArg(func, "state", string_t);
+    auto set_randstate = makeFunc("set_randstate", void_t, false);
+    if (set_randstate)
+        set_randstate->addArg("state", string_t);
 
-    func = makeFunc("srandom", void_t, false);
-    if (func)
-        setArg(func, "seed", int_t);
+    auto srandom = makeFunc("srandom", void_t, false);
+    if (srandom)
+        srandom->addArg("seed", int_t);
 
     // This needs to happen last, otherwise setting "needs elaboration" before
     // trying to access the name map can cause infinite recursion.
