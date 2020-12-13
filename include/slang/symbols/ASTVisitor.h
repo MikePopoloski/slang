@@ -7,6 +7,7 @@
 #pragma once
 
 #include "slang/binding/AssignmentExpressions.h"
+#include "slang/binding/Constraints.h"
 #include "slang/binding/LiteralExpressions.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/binding/OperatorExpressions.h"
@@ -97,6 +98,7 @@ public:
     void visitInvalid(const Expression&) {}
     void visitInvalid(const Statement&) {}
     void visitInvalid(const TimingControl&) {}
+    void visitInvalid(const Constraint&) {}
 
 #undef DERIVED
 };
@@ -309,6 +311,19 @@ void InstanceSymbol::visitExprs(TVisitor&& visitor) const {
         if (conn && !conn->isInterfacePort && conn->expr)
             conn->expr->visit(visitor);
     }
+}
+
+template<typename TVisitor, typename... Args>
+decltype(auto) Constraint::visit(TVisitor& visitor, Args&&... args) const {
+    // clang-format off
+#define CASE(k, n) case ConstraintKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
+    switch (kind) {
+        case ConstraintKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
+        CASE(List, ConstraintList);
+    }
+#undef CASE
+    // clang-format on
+    THROW_UNREACHABLE;
 }
 
 } // namespace slang

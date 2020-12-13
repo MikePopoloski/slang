@@ -9,6 +9,7 @@
 #include "ParameterBuilder.h"
 
 #include "slang/binding/AssignmentExpressions.h"
+#include "slang/binding/Constraints.h"
 #include "slang/binding/MiscExpressions.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -828,7 +829,27 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
+const Constraint& ConstraintBlockSymbol::getConstraints() const {
+    if (constraint)
+        return *constraint;
+
+    auto syntax = getSyntax();
+    auto scope = getParentScope();
+    ASSERT(syntax && scope);
+
+    // TODO: support constraint prototypes
+    if (syntax->kind != SyntaxKind::ConstraintDeclaration) {
+        constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
+        return *constraint;
+    }
+
+    BindContext context(*scope, LookupLocation::after(*this));
+    constraint = &Constraint::bind(*syntax->as<ConstraintDeclarationSyntax>().block, context);
+    return *constraint;
+}
+
 void ConstraintBlockSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("constraints", getConstraints());
     serializer.write("isStatic", isStatic);
     serializer.write("isExtern", isExtern);
     serializer.write("isExplicitExtern", isExplicitExtern);

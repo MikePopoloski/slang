@@ -119,6 +119,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getDelay();
     }
 
+    void handle(const ConstraintBlockSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getConstraints();
+    }
+
     void handle(const InstanceSymbol& symbol) {
         if (numErrors > errorLimit)
             return;

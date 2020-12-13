@@ -17,6 +17,7 @@
 namespace slang {
 
 class BindContext;
+class Constraint;
 struct ClassPropertyDeclarationSyntax;
 
 class ClassPropertySymbol : public VariableSymbol {
@@ -241,6 +242,8 @@ public:
 
     ConstraintBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
+    const Constraint& getConstraints() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static ConstraintBlockSymbol& fromSyntax(const Scope& scope,
@@ -250,6 +253,9 @@ public:
                                              const ConstraintPrototypeSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ConstraintBlock; }
+
+private:
+    mutable const Constraint* constraint = nullptr;
 };
 
 } // namespace slang

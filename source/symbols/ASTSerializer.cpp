@@ -31,6 +31,10 @@ void ASTSerializer::serialize(const TimingControl& timing) {
     timing.visit(*this);
 }
 
+void ASTSerializer::serialize(const Constraint& constraint) {
+    constraint.visit(*this);
+}
+
 void ASTSerializer::serialize(string_view value) {
     writer.writeValue(value);
 }
@@ -86,6 +90,11 @@ void ASTSerializer::write(string_view name, const Statement& value) {
 }
 
 void ASTSerializer::write(string_view name, const TimingControl& value) {
+    writer.writeProperty(name);
+    serialize(value);
+}
+
+void ASTSerializer::write(string_view name, const Constraint& value) {
     writer.writeProperty(name);
     serialize(value);
 }
@@ -153,10 +162,10 @@ void ASTSerializer::visit(const T& elem) {
     else if constexpr (std::is_base_of_v<Type, T> && !std::is_same_v<TypeAliasType, T>) {
         writer.writeValue(elem.toString());
     }
-    else if constexpr (std::is_base_of_v<TimingControl, T>) {
+    else if constexpr (std::is_base_of_v<TimingControl, T> || std::is_base_of_v<Constraint, T>) {
         writer.startObject();
         write("kind", toString(elem.kind));
-        if constexpr (!std::is_same_v<TimingControl, T>) {
+        if constexpr (!std::is_same_v<TimingControl, T> && !std::is_same_v<Constraint, T>) {
             elem.serializeTo(*this);
         }
         writer.endObject();
@@ -214,6 +223,10 @@ void ASTSerializer::visitInvalid(const slang::Statement& statement) {
 
 void ASTSerializer::visitInvalid(const slang::TimingControl& timing) {
     visit(timing.as<InvalidTimingControl>());
+}
+
+void ASTSerializer::visitInvalid(const slang::Constraint& constraint) {
+    visit(constraint.as<InvalidConstraint>());
 }
 
 } // namespace slang
