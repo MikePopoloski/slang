@@ -16,7 +16,8 @@ namespace slang {
     x(Invalid) \
     x(List) \
     x(Expression) \
-    x(Implication)
+    x(Implication) \
+    x(Conditional)
 ENUM(ConstraintKind, CONSTRAINT);
 #undef CONTROL
 // clang-format on
@@ -121,6 +122,28 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Implication; }
+};
+
+struct ConditionalConstraintSyntax;
+
+/// Represents a constraint defined by an if-else condition.
+class ConditionalConstraint : public Constraint {
+public:
+    const Expression& predicate;
+    const Constraint& ifBody;
+    const Constraint* elseBody;
+
+    ConditionalConstraint(const Expression& predicate, const Constraint& ifBody,
+                          const Constraint* elseBody) :
+        Constraint(ConstraintKind::Conditional),
+        predicate(predicate), ifBody(ifBody), elseBody(elseBody) {}
+
+    static Constraint& fromSyntax(const ConditionalConstraintSyntax& syntax,
+                                  const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Conditional; }
 };
 
 } // namespace slang

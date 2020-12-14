@@ -32,10 +32,13 @@ const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const Bin
             result =
                 &ImplicationConstraint::fromSyntax(syntax.as<ImplicationConstraintSyntax>(), ctx);
             break;
+        case SyntaxKind::ConditionalConstraint:
+            result =
+                &ConditionalConstraint::fromSyntax(syntax.as<ConditionalConstraintSyntax>(), ctx);
+            break;
         case SyntaxKind::SolveBeforeConstraint:
         case SyntaxKind::DisableConstraint:
         case SyntaxKind::LoopConstraint:
-        case SyntaxKind::ConditionalConstraint:
         case SyntaxKind::UniquenessConstraint:
             ctx.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badConstraint(comp, nullptr);
@@ -196,6 +199,34 @@ Constraint& ImplicationConstraint::fromSyntax(const ImplicationConstraintSyntax&
 void ImplicationConstraint::serializeTo(ASTSerializer& serializer) const {
     serializer.write("predicate", predicate);
     serializer.write("body", body);
+}
+
+Constraint& ConditionalConstraint::fromSyntax(const ConditionalConstraintSyntax& syntax,
+                                              const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& pred = Expression::bind(*syntax.condition, context);
+    auto& ifBody = Constraint::bind(*syntax.constraints, context);
+
+    const Constraint* elseBody = nullptr;
+    if (syntax.elseClause)
+        elseBody = &Constraint::bind(*syntax.elseClause->constraints, context);
+
+    auto result = comp.emplace<ConditionalConstraint>(pred, ifBody, elseBody);
+    if (pred.bad() || ifBody.bad() || (elseBody && elseBody->bad()))
+        return badConstraint(comp, result);
+
+    ConstraintExprVisitor visitor(context);
+    if (!pred.visit(visitor))
+        return badConstraint(comp, result);
+
+    return *result;
+}
+
+void ConditionalConstraint::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("predicate", predicate);
+    serializer.write("ifBody", ifBody);
+    if (elseBody)
+        serializer.write("elseBody", *elseBody);
 }
 
 } // namespace slang

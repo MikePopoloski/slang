@@ -1838,6 +1838,16 @@ class C;
     rand bit [7:0] A[] ;
     constraint c1 { A.size == 5; }
     constraint c2 { A.sum() with (int'(item)) < 1000; }
+
+    enum { big, little } mode;
+    int len;
+    constraint c3 {
+        if (mode != big)
+            if (mode == little)
+                len < 10;
+            else // the else applies to preceding if
+                len > 100;
+    }
 endclass
 )");
 
