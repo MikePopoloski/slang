@@ -1818,6 +1818,27 @@ class A;
         i === 3;
     }
 endclass
+
+class B;
+    rand integer x, y, z;
+    constraint c1 {x inside {3, 5, [9:15], [24:32], [y:2*y], z};}
+
+    rand integer a, b, c;
+    constraint c2 {a inside {b, c};}
+
+    integer fives[4] = '{ 5, 10, 15, 20 };
+    rand integer v;
+    constraint c3 { v inside {fives}; }
+
+    constraint c4 { (a == 0) -> (b == 1); }
+    constraint c5 { (a == 0) -> { b == 1; b + c == 3; } }
+endclass
+
+class C;
+    rand bit [7:0] A[] ;
+    constraint c1 { A.size == 5; }
+    constraint c2 { A.sum() with (int'(item)) < 1000; }
+endclass
 )");
 
     Compilation compilation;

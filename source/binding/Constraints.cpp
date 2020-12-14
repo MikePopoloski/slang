@@ -28,12 +28,15 @@ const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const Bin
             result =
                 &ExpressionConstraint::fromSyntax(syntax.as<ExpressionConstraintSyntax>(), ctx);
             break;
+        case SyntaxKind::ImplicationConstraint:
+            result =
+                &ImplicationConstraint::fromSyntax(syntax.as<ImplicationConstraintSyntax>(), ctx);
+            break;
         case SyntaxKind::SolveBeforeConstraint:
         case SyntaxKind::DisableConstraint:
         case SyntaxKind::LoopConstraint:
         case SyntaxKind::ConditionalConstraint:
         case SyntaxKind::UniquenessConstraint:
-        case SyntaxKind::ImplicationConstraint:
             ctx.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badConstraint(comp, nullptr);
             break;
@@ -172,6 +175,27 @@ Constraint& ExpressionConstraint::fromSyntax(const ExpressionConstraintSyntax& s
 void ExpressionConstraint::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
     serializer.write("isSoft", isSoft);
+}
+
+Constraint& ImplicationConstraint::fromSyntax(const ImplicationConstraintSyntax& syntax,
+                                              const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& pred = Expression::bind(*syntax.left, context);
+    auto& body = Constraint::bind(*syntax.constraints, context);
+    auto result = comp.emplace<ImplicationConstraint>(pred, body);
+    if (pred.bad() || body.bad())
+        return badConstraint(comp, result);
+
+    ConstraintExprVisitor visitor(context);
+    if (!pred.visit(visitor))
+        return badConstraint(comp, result);
+
+    return *result;
+}
+
+void ImplicationConstraint::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("predicate", predicate);
+    serializer.write("body", body);
 }
 
 } // namespace slang

@@ -320,6 +320,8 @@ decltype(auto) Constraint::visit(TVisitor& visitor, Args&&... args) const {
     switch (kind) {
         case ConstraintKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
         CASE(List, ConstraintList);
+        CASE(Expression, ExpressionConstraint);
+        CASE(Implication, ImplicationConstraint);
     }
 #undef CASE
     // clang-format on
