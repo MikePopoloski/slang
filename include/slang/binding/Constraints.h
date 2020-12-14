@@ -14,7 +14,8 @@ namespace slang {
 // clang-format off
 #define CONSTRAINT(x) \
     x(Invalid) \
-    x(List)
+    x(List) \
+    x(Expression)
 ENUM(ConstraintKind, CONSTRAINT);
 #undef CONTROL
 // clang-format on
@@ -81,6 +82,25 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::List; }
+};
+
+struct ExpressionConstraintSyntax;
+
+/// Represents a list of constraints.
+class ExpressionConstraint : public Constraint {
+public:
+    const Expression& expr;
+    bool isSoft;
+
+    ExpressionConstraint(const Expression& expr, bool isSoft) :
+        Constraint(ConstraintKind::Expression), expr(expr), isSoft(isSoft) {}
+
+    static Constraint& fromSyntax(const ExpressionConstraintSyntax& syntax,
+                                  const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Expression; }
 };
 
 } // namespace slang

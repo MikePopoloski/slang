@@ -1799,3 +1799,35 @@ endmodule
     CHECK(diags[1].code == diag::InvalidRandomizeOverride);
     CHECK(diags[2].code == diag::InvalidRandomizeOverride);
 }
+
+TEST_CASE("Constraint items") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    int i;
+    rand A a;
+    constraint c {
+        i == 1;
+        i inside {-4, 5, [3:8]};
+        i >= 0 && i < 9;
+
+        i == 'x;
+        i == 3'bx;
+        i == 3.1;
+        3.1 == i;
+        a == null;
+        i === 3;
+    }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::UnknownConstraintLiteral);
+    CHECK(diags[1].code == diag::UnknownConstraintLiteral);
+    CHECK(diags[2].code == diag::NonIntegralConstraintExpr);
+    CHECK(diags[3].code == diag::NonIntegralConstraintLiteral);
+    CHECK(diags[4].code == diag::ExprNotConstraint);
+}

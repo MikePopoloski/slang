@@ -653,7 +653,7 @@ bool Type::canBeStringLike() const {
 }
 
 bool Type::isValidForRand(RandMode mode) const {
-    if (isIntegral())
+    if (isIntegral() || isNull())
         return true;
 
     if (isArray())
