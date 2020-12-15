@@ -161,6 +161,7 @@ public:
     MIRValue visit(const ReplicatedAssignmentPatternExpression&) { return {}; }
     MIRValue visit(const EmptyArgumentExpression&) { return {}; }
     MIRValue visit(const OpenRangeExpression&) { return {}; }
+    MIRValue visit(const DistExpression&) { return {}; }
 
     void visitInvalid(const Statement&) {}
     MIRValue visitInvalid(const Expression&) { return {}; }

@@ -316,4 +316,54 @@ private:
     const Expression& sourceExpr_;
 };
 
+struct ExpressionOrDistSyntax;
+
+/// Denotes an expression along with a distribution of probabilities for that
+/// expression. This can't occur in normal expression code; it's used as part
+/// of constraints and properties (and always has the type 'void').
+class DistExpression : public Expression {
+public:
+    struct DistWeight {
+        enum Kind { PerValue, PerRange } kind;
+        const Expression& expr;
+    };
+
+    struct DistItem {
+        const Expression& value;
+        optional<DistWeight> weight;
+    };
+
+    DistExpression(const Type& type, const Expression& left, span<DistItem> items,
+                   SourceRange sourceRange) :
+        Expression(ExpressionKind::Dist, type, sourceRange),
+        left_(&left), items_(items) {}
+
+    const Expression& left() const { return *left_; }
+    span<DistItem const> items() const { return items_; }
+
+    ConstantValue evalImpl(EvalContext&) const { return nullptr; }
+    bool verifyConstantImpl(EvalContext&) const { return false; }
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static Expression& fromSyntax(Compilation& comp, const ExpressionOrDistSyntax& syntax,
+                                  const BindContext& context);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Dist; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        left().visit(visitor);
+        for (auto& item : items_) {
+            item.value.visit(visitor);
+            if (item.weight)
+                item.weight->expr.visit(visitor);
+        }
+    }
+
+private:
+    const Expression* left_;
+    span<DistItem> items_;
+};
+
 } // namespace slang

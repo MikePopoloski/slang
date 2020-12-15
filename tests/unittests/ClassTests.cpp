@@ -1848,6 +1848,11 @@ class C;
             else // the else applies to preceding if
                 len > 100;
     }
+
+    int x;
+    constraint c4 {
+        x dist { [100:102] :/ 1, 200 := 2, 300 := 5 };
+    }
 endclass
 )");
 

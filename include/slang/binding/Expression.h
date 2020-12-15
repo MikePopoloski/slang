@@ -55,6 +55,7 @@ struct InvocationExpressionSyntax;
     x(ReplicatedAssignmentPattern) \
     x(EmptyArgument) \
     x(OpenRange) \
+    x(Dist) \
     x(NewArray) \
     x(NewClass) \
     x(CopyClass) \

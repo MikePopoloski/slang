@@ -1003,4 +1003,67 @@ void CopyClassExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("sourceExpr", sourceExpr());
 }
 
+Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDistSyntax& syntax,
+                                       const BindContext& context) {
+    auto& left = Expression::bind(*syntax.expr, context);
+    bool bad = left.bad();
+
+    if (!left.bad() && !left.type->isIntegral()) {
+        context.addDiag(diag::ExprMustBeIntegral, left.sourceRange);
+        bad = true;
+    }
+
+    SmallVectorSized<DistItem, 4> items;
+    for (auto item : syntax.distribution->items) {
+        auto value = &create(comp, *item->range, context);
+        contextDetermined(context, value, *left.type);
+        bad |= value->bad();
+
+        if (!value->bad() && value->kind != ExpressionKind::OpenRange &&
+            !value->type->isIntegral()) {
+            context.addDiag(diag::ExprMustBeIntegral, value->sourceRange);
+            bad = true;
+        }
+
+        DistItem di{ *value };
+        if (item->weight) {
+            auto weightKind = item->weight->op.kind == TokenKind::ColonSlash ? DistWeight::PerRange
+                                                                             : DistWeight::PerValue;
+            auto& weightExpr = Expression::bind(*item->weight->expr, context);
+            di.weight.emplace(DistWeight{ weightKind, weightExpr });
+            bad |= weightExpr.bad();
+
+            if (!weightExpr.bad() && !weightExpr.type->isIntegral()) {
+                context.addDiag(diag::ExprMustBeIntegral, weightExpr.sourceRange);
+                bad = true;
+            }
+        }
+
+        items.emplace(di);
+    }
+
+    auto result = comp.emplace<DistExpression>(comp.getVoidType(), left, items.copy(comp),
+                                               syntax.sourceRange());
+    if (bad)
+        return badExpr(comp, result);
+
+    return *result;
+}
+
+void DistExpression::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("left", left());
+    serializer.startArray("items");
+    for (auto& item : items_) {
+        serializer.startObject();
+        serializer.write("value", item.value);
+        if (item.weight) {
+            serializer.write("kind", item.weight->kind == DistWeight::PerRange ? "PerRange"sv
+                                                                               : "PerValue"sv);
+            serializer.write("weight", item.weight->expr);
+        }
+        serializer.endObject();
+    }
+    serializer.endArray();
+}
+
 } // namespace slang

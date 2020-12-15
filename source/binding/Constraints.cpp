@@ -140,6 +140,7 @@ struct ConstraintExprVisitor {
                 break;
             }
             case ExpressionKind::OpenRange:
+            case ExpressionKind::Dist:
                 return true;
             default:
                 break;

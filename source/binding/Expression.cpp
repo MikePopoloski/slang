@@ -651,6 +651,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &OpenRangeExpression::fromSyntax(
                 compilation, syntax.as<OpenRangeExpressionSyntax>(), context);
             break;
+        case SyntaxKind::ExpressionOrDist:
+            result = &DistExpression::fromSyntax(compilation, syntax.as<ExpressionOrDistSyntax>(),
+                                                 context);
+            break;
         case SyntaxKind::TimingControlExpression:
             // Valid cases of this expression type are handled in AssignmentExpression. If we reach
             // this block here, the expression is invalid so always report an error.
@@ -687,7 +691,6 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::AndSequenceExpression:
         case SyntaxKind::BinarySequenceDelayExpression:
         case SyntaxKind::EventuallyPropertyExpression:
-        case SyntaxKind::ExpressionOrDist:
         case SyntaxKind::IffPropertyExpression:
         case SyntaxKind::ImpliesPropertyExpression:
         case SyntaxKind::IntersectSequenceExpression:
