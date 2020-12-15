@@ -1025,7 +1025,7 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
             bad = true;
         }
 
-        DistItem di{ *value };
+        DistItem di{ *value, {} };
         if (item->weight) {
             auto weightKind = item->weight->op.kind == TokenKind::ColonSlash ? DistWeight::PerRange
                                                                              : DistWeight::PerValue;

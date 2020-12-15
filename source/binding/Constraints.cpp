@@ -115,19 +115,19 @@ struct ConstraintExprVisitor {
                 context.addDiag(diag::NonIntegralConstraintLiteral, expr.sourceRange);
                 return visitInvalid(expr);
             case ExpressionKind::IntegerLiteral:
-                if (expr.as<IntegerLiteral>().getValue().hasUnknown()) {
+                if (expr.template as<IntegerLiteral>().getValue().hasUnknown()) {
                     context.addDiag(diag::UnknownConstraintLiteral, expr.sourceRange);
                     return visitInvalid(expr);
                 }
                 return true;
             case ExpressionKind::UnbasedUnsizedIntegerLiteral:
-                if (expr.as<UnbasedUnsizedIntegerLiteral>().getValue().hasUnknown()) {
+                if (expr.template as<UnbasedUnsizedIntegerLiteral>().getValue().hasUnknown()) {
                     context.addDiag(diag::UnknownConstraintLiteral, expr.sourceRange);
                     return visitInvalid(expr);
                 }
                 return true;
             case ExpressionKind::BinaryOp: {
-                switch (expr.as<BinaryExpression>().op) {
+                switch (expr.template as<BinaryExpression>().op) {
                     case BinaryOperator::CaseEquality:
                     case BinaryOperator::CaseInequality:
                     case BinaryOperator::WildcardEquality:
