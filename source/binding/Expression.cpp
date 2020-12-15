@@ -389,36 +389,51 @@ bool Expression::verifyAssignable(const BindContext& context, bool isNonBlocking
 }
 
 bool Expression::canConnectToRefArg(bool isConstRef, bool allowConstClassHandle) const {
-    auto canConnectSymbol = [&](const Symbol& sym) {
-        if (!VariableSymbol::isKind(sym.kind))
-            return false;
+    auto sym = getSymbolReference();
+    if (!sym || !VariableSymbol::isKind(sym->kind))
+        return false;
 
-        auto& var = sym.as<VariableSymbol>();
-        return isConstRef || !var.isConstant || (allowConstClassHandle && var.getType().isClass());
-    };
+    auto& var = sym->as<VariableSymbol>();
+    if (!isConstRef && var.isConstant && (!allowConstClassHandle || !var.getType().isClass()))
+        return false;
 
+    // Need to recursively check the left hand side of element selects and member accesses
+    // to be sure this is actually an lvalue and not, for example, the result of a
+    // function call or something.
     switch (kind) {
-        case ExpressionKind::NamedValue:
-        case ExpressionKind::HierarchicalValue:
-            return canConnectSymbol(as<ValueExpressionBase>().symbol);
-        case ExpressionKind::ElementSelect: {
-            auto& val = as<ElementSelectExpression>().value();
-            return val.type->isUnpackedArray() && val.canConnectToRefArg(isConstRef, false);
-        }
-        case ExpressionKind::MemberAccess: {
-            auto& access = as<MemberAccessExpression>();
-            auto& val = access.value();
-            return (val.type->isClass() || val.type->isUnpackedStruct()) &&
-                   val.canConnectToRefArg(isConstRef, true) && canConnectSymbol(access.member);
-        }
+        case ExpressionKind::ElementSelect:
+            return as<ElementSelectExpression>().value().canConnectToRefArg(isConstRef, false);
+        case ExpressionKind::MemberAccess:
+            return as<MemberAccessExpression>().value().canConnectToRefArg(isConstRef, true);
         default:
-            return false;
+            return true;
     }
 }
 
 optional<bitwidth_t> Expression::getEffectiveWidth() const {
     EffectiveWidthVisitor visitor;
     return visit(visitor);
+}
+
+const Symbol* Expression::getSymbolReference() const {
+    switch (kind) {
+        case ExpressionKind::NamedValue:
+        case ExpressionKind::HierarchicalValue:
+            return &as<ValueExpressionBase>().symbol;
+        case ExpressionKind::ElementSelect: {
+            auto& val = as<ElementSelectExpression>().value();
+            return val.type->isUnpackedArray() ? val.getSymbolReference() : nullptr;
+        }
+        case ExpressionKind::MemberAccess: {
+            auto& access = as<MemberAccessExpression>();
+            auto& val = access.value();
+            if (val.type->isClass() || val.type->isUnpackedStruct())
+                return &access.member;
+            return nullptr;
+        }
+        default:
+            return nullptr;
+    }
 }
 
 bool Expression::bad() const {

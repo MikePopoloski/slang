@@ -711,25 +711,6 @@ void RangeSelectExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("right", right());
 }
 
-static const Symbol* getBaseSymbol(const Expression& expr) {
-    switch (expr.kind) {
-        case ExpressionKind::NamedValue:
-        case ExpressionKind::HierarchicalValue:
-            return &expr.as<ValueExpressionBase>().symbol;
-        case ExpressionKind::ElementSelect:
-            return getBaseSymbol(expr.as<ElementSelectExpression>().value());
-        case ExpressionKind::MemberAccess: {
-            auto& access = expr.as<MemberAccessExpression>();
-            auto& val = access.value();
-            if (val.type->isClass() || val.type->isUnpackedStruct())
-                return &access.member;
-            return nullptr;
-        }
-        default:
-            return nullptr;
-    }
-}
-
 Expression& MemberAccessExpression::fromSelector(
     Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
     const InvocationExpressionSyntax* invocation,
@@ -780,14 +761,8 @@ Expression& MemberAccessExpression::fromSelector(
     // call.
     auto tryBindRandMode = [&]() -> Expression* {
         if (selector.name == "rand_mode"sv) {
-            if (auto sym = getBaseSymbol(expr)) {
-                RandMode mode = RandMode::None;
-                if (sym->kind == SymbolKind::ClassProperty)
-                    mode = sym->as<ClassPropertySymbol>().randMode;
-                else if (sym->kind == SymbolKind::Field)
-                    mode = sym->as<FieldSymbol>().randMode;
-
-                if (mode != RandMode::None) {
+            if (auto sym = expr.getSymbolReference()) {
+                if (sym->getRandMode() != RandMode::None) {
                     return CallExpression::fromBuiltInMethod(compilation, SymbolKind::ClassProperty,
                                                              expr, selector, invocation, withClause,
                                                              context);

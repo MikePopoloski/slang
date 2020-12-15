@@ -20,6 +20,7 @@ class Scope;
 class SyntaxNode;
 class Type;
 struct AttributeInstanceSyntax;
+enum class RandMode;
 
 // clang-format off
 #define SYMBOLKIND(x) \
@@ -148,6 +149,10 @@ public:
     /// Gets the definition in which this symbol is declared. If the symbol isn't
     /// declared in a definition, returns nullptr.
     const Definition* getDeclaringDefinition() const;
+
+    /// If this symbol is a random variable, returns its mode.
+    /// Otherwise returns RandMode::None.
+    RandMode getRandMode() const;
 
     void setAttributes(const Scope& scope, span<const AttributeInstanceSyntax* const> syntax);
 

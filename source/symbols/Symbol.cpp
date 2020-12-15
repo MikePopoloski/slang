@@ -11,9 +11,9 @@
 #include "slang/symbols/ASTVisitor.h"
 #include "slang/symbols/CompilationUnitSymbols.h"
 #include "slang/symbols/MemberSymbols.h"
-#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
+#include "slang/types/Type.h"
 #include "slang/util/StackContainer.h"
 
 namespace {
@@ -177,6 +177,17 @@ const Definition* Symbol::getDeclaringDefinition() const {
     }
 
     return &curr->as<InstanceBodySymbol>().getDefinition();
+}
+
+RandMode Symbol::getRandMode() const {
+    switch (kind) {
+        case SymbolKind::ClassProperty:
+            return as<ClassPropertySymbol>().randMode;
+        case SymbolKind::Field:
+            return as<FieldSymbol>().randMode;
+        default:
+            return RandMode::None;
+    }
 }
 
 void Symbol::setAttributes(const Scope& scope, span<const AttributeInstanceSyntax* const> syntax) {

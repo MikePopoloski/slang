@@ -230,12 +230,7 @@ void DeclaredType::checkType(const BindContext& context) const {
         }
     }
     else if (flags.has(DeclaredTypeFlags::Rand)) {
-        RandMode mode;
-        if (parent.kind == SymbolKind::ClassProperty)
-            mode = parent.as<ClassPropertySymbol>().randMode;
-        else
-            mode = parent.as<FieldSymbol>().randMode;
-
+        RandMode mode = parent.getRandMode();
         if (!type->isValidForRand(mode)) {
             auto& diag = context.addDiag(diag::InvalidRandType, parent.location) << *type;
             if (mode == RandMode::Rand)
