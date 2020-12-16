@@ -86,10 +86,42 @@ void ConstraintList::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-struct ConstraintExprVisitor {
-    template<typename T, typename Arg>
-    using visitExprs_t = decltype(std::declval<T>().visitExprs(std::declval<Arg>()));
+template<typename T, typename Arg>
+using visitExprs_t = decltype(std::declval<T>().visitExprs(std::declval<Arg>()));
 
+struct DistVarVisitor {
+    const BindContext& context;
+    bool anyRandVars = false;
+
+    DistVarVisitor(const BindContext& context) : context(context) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        switch (expr.kind) {
+            case ExpressionKind::NamedValue:
+            case ExpressionKind::HierarchicalValue:
+            case ExpressionKind::MemberAccess:
+            case ExpressionKind::ElementSelect: {
+                if (auto sym = expr.getSymbolReference()) {
+                    RandMode mode = sym->getRandMode();
+                    if (mode == RandMode::Rand)
+                        anyRandVars = true;
+                    else if (mode == RandMode::RandC)
+                        context.addDiag(diag::RandCInDist, expr.sourceRange);
+                }
+                break;
+            }
+            default:
+                if constexpr (is_detected_v<visitExprs_t, T, DistVarVisitor>)
+                    expr.visitExprs(*this);
+                break;
+        }
+    }
+
+    void visitInvalid(const Expression&) {}
+};
+
+struct ConstraintExprVisitor {
     const BindContext& context;
     bool failed = false;
 
@@ -140,8 +172,18 @@ struct ConstraintExprVisitor {
                 break;
             }
             case ExpressionKind::OpenRange:
-            case ExpressionKind::Dist:
                 return true;
+            case ExpressionKind::Dist: {
+                // Additional restrictions on dist expressions:
+                // - must contain at least one 'rand' var
+                // - cannot contain any 'randc' vars
+                DistVarVisitor distVisitor(context);
+                auto& left = expr.template as<DistExpression>().left();
+                left.visit(distVisitor);
+                if (!distVisitor.anyRandVars)
+                    context.addDiag(diag::RandNeededInDist, left.sourceRange);
+                return true;
+            }
             default:
                 break;
         }

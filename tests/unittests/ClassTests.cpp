@@ -1849,9 +1849,12 @@ class C;
                 len > 100;
     }
 
-    int x;
+    rand int x;
+    randc int y;
+    int z;
     constraint c4 {
         x dist { [100:102] :/ 1, 200 := 2, 300 := 5 };
+        z + y dist { 1, 2, 3:=100 };
     }
 endclass
 )");
@@ -1860,10 +1863,12 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::UnknownConstraintLiteral);
     CHECK(diags[1].code == diag::UnknownConstraintLiteral);
     CHECK(diags[2].code == diag::NonIntegralConstraintExpr);
     CHECK(diags[3].code == diag::NonIntegralConstraintLiteral);
     CHECK(diags[4].code == diag::ExprNotConstraint);
+    CHECK(diags[5].code == diag::RandNeededInDist);
+    CHECK(diags[6].code == diag::RandCInDist);
 }
