@@ -403,6 +403,8 @@ bool Expression::canConnectToRefArg(bool isConstRef, bool allowConstClassHandle)
     switch (kind) {
         case ExpressionKind::ElementSelect:
             return as<ElementSelectExpression>().value().canConnectToRefArg(isConstRef, false);
+        case ExpressionKind::RangeSelect:
+            return as<RangeSelectExpression>().value().canConnectToRefArg(isConstRef, false);
         case ExpressionKind::MemberAccess:
             return as<MemberAccessExpression>().value().canConnectToRefArg(isConstRef, true);
         default:
@@ -422,6 +424,10 @@ const Symbol* Expression::getSymbolReference() const {
             return &as<ValueExpressionBase>().symbol;
         case ExpressionKind::ElementSelect: {
             auto& val = as<ElementSelectExpression>().value();
+            return val.type->isUnpackedArray() ? val.getSymbolReference() : nullptr;
+        }
+        case ExpressionKind::RangeSelect: {
+            auto& val = as<RangeSelectExpression>().value();
             return val.type->isUnpackedArray() ? val.getSymbolReference() : nullptr;
         }
         case ExpressionKind::MemberAccess: {
