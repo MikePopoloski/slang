@@ -18,7 +18,8 @@ namespace slang {
     x(Expression) \
     x(Implication) \
     x(Conditional) \
-    x(Uniqueness)
+    x(Uniqueness) \
+    x(DisableSoft)
 ENUM(ConstraintKind, CONSTRAINT);
 #undef CONTROL
 // clang-format on
@@ -163,6 +164,24 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Uniqueness; }
+};
+
+struct DisableConstraintSyntax;
+
+/// Represents a constraint that disables a soft random variable.
+class DisableSoftConstraint : public Constraint {
+public:
+    const Expression& target;
+
+    explicit DisableSoftConstraint(const Expression& target) :
+        Constraint(ConstraintKind::DisableSoft), target(target) {}
+
+    static Constraint& fromSyntax(const DisableConstraintSyntax& syntax,
+                                  const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::DisableSoft; }
 };
 
 } // namespace slang

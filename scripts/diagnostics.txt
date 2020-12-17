@@ -422,6 +422,7 @@ error InvalidUniquenessExpr "uniqueness constraints can only contain references 
 error InequivalentUniquenessTypes "type of '{}' is {} which is not equivalent to the type of other variables in the constraint (previously saw {})"
 error TaskInConstraint "cannot invoke tasks in constraints"
 error OutRefFuncConstraint "cannot call a function with ref or output arguments in constraints"
+error BadDisableSoft "target of 'disable soft' constraint must be a random variable"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"

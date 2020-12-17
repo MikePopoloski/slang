@@ -325,6 +325,7 @@ decltype(auto) Constraint::visit(TVisitor& visitor, Args&&... args) const {
         CASE(Implication, ImplicationConstraint);
         CASE(Conditional, ConditionalConstraint);
         CASE(Uniqueness, UniquenessConstraint);
+        CASE(DisableSoft, DisableSoftConstraint);
     }
 #undef CASE
     // clang-format on

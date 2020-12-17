@@ -40,8 +40,10 @@ const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const Bin
             result =
                 &UniquenessConstraint::fromSyntax(syntax.as<UniquenessConstraintSyntax>(), ctx);
             break;
-        case SyntaxKind::SolveBeforeConstraint:
         case SyntaxKind::DisableConstraint:
+            result = &DisableSoftConstraint::fromSyntax(syntax.as<DisableConstraintSyntax>(), ctx);
+            break;
+        case SyntaxKind::SolveBeforeConstraint:
         case SyntaxKind::LoopConstraint:
             ctx.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badConstraint(comp, nullptr);
@@ -307,7 +309,6 @@ static bool isAllowedForUniqueness(const Type& type) {
 
 Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& syntax,
                                              const BindContext& context) {
-
     auto& comp = context.getCompilation();
     bool bad = false;
     const Type* commonType = nullptr;
@@ -362,6 +363,27 @@ void UniquenessConstraint::serializeTo(ASTSerializer& serializer) const {
     for (auto item : items)
         serializer.serialize(*item);
     serializer.endArray();
+}
+
+Constraint& DisableSoftConstraint::fromSyntax(const DisableConstraintSyntax& syntax,
+                                              const BindContext& context) {
+    auto& comp = context.getCompilation();
+    auto& expr = Expression::bind(*syntax.name, context);
+    auto result = comp.emplace<DisableSoftConstraint>(expr);
+    if (expr.bad())
+        return badConstraint(comp, result);
+
+    auto sym = expr.getSymbolReference();
+    if (!sym || sym->getRandMode() == RandMode::None) {
+        context.addDiag(diag::BadDisableSoft, expr.sourceRange);
+        return badConstraint(comp, result);
+    }
+
+    return *result;
+}
+
+void DisableSoftConstraint::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("target", target);
 }
 
 } // namespace slang

@@ -1874,6 +1874,11 @@ class C;
     function void f(ref int x); endfunction
 
     constraint c8 { t(); f(x); }
+
+    constraint c9 {
+        disable soft x; soft x dist {5, 8};
+        disable soft z;
+    }
 endclass
 )");
 
@@ -1881,7 +1886,7 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 13);
+    REQUIRE(diags.size() == 14);
     CHECK(diags[0].code == diag::UnknownConstraintLiteral);
     CHECK(diags[1].code == diag::UnknownConstraintLiteral);
     CHECK(diags[2].code == diag::NonIntegralConstraintExpr);
@@ -1895,4 +1900,5 @@ endclass
     CHECK(diags[10].code == diag::InequivalentUniquenessTypes);
     CHECK(diags[11].code == diag::TaskInConstraint);
     CHECK(diags[12].code == diag::OutRefFuncConstraint);
+    CHECK(diags[13].code == diag::BadDisableSoft);
 }
