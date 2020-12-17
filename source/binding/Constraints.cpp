@@ -188,6 +188,25 @@ struct ConstraintExprVisitor {
                     context.addDiag(diag::RandNeededInDist, left.sourceRange);
                 return true;
             }
+            case ExpressionKind::Call: {
+                auto& call = expr.template as<CallExpression>();
+                if (call.getSubroutineKind() == SubroutineKind::Task) {
+                    context.addDiag(diag::TaskInConstraint, expr.sourceRange);
+                    return visitInvalid(expr);
+                }
+
+                if (!call.isSystemCall()) {
+                    const SubroutineSymbol& sub = *std::get<0>(call.subroutine);
+                    for (auto arg : sub.getArguments()) {
+                        if (arg->direction == ArgumentDirection::Out ||
+                            (arg->direction == ArgumentDirection::Ref && !arg->isConstant)) {
+                            context.addDiag(diag::OutRefFuncConstraint, expr.sourceRange);
+                            return visitInvalid(expr);
+                        }
+                    }
+                }
+                break;
+            }
             default:
                 break;
         }

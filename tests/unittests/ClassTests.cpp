@@ -1865,6 +1865,15 @@ class C;
         unique {a[0] + b, y, z};
         unique {a[0], x};
     }
+
+    rand bit [7:0] arr[] ;
+    constraint c6 { arr.size == 5; }
+    constraint c7 { arr.sum() with (int'(item)) < 1000; }
+
+    task t; endtask
+    function void f(ref int x); endfunction
+
+    constraint c8 { t(); f(x); }
 endclass
 )");
 
@@ -1872,7 +1881,7 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 11);
+    REQUIRE(diags.size() == 13);
     CHECK(diags[0].code == diag::UnknownConstraintLiteral);
     CHECK(diags[1].code == diag::UnknownConstraintLiteral);
     CHECK(diags[2].code == diag::NonIntegralConstraintExpr);
@@ -1884,4 +1893,6 @@ endclass
     CHECK(diags[8].code == diag::RandCInUnique);
     CHECK(diags[9].code == diag::InvalidUniquenessExpr);
     CHECK(diags[10].code == diag::InequivalentUniquenessTypes);
+    CHECK(diags[11].code == diag::TaskInConstraint);
+    CHECK(diags[12].code == diag::OutRefFuncConstraint);
 }
