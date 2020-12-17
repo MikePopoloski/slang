@@ -17,7 +17,8 @@ namespace slang {
     x(List) \
     x(Expression) \
     x(Implication) \
-    x(Conditional)
+    x(Conditional) \
+    x(Uniqueness)
 ENUM(ConstraintKind, CONSTRAINT);
 #undef CONTROL
 // clang-format on
@@ -144,6 +145,24 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Conditional; }
+};
+
+struct UniquenessConstraintSyntax;
+
+/// Represents a constraint that enforces uniqueness of variables.
+class UniquenessConstraint : public Constraint {
+public:
+    span<const Expression* const> items;
+
+    explicit UniquenessConstraint(span<const Expression* const> items) :
+        Constraint(ConstraintKind::Uniqueness), items(items) {}
+
+    static Constraint& fromSyntax(const UniquenessConstraintSyntax& syntax,
+                                  const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Uniqueness; }
 };
 
 } // namespace slang

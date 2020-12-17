@@ -36,10 +36,13 @@ const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const Bin
             result =
                 &ConditionalConstraint::fromSyntax(syntax.as<ConditionalConstraintSyntax>(), ctx);
             break;
+        case SyntaxKind::UniquenessConstraint:
+            result =
+                &UniquenessConstraint::fromSyntax(syntax.as<UniquenessConstraintSyntax>(), ctx);
+            break;
         case SyntaxKind::SolveBeforeConstraint:
         case SyntaxKind::DisableConstraint:
         case SyntaxKind::LoopConstraint:
-        case SyntaxKind::UniquenessConstraint:
             ctx.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badConstraint(comp, nullptr);
             break;
@@ -101,7 +104,8 @@ struct DistVarVisitor {
             case ExpressionKind::NamedValue:
             case ExpressionKind::HierarchicalValue:
             case ExpressionKind::MemberAccess:
-            case ExpressionKind::ElementSelect: {
+            case ExpressionKind::ElementSelect:
+            case ExpressionKind::RangeSelect: {
                 if (auto sym = expr.getSymbolReference()) {
                     RandMode mode = sym->getRandMode();
                     if (mode == RandMode::Rand)
@@ -270,6 +274,75 @@ void ConditionalConstraint::serializeTo(ASTSerializer& serializer) const {
     serializer.write("ifBody", ifBody);
     if (elseBody)
         serializer.write("elseBody", *elseBody);
+}
+
+static bool isAllowedForUniqueness(const Type& type) {
+    if (type.isIntegral())
+        return true;
+
+    if (type.isUnpackedArray())
+        return isAllowedForUniqueness(*type.getArrayElementType());
+
+    return false;
+}
+
+Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& syntax,
+                                             const BindContext& context) {
+
+    auto& comp = context.getCompilation();
+    bool bad = false;
+    const Type* commonType = nullptr;
+    SmallVectorSized<const Expression*, 4> items;
+    for (auto item : syntax.ranges->valueRanges) {
+        auto& expr = Expression::bind(*item, context);
+        items.append(&expr);
+
+        if (expr.bad()) {
+            bad = true;
+        }
+        else {
+            auto sym = expr.getSymbolReference();
+            if (!sym || !isAllowedForUniqueness(sym->getDeclaredType()->getType())) {
+                context.addDiag(diag::InvalidUniquenessExpr, expr.sourceRange);
+                bad = true;
+            }
+            else {
+                const Type* symType = &sym->getDeclaredType()->getType();
+                while (symType->isUnpackedArray())
+                    symType = symType->getArrayElementType();
+
+                RandMode mode = sym->getRandMode();
+                if (mode == RandMode::RandC)
+                    context.addDiag(diag::RandCInUnique, expr.sourceRange);
+                else if (mode == RandMode::None)
+                    context.addDiag(diag::InvalidUniquenessExpr, expr.sourceRange);
+                else if (!commonType)
+                    commonType = symType;
+                else if (!commonType->isEquivalent(*symType)) {
+                    // All variables used in a uniqueness constraint must have equivalent types.
+                    if (!bad && !commonType->isError() && !symType->isError()) {
+                        auto& diag =
+                            context.addDiag(diag::InequivalentUniquenessTypes, expr.sourceRange);
+                        diag << sym->name << *symType << *commonType;
+                        bad = true;
+                    }
+                }
+            }
+        }
+    }
+
+    auto result = comp.emplace<UniquenessConstraint>(items.copy(comp));
+    if (bad)
+        return badConstraint(comp, result);
+
+    return *result;
+}
+
+void UniquenessConstraint::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("items");
+    for (auto item : items)
+        serializer.serialize(*item);
+    serializer.endArray();
 }
 
 } // namespace slang

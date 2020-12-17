@@ -1856,6 +1856,15 @@ class C;
         x dist { [100:102] :/ 1, 200 := 2, 300 := 5 };
         z + y dist { 1, 2, 3:=100 };
     }
+
+    rand byte a[5];
+    rand byte b;
+    rand byte excluded;
+    constraint c5 {
+        unique {b, a[2:3], excluded};
+        unique {a[0] + b, y, z};
+        unique {a[0], x};
+    }
 endclass
 )");
 
@@ -1863,7 +1872,7 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::UnknownConstraintLiteral);
     CHECK(diags[1].code == diag::UnknownConstraintLiteral);
     CHECK(diags[2].code == diag::NonIntegralConstraintExpr);
@@ -1871,4 +1880,8 @@ endclass
     CHECK(diags[4].code == diag::ExprNotConstraint);
     CHECK(diags[5].code == diag::RandNeededInDist);
     CHECK(diags[6].code == diag::RandCInDist);
+    CHECK(diags[7].code == diag::InvalidUniquenessExpr);
+    CHECK(diags[8].code == diag::RandCInUnique);
+    CHECK(diags[9].code == diag::InvalidUniquenessExpr);
+    CHECK(diags[10].code == diag::InequivalentUniquenessTypes);
 }
