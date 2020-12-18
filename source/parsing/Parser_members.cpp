@@ -1528,15 +1528,15 @@ MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifier
         return factory.constraintPrototype(attributes, qualifiers, keyword, name, consume());
     }
     return factory.constraintDeclaration(attributes, qualifiers, keyword, name,
-                                         parseConstraintBlock());
+                                         parseConstraintBlock(/* isTopLevel */ true));
 }
 
-ConstraintBlockSyntax& Parser::parseConstraintBlock() {
+ConstraintBlockSyntax& Parser::parseConstraintBlock(bool isTopLevel) {
     Token closeBrace;
     auto openBrace = expect(TokenKind::OpenBrace);
     auto members = parseMemberList<ConstraintItemSyntax>(
         TokenKind::CloseBrace, closeBrace, SyntaxKind::ConstraintBlock,
-        [this](SyntaxKind, bool&) { return parseConstraintItem(false); });
+        [this, isTopLevel](SyntaxKind, bool&) { return parseConstraintItem(false, isTopLevel); });
 
     return factory.constraintBlock(openBrace, members, closeBrace);
 }
@@ -1550,20 +1550,23 @@ ExpressionSyntax& Parser::parseExpressionOrDist() {
     return factory.expressionOrDist(expr, dist);
 }
 
-ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
+ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLevel) {
     switch (peek().kind) {
         case TokenKind::SolveKeyword: {
             auto solve = consume();
+            if (!isTopLevel)
+                addDiag(diag::SolveBeforeDisallowed, solve.location()) << solve.range();
+
             Token before;
             SmallVectorSized<TokenOrSyntax, 4> beforeBuffer;
-            parseList<isPossibleExpression, isBeforeOrSemicolon>(
+            parseList<isPossibleExpressionOrComma, isBeforeOrSemicolon>(
                 beforeBuffer, TokenKind::BeforeKeyword, TokenKind::Comma, before,
                 RequireItems::True, diag::ExpectedExpression,
                 [this] { return &parsePrimaryExpression(/* disallowVector */ false); });
 
             Token semi;
             SmallVectorSized<TokenOrSyntax, 4> afterBuffer;
-            parseList<isPossibleExpression, isSemicolon>(
+            parseList<isPossibleExpressionOrComma, isSemicolon>(
                 afterBuffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
                 diag::ExpectedExpression,
                 [this] { return &parsePrimaryExpression(/* disallowVector */ false); });
@@ -1580,19 +1583,20 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
         case TokenKind::ForeachKeyword: {
             auto keyword = consume();
             auto& vars = parseForeachLoopVariables();
-            return &factory.loopConstraint(keyword, vars, *parseConstraintItem(true));
+            return &factory.loopConstraint(keyword, vars, *parseConstraintItem(true, false));
         }
         case TokenKind::IfKeyword: {
             auto ifKeyword = consume();
             auto openParen = expect(TokenKind::OpenParenthesis);
             auto& condition = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            auto& constraints = *parseConstraintItem(true);
+            auto& constraints = *parseConstraintItem(true, false);
 
             ElseConstraintClauseSyntax* elseClause = nullptr;
             if (peek(TokenKind::ElseKeyword)) {
                 auto elseKeyword = consume();
-                elseClause = &factory.elseConstraintClause(elseKeyword, *parseConstraintItem(true));
+                elseClause =
+                    &factory.elseConstraintClause(elseKeyword, *parseConstraintItem(true, false));
             }
             return &factory.conditionalConstraint(ifKeyword, openParen, condition, closeParen,
                                                   constraints, elseClause);
@@ -1614,8 +1618,9 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
             if (allowBlock) {
                 uint32_t index = 1;
                 if (!scanTypePart<isNotInConcatenationExpr>(index, TokenKind::OpenBrace,
-                                                            TokenKind::CloseBrace))
-                    return &parseConstraintBlock();
+                                                            TokenKind::CloseBrace)) {
+                    return &parseConstraintBlock(false);
+                }
             }
             break;
         }
@@ -1636,7 +1641,7 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
     auto expr = &parseSubExpression(ExpressionOptions::ConstraintContext, 0);
     if (peek(TokenKind::MinusArrow)) {
         auto arrow = consume();
-        return &factory.implicationConstraint(*expr, arrow, *parseConstraintItem(true));
+        return &factory.implicationConstraint(*expr, arrow, *parseConstraintItem(true, false));
     }
 
     if (peek(TokenKind::DistKeyword)) {

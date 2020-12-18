@@ -19,7 +19,8 @@ namespace slang {
     x(Implication) \
     x(Conditional) \
     x(Uniqueness) \
-    x(DisableSoft)
+    x(DisableSoft) \
+    x(SolveBefore)
 ENUM(ConstraintKind, CONSTRAINT);
 #undef CONTROL
 // clang-format on
@@ -182,6 +183,27 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::DisableSoft; }
+};
+
+struct SolveBeforeConstraintSyntax;
+
+/// Represents a constraint that enforces ordering of solving variables.
+class SolveBeforeConstraint : public Constraint {
+public:
+    span<const Expression* const> solve;
+    span<const Expression* const> before;
+
+    SolveBeforeConstraint(span<const Expression* const> solve,
+                          span<const Expression* const> before) :
+        Constraint(ConstraintKind::SolveBefore),
+        solve(solve), before(before) {}
+
+    static Constraint& fromSyntax(const SolveBeforeConstraintSyntax& syntax,
+                                  const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::SolveBefore; }
 };
 
 } // namespace slang

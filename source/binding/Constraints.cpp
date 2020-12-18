@@ -44,6 +44,9 @@ const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const Bin
             result = &DisableSoftConstraint::fromSyntax(syntax.as<DisableConstraintSyntax>(), ctx);
             break;
         case SyntaxKind::SolveBeforeConstraint:
+            result =
+                &SolveBeforeConstraint::fromSyntax(syntax.as<SolveBeforeConstraintSyntax>(), ctx);
+            break;
         case SyntaxKind::LoopConstraint:
             ctx.addDiag(diag::NotYetSupported, syntax.sourceRange());
             result = &badConstraint(comp, nullptr);
@@ -384,6 +387,51 @@ Constraint& DisableSoftConstraint::fromSyntax(const DisableConstraintSyntax& syn
 
 void DisableSoftConstraint::serializeTo(ASTSerializer& serializer) const {
     serializer.write("target", target);
+}
+
+Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax& syntax,
+                                              const BindContext& context) {
+    bool bad = false;
+    auto bindExprs = [&](auto& list, auto& results) {
+        for (auto item : list) {
+            auto& expr = Expression::bind(*item, context);
+            results.append(&expr);
+
+            if (expr.bad())
+                bad = true;
+            else {
+                auto sym = expr.getSymbolReference();
+                if (!sym || sym->getRandMode() == RandMode::None)
+                    context.addDiag(diag::BadSolveBefore, expr.sourceRange);
+                else if (sym && sym->getRandMode() == RandMode::RandC)
+                    context.addDiag(diag::RandCInSolveBefore, expr.sourceRange);
+            }
+        }
+    };
+
+    auto& comp = context.getCompilation();
+    SmallVectorSized<const Expression*, 4> solve;
+    SmallVectorSized<const Expression*, 4> before;
+    bindExprs(syntax.beforeExpr, solve);
+    bindExprs(syntax.afterExpr, before);
+
+    auto result = comp.emplace<SolveBeforeConstraint>(solve.copy(comp), before.copy(comp));
+    if (bad)
+        return badConstraint(comp, result);
+
+    return *result;
+}
+
+void SolveBeforeConstraint::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("solve");
+    for (auto item : solve)
+        serializer.serialize(*item);
+    serializer.endArray();
+
+    serializer.startArray("before");
+    for (auto item : before)
+        serializer.serialize(*item);
+    serializer.endArray();
 }
 
 } // namespace slang

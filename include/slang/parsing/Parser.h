@@ -292,8 +292,8 @@ private:
     CoverageOptionSyntax* parseCoverageOption(AttrList attributes);
     MemberSyntax* parseCoverpointMember();
     MemberSyntax& parseConstraint(AttrList attributes, span<Token> qualifiers);
-    ConstraintBlockSyntax& parseConstraintBlock();
-    ConstraintItemSyntax* parseConstraintItem(bool allowBlock);
+    ConstraintBlockSyntax& parseConstraintBlock(bool isTopLevel);
+    ConstraintItemSyntax* parseConstraintItem(bool allowBlock, bool isTopLevel);
     DistConstraintListSyntax& parseDistConstraintList();
     DistItemSyntax& parseDistItem();
     ExpressionSyntax& parseArrayOrRandomizeMethod(ExpressionSyntax& expr);

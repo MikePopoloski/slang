@@ -1878,6 +1878,9 @@ class C;
     constraint c9 {
         disable soft x; soft x dist {5, 8};
         disable soft z;
+        solve a, b, x before excluded, A;
+        solve 3 before y;
+        x -> { solve a before b; }
     }
 endclass
 )");
@@ -1886,7 +1889,7 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 14);
+    REQUIRE(diags.size() == 17);
     CHECK(diags[0].code == diag::UnknownConstraintLiteral);
     CHECK(diags[1].code == diag::UnknownConstraintLiteral);
     CHECK(diags[2].code == diag::NonIntegralConstraintExpr);
@@ -1901,4 +1904,7 @@ endclass
     CHECK(diags[11].code == diag::TaskInConstraint);
     CHECK(diags[12].code == diag::OutRefFuncConstraint);
     CHECK(diags[13].code == diag::BadDisableSoft);
+    CHECK(diags[14].code == diag::BadSolveBefore);
+    CHECK(diags[15].code == diag::RandCInSolveBefore);
+    CHECK(diags[16].code == diag::SolveBeforeDisallowed);
 }

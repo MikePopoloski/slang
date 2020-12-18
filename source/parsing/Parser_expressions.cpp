@@ -1010,7 +1010,7 @@ ExpressionSyntax& Parser::parseArrayOrRandomizeMethod(ExpressionSyntax& expr) {
 
     ConstraintBlockSyntax* constraints = nullptr;
     if (peek(TokenKind::OpenBrace))
-        constraints = &parseConstraintBlock();
+        constraints = &parseConstraintBlock(/* isTopLevel */ true);
 
     return factory.arrayOrRandomizeMethodExpression(expr, with, args, constraints);
 }
