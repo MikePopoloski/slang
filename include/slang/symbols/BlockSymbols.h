@@ -31,8 +31,6 @@ public:
                                             bool inLoop);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const ForLoopStatementSyntax& syntax, bool inLoop);
-    static StatementBlockSymbol& fromSyntax(const Scope& scope,
-                                            const ForeachLoopStatementSyntax& syntax, bool inLoop);
     static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax,
                                                  bool inLoop);
 

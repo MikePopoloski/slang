@@ -61,13 +61,6 @@ const Scope& DeclaredType::getScope() const {
 }
 
 void DeclaredType::resolveType(const BindContext& initializerContext) const {
-    // If this is a foreach variable, we need to look up the array in
-    // order to know our type.
-    if ((flags & DeclaredTypeFlags::ForeachVar) != 0) {
-        type = resolveForeachVar(initializerContext);
-        return;
-    }
-
     auto& scope = getScope();
     auto& comp = scope.getCompilation();
     if (!typeSyntax) {
@@ -109,54 +102,6 @@ void DeclaredType::resolveType(const BindContext& initializerContext) const {
 
     if (flags.has(DeclaredTypeFlags::NeedsTypeCheck) && !type->isError())
         checkType(initializerContext);
-}
-
-const Type* DeclaredType::resolveForeachVar(const BindContext& context) const {
-    // This is kind of an unfortunate layering violation.
-    auto& comp = context.getCompilation();
-    auto& var = parent.as<VariableSymbol>();
-    auto syntax = var.getSyntax();
-    ASSERT(syntax && syntax->parent);
-
-    // Walk up to the parent foreach loop syntax.
-    auto arrayName = syntax->parent->as<ForeachLoopListSyntax>().arrayName;
-
-    // Lookup failures will be diagnosed later, so if we can't find the
-    // array here just give up quietly.
-    LookupResult result;
-    Lookup::name(context.scope, *arrayName, context.lookupLocation, LookupFlags::None, result);
-    if (!result.found)
-        return &comp.getErrorType();
-
-    auto declType = result.found->getDeclaredType();
-    if (!declType)
-        return &comp.getErrorType();
-
-    const Type* currType = &declType->getType();
-    for (int32_t i = var.foreachIndex - 1; i > 0; i--) {
-        if (!currType->isArray())
-            return &comp.getErrorType();
-
-        currType = currType->getArrayElementType();
-    }
-
-    if (!currType->isArray() && !currType->isString() && !currType->isIntegral())
-        return &comp.getErrorType();
-
-    // If this is an associative array, we take the type from the index type.
-    // Otherwise, for all this work, we just end up with an int index.
-    if (currType->isAssociativeArray()) {
-        currType = currType->getAssociativeIndexType();
-        if (!currType) {
-            context.addDiag(diag::ForeachWildcardIndex, syntax->sourceRange())
-                << arrayName->sourceRange();
-            return &comp.getErrorType();
-        }
-
-        return currType;
-    }
-
-    return &comp.getIntType();
 }
 
 static bool isValidForNet(const Type& type) {

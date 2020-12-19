@@ -242,6 +242,10 @@ public:
     /// the string type itself as well as byte arrays and all integral types.
     bool canBeStringLike() const;
 
+    /// Returns true if the type can be considered iterable, which includes
+    /// types like arrays and strings.
+    bool isIterable() const;
+
     /// Returns true if the type is valid for use as a random variable of
     /// the given mode.
     bool isValidForRand(RandMode mode) const;

@@ -173,8 +173,6 @@ public:
                    bool inLoop);
     void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax,
                    bool inLoop);
-    void setSyntax(const StatementBlockSymbol& scope, const ForeachLoopStatementSyntax& syntax,
-                   bool inLoop);
     void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax, SourceRange sourceRange,
                   bool inLoop);
 
@@ -182,9 +180,6 @@ public:
     span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
 
 private:
-    template<typename TStatement>
-    void setSyntaxImpl(const StatementBlockSymbol& scope, const TStatement& syntax, bool inLoop);
-
     const Statement& bindStatement(const BindContext& context) const;
 
     std::variant<const StatementSyntax*, const SyntaxList<SyntaxNode>*> syntax;

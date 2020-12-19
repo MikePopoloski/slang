@@ -95,63 +95,6 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const ForeachLoopStatementSyntax& syntax,
-                                                       bool inLoop) {
-    string_view name;
-    SourceLocation loc;
-    if (syntax.label) {
-        auto token = syntax.label->name;
-        name = token.valueText();
-        loc = token.location();
-    }
-    else {
-        name = "";
-        loc = syntax.keyword.location();
-    }
-
-    auto& comp = scope.getCompilation();
-    auto result = comp.emplace<StatementBlockSymbol>(
-        comp, name, loc, StatementBlockKind::Sequential, scope.getDefaultLifetime());
-    result->setSyntax(syntax);
-    result->setAttributes(scope, syntax.attributes);
-
-    // Get the name of the array variable.
-    auto nameSyntax = syntax.loopList->arrayName;
-    while (nameSyntax->kind == SyntaxKind::ScopedName)
-        nameSyntax = nameSyntax->as<ScopedNameSyntax>().right;
-
-    string_view arrayName;
-    if (nameSyntax->kind == SyntaxKind::IdentifierName)
-        arrayName = nameSyntax->as<IdentifierNameSyntax>().identifier.valueText();
-
-    // Create loop iteration variables.
-    int32_t index = 0;
-    for (auto loopVar : syntax.loopList->loopVariables) {
-        index++;
-        if (loopVar->kind == SyntaxKind::EmptyIdentifierName)
-            continue;
-
-        auto& idName = loopVar->as<IdentifierNameSyntax>();
-        auto varName = idName.identifier.valueText();
-        if (varName.empty())
-            continue;
-
-        if (varName == arrayName) {
-            scope.addDiag(diag::LoopVarShadowsArray, loopVar->sourceRange()) << varName;
-            continue;
-        }
-
-        result->addMember(VariableSymbol::fromForeachVar(comp, idName, index));
-    }
-
-    result->binder.setSyntax(*result, syntax, inLoop);
-    for (auto block : result->binder.getBlocks())
-        result->addMember(*block);
-
-    return *result;
-}
-
 StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
                                                             const StatementSyntax& syntax,
                                                             bool inLoop) {

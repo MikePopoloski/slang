@@ -87,8 +87,7 @@ static bool hasSimpleLabel(const StatementSyntax& syntax) {
 
     return syntax.kind != SyntaxKind::SequentialBlockStatement &&
            syntax.kind != SyntaxKind::ParallelBlockStatement &&
-           syntax.kind != SyntaxKind::ForLoopStatement &&
-           syntax.kind != SyntaxKind::ForeachLoopStatement;
+           syntax.kind != SyntaxKind::ForLoopStatement;
 }
 
 const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
@@ -152,12 +151,8 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         }
         case SyntaxKind::ForeachLoopStatement:
-            // We might have an implicit block here; check for that first.
-            result = stmtCtx.tryGetBlock(comp, syntax);
-            if (!result) {
-                result = &ForeachLoopStatement::fromSyntax(
-                    comp, syntax.as<ForeachLoopStatementSyntax>(), context, stmtCtx);
-            }
+            result = &ForeachLoopStatement::fromSyntax(
+                comp, syntax.as<ForeachLoopStatementSyntax>(), context, stmtCtx);
             break;
         case SyntaxKind::DoWhileStatement:
             result = &DoWhileLoopStatement::fromSyntax(comp, syntax.as<DoWhileStatementSyntax>(),
@@ -355,9 +350,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             return;
         }
         case SyntaxKind::ForeachLoopStatement:
-            // A foreach loop always creates a block.
-            results.append(&StatementBlockSymbol::fromSyntax(
-                scope, syntax.as<ForeachLoopStatementSyntax>(), inLoop));
+            recurse(syntax.as<ForeachLoopStatementSyntax>().statement, true);
             return;
         case SyntaxKind::TimingControlStatement:
             recurse(syntax.as<TimingControlStatementSyntax>().statement);
@@ -414,9 +407,8 @@ void StatementBinder::setSyntax(const Scope& scope, const StatementSyntax& synta
     blocks = buffer.copy(scope.getCompilation());
 }
 
-template<typename TStatement>
-void StatementBinder::setSyntaxImpl(const StatementBlockSymbol& scope, const TStatement& syntax_,
-                                    bool inLoop_) {
+void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
+                                const ForLoopStatementSyntax& syntax_, bool inLoop_) {
     stmt = nullptr;
     syntax = &syntax_;
     labelHandled = false;
@@ -426,16 +418,6 @@ void StatementBinder::setSyntaxImpl(const StatementBlockSymbol& scope, const TSt
     SmallVectorSized<const StatementBlockSymbol*, 8> buffer;
     findBlocks(scope, *syntax_.statement, buffer, labelHandled, /* inLoop */ true);
     blocks = buffer.copy(scope.getCompilation());
-}
-
-void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
-                                const ForLoopStatementSyntax& syntax_, bool inLoop_) {
-    setSyntaxImpl(scope, syntax_, inLoop_);
-}
-
-void StatementBinder::setSyntax(const StatementBlockSymbol& scope,
-                                const ForeachLoopStatementSyntax& syntax_, bool inLoop_) {
-    setSyntaxImpl(scope, syntax_, inLoop_);
 }
 
 void StatementBinder::setItems(Scope& scope, const SyntaxList<SyntaxNode>& items, SourceRange range,
@@ -1340,7 +1322,6 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
                                             const ForeachLoopStatementSyntax& syntax,
                                             const BindContext& context, StatementContext& stmtCtx) {
     auto guard = stmtCtx.enterLoop();
-    bool bad = false;
 
     // Find the array over which we are looping. Make sure it's actually iterable:
     // - Must be a referenceable variable, class property, etc.
@@ -1349,81 +1330,85 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
     //    - Any multi-dimensional integral type
     //    - A string
     auto& arrayRef = Expression::bind(*syntax.loopList->arrayName, context);
+    if (arrayRef.bad())
+        return badStmt(compilation, nullptr);
+
     const Type* type = arrayRef.type;
-    bool isIterable =
-        (type->hasFixedRange() || type->isArray() || type->isString()) && !type->isScalar();
-
-    if (arrayRef.bad()) {
-        bad = true;
-    }
-    else if ((!arrayRef.canConnectToRefArg(true) && !ValueExpressionBase::isKind(arrayRef.kind)) ||
-             !isIterable) {
+    auto arraySym = arrayRef.getSymbolReference();
+    if (!arraySym || !type->isIterable()) {
         context.addDiag(diag::NotAnArray, arrayRef.sourceRange);
-        bad = true;
+        return badStmt(compilation, nullptr);
     }
 
+    // Build iterator symbols for each loop variable.
+    BindContext iterCtx = context;
     SmallVectorSized<LoopDim, 4> dims;
-    if (type->isArray()) {
-        do {
-            if (type->hasFixedRange())
-                dims.append({ type->getFixedRange() });
-            else
-                dims.emplace();
-            type = type->getArrayElementType();
-        } while (type->isArray());
-    }
-    else if (type->isString()) {
-        dims.emplace();
-    }
-    else {
-        dims.append({ type->getFixedRange() });
-    }
-
-    if (syntax.loopList->loopVariables.size() > dims.size()) {
-        if (!bad) {
+    bool skippedAny = false;
+    for (auto loopVar : syntax.loopList->loopVariables) {
+        // If type is null, we've run out of dimensions so there were too many
+        // loop variables supplied.
+        if (!type || type->isScalar()) {
             context.addDiag(diag::TooManyForeachVars, syntax.loopList->loopVariables.sourceRange())
                 << *arrayRef.type;
-            bad = true;
+            return badStmt(compilation, nullptr);
         }
-    }
-    else {
-        // Find a reference to all of our loop variables, which should always be
-        // in the parent block symbol.
-        size_t count = 0;
-        auto dimIt = dims.begin();
-        for (auto loopVar : syntax.loopList->loopVariables) {
-            if (loopVar->kind != SyntaxKind::EmptyIdentifierName) {
-                auto& idName = loopVar->as<IdentifierNameSyntax>();
-                string_view name = idName.identifier.valueText();
 
-                // If we previously had skipped dimensions this one can't be dynamically
-                // sized (there would be no way to reach it duration iteration).
-                size_t currIndex = size_t(dimIt - dims.begin());
-                if (!dimIt->range && currIndex != count) {
-                    context.addDiag(diag::ForeachDynamicDimAfterSkipped, idName.sourceRange())
-                        << name;
-                    bad = true;
-                    break;
-                }
+        if (type->hasFixedRange())
+            dims.append({ type->getFixedRange() });
+        else
+            dims.emplace();
 
-                if (auto sym = context.scope.find(name)) {
-                    dimIt->loopVar = &sym->as<ValueSymbol>();
-                    if (dimIt->loopVar->getType().isError())
-                        bad = true;
-                    count = currIndex + 1;
-                }
+        const Type& currType = *type;
+        type = type->getArrayElementType();
+
+        // Empty iterator names indicate that we skip this dimension.
+        if (loopVar->kind == SyntaxKind::EmptyIdentifierName) {
+            skippedAny = true;
+            continue;
+        }
+
+        auto& idName = loopVar->as<IdentifierNameSyntax>();
+        string_view name = idName.identifier.valueText();
+
+        // If we previously had skipped dimensions this one can't be dynamically
+        // sized (there would be no way to reach it duration iteration).
+        if (!dims.back().range && skippedAny) {
+            context.addDiag(diag::ForeachDynamicDimAfterSkipped, idName.sourceRange()) << name;
+            return badStmt(compilation, nullptr);
+        }
+
+        if (name == arraySym->name) {
+            context.addDiag(diag::LoopVarShadowsArray, loopVar->sourceRange()) << name;
+            return badStmt(compilation, nullptr);
+        }
+
+        // The type of the iterator is typically an int, unless this dimension
+        // is an associative array in which case it's the index type.
+        const Type* indexType;
+        if (currType.isAssociativeArray()) {
+            indexType = currType.getAssociativeIndexType();
+            if (!indexType) {
+                context.addDiag(diag::ForeachWildcardIndex, loopVar->sourceRange())
+                    << syntax.loopList->arrayName->sourceRange();
+                indexType = &compilation.getErrorType();
             }
-            dimIt++;
+        }
+        else {
+            indexType = &compilation.getIntType();
         }
 
-        dims.resize(count);
+        // Build the iterator variable and hook it up to our new context's
+        // linked list of iterators.
+        auto it = compilation.emplace<IteratorSymbol>(
+            context.scope, name, idName.identifier.location(), currType, *indexType);
+        it->nextIterator = std::exchange(iterCtx.firstIterator, it);
+        dims.back().loopVar = it;
     }
 
-    auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
+    auto& bodyStmt = Statement::bind(*syntax.statement, iterCtx, stmtCtx);
     auto result = compilation.emplace<ForeachLoopStatement>(arrayRef, dims.copy(compilation),
                                                             bodyStmt, syntax.sourceRange());
-
-    if (bad || bodyStmt.bad())
+    if (bodyStmt.bad())
         return badStmt(compilation, result);
     return *result;
 }
@@ -1457,8 +1442,7 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue
         return evalRecursive(context, nullptr, currDims.subspan(1));
     }
 
-    auto local = context.findLocal(dim.loopVar);
-    ASSERT(local);
+    auto local = context.createLocal(dim.loopVar);
 
     // If this is an associative array, looping happens over the keys.
     if (cv.isMap()) {

@@ -135,19 +135,6 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
     return *var;
 }
 
-VariableSymbol& VariableSymbol::fromForeachVar(Compilation& compilation,
-                                               const IdentifierNameSyntax& syntax,
-                                               int32_t foreachIndex) {
-    // TODO: needs to be read-only
-    auto nameToken = syntax.identifier;
-    auto var = compilation.emplace<VariableSymbol>(nameToken.valueText(), nameToken.location(),
-                                                   VariableLifetime::Automatic);
-    var->setSyntax(syntax);
-    var->foreachIndex = foreachIndex;
-    var->getDeclaredType()->addFlags(DeclaredTypeFlags::ForeachVar);
-    return *var;
-}
-
 VariableSymbol::VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime) :
     VariableSymbol(SymbolKind::Variable, name, loc, lifetime) {
 }
@@ -367,6 +354,16 @@ IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocat
         elemType = &scope.getCompilation().getErrorType();
 
     setType(*elemType);
+}
+
+IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc,
+                               const Type& arrayType, const Type& indexType) :
+    VariableSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
+    arrayType(arrayType) {
+
+    isConstant = true;
+    setParent(scope);
+    setType(indexType);
 }
 
 } // namespace slang
