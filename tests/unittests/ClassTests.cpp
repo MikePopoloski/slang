@@ -1917,3 +1917,20 @@ endclass
     CHECK(diags[15].code == diag::RandCInSolveBefore);
     CHECK(diags[16].code == diag::SolveBeforeDisallowed);
 }
+
+TEST_CASE("Constraint qualifiers") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    virtual constraint c1;
+    pure constraint c2 { 1; }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidConstraintQualifier);
+    CHECK(diags[1].code == diag::UnexpectedConstraintBlock);
+}

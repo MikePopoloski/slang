@@ -930,6 +930,17 @@ bool SyntaxFacts::isPropertyQualifier(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isConstraintQualifier(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::StaticKeyword:
+        case TokenKind::PureKeyword:
+        case TokenKind::ExternKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool SyntaxFacts::isDriveStrength(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:

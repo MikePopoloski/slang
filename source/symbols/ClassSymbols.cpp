@@ -805,6 +805,12 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(
     for (auto qual : syntax.qualifiers) {
         if (qual.kind == TokenKind::StaticKeyword)
             result->isStatic = true;
+        else if (qual.kind == TokenKind::PureKeyword || qual.kind == TokenKind::ExternKeyword) {
+            // This is an error, pure and extern declarations can't declare bodies.
+            scope.addDiag(diag::UnexpectedConstraintBlock, syntax.block->sourceRange())
+                << qual.range();
+            break;
+        }
     }
 
     return *result;
@@ -820,10 +826,19 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
     result->isExtern = true;
 
     for (auto qual : syntax.qualifiers) {
-        if (qual.kind == TokenKind::StaticKeyword)
-            result->isStatic = true;
-        else if (qual.kind == TokenKind::ExternKeyword)
-            result->isExplicitExtern = true;
+        switch (qual.kind) {
+            case TokenKind::StaticKeyword:
+                result->isStatic = true;
+                break;
+            case TokenKind::ExternKeyword:
+                result->isExplicitExtern = true;
+                break;
+            case TokenKind::PureKeyword:
+                result->isPure = true;
+                break;
+            default:
+                break;
+        }
     }
 
     return *result;

@@ -240,6 +240,10 @@ public:
     /// which means an out-of-block body is required instead of optional.
     bool isExplicitExtern = false;
 
+    /// Set to true if this is a 'pure' constraint block, once which is
+    /// required to be overriden in derived classes.
+    bool isPure = false;
+
     ConstraintBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
     const Constraint& getConstraints() const;
