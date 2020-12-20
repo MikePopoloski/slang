@@ -13,6 +13,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
+#include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/SubroutineSymbols.h"
 #include "slang/symbols/VariableSymbols.h"
@@ -20,46 +21,6 @@
 #include "slang/util/StackContainer.h"
 
 namespace slang {
-
-static std::pair<const Symbol*, bool> getParentClass(const Scope& scope) {
-    // Find the class that is the source of the lookup.
-    const Symbol* parent = &scope.asSymbol();
-    bool inStatic = false;
-    while (true) {
-        if (parent->kind == SymbolKind::Subroutine) {
-            // Remember whether this was a static class method.
-            if (parent->as<SubroutineSymbol>().flags & MethodFlags::Static)
-                inStatic = true;
-        }
-        else if (parent->kind == SymbolKind::ClassType) {
-            // We found our parent class, so break out.
-            return { parent, inStatic };
-        }
-        else if (parent->kind != SymbolKind::StatementBlock) {
-            // We're not in a class, so there's nothing to check.
-            // This is probably not actually reachable.
-            return { nullptr, false };
-        }
-
-        auto parentScope = parent->getParentScope();
-        ASSERT(parentScope);
-        parent = &parentScope->asSymbol();
-    }
-}
-
-// Returns true if the target symbol is accessible from the class scope given by `parentClass`.
-static bool isAccessibleFrom(const Symbol& target, const Symbol& sourceScope) {
-    auto& parentScope = target.getParentScope()->asSymbol();
-    if (&sourceScope == &parentScope)
-        return true;
-
-    if (parentScope.kind != SymbolKind::ClassType)
-        return false;
-
-    auto& sourceType = sourceScope.as<Type>();
-    auto& targetType = parentScope.as<Type>();
-    return targetType.isAssignmentCompatible(sourceType);
-}
 
 Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Symbol& symbol,
                                             bool isHierarchical, SourceRange sourceRange) {
@@ -76,16 +37,8 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
         // If this is actually a class property, check that no static methods,
         // initializers, or nested classes are accessing it.
         if (symbol.kind == SymbolKind::ClassProperty) {
-            auto [parent, inStatic] = getParentClass(context.scope);
-            if (parent && !isAccessibleFrom(symbol, *parent)) {
-                auto& diag = context.addDiag(diag::NestedNonStaticClassProperty, sourceRange);
-                diag << symbol.name << parent->name;
+            if (!Lookup::ensureAccessible(symbol, context, sourceRange))
                 return badExpr(compilation, nullptr);
-            }
-            else if (!parent || inStatic || (context.flags & BindFlags::StaticInitializer) != 0) {
-                context.addDiag(diag::NonStaticClassProperty, sourceRange) << symbol.name;
-                return badExpr(compilation, nullptr);
-            }
         }
         else if ((context.flags & BindFlags::StaticInitializer) != 0) {
             context.addDiag(diag::AutoFromStaticInit, sourceRange) << symbol.name;
@@ -314,8 +267,8 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     if ((sub->flags & MethodFlags::Static) == 0 && !thisClass &&
         subroutineParent.kind == SymbolKind::ClassType) {
 
-        auto [parent, inStatic] = getParentClass(context.scope);
-        if (parent && !isAccessibleFrom(*sub, *parent)) {
+        auto [parent, inStatic] = Lookup::getContainingClass(context.scope);
+        if (parent && !Lookup::isAccessibleFrom(*sub, *parent)) {
             auto& diag = context.addDiag(diag::NestedNonStaticClassMethod, range);
             diag << parent->name;
             return badExpr(compilation, nullptr);

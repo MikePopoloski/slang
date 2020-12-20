@@ -215,9 +215,11 @@ public:
     static const ClassType* findClass(const NameSyntax& name, const BindContext& context,
                                       optional<DiagCode> requireInterfaceClass = {});
 
-    /// Gets the containing class for the given scope, or nullptr if the
-    /// scope is not within a class.
-    static const ClassType* getContainingClass(const Scope& scope);
+    /// Gets the containing class for the given scope. The return value is a pair, with
+    /// the first element being the found class or nullptr if the scope is not within a
+    /// class definition. The second element indicates whether the given scope was found
+    /// to be within a static method.
+    static std::pair<const ClassType*, bool> getContainingClass(const Scope& scope);
 
     /// If the given symbol is a member of a class, returns its access visibility.
     /// Otherwise, returns Visibility::Public.
@@ -227,12 +229,25 @@ public:
     /// taking into account class accessibility modifiers.
     static bool isVisibleFrom(const Symbol& symbol, const Scope& scope);
 
+    /// Returns whether the given @a target instance symbol is accessible from the
+    /// provided scope, taking into account the class that owns the target (if any)
+    /// and the class that owns the provided scope (if any). This is for checking
+    /// access of instance members and doesn't look at visibility of the symbol.
+    static bool isAccessibleFrom(const Symbol& target, const Symbol& sourceScope);
+
     /// If the given symbol is not a class member, returns true without doing any other work.
     /// Otherwise, if the member is visible from the provided context, returns true.
     /// If it's not visible, and @a sourceRange is provided, an appropriate diganostic will
     /// be issued and false returned.
     static bool ensureVisible(const Symbol& symbol, const BindContext& context,
                               optional<SourceRange> sourceRange);
+
+    /// If the given symbol is not a class member, returns true without doing any other work.
+    /// Otherwise, if the member is accessible from the provided context (in terms of static
+    /// vs instance members), returns true. If it's not accessible, and @a sourceRange is provided,
+    /// an appropriate diganostic will be issued and false returned.
+    static bool ensureAccessible(const Symbol& symbol, const BindContext& context,
+                                 optional<SourceRange> sourceRange);
 
     /// Searches a linked list of iterator symbols to see if any match the given name.
     /// If one is found, populates @a result returns true. Otherwise returns false.
