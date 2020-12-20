@@ -1883,6 +1883,15 @@ class C;
         x -> { solve a before b; }
     }
 endclass
+
+class D;
+    int A [2][3][4];
+    bit [3:0][2:1] B [5:1][4];
+    constraint c1 {
+        foreach (A[i, j, k]) A[i][j][k] inside {2,4,8,16};
+        foreach (B[q, r, , s]) B[q][r] inside {1,2,3};
+    }
+endclass
 )");
 
     Compilation compilation;

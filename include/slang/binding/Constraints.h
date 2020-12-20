@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/binding/Statements.h"
+#include "slang/numeric/ConstantValue.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/util/Util.h"
 
@@ -20,7 +22,8 @@ namespace slang {
     x(Conditional) \
     x(Uniqueness) \
     x(DisableSoft) \
-    x(SolveBefore)
+    x(SolveBefore) \
+    x(Foreach)
 ENUM(ConstraintKind, CONSTRAINT);
 #undef CONTROL
 // clang-format on
@@ -204,6 +207,27 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::SolveBefore; }
+};
+
+struct LoopConstraintSyntax;
+
+/// Represents a constraint that iterates over the elements of an array.
+class ForeachConstraint : public Constraint {
+public:
+    const Expression& arrayRef;
+    span<const ForeachLoopStatement::LoopDim> loopDims;
+    const Constraint& body;
+
+    ForeachConstraint(const Expression& arrayRef,
+                      span<const ForeachLoopStatement::LoopDim> loopDims, const Constraint& body) :
+        Constraint(ConstraintKind::Foreach),
+        arrayRef(arrayRef), loopDims(loopDims), body(body) {}
+
+    static Constraint& fromSyntax(const LoopConstraintSyntax& syntax, const BindContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Foreach; }
 };
 
 } // namespace slang

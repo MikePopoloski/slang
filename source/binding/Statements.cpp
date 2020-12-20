@@ -1318,39 +1318,36 @@ void RepeatLoopStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", body);
 }
 
-Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
-                                            const ForeachLoopStatementSyntax& syntax,
-                                            const BindContext& context, StatementContext& stmtCtx) {
-    auto guard = stmtCtx.enterLoop();
-
+const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSyntax& loopList,
+                                                      BindContext& context,
+                                                      SmallVector<LoopDim>& dims) {
     // Find the array over which we are looping. Make sure it's actually iterable:
     // - Must be a referenceable variable, class property, etc.
     // - Type can be:
     //    - Any kind of array
     //    - Any multi-dimensional integral type
     //    - A string
-    auto& arrayRef = Expression::bind(*syntax.loopList->arrayName, context);
+    auto& comp = context.getCompilation();
+    auto& arrayRef = Expression::bind(*loopList.arrayName, context);
     if (arrayRef.bad())
-        return badStmt(compilation, nullptr);
+        return nullptr;
 
     const Type* type = arrayRef.type;
     auto arraySym = arrayRef.getSymbolReference();
     if (!arraySym || !type->isIterable()) {
         context.addDiag(diag::NotAnArray, arrayRef.sourceRange);
-        return badStmt(compilation, nullptr);
+        return nullptr;
     }
 
     // Build iterator symbols for each loop variable.
-    BindContext iterCtx = context;
-    SmallVectorSized<LoopDim, 4> dims;
     bool skippedAny = false;
-    for (auto loopVar : syntax.loopList->loopVariables) {
+    for (auto loopVar : loopList.loopVariables) {
         // If type is null, we've run out of dimensions so there were too many
         // loop variables supplied.
         if (!type || type->isScalar()) {
-            context.addDiag(diag::TooManyForeachVars, syntax.loopList->loopVariables.sourceRange())
+            context.addDiag(diag::TooManyForeachVars, loopList.loopVariables.sourceRange())
                 << *arrayRef.type;
-            return badStmt(compilation, nullptr);
+            return nullptr;
         }
 
         if (type->hasFixedRange())
@@ -1374,12 +1371,12 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
         // sized (there would be no way to reach it duration iteration).
         if (!dims.back().range && skippedAny) {
             context.addDiag(diag::ForeachDynamicDimAfterSkipped, idName.sourceRange()) << name;
-            return badStmt(compilation, nullptr);
+            return nullptr;
         }
 
         if (name == arraySym->name) {
             context.addDiag(diag::LoopVarShadowsArray, loopVar->sourceRange()) << name;
-            return badStmt(compilation, nullptr);
+            return nullptr;
         }
 
         // The type of the iterator is typically an int, unless this dimension
@@ -1389,24 +1386,38 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
             indexType = currType.getAssociativeIndexType();
             if (!indexType) {
                 context.addDiag(diag::ForeachWildcardIndex, loopVar->sourceRange())
-                    << syntax.loopList->arrayName->sourceRange();
-                indexType = &compilation.getErrorType();
+                    << loopList.arrayName->sourceRange();
+                indexType = &comp.getErrorType();
             }
         }
         else {
-            indexType = &compilation.getIntType();
+            indexType = &comp.getIntType();
         }
 
         // Build the iterator variable and hook it up to our new context's
         // linked list of iterators.
-        auto it = compilation.emplace<IteratorSymbol>(
-            context.scope, name, idName.identifier.location(), currType, *indexType);
-        it->nextIterator = std::exchange(iterCtx.firstIterator, it);
+        auto it = comp.emplace<IteratorSymbol>(context.scope, name, idName.identifier.location(),
+                                               currType, *indexType);
+        it->nextIterator = std::exchange(context.firstIterator, it);
         dims.back().loopVar = it;
     }
 
+    return &arrayRef;
+}
+
+Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
+                                            const ForeachLoopStatementSyntax& syntax,
+                                            const BindContext& context, StatementContext& stmtCtx) {
+    auto guard = stmtCtx.enterLoop();
+
+    BindContext iterCtx = context;
+    SmallVectorSized<LoopDim, 4> dims;
+    auto arrayRef = buildLoopDims(*syntax.loopList, iterCtx, dims);
+    if (!arrayRef)
+        return badStmt(compilation, nullptr);
+
     auto& bodyStmt = Statement::bind(*syntax.statement, iterCtx, stmtCtx);
-    auto result = compilation.emplace<ForeachLoopStatement>(arrayRef, dims.copy(compilation),
+    auto result = compilation.emplace<ForeachLoopStatement>(*arrayRef, dims.copy(compilation),
                                                             bodyStmt, syntax.sourceRange());
     if (bodyStmt.bad())
         return badStmt(compilation, result);

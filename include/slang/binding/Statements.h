@@ -530,6 +530,7 @@ public:
     }
 };
 
+struct ForeachLoopListSyntax;
 struct ForeachLoopStatementSyntax;
 
 class ForeachLoopStatement : public Statement {
@@ -561,6 +562,9 @@ public:
                                  const BindContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    static const Expression* buildLoopDims(const ForeachLoopListSyntax& loopList,
+                                           BindContext& context, SmallVector<LoopDim>& dims);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
 
