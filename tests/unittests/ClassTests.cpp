@@ -1923,14 +1923,30 @@ TEST_CASE("Constraint qualifiers") {
 class A;
     virtual constraint c1;
     pure constraint c2 { 1; }
+
+    static constraint c3 { 1; }
+    constraint c4 { 1; }
+
+    static function foo;
+        c4.constraint_mode(1);
+    endfunction
 endclass
+
+module m;
+    initial begin
+        A::c3.constraint_mode(1);
+        A::c4.constraint_mode(1);
+    end
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::InvalidConstraintQualifier);
     CHECK(diags[1].code == diag::UnexpectedConstraintBlock);
+    CHECK(diags[2].code == diag::NonStaticClassProperty);
+    CHECK(diags[3].code == diag::NonStaticClassProperty);
 }
