@@ -1524,11 +1524,7 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
 }
 
 MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifiers) {
-    bool isPureOrExtern = false;
     for (auto qual : qualifiers) {
-        if (qual.kind == TokenKind::PureKeyword || qual.kind == TokenKind::ExternKeyword)
-            isPureOrExtern = true;
-
         if (!isConstraintQualifier(qual.kind)) {
             auto& diag = addDiag(diag::InvalidConstraintQualifier, qual.location());
             diag << qual.range() << qual.rawText();
