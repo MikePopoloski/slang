@@ -932,11 +932,15 @@ const ClassType* Lookup::findClass(const NameSyntax& className, const BindContex
 std::pair<const ClassType*, bool> Lookup::getContainingClass(const Scope& scope) {
     const Symbol* parent = &scope.asSymbol();
     bool inStatic = false;
-    while (parent->kind == SymbolKind::StatementBlock || parent->kind == SymbolKind::Subroutine) {
+    while (parent->kind == SymbolKind::StatementBlock || parent->kind == SymbolKind::Subroutine ||
+           parent->kind == SymbolKind::ConstraintBlock) {
         if (parent->kind == SymbolKind::Subroutine) {
             // Remember whether this was a static class method.
             if (parent->as<SubroutineSymbol>().flags & MethodFlags::Static)
                 inStatic = true;
+        }
+        else if (parent->kind == SymbolKind::ConstraintBlock) {
+            inStatic |= parent->as<ConstraintBlockSymbol>().isStatic;
         }
 
         auto parentScope = parent->getParentScope();
@@ -1210,8 +1214,11 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
     //   function int C::foo;
     //     return k;
     //   endfunction
-    if (scope.asSymbol().kind == SymbolKind::Subroutine)
-        outOfBlockIndex = scope.asSymbol().as<SubroutineSymbol>().outOfBlockIndex;
+    auto& sym = scope.asSymbol();
+    if (sym.kind == SymbolKind::Subroutine)
+        outOfBlockIndex = sym.as<SubroutineSymbol>().outOfBlockIndex;
+    else if (sym.kind == SymbolKind::ConstraintBlock)
+        outOfBlockIndex = sym.as<ConstraintBlockSymbol>().getOutOfBlockIndex();
     else if (uint32_t(outOfBlockIndex) != 0) {
         location = LookupLocation(location.getScope(), uint32_t(outOfBlockIndex));
         outOfBlockIndex = SymbolIndex(0);

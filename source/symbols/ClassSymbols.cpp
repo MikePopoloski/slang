@@ -865,6 +865,7 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
     auto syntax = getSyntax();
     auto scope = getParentScope();
     ASSERT(syntax && scope);
+    BindContext context(*this, LookupLocation::max);
 
     if (syntax->kind == SyntaxKind::ConstraintPrototype) {
         // The out-of-block definition must be in our parent scope.
@@ -885,6 +886,7 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
         *used = true;
 
         // The method definition must be located after the class definition.
+        outOfBlockIndex = index;
         if (index <= parentSym.getIndex()) {
             auto& diag = outerScope.addDiag(diag::MemberDefinitionBeforeClass,
                                             cds.name->getLastToken().location());
@@ -892,13 +894,10 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
             diag.addNote(diag::NoteDeclarationHere, parentSym.location);
         }
 
-        // TODO: out of block lookup location
-        BindContext context(*scope, LookupLocation::after(*this));
         constraint = &Constraint::bind(*cds.block, context);
         return *constraint;
     }
 
-    BindContext context(*scope, LookupLocation::after(*this));
     constraint = &Constraint::bind(*syntax->as<ConstraintDeclarationSyntax>().block, context);
     return *constraint;
 }

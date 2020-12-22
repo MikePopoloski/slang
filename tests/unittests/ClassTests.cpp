@@ -1977,6 +1977,7 @@ TEST_CASE("Class constraint block out-of-band definitions") {
 constraint A::g { 1; }
 
 class A;
+    rand int foo;
     constraint c;
     extern static constraint d;
     constraint e;                   // no impl is just a warning
@@ -1984,7 +1985,9 @@ class A;
     constraint g;
 endclass
 
-constraint A::c { 1; }
+int bar;
+
+constraint A::c { foo < bar; }
 static constraint A::d { 1; }
 pure constraint A::d { 1; }
 )");

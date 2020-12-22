@@ -247,6 +247,7 @@ public:
     ConstraintBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
     const Constraint& getConstraints() const;
+    SymbolIndex getOutOfBlockIndex() const { return outOfBlockIndex; }
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -260,6 +261,7 @@ public:
 
 private:
     mutable const Constraint* constraint = nullptr;
+    mutable SymbolIndex outOfBlockIndex{ 0 };
 };
 
 } // namespace slang
