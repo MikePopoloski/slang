@@ -792,16 +792,29 @@ ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, string_view name, S
     addMember(method.symbol);
 }
 
-ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(
+ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
     const Scope& scope, const ConstraintDeclarationSyntax& syntax) {
 
     auto& comp = scope.getCompilation();
+    if (syntax.name->kind == SyntaxKind::ScopedName) {
+        // Remember the location in the parent scope where we *would* have inserted this
+        // constraint, for later use during lookup.
+        uint32_t index = 1;
+        if (auto last = scope.getLastMember())
+            index = (uint32_t)last->getIndex() + 1;
+
+        comp.addOutOfBlockDecl(scope, syntax.name->as<ScopedNameSyntax>(), syntax,
+                               SymbolIndex(index));
+        return nullptr;
+    }
+
+    auto nameToken = syntax.name->getLastToken();
     auto result =
-        comp.emplace<ConstraintBlockSymbol>(comp, syntax.name.valueText(), syntax.name.location());
+        comp.emplace<ConstraintBlockSymbol>(comp, nameToken.valueText(), nameToken.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
-    // Static is the only allowed qualifier, enforced by the parser.
+    // Static is the only allowed qualifier.
     for (auto qual : syntax.qualifiers) {
         if (qual.kind == TokenKind::StaticKeyword)
             result->isStatic = true;
@@ -813,14 +826,15 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(
         }
     }
 
-    return *result;
+    return result;
 }
 
 ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
                                                          const ConstraintPrototypeSyntax& syntax) {
     auto& comp = scope.getCompilation();
+    auto nameToken = syntax.name->getLastToken();
     auto result =
-        comp.emplace<ConstraintBlockSymbol>(comp, syntax.name.valueText(), syntax.name.location());
+        comp.emplace<ConstraintBlockSymbol>(comp, nameToken.valueText(), nameToken.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     result->isExtern = true;

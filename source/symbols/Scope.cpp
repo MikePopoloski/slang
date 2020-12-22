@@ -357,8 +357,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 SubroutineSymbol::fromSyntax(compilation, syntax.as<DPIImportSyntax>(), *this));
             break;
         case SyntaxKind::ConstraintDeclaration:
-            addMember(
-                ConstraintBlockSymbol::fromSyntax(*this, syntax.as<ConstraintDeclarationSyntax>()));
+            if (auto sym = ConstraintBlockSymbol::fromSyntax(
+                    *this, syntax.as<ConstraintDeclarationSyntax>())) {
+                addMember(*sym);
+            }
             break;
         case SyntaxKind::ConstraintPrototype:
             addMember(

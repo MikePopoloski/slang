@@ -1523,6 +1523,19 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
                                          endGroup, endBlockName);
 }
 
+static bool checkConstraintName(const NameSyntax& name) {
+    if (name.kind == SyntaxKind::ScopedName) {
+        auto& scoped = name.as<ScopedNameSyntax>();
+        if (scoped.separator.kind == TokenKind::Dot)
+            return false;
+
+        return scoped.left->kind == SyntaxKind::IdentifierName &&
+               scoped.right->kind == SyntaxKind::IdentifierName;
+    }
+
+    return name.kind == SyntaxKind::IdentifierName;
+}
+
 MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifiers) {
     for (auto qual : qualifiers) {
         if (!isConstraintQualifier(qual.kind)) {
@@ -1533,11 +1546,22 @@ MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifier
     }
 
     auto keyword = consume();
-    auto name = expect(TokenKind::Identifier);
+    auto& name = parseName();
+
+    bool nameError = false;
+    if (!checkConstraintName(name)) {
+        nameError = true;
+        addDiag(diag::ExpectedConstraintName, keyword.location()) << name.sourceRange();
+    }
 
     if (peek(TokenKind::OpenBrace)) {
         return factory.constraintDeclaration(attributes, qualifiers, keyword, name,
                                              parseConstraintBlock(/* isTopLevel */ true));
+    }
+
+    if (!nameError && name.kind != SyntaxKind::IdentifierName) {
+        SourceRange range = name.sourceRange();
+        addDiag(diag::ExpectedIdentifier, range.start()) << range;
     }
 
     return factory.constraintPrototype(attributes, qualifiers, keyword, name, consume());

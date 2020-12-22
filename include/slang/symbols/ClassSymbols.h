@@ -250,7 +250,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static ConstraintBlockSymbol& fromSyntax(const Scope& scope,
+    static ConstraintBlockSymbol* fromSyntax(const Scope& scope,
                                              const ConstraintDeclarationSyntax& syntax);
 
     static ConstraintBlockSymbol& fromSyntax(const Scope& scope,

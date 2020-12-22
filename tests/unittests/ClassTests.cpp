@@ -609,7 +609,7 @@ endfunction
     CHECK(diags[9].code == diag::MethodReturnTypeScoped);
     CHECK(diags[10].code == diag::UndeclaredIdentifier);
     CHECK(diags[11].code == diag::NotAClass);
-    CHECK(diags[12].code == diag::NoMethodInClass);
+    CHECK(diags[12].code == diag::NoDeclInClass);
     CHECK(diags[13].code == diag::MethodArgDirectionMismatch);
 }
 
@@ -1949,4 +1949,24 @@ endmodule
     CHECK(diags[1].code == diag::UnexpectedConstraintBlock);
     CHECK(diags[2].code == diag::NonStaticClassProperty);
     CHECK(diags[3].code == diag::NonStaticClassProperty);
+}
+
+TEST_CASE("Class constraint block corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    constraint A::B;
+    constraint new { 1; }
+    constraint A.B { 1; }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ExpectedIdentifier);
+    CHECK(diags[1].code == diag::ExpectedConstraintName);
+    CHECK(diags[2].code == diag::ExpectedConstraintName);
+    CHECK(diags[3].code == diag::NoDeclInClass);
 }

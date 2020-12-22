@@ -40,7 +40,8 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         if (auto last = parent.getLastMember())
             index = (uint32_t)last->getIndex() + 1;
 
-        compilation.addOutOfBlockMethod(parent, syntax, SymbolIndex(index));
+        compilation.addOutOfBlockDecl(parent, proto->name->as<ScopedNameSyntax>(), syntax,
+                                      SymbolIndex(index));
         return nullptr;
     }
 
@@ -730,7 +731,14 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
     }
 
     // The out-of-block definition must be in our parent scope.
-    auto [syntax, index] = comp.findOutOfBlockMethod(outerScope, parentSym.name, name);
+    auto [declSyntax, index, used] = comp.findOutOfBlockDecl(outerScope, parentSym.name, name);
+    const FunctionDeclarationSyntax* syntax = nullptr;
+    if (declSyntax && (declSyntax->kind == SyntaxKind::FunctionDeclaration ||
+                       declSyntax->kind == SyntaxKind::TaskDeclaration)) {
+        syntax = &declSyntax->as<FunctionDeclarationSyntax>();
+        *used = true;
+    }
+
     if (flags & MethodFlags::Pure) {
         // A pure method should not have a body defined.
         if (syntax) {
