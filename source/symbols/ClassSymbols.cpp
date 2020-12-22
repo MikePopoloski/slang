@@ -381,6 +381,34 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
                 }
             }
         }
+        else if (member.kind == SymbolKind::ConstraintBlock) {
+            // Constraint blocks can also be overriden -- check that 'static'ness
+            // matches between base and derived if the base is pure.
+            auto currentBase = baseType;
+            while (true) {
+                const Symbol* found = currentBase->find(member.name);
+                if (found) {
+                    if (found->kind == SymbolKind::ConstraintBlock) {
+                        auto& baseConstraint = found->as<ConstraintBlockSymbol>();
+                        if (baseConstraint.isPure &&
+                            baseConstraint.isStatic !=
+                                member.as<ConstraintBlockSymbol>().isStatic) {
+                            auto& diag =
+                                context.addDiag(diag::MismatchStaticConstraint, member.location);
+                            diag.addNote(diag::NoteDeclarationHere, found->location);
+                        }
+                    }
+                    break;
+                }
+
+                // Otherwise it could be inherited from a higher-level base.
+                auto possibleBase = currentBase->getBaseClass();
+                if (!possibleBase)
+                    break;
+
+                currentBase = &possibleBase->getCanonicalType().as<ClassType>();
+            }
+        }
     }
 
     // If we have a constructor, find whether it invokes super.new in its body.
@@ -922,6 +950,20 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
                                             cds.name->getLastToken().location());
             diag << name << parentSym.name;
             diag.addNote(diag::NoteDeclarationHere, parentSym.location);
+        }
+
+        bool declStatic = false;
+        for (auto qual : cds.qualifiers) {
+            if (qual.kind == TokenKind::StaticKeyword) {
+                declStatic = true;
+                break;
+            }
+        }
+
+        if (declStatic != isStatic) {
+            auto& diag =
+                outerScope.addDiag(diag::MismatchStaticConstraint, cds.getFirstToken().location());
+            diag.addNote(diag::NoteDeclarationHere, location);
         }
 
         constraint = &Constraint::bind(*cds.block, context);

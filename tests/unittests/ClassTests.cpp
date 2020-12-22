@@ -1984,6 +1984,7 @@ class A;
     extern constraint f;            // no impl is an error
     constraint g;
     pure constraint h;
+    static constraint i;
 endclass
 
 int bar;
@@ -1991,18 +1992,22 @@ int bar;
 constraint A::c { foo < bar; }
 static constraint A::d { 1; }
 pure constraint A::d { 1; }
+constraint A::i { 1; }
 
 virtual class B;
     pure constraint a;
+    pure static constraint b;
 endclass
 
 constraint B::a { 1; }
 
 class C extends B;
     constraint a { 1; }
+    static constraint b { 1; }
 endclass
 
 class D extends B;
+    constraint b { 1; }
 endclass
 )");
 
@@ -2010,12 +2015,14 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::MemberDefinitionBeforeClass);
     CHECK(diags[1].code == diag::NoConstraintBody);
     CHECK(diags[2].code == diag::NoMemberImplFound);
     CHECK(diags[3].code == diag::PureConstraintInAbstract);
     CHECK(diags[4].code == diag::ConstraintQualOutOfBlock);
-    CHECK(diags[5].code == diag::BodyForPureConstraint);
-    CHECK(diags[6].code == diag::InheritFromAbstractConstraint);
+    CHECK(diags[5].code == diag::MismatchStaticConstraint);
+    CHECK(diags[6].code == diag::BodyForPureConstraint);
+    CHECK(diags[7].code == diag::InheritFromAbstractConstraint);
+    CHECK(diags[8].code == diag::MismatchStaticConstraint);
 }
