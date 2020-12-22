@@ -1983,6 +1983,7 @@ class A;
     constraint e;                   // no impl is just a warning
     extern constraint f;            // no impl is an error
     constraint g;
+    pure constraint h;
 endclass
 
 int bar;
@@ -1990,15 +1991,31 @@ int bar;
 constraint A::c { foo < bar; }
 static constraint A::d { 1; }
 pure constraint A::d { 1; }
+
+virtual class B;
+    pure constraint a;
+endclass
+
+constraint B::a { 1; }
+
+class C extends B;
+    constraint a { 1; }
+endclass
+
+class D extends B;
+endclass
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::MemberDefinitionBeforeClass);
     CHECK(diags[1].code == diag::NoConstraintBody);
     CHECK(diags[2].code == diag::NoMemberImplFound);
-    CHECK(diags[3].code == diag::ConstraintQualOutOfBlock);
+    CHECK(diags[3].code == diag::PureConstraintInAbstract);
+    CHECK(diags[4].code == diag::ConstraintQualOutOfBlock);
+    CHECK(diags[5].code == diag::BodyForPureConstraint);
+    CHECK(diags[6].code == diag::InheritFromAbstractConstraint);
 }

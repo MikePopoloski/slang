@@ -315,6 +315,22 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             }
         }
 
+        if (!isAbstract && toWrap->kind == SymbolKind::ConstraintBlock) {
+            auto& cb = toWrap->as<ConstraintBlockSymbol>();
+            if (cb.isPure) {
+                if (!pureVirtualError) {
+                    auto& diag = context.addDiag(diag::InheritFromAbstractConstraint,
+                                                 extendsClause.sourceRange());
+                    diag << name;
+                    diag << baseType->name;
+                    diag << cb.name;
+                    diag.addNote(diag::NoteDeclarationHere, cb.location);
+                    pureVirtualError = true;
+                }
+                continue;
+            }
+        }
+
         // All symbols get inserted into the beginning of the scope using the
         // provided insertion callback. We insert them as TransparentMemberSymbols
         // so that we can trace a path back to the actual location they are declared.
@@ -855,6 +871,12 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
         }
     }
 
+    if (result->isPure && scope.asSymbol().kind == SymbolKind::ClassType) {
+        auto& classType = scope.asSymbol().as<ClassType>();
+        if (!classType.isAbstract)
+            scope.addDiag(diag::PureConstraintInAbstract, nameToken.range());
+    }
+
     return *result;
 }
 
@@ -875,15 +897,23 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
 
         auto [declSyntax, index, used] = comp.findOutOfBlockDecl(outerScope, parentSym.name, name);
         if (!declSyntax || declSyntax->kind != SyntaxKind::ConstraintDeclaration) {
-            // TODO: pure blocks
-            DiagCode code = isExplicitExtern ? diag::NoMemberImplFound : diag::NoConstraintBody;
-            outerScope.addDiag(code, location) << name;
+            if (!isPure) {
+                DiagCode code = isExplicitExtern ? diag::NoMemberImplFound : diag::NoConstraintBody;
+                outerScope.addDiag(code, location) << name;
+            }
             constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
             return *constraint;
         }
 
         auto& cds = declSyntax->as<ConstraintDeclarationSyntax>();
         *used = true;
+
+        if (isPure) {
+            auto& diag = outerScope.addDiag(diag::BodyForPureConstraint, cds.name->sourceRange());
+            diag.addNote(diag::NoteDeclarationHere, location);
+            constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
+            return *constraint;
+        }
 
         // The method definition must be located after the class definition.
         outOfBlockIndex = index;
