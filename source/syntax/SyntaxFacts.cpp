@@ -1162,6 +1162,7 @@ static bool isModuleOrPackageDecl(SyntaxKind kind) {
         case SyntaxKind::PropertyDeclaration:
         case SyntaxKind::SequenceDeclaration:
         case SyntaxKind::LetDeclaration:
+        case SyntaxKind::ConstraintDeclaration:
             return true;
         default:
             return false;

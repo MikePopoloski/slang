@@ -756,14 +756,14 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
 
     // Otherwise, there must be a body for any declared prototype.
     if (!syntax) {
-        outerScope.addDiag(diag::NoMethodImplFound, location) << name;
+        outerScope.addDiag(diag::NoMemberImplFound, location) << name;
         subroutine = nullptr;
         return nullptr;
     }
 
     // The method definition must be located after the class definition.
     if (index <= parentSym.getIndex()) {
-        auto& diag = outerScope.addDiag(diag::MethodDefinitionBeforeClass,
+        auto& diag = outerScope.addDiag(diag::MemberDefinitionBeforeClass,
                                         syntax->prototype->name->getLastToken().location());
         diag << name << parentSym.name;
         diag.addNote(diag::NoteDeclarationHere, parentSym.location);

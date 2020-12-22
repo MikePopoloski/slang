@@ -866,9 +866,35 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
     auto scope = getParentScope();
     ASSERT(syntax && scope);
 
-    // TODO: support constraint prototypes
-    if (syntax->kind != SyntaxKind::ConstraintDeclaration) {
-        constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
+    if (syntax->kind == SyntaxKind::ConstraintPrototype) {
+        // The out-of-block definition must be in our parent scope.
+        auto& parentSym = scope->asSymbol();
+        auto& outerScope = *parentSym.getParentScope();
+        auto& comp = outerScope.getCompilation();
+
+        auto [declSyntax, index, used] = comp.findOutOfBlockDecl(outerScope, parentSym.name, name);
+        if (!declSyntax || declSyntax->kind != SyntaxKind::ConstraintDeclaration) {
+            // TODO: pure blocks
+            DiagCode code = isExplicitExtern ? diag::NoMemberImplFound : diag::NoConstraintBody;
+            outerScope.addDiag(code, location) << name;
+            constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
+            return *constraint;
+        }
+
+        auto& cds = declSyntax->as<ConstraintDeclarationSyntax>();
+        *used = true;
+
+        // The method definition must be located after the class definition.
+        if (index <= parentSym.getIndex()) {
+            auto& diag = outerScope.addDiag(diag::MemberDefinitionBeforeClass,
+                                            cds.name->getLastToken().location());
+            diag << name << parentSym.name;
+            diag.addNote(diag::NoteDeclarationHere, parentSym.location);
+        }
+
+        // TODO: out of block lookup location
+        BindContext context(*scope, LookupLocation::after(*this));
+        constraint = &Constraint::bind(*cds.block, context);
         return *constraint;
     }
 

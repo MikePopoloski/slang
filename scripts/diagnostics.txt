@@ -178,6 +178,7 @@ error ConstructorReturnType "class constructors cannot declare a return type"
 error NewKeywordQualified "invalid scope access on 'new' keyword"
 error MethodPrototypeScoped "method prototype cannot have a scoped name"
 error QualifiersOnOutOfBlock "qualifiers are not allowed on out-of-block method definitions"
+error ConstraintQualOutOfBlock "'{}' qualifier is not allowed on out-of-block constraint definitions"
 error ConstructorOutsideClass "constructor cannot be declared outside of a class"
 error InvalidSuperNew "super class constructor can only be called from the first statement in a derived class's constructor"
 error IfaceMethodPure "method in interface class must be marked 'pure'"
@@ -240,7 +241,7 @@ error MaxGenerateStepsExceeded "generate loop hit maximum step limit; possible i
 error MixingSubroutinePortKinds "port declarations not allowed when subroutine defines a formal argument list"
 error UnpackedArrayParamType "unpacked array parameter requires explicit data type"
 error AutomaticNotAllowed "automatic variables can only be declared in procedural contexts"
-error NoMethodImplFound "no implementation found in parent scope for '{}'"
+error NoMemberImplFound "no implementation found in parent scope for '{}'"
 error MethodReturnMismatch "return type {} of method '{}' does not match {} declared in its prototype"
 error MethodArgCountMismatch "definition of method '{}' has different number of arguments from its prototype"
 error MethodArgNameMismatch "method argument name '{}' doesn't match '{}' given in its prototype"
@@ -248,7 +249,7 @@ error MethodArgTypeMismatch "method argument '{}' is of type {} which differs fr
 error MethodArgNoDefault "method argument '{}' provides a default value but its prototype does not"
 error MethodArgDefaultMismatch "default value for method argument '{}' must exactly match the expression given in its prototype"
 error MethodArgDirectionMismatch "direction of method argument '{}' differs from the direction given in its prototype"
-error MethodDefinitionBeforeClass "definition of method '{}' must come after its containing class '{}'"
+error MemberDefinitionBeforeClass "definition of '{}' must come after its containing class '{}'"
 error MethodReturnTypeScoped "return type for out-of-block method '{}' must use class scope '{}::' to access nested type"
 error VirtualReturnMismatch "return type {} of virtual method '{}' does not match {} declared in its superclass"
 error VirtualArgCountMismatch "virtual method '{}' has different number of arguments from its superclass method"
@@ -295,6 +296,7 @@ warning implicit-net-port ImplicitNetPortNoDefault "implicit net port disallowed
 warning dup-attr DuplicateAttribute "duplicate attribute definition '{}'; taking last value"
 warning empty-member EmptyMember "extra ';' has no effect"
 warning ineffective-sign SignednessNoEffect "'{}' on I/O declaration has no effect on type {}"
+warning constraint-missing NoConstraintBody "no body for implicit constraint block '{}'"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -603,7 +605,8 @@ group default = { real-underflow real-overflow literal-overflow unconnected-port
                   unconnected-unnamed-port event-const redef-macro not-supported unknown-pragma
                   extra-pragma-args expected-diag-arg unknown-diag-arg pragma-diag-level explicit-static
                   static-skipped elem-not-found dynarray-index dynarray-range queue-range empty-queue
-                  unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv }
+                  unknown-escape-code no-top warning-task unsized-concat finish-num implicit-conv
+                  constraint-missing }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr }

@@ -605,7 +605,7 @@ endfunction
     CHECK(diags[5].code == diag::MethodArgDefaultMismatch);
     CHECK(diags[6].code == diag::MethodArgDefaultMismatch);
     CHECK(diags[7].code == diag::MethodArgTypeMismatch);
-    CHECK(diags[8].code == diag::MethodDefinitionBeforeClass);
+    CHECK(diags[8].code == diag::MemberDefinitionBeforeClass);
     CHECK(diags[9].code == diag::MethodReturnTypeScoped);
     CHECK(diags[10].code == diag::UndeclaredIdentifier);
     CHECK(diags[11].code == diag::NotAClass);
@@ -1754,7 +1754,7 @@ endmodule
 TEST_CASE("Built-in class methods") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
-    constraint c;
+    constraint c { 1; }
     function void foo;
         c.constraint_mode(1);
     endfunction
@@ -1921,7 +1921,7 @@ endclass
 TEST_CASE("Constraint qualifiers") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
-    virtual constraint c1;
+    virtual constraint c1 { 1; }
     pure constraint c2 { 1; }
 
     static constraint c3 { 1; }
@@ -1951,7 +1951,7 @@ endmodule
     CHECK(diags[3].code == diag::NonStaticClassProperty);
 }
 
-TEST_CASE("Class constraint block corner cases") {
+TEST_CASE("Class constraint block name errors") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
     constraint A::B;
@@ -1964,9 +1964,38 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::ExpectedIdentifier);
-    CHECK(diags[1].code == diag::ExpectedConstraintName);
+    CHECK(diags[1].code == diag::NoConstraintBody);
     CHECK(diags[2].code == diag::ExpectedConstraintName);
-    CHECK(diags[3].code == diag::NoDeclInClass);
+    CHECK(diags[3].code == diag::ExpectedConstraintName);
+    CHECK(diags[4].code == diag::NoDeclInClass);
+}
+
+TEST_CASE("Class constraint block out-of-band definitions") {
+    auto tree = SyntaxTree::fromText(R"(
+constraint A::g { 1; }
+
+class A;
+    constraint c;
+    extern static constraint d;
+    constraint e;                   // no impl is just a warning
+    extern constraint f;            // no impl is an error
+    constraint g;
+endclass
+
+constraint A::c { 1; }
+static constraint A::d { 1; }
+pure constraint A::d { 1; }
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::MemberDefinitionBeforeClass);
+    CHECK(diags[1].code == diag::NoConstraintBody);
+    CHECK(diags[2].code == diag::NoMemberImplFound);
+    CHECK(diags[3].code == diag::ConstraintQualOutOfBlock);
 }

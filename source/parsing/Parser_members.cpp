@@ -259,6 +259,8 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
                 return result;
             break;
         }
+        case TokenKind::ConstraintKeyword:
+            return &parseConstraint(attributes, {});
         default:
             break;
     }
@@ -284,6 +286,23 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             auto kind = t.kind == TokenKind::FunctionKeyword ? SyntaxKind::FunctionDeclaration
                                                              : SyntaxKind::TaskDeclaration;
             return &parseFunctionDeclaration(attributes, kind, getSkipToKind(t.kind), parentKind);
+        }
+
+        if (t.kind == TokenKind::ConstraintKeyword) {
+            // Out-of-block constraints can legitimately have the 'static' keyword,
+            // but nothing else.
+            SmallVectorSized<Token, 4> quals;
+            for (uint32_t i = 0; i < index; i++) {
+                Token qual = consume();
+                quals.append(qual);
+
+                if (qual.kind != TokenKind::StaticKeyword && isConstraintQualifier(qual.kind)) {
+                    addDiag(diag::ConstraintQualOutOfBlock, qual.location())
+                        << qual.valueText() << qual.range();
+                }
+            }
+
+            return &parseConstraint(attributes, quals.copy(alloc));
         }
     }
 
