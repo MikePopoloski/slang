@@ -74,8 +74,13 @@ enum class BindFlags {
     /// argument, or stream expressions of another streaming concatenation. This flag is cleared for
     /// nested subexpressions, unless they are directly parenthesized.
     StreamingAllowed = 1 << 10,
+
+    /// This is the first expression appearing as an expression statement; potentially this
+    /// indicates whether a subroutine invocation is as a task (if set) or as a function (unset).
+    /// Cleared for nested subexpressions.
+    TopLevelStatement = 1 << 11
 };
-BITMASK(BindFlags, StreamingAllowed);
+BITMASK(BindFlags, TopLevelStatement);
 
 enum class DimensionKind { Unknown, Range, AbbreviatedRange, Dynamic, Associative, Queue };
 

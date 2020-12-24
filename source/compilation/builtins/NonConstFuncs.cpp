@@ -173,6 +173,37 @@ public:
     }
 };
 
+class RandModeFunc : public SystemSubroutine {
+public:
+    RandModeFunc(const std::string& name) : SystemSubroutine(name, SubroutineKind::Task) {}
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        // The number of arguments required is 1 if called as a task
+        // and 0 if called as a function.
+        auto& comp = context.getCompilation();
+        size_t numArgs = context.flags.has(BindFlags::TopLevelStatement) ? 1 : 0;
+        if (!checkArgCount(context, true, args, range, numArgs, numArgs))
+            return comp.getErrorType();
+
+        if (numArgs) {
+            // First argument is integral.
+            if (!args[1]->type->isIntegral())
+                return badArg(context, *args[1]);
+        }
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
 void registerNonConstFuncs(Compilation& c) {
 #define REGISTER(...) c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
 
@@ -212,11 +243,9 @@ void registerNonConstFuncs(Compilation& c) {
                                                             std::vector<const Type*>{},
                                                             /* isMethod */ true));
 
-    auto rand_mode = std::make_unique<NonConstantFunction>(
-        "rand_mode", c.getIntType(), 0, std::vector<const Type*>{ &c.getBitType() },
-        /* isMethod */ true);
-    rand_mode->kind = SubroutineKind::Task;
-    c.addSystemMethod(SymbolKind::ClassProperty, std::move(rand_mode));
+    c.addSystemMethod(SymbolKind::ClassProperty, std::make_unique<RandModeFunc>("rand_mode"));
+    c.addSystemMethod(SymbolKind::ConstraintBlock,
+                      std::make_unique<RandModeFunc>("constraint_mode"));
 }
 
 } // namespace slang::Builtins

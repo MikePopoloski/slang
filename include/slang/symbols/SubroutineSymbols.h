@@ -14,15 +14,35 @@ namespace slang {
 
 class FormalArgumentSymbol;
 
+/// Specifies various flags that can apply to subroutines.
 enum class MethodFlags : uint8_t {
+    /// No specific flags specified.
     None = 0,
-    Virtual = 1,
-    Pure = 2,
-    Static = 4,
-    Constructor = 8,
-    InterfaceImport = 16,
-    DPIImport = 32,
-    NotConst = 64
+
+    /// The method is virtual.
+    Virtual = 1 << 0,
+
+    /// The method is 'pure' virtual, meaning it requires
+    /// an implementation in derived classes.
+    Pure = 1 << 1,
+
+    /// The method is static, meaning it is invocable without
+    /// an object instance handle.
+    Static = 1 << 2,
+
+    /// The method is a class constructor.
+    Constructor = 1 << 3,
+
+    /// The method is imported into an interface instance.
+    InterfaceImport = 1 << 4,
+
+    /// The method is a DPI import.
+    DPIImport = 1 << 5,
+
+    /// The method is known not to be constant, even if it otherwise
+    /// meets all of the requirements for a constant function. Used for
+    /// built-in methods only.
+    NotConst = 1 << 6
 };
 BITMASK(MethodFlags, NotConst);
 

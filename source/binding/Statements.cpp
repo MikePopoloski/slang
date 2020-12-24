@@ -1708,7 +1708,8 @@ void ForeverLoopStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const ExpressionStatementSyntax& syntax,
                                            const BindContext& context) {
-    auto& expr = Expression::bind(*syntax.expr, context, BindFlags::AssignmentAllowed);
+    auto& expr = Expression::bind(*syntax.expr, context,
+                                  BindFlags::AssignmentAllowed | BindFlags::TopLevelStatement);
     auto result = compilation.emplace<ExpressionStatement>(expr, syntax.sourceRange());
     if (expr.bad())
         return badStmt(compilation, result);

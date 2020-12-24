@@ -45,6 +45,10 @@ Expression& ValueExpressionBase::fromSymbol(const BindContext& context, const Sy
             return badExpr(compilation, nullptr);
         }
     }
+    else if (symbol.kind == SymbolKind::ConstraintBlock) {
+        if (!symbol.as<ConstraintBlockSymbol>().isStatic)
+            Lookup::ensureAccessible(symbol, context, sourceRange);
+    }
 
     auto& value = symbol.as<ValueSymbol>();
     if (isHierarchical)

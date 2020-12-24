@@ -305,12 +305,6 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 
         if (symbol->kind == SymbolKind::Instance)
             symbol = &symbol->as<InstanceSymbol>().body;
-        else if (symbol->kind == SymbolKind::ConstraintBlock) {
-            // We have to check accessiblity of the constraint block here
-            // because there's no other good place to do it.
-            if (!symbol->as<ConstraintBlockSymbol>().isStatic)
-                Lookup::ensureAccessible(*symbol, context, name.range());
-        }
 
         // If there is a modport name restricting our lookup, translate to that
         // modport's scope now.

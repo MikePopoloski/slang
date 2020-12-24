@@ -1786,6 +1786,11 @@ module m;
         a.constraint_mode(0);
         i = a.c.constraint_mode();
         a.asdf[0].i.rand_mode(1);
+
+        // Errors
+        i = a.constraint_mode(1);
+        a.c.constraint_mode();
+        i = a.c.constraint_mode(1);
     end
 endmodule
 )");
@@ -1794,10 +1799,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::InvalidMethodOverride);
     CHECK(diags[1].code == diag::InvalidRandomizeOverride);
     CHECK(diags[2].code == diag::InvalidRandomizeOverride);
+    CHECK(diags[3].code == diag::BadAssignment);
+    CHECK(diags[4].code == diag::TooFewArguments);
+    CHECK(diags[5].code == diag::TooManyArguments);
 }
 
 TEST_CASE("Constraint items") {
