@@ -356,13 +356,12 @@ IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocat
     setType(*elemType);
 }
 
-IteratorSymbol::IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc,
-                               const Type& arrayType, const Type& indexType) :
+IteratorSymbol::IteratorSymbol(string_view name, SourceLocation loc, const Type& arrayType,
+                               const Type& indexType) :
     VariableSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
     arrayType(arrayType) {
 
     isConstant = true;
-    setParent(scope);
     setType(indexType);
 }
 

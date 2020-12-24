@@ -833,6 +833,13 @@ void Scope::elaborate() const {
             addDiag(diag::UnresolvedForwardTypedef, symbol->location) << symbol->name;
     }
 
+    // Allow statement blocks containing variables to include them in their member
+    // list before allowing anyone else to access to the contained statements.
+    if (thisSym->kind == SymbolKind::StatementBlock) {
+        thisSym->as<StatementBlockSymbol>().elaborateVariables(
+            [this](const Symbol& member) { insertMember(&member, nullptr, true); });
+    }
+
     ASSERT(deferredMemberIndex == DeferredMemberIndex::Invalid);
 }
 

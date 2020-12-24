@@ -13,16 +13,27 @@
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ParameterSymbols.h"
-#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/Type.h"
 #include "slang/util/StackContainer.h"
 
 namespace slang {
 
 const Statement& StatementBlockSymbol::getBody() const {
+    ensureElaborated();
     return binder.getStatement(
         BindContext(*this, LookupLocation::max, BindFlags::ProceduralStatement));
+}
+
+static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& syntax,
+                                                       SourceLocation defaultLoc) {
+    if (syntax.label) {
+        auto token = syntax.label->name;
+        return { token.valueText(), token.location() };
+    }
+
+    return { ""sv, defaultLoc };
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
@@ -35,14 +46,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
         name = token.valueText();
         loc = token.location();
     }
-    else if (syntax.label) {
-        auto token = syntax.label->name;
-        name = token.valueText();
-        loc = token.location();
-    }
     else {
-        name = "";
-        loc = syntax.begin.location();
+        std::tie(name, loc) = getLabel(syntax, syntax.begin.location());
     }
 
     StatementBlockKind blockKind = SemanticFacts::getStatementBlockKind(syntax);
@@ -57,28 +62,24 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
-                                                       const ForLoopStatementSyntax& syntax,
-                                                       bool inLoop) {
-    string_view name;
-    SourceLocation loc;
-    if (syntax.label) {
-        auto token = syntax.label->name;
-        name = token.valueText();
-        loc = token.location();
-    }
-    else {
-        name = "";
-        loc = syntax.forKeyword.location();
-    }
-
+static StatementBlockSymbol* createBlock(const Scope& scope, const StatementSyntax& syntax,
+                                         string_view name, SourceLocation loc) {
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<StatementBlockSymbol>(
         comp, name, loc, StatementBlockKind::Sequential, scope.getDefaultLifetime());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
+    return result;
+}
+
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
+                                                       const ForLoopStatementSyntax& syntax,
+                                                       bool inLoop) {
+    auto [name, loc] = getLabel(syntax, syntax.forKeyword.location());
+    auto result = createBlock(scope, syntax, name, loc);
 
     // If one entry is a variable declaration, they must all be.
+    auto& comp = scope.getCompilation();
     const VariableSymbol* lastVar = nullptr;
     for (auto init : syntax.initializers) {
         auto& var =
@@ -95,21 +96,53 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
+                                                       const ForeachLoopStatementSyntax& syntax,
+                                                       bool inLoop) {
+    auto [name, loc] = getLabel(syntax, syntax.keyword.location());
+    auto result = createBlock(scope, syntax, name, loc);
+
+    result->binder.setSyntax(*result, syntax, /* labelHandled */ true, inLoop);
+    for (auto block : result->binder.getBlocks())
+        result->addMember(*block);
+
+    // This block needs elaboration to collect iteration variables.
+    result->setNeedElaboration();
+
+    return *result;
+}
+
 StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
                                                             const StatementSyntax& syntax,
                                                             bool inLoop) {
-    auto token = syntax.label->name;
-    string_view name = token.valueText();
-    SourceLocation loc = token.location();
+    auto [name, loc] = getLabel(syntax, {});
+    auto result = createBlock(scope, syntax, name, loc);
 
-    auto& comp = scope.getCompilation();
-    auto result = comp.emplace<StatementBlockSymbol>(
-        comp, name, loc, StatementBlockKind::Sequential, scope.getDefaultLifetime());
     result->binder.setSyntax(*result, syntax, /* labelHandled */ true, inLoop);
-    result->setSyntax(syntax);
-    result->setAttributes(scope, syntax.attributes);
+    for (auto block : result->binder.getBlocks())
+        result->addMember(*block);
 
     return *result;
+}
+
+void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> insertCB) const {
+    auto stmtSyntax = binder.getSyntax();
+    if (!stmtSyntax || stmtSyntax->kind != SyntaxKind::ForeachLoopStatement)
+        return;
+
+    const Statement* body = &getBody();
+    if (body->kind == StatementKind::Invalid) {
+        // Unwrap invalid statements here so that we still get foreach loop
+        // variables added even if its body had a problem somewhere.
+        body = body->as<InvalidStatement>().child;
+        if (!body)
+            return;
+    }
+
+    for (auto& dim : body->as<ForeachLoopStatement>().loopDims) {
+        if (dim.loopVar)
+            insertCB(*dim.loopVar);
+    }
 }
 
 const Statement& ProceduralBlockSymbol::getBody() const {

@@ -178,6 +178,7 @@ public:
 
     const Statement& getStatement(const BindContext& context) const;
     span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
+    const StatementSyntax* getSyntax() const;
 
 private:
     const Statement& bindStatement(const BindContext& context) const;
@@ -543,7 +544,7 @@ public:
 
         /// The loop variable for this dimension, or nullptr if
         /// the dimension is being skipped.
-        const ValueSymbol* loopVar = nullptr;
+        const IteratorSymbol* loopVar = nullptr;
     };
 
     const Expression& arrayRef;

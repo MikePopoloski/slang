@@ -87,7 +87,8 @@ static bool hasSimpleLabel(const StatementSyntax& syntax) {
 
     return syntax.kind != SyntaxKind::SequentialBlockStatement &&
            syntax.kind != SyntaxKind::ParallelBlockStatement &&
-           syntax.kind != SyntaxKind::ForLoopStatement;
+           syntax.kind != SyntaxKind::ForLoopStatement &&
+           syntax.kind != SyntaxKind::ForeachLoopStatement;
 }
 
 const Statement& Statement::bind(const StatementSyntax& syntax, const BindContext& context,
@@ -151,8 +152,12 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const BindContex
             break;
         }
         case SyntaxKind::ForeachLoopStatement:
-            result = &ForeachLoopStatement::fromSyntax(
-                comp, syntax.as<ForeachLoopStatementSyntax>(), context, stmtCtx);
+            // We might have an implicit block here; check for that first.
+            result = stmtCtx.tryGetBlock(comp, syntax);
+            if (!result) {
+                result = &ForeachLoopStatement::fromSyntax(
+                    comp, syntax.as<ForeachLoopStatementSyntax>(), context, stmtCtx);
+            }
             break;
         case SyntaxKind::DoWhileStatement:
             result = &DoWhileLoopStatement::fromSyntax(comp, syntax.as<DoWhileStatementSyntax>(),
@@ -350,7 +355,15 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             return;
         }
         case SyntaxKind::ForeachLoopStatement:
-            recurse(syntax.as<ForeachLoopStatementSyntax>().statement, true);
+            // A foreach loop always creates a block, but we need to check labelHandled
+            // here to make sure we don't infinitely recurse.
+            if (!labelHandled) {
+                results.append(&StatementBlockSymbol::fromSyntax(
+                    scope, syntax.as<ForeachLoopStatementSyntax>(), inLoop));
+            }
+            else {
+                recurse(syntax.as<ForeachLoopStatementSyntax>().statement, true);
+            }
             return;
         case SyntaxKind::TimingControlStatement:
             recurse(syntax.as<TimingControlStatementSyntax>().statement);
@@ -481,6 +494,10 @@ const Statement& StatementBinder::getStatement(const BindContext& context) const
     return *stmt;
 }
 
+const StatementSyntax* StatementBinder::getSyntax() const {
+    return syntax.index() == 0 ? std::get<0>(syntax) : nullptr;
+}
+
 const Statement& StatementBinder::bindStatement(const BindContext& context) const {
     auto& scope = context.scope;
     auto& comp = scope.getCompilation();
@@ -533,11 +550,11 @@ const Statement& StatementBinder::bindStatement(const BindContext& context) cons
 
     ASSERT(anyBad || stmtCtx.blocks.empty());
 
-    if (anyBad)
-        return InvalidStatement::Instance;
-
     if (buffer.size() == 1)
         return *buffer[0];
+
+    if (anyBad)
+        return InvalidStatement::Instance;
 
     return *comp.emplace<StatementList>(buffer.copy(comp), sourceRange);
 }
@@ -1396,8 +1413,8 @@ const Expression* ForeachLoopStatement::buildLoopDims(const ForeachLoopListSynta
 
         // Build the iterator variable and hook it up to our new context's
         // linked list of iterators.
-        auto it = comp.emplace<IteratorSymbol>(context.scope, name, idName.identifier.location(),
-                                               currType, *indexType);
+        auto it =
+            comp.emplace<IteratorSymbol>(name, idName.identifier.location(), currType, *indexType);
         it->nextIterator = std::exchange(context.firstIterator, it);
         dims.back().loopVar = it;
     }

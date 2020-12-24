@@ -138,7 +138,7 @@ public:
     const Type& arrayType;
 
     IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc, const Type& arrayType);
-    IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc, const Type& arrayType,
+    IteratorSymbol(string_view name, SourceLocation loc, const Type& arrayType,
                    const Type& indexType);
 
     void serializeTo(ASTSerializer&) const {};

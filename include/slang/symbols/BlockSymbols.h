@@ -9,6 +9,7 @@
 #include "slang/binding/Statements.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
+#include "slang/util/Function.h"
 
 namespace slang {
 
@@ -31,12 +32,18 @@ public:
                                             bool inLoop);
     static StatementBlockSymbol& fromSyntax(const Scope& scope,
                                             const ForLoopStatementSyntax& syntax, bool inLoop);
+    static StatementBlockSymbol& fromSyntax(const Scope& scope,
+                                            const ForeachLoopStatementSyntax& syntax, bool inLoop);
     static StatementBlockSymbol& fromLabeledStmt(const Scope& scope, const StatementSyntax& syntax,
                                                  bool inLoop);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 
 private:
+    friend Scope;
+
+    void elaborateVariables(function_ref<void(const Symbol&)> insertCB) const;
+
     StatementBinder binder;
 };
 
