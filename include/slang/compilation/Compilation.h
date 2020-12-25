@@ -38,6 +38,7 @@ struct CompilationUnitSyntax;
 struct DataTypeSyntax;
 struct FunctionDeclarationSyntax;
 struct ModuleDeclarationSyntax;
+struct ScopedNameSyntax;
 struct VariableDimensionSyntax;
 
 enum class IntegralFlags : uint8_t;
@@ -215,17 +216,17 @@ public:
     /// and false if it's already been elaborated (thus constituting an error).
     bool noteBindDirective(const BindDirectiveSyntax& syntax, const Definition* targetDef);
 
-    /// Tracks the existence of an out-of-block metohd definition in the given scope.
-    /// This can later be retrieved by calling findOutOfBlockMethod().
-    void addOutOfBlockMethod(const Scope& scope, const FunctionDeclarationSyntax& syntax,
-                             SymbolIndex index);
+    /// Tracks the existence of an out-of-block declaration (method or constraint) in the
+    /// given scope. This can later be retrieved by calling findOutOfBlockDecl().
+    void addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& name,
+                           const SyntaxNode& syntax, SymbolIndex index);
 
-    /// Searches for an out-of-block method definition in the given @a scope with @a name
-    /// for a @a className class.
-    /// Returns a tuple of syntax pointer and symbol index in the defining scope.
-    /// If not found, the syntax pointer will be null.
-    std::tuple<const FunctionDeclarationSyntax*, SymbolIndex> findOutOfBlockMethod(
-        const Scope& scope, string_view className, string_view methodName) const;
+    /// Searches for an out-of-block declaration in the given @a scope with @a declName
+    /// for a @a className class. Returns a tuple of syntax pointer and symbol
+    /// index in the defining scope, along with a pointer that should be set to true if
+    /// the resulting decl is considered "used". If not found, the syntax pointer will be null.
+    std::tuple<const SyntaxNode*, SymbolIndex, bool*> findOutOfBlockDecl(
+        const Scope& scope, string_view className, string_view declName) const;
 
     /// A convenience method for parsing a name string and turning it into a set
     /// of syntax nodes. This is mostly for testing and API purposes; normal
@@ -445,13 +446,13 @@ private:
     using DiagMap = flat_hash_map<std::tuple<DiagCode, SourceLocation>, std::vector<Diagnostic>>;
     DiagMap diagMap;
 
-    // A map from class name + method name + scope to out-of-block method definitions.
-    // These get registered when we find the function and later get used when we see the
-    // class method prototype. The value also includes a boolean indicating whether anything
-    // has used this method definition -- an error is issued if it's never used.
+    // A map from class name + decl name + scope to out-of-block declarations. These get
+    // registered when we find the initial declaration and later get used when we see
+    // the class prototype. The value also includes a boolean indicating whether anything
+    // has used this declaration -- an error is issued if it's never used.
     mutable flat_hash_map<std::tuple<string_view, string_view, const Scope*>,
-                          std::tuple<const FunctionDeclarationSyntax*, SymbolIndex, bool>>
-        outOfBlockMethods;
+                          std::tuple<const SyntaxNode*, const ScopedNameSyntax*, SymbolIndex, bool>>
+        outOfBlockDecls;
 
     std::unique_ptr<RootSymbol> root;
     std::unique_ptr<InstanceCache> instanceCache;

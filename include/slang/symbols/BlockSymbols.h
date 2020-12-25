@@ -9,6 +9,7 @@
 #include "slang/binding/Statements.h"
 #include "slang/symbols/SemanticFacts.h"
 #include "slang/symbols/Symbol.h"
+#include "slang/util/Function.h"
 
 namespace slang {
 
@@ -39,6 +40,10 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StatementBlock; }
 
 private:
+    friend Scope;
+
+    void elaborateVariables(function_ref<void(const Symbol&)> insertCB) const;
+
     StatementBinder binder;
 };
 

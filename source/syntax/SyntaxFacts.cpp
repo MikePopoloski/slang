@@ -930,6 +930,17 @@ bool SyntaxFacts::isPropertyQualifier(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isConstraintQualifier(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::StaticKeyword:
+        case TokenKind::PureKeyword:
+        case TokenKind::ExternKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool SyntaxFacts::isDriveStrength(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:
@@ -1151,6 +1162,7 @@ static bool isModuleOrPackageDecl(SyntaxKind kind) {
         case SyntaxKind::PropertyDeclaration:
         case SyntaxKind::SequenceDeclaration:
         case SyntaxKind::LetDeclaration:
+        case SyntaxKind::ConstraintDeclaration:
             return true;
         default:
             return false;

@@ -357,8 +357,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 SubroutineSymbol::fromSyntax(compilation, syntax.as<DPIImportSyntax>(), *this));
             break;
         case SyntaxKind::ConstraintDeclaration:
-            addMember(
-                ConstraintBlockSymbol::fromSyntax(*this, syntax.as<ConstraintDeclarationSyntax>()));
+            if (auto sym = ConstraintBlockSymbol::fromSyntax(
+                    *this, syntax.as<ConstraintDeclarationSyntax>())) {
+                addMember(*sym);
+            }
             break;
         case SyntaxKind::ConstraintPrototype:
             addMember(
@@ -829,6 +831,13 @@ void Scope::elaborate() const {
             it->second->as<GenericClassDefSymbol>().checkForwardDecls();
         else
             addDiag(diag::UnresolvedForwardTypedef, symbol->location) << symbol->name;
+    }
+
+    // Allow statement blocks containing variables to include them in their member
+    // list before allowing anyone else to access to the contained statements.
+    if (thisSym->kind == SymbolKind::StatementBlock) {
+        thisSym->as<StatementBlockSymbol>().elaborateVariables(
+            [this](const Symbol& member) { insertMember(&member, nullptr, true); });
     }
 
     ASSERT(deferredMemberIndex == DeferredMemberIndex::Invalid);

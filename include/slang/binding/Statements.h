@@ -173,18 +173,14 @@ public:
                    bool inLoop);
     void setSyntax(const StatementBlockSymbol& scope, const ForLoopStatementSyntax& syntax,
                    bool inLoop);
-    void setSyntax(const StatementBlockSymbol& scope, const ForeachLoopStatementSyntax& syntax,
-                   bool inLoop);
     void setItems(Scope& scope, const SyntaxList<SyntaxNode>& syntax, SourceRange sourceRange,
                   bool inLoop);
 
     const Statement& getStatement(const BindContext& context) const;
     span<const StatementBlockSymbol* const> getBlocks() const { return blocks; }
+    const StatementSyntax* getSyntax() const;
 
 private:
-    template<typename TStatement>
-    void setSyntaxImpl(const StatementBlockSymbol& scope, const TStatement& syntax, bool inLoop);
-
     const Statement& bindStatement(const BindContext& context) const;
 
     std::variant<const StatementSyntax*, const SyntaxList<SyntaxNode>*> syntax;
@@ -535,6 +531,7 @@ public:
     }
 };
 
+struct ForeachLoopListSyntax;
 struct ForeachLoopStatementSyntax;
 
 class ForeachLoopStatement : public Statement {
@@ -547,7 +544,7 @@ public:
 
         /// The loop variable for this dimension, or nullptr if
         /// the dimension is being skipped.
-        const ValueSymbol* loopVar = nullptr;
+        const IteratorSymbol* loopVar = nullptr;
     };
 
     const Expression& arrayRef;
@@ -566,6 +563,9 @@ public:
                                  const BindContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    static const Expression* buildLoopDims(const ForeachLoopListSyntax& loopList,
+                                           BindContext& context, SmallVector<LoopDim>& dims);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForeachLoop; }
 

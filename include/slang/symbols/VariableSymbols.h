@@ -30,10 +30,6 @@ public:
     /// it being declared in the user's source code.
     bool isCompilerGenerated = false;
 
-    /// If this is a foreach loop variable, specifies a 1-based dimension index
-    /// that this variable loops over. Otherwise this is zero.
-    int32_t foreachIndex = 0;
-
     VariableSymbol(string_view name, SourceLocation loc, VariableLifetime lifetime);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -47,9 +43,6 @@ public:
     static VariableSymbol& fromSyntax(Compilation& compilation,
                                       const ForVariableDeclarationSyntax& syntax,
                                       const VariableSymbol* lastVar);
-
-    static VariableSymbol& fromForeachVar(Compilation& compilation,
-                                          const IdentifierNameSyntax& syntax, int32_t foreachIndex);
 
     static bool isKind(SymbolKind kind) {
         return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument ||
@@ -145,6 +138,8 @@ public:
     const Type& arrayType;
 
     IteratorSymbol(const Scope& scope, string_view name, SourceLocation loc, const Type& arrayType);
+    IteratorSymbol(string_view name, SourceLocation loc, const Type& arrayType,
+                   const Type& indexType);
 
     void serializeTo(ASTSerializer&) const {};
 

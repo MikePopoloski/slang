@@ -30,7 +30,16 @@ endclass
 module m;
     C c;
     initial begin
-        foreach (c.asdf[i,j,,k]) begin end
+        foreach (c.asdf[i,j,,k]) begin
+            if (c.asdf[i][j][0]) begin
+                string s;
+                s = string'(c.asdf[i][j][0][k]);
+                foreach (c.asdf[a]) begin
+                    automatic string t = {s, string'(c.asdf[a][i][j][0])};
+                    t = {t, "asdf"};
+                end
+            end
+        end
     end
 endmodule
 )");

@@ -29,6 +29,7 @@ bool ValueSymbol::isKind(SymbolKind kind) {
         case SymbolKind::Parameter:
         case SymbolKind::Port:
         case SymbolKind::ModportPort:
+        case SymbolKind::ConstraintBlock:
             return true;
         default:
             return VariableSymbol::isKind(kind);

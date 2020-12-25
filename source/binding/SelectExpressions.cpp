@@ -711,6 +711,29 @@ void RangeSelectExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("right", right());
 }
 
+static Expression* tryBindSpecialMethod(Compilation& compilation, const Expression& expr,
+                                        const LookupResult::MemberSelector& selector,
+                                        const InvocationExpressionSyntax* invocation,
+                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                        const BindContext& context) {
+    auto sym = expr.getSymbolReference();
+    if (!sym)
+        return nullptr;
+
+    // There is a built-in 'rand_mode' method that is present on every 'rand' and 'randc'
+    // class property, and additionally on subelements of those properties.
+    if (selector.name == "rand_mode"sv) {
+        if (sym->getRandMode() == RandMode::None)
+            return nullptr;
+
+        return CallExpression::fromBuiltInMethod(compilation, SymbolKind::ClassProperty, expr,
+                                                 selector, invocation, withClause, context);
+    }
+
+    return CallExpression::fromBuiltInMethod(compilation, sym->kind, expr, selector, invocation,
+                                             withClause, context);
+}
+
 Expression& MemberAccessExpression::fromSelector(
     Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
     const InvocationExpressionSyntax* invocation,
@@ -723,54 +746,17 @@ Expression& MemberAccessExpression::fromSelector(
     // The source range of the entire member access starts from the value being selected.
     SourceRange range{ expr.sourceRange.start(), selector.nameRange.end() };
 
-    // Special cases for built-in methods that don't cleanly fit the general
+    // Special cases for built-in iterator methods that don't cleanly fit the general
     // mold of looking up members via the type of the expression.
-    switch (expr.kind) {
-        case ExpressionKind::NamedValue:
-            // Iterators aren't a type themselves, so special case the lookup
-            // for the 'index' method.
-            if (expr.as<NamedValueExpression>().symbol.kind == SymbolKind::Iterator) {
-                auto result =
-                    CallExpression::fromBuiltInMethod(compilation, SymbolKind::Iterator, expr,
-                                                      selector, invocation, withClause, context);
-                if (result)
-                    return *result;
-            }
-            break;
-        case ExpressionKind::HierarchicalReference: {
-            // We'll hit this for constraint blocks looking up the built-in 'constraint_mode'
-            // method. See comment below for more details.
-            auto& sym = *expr.as<HierarchicalReferenceExpression>().symbol;
-            if (sym.kind == SymbolKind::ConstraintBlock) {
-                if (const Symbol* member = sym.as<Scope>().find(selector.name)) {
-                    return CallExpression::fromLookup(compilation, &member->as<SubroutineSymbol>(),
-                                                      &expr, invocation, withClause, range,
-                                                      context);
-                }
-            }
-            break;
+    if (expr.kind == ExpressionKind::NamedValue) {
+        auto symKind = expr.as<NamedValueExpression>().symbol.kind;
+        if (symKind == SymbolKind::Iterator) {
+            auto result = CallExpression::fromBuiltInMethod(compilation, symKind, expr, selector,
+                                                            invocation, withClause, context);
+            if (result)
+                return *result;
         }
-        default:
-            break;
     }
-
-    // There is a built-in 'rand_mode' method that is present on every 'rand' and 'randc' class
-    // property, and additionally on subelements of those properties. Rather than check that up
-    // front, which would be costly especially since 'rand_mode' calls will be extremely rare in
-    // real code, we wait until we fail to find anything else and only then look for the rand_mode
-    // call.
-    auto tryBindRandMode = [&]() -> Expression* {
-        if (selector.name == "rand_mode"sv) {
-            if (auto sym = expr.getSymbolReference()) {
-                if (sym->getRandMode() != RandMode::None) {
-                    return CallExpression::fromBuiltInMethod(compilation, SymbolKind::ClassProperty,
-                                                             expr, selector, invocation, withClause,
-                                                             context);
-                }
-            }
-        }
-        return nullptr;
-    };
 
     // This might look like a member access but actually be a built-in type method.
     const Type& type = expr.type->getCanonicalType();
@@ -791,8 +777,10 @@ Expression& MemberAccessExpression::fromSelector(
             return CallExpression::fromSystemMethod(compilation, expr, selector, invocation,
                                                     withClause, context);
         default: {
-            if (auto result = tryBindRandMode())
+            if (auto result = tryBindSpecialMethod(compilation, expr, selector, invocation,
+                                                   withClause, context)) {
                 return *result;
+            }
 
             auto& diag = context.addDiag(diag::InvalidMemberAccess, selector.dotLocation);
             diag << expr.sourceRange;
@@ -804,8 +792,10 @@ Expression& MemberAccessExpression::fromSelector(
 
     const Symbol* member = expr.type->getCanonicalType().as<Scope>().find(selector.name);
     if (!member) {
-        if (auto result = tryBindRandMode())
+        if (auto result = tryBindSpecialMethod(compilation, expr, selector, invocation, withClause,
+                                               context)) {
             return *result;
+        }
 
         auto& diag = context.addDiag(diag::UnknownMember, selector.nameRange.start());
         diag << expr.sourceRange;
@@ -841,12 +831,8 @@ Expression& MemberAccessExpression::fromSelector(
                                                                 range);
         }
         case SymbolKind::ConstraintBlock:
-            // Constraint blocks are not really value symbols and don't have a type. Accessing them
-            // via a class handle is only allowed in order to invoke the 'constraint_mode' built-in
-            // on them. Represent this via a hierarchical reference expression, which will result in
-            // errors about 'void' type accesses if the user tries to use this for anything else.
-            return *compilation.emplace<HierarchicalReferenceExpression>(
-                *member, compilation.getVoidType(), range);
+            return *compilation.emplace<MemberAccessExpression>(compilation.getVoidType(), expr,
+                                                                *member, 0u, range);
         default:
             auto& diag = context.addDiag(diag::InvalidClassAccess, selector.dotLocation);
             diag << selector.nameRange;

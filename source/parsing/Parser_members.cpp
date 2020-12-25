@@ -259,6 +259,8 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
                 return result;
             break;
         }
+        case TokenKind::ConstraintKeyword:
+            return &parseConstraint(attributes, {});
         default:
             break;
     }
@@ -284,6 +286,23 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             auto kind = t.kind == TokenKind::FunctionKeyword ? SyntaxKind::FunctionDeclaration
                                                              : SyntaxKind::TaskDeclaration;
             return &parseFunctionDeclaration(attributes, kind, getSkipToKind(t.kind), parentKind);
+        }
+
+        if (t.kind == TokenKind::ConstraintKeyword) {
+            // Out-of-block constraints can legitimately have the 'static' keyword,
+            // but nothing else.
+            SmallVectorSized<Token, 4> quals;
+            for (uint32_t i = 0; i < index; i++) {
+                Token qual = consume();
+                quals.append(qual);
+
+                if (qual.kind != TokenKind::StaticKeyword && isConstraintQualifier(qual.kind)) {
+                    addDiag(diag::ConstraintQualOutOfBlock, qual.location())
+                        << qual.valueText() << qual.range();
+                }
+            }
+
+            return &parseConstraint(attributes, quals.copy(alloc));
         }
     }
 
@@ -843,8 +862,7 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
                                     endClass, endBlockName);
 }
 
-span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
-    SmallVectorSized<Token, 4> qualifierBuffer;
+void Parser::checkClassQualifiers(span<const Token> qualifiers, bool isConstraint) {
     SmallMap<TokenKind, Token, 4> qualifierSet;
     Token lastRand;
     Token lastVisibility;
@@ -857,6 +875,7 @@ span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
     bool errorStaticVirtual = false;
     bool errorFirst = false;
     bool errorPure = false;
+    size_t count = 0;
 
     auto checkConflict = [this](Token curr, bool isKind, Token& lastSeen, bool& alreadyErrored) {
         if (isKind) {
@@ -873,12 +892,9 @@ span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
         }
     };
 
-    while (isMemberQualifier(peek().kind)) {
-        Token t = consume();
-        qualifierBuffer.append(t);
-        if (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)
-            isPureOrExtern = true;
-        else if (t.kind == TokenKind::VirtualKeyword)
+    for (auto t : qualifiers) {
+        count++;
+        if (t.kind == TokenKind::VirtualKeyword)
             isVirtual = true;
 
         // Don't allow duplicates of any qualifier.
@@ -892,8 +908,7 @@ span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
         }
 
         // Some qualifiers are required to come first in the list.
-        if (qualifierBuffer.size() > 1 &&
-            (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)) {
+        if (count > 1 && (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)) {
             if (!errorFirst) {
                 auto& diag = addDiag(diag::QualifierNotFirst, t.location());
                 diag << t.rawText() << t.range();
@@ -902,11 +917,11 @@ span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
             continue;
         }
 
-        // Pure keyword must be followed by virtual, always.
+        // Pure keyword must be followed by virtual unless this is a constraint.
         if (t.kind == TokenKind::PureKeyword)
             lastPure = t;
         else if (lastPure) {
-            if (t.kind != TokenKind::VirtualKeyword) {
+            if (t.kind != TokenKind::VirtualKeyword && !isConstraint) {
                 if (!errorPure) {
                     auto& diag = addDiag(diag::PureRequiresVirtual, t.location());
                     diag << lastPure.range() << t.range();
@@ -932,10 +947,8 @@ span<Token> Parser::parseClassQualifiers(bool& isPureOrExtern) {
                       lastStaticOrVirtual, errorStaticVirtual);
     }
 
-    if (lastPure && !errorPure && !isVirtual)
+    if (lastPure && !errorPure && !isVirtual && !isConstraint)
         addDiag(diag::PureRequiresVirtual, lastPure.location()) << lastPure.range();
-
-    return qualifierBuffer.copy(alloc);
 }
 
 MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
@@ -969,7 +982,16 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
     }
 
     bool isPureOrExtern = false;
-    auto qualifiers = parseClassQualifiers(isPureOrExtern);
+    SmallVectorSized<Token, 4> qualifierBuffer;
+    while (isMemberQualifier(peek().kind)) {
+        Token t = consume();
+        qualifierBuffer.append(t);
+        if (t.kind == TokenKind::PureKeyword || t.kind == TokenKind::ExternKeyword)
+            isPureOrExtern = true;
+    }
+
+    auto qualifiers = qualifierBuffer.copy(alloc);
+    checkClassQualifiers(qualifiers, peek(TokenKind::ConstraintKeyword));
 
     if (isVariableDeclaration()) {
         // Check that all qualifiers are allowed specifically for properties.
@@ -1520,15 +1542,48 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
                                          endGroup, endBlockName);
 }
 
-MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifiers) {
-    auto keyword = consume();
-    auto name = expect(TokenKind::Identifier);
-    if (peek(TokenKind::Semicolon)) {
-        // this is just a prototype
-        return factory.constraintPrototype(attributes, qualifiers, keyword, name, consume());
+static bool checkConstraintName(const NameSyntax& name) {
+    if (name.kind == SyntaxKind::ScopedName) {
+        auto& scoped = name.as<ScopedNameSyntax>();
+        if (scoped.separator.kind == TokenKind::Dot)
+            return false;
+
+        return scoped.left->kind == SyntaxKind::IdentifierName &&
+               scoped.right->kind == SyntaxKind::IdentifierName;
     }
-    return factory.constraintDeclaration(attributes, qualifiers, keyword, name,
-                                         parseConstraintBlock(/* isTopLevel */ true));
+
+    return name.kind == SyntaxKind::IdentifierName;
+}
+
+MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifiers) {
+    for (auto qual : qualifiers) {
+        if (!isConstraintQualifier(qual.kind)) {
+            auto& diag = addDiag(diag::InvalidConstraintQualifier, qual.location());
+            diag << qual.range() << qual.rawText();
+            break;
+        }
+    }
+
+    auto keyword = consume();
+    auto& name = parseName();
+
+    bool nameError = false;
+    if (!checkConstraintName(name)) {
+        nameError = true;
+        addDiag(diag::ExpectedConstraintName, keyword.location()) << name.sourceRange();
+    }
+
+    if (peek(TokenKind::OpenBrace)) {
+        return factory.constraintDeclaration(attributes, qualifiers, keyword, name,
+                                             parseConstraintBlock(/* isTopLevel */ true));
+    }
+
+    if (!nameError && name.kind != SyntaxKind::IdentifierName) {
+        SourceRange range = name.sourceRange();
+        addDiag(diag::ExpectedIdentifier, range.start()) << range;
+    }
+
+    return factory.constraintPrototype(attributes, qualifiers, keyword, name, consume());
 }
 
 ConstraintBlockSyntax& Parser::parseConstraintBlock(bool isTopLevel) {

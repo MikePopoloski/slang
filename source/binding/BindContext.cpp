@@ -14,9 +14,9 @@
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/symbols/AttributeSymbol.h"
 #include "slang/symbols/SubroutineSymbols.h"
-#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/Type.h"
 
 namespace slang {
 
@@ -361,8 +361,9 @@ void BindContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked
 BindContext BindContext::resetFlags(bitmask<BindFlags> addedFlags) const {
     // Remove non-sticky flags, add in any extras specified by addedFlags
     BindContext result(*this);
-    result.flags &= ~(BindFlags::InsideConcatenation | BindFlags::AllowDataType |
-                      BindFlags::AssignmentAllowed | BindFlags::StreamingAllowed);
+    result.flags &=
+        ~(BindFlags::InsideConcatenation | BindFlags::AllowDataType | BindFlags::AssignmentAllowed |
+          BindFlags::StreamingAllowed | BindFlags::TopLevelStatement);
     result.flags |= addedFlags;
     return result;
 }

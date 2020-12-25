@@ -1033,10 +1033,12 @@ bool Parser::isVariableDeclaration() {
             return true;
 
         // Static keyword *should* always be a variable, but it could accidentally
-        // be an attempt at an out-of-block function declaration.
+        // be an attempt at an out-of-block function declaration, or it could legitimately
+        // be an out-of-block constraint declaration.
         case TokenKind::StaticKeyword: {
             auto next = peek(index + 1);
-            return next.kind != TokenKind::FunctionKeyword && next.kind != TokenKind::TaskKeyword;
+            return next.kind != TokenKind::FunctionKeyword && next.kind != TokenKind::TaskKeyword &&
+                   next.kind != TokenKind::ConstraintKeyword;
         }
 
         // either an import of a package or a DPI import

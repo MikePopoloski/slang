@@ -322,7 +322,7 @@ private:
     bool parseCaseItems(TokenKind caseKind, SmallVector<CaseItemSyntax*>& itemBuffer,
                         IsItemFunc&& isItem, ParseItemFunc&& parseItem);
 
-    span<Token> parseClassQualifiers(bool& isPureOrExtern);
+    void checkClassQualifiers(span<const Token> qualifiers, bool isConstraint);
     Token parseDPISpecString();
 
     // ---- Lookahead routines, for determining which kind of syntax to parse ----

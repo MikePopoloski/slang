@@ -1452,13 +1452,13 @@ token closeBrace
 ConstraintPrototype base=Member
 tokenlist qualifiers
 token keyword
-token name
+Name name
 token semi
 
 ConstraintDeclaration base=Member
 tokenlist qualifiers
 token keyword
-token name
+Name name
 ConstraintBlock block
 
 ParenExpressionList

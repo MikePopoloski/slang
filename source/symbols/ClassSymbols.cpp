@@ -315,6 +315,22 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
             }
         }
 
+        if (!isAbstract && toWrap->kind == SymbolKind::ConstraintBlock) {
+            auto& cb = toWrap->as<ConstraintBlockSymbol>();
+            if (cb.isPure) {
+                if (!pureVirtualError) {
+                    auto& diag = context.addDiag(diag::InheritFromAbstractConstraint,
+                                                 extendsClause.sourceRange());
+                    diag << name;
+                    diag << baseType->name;
+                    diag << cb.name;
+                    diag.addNote(diag::NoteDeclarationHere, cb.location);
+                    pureVirtualError = true;
+                }
+                continue;
+            }
+        }
+
         // All symbols get inserted into the beginning of the scope using the
         // provided insertion callback. We insert them as TransparentMemberSymbols
         // so that we can trace a path back to the actual location they are declared.
@@ -363,6 +379,34 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const Bi
                         context.scope, baseSub->as<SubroutineSymbol>(), *protoSub,
                         /* allowDerivedReturn */ true);
                 }
+            }
+        }
+        else if (member.kind == SymbolKind::ConstraintBlock) {
+            // Constraint blocks can also be overriden -- check that 'static'ness
+            // matches between base and derived if the base is pure.
+            auto currentBase = baseType;
+            while (true) {
+                const Symbol* found = currentBase->find(member.name);
+                if (found) {
+                    if (found->kind == SymbolKind::ConstraintBlock) {
+                        auto& baseConstraint = found->as<ConstraintBlockSymbol>();
+                        if (baseConstraint.isPure &&
+                            baseConstraint.isStatic !=
+                                member.as<ConstraintBlockSymbol>().isStatic) {
+                            auto& diag =
+                                context.addDiag(diag::MismatchStaticConstraint, member.location);
+                            diag.addNote(diag::NoteDeclarationHere, found->location);
+                        }
+                    }
+                    break;
+                }
+
+                // Otherwise it could be inherited from a higher-level base.
+                auto possibleBase = currentBase->getBaseClass();
+                if (!possibleBase)
+                    break;
+
+                currentBase = &possibleBase->getCanonicalType().as<ClassType>();
             }
         }
     }
@@ -784,46 +828,77 @@ bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKe
 }
 
 ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, string_view name, SourceLocation loc) :
-    Symbol(SymbolKind::ConstraintBlock, name, loc), Scope(c, this) {
-
-    // Each constraint block gets a built-in method.
-    MethodBuilder method(c, "constraint_mode", c.getIntType(), SubroutineKind::Task);
-    method.addArg("on_off", c.getBitType(), ArgumentDirection::In, SVInt(32, 0u, true));
-    addMember(method.symbol);
+    ValueSymbol(SymbolKind::ConstraintBlock, name, loc), Scope(c, this) {
+    setType(c.getVoidType());
 }
 
-ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(
+ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
     const Scope& scope, const ConstraintDeclarationSyntax& syntax) {
 
     auto& comp = scope.getCompilation();
+    if (syntax.name->kind == SyntaxKind::ScopedName) {
+        // Remember the location in the parent scope where we *would* have inserted this
+        // constraint, for later use during lookup.
+        uint32_t index = 1;
+        if (auto last = scope.getLastMember())
+            index = (uint32_t)last->getIndex() + 1;
+
+        comp.addOutOfBlockDecl(scope, syntax.name->as<ScopedNameSyntax>(), syntax,
+                               SymbolIndex(index));
+        return nullptr;
+    }
+
+    auto nameToken = syntax.name->getLastToken();
     auto result =
-        comp.emplace<ConstraintBlockSymbol>(comp, syntax.name.valueText(), syntax.name.location());
+        comp.emplace<ConstraintBlockSymbol>(comp, nameToken.valueText(), nameToken.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
-    // Static is the only allowed qualifier, enforced by the parser.
+    // Static is the only allowed qualifier.
     for (auto qual : syntax.qualifiers) {
         if (qual.kind == TokenKind::StaticKeyword)
             result->isStatic = true;
+        else if (qual.kind == TokenKind::PureKeyword || qual.kind == TokenKind::ExternKeyword) {
+            // This is an error, pure and extern declarations can't declare bodies.
+            scope.addDiag(diag::UnexpectedConstraintBlock, syntax.block->sourceRange())
+                << qual.range();
+            break;
+        }
     }
 
-    return *result;
+    return result;
 }
 
 ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
                                                          const ConstraintPrototypeSyntax& syntax) {
     auto& comp = scope.getCompilation();
+    auto nameToken = syntax.name->getLastToken();
     auto result =
-        comp.emplace<ConstraintBlockSymbol>(comp, syntax.name.valueText(), syntax.name.location());
+        comp.emplace<ConstraintBlockSymbol>(comp, nameToken.valueText(), nameToken.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     result->isExtern = true;
 
     for (auto qual : syntax.qualifiers) {
-        if (qual.kind == TokenKind::StaticKeyword)
-            result->isStatic = true;
-        else if (qual.kind == TokenKind::ExternKeyword)
-            result->isExplicitExtern = true;
+        switch (qual.kind) {
+            case TokenKind::StaticKeyword:
+                result->isStatic = true;
+                break;
+            case TokenKind::ExternKeyword:
+                result->isExplicitExtern = true;
+                break;
+            case TokenKind::PureKeyword:
+                result->isPure = true;
+                break;
+            default:
+                break;
+        }
+    }
+
+    if (result->isPure && scope.asSymbol().kind == SymbolKind::ClassType) {
+        auto& classType = scope.asSymbol().as<ClassType>();
+        if (!classType.isAbstract)
+            scope.addDiag(diag::PureConstraintInAbstract, nameToken.range());
     }
 
     return *result;
@@ -836,14 +911,61 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
     auto syntax = getSyntax();
     auto scope = getParentScope();
     ASSERT(syntax && scope);
+    BindContext context(*this, LookupLocation::max);
 
-    // TODO: support constraint prototypes
-    if (syntax->kind != SyntaxKind::ConstraintDeclaration) {
-        constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
+    if (syntax->kind == SyntaxKind::ConstraintPrototype) {
+        // The out-of-block definition must be in our parent scope.
+        auto& parentSym = scope->asSymbol();
+        auto& outerScope = *parentSym.getParentScope();
+        auto& comp = outerScope.getCompilation();
+
+        auto [declSyntax, index, used] = comp.findOutOfBlockDecl(outerScope, parentSym.name, name);
+        if (!declSyntax || declSyntax->kind != SyntaxKind::ConstraintDeclaration) {
+            if (!isPure) {
+                DiagCode code = isExplicitExtern ? diag::NoMemberImplFound : diag::NoConstraintBody;
+                outerScope.addDiag(code, location) << name;
+            }
+            constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
+            return *constraint;
+        }
+
+        auto& cds = declSyntax->as<ConstraintDeclarationSyntax>();
+        *used = true;
+
+        if (isPure) {
+            auto& diag = outerScope.addDiag(diag::BodyForPureConstraint, cds.name->sourceRange());
+            diag.addNote(diag::NoteDeclarationHere, location);
+            constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
+            return *constraint;
+        }
+
+        // The method definition must be located after the class definition.
+        outOfBlockIndex = index;
+        if (index <= parentSym.getIndex()) {
+            auto& diag = outerScope.addDiag(diag::MemberDefinitionBeforeClass,
+                                            cds.name->getLastToken().location());
+            diag << name << parentSym.name;
+            diag.addNote(diag::NoteDeclarationHere, parentSym.location);
+        }
+
+        bool declStatic = false;
+        for (auto qual : cds.qualifiers) {
+            if (qual.kind == TokenKind::StaticKeyword) {
+                declStatic = true;
+                break;
+            }
+        }
+
+        if (declStatic != isStatic) {
+            auto& diag =
+                outerScope.addDiag(diag::MismatchStaticConstraint, cds.getFirstToken().location());
+            diag.addNote(diag::NoteDeclarationHere, location);
+        }
+
+        constraint = &Constraint::bind(*cds.block, context);
         return *constraint;
     }
 
-    BindContext context(*scope, LookupLocation::after(*this));
     constraint = &Constraint::bind(*syntax->as<ConstraintDeclarationSyntax>().block, context);
     return *constraint;
 }

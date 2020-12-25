@@ -803,27 +803,24 @@ bool Compilation::noteBindDirective(const BindDirectiveSyntax& syntax,
     return true;
 }
 
-void Compilation::addOutOfBlockMethod(const Scope& scope, const FunctionDeclarationSyntax& syntax,
-                                      SymbolIndex index) {
-    auto& scoped = syntax.prototype->name->as<ScopedNameSyntax>();
-    string_view className = scoped.left->getLastToken().valueText();
-    string_view methodName = scoped.right->getLastToken().valueText();
-
-    outOfBlockMethods.emplace(std::make_tuple(className, methodName, &scope),
-                              std::make_tuple(&syntax, index, false));
+void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& name,
+                                    const SyntaxNode& syntax, SymbolIndex index) {
+    string_view className = name.left->getLastToken().valueText();
+    string_view declName = name.right->getLastToken().valueText();
+    outOfBlockDecls.emplace(std::make_tuple(className, declName, &scope),
+                            std::make_tuple(&syntax, &name, index, false));
 }
 
-std::tuple<const FunctionDeclarationSyntax*, SymbolIndex> Compilation::findOutOfBlockMethod(
-    const Scope& scope, string_view className, string_view methodName) const {
+std::tuple<const SyntaxNode*, SymbolIndex, bool*> Compilation::findOutOfBlockDecl(
+    const Scope& scope, string_view className, string_view declName) const {
 
-    auto it = outOfBlockMethods.find({ className, methodName, &scope });
-    if (it != outOfBlockMethods.end()) {
-        auto& [syntax, index, used] = it->second;
-        used = true;
-        return { syntax, index };
+    auto it = outOfBlockDecls.find({ className, declName, &scope });
+    if (it != outOfBlockDecls.end()) {
+        auto& [syntax, name, index, used] = it->second;
+        return { syntax, index, &used };
     }
 
-    return { nullptr, SymbolIndex() };
+    return { nullptr, SymbolIndex(), nullptr };
 }
 
 const NameSyntax& Compilation::parseName(string_view name) {
@@ -879,20 +876,19 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     visitor.finalize();
 
     // Report on unused out-of-block definitions. These are always a real error.
-    for (auto& [key, val] : outOfBlockMethods) {
-        auto& [syntax, index, used] = val;
+    for (auto& [key, val] : outOfBlockDecls) {
+        auto& [syntax, name, index, used] = val;
         if (!used) {
-            auto& [className, methodName, scope] = key;
-            auto nameSyntax = syntax->prototype->name;
-            auto classRange = nameSyntax->as<ScopedNameSyntax>().left->sourceRange();
-
+            auto& [className, declName, scope] = key;
+            auto classRange = name->left->sourceRange();
             auto sym = Lookup::unqualifiedAt(*scope, className,
                                              LookupLocation(scope, uint32_t(index)), classRange);
+
             if (sym) {
                 if (sym->kind == SymbolKind::ClassType ||
                     sym->kind == SymbolKind::GenericClassDef) {
-                    auto& diag = scope->addDiag(diag::NoMethodInClass, nameSyntax->sourceRange());
-                    diag << methodName << className;
+                    auto& diag = scope->addDiag(diag::NoDeclInClass, name->sourceRange());
+                    diag << declName << className;
                 }
                 else {
                     auto& diag = scope->addDiag(diag::NotAClass, classRange);

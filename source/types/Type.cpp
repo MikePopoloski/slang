@@ -652,6 +652,11 @@ bool Type::canBeStringLike() const {
     return t.isIntegral() || t.isString() || t.isByteArray();
 }
 
+bool Type::isIterable() const {
+    const Type& t = getCanonicalType();
+    return (t.hasFixedRange() || t.isArray() || t.isString()) && !t.isScalar();
+}
+
 bool Type::isValidForRand(RandMode mode) const {
     if (isIntegral() || isNull())
         return true;

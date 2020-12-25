@@ -227,7 +227,7 @@ struct ConstraintDeclarationSyntax;
 struct ConstraintPrototypeSyntax;
 
 /// Represents a named constraint block declaration within a class.
-class ConstraintBlockSymbol : public Symbol, public Scope {
+class ConstraintBlockSymbol : public ValueSymbol, public Scope {
 public:
     /// Set to true if this is a static constraint block.
     bool isStatic = false;
@@ -240,13 +240,18 @@ public:
     /// which means an out-of-block body is required instead of optional.
     bool isExplicitExtern = false;
 
+    /// Set to true if this is a 'pure' constraint block, once which is
+    /// required to be overriden in derived classes.
+    bool isPure = false;
+
     ConstraintBlockSymbol(Compilation& compilation, string_view name, SourceLocation loc);
 
     const Constraint& getConstraints() const;
+    SymbolIndex getOutOfBlockIndex() const { return outOfBlockIndex; }
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static ConstraintBlockSymbol& fromSyntax(const Scope& scope,
+    static ConstraintBlockSymbol* fromSyntax(const Scope& scope,
                                              const ConstraintDeclarationSyntax& syntax);
 
     static ConstraintBlockSymbol& fromSyntax(const Scope& scope,
@@ -256,6 +261,7 @@ public:
 
 private:
     mutable const Constraint* constraint = nullptr;
+    mutable SymbolIndex outOfBlockIndex{ 0 };
 };
 
 } // namespace slang

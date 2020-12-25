@@ -605,11 +605,11 @@ endfunction
     CHECK(diags[5].code == diag::MethodArgDefaultMismatch);
     CHECK(diags[6].code == diag::MethodArgDefaultMismatch);
     CHECK(diags[7].code == diag::MethodArgTypeMismatch);
-    CHECK(diags[8].code == diag::MethodDefinitionBeforeClass);
+    CHECK(diags[8].code == diag::MemberDefinitionBeforeClass);
     CHECK(diags[9].code == diag::MethodReturnTypeScoped);
     CHECK(diags[10].code == diag::UndeclaredIdentifier);
     CHECK(diags[11].code == diag::NotAClass);
-    CHECK(diags[12].code == diag::NoMethodInClass);
+    CHECK(diags[12].code == diag::NoDeclInClass);
     CHECK(diags[13].code == diag::MethodArgDirectionMismatch);
 }
 
@@ -1754,7 +1754,7 @@ endmodule
 TEST_CASE("Built-in class methods") {
     auto tree = SyntaxTree::fromText(R"(
 class A;
-    constraint c;
+    constraint c { 1; }
     function void foo;
         c.constraint_mode(1);
     endfunction
@@ -1786,6 +1786,11 @@ module m;
         a.constraint_mode(0);
         i = a.c.constraint_mode();
         a.asdf[0].i.rand_mode(1);
+
+        // Errors
+        i = a.constraint_mode(1);
+        a.c.constraint_mode();
+        i = a.c.constraint_mode(1);
     end
 endmodule
 )");
@@ -1794,10 +1799,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::InvalidMethodOverride);
     CHECK(diags[1].code == diag::InvalidRandomizeOverride);
     CHECK(diags[2].code == diag::InvalidRandomizeOverride);
+    CHECK(diags[3].code == diag::BadAssignment);
+    CHECK(diags[4].code == diag::TooFewArguments);
+    CHECK(diags[5].code == diag::TooManyArguments);
 }
 
 TEST_CASE("Constraint items") {
@@ -1883,6 +1891,15 @@ class C;
         x -> { solve a before b; }
     }
 endclass
+
+class D;
+    int A [2][3][4];
+    bit [3:0][2:1] B [5:1][4];
+    constraint c1 {
+        foreach (A[i, j, k]) A[i][j][k] inside {2,4,8,16};
+        foreach (B[q, r, , s]) B[q][r] inside {1,2,3};
+    }
+endclass
 )");
 
     Compilation compilation;
@@ -1907,4 +1924,113 @@ endclass
     CHECK(diags[14].code == diag::BadSolveBefore);
     CHECK(diags[15].code == diag::RandCInSolveBefore);
     CHECK(diags[16].code == diag::SolveBeforeDisallowed);
+}
+
+TEST_CASE("Constraint qualifiers") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    virtual constraint c1 { 1; }
+    pure constraint c2 { 1; }
+
+    static constraint c3 { 1; }
+    constraint c4 { 1; }
+
+    static function foo;
+        c4.constraint_mode(1);
+    endfunction
+endclass
+
+module m;
+    initial begin
+        A::c3.constraint_mode(1);
+        A::c4.constraint_mode(1);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::InvalidConstraintQualifier);
+    CHECK(diags[1].code == diag::UnexpectedConstraintBlock);
+    CHECK(diags[2].code == diag::NonStaticClassProperty);
+    CHECK(diags[3].code == diag::NonStaticClassProperty);
+}
+
+TEST_CASE("Class constraint block name errors") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    constraint A::B;
+    constraint new { 1; }
+    constraint A.B { 1; }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::ExpectedIdentifier);
+    CHECK(diags[1].code == diag::NoConstraintBody);
+    CHECK(diags[2].code == diag::ExpectedConstraintName);
+    CHECK(diags[3].code == diag::ExpectedConstraintName);
+    CHECK(diags[4].code == diag::NoDeclInClass);
+}
+
+TEST_CASE("Class constraint block out-of-band definitions") {
+    auto tree = SyntaxTree::fromText(R"(
+constraint A::g { 1; }
+
+class A;
+    rand int foo;
+    constraint c;
+    extern static constraint d;
+    constraint e;                   // no impl is just a warning
+    extern constraint f;            // no impl is an error
+    constraint g;
+    pure constraint h;
+    static constraint i;
+endclass
+
+int bar;
+
+constraint A::c { foo < bar; }
+static constraint A::d { 1; }
+pure constraint A::d { 1; }
+constraint A::i { 1; }
+
+virtual class B;
+    pure constraint a;
+    pure static constraint b;
+endclass
+
+constraint B::a { 1; }
+
+class C extends B;
+    constraint a { 1; }
+    static constraint b { 1; }
+endclass
+
+class D extends B;
+    constraint b { 1; }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::MemberDefinitionBeforeClass);
+    CHECK(diags[1].code == diag::NoConstraintBody);
+    CHECK(diags[2].code == diag::NoMemberImplFound);
+    CHECK(diags[3].code == diag::PureConstraintInAbstract);
+    CHECK(diags[4].code == diag::ConstraintQualOutOfBlock);
+    CHECK(diags[5].code == diag::MismatchStaticConstraint);
+    CHECK(diags[6].code == diag::BodyForPureConstraint);
+    CHECK(diags[7].code == diag::InheritFromAbstractConstraint);
+    CHECK(diags[8].code == diag::MismatchStaticConstraint);
 }

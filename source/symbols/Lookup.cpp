@@ -482,9 +482,10 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRa
         return true;
 
     // All non-public members can only be accessed from scopes that are within a class.
-    const Symbol* lookupParent = Lookup::getContainingClass(scope);
+    auto [lp, _] = Lookup::getContainingClass(scope);
     const Symbol& targetParent = symbol.getParentScope()->asSymbol();
 
+    const Symbol* lookupParent = lp;
     if (lookupParent && targetParent.kind == SymbolKind::ClassType) {
         if (visibility == Visibility::Local) {
             // Local members can only be accessed from the declaring class,
@@ -562,7 +563,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
                 // The unadorned generic class name here is an error if we're outside the context
                 // of the class itself. If we're within the class, it refers to the "current"
                 // specialization, not the default specialization.
-                auto parent = Lookup::getContainingClass(context.scope);
+                auto [parent, _] = Lookup::getContainingClass(context.scope);
                 if (!parent || parent->genericClass != symbol) {
                     result.addDiag(context.scope, diag::GenericClassScopeResolution, name.range());
                     return false;
@@ -695,7 +696,7 @@ const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult
 }
 
 const Symbol* findSuperHandle(const Scope& scope, SourceRange range, LookupResult& result) {
-    auto parent = Lookup::getContainingClass(scope);
+    auto [parent, _] = Lookup::getContainingClass(scope);
     if (!parent) {
         result.addDiag(scope, diag::SuperOutsideClass, range);
         return nullptr;
@@ -922,18 +923,29 @@ const ClassType* Lookup::findClass(const NameSyntax& className, const BindContex
     return &classType;
 }
 
-const ClassType* Lookup::getContainingClass(const Scope& scope) {
+std::pair<const ClassType*, bool> Lookup::getContainingClass(const Scope& scope) {
     const Symbol* parent = &scope.asSymbol();
-    while (parent->kind == SymbolKind::StatementBlock || parent->kind == SymbolKind::Subroutine) {
+    bool inStatic = false;
+    while (parent->kind == SymbolKind::StatementBlock || parent->kind == SymbolKind::Subroutine ||
+           parent->kind == SymbolKind::ConstraintBlock) {
+        if (parent->kind == SymbolKind::Subroutine) {
+            // Remember whether this was a static class method.
+            if (parent->as<SubroutineSymbol>().flags & MethodFlags::Static)
+                inStatic = true;
+        }
+        else if (parent->kind == SymbolKind::ConstraintBlock) {
+            inStatic |= parent->as<ConstraintBlockSymbol>().isStatic;
+        }
+
         auto parentScope = parent->getParentScope();
         ASSERT(parentScope);
         parent = &parentScope->asSymbol();
     }
 
     if (parent->kind == SymbolKind::ClassType)
-        return &parent->as<ClassType>();
+        return { &parent->as<ClassType>(), inStatic };
 
-    return nullptr;
+    return { nullptr, inStatic };
 }
 
 Visibility Lookup::getVisibility(const Symbol& symbol) {
@@ -956,6 +968,19 @@ bool Lookup::isVisibleFrom(const Symbol& symbol, const Scope& scope) {
     return checkVisibility(symbol, scope, std::nullopt, result);
 }
 
+bool Lookup::isAccessibleFrom(const Symbol& target, const Symbol& sourceScope) {
+    auto& parentScope = target.getParentScope()->asSymbol();
+    if (&sourceScope == &parentScope)
+        return true;
+
+    if (parentScope.kind != SymbolKind::ClassType)
+        return false;
+
+    auto& sourceType = sourceScope.as<Type>();
+    auto& targetType = parentScope.as<Type>();
+    return targetType.isAssignmentCompatible(sourceType);
+}
+
 bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
                            optional<SourceRange> sourceRange) {
     LookupResult result;
@@ -964,6 +989,24 @@ bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
 
     result.reportErrors(context);
     return false;
+}
+
+bool Lookup::ensureAccessible(const Symbol& symbol, const BindContext& context,
+                              optional<SourceRange> sourceRange) {
+    auto [parent, inStatic] = getContainingClass(context.scope);
+    if (parent && !isAccessibleFrom(symbol, *parent)) {
+        if (sourceRange) {
+            auto& diag = context.addDiag(diag::NestedNonStaticClassProperty, *sourceRange);
+            diag << symbol.name << parent->name;
+        }
+        return false;
+    }
+    else if (!parent || inStatic || (context.flags & BindFlags::StaticInitializer) != 0) {
+        if (sourceRange)
+            context.addDiag(diag::NonStaticClassProperty, *sourceRange) << symbol.name;
+        return false;
+    }
+    return true;
 }
 
 bool Lookup::findIterator(const Scope& scope, const IteratorSymbol& symbol,
@@ -1165,8 +1208,11 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
     //   function int C::foo;
     //     return k;
     //   endfunction
-    if (scope.asSymbol().kind == SymbolKind::Subroutine)
-        outOfBlockIndex = scope.asSymbol().as<SubroutineSymbol>().outOfBlockIndex;
+    auto& sym = scope.asSymbol();
+    if (sym.kind == SymbolKind::Subroutine)
+        outOfBlockIndex = sym.as<SubroutineSymbol>().outOfBlockIndex;
+    else if (sym.kind == SymbolKind::ConstraintBlock)
+        outOfBlockIndex = sym.as<ConstraintBlockSymbol>().getOutOfBlockIndex();
     else if (uint32_t(outOfBlockIndex) != 0) {
         location = LookupLocation(location.getScope(), uint32_t(outOfBlockIndex));
         outOfBlockIndex = SymbolIndex(0);

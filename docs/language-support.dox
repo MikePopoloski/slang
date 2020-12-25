@@ -269,13 +269,13 @@ LRM | Feature | Supported
 
 LRM | Feature | Supported
 --- | ------- | ---------
-{{m-danger}}  18.3 | Concepts and usage | no
+{{m-success}} 18.3 | Concepts and usage | v0.6
 {{m-success}} 18.4 | Random variables | v0.6
-{{m-danger}}  18.5 | Constraint blocks | no
+{{m-success}} 18.5 | Constraint blocks | v0.6
 {{m-success}} 18.6 | Randomization methods | v0.6
 {{m-danger}}  18.7 | In-line constraints | no
-{{m-danger}}  18.8 | Disabling random variables | no
-{{m-danger}}  18.9 | Controlling constraints | no
+{{m-success}} 18.8 | Disabling random variables | v0.6
+{{m-success}} 18.9 | Controlling constraints | v0.6
 {{m-dim}}     18.10 | Dynamic constraint modification | N/A
 {{m-danger}}  18.11 | In-line random variable control | no
 {{m-danger}}  18.12 | Randomization of scope variables | no

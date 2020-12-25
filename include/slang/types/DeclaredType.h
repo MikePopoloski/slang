@@ -31,13 +31,12 @@ enum class DeclaredTypeFlags {
     LookupMax = 1 << 2,
     InProceduralContext = 1 << 3,
     AutomaticInitializer = 1 << 4,
-    ForeachVar = 1 << 5,
-    Port = 1 << 6,
-    TypedefTarget = 1 << 7,
-    NetType = 1 << 8,
-    UserDefinedNetType = 1 << 9,
-    FormalArgMergeVar = 1 << 10,
-    Rand = 1 << 11,
+    Port = 1 << 5,
+    TypedefTarget = 1 << 6,
+    NetType = 1 << 7,
+    UserDefinedNetType = 1 << 8,
+    FormalArgMergeVar = 1 << 9,
+    Rand = 1 << 10,
 
     NeedsTypeCheck = Port | NetType | UserDefinedNetType | FormalArgMergeVar | Rand
 };
@@ -97,7 +96,6 @@ public:
 private:
     const Scope& getScope() const;
     void resolveType(const BindContext& initializerContext) const;
-    const Type* resolveForeachVar(const BindContext& context) const;
     void checkType(const BindContext& context) const;
     void mergePortTypes(const BindContext& context, const ValueSymbol& sourceSymbol,
                         const ImplicitTypeSyntax& implicit, SourceLocation location,

@@ -18,7 +18,6 @@ const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const Bin
     BindContext ctx(context);
     ctx.flags &= ~BindFlags::ProceduralStatement;
 
-    auto& comp = ctx.scope.getCompilation();
     Constraint* result;
     switch (syntax.kind) {
         case SyntaxKind::ConstraintBlock:
@@ -48,8 +47,7 @@ const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const Bin
                 &SolveBeforeConstraint::fromSyntax(syntax.as<SolveBeforeConstraintSyntax>(), ctx);
             break;
         case SyntaxKind::LoopConstraint:
-            ctx.addDiag(diag::NotYetSupported, syntax.sourceRange());
-            result = &badConstraint(comp, nullptr);
+            result = &ForeachConstraint::fromSyntax(syntax.as<LoopConstraintSyntax>(), ctx);
             break;
         default:
             THROW_UNREACHABLE;
@@ -432,6 +430,40 @@ void SolveBeforeConstraint::serializeTo(ASTSerializer& serializer) const {
     for (auto item : before)
         serializer.serialize(*item);
     serializer.endArray();
+}
+
+Constraint& ForeachConstraint::fromSyntax(const LoopConstraintSyntax& syntax,
+                                          const BindContext& context) {
+    auto& comp = context.getCompilation();
+
+    BindContext iterCtx = context;
+    SmallVectorSized<ForeachLoopStatement::LoopDim, 4> dims;
+    auto arrayRef = ForeachLoopStatement::buildLoopDims(*syntax.loopList, iterCtx, dims);
+    if (!arrayRef)
+        return badConstraint(comp, nullptr);
+
+    auto& body = Constraint::bind(*syntax.constraints, iterCtx);
+    auto result = comp.emplace<ForeachConstraint>(*arrayRef, dims.copy(comp), body);
+    if (body.bad())
+        return badConstraint(comp, result);
+
+    return *result;
+}
+
+void ForeachConstraint::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("arrayRef", arrayRef);
+
+    serializer.startArray("loopDims");
+    for (auto& r : loopDims) {
+        serializer.startObject();
+        serializer.write("range", r.range ? r.range->toString() : "[]");
+        if (r.loopVar)
+            serializer.write("var", *r.loopVar);
+        serializer.endObject();
+    }
+    serializer.endArray();
+
+    serializer.write("body", body);
 }
 
 } // namespace slang

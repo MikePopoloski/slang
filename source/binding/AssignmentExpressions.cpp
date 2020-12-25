@@ -880,7 +880,8 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
             // This is a super.new invocation, so find the base class's
             // constructor. This is relative to our current context, not
             // any particular assignment target.
-            classType = Lookup::getContainingClass(context.scope);
+            auto [ct, _] = Lookup::getContainingClass(context.scope);
+            classType = ct;
             if (!classType) {
                 // Parser already emitted an error for this case.
                 return badExpr(compilation, nullptr);

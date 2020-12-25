@@ -163,6 +163,9 @@ public:
     /// @return true if the given token is a valid qualifier for a class property.
     static bool isPropertyQualifier(TokenKind kind);
 
+    /// @return true if the given token is a valid qualifier for a constraint block.
+    static bool isConstraintQualifier(TokenKind kind);
+
     /// @return true if the given token is a drive strength.
     static bool isDriveStrength(TokenKind kind);
 
