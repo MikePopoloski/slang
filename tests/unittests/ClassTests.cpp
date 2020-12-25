@@ -2034,3 +2034,27 @@ endclass
     CHECK(diags[7].code == diag::InheritFromAbstractConstraint);
     CHECK(diags[8].code == diag::MismatchStaticConstraint);
 }
+
+TEST_CASE("Randomize 'with' clauses") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+	int i;
+	class A;
+      rand int j;
+    endclass
+endpackage
+
+module m;
+  int k;
+  p::A a;
+  initial begin
+    a = new;
+    k = a.randomize with (j, a) { k < 1 + k; };
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

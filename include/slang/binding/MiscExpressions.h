@@ -11,6 +11,8 @@
 
 namespace slang {
 
+class Constraint;
+
 /// Common base class for both NamedValueExpression and HierarchicalValueExpression.
 class ValueExpressionBase : public Expression {
 public:
@@ -64,11 +66,22 @@ struct ArgumentListSyntax;
 /// Represents a subroutine call.
 class CallExpression : public Expression {
 public:
+    struct IteratorCallInfo {
+        const Expression* iterExpr = nullptr;
+        const ValueSymbol* iterVar = nullptr;
+    };
+
+    struct RandomizeCallInfo {
+        const Constraint* inlineConstraints = nullptr;
+        span<string_view> constraintRestrictions;
+    };
+
     struct SystemCallInfo {
         not_null<const SystemSubroutine*> subroutine;
         not_null<const Scope*> scope;
-        const Expression* iterExpr = nullptr;
-        const ValueSymbol* iterVar = nullptr;
+        std::variant<std::monostate, IteratorCallInfo, RandomizeCallInfo> extraInfo;
+
+        std::pair<const Expression*, const ValueSymbol*> getIteratorInfo() const;
     };
 
     using Subroutine = std::variant<const SubroutineSymbol*, SystemCallInfo>;

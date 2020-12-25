@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/MiscExpressions.h"
 
+#include "slang/binding/Constraints.h"
 #include "slang/binding/SelectExpressions.h"
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
@@ -257,6 +258,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                        SourceRange range, const BindContext& context) {
     if (subroutine.index() == 1) {
+        ASSERT(!thisClass);
         const SystemCallInfo& info = std::get<1>(subroutine);
         return createSystemCall(compilation, *info.subroutine, nullptr, syntax, withClause, range,
                                 context);
@@ -268,7 +270,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     auto sub = std::get<0>(subroutine);
     ASSERT(sub->getParentScope());
     auto& subroutineParent = sub->getParentScope()->asSymbol();
-    if ((sub->flags & MethodFlags::Static) == 0 && !thisClass &&
+    if (!sub->flags.has(MethodFlags::Static) && !thisClass &&
         subroutineParent.kind == SymbolKind::ClassType) {
 
         auto [parent, inStatic] = Lookup::getContainingClass(context.scope);
@@ -281,6 +283,14 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
             context.addDiag(diag::NonStaticClassMethod, range);
             return badExpr(compilation, nullptr);
         }
+    }
+
+    // The built-in randomize method is found via normal lookup but it has special syntax rules,
+    // so translate that into a call to a system subroutine that can handle those rules.
+    if (sub->flags.has(MethodFlags::Randomize)) {
+        auto ss = compilation.getSystemSubroutine(sub->name);
+        ASSERT(ss);
+        return createSystemCall(compilation, *ss, thisClass, syntax, withClause, range, context);
     }
 
     if (withClause) {
@@ -549,12 +559,27 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
     return &Expression::bind(*withClause.args->expressions[0], iterCtx);
 }
 
+static CallExpression::RandomizeCallInfo bindRandomizeExpr(
+    const ArrayOrRandomizeMethodExpressionSyntax& withClause, const Expression*,
+    const BindContext& context) {
+
+    if (!withClause.constraints) {
+        context.addDiag(diag::MissingConstraintBlock, withClause.sourceRange());
+        return { nullptr, {} };
+    }
+
+    // TODO: other randomize features, name lookup
+    auto& constraints = Constraint::bind(*withClause.constraints, context);
+    return { &constraints, {} };
+}
+
 Expression& CallExpression::createSystemCall(
     Compilation& compilation, const SystemSubroutine& subroutine, const Expression* firstArg,
     const InvocationExpressionSyntax* syntax,
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, SourceRange range,
     const BindContext& context) {
 
+    SystemCallInfo callInfo{ &subroutine, &context.scope };
     SmallVectorSized<const Expression*, 8> buffer;
     if (firstArg)
         buffer.append(firstArg);
@@ -578,16 +603,24 @@ Expression& CallExpression::createSystemCall(
                                         iterVar);
             if (!iterExpr || iterExpr->bad())
                 return badExpr(compilation, iterExpr);
+
+            callInfo.extraInfo = IteratorCallInfo{ iterExpr, iterVar };
         }
-    }
-    else if (subroutine.withClauseMode == WithClauseMode::Randomize) {
-        // TODO: support randomize calls
     }
     else {
         if (withClause) {
-            context.addDiag(diag::WithClauseNotAllowed, withClause->with.range())
-                << subroutine.name;
-            return badExpr(compilation, nullptr);
+            if (subroutine.withClauseMode == WithClauseMode::Randomize) {
+                auto randInfo = bindRandomizeExpr(*withClause, firstArg, context);
+                if (!randInfo.inlineConstraints)
+                    return badExpr(compilation, nullptr);
+
+                callInfo.extraInfo = randInfo;
+            }
+            else {
+                context.addDiag(diag::WithClauseNotAllowed, withClause->with.range())
+                    << subroutine.name;
+                return badExpr(compilation, nullptr);
+            }
         }
 
         // Bind arguments as we would for any ordinary method.
@@ -621,7 +654,6 @@ Expression& CallExpression::createSystemCall(
         }
     }
 
-    SystemCallInfo callInfo{ &subroutine, &context.scope, iterExpr, iterVar };
     const Type& type = subroutine.checkArguments(context, buffer, range, iterExpr);
     auto expr = compilation.emplace<CallExpression>(
         callInfo, type, nullptr, buffer.copy(compilation), context.lookupLocation, range);
@@ -706,8 +738,12 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
 
     if (isSystemCall()) {
         auto& callInfo = std::get<1>(subroutine);
-        if (callInfo.iterExpr && !callInfo.iterExpr->verifyConstant(context))
+        auto iteratorInfo = std::get_if<IteratorCallInfo>(&callInfo.extraInfo);
+
+        if (iteratorInfo && iteratorInfo->iterExpr &&
+            !iteratorInfo->iterExpr->verifyConstant(context)) {
             return false;
+        }
 
         return callInfo.subroutine->verifyConstant(context, arguments(), sourceRange);
     }
@@ -777,6 +813,14 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
     }
 
     return true;
+}
+
+std::pair<const Expression*, const ValueSymbol*> CallExpression::SystemCallInfo::getIteratorInfo()
+    const {
+    auto itInfo = std::get_if<IteratorCallInfo>(&extraInfo);
+    if (!itInfo)
+        return { nullptr, nullptr };
+    return { itInfo->iterExpr, itInfo->iterVar };
 }
 
 string_view CallExpression::getSubroutineName() const {

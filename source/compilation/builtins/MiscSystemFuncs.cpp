@@ -87,10 +87,35 @@ public:
     }
 };
 
+class RandomizeFunction : public SystemSubroutine {
+public:
+    RandomizeFunction() : SystemSubroutine("randomize", SubroutineKind::Function) {
+        withClauseMode = WithClauseMode::Randomize;
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, INT32_MAX))
+            return comp.getErrorType();
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
 void registerMiscSystemFuncs(Compilation& c) {
 #define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(SFormat);
     REGISTER(ValuePlusArgs);
+    REGISTER(Randomize);
 #undef REGISTER
 }
 
