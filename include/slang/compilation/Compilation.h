@@ -455,7 +455,7 @@ private:
 
     std::unique_ptr<RootSymbol> root;
     std::unique_ptr<InstanceCache> instanceCache;
-    const SourceManager* sourceManager = nullptr;
+    SourceManager* sourceManager = nullptr;
     size_t numErrors = 0; // total number of errors inserted into the diagMap
     TimeScale defaultTimeScale;
     bool finalized = false;

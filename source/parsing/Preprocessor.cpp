@@ -16,6 +16,7 @@
 namespace slang {
 
 using LF = LexerFacts;
+std::unordered_map<string_view, Preprocessor::MacroDef> Preprocessor::macros;
 
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
                            Diagnostics& diagnostics, const Bag& options_) :
@@ -76,6 +77,10 @@ bool Preprocessor::undefine(string_view name) {
 }
 
 void Preprocessor::undefineAll() {
+    static bool once = false;
+    if (once)
+        return;
+    once = true;
     macros.clear();
     macros["__FILE__"] = MacroIntrinsic::File;
     macros["__LINE__"] = MacroIntrinsic::Line;

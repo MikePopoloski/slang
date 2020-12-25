@@ -317,7 +317,7 @@ private:
     std::deque<BranchEntry> branchStack;
 
     // map from macro name to macro definition
-    std::unordered_map<string_view, MacroDef> macros;
+    static std::unordered_map<string_view, MacroDef> macros;
 
     // list of expanded macro tokens to drain before continuing with active lexer
     SmallVectorSized<Token, 16> expandedTokens;

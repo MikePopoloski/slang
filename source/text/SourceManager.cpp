@@ -519,6 +519,7 @@ void SourceManager::computeLineOffsets(const std::vector<char>& buffer,
 }
 
 bool SourceManager::readFile(const fs::path& path, std::vector<char>& buffer) {
+printf("[%s:%d] PATH %s\n", __FUNCTION__, __LINE__, path.string().c_str());
 #if defined(_MSC_VER)
     std::error_code ec;
     uintmax_t size = fs::file_size(path, ec);
