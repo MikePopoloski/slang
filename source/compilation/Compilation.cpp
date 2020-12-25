@@ -565,8 +565,8 @@ const RootSymbol& Compilation::getRoot() {
                         const std::string file = std::string(name) + ".sv";
                         SourceBuffer buffer = sourceManager->readHeader(file, SourceLocation(), false);
                         if (buffer) {
-                            Bag options;
-                            addSyntaxTree(SyntaxTree::fromBuffer(buffer, *sourceManager, options));
+                            Bag bopt;
+                            addSyntaxTree(SyntaxTree::fromBuffer(buffer, *sourceManager, bopt));
                             more = true;
                         }
                     }
