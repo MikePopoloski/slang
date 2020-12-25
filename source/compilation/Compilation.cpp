@@ -551,29 +551,6 @@ const RootSymbol& Compilation::getRoot() {
         for (auto& name : tm)
             root->addDiag(diag::InvalidTopModule, SourceLocation::NoLocation) << name;
     }
-    bool more;
-    do {
-        more = false;
-        for (auto& [key, definition] : definitionMap) {
-            if (definition->definitionKind == DefinitionKind::Module)
-            for (auto member : definition.get()->syntax.members) {
-                if (member->kind == SyntaxKind::HierarchyInstantiation) {
-                    auto &his = member->as<HierarchyInstantiationSyntax>();
-                    string_view name = his.type.valueText();
-                    auto targetDef = getDefinition(name, definition->scope);
-                    if (!targetDef) {
-                        const std::string file = std::string(name) + ".sv";
-                        SourceBuffer buffer = sourceManager->readHeader(file, SourceLocation(), false);
-                        if (buffer) {
-                            Bag bopt;
-                            addSyntaxTree(SyntaxTree::fromBuffer(buffer, *sourceManager, bopt));
-                            more = true;
-                        }
-                    }
-                }
-            }
-        }
-    } while (more);
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
     // the order is otherwise dependent on iterating over a hash table.

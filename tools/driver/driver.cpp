@@ -471,7 +471,47 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
         else {
             Compilation compilation(options);
             if (singleUnit == true) {
-                compilation.addSyntaxTree(SyntaxTree::fromBuffers(buffers, sourceManager, options));
+                std::map<std::string, bool> moduleMap;
+                bool more = true;
+                auto addAST = [&] (std::shared_ptr<SyntaxTree> tree) -> void {
+                    const SyntaxNode& node = tree->root();
+                    if (node.kind == SyntaxKind::CompilationUnit) {
+                        for (auto unit : node.as<CompilationUnitSyntax>().members) {
+                            if (unit->kind == SyntaxKind::ModuleDeclaration) {
+                                auto mod = unit->as<ModuleDeclarationSyntax>();
+                                std::string name = std::string(mod.header->name.valueText());
+                                moduleMap[name] = true;
+                                for (auto member : mod.members) {
+                                    if (member->kind == SyntaxKind::HierarchyInstantiation) {
+                                        const std::string file = std::string(member->getFirstToken().valueText());
+                                        bool found = moduleMap[file];
+                                        if (!found)
+                                            more = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        printf("[%s:%d]NOTCOMPUNIT\n", __FUNCTION__, __LINE__);
+                        exit(-1);
+                    }
+                    compilation.addSyntaxTree(tree);
+                };
+                addAST(SyntaxTree::fromBuffers(buffers, sourceManager, options));
+                while (more) {
+                    more = false;
+                    for (auto item: moduleMap) {
+                        if (!item.second) {
+                            std::string file = item.first + ".sv";
+                            SourceBuffer buffer = sourceManager.readHeader(file, SourceLocation(), false);
+                            if (buffer) {
+                                addAST(SyntaxTree::fromBuffer(buffer, sourceManager, options));
+                                more = true;
+                            }
+                        }
+                    }
+                }
             }
             else {
                 for (const SourceBuffer& buffer : buffers)
