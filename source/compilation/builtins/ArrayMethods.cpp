@@ -153,13 +153,13 @@ public:
             ASSERT(iterVar);
             auto iterVal = context.createLocal(iterVar);
 
-            auto sortTarget = [&](auto& target) {
-                auto pred = [&](ConstantValue& a, ConstantValue& b) {
+            auto sortTarget = [&, ie = iterExpr](auto& target) {
+                auto pred = [&, ie = ie](ConstantValue& a, ConstantValue& b) {
                     *iterVal = a;
-                    ConstantValue cva = iterExpr->eval(context);
+                    ConstantValue cva = ie->eval(context);
 
                     *iterVal = b;
-                    ConstantValue cvb = iterExpr->eval(context);
+                    ConstantValue cvb = ie->eval(context);
 
                     return cva < cvb;
                 };
@@ -290,10 +290,10 @@ public:
 
         SVQueue results;
         if (arr.isMap()) {
-            auto doFind = [&](auto it, auto end) {
+            auto doFind = [&, ie = iterExpr](auto it, auto end) {
                 for (; it != end; it++) {
                     *iterVal = it->second;
-                    ConstantValue cv = iterExpr->eval(context);
+                    ConstantValue cv = ie->eval(context);
                     if (cv.isTrue()) {
                         if (isIndexed)
                             results.emplace_back(it->first);
@@ -313,10 +313,10 @@ public:
                 doFind(std::begin(cont), std::end(cont));
         }
         else {
-            auto doFind = [&](auto begin, auto end) {
+            auto doFind = [&, ie = iterExpr](auto begin, auto end) {
                 for (auto it = begin; it != end; it++) {
                     *iterVal = *it;
-                    ConstantValue cv = iterExpr->eval(context);
+                    ConstantValue cv = ie->eval(context);
                     if (cv.isTrue()) {
                         if (isIndexed) {
                             auto dist = std::distance(begin, it);
