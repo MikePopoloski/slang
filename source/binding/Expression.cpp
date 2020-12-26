@@ -802,7 +802,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         ASSERT(result.selectors.empty());
 
         SourceRange callRange = invocation ? invocation->sourceRange() : syntax.sourceRange();
-        CallExpression::SystemCallInfo callInfo{ result.systemSubroutine, &context.scope };
+        CallExpression::SystemCallInfo callInfo{ result.systemSubroutine, &context.scope, {} };
         return CallExpression::fromLookup(compilation, callInfo, nullptr, invocation, withClause,
                                           callRange, context);
     }

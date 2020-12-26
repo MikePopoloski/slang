@@ -597,7 +597,7 @@ Expression& CallExpression::createSystemCall(
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, SourceRange range,
     const BindContext& context, const Scope* randomizeScope) {
 
-    SystemCallInfo callInfo{ &subroutine, &context.scope };
+    SystemCallInfo callInfo{ &subroutine, &context.scope, {} };
     SmallVectorSized<const Expression*, 8> buffer;
     if (firstArg)
         buffer.append(firstArg);
