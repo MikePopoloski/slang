@@ -2040,17 +2040,18 @@ TEST_CASE("Randomize 'with' clauses") {
 package p;
 	int i;
 	class A;
-      rand int j;
+        rand int j;
+        function int foo; return 1; endfunction
     endclass
 endpackage
 
 module m;
-  int k;
-  p::A a;
-  initial begin
-    a = new;
-    k = a.randomize with (j, a) { k < 1 + k; };
-  end
+    int k;
+    p::A a;
+    initial begin
+        a = new;
+        k = a.randomize with (j, a) { j < foo() + k; };
+    end
 endmodule
 )");
 

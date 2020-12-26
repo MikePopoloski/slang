@@ -73,7 +73,7 @@ public:
 
     struct RandomizeCallInfo {
         const Constraint* inlineConstraints = nullptr;
-        span<string_view> constraintRestrictions;
+        span<const string_view> constraintRestrictions;
     };
 
     struct SystemCallInfo {
@@ -165,7 +165,8 @@ private:
                                         const Expression* firstArg,
                                         const InvocationExpressionSyntax* syntax,
                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                        SourceRange range, const BindContext& context);
+                                        SourceRange range, const BindContext& context,
+                                        const Scope* randomizeScope = nullptr);
 
     static bool checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                               SourceRange range);

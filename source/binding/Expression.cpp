@@ -770,10 +770,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     // its name here.
     if (context.firstIterator) {
         LookupResult result;
-        if (Lookup::findIterator(context.scope, *context.firstIterator, syntax, result)) {
-            return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
-                                    withClause, context);
-        }
+        if (Lookup::findIterator(context.scope, *context.firstIterator, syntax, result))
+            return bindLookupResult(compilation, result, syntax, invocation, withClause, context);
     }
 
     bitmask<LookupFlags> flags = LookupFlags::None;
@@ -781,6 +779,19 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         flags |= LookupFlags::AllowDeclaredAfter;
     if ((context.flags & BindFlags::Constant) || (context.flags & BindFlags::NoHierarchicalNames))
         flags |= LookupFlags::Constant;
+
+    if (context.classRandomizeScope) {
+        ASSERT(context.classRandomizeScope->classType);
+
+        // Inside a class-scoped randomize call, first do a lookup in the class scope.
+        // If it's not found, we proceed to do a normal lookup.
+        LookupResult result;
+        if (Lookup::withinClassRandomize(*context.classRandomizeScope->classType,
+                                         context.classRandomizeScope->nameRestrictions, syntax,
+                                         flags, result)) {
+            return bindLookupResult(compilation, result, syntax, invocation, withClause, context);
+        }
+    }
 
     LookupResult result;
     Lookup::name(context.scope, syntax, context.lookupLocation, flags, result);
@@ -796,6 +807,14 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                                           callRange, context);
     }
 
+    return bindLookupResult(compilation, result, syntax, invocation, withClause, context);
+}
+
+Expression& Expression::bindLookupResult(Compilation& compilation, const LookupResult& result,
+                                         const NameSyntax& syntax,
+                                         const InvocationExpressionSyntax* invocation,
+                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
+                                         const BindContext& context) {
     const Symbol* symbol = result.found;
     if (!symbol)
         return badExpr(compilation, nullptr);
@@ -820,18 +839,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         }
     }
 
-    result.found = symbol;
-    return bindLookupResult(compilation, result, syntax.sourceRange(), invocation, withClause,
-                            context);
-}
-
-Expression& Expression::bindLookupResult(Compilation& compilation, const LookupResult& result,
-                                         SourceRange sourceRange,
-                                         const InvocationExpressionSyntax* invocation,
-                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
-                                         const BindContext& context) {
-    const Symbol* symbol = result.found;
     Expression* expr;
+    SourceRange sourceRange = syntax.sourceRange();
     if (symbol->kind == SymbolKind::Subroutine) {
         SourceRange callRange = invocation ? invocation->sourceRange() : sourceRange;
         expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(), nullptr,

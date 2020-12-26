@@ -273,15 +273,19 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     if (!sub->flags.has(MethodFlags::Static) && !thisClass &&
         subroutineParent.kind == SymbolKind::ClassType) {
 
-        auto [parent, inStatic] = Lookup::getContainingClass(context.scope);
-        if (parent && !Lookup::isAccessibleFrom(*sub, *parent)) {
-            auto& diag = context.addDiag(diag::NestedNonStaticClassMethod, range);
-            diag << parent->name;
-            return badExpr(compilation, nullptr);
-        }
-        else if (!parent || inStatic || (context.flags & BindFlags::StaticInitializer) != 0) {
-            context.addDiag(diag::NonStaticClassMethod, range);
-            return badExpr(compilation, nullptr);
+        if (!context.classRandomizeScope ||
+            context.classRandomizeScope->classType != sub->getParentScope()) {
+
+            auto [parent, inStatic] = Lookup::getContainingClass(context.scope);
+            if (parent && !Lookup::isAccessibleFrom(*sub, *parent)) {
+                auto& diag = context.addDiag(diag::NestedNonStaticClassMethod, range);
+                diag << parent->name;
+                return badExpr(compilation, nullptr);
+            }
+            else if (!parent || inStatic || (context.flags & BindFlags::StaticInitializer) != 0) {
+                context.addDiag(diag::NonStaticClassMethod, range);
+                return badExpr(compilation, nullptr);
+            }
         }
     }
 
@@ -290,7 +294,8 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     if (sub->flags.has(MethodFlags::Randomize)) {
         auto ss = compilation.getSystemSubroutine(sub->name);
         ASSERT(ss);
-        return createSystemCall(compilation, *ss, thisClass, syntax, withClause, range, context);
+        return createSystemCall(compilation, *ss, thisClass, syntax, withClause, range, context,
+                                sub->getParentScope());
     }
 
     if (withClause) {
@@ -560,16 +565,29 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
 }
 
 static CallExpression::RandomizeCallInfo bindRandomizeExpr(
-    const ArrayOrRandomizeMethodExpressionSyntax& withClause, const Expression*,
-    const BindContext& context) {
+    const ArrayOrRandomizeMethodExpressionSyntax& withClause, const Expression* thisClass,
+    const Scope* randomizeScope, const BindContext& context) {
 
     if (!withClause.constraints) {
         context.addDiag(diag::MissingConstraintBlock, withClause.sourceRange());
         return { nullptr, {} };
     }
 
-    // TODO: other randomize features, name lookup
-    auto& constraints = Constraint::bind(*withClause.constraints, context);
+    BindContext constraintCtx = context;
+    BindContext::ClassRandomizeScope crs;
+
+    // If this is a class-scoped randomize call, setup the scope properly
+    // so that class members can be found in the constraint block.
+    if (thisClass) {
+        crs.classType = &thisClass->type->getCanonicalType().as<ClassType>();
+        constraintCtx.classRandomizeScope = &crs;
+    }
+    else if (randomizeScope && randomizeScope->asSymbol().kind == SymbolKind::ClassType) {
+        crs.classType = randomizeScope;
+        constraintCtx.classRandomizeScope = &crs;
+    }
+
+    auto& constraints = Constraint::bind(*withClause.constraints, constraintCtx);
     return { &constraints, {} };
 }
 
@@ -577,7 +595,7 @@ Expression& CallExpression::createSystemCall(
     Compilation& compilation, const SystemSubroutine& subroutine, const Expression* firstArg,
     const InvocationExpressionSyntax* syntax,
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, SourceRange range,
-    const BindContext& context) {
+    const BindContext& context, const Scope* randomizeScope) {
 
     SystemCallInfo callInfo{ &subroutine, &context.scope };
     SmallVectorSized<const Expression*, 8> buffer;
@@ -610,7 +628,7 @@ Expression& CallExpression::createSystemCall(
     else {
         if (withClause) {
             if (subroutine.withClauseMode == WithClauseMode::Randomize) {
-                auto randInfo = bindRandomizeExpr(*withClause, firstArg, context);
+                auto randInfo = bindRandomizeExpr(*withClause, firstArg, randomizeScope, context);
                 if (!randInfo.inlineConstraints)
                     return badExpr(compilation, nullptr);
 
