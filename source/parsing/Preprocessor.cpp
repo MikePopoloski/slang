@@ -16,7 +16,6 @@
 namespace slang {
 
 using LF = LexerFacts;
-std::unordered_map<string_view, Preprocessor::MacroDef> Preprocessor::macros;
 
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
                            Diagnostics& diagnostics, const Bag& options_) :

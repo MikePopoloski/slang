@@ -504,7 +504,9 @@ int driverMain(int argc, TArgs argv, bool suppressColors) try {
                     for (auto item: moduleMap) {
                         if (!item.second) {
                             std::string file = item.first + ".sv";
+                            moduleMap[item.first]  = true;
                             SourceBuffer buffer = sourceManager.readHeader(file, SourceLocation(), false);
+printf("[%s:%d] add %s buffer %d\n", __FUNCTION__, __LINE__, file.c_str(), buffer ? 1: 0);
                             if (buffer) {
                                 addAST(SyntaxTree::fromBuffer(buffer, sourceManager, options));
                                 more = true;
