@@ -518,6 +518,7 @@ error IfaceExtendTypeParam "cannot extend or implement a type parameter"
 error IfaceExtendIncomplete "cannot extend or implement an incomplete forward typedef"
 error ScopeIncompleteTypedef "cannot resolve scoped class member via incomplete forward typedef"
 error InvalidModportAccess "cannot access '{}' via modport '{}.{}'"
+error LocalNotAllowed "'local' qualifier not allowed here"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 
 subsystem SysFuncs

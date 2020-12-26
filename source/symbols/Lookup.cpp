@@ -1342,6 +1342,24 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
 
     bool inConstantEval = (flags & LookupFlags::Constant) != 0;
 
+    if (leftMost->kind == SyntaxKind::LocalScope) {
+        if (!context.classRandomizeScope) {
+            result.addDiag(scope, diag::LocalNotAllowed, first.range());
+            return;
+        }
+
+        // The local:: is allowed here. Pop it and look up the rest of
+        // the name as if the local hadn't been specified -- the local
+        // lookup portion has already been ensured because we exited
+        // early from withinClassRandomize.
+        leftMost = nameParts.back().name;
+        first = *leftMost;
+        nameParts.pop();
+        name = first.text();
+        if (colonParts)
+            colonParts--;
+    }
+
     switch (leftMost->kind) {
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
@@ -1378,7 +1396,8 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
             findThisOrSuper(scope, *leftMost, first, nameParts, colonParts, result);
             break;
         case SyntaxKind::LocalScope:
-            result.addDiag(scope, diag::NotYetSupported, syntax.sourceRange());
+            // This is only reachable in invalid code. An error has already been
+            // reported so early out.
             return;
         default:
             THROW_UNREACHABLE;

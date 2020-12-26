@@ -2041,16 +2041,18 @@ package p;
 	int i;
 	class A;
         rand int j;
+        int l[5];
         function int foo; return 1; endfunction
     endclass
 endpackage
 
 module m;
-    int k;
+    int k, l;
     p::A a;
     initial begin
         a = new;
         k = a.randomize with (j, a) { j < foo() + k; };
+        k = a.randomize with { j + local::l < 10; };
     end
 endmodule
 )");
