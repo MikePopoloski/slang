@@ -781,7 +781,8 @@ private:
         }
 
         LookupResult result;
-        Lookup::name(scope, expr->as<NameSyntax>(), lookupLocation, LookupFlags::None, result);
+        BindContext context(scope, lookupLocation);
+        Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
         if (result.hasError())
             scope.getCompilation().addDiagnostics(result.getDiagnostics());
 
@@ -1141,8 +1142,8 @@ void InterfacePortSymbol::findInterfaceInstanceKeys(
 
         if (NameSyntax::isKind(expr->kind)) {
             LookupResult result;
-            Lookup::name(scope, expr->as<NameSyntax>(), LookupLocation::max, LookupFlags::None,
-                         result);
+            BindContext context(scope, LookupLocation::max);
+            Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
             unwrap(result.found);
         }
     };

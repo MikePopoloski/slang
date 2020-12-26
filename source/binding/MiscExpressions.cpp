@@ -897,9 +897,7 @@ Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation
                                                         const NameSyntax& syntax,
                                                         const BindContext& context) {
     LookupResult result;
-    Lookup::name(context.scope, syntax, context.lookupLocation, LookupFlags::AllowDeclaredAfter,
-                 result);
-
+    Lookup::name(syntax, context, LookupFlags::AllowDeclaredAfter, result);
     if (result.hasError())
         compilation.addDiagnostics(result.getDiagnostics());
 

@@ -6,11 +6,12 @@
 //------------------------------------------------------------------------------
 #include "slang/types/NetType.h"
 
+#include "slang/binding/BindContext.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/Scope.h"
-#include "slang/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/Type.h"
 
 namespace slang {
 
@@ -94,7 +95,8 @@ void NetType::resolve() const {
     if (declSyntax.type->kind == SyntaxKind::NamedType) {
         LookupResult result;
         const NameSyntax& nameSyntax = *declSyntax.type->as<NamedTypeSyntax>().name;
-        Lookup::name(*scope, nameSyntax, LookupLocation::before(*this), LookupFlags::Type, result);
+        BindContext context(*scope, LookupLocation::before(*this));
+        Lookup::name(nameSyntax, context, LookupFlags::Type, result);
 
         if (result.found && result.found->kind == SymbolKind::NetType) {
             if (result.hasError())

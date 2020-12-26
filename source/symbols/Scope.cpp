@@ -405,7 +405,8 @@ const Symbol* Scope::find(string_view name) const {
 const Symbol* Scope::lookupName(string_view name, LookupLocation location,
                                 bitmask<LookupFlags> flags) const {
     LookupResult result;
-    Lookup::name(*this, compilation.parseName(name), location, flags, result);
+    BindContext context(*this, location);
+    Lookup::name(compilation.parseName(name), context, flags, result);
     ASSERT(result.selectors.empty());
     return result.found;
 }

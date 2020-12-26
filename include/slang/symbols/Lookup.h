@@ -187,7 +187,7 @@ class Lookup {
 public:
     /// Performs a full fledged name lookup starting in the current scope, following all
     /// SystemVerilog rules for qualified or unqualified name resolution.
-    static void name(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
+    static void name(const NameSyntax& syntax, const BindContext& context,
                      bitmask<LookupFlags> flags, LookupResult& result);
 
     /// Performs an unqualified lookup in this scope, then recursively up the parent
@@ -270,9 +270,8 @@ private:
                                 optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                                 SymbolIndex outOfBlockIndex, LookupResult& result);
 
-    static void qualified(const Scope& scope, const ScopedNameSyntax& syntax,
-                          LookupLocation location, bitmask<LookupFlags> flags,
-                          LookupResult& result);
+    static void qualified(const ScopedNameSyntax& syntax, const BindContext& context,
+                          bitmask<LookupFlags> flags, LookupResult& result);
 
     static void reportUndeclared(const Scope& scope, string_view name, SourceRange range,
                                  bitmask<LookupFlags> flags, bool isHierarchical,

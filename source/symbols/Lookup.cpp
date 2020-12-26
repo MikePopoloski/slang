@@ -758,8 +758,9 @@ void findThisOrSuper(const Scope& scope, const NameSyntax& syntax, NameComponent
 
 } // namespace
 
-void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
-                  bitmask<LookupFlags> flags, LookupResult& result) {
+void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<LookupFlags> flags,
+                  LookupResult& result) {
+    auto& scope = context.scope;
     NameComponents name;
     switch (syntax.kind) {
         case SyntaxKind::IdentifierName:
@@ -769,7 +770,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
             break;
         case SyntaxKind::ScopedName:
             // Handle qualified names separately.
-            qualified(scope, syntax.as<ScopedNameSyntax>(), location, flags, result);
+            qualified(syntax.as<ScopedNameSyntax>(), context, flags, result);
             unwrapResult(scope, syntax.sourceRange(), result);
             return;
         case SyntaxKind::ThisHandle:
@@ -797,7 +798,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
         return;
 
     // Perform the lookup.
-    unqualifiedImpl(scope, name.text(), location, name.range(), flags, {}, result);
+    unqualifiedImpl(scope, name.text(), context.lookupLocation, name.range(), flags, {}, result);
     if (!result.found && !result.hasError())
         reportUndeclared(scope, name.text(), name.range(), flags, false, result);
 
@@ -811,8 +812,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
         }
         else {
             auto& classDef = result.found->as<GenericClassDefSymbol>();
-            result.found =
-                &classDef.getSpecialization(BindContext(scope, location), *name.paramAssignments);
+            result.found = &classDef.getSpecialization(context, *name.paramAssignments);
         }
     }
 
@@ -821,8 +821,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
     if (name.selectors) {
         // If this is a scope, the selectors should be an index into it.
         if (result.found && result.found->isScope() && !result.found->isType()) {
-            result.found =
-                selectChild(*result.found, *name.selectors, BindContext(scope, location), result);
+            result.found = selectChild(*result.found, *name.selectors, context, result);
         }
         else {
             result.selectors.appendRange(*name.selectors);
@@ -934,7 +933,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
 const ClassType* Lookup::findClass(const NameSyntax& className, const BindContext& context,
                                    optional<DiagCode> requireInterfaceClass) {
     LookupResult result;
-    Lookup::name(context.scope, className, context.lookupLocation, LookupFlags::Type, result);
+    Lookup::name(className, context, LookupFlags::Type, result);
 
     result.reportErrors(context);
     if (!result.found)
@@ -1323,7 +1322,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                            outOfBlockIndex, result);
 }
 
-void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, LookupLocation location,
+void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& context,
                        bitmask<LookupFlags> flags, LookupResult& result) {
     // Split the name into easier to manage chunks. The parser will always produce a
     // left-recursive name tree, so that's all we'll bother to handle.
@@ -1336,11 +1335,11 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     if (name.empty())
         return;
 
-    auto& compilation = scope.getCompilation();
+    auto& scope = context.scope;
+    auto& compilation = context.getCompilation();
     if (compilation.isFinalizing())
         flags |= LookupFlags::Constant;
 
-    BindContext context(scope, location);
     bool inConstantEval = (flags & LookupFlags::Constant) != 0;
 
     switch (leftMost->kind) {
@@ -1348,11 +1347,11 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
         case SyntaxKind::IdentifierSelectName:
         case SyntaxKind::ClassName:
             // Start by trying to find the first name segment using normal unqualified lookup
-            unqualifiedImpl(scope, name, location, first.range(), flags, {}, result);
+            unqualifiedImpl(scope, name, context.lookupLocation, first.range(), flags, {}, result);
             break;
         case SyntaxKind::UnitScope:
             // Ignore hierarchical lookups that occur inside uninstantiated modules.
-            if (isUninstantiated(scope))
+            if (isUninstantiated(context.scope))
                 return;
 
             result.found = getCompilationUnit(scope.asSymbol());

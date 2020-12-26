@@ -794,7 +794,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     }
 
     LookupResult result;
-    Lookup::name(context.scope, syntax, context.lookupLocation, flags, result);
+    Lookup::name(syntax, context, flags, result);
     result.reportErrors(context);
 
     if (result.systemSubroutine) {
@@ -937,8 +937,8 @@ void Expression::findPotentiallyImplicitNets(const ExpressionSyntax& expr,
                 return;
 
             LookupResult result;
-            Lookup::name(context.scope, nameSyntax, LookupLocation::max,
-                         LookupFlags::NoUndeclaredError, result);
+            BindContext ctx(context.scope, LookupLocation::max);
+            Lookup::name(nameSyntax, ctx, LookupFlags::NoUndeclaredError, result);
 
             if (!result.found && !result.hasError())
                 results.append(nameSyntax.as<IdentifierNameSyntax>().identifier);
