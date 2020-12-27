@@ -791,6 +791,10 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                                          flags, result)) {
             return bindLookupResult(compilation, result, syntax, invocation, withClause, context);
         }
+        else if (result.hasError()) {
+            result.reportErrors(context);
+            return badExpr(compilation, nullptr);
+        }
     }
 
     LookupResult result;

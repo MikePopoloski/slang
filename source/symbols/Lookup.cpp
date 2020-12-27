@@ -719,6 +719,12 @@ const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult
             return sub.thisVar;
     }
 
+    if (parent->kind == SymbolKind::ConstraintBlock) {
+        auto thisVar = parent->as<ConstraintBlockSymbol>().thisVar;
+        if (thisVar)
+            return thisVar;
+    }
+
     result.addDiag(scope, diag::InvalidThisHandle, range);
     return nullptr;
 }
@@ -737,23 +743,6 @@ const Symbol* findSuperHandle(const Scope& scope, SourceRange range, LookupResul
     }
 
     return base;
-}
-
-void findThisOrSuper(const Scope& scope, const NameSyntax& syntax, NameComponents& name,
-                     SmallVector<NamePlusLoc>& nameParts, int& colonParts, LookupResult& result) {
-    if (syntax.kind == SyntaxKind::ThisHandle) {
-        result.found = findThisHandle(scope, name.range(), result);
-        if (!result.found || nameParts.back().name->kind != SyntaxKind::SuperHandle)
-            return;
-
-        // Handle "this.super.whatever" the same as if the user had just
-        // written "super.whatever".
-        name = *nameParts.back().name;
-        nameParts.pop();
-    }
-
-    result.found = findSuperHandle(scope, name.range(), result);
-    colonParts = 1; // pretend we used colon access to resolve class scoped name
 }
 
 } // namespace
@@ -1102,21 +1091,43 @@ bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> na
     int colonParts = 0;
     SmallVectorSized<NamePlusLoc, 8> nameParts;
     const NameSyntax* first = &syntax;
-    if (syntax.kind == SyntaxKind::ScopedName) {
+    if (syntax.kind == SyntaxKind::ScopedName)
         first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
-        if (colonParts)
-            return false;
-    }
 
     NameComponents name = *first;
     switch (first->kind) {
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
         case SyntaxKind::ClassName:
+            if (name.text().empty())
+                return false;
+
+            // If the nameRestrictions list is not empty, we have to verify that the
+            // first element is in the list. Otherwise, an empty list indicates that
+            // the lookup is unrestricted.
+            if (!nameRestrictions.empty()) {
+                if (std::find(nameRestrictions.begin(), nameRestrictions.end(), name.text()) ==
+                    nameRestrictions.end()) {
+                    return false;
+                }
+            }
+
+            result.found = scope.find(name.text());
             break;
         case SyntaxKind::ThisHandle:
+            result.found = &scope.asSymbol();
+            if (nameParts.back().name->kind == SyntaxKind::SuperHandle) {
+                // Handle "this.super.whatever" the same as if the user had just
+                // written "super.whatever".
+                name = *nameParts.back().name;
+                nameParts.pop();
+                result.found = findSuperHandle(scope, name.range(), result);
+                colonParts = 1;
+            }
+            break;
         case SyntaxKind::SuperHandle:
-            findThisOrSuper(scope, *first, name, nameParts, colonParts, result);
+            result.found = findSuperHandle(scope, name.range(), result);
+            colonParts = 1; // pretend we used colon access to resolve class scoped name
             break;
         default:
             // Return not found; the caller should do a normal lookup
@@ -1124,20 +1135,6 @@ bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> na
             return false;
     }
 
-    if (name.text().empty())
-        return false;
-
-    // If the nameRestrictions list is not empty, we have to verify that the
-    // first element is in the list. Otherwise, an empty list indicates that
-    // the lookup is unrestricted.
-    if (!nameRestrictions.empty()) {
-        if (std::find(nameRestrictions.begin(), nameRestrictions.end(), name.text()) ==
-            nameRestrictions.end()) {
-            return false;
-        }
-    }
-
-    result.found = scope.find(name.text());
     if (!result.found)
         return false;
 
@@ -1395,8 +1392,19 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& contex
             lookupDownward(nameParts, first, context, result, flags);
             return;
         case SyntaxKind::ThisHandle:
+            result.found = findThisHandle(scope, first.range(), result);
+            if (result.found && nameParts.back().name->kind == SyntaxKind::SuperHandle) {
+                // Handle "this.super.whatever" the same as if the user had just
+                // written "super.whatever".
+                first = *nameParts.back().name;
+                nameParts.pop();
+                result.found = findSuperHandle(scope, first.range(), result);
+                colonParts = 1;
+            }
+            break;
         case SyntaxKind::SuperHandle:
-            findThisOrSuper(scope, *leftMost, first, nameParts, colonParts, result);
+            result.found = findSuperHandle(scope, first.range(), result);
+            colonParts = 1; // pretend we used colon access to resolve class scoped name
             break;
         case SyntaxKind::LocalScope:
             // This is only reachable in invalid code. An error has already been

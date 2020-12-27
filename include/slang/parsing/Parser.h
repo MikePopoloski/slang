@@ -51,16 +51,19 @@ enum class NameOptions {
     None = 0,
 
     /// Parsing the name of a foreach variable.
-    ForeachName = 1,
+    ForeachName = 1 << 0,
 
     /// This is the first element of a potentially dotted name path.
-    IsFirst = 2,
+    IsFirst = 1 << 1,
 
     /// The previous element in the name path was the 'this' keyword.
-    PreviousWasThis = 4,
+    PreviousWasThis = 1 << 2,
+
+    /// The previous element in the name path was the 'local' keyword.
+    PreviousWasLocal = 1 << 3,
 
     /// We are expecting an expression while parsing this name.
-    ExpectingExpression = 8
+    ExpectingExpression = 1 << 4
 };
 BITMASK(NameOptions, ExpectingExpression);
 
