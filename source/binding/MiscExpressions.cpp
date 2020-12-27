@@ -566,26 +566,12 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
 }
 
 static CallExpression::RandomizeCallInfo bindRandomizeExpr(
-    const ArrayOrRandomizeMethodExpressionSyntax& withClause, const Expression* thisClass,
-    const Scope* randomizeScope, const BindContext& context) {
+    const ArrayOrRandomizeMethodExpressionSyntax& withClause, BindContext& context,
+    BindContext::ClassRandomizeScope& randomizeCtx) {
 
     if (!withClause.constraints) {
         context.addDiag(diag::MissingConstraintBlock, withClause.sourceRange());
         return { nullptr, {} };
-    }
-
-    BindContext constraintCtx = context;
-    BindContext::ClassRandomizeScope crs;
-
-    // If this is a class-scoped randomize call, setup the scope properly
-    // so that class members can be found in the constraint block.
-    if (thisClass) {
-        crs.classType = &thisClass->type->getCanonicalType().as<ClassType>();
-        constraintCtx.classRandomizeScope = &crs;
-    }
-    else if (randomizeScope && randomizeScope->asSymbol().kind == SymbolKind::ClassType) {
-        crs.classType = randomizeScope;
-        constraintCtx.classRandomizeScope = &crs;
     }
 
     if (withClause.args) {
@@ -599,11 +585,11 @@ static CallExpression::RandomizeCallInfo bindRandomizeExpr(
             names.append(expr->as<IdentifierNameSyntax>().identifier.valueText());
         }
 
-        crs.nameRestrictions = names.copy(context.getCompilation());
+        randomizeCtx.nameRestrictions = names.copy(context.getCompilation());
     }
 
-    auto& constraints = Constraint::bind(*withClause.constraints, constraintCtx);
-    return { &constraints, crs.nameRestrictions };
+    auto& constraints = Constraint::bind(*withClause.constraints, context);
+    return { &constraints, randomizeCtx.nameRestrictions };
 }
 
 Expression& CallExpression::createSystemCall(
@@ -617,7 +603,7 @@ Expression& CallExpression::createSystemCall(
     if (firstArg)
         buffer.append(firstArg);
 
-    const Expression* iterExpr = nullptr;
+    const Expression* iterOrThis = nullptr;
     const ValueSymbol* iterVar = nullptr;
     using WithClauseMode = SystemSubroutine::WithClauseMode;
     if (subroutine.withClauseMode == WithClauseMode::Iterator) {
@@ -632,25 +618,47 @@ Expression& CallExpression::createSystemCall(
             }
         }
         else if (firstArg) {
-            iterExpr = bindIteratorExpr(compilation, syntax, *withClause, *firstArg->type, context,
-                                        iterVar);
-            if (!iterExpr || iterExpr->bad())
-                return badExpr(compilation, iterExpr);
+            iterOrThis = bindIteratorExpr(compilation, syntax, *withClause, *firstArg->type,
+                                          context, iterVar);
+            if (!iterOrThis || iterOrThis->bad())
+                return badExpr(compilation, iterOrThis);
 
-            callInfo.extraInfo = IteratorCallInfo{ iterExpr, iterVar };
+            callInfo.extraInfo = IteratorCallInfo{ iterOrThis, iterVar };
         }
     }
     else {
+        BindContext::ClassRandomizeScope randomizeCtx;
+        BindContext argContext = context;
+
+        if (subroutine.withClauseMode == WithClauseMode::Randomize) {
+            // If this is a class-scoped randomize call, setup the scope properly
+            // so that class members can be found in the constraint block.
+            if (firstArg) {
+                randomizeCtx.classType = &firstArg->type->getCanonicalType().as<ClassType>();
+                argContext.classRandomizeScope = &randomizeCtx;
+            }
+            else if (randomizeScope && randomizeScope->asSymbol().kind == SymbolKind::ClassType) {
+                randomizeCtx.classType = randomizeScope;
+                argContext.classRandomizeScope = &randomizeCtx;
+            }
+            iterOrThis = firstArg;
+        }
+
         if (withClause) {
             if (subroutine.withClauseMode == WithClauseMode::Randomize) {
-                auto randInfo = bindRandomizeExpr(*withClause, firstArg, randomizeScope, context);
+                auto randInfo = bindRandomizeExpr(*withClause, argContext, randomizeCtx);
                 if (!randInfo.inlineConstraints)
                     return badExpr(compilation, nullptr);
 
                 callInfo.extraInfo = randInfo;
+
+                // These need to be cleared out because we will reuse the bind context
+                // for looking up argument names below and they aren't subject to any
+                // restriction list.
+                randomizeCtx.nameRestrictions = {};
             }
             else {
-                context.addDiag(diag::WithClauseNotAllowed, withClause->with.range())
+                argContext.addDiag(diag::WithClauseNotAllowed, withClause->with.range())
                     << subroutine.name;
                 return badExpr(compilation, nullptr);
             }
@@ -664,11 +672,12 @@ Expression& CallExpression::createSystemCall(
                 switch (actualArgs[i]->kind) {
                     case SyntaxKind::OrderedArgument: {
                         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-                        buffer.append(&subroutine.bindArgument(index, context, *arg.expr, buffer));
+                        buffer.append(
+                            &subroutine.bindArgument(index, argContext, *arg.expr, buffer));
                         break;
                     }
                     case SyntaxKind::NamedArgument:
-                        context.addDiag(diag::NamedArgNotAllowed, actualArgs[i]->sourceRange());
+                        argContext.addDiag(diag::NamedArgNotAllowed, actualArgs[i]->sourceRange());
                         return badExpr(compilation, nullptr);
                     case SyntaxKind::EmptyArgument:
                         if (subroutine.allowEmptyArgument(index)) {
@@ -676,7 +685,8 @@ Expression& CallExpression::createSystemCall(
                                 compilation.getVoidType(), actualArgs[i]->sourceRange()));
                         }
                         else {
-                            context.addDiag(diag::EmptyArgNotAllowed, actualArgs[i]->sourceRange());
+                            argContext.addDiag(diag::EmptyArgNotAllowed,
+                                               actualArgs[i]->sourceRange());
                             return badExpr(compilation, nullptr);
                         }
                         break;
@@ -687,7 +697,7 @@ Expression& CallExpression::createSystemCall(
         }
     }
 
-    const Type& type = subroutine.checkArguments(context, buffer, range, iterExpr);
+    const Type& type = subroutine.checkArguments(context, buffer, range, iterOrThis);
     auto expr = compilation.emplace<CallExpression>(
         callInfo, type, nullptr, buffer.copy(compilation), context.lookupLocation, range);
 

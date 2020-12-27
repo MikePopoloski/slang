@@ -36,7 +36,7 @@ public:
                                            const ExpressionSyntax& syntax,
                                            const Args& previousArgs) const;
     virtual const Type& checkArguments(const BindContext& context, const Args& args,
-                                       SourceRange range, const Expression* iterExpr) const = 0;
+                                       SourceRange range, const Expression* iterOrThis) const = 0;
     virtual ConstantValue eval(EvalContext& context, const Args& args,
                                const CallExpression::SystemCallInfo& callInfo) const = 0;
     virtual bool verifyConstant(EvalContext& context, const Args& args,

@@ -8,6 +8,7 @@
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/symbols/ClassSymbols.h"
 
 namespace slang::Builtins {
 
@@ -94,10 +95,36 @@ public:
     }
 
     const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
-                               const Expression*) const final {
+                               const Expression* thisExpr) const final {
+        bool isMethod = thisExpr != nullptr;
         auto& comp = context.getCompilation();
-        if (!checkArgCount(context, false, args, range, 0, INT32_MAX))
+        if (!checkArgCount(context, isMethod, args, range, 0, INT32_MAX))
             return comp.getErrorType();
+
+        // This can only be called via a special lookup on a class handle or as a local
+        // class member, so we know either the this expression gives us the class type
+        // or we can look it up from our current scope.
+        const Scope* ct;
+        if (thisExpr)
+            ct = &thisExpr->type->getCanonicalType().as<ClassType>();
+        else
+            ct = Lookup::getContainingClass(context.scope).first;
+
+        if (!ct)
+            return comp.getErrorType();
+
+        for (size_t i = isMethod ? 1 : 0; i < args.size(); i++) {
+            if (args[i]->kind != ExpressionKind::NamedValue) {
+                context.addDiag(diag::ExpectedClassPropertyName, args[i]->sourceRange);
+                return comp.getErrorType();
+            }
+
+            auto sym = args[i]->getSymbolReference();
+            if (!sym || sym->kind != SymbolKind::ClassProperty || sym->getParentScope() != ct) {
+                context.addDiag(diag::ExpectedClassPropertyName, args[i]->sourceRange);
+                return comp.getErrorType();
+            }
+        }
 
         return comp.getIntType();
     }

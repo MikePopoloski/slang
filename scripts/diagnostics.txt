@@ -546,6 +546,7 @@ error AssociativeWildcardNotAllowed "'{}' cannot be called with an associative a
 error ExpectedModuleName "expected module name"
 error ExpectedModOrVarName "expected module or variable name"
 error ExpectedScopeOrAssert "expected scope or assertion name"
+error ExpectedClassPropertyName "expected class property name"
 error CastArgSingular "argument to $cast cannot be of aggregate type (type is {})"
 error ArrayLocatorWithClause "'{}' requires 'with' expression for searching"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"

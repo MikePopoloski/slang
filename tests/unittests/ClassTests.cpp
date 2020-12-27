@@ -2063,13 +2063,21 @@ module m;
     end
 endmodule
 
+int baz;
+
 class B;
     p::A a;
     int k;
     function void foo;
         k = a.randomize with { k + this.l < $bits(super.IntT) + $bits(this.super.IntT); };
         k = a.randomize with { k + local::this.l < 10; };
+        k = a.randomize with (a.l, 1+k) { 1; };
         k = local::k; // error
+        k = a.randomize (l, j);
+        k = a.randomize (l, j) with (l) { l[0] > 1; };
+        k = randomize (k);
+        k = randomize (baz);
+        k = randomize (k[0]);
     endfunction
 endclass
 )");
@@ -2078,7 +2086,11 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::UnknownMember);
-    CHECK(diags[1].code == diag::LocalNotAllowed);
+    CHECK(diags[1].code == diag::ExpectedIdentifier);
+    CHECK(diags[2].code == diag::ExpectedIdentifier);
+    CHECK(diags[3].code == diag::LocalNotAllowed);
+    CHECK(diags[4].code == diag::ExpectedClassPropertyName);
+    CHECK(diags[5].code == diag::ExpectedClassPropertyName);
 }
