@@ -2051,8 +2051,9 @@ module m;
     p::A a;
     initial begin
         a = new;
-        k = a.randomize with (j, a) { j < foo() + k; };
+        k = a.randomize with (j, a, foo) { j < foo() + k; };
         k = a.randomize with { j + local::l < 10; };
+        k = a.randomize with (j) { j + l < 10; };
     end
 endmodule
 )");

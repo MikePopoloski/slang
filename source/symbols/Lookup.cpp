@@ -1131,7 +1131,10 @@ bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> na
     // first element is in the list. Otherwise, an empty list indicates that
     // the lookup is unrestricted.
     if (!nameRestrictions.empty()) {
-        // TODO: implement
+        if (std::find(nameRestrictions.begin(), nameRestrictions.end(), name.text()) ==
+            nameRestrictions.end()) {
+            return false;
+        }
     }
 
     result.found = scope.find(name.text());
