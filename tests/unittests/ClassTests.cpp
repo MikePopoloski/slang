@@ -2078,6 +2078,7 @@ class B;
         k = randomize (k);
         k = randomize (baz);
         k = randomize (k[0]);
+        k = randomize (null);
     endfunction
 endclass
 )");

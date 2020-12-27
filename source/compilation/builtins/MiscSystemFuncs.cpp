@@ -101,6 +101,15 @@ public:
         if (!checkArgCount(context, isMethod, args, range, 0, INT32_MAX))
             return comp.getErrorType();
 
+        Args methodArgs = args;
+        if (isMethod)
+            methodArgs = methodArgs.subspan(1);
+
+        // Special case: a single 'null' argument can be passed to indicate
+        // that no variables should be randomized.
+        if (methodArgs.size() == 1 && methodArgs[0]->type->isNull())
+            return comp.getIntType();
+
         // This can only be called via a special lookup on a class handle or as a local
         // class member, so we know either the this expression gives us the class type
         // or we can look it up from our current scope.
@@ -113,15 +122,15 @@ public:
         if (!ct)
             return comp.getErrorType();
 
-        for (size_t i = isMethod ? 1 : 0; i < args.size(); i++) {
-            if (args[i]->kind != ExpressionKind::NamedValue) {
-                context.addDiag(diag::ExpectedClassPropertyName, args[i]->sourceRange);
+        for (auto arg : methodArgs) {
+            if (arg->kind != ExpressionKind::NamedValue) {
+                context.addDiag(diag::ExpectedClassPropertyName, arg->sourceRange);
                 return comp.getErrorType();
             }
 
-            auto sym = args[i]->getSymbolReference();
+            auto sym = arg->getSymbolReference();
             if (!sym || sym->kind != SymbolKind::ClassProperty || sym->getParentScope() != ct) {
-                context.addDiag(diag::ExpectedClassPropertyName, args[i]->sourceRange);
+                context.addDiag(diag::ExpectedClassPropertyName, arg->sourceRange);
                 return comp.getErrorType();
             }
         }
