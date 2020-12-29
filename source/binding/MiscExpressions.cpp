@@ -293,7 +293,14 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     // The built-in randomize method is found via normal lookup but it has special syntax rules,
     // so translate that into a call to a system subroutine that can handle those rules.
     if (sub->flags.has(MethodFlags::Randomize)) {
-        auto ss = compilation.getSystemSubroutine(sub->name);
+        // If the parent is a class, look up the special randomize method on ClassTypes.
+        // Otherwise, this is the free std::randomize function.
+        const SystemSubroutine* ss;
+        if (subroutineParent.kind == SymbolKind::ClassType)
+            ss = compilation.getSystemMethod(SymbolKind::ClassType, sub->name);
+        else
+            ss = compilation.getSystemSubroutine(sub->name);
+
         ASSERT(ss);
         return createSystemCall(compilation, *ss, thisClass, syntax, withClause, range, context,
                                 sub->getParentScope());
@@ -575,6 +582,11 @@ static CallExpression::RandomizeCallInfo bindRandomizeExpr(
     }
 
     if (withClause.args) {
+        if (!context.classRandomizeScope) {
+            context.addDiag(diag::NameListWithScopeRandomize, withClause.args->sourceRange());
+            return { nullptr, {} };
+        }
+
         SmallVectorSized<string_view, 4> names;
         for (auto expr : withClause.args->expressions) {
             if (expr->kind != SyntaxKind::IdentifierName) {

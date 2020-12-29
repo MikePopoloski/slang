@@ -2068,6 +2068,7 @@ int baz;
 class B;
     p::A a;
     int k;
+    union { int i; int j; } u;
     function void foo;
         k = a.randomize with { k + this.l < $bits(super.IntT) + $bits(this.super.IntT); };
         k = a.randomize with { k + local::this.l < 10; };
@@ -2079,6 +2080,10 @@ class B;
         k = randomize (baz);
         k = randomize (k[0]);
         k = randomize (null);
+        k = std::randomize(a, k) with { k < a.j; };
+        k = std::randomize(a.j, u) with { k < a.j; };
+        k = std::randomize(u) with { k < a.j; };
+        k = std::randomize() with (a, b) { k < a.j; };
     endfunction
 endclass
 )");
@@ -2087,11 +2092,14 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::UnknownMember);
     CHECK(diags[1].code == diag::ExpectedIdentifier);
     CHECK(diags[2].code == diag::ExpectedIdentifier);
     CHECK(diags[3].code == diag::LocalNotAllowed);
     CHECK(diags[4].code == diag::ExpectedClassPropertyName);
     CHECK(diags[5].code == diag::ExpectedClassPropertyName);
+    CHECK(diags[6].code == diag::ExpectedVariableName);
+    CHECK(diags[7].code == diag::InvalidRandType);
+    CHECK(diags[8].code == diag::NameListWithScopeRandomize);
 }
