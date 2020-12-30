@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Preprocessor.h"
@@ -102,13 +103,16 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
 }
 
 bool runCompiler(Compilation& compilation, const std::vector<std::string>& warningOptions,
-                 uint32_t errorLimit, bool quiet, bool onlyParse, bool showColors,
-                 const optional<std::string>& astJsonFile,
+                 uint32_t errorLimit, bool quiet, bool onlyParse, bool ignoreUnknownModules,
+                 bool showColors, const optional<std::string>& astJsonFile,
                  const std::vector<std::string>& astJsonScopes) {
     DiagnosticEngine diagEngine(*compilation.getSourceManager());
     Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
     Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
     diagEngine.setErrorLimit(errorLimit);
+
+    if (ignoreUnknownModules)
+        diagEngine.setSeverity(diag::UnknownModule, DiagnosticSeverity::Ignored);
 
     auto client = std::make_shared<TextDiagnosticClient>();
     client->setColorsEnabled(showColors);
@@ -303,6 +307,7 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
 
     // Diagnostics control
     optional<bool> colorDiags;
+    optional<bool> ignoreUnknownModules;
     optional<uint32_t> errorLimit;
     std::vector<std::string> warningOptions;
     cmdLine.add("-W", warningOptions, "Control the specified warning", "<warning>");
@@ -314,6 +319,9 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
                 "Limit on the number of errors that will be printed. Setting this to zero will "
                 "disable the limit.",
                 "<limit>");
+    cmdLine.add("--ignore-unknown-modules", ignoreUnknownModules,
+                "Don't issue an error for instantiations of unknown modules, "
+                "interface, and programs.");
 
     // File list
     optional<bool> singleUnit;
@@ -481,9 +489,9 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
                         SyntaxTree::fromBuffer(buffer, sourceManager, options));
             }
 
-            anyErrors =
-                !runCompiler(compilation, warningOptions, errorLimit.value_or(20), quiet == true,
-                             onlyParse == true, showColors, astJsonFile, astJsonScopes);
+            anyErrors = !runCompiler(compilation, warningOptions, errorLimit.value_or(20),
+                                     quiet == true, onlyParse == true, ignoreUnknownModules == true,
+                                     showColors, astJsonFile, astJsonScopes);
 
 #if defined(INCLUDE_SIM)
             if (!anyErrors && !onlyParse.value_or(false) && shouldSim == true) {
@@ -589,6 +597,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     compilation.addSyntaxTree(SyntaxTree::fromText(text, "<source>"));
 
     runCompiler(compilation, {}, 0, /* quiet */ false, /* onlyParse */ false,
+                /* ignoreUnknownModules */ false,
                 /* showColors */ false, {});
 
     return 0;
