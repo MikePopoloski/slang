@@ -18,7 +18,7 @@ namespace slang {
 #if defined(_MSC_VER)
 
 bool OS::fileSupportsColors(int fd) {
-    return fd == _fileno(stdout);
+    return fd == _fileno(stdout) || fd == _fileno(stderr);
 }
 
 bool OS::fileSupportsColors(FILE* file) {
