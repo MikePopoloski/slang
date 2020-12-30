@@ -1239,4 +1239,27 @@ void PortConnection::makeConnections(
     builder.finalize();
 }
 
+void PortConnection::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isInterfacePort", isInterfacePort);
+    if (isInterfacePort) {
+        if (ifacePort)
+            serializer.writeLink("ifacePort", *ifacePort);
+        if (ifaceInstance)
+            serializer.writeLink("ifaceInstance", *ifaceInstance);
+    }
+    else {
+        if (port)
+            serializer.writeLink("port", *port);
+        if (expr)
+            serializer.write("expr", *expr);
+    }
+
+    if (!attributes.empty()) {
+        serializer.startArray("attributes");
+        for (auto attr : attributes)
+            serializer.serialize(*attr);
+        serializer.endArray();
+    }
+}
+
 } // namespace slang

@@ -109,6 +109,8 @@ public:
     static void makeConnections(const InstanceSymbol& instance, span<const Symbol* const> ports,
                                 const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
                                 PointerMap& results);
+
+    void serializeTo(ASTSerializer& serializer) const;
 };
 
 } // namespace slang

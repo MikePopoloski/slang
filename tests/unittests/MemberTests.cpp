@@ -289,7 +289,9 @@ endmodule
           }
         ],
         "definition": "test_enum"
-      }
+      },
+      "connections": [
+      ]
     }
   ]
 })");

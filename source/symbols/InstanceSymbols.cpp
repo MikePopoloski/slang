@@ -444,6 +444,15 @@ void InstanceSymbol::getArrayDimensions(SmallVector<ConstantRange>& dimensions) 
 
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", body);
+
+    resolvePortConnections();
+    serializer.startArray("connections");
+    for (auto& [_, connPtr] : *connections) {
+        serializer.startObject();
+        reinterpret_cast<const PortConnection*>(connPtr)->serializeTo(serializer);
+        serializer.endObject();
+    }
+    serializer.endArray();
 }
 
 InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey,
