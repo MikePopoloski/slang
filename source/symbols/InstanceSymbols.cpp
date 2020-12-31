@@ -15,12 +15,12 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/MemberSymbols.h"
-#include "slang/types/NetType.h"
 #include "slang/symbols/ParameterSymbols.h"
 #include "slang/symbols/PortSymbols.h"
-#include "slang/types/Type.h"
 #include "slang/symbols/VariableSymbols.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/types/NetType.h"
+#include "slang/types/Type.h"
 #include "slang/util/StackContainer.h"
 
 namespace {
@@ -314,7 +314,7 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
 
         for (auto inst : syntax.targetInstances->targets) {
             LookupResult result;
-            Lookup::name(scope, *inst, LookupLocation::max, LookupFlags::None, result);
+            Lookup::name(*inst, context, LookupFlags::None, result);
             result.reportErrors(context);
 
             if (result.found) {
@@ -327,7 +327,7 @@ void InstanceSymbol::fromBindDirective(const Scope& scope, const BindDirectiveSy
     }
     else {
         LookupResult result;
-        Lookup::name(scope, *syntax.target, LookupLocation::max, LookupFlags::None, result);
+        Lookup::name(*syntax.target, context, LookupFlags::None, result);
 
         if (result.found) {
             // TODO: check valid target
@@ -444,6 +444,15 @@ void InstanceSymbol::getArrayDimensions(SmallVector<ConstantRange>& dimensions) 
 
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", body);
+
+    resolvePortConnections();
+    serializer.startArray("connections");
+    for (auto& [_, connPtr] : *connections) {
+        serializer.startObject();
+        reinterpret_cast<const PortConnection*>(connPtr)->serializeTo(serializer);
+        serializer.endObject();
+    }
+    serializer.endArray();
 }
 
 InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const InstanceCacheKey& cacheKey,

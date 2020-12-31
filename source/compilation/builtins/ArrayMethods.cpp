@@ -59,23 +59,24 @@ public:
         if (!arr)
             return nullptr;
 
-        if (callInfo.iterExpr) {
-            ASSERT(callInfo.iterVar);
+        auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
+        if (iterExpr) {
+            ASSERT(iterVar);
             if (arr.empty()) {
-                auto elemType = callInfo.iterExpr->type;
+                auto elemType = iterExpr->type;
                 return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
             }
 
             auto it = begin(arr);
-            auto iterVal = context.createLocal(callInfo.iterVar, *it);
-            ConstantValue cv = callInfo.iterExpr->eval(context);
+            auto iterVal = context.createLocal(iterVar, *it);
+            ConstantValue cv = iterExpr->eval(context);
             if (!cv)
                 return nullptr;
 
             SVInt result = cv.integer();
             for (++it; it != end(arr); ++it) {
                 *iterVal = *it;
-                cv = callInfo.iterExpr->eval(context);
+                cv = iterExpr->eval(context);
                 if (!cv)
                     return nullptr;
 
@@ -147,17 +148,18 @@ public:
         if (!target)
             return nullptr;
 
-        if (callInfo.iterExpr) {
-            ASSERT(callInfo.iterVar);
-            auto iterVal = context.createLocal(callInfo.iterVar);
+        auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
+        if (iterExpr) {
+            ASSERT(iterVar);
+            auto iterVal = context.createLocal(iterVar);
 
-            auto sortTarget = [&](auto& target) {
-                auto pred = [&](ConstantValue& a, ConstantValue& b) {
+            auto sortTarget = [&, ie = iterExpr](auto& target) {
+                auto pred = [&, ie = ie](ConstantValue& a, ConstantValue& b) {
                     *iterVal = a;
-                    ConstantValue cva = callInfo.iterExpr->eval(context);
+                    ConstantValue cva = ie->eval(context);
 
                     *iterVal = b;
-                    ConstantValue cvb = callInfo.iterExpr->eval(context);
+                    ConstantValue cvb = ie->eval(context);
 
                     return cva < cvb;
                 };
@@ -283,14 +285,15 @@ public:
         if (!arr)
             return nullptr;
 
-        SVQueue results;
-        auto iterVal = context.createLocal(callInfo.iterVar);
+        auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
+        auto iterVal = context.createLocal(iterVar);
 
+        SVQueue results;
         if (arr.isMap()) {
-            auto doFind = [&](auto it, auto end) {
+            auto doFind = [&, ie = iterExpr](auto it, auto end) {
                 for (; it != end; it++) {
                     *iterVal = it->second;
-                    ConstantValue cv = callInfo.iterExpr->eval(context);
+                    ConstantValue cv = ie->eval(context);
                     if (cv.isTrue()) {
                         if (isIndexed)
                             results.emplace_back(it->first);
@@ -310,10 +313,10 @@ public:
                 doFind(std::begin(cont), std::end(cont));
         }
         else {
-            auto doFind = [&](auto begin, auto end) {
+            auto doFind = [&, ie = iterExpr](auto begin, auto end) {
                 for (auto it = begin; it != end; it++) {
                     *iterVal = *it;
-                    ConstantValue cv = callInfo.iterExpr->eval(context);
+                    ConstantValue cv = ie->eval(context);
                     if (cv.isTrue()) {
                         if (isIndexed) {
                             auto dist = std::distance(begin, it);
@@ -391,17 +394,18 @@ public:
         if (arr.empty())
             return result;
 
-        if (callInfo.iterExpr) {
-            ASSERT(callInfo.iterVar);
+        auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
+        if (iterExpr) {
+            ASSERT(iterVar);
 
             auto it = begin(arr);
-            auto iterVal = context.createLocal(callInfo.iterVar, *it);
+            auto iterVal = context.createLocal(iterVar, *it);
             ConstantValue elem = *it;
-            ConstantValue val = callInfo.iterExpr->eval(context);
+            ConstantValue val = iterExpr->eval(context);
 
             for (++it; it != end(arr); ++it) {
                 *iterVal = *it;
-                auto cv = callInfo.iterExpr->eval(context);
+                auto cv = iterExpr->eval(context);
 
                 if (isMin) {
                     if (cv < val) {
@@ -480,15 +484,16 @@ public:
 
         SVQueue result;
 
-        if (callInfo.iterExpr) {
-            ASSERT(callInfo.iterVar);
-            auto iterVal = context.createLocal(callInfo.iterVar);
+        auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
+        if (iterExpr) {
+            ASSERT(iterVar);
+            auto iterVal = context.createLocal(iterVar);
 
             uint32_t index = 0;
             flat_hash_set<ConstantValue> seen;
             for (auto it = begin(arr); it != end(arr); ++it, ++index) {
                 *iterVal = *it;
-                auto cv = callInfo.iterExpr->eval(context);
+                auto cv = iterExpr->eval(context);
                 if (seen.emplace(cv).second) {
                     if (isIndexed && !arr.isMap())
                         result.emplace_back(SVInt(32, index, true));

@@ -751,8 +751,7 @@ Statement& DisableStatement::fromSyntax(Compilation& compilation,
                                         const DisableStatementSyntax& syntax,
                                         const BindContext& context) {
     LookupResult result;
-    Lookup::name(context.scope, *syntax.name, context.lookupLocation,
-                 LookupFlags::AllowDeclaredAfter, result);
+    Lookup::name(*syntax.name, context, LookupFlags::AllowDeclaredAfter, result);
     result.reportErrors(context);
 
     const Symbol* symbol = result.found;
@@ -1985,8 +1984,7 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
     SmallVectorSized<const Symbol*, 4> events;
     for (auto name : syntax.names) {
         LookupResult result;
-        Lookup::name(context.scope, *name, context.lookupLocation, LookupFlags::AllowDeclaredAfter,
-                     result);
+        Lookup::name(*name, context, LookupFlags::AllowDeclaredAfter, result);
         result.reportErrors(context);
 
         const Symbol* symbol = result.found;
@@ -2043,8 +2041,7 @@ Statement& EventTriggerStatement::fromSyntax(Compilation& compilation,
                                              const EventTriggerStatementSyntax& syntax,
                                              const BindContext& context) {
     LookupResult result;
-    Lookup::name(context.scope, *syntax.name, context.lookupLocation,
-                 LookupFlags::AllowDeclaredAfter, result);
+    Lookup::name(*syntax.name, context, LookupFlags::AllowDeclaredAfter, result);
     result.reportErrors(context);
 
     const Symbol* symbol = result.found;

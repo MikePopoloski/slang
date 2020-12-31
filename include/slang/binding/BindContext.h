@@ -97,8 +97,13 @@ struct EvaluatedDimension {
 
 class BindContext {
 public:
+    /// The scope where the binding is occurring.
     const Scope& scope;
+
+    /// The location to use when looking up names during binding.
     LookupLocation lookupLocation;
+
+    /// Various flags that control how binding is performed.
     bitmask<BindFlags> flags;
 
     /// An optional pointer to the context used by an active expression evaluation.
@@ -114,6 +119,23 @@ public:
     /// representing the first iterator, along with a linked list of any others
     /// that may be active.
     const IteratorSymbol* firstIterator = nullptr;
+
+    /// A collection of information needed to bind names inside inline constraint
+    /// blocks for class randomize function calls.
+    struct ClassRandomizeScope {
+        /// The scope of the class type itself.
+        const Scope* classType = nullptr;
+
+        /// A list of names to which class-scoped lookups are restricted.
+        /// If empty, the lookup is unrestricted and all names are first
+        /// tried in class-scope.
+        span<const string_view> nameRestrictions;
+    };
+
+    /// If this context is for binding an inline constraint block for a class randomize
+    /// function call, this points to information about the class scope. Name lookups
+    /// happen inside the class scope before going through the normal local lookup.
+    const ClassRandomizeScope* classRandomizeScope = nullptr;
 
     BindContext(const Scope& scope, LookupLocation lookupLocation,
                 bitmask<BindFlags> flags = BindFlags::None) :

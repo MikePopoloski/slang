@@ -6,12 +6,14 @@
 //------------------------------------------------------------------------------
 #include "slang/binding/MiscExpressions.h"
 
+#include "slang/binding/Constraints.h"
 #include "slang/binding/SelectExpressions.h"
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/symbols/ASTSerializer.h"
 #include "slang/symbols/ClassSymbols.h"
 #include "slang/symbols/ParameterSymbols.h"
@@ -257,6 +259,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                        SourceRange range, const BindContext& context) {
     if (subroutine.index() == 1) {
+        ASSERT(!thisClass);
         const SystemCallInfo& info = std::get<1>(subroutine);
         return createSystemCall(compilation, *info.subroutine, nullptr, syntax, withClause, range,
                                 context);
@@ -268,19 +271,39 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     auto sub = std::get<0>(subroutine);
     ASSERT(sub->getParentScope());
     auto& subroutineParent = sub->getParentScope()->asSymbol();
-    if ((sub->flags & MethodFlags::Static) == 0 && !thisClass &&
+    if (!sub->flags.has(MethodFlags::Static) && !thisClass &&
         subroutineParent.kind == SymbolKind::ClassType) {
 
-        auto [parent, inStatic] = Lookup::getContainingClass(context.scope);
-        if (parent && !Lookup::isAccessibleFrom(*sub, *parent)) {
-            auto& diag = context.addDiag(diag::NestedNonStaticClassMethod, range);
-            diag << parent->name;
-            return badExpr(compilation, nullptr);
+        if (!context.classRandomizeScope ||
+            context.classRandomizeScope->classType != sub->getParentScope()) {
+
+            auto [parent, inStatic] = Lookup::getContainingClass(context.scope);
+            if (parent && !Lookup::isAccessibleFrom(*sub, *parent)) {
+                auto& diag = context.addDiag(diag::NestedNonStaticClassMethod, range);
+                diag << parent->name;
+                return badExpr(compilation, nullptr);
+            }
+            else if (!parent || inStatic || (context.flags & BindFlags::StaticInitializer) != 0) {
+                context.addDiag(diag::NonStaticClassMethod, range);
+                return badExpr(compilation, nullptr);
+            }
         }
-        else if (!parent || inStatic || (context.flags & BindFlags::StaticInitializer) != 0) {
-            context.addDiag(diag::NonStaticClassMethod, range);
-            return badExpr(compilation, nullptr);
-        }
+    }
+
+    // The built-in randomize method is found via normal lookup but it has special syntax rules,
+    // so translate that into a call to a system subroutine that can handle those rules.
+    if (sub->flags.has(MethodFlags::Randomize)) {
+        // If the parent is a class, look up the special randomize method on ClassTypes.
+        // Otherwise, this is the free std::randomize function.
+        const SystemSubroutine* ss;
+        if (subroutineParent.kind == SymbolKind::ClassType)
+            ss = compilation.getSystemMethod(SymbolKind::ClassType, sub->name);
+        else
+            ss = compilation.getSystemSubroutine(sub->name);
+
+        ASSERT(ss);
+        return createSystemCall(compilation, *ss, thisClass, syntax, withClause, range, context,
+                                sub->getParentScope());
     }
 
     if (withClause) {
@@ -549,17 +572,50 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
     return &Expression::bind(*withClause.args->expressions[0], iterCtx);
 }
 
+static CallExpression::RandomizeCallInfo bindRandomizeExpr(
+    const ArrayOrRandomizeMethodExpressionSyntax& withClause, BindContext& context,
+    BindContext::ClassRandomizeScope& randomizeCtx) {
+
+    if (!withClause.constraints) {
+        context.addDiag(diag::MissingConstraintBlock, withClause.sourceRange());
+        return { nullptr, {} };
+    }
+
+    if (withClause.args) {
+        if (!context.classRandomizeScope) {
+            context.addDiag(diag::NameListWithScopeRandomize, withClause.args->sourceRange());
+            return { nullptr, {} };
+        }
+
+        SmallVectorSized<string_view, 4> names;
+        for (auto expr : withClause.args->expressions) {
+            if (expr->kind != SyntaxKind::IdentifierName) {
+                context.addDiag(diag::ExpectedIdentifier, expr->sourceRange());
+                continue;
+            }
+
+            names.append(expr->as<IdentifierNameSyntax>().identifier.valueText());
+        }
+
+        randomizeCtx.nameRestrictions = names.copy(context.getCompilation());
+    }
+
+    auto& constraints = Constraint::bind(*withClause.constraints, context);
+    return { &constraints, randomizeCtx.nameRestrictions };
+}
+
 Expression& CallExpression::createSystemCall(
     Compilation& compilation, const SystemSubroutine& subroutine, const Expression* firstArg,
     const InvocationExpressionSyntax* syntax,
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, SourceRange range,
-    const BindContext& context) {
+    const BindContext& context, const Scope* randomizeScope) {
 
+    SystemCallInfo callInfo{ &subroutine, &context.scope, {} };
     SmallVectorSized<const Expression*, 8> buffer;
     if (firstArg)
         buffer.append(firstArg);
 
-    const Expression* iterExpr = nullptr;
+    const Expression* iterOrThis = nullptr;
     const ValueSymbol* iterVar = nullptr;
     using WithClauseMode = SystemSubroutine::WithClauseMode;
     if (subroutine.withClauseMode == WithClauseMode::Iterator) {
@@ -574,20 +630,50 @@ Expression& CallExpression::createSystemCall(
             }
         }
         else if (firstArg) {
-            iterExpr = bindIteratorExpr(compilation, syntax, *withClause, *firstArg->type, context,
-                                        iterVar);
-            if (!iterExpr || iterExpr->bad())
-                return badExpr(compilation, iterExpr);
+            iterOrThis = bindIteratorExpr(compilation, syntax, *withClause, *firstArg->type,
+                                          context, iterVar);
+            if (!iterOrThis || iterOrThis->bad())
+                return badExpr(compilation, iterOrThis);
+
+            callInfo.extraInfo = IteratorCallInfo{ iterOrThis, iterVar };
         }
     }
-    else if (subroutine.withClauseMode == WithClauseMode::Randomize) {
-        // TODO: support randomize calls
-    }
     else {
+        BindContext::ClassRandomizeScope randomizeCtx;
+        BindContext argContext = context;
+
+        if (subroutine.withClauseMode == WithClauseMode::Randomize) {
+            // If this is a class-scoped randomize call, setup the scope properly
+            // so that class members can be found in the constraint block.
+            if (firstArg) {
+                randomizeCtx.classType = &firstArg->type->getCanonicalType().as<ClassType>();
+                argContext.classRandomizeScope = &randomizeCtx;
+            }
+            else if (randomizeScope && randomizeScope->asSymbol().kind == SymbolKind::ClassType) {
+                randomizeCtx.classType = randomizeScope;
+                argContext.classRandomizeScope = &randomizeCtx;
+            }
+            iterOrThis = firstArg;
+        }
+
         if (withClause) {
-            context.addDiag(diag::WithClauseNotAllowed, withClause->with.range())
-                << subroutine.name;
-            return badExpr(compilation, nullptr);
+            if (subroutine.withClauseMode == WithClauseMode::Randomize) {
+                auto randInfo = bindRandomizeExpr(*withClause, argContext, randomizeCtx);
+                if (!randInfo.inlineConstraints)
+                    return badExpr(compilation, nullptr);
+
+                callInfo.extraInfo = randInfo;
+
+                // These need to be cleared out because we will reuse the bind context
+                // for looking up argument names below and they aren't subject to any
+                // restriction list.
+                randomizeCtx.nameRestrictions = {};
+            }
+            else {
+                argContext.addDiag(diag::WithClauseNotAllowed, withClause->with.range())
+                    << subroutine.name;
+                return badExpr(compilation, nullptr);
+            }
         }
 
         // Bind arguments as we would for any ordinary method.
@@ -598,11 +684,12 @@ Expression& CallExpression::createSystemCall(
                 switch (actualArgs[i]->kind) {
                     case SyntaxKind::OrderedArgument: {
                         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-                        buffer.append(&subroutine.bindArgument(index, context, *arg.expr, buffer));
+                        buffer.append(
+                            &subroutine.bindArgument(index, argContext, *arg.expr, buffer));
                         break;
                     }
                     case SyntaxKind::NamedArgument:
-                        context.addDiag(diag::NamedArgNotAllowed, actualArgs[i]->sourceRange());
+                        argContext.addDiag(diag::NamedArgNotAllowed, actualArgs[i]->sourceRange());
                         return badExpr(compilation, nullptr);
                     case SyntaxKind::EmptyArgument:
                         if (subroutine.allowEmptyArgument(index)) {
@@ -610,7 +697,8 @@ Expression& CallExpression::createSystemCall(
                                 compilation.getVoidType(), actualArgs[i]->sourceRange()));
                         }
                         else {
-                            context.addDiag(diag::EmptyArgNotAllowed, actualArgs[i]->sourceRange());
+                            argContext.addDiag(diag::EmptyArgNotAllowed,
+                                               actualArgs[i]->sourceRange());
                             return badExpr(compilation, nullptr);
                         }
                         break;
@@ -621,8 +709,7 @@ Expression& CallExpression::createSystemCall(
         }
     }
 
-    SystemCallInfo callInfo{ &subroutine, &context.scope, iterExpr, iterVar };
-    const Type& type = subroutine.checkArguments(context, buffer, range, iterExpr);
+    const Type& type = subroutine.checkArguments(context, buffer, range, iterOrThis);
     auto expr = compilation.emplace<CallExpression>(
         callInfo, type, nullptr, buffer.copy(compilation), context.lookupLocation, range);
 
@@ -706,8 +793,12 @@ bool CallExpression::verifyConstantImpl(EvalContext& context) const {
 
     if (isSystemCall()) {
         auto& callInfo = std::get<1>(subroutine);
-        if (callInfo.iterExpr && !callInfo.iterExpr->verifyConstant(context))
+        auto iteratorInfo = std::get_if<IteratorCallInfo>(&callInfo.extraInfo);
+
+        if (iteratorInfo && iteratorInfo->iterExpr &&
+            !iteratorInfo->iterExpr->verifyConstant(context)) {
             return false;
+        }
 
         return callInfo.subroutine->verifyConstant(context, arguments(), sourceRange);
     }
@@ -779,6 +870,14 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
     return true;
 }
 
+std::pair<const Expression*, const ValueSymbol*> CallExpression::SystemCallInfo::getIteratorInfo()
+    const {
+    auto itInfo = std::get_if<IteratorCallInfo>(&extraInfo);
+    if (!itInfo)
+        return { nullptr, nullptr };
+    return { itInfo->iterExpr, itInfo->iterVar };
+}
+
 string_view CallExpression::getSubroutineName() const {
     if (subroutine.index() == 1) {
         auto& callInfo = std::get<1>(subroutine);
@@ -835,9 +934,7 @@ Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation
                                                         const NameSyntax& syntax,
                                                         const BindContext& context) {
     LookupResult result;
-    Lookup::name(context.scope, syntax, context.lookupLocation, LookupFlags::AllowDeclaredAfter,
-                 result);
-
+    Lookup::name(syntax, context, LookupFlags::AllowDeclaredAfter, result);
     if (result.hasError())
         compilation.addDiagnostics(result.getDiagnostics());
 

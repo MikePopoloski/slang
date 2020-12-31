@@ -42,7 +42,13 @@ enum class MethodFlags : uint8_t {
     /// The method is known not to be constant, even if it otherwise
     /// meets all of the requirements for a constant function. Used for
     /// built-in methods only.
-    NotConst = 1 << 6
+    NotConst = 1 << 6,
+
+    /// This method is a std::randomize built-in. These are declared as
+    /// normal subroutines so they can be found via name lookup, and then
+    /// a special case translates the calls into the appropriate system
+    /// subroutine call.
+    Randomize = 1 << 7
 };
 BITMASK(MethodFlags, NotConst);
 

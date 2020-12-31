@@ -173,6 +173,17 @@ bool isClassType(const Symbol& symbol) {
     return symbol.kind == SymbolKind::GenericClassDef;
 }
 
+bool isUninstantiated(const Scope& scope) {
+    auto currScope = &scope;
+    while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
+        currScope = currScope->asSymbol().getParentScope();
+
+    if (currScope)
+        return currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
+
+    return false;
+}
+
 const NameSyntax* splitScopedName(const ScopedNameSyntax& syntax,
                                   SmallVector<NamePlusLoc>& nameParts, int& colonParts) {
     // Split the name into easier to manage chunks. The parser will always produce a
@@ -537,8 +548,25 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope, optional<SourceRa
 bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonParts,
                        NameComponents& name, bitmask<LookupFlags> flags, LookupResult& result,
                        const BindContext& context) {
+    // Unwrap the symbol if it's a type parameter, and bail early if it's an error type.
     const Symbol* symbol = std::exchange(result.found, nullptr);
-    ASSERT(symbol);
+    if (symbol) {
+        symbol = unwrapTypeParam(symbol);
+        if (!symbol)
+            return false;
+    }
+
+    // If the prefix name resolved normally to a class object, use that. Otherwise we need
+    // to look for a package with the corresponding name.
+    if (!symbol || !isClassType(*symbol)) {
+        symbol = context.getCompilation().getPackage(name.text());
+        if (!symbol) {
+            if (!isUninstantiated(context.scope))
+                result.addDiag(context.scope, diag::UnknownClassOrPackage, name.range())
+                    << name.text();
+            return false;
+        }
+    }
 
     // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
     // unless this is within a typedef declaration.
@@ -637,7 +665,7 @@ bool resolveColonNames(SmallVectorSized<NamePlusLoc, 8>& nameParts, int colonPar
         return false;
 
     result.found = symbol;
-    return true;
+    return lookupDownward(nameParts, name, context, result, flags);
 }
 
 const Symbol* getCompilationUnit(const Symbol& symbol) {
@@ -691,6 +719,12 @@ const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult
             return sub.thisVar;
     }
 
+    if (parent->kind == SymbolKind::ConstraintBlock) {
+        auto thisVar = parent->as<ConstraintBlockSymbol>().thisVar;
+        if (thisVar)
+            return thisVar;
+    }
+
     result.addDiag(scope, diag::InvalidThisHandle, range);
     return nullptr;
 }
@@ -713,8 +747,9 @@ const Symbol* findSuperHandle(const Scope& scope, SourceRange range, LookupResul
 
 } // namespace
 
-void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
-                  bitmask<LookupFlags> flags, LookupResult& result) {
+void Lookup::name(const NameSyntax& syntax, const BindContext& context, bitmask<LookupFlags> flags,
+                  LookupResult& result) {
+    auto& scope = context.scope;
     NameComponents name;
     switch (syntax.kind) {
         case SyntaxKind::IdentifierName:
@@ -724,7 +759,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
             break;
         case SyntaxKind::ScopedName:
             // Handle qualified names separately.
-            qualified(scope, syntax.as<ScopedNameSyntax>(), location, flags, result);
+            qualified(syntax.as<ScopedNameSyntax>(), context, flags, result);
             unwrapResult(scope, syntax.sourceRange(), result);
             return;
         case SyntaxKind::ThisHandle:
@@ -752,7 +787,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
         return;
 
     // Perform the lookup.
-    unqualifiedImpl(scope, name.text(), location, name.range(), flags, {}, result);
+    unqualifiedImpl(scope, name.text(), context.lookupLocation, name.range(), flags, {}, result);
     if (!result.found && !result.hasError())
         reportUndeclared(scope, name.text(), name.range(), flags, false, result);
 
@@ -766,8 +801,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
         }
         else {
             auto& classDef = result.found->as<GenericClassDefSymbol>();
-            result.found =
-                &classDef.getSpecialization(BindContext(scope, location), *name.paramAssignments);
+            result.found = &classDef.getSpecialization(context, *name.paramAssignments);
         }
     }
 
@@ -776,8 +810,7 @@ void Lookup::name(const Scope& scope, const NameSyntax& syntax, LookupLocation l
     if (name.selectors) {
         // If this is a scope, the selectors should be an index into it.
         if (result.found && result.found->isScope() && !result.found->isType()) {
-            result.found =
-                selectChild(*result.found, *name.selectors, BindContext(scope, location), result);
+            result.found = selectChild(*result.found, *name.selectors, context, result);
         }
         else {
             result.selectors.appendRange(*name.selectors);
@@ -889,7 +922,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
 const ClassType* Lookup::findClass(const NameSyntax& className, const BindContext& context,
                                    optional<DiagCode> requireInterfaceClass) {
     LookupResult result;
-    Lookup::name(context.scope, className, context.lookupLocation, LookupFlags::Type, result);
+    Lookup::name(className, context, LookupFlags::Type, result);
 
     result.reportErrors(context);
     if (!result.found)
@@ -993,6 +1026,11 @@ bool Lookup::ensureVisible(const Symbol& symbol, const BindContext& context,
 
 bool Lookup::ensureAccessible(const Symbol& symbol, const BindContext& context,
                               optional<SourceRange> sourceRange) {
+    if (context.classRandomizeScope &&
+        symbol.getParentScope() == context.classRandomizeScope->classType) {
+        return true;
+    }
+
     auto [parent, inStatic] = getContainingClass(context.scope);
     if (parent && !isAccessibleFrom(symbol, *parent)) {
         if (sourceRange) {
@@ -1044,10 +1082,72 @@ bool Lookup::findIterator(const Scope& scope, const IteratorSymbol& symbol,
         return false;
 
     BindContext context(scope, LookupLocation::max);
-    if (!lookupDownward(nameParts, name, context, result, LookupFlags::None))
+    return lookupDownward(nameParts, name, context, result, LookupFlags::None);
+}
+
+bool Lookup::withinClassRandomize(const Scope& scope, span<const string_view> nameRestrictions,
+                                  const NameSyntax& syntax, bitmask<LookupFlags> flags,
+                                  LookupResult& result) {
+    int colonParts = 0;
+    SmallVectorSized<NamePlusLoc, 8> nameParts;
+    const NameSyntax* first = &syntax;
+    if (syntax.kind == SyntaxKind::ScopedName)
+        first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
+
+    NameComponents name = *first;
+    switch (first->kind) {
+        case SyntaxKind::IdentifierName:
+        case SyntaxKind::IdentifierSelectName:
+        case SyntaxKind::ClassName:
+            if (name.text().empty())
+                return false;
+
+            // If the nameRestrictions list is not empty, we have to verify that the
+            // first element is in the list. Otherwise, an empty list indicates that
+            // the lookup is unrestricted.
+            if (!nameRestrictions.empty()) {
+                if (std::find(nameRestrictions.begin(), nameRestrictions.end(), name.text()) ==
+                    nameRestrictions.end()) {
+                    return false;
+                }
+            }
+
+            result.found = scope.find(name.text());
+            break;
+        case SyntaxKind::ThisHandle:
+            result.found = &scope.asSymbol();
+            if (nameParts.back().name->kind == SyntaxKind::SuperHandle) {
+                // Handle "this.super.whatever" the same as if the user had just
+                // written "super.whatever".
+                name = *nameParts.back().name;
+                nameParts.pop();
+                result.found = findSuperHandle(scope, name.range(), result);
+                colonParts = 1;
+            }
+            break;
+        case SyntaxKind::SuperHandle:
+            result.found = findSuperHandle(scope, name.range(), result);
+            colonParts = 1; // pretend we used colon access to resolve class scoped name
+            break;
+        default:
+            // Return not found; the caller should do a normal lookup
+            // to handle any of these other cases.
+            return false;
+    }
+
+    if (!result.found)
         return false;
 
-    return true;
+    BindContext context(scope, LookupLocation::max);
+    if (colonParts) {
+        // Disallow package lookups in this function.
+        if (!isClassType(*result.found))
+            return false;
+
+        return resolveColonNames(nameParts, colonParts, name, flags, result, context);
+    }
+
+    return lookupDownward(nameParts, name, context, result, flags);
 }
 
 void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
@@ -1222,18 +1322,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocatio
                            outOfBlockIndex, result);
 }
 
-static bool isUninstantiated(const Scope& scope) {
-    auto currScope = &scope;
-    while (currScope && currScope->asSymbol().kind != SymbolKind::InstanceBody)
-        currScope = currScope->asSymbol().getParentScope();
-
-    if (currScope)
-        return currScope->asSymbol().as<InstanceBodySymbol>().isUninstantiated;
-
-    return false;
-}
-
-void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, LookupLocation location,
+void Lookup::qualified(const ScopedNameSyntax& syntax, const BindContext& context,
                        bitmask<LookupFlags> flags, LookupResult& result) {
     // Split the name into easier to manage chunks. The parser will always produce a
     // left-recursive name tree, so that's all we'll bother to handle.
@@ -1246,23 +1335,41 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     if (name.empty())
         return;
 
-    auto& compilation = scope.getCompilation();
+    auto& scope = context.scope;
+    auto& compilation = context.getCompilation();
     if (compilation.isFinalizing())
         flags |= LookupFlags::Constant;
 
-    BindContext context(scope, location);
     bool inConstantEval = (flags & LookupFlags::Constant) != 0;
+
+    if (leftMost->kind == SyntaxKind::LocalScope) {
+        if (!context.classRandomizeScope) {
+            result.addDiag(scope, diag::LocalNotAllowed, first.range());
+            return;
+        }
+
+        // The local:: is allowed here. Pop it and look up the rest of
+        // the name as if the local hadn't been specified -- the local
+        // lookup portion has already been ensured because we exited
+        // early from withinClassRandomize.
+        leftMost = nameParts.back().name;
+        first = *leftMost;
+        nameParts.pop();
+        name = first.text();
+        if (colonParts)
+            colonParts--;
+    }
 
     switch (leftMost->kind) {
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
         case SyntaxKind::ClassName:
             // Start by trying to find the first name segment using normal unqualified lookup
-            unqualifiedImpl(scope, name, location, first.range(), flags, {}, result);
+            unqualifiedImpl(scope, name, context.lookupLocation, first.range(), flags, {}, result);
             break;
         case SyntaxKind::UnitScope:
             // Ignore hierarchical lookups that occur inside uninstantiated modules.
-            if (isUninstantiated(scope))
+            if (isUninstantiated(context.scope))
                 return;
 
             result.found = getCompilationUnit(scope.asSymbol());
@@ -1300,7 +1407,8 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
             colonParts = 1; // pretend we used colon access to resolve class scoped name
             break;
         case SyntaxKind::LocalScope:
-            result.addDiag(scope, diag::NotYetSupported, syntax.sourceRange());
+            // This is only reachable in invalid code. An error has already been
+            // reported so early out.
             return;
         default:
             THROW_UNREACHABLE;
@@ -1312,31 +1420,7 @@ void Lookup::qualified(const Scope& scope, const ScopedNameSyntax& syntax, Looku
     // [23.7.1] If we are starting with a colon separator, always do a downwards name
     // resolution.
     if (colonParts) {
-        // Unwrap the symbol if it's a type parameter, and bail early if it's an error type.
-        if (result.found) {
-            result.found = unwrapTypeParam(result.found);
-            if (!result.found)
-                return;
-        }
-
-        // If the prefix name resolved normally to a class object, use that. Otherwise we need
-        // to look for a package with the corresponding name.
-        if (!result.found || !isClassType(*result.found)) {
-            result.found = compilation.getPackage(name);
-            if (!result.found) {
-                if (!isUninstantiated(scope))
-                    result.addDiag(scope, diag::UnknownClassOrPackage, first.range()) << name;
-                return;
-            }
-        }
-
-        // Drain all colon-qualified lookups here, which should always resolve to a nested type.
-        if (!resolveColonNames(nameParts, colonParts, first, flags, result, context))
-            return;
-
-        // We can't do upwards name resolution if colon access is involved, so always return
-        // after one downward lookup.
-        lookupDownward(nameParts, first, context, result, flags);
+        resolveColonNames(nameParts, colonParts, first, flags, result, context);
         return;
     }
 

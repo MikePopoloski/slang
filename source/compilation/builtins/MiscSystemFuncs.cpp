@@ -7,7 +7,9 @@
 #include "slang/binding/FormatHelpers.h"
 #include "slang/binding/SystemSubroutine.h"
 #include "slang/compilation/Compilation.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/symbols/ClassSymbols.h"
 
 namespace slang::Builtins {
 
@@ -87,11 +89,112 @@ public:
     }
 };
 
+class ClassRandomizeFunction : public SystemSubroutine {
+public:
+    ClassRandomizeFunction() : SystemSubroutine("randomize", SubroutineKind::Function) {
+        withClauseMode = WithClauseMode::Randomize;
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression* thisExpr) const final {
+        bool isMethod = thisExpr != nullptr;
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, isMethod, args, range, 0, INT32_MAX))
+            return comp.getErrorType();
+
+        Args methodArgs = args;
+        if (isMethod)
+            methodArgs = methodArgs.subspan(1);
+
+        // Special case: a single 'null' argument can be passed to indicate
+        // that no variables should be randomized.
+        if (methodArgs.size() == 1 && methodArgs[0]->type->isNull())
+            return comp.getIntType();
+
+        // This can only be called via a special lookup on a class handle or as a local
+        // class member, so we know either the this expression gives us the class type
+        // or we can look it up from our current scope.
+        const Scope* ct;
+        if (thisExpr)
+            ct = &thisExpr->type->getCanonicalType().as<ClassType>();
+        else
+            ct = Lookup::getContainingClass(context.scope).first;
+
+        if (!ct)
+            return comp.getErrorType();
+
+        for (auto arg : methodArgs) {
+            if (arg->kind != ExpressionKind::NamedValue) {
+                context.addDiag(diag::ExpectedClassPropertyName, arg->sourceRange);
+                return comp.getErrorType();
+            }
+
+            auto sym = arg->getSymbolReference();
+            if (!sym || sym->kind != SymbolKind::ClassProperty || sym->getParentScope() != ct) {
+                context.addDiag(diag::ExpectedClassPropertyName, arg->sourceRange);
+                return comp.getErrorType();
+            }
+        }
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
+class ScopeRandomizeFunction : public SystemSubroutine {
+public:
+    ScopeRandomizeFunction() : SystemSubroutine("randomize", SubroutineKind::Function) {
+        withClauseMode = WithClauseMode::Randomize;
+    }
+
+    const Type& checkArguments(const BindContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, INT32_MAX))
+            return comp.getErrorType();
+
+        for (auto arg : args) {
+            auto sym = arg->getSymbolReference();
+            if (!sym || arg->kind != ExpressionKind::NamedValue) {
+                context.addDiag(diag::ExpectedVariableName, arg->sourceRange);
+                return comp.getErrorType();
+            }
+
+            auto dt = sym->getDeclaredType();
+            ASSERT(dt);
+            if (!dt->getType().isValidForRand(RandMode::Rand)) {
+                context.addDiag(diag::InvalidRandType, arg->sourceRange)
+                    << dt->getType() << "rand"sv;
+            }
+        }
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(EvalContext&, const Args&,
+                       const CallExpression::SystemCallInfo&) const final {
+        return nullptr;
+    }
+    bool verifyConstant(EvalContext& context, const Args&, SourceRange range) const final {
+        return notConst(context, range);
+    }
+};
+
 void registerMiscSystemFuncs(Compilation& c) {
 #define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
     REGISTER(SFormat);
     REGISTER(ValuePlusArgs);
+    REGISTER(ScopeRandomize);
 #undef REGISTER
+
+    c.addSystemMethod(SymbolKind::ClassType, std::make_unique<ClassRandomizeFunction>());
 }
 
 } // namespace slang::Builtins

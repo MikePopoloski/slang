@@ -635,6 +635,8 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
         bitmask<NameOptions> nextOptions = options;
         if (previousKind == SyntaxKind::ThisHandle)
             nextOptions |= NameOptions::PreviousWasThis;
+        else if (previousKind == SyntaxKind::LocalScope)
+            nextOptions |= NameOptions::PreviousWasLocal;
 
         NameSyntax& rhs = parseNamePart(nextOptions);
         previousKind = rhs.kind;
@@ -686,8 +688,11 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
             // These are only allowed to be the first element in a path, except
             // for "super" which can follow "this".
             if (isFirst ||
-                (kind == SyntaxKind::SuperHandle && (options & NameOptions::PreviousWasThis)))
+                (kind == SyntaxKind::SuperHandle && options.has(NameOptions::PreviousWasThis)) ||
+                ((kind == SyntaxKind::SuperHandle || kind == SyntaxKind::ThisHandle) &&
+                 options.has(NameOptions::PreviousWasLocal))) {
                 return factory.keywordName(kind, consume());
+            }
         }
 
         // Otherwise fall through to the handling below to get an error emitted.

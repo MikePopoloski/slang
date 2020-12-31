@@ -298,7 +298,7 @@ protected:
                                 const BindContext& context);
 
     static Expression& bindLookupResult(Compilation& compilation, const LookupResult& result,
-                                        SourceRange sourceRange,
+                                        const NameSyntax& syntax,
                                         const InvocationExpressionSyntax* invocation,
                                         const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                         const BindContext& context);

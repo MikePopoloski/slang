@@ -229,6 +229,10 @@ struct ConstraintPrototypeSyntax;
 /// Represents a named constraint block declaration within a class.
 class ConstraintBlockSymbol : public ValueSymbol, public Scope {
 public:
+    /// If this is a non-static constraint block, this is a variable
+    /// that represents the 'this' class handle.
+    const VariableSymbol* thisVar = nullptr;
+
     /// Set to true if this is a static constraint block.
     bool isStatic = false;
 
@@ -260,6 +264,8 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ConstraintBlock; }
 
 private:
+    void addThisVar(const Type& type);
+
     mutable const Constraint* constraint = nullptr;
     mutable SymbolIndex outOfBlockIndex{ 0 };
 };

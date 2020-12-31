@@ -204,7 +204,7 @@ const Type& ClassType::populate(const Scope& scope, const ClassDeclarationSyntax
         return builder;
     };
 
-    makeFunc("randomize", int_t, false, MethodFlags::Virtual);
+    makeFunc("randomize", int_t, false, MethodFlags::Virtual | MethodFlags::Randomize);
     makeFunc("pre_randomize", void_t, true);
     makeFunc("post_randomize", void_t, true);
     makeFunc("get_randstate", string_t, false);
@@ -866,6 +866,9 @@ ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
         }
     }
 
+    if (!result->isStatic)
+        result->addThisVar(scope.asSymbol().as<ClassType>());
+
     return result;
 }
 
@@ -900,6 +903,9 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
         if (!classType.isAbstract)
             scope.addDiag(diag::PureConstraintInAbstract, nameToken.range());
     }
+
+    if (!result->isStatic)
+        result->addThisVar(scope.asSymbol().as<ClassType>());
 
     return *result;
 }
@@ -975,6 +981,16 @@ void ConstraintBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isStatic", isStatic);
     serializer.write("isExtern", isExtern);
     serializer.write("isExplicitExtern", isExplicitExtern);
+}
+
+void ConstraintBlockSymbol::addThisVar(const Type& type) {
+    auto tv = getCompilation().emplace<VariableSymbol>("this", type.location,
+                                                       VariableLifetime::Automatic);
+    tv->setType(type);
+    tv->isConstant = true;
+    tv->isCompilerGenerated = true;
+    thisVar = tv;
+    addMember(*thisVar);
 }
 
 } // namespace slang

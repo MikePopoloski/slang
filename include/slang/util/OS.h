@@ -23,25 +23,46 @@ public:
 
     /// Sets whether color output should be enabled for the print() functions.
     /// This is off by default.
-    static void setColorsEnabled(bool enabled) { showColors = enabled; }
+    static void setStdoutColorsEnabled(bool enabled) { showColorsStdout = enabled; }
+    static void setStderrColorsEnabled(bool enabled) { showColorsStderr = enabled; }
 
 #if defined(_MSC_VER)
     /// Prints formatted text to stdout, handling Unicode conversions where necessary.
     template<typename... Args>
     static void print(string_view format, const Args&... args) {
-        fmt::vprint(fmt::to_string_view(widen(format)),
+        fmt::vprint(stdout, fmt::to_string_view(widen(format)),
                     fmt::make_format_args<fmt::wformat_context>(convert(args)...));
     }
 
     /// Prints colored formatted text to stdout, handling Unicode conversions where necessary.
     template<typename... Args>
     static void print(const fmt::text_style& style, string_view format, const Args&... args) {
-        if (showColors) {
+        if (showColorsStdout) {
             fmt::vprint(stdout, style, fmt::to_string_view(widen(format)),
                         fmt::make_format_args<fmt::wformat_context>(convert(args)...));
         }
         else {
-            fmt::vprint(fmt::to_string_view(widen(format)),
+            fmt::vprint(stdout, fmt::to_string_view(widen(format)),
+                        fmt::make_format_args<fmt::wformat_context>(convert(args)...));
+        }
+    }
+
+    /// Prints formatted text to stderr, handling Unicode conversions where necessary.
+    template<typename... Args>
+    static void printE(string_view format, const Args&... args) {
+        fmt::vprint(stderr, fmt::to_string_view(widen(format)),
+                    fmt::make_format_args<fmt::wformat_context>(convert(args)...));
+    }
+
+    /// Prints colored formatted text to stderr, handling Unicode conversions where necessary.
+    template<typename... Args>
+    static void printE(const fmt::text_style& style, string_view format, const Args&... args) {
+        if (showColorsStderr) {
+            fmt::vprint(stderr, style, fmt::to_string_view(widen(format)),
+                        fmt::make_format_args<fmt::wformat_context>(convert(args)...));
+        }
+        else {
+            fmt::vprint(stderr, fmt::to_string_view(widen(format)),
                         fmt::make_format_args<fmt::wformat_context>(convert(args)...));
         }
     }
@@ -49,17 +70,34 @@ public:
     /// Prints formatted text to stdout, handling Unicode conversions where necessary.
     template<typename... Args>
     static void print(string_view format, const Args&... args) {
-        fmt::vprint(format, fmt::make_format_args(args...));
+        fmt::vprint(stdout, format, fmt::make_format_args(args...));
     }
 
     /// Prints colored formatted text to stdout, handling Unicode conversions where necessary.
     template<typename... Args>
     static void print(const fmt::text_style& style, string_view format, const Args&... args) {
-        if (showColors) {
+        if (showColorsStdout) {
             fmt::vprint(stdout, style, format, fmt::make_format_args(args...));
         }
         else {
-            fmt::vprint(format, fmt::make_format_args(args...));
+            fmt::vprint(stdout, format, fmt::make_format_args(args...));
+        }
+    }
+
+    /// Prints formatted text to stderr, handling Unicode conversions where necessary.
+    template<typename... Args>
+    static void printE(string_view format, const Args&... args) {
+        fmt::vprint(stderr, format, fmt::make_format_args(args...));
+    }
+
+    /// Prints colored formatted text to stderr, handling Unicode conversions where necessary.
+    template<typename... Args>
+    static void printE(const fmt::text_style& style, string_view format, const Args&... args) {
+        if (showColorsStderr) {
+            fmt::vprint(stderr, style, format, fmt::make_format_args(args...));
+        }
+        else {
+            fmt::vprint(stderr, format, fmt::make_format_args(args...));
         }
     }
 #endif
@@ -67,7 +105,8 @@ public:
 private:
     OS() = default;
 
-    static inline bool showColors = false;
+    static inline bool showColorsStdout = false;
+    static inline bool showColorsStderr = false;
 
 #if defined(_MSC_VER)
     template<typename T>

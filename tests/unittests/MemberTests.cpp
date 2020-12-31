@@ -167,6 +167,9 @@ package p1;
     parameter int BLAH = 1;
 endpackage
 
+function int foo(int a, output logic b);
+endfunction
+
 module Top;
     wire foo;
     assign foo = 1;
@@ -289,7 +292,9 @@ endmodule
           }
         ],
         "definition": "test_enum"
-      }
+      },
+      "connections": [
+      ]
     }
   ]
 })");

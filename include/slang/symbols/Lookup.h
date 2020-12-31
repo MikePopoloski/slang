@@ -182,11 +182,12 @@ private:
     Diagnostics diagnostics;
 };
 
+/// Centralized functionality for looking up symbols by name in the AST.
 class Lookup {
 public:
     /// Performs a full fledged name lookup starting in the current scope, following all
     /// SystemVerilog rules for qualified or unqualified name resolution.
-    static void name(const Scope& scope, const NameSyntax& syntax, LookupLocation location,
+    static void name(const NameSyntax& syntax, const BindContext& context,
                      bitmask<LookupFlags> flags, LookupResult& result);
 
     /// Performs an unqualified lookup in this scope, then recursively up the parent
@@ -250,9 +251,17 @@ public:
                                  optional<SourceRange> sourceRange);
 
     /// Searches a linked list of iterator symbols to see if any match the given name.
-    /// If one is found, populates @a result returns true. Otherwise returns false.
+    /// If one is found, populates @a result and returns true. Otherwise returns false.
     static bool findIterator(const Scope& scope, const IteratorSymbol& symbol,
                              const NameSyntax& name, LookupResult& result);
+
+    /// Performs a lookup within the given class randomize() scope, respecting the name
+    /// restrictions provided. If the symbol is not found, or if the name starts with 'local::',
+    /// it is expected that the caller will then perform a normal lookup in the local scope.
+    /// Returns true if the symbol is found and false otherwise.
+    static bool withinClassRandomize(const Scope& scope, span<const string_view> nameRestrictions,
+                                     const NameSyntax& syntax, bitmask<LookupFlags> flags,
+                                     LookupResult& result);
 
 private:
     Lookup() = default;
@@ -261,9 +270,8 @@ private:
                                 optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                                 SymbolIndex outOfBlockIndex, LookupResult& result);
 
-    static void qualified(const Scope& scope, const ScopedNameSyntax& syntax,
-                          LookupLocation location, bitmask<LookupFlags> flags,
-                          LookupResult& result);
+    static void qualified(const ScopedNameSyntax& syntax, const BindContext& context,
+                          bitmask<LookupFlags> flags, LookupResult& result);
 
     static void reportUndeclared(const Scope& scope, string_view name, SourceRange range,
                                  bitmask<LookupFlags> flags, bool isHierarchical,

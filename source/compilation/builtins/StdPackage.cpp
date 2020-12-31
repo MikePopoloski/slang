@@ -82,10 +82,18 @@ static const Symbol& createSemaphoreClass(Compilation& c) {
     return builder.type;
 }
 
+static const Symbol& createRandomizeFunc(Compilation& c) {
+    MethodBuilder builder(c, "randomize", c.getIntType());
+    builder.addFlags(MethodFlags::Randomize);
+    return builder.symbol;
+}
+
 const PackageSymbol& createStdPackage(Compilation& c) {
     auto pkg = c.emplace<PackageSymbol>(c, "std", NL, c.getWireNetType());
     pkg->addMember(createProcessClass(c));
     pkg->addMember(createSemaphoreClass(c));
+    pkg->addMember(createRandomizeFunc(c));
+
     return *pkg;
 }
 

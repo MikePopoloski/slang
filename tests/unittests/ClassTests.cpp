@@ -2010,8 +2010,10 @@ endclass
 constraint B::a { 1; }
 
 class C extends B;
-    constraint a { 1; }
-    static constraint b { 1; }
+    rand int x;
+    static int y;
+    constraint a { this.x > y; }
+    static constraint b { this.x > y; }
 endclass
 
 class D extends B;
@@ -2023,7 +2025,7 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 9);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::MemberDefinitionBeforeClass);
     CHECK(diags[1].code == diag::NoConstraintBody);
     CHECK(diags[2].code == diag::NoMemberImplFound);
@@ -2031,6 +2033,73 @@ endclass
     CHECK(diags[4].code == diag::ConstraintQualOutOfBlock);
     CHECK(diags[5].code == diag::MismatchStaticConstraint);
     CHECK(diags[6].code == diag::BodyForPureConstraint);
-    CHECK(diags[7].code == diag::InheritFromAbstractConstraint);
-    CHECK(diags[8].code == diag::MismatchStaticConstraint);
+    CHECK(diags[7].code == diag::InvalidThisHandle);
+    CHECK(diags[8].code == diag::InheritFromAbstractConstraint);
+    CHECK(diags[9].code == diag::MismatchStaticConstraint);
+}
+
+TEST_CASE("Randomize 'with' clauses") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+	int i;
+    class Base;
+        typedef int IntT;
+    endclass
+	class A extends Base;
+        rand int j;
+        int l[5];
+        function int foo; return 1; endfunction
+    endclass
+endpackage
+
+module m;
+    int k, l;
+    p::A a;
+    initial begin
+        a = new;
+        k = a.randomize with (j, q, foo) { j < foo() + k; };
+        k = a.randomize with { j + local::l < 10; };
+        k = a.randomize with (j) { j + l < 10; };
+    end
+endmodule
+
+int baz;
+
+class B;
+    p::A a;
+    int k;
+    union { int i; int j; } u;
+    function void foo;
+        k = a.randomize with { k + this.l < $bits(super.IntT) + $bits(this.super.IntT); };
+        k = a.randomize with { k + local::this.l < 10; };
+        k = a.randomize with (a.l, 1+k) { 1; };
+        k = local::k; // error
+        k = a.randomize (l, j);
+        k = a.randomize (l, j) with (l) { l[0] > 1; };
+        k = randomize (k);
+        k = randomize (baz);
+        k = randomize (k[0]);
+        k = randomize (null);
+        k = std::randomize(a, k) with { k < a.j; };
+        k = std::randomize(a.j, u) with { k < a.j; };
+        k = std::randomize(u) with { k < a.j; };
+        k = std::randomize() with (a, b) { k < a.j; };
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::UnknownMember);
+    CHECK(diags[1].code == diag::ExpectedIdentifier);
+    CHECK(diags[2].code == diag::ExpectedIdentifier);
+    CHECK(diags[3].code == diag::LocalNotAllowed);
+    CHECK(diags[4].code == diag::ExpectedClassPropertyName);
+    CHECK(diags[5].code == diag::ExpectedClassPropertyName);
+    CHECK(diags[6].code == diag::ExpectedVariableName);
+    CHECK(diags[7].code == diag::InvalidRandType);
+    CHECK(diags[8].code == diag::NameListWithScopeRandomize);
 }

@@ -931,7 +931,8 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
         flags |= LookupFlags::TypedefTarget;
 
     LookupResult result;
-    Lookup::name(parent, syntax, location, flags, result);
+    BindContext context(parent, location);
+    Lookup::name(syntax, context, flags, result);
 
     if (result.hasError())
         compilation.addDiagnostics(result.getDiagnostics());
