@@ -102,89 +102,101 @@ void printMacros(SourceManager& sourceManager, const Bag& options,
     }
 }
 
-bool runCompiler(Compilation& compilation, const std::vector<std::string>& warningOptions,
-                 uint32_t errorLimit, bool quiet, bool onlyParse, bool ignoreUnknownModules,
-                 bool showColors, const optional<std::string>& astJsonFile,
-                 const std::vector<std::string>& astJsonScopes) {
-    DiagnosticEngine diagEngine(*compilation.getSourceManager());
-    Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
-    Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
-    diagEngine.setErrorLimit(errorLimit);
+class Compiler {
+public:
+    Compilation& compilation;
+    DiagnosticEngine diagEngine;
+    std::shared_ptr<TextDiagnosticClient> diagClient;
+    bool quiet = false;
+    bool onlyParse = false;
 
-    if (ignoreUnknownModules)
-        diagEngine.setSeverity(diag::UnknownModule, DiagnosticSeverity::Ignored);
+    Compiler(Compilation& compilation) :
+        compilation(compilation), diagEngine(*compilation.getSourceManager()) {
+        diagClient = std::make_shared<TextDiagnosticClient>();
+        diagEngine.addClient(diagClient);
+    }
 
-    auto client = std::make_shared<TextDiagnosticClient>();
-    client->setColorsEnabled(showColors);
-    diagEngine.addClient(client);
+    void setDiagnosticOptions(const std::vector<std::string>& warningOptions, uint32_t errorLimit,
+                              bool ignoreUnknownModules, bool showColors) {
+        Diagnostics optionDiags = diagEngine.setWarningOptions(warningOptions);
+        Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
+        diagEngine.setErrorLimit(errorLimit);
 
-    for (auto& diag : optionDiags)
-        diagEngine.issue(diag);
+        if (ignoreUnknownModules)
+            diagEngine.setSeverity(diag::UnknownModule, DiagnosticSeverity::Ignored);
 
-    for (auto& diag : pragmaDiags)
-        diagEngine.issue(diag);
+        diagClient->setColorsEnabled(showColors);
 
-    if (onlyParse) {
-        for (auto& diag : compilation.getParseDiagnostics())
+        for (auto& diag : optionDiags)
+            diagEngine.issue(diag);
+
+        for (auto& diag : pragmaDiags)
             diagEngine.issue(diag);
     }
-    else {
+
+    bool run() {
+        if (onlyParse) {
+            for (auto& diag : compilation.getParseDiagnostics())
+                diagEngine.issue(diag);
+        }
+        else {
 #ifndef FUZZ_TARGET
-        auto topInstances = compilation.getRoot().topInstances;
-        if (!quiet && !topInstances.empty()) {
-            OS::print(fg(warningColor), "Top level design units:\n");
-            for (auto inst : topInstances)
-                OS::print("    {}\n", inst->name);
-            OS::print("\n");
+            auto topInstances = compilation.getRoot().topInstances;
+            if (!quiet && !topInstances.empty()) {
+                OS::print(fg(warningColor), "Top level design units:\n");
+                for (auto inst : topInstances)
+                    OS::print("    {}\n", inst->name);
+                OS::print("\n");
+            }
+#endif
+
+            for (auto& diag : compilation.getAllDiagnostics())
+                diagEngine.issue(diag);
+        }
+
+        bool succeeded = diagEngine.getNumErrors() == 0;
+
+#ifndef FUZZ_TARGET
+        std::string diagStr = diagClient->getString();
+        OS::printE("{}", diagStr);
+
+        if (!quiet && !onlyParse) {
+            if (diagStr.size() > 1)
+                OS::print("\n");
+
+            if (succeeded)
+                OS::print(fg(highlightColor), "Build succeeded: ");
+            else
+                OS::print(fg(errorColor), "Build failed: ");
+
+            OS::print("{} error{}, {} warning{}\n", diagEngine.getNumErrors(),
+                      diagEngine.getNumErrors() == 1 ? "" : "s", diagEngine.getNumWarnings(),
+                      diagEngine.getNumWarnings() == 1 ? "" : "s");
         }
 #endif
 
-        for (auto& diag : compilation.getAllDiagnostics())
-            diagEngine.issue(diag);
+        return succeeded;
     }
 
-    if (astJsonFile) {
+    void printJson(const std::string& fileName, const std::vector<std::string>& scopes) {
         JsonWriter writer;
         writer.setPrettyPrint(true);
 
         ASTSerializer serializer(compilation, writer);
-        if (astJsonScopes.empty()) {
+        if (scopes.empty()) {
             serializer.serialize(compilation.getRoot());
         }
         else {
-            for (auto& scopeName : astJsonScopes) {
+            for (auto& scopeName : scopes) {
                 auto sym = compilation.getRoot().lookupName(scopeName);
                 if (sym)
                     serializer.serialize(*sym);
             }
         }
 
-        writeToFile(*astJsonFile, writer.view());
+        writeToFile(fileName, writer.view());
     }
-
-    bool succeeded = diagEngine.getNumErrors() == 0;
-
-#ifndef FUZZ_TARGET
-    std::string diagStr = client->getString();
-    OS::printE("{}", diagStr);
-
-    if (!quiet && !onlyParse) {
-        if (diagStr.size() > 1)
-            OS::print("\n");
-
-        if (succeeded)
-            OS::print(fg(highlightColor), "Build succeeded: ");
-        else
-            OS::print(fg(errorColor), "Build failed: ");
-
-        OS::print("{} error{}, {} warning{}\n", diagEngine.getNumErrors(),
-                  diagEngine.getNumErrors() == 1 ? "" : "s", diagEngine.getNumWarnings(),
-                  diagEngine.getNumWarnings() == 1 ? "" : "s");
-    }
-#endif
-
-    return succeeded;
-}
+};
 
 #if defined(INCLUDE_SIM)
 using namespace slang::mir;
@@ -489,9 +501,16 @@ int driverMain(int argc, TArgs argv, bool suppressColorsStdout, bool suppressCol
                         SyntaxTree::fromBuffer(buffer, sourceManager, options));
             }
 
-            anyErrors = !runCompiler(compilation, warningOptions, errorLimit.value_or(20),
-                                     quiet == true, onlyParse == true, ignoreUnknownModules == true,
-                                     showColors, astJsonFile, astJsonScopes);
+            Compiler compiler(compilation);
+            compiler.quiet = quiet == true;
+            compiler.onlyParse = onlyParse == true;
+            compiler.setDiagnosticOptions(warningOptions, errorLimit.value_or(2),
+                                          ignoreUnknownModules == true, showColors);
+            anyErrors = !compiler.run();
+
+            if (astJsonFile) {
+                compiler.printJson(*astJsonFile, astJsonScopes);
+            }
 
 #if defined(INCLUDE_SIM)
             if (!anyErrors && !onlyParse.value_or(false) && shouldSim == true) {
@@ -596,9 +615,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     Compilation compilation;
     compilation.addSyntaxTree(SyntaxTree::fromText(text, "<source>"));
 
-    runCompiler(compilation, {}, 0, /* quiet */ false, /* onlyParse */ false,
-                /* ignoreUnknownModules */ false,
-                /* showColors */ false, {});
+    Compiler compiler(compilation);
+    compiler.run();
 
     return 0;
 }
