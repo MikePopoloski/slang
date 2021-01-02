@@ -99,8 +99,8 @@ void NetType::resolve() const {
         Lookup::name(nameSyntax, context, LookupFlags::Type, result);
 
         if (result.found && result.found->kind == SymbolKind::NetType) {
-            if (result.hasError())
-                scope->getCompilation().addDiagnostics(result.getDiagnostics());
+            result.errorIfSelectors(context);
+            result.reportErrors(context);
 
             alias = &result.found->as<NetType>();
             declaredType.copyTypeFrom(alias->getCanonical().declaredType);

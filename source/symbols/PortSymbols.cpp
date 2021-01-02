@@ -783,8 +783,7 @@ private:
         LookupResult result;
         BindContext context(scope, lookupLocation);
         Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
-        if (result.hasError())
-            scope.getCompilation().addDiagnostics(result.getDiagnostics());
+        result.reportErrors(context);
 
         // If we found the interface but it's actually a port, unwrap to the target connection.
         const Symbol* symbol = result.found;
@@ -802,6 +801,9 @@ private:
                 symbol = Lookup::selectChild(*symbol, selectors, BindContext(scope, lookupLocation),
                                              result);
             }
+        }
+        else {
+            result.errorIfSelectors(context);
         }
 
         const Symbol* conn = nullptr;

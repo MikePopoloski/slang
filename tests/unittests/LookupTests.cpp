@@ -1526,3 +1526,27 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Lookup with unused selectors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic i;
+    modport m(input i);
+endinterface
+
+module N (I i);
+endmodule
+
+module M;
+    I i();
+    N n(i.m[3]);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnexpectedSelection);
+}

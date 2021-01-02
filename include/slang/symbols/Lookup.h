@@ -178,6 +178,9 @@ struct LookupResult {
     /// context, which will ensure they are visible to the compilation.
     void reportErrors(const BindContext& context);
 
+    /// Issues a diagnostic if there are selectors in the lookup result.
+    void errorIfSelectors(const BindContext& context);
+
 private:
     Diagnostics diagnostics;
 };

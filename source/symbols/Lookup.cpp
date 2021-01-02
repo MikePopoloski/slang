@@ -101,6 +101,20 @@ void LookupResult::reportErrors(const BindContext& context) {
     context.getCompilation().addDiagnostics(diagnostics);
 }
 
+void LookupResult::errorIfSelectors(const BindContext& context) {
+    if (selectors.empty())
+        return;
+
+    SourceRange range;
+    auto& sel = selectors[0];
+    if (sel.index() == 0)
+        range = std::get<0>(sel)->sourceRange();
+    else
+        range = std::get<1>(sel).nameRange;
+
+    context.addDiag(diag::UnexpectedSelection, range);
+}
+
 namespace {
 
 struct NamePlusLoc {
@@ -924,6 +938,7 @@ const ClassType* Lookup::findClass(const NameSyntax& className, const BindContex
     LookupResult result;
     Lookup::name(className, context, LookupFlags::Type, result);
 
+    result.errorIfSelectors(context);
     result.reportErrors(context);
     if (!result.found)
         return nullptr;

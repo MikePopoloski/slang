@@ -752,6 +752,7 @@ Statement& DisableStatement::fromSyntax(Compilation& compilation,
                                         const BindContext& context) {
     LookupResult result;
     Lookup::name(*syntax.name, context, LookupFlags::AllowDeclaredAfter, result);
+    result.errorIfSelectors(context);
     result.reportErrors(context);
 
     const Symbol* symbol = result.found;

@@ -935,8 +935,8 @@ Expression& HierarchicalReferenceExpression::fromSyntax(Compilation& compilation
                                                         const BindContext& context) {
     LookupResult result;
     Lookup::name(syntax, context, LookupFlags::AllowDeclaredAfter, result);
-    if (result.hasError())
-        compilation.addDiagnostics(result.getDiagnostics());
+    result.errorIfSelectors(context);
+    result.reportErrors(context);
 
     const Symbol* symbol = result.found;
     if (!symbol)
