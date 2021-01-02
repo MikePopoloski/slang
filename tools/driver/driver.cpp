@@ -178,6 +178,7 @@ void loadAllSources(Compilation& compilation, SourceManager& sourceManager,
 
             if (buffer) {
                 auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, options);
+                tree->isLibrary = true;
                 compilation.addSyntaxTree(tree);
 
                 addDefNames(tree);

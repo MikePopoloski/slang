@@ -25,6 +25,10 @@ struct SourceBuffer;
 /// live for as long as you need to access its syntax nodes.
 class SyntaxTree {
 public:
+    /// Indicates whether this syntax tree represents a "library" compilation unit,
+    /// which means that modules declared within it are not automatically instantiated.
+    bool isLibrary = false;
+
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
                std::shared_ptr<SyntaxTree> parent = nullptr);
 

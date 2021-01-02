@@ -19,6 +19,7 @@ class AttributeSymbol;
 class Compilation;
 class NetType;
 class Scope;
+class SyntaxTree;
 
 struct DeclaratorSyntax;
 struct ModuleDeclarationSyntax;
@@ -75,10 +76,12 @@ public:
     SmallVectorSized<ParameterDecl, 8> parameters;
     flat_hash_set<string_view> modports;
     span<const AttributeSymbol* const> attributes;
+    const SyntaxTree* syntaxTree;
 
     Definition(const Scope& scope, LookupLocation lookupLocation,
                const ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
-               UnconnectedDrive unconnectedDrive, optional<TimeScale> directiveTimeScale);
+               UnconnectedDrive unconnectedDrive, optional<TimeScale> directiveTimeScale,
+               const SyntaxTree* syntaxTree);
 
     span<const PortDecl> getPorts() const {
         if (!resolvedPorts)

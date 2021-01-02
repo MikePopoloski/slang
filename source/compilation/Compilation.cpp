@@ -419,6 +419,7 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     for (auto& [n, meta] : tree->getMetadata().nodeMap) {
         auto decl = &n->as<ModuleDeclarationSyntax>();
         DefinitionMetadata result;
+        result.tree = tree.get();
         result.defaultNetType = &getNetType(meta.defaultNetType);
         result.timeScale = meta.timeScale;
 
@@ -503,6 +504,10 @@ const RootSymbol& Compilation::getRoot() {
                 globalInstantiations.find(definition->name) != globalInstantiations.end()) {
                 continue;
             }
+
+            // Library modules are never automatically instantiated in any capacity.
+            if (definition->syntaxTree && definition->syntaxTree->isLibrary)
+                continue;
 
             if (definition->definitionKind == DefinitionKind::Module) {
                 if (isValidTop(*definition)) {
@@ -645,8 +650,9 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
 const Definition& Compilation::createDefinition(const Scope& scope, LookupLocation location,
                                                 const ModuleDeclarationSyntax& syntax) {
     auto& metadata = definitionMetadata[&syntax];
-    auto def = std::make_unique<Definition>(scope, location, syntax, *metadata.defaultNetType,
-                                            metadata.unconnectedDrive, metadata.timeScale);
+    auto def =
+        std::make_unique<Definition>(scope, location, syntax, *metadata.defaultNetType,
+                                     metadata.unconnectedDrive, metadata.timeScale, metadata.tree);
 
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.

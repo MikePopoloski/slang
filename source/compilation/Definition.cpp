@@ -62,9 +62,11 @@ bool Definition::ParameterDecl::hasDefault() const {
 
 Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
                        const ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
-                       UnconnectedDrive unconnectedDrive, optional<TimeScale> directiveTimeScale) :
+                       UnconnectedDrive unconnectedDrive, optional<TimeScale> directiveTimeScale,
+                       const SyntaxTree* syntaxTree) :
     syntax(syntax),
-    defaultNetType(defaultNetType), scope(scope), unconnectedDrive(unconnectedDrive) {
+    defaultNetType(defaultNetType), scope(scope), unconnectedDrive(unconnectedDrive),
+    syntaxTree(syntaxTree) {
 
     // Extract and save various properties of the definition.
     auto& header = *syntax.header;

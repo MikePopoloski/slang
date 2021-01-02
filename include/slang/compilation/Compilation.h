@@ -429,9 +429,10 @@ private:
     flat_hash_set<string_view> globalInstantiations;
 
     struct DefinitionMetadata {
-        const NetType* defaultNetType;
+        const SyntaxTree* tree = nullptr;
+        const NetType* defaultNetType = nullptr;
         optional<TimeScale> timeScale;
-        UnconnectedDrive unconnectedDrive;
+        UnconnectedDrive unconnectedDrive = UnconnectedDrive::None;
     };
 
     // Map from syntax nodes to parse-time metadata about them.
